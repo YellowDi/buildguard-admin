@@ -125,7 +125,7 @@ watch(openMobile, (value) => {
 </script>
 
 <template>
-  <Sidebar collapsible="offcanvas" class="bg-transparent">
+  <Sidebar collapsible="offcanvas" class="z-40 bg-transparent">
     <SidebarHeader class="shrink-0 border-b px-4 pb-4 pt-5">
       <RouterLink
         to="/"
