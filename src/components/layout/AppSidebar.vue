@@ -13,7 +13,7 @@ import Tree from "@/components/layout/Tree.vue"
 </script>
 
 <template>
-  <Sidebar collapsible="icon" variant="inset">
+  <Sidebar collapsible="offcanvas">
     <SidebarHeader>
       <SidebarMenu>
         <SidebarMenuItem>
