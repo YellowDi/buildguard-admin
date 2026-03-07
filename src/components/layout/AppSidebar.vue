@@ -76,10 +76,6 @@ const businessItems = reactive<NavItem[]>([
     path: "/users",
   },
   {
-    label: "运营商",
-    icon: "ri-bank-line",
-  },
-  {
     label: "呼叫中心",
     icon: "ri-customer-service-2-line",
     open: true,
@@ -89,38 +85,6 @@ const businessItems = reactive<NavItem[]>([
       },
       {
         label: "报警查询",
-      },
-    ],
-  },
-  {
-    label: "统计报表",
-    icon: "ri-pie-chart-2-line",
-    open: true,
-    children: [
-      {
-        label: "企业",
-      },
-      {
-        label: "车辆",
-      },
-      {
-        label: "区域",
-      },
-      {
-        label: "排名",
-      },
-      {
-        label: "总报表",
-        path: "/settings",
-      },
-      {
-        label: "区域报表",
-      },
-      {
-        label: "客户信息",
-      },
-      {
-        label: "行管报表",
       },
     ],
   },
