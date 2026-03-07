@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { PropType } from "vue"
 
-import ListPage from "@/components/resource/ListPage.vue"
+import Page from "@/components/resource/Page.vue"
 import type { ResourceListController } from "@/components/resource/useResourceList"
 
 defineProps({
@@ -13,7 +13,7 @@ defineProps({
 </script>
 
 <template>
-  <ListPage
+  <Page
     :title="page.title"
     :count="page.visibleRows.value.length"
     :tabs="page.tabs.value"

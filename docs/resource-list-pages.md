@@ -1,6 +1,6 @@
 # Resource List Pages
 
-本项目中的后台表格页统一使用资源页 schema 驱动，不再直接在业务页面里手写 `ListPage + useListController` 这一层协议。
+本项目中的后台表格页统一使用资源页 schema 驱动，不再直接在业务页面里手写 `Page + useListController` 这一层协议。
 
 标准目标只有一个：让开发者新建一个列表页时，只需要关心数据结构、页面 schema 和少量展示差异，而不需要理解资源层内部状态机。
 
@@ -11,7 +11,7 @@
 2. 准备数据数组
 3. 声明 `ResourceListSchema<Row>`
 4. 调用 `useResourceList(schema)`
-5. 模板只渲染 `<ResourceListPage :page="page" />`
+5. 模板只渲染 `<ResourcePage :page="page" />`
 
 参考：
 
@@ -23,7 +23,7 @@
 1. 分别定义多个 `ResourceListSchema`
 2. 分别调用 `useResourceList`
 3. 用顶层 tab 决定当前激活的 page
-4. 模板渲染 `<ResourceTabbedPage :active-page="activePage" />`
+4. 模板渲染 `<TabbedPage :active-page="activePage" />`
 
 参考：
 
@@ -126,7 +126,7 @@
 3. 先把表格列跑通，只写 `key + label + cellRenderer`
 4. 再逐列补 `searchable / filter / sort`
 5. 最后补页面级 `filters`、默认 `sort`、顶部 `tabs`
-6. 模板保持极薄，只保留 `<ResourceListPage :page="page" />`
+6. 模板保持极薄，只保留 `<ResourcePage :page="page" />`
 
 不要这样做：
 
@@ -157,8 +157,8 @@
 资源层组件和 hooks 位于：
 
 - [useResourceList.ts](/Users/Rolly/buildguard-admin/src/components/resource/useResourceList.ts)
-- [ResourceListPage.vue](/Users/Rolly/buildguard-admin/src/components/resource/ResourceListPage.vue)
-- [ResourceTabbedPage.vue](/Users/Rolly/buildguard-admin/src/components/resource/ResourceTabbedPage.vue)
+- [ResourcePage.vue](/Users/Rolly/buildguard-admin/src/components/resource/ResourcePage.vue)
+- [TabbedPage.vue](/Users/Rolly/buildguard-admin/src/components/resource/TabbedPage.vue)
 - [types.ts](/Users/Rolly/buildguard-admin/src/components/resource/types.ts)
 
 维护时遵守两条原则：
@@ -168,7 +168,7 @@
 
 表格视觉统一入口位于：
 
-- [resourceTableTheme.ts](/Users/Rolly/buildguard-admin/src/components/resource/resourceTableTheme.ts)
-- [ListTable.vue](/Users/Rolly/buildguard-admin/src/components/resource/ListTable.vue)
+- [tableTheme.ts](/Users/Rolly/buildguard-admin/src/components/resource/tableTheme.ts)
+- [Table.vue](/Users/Rolly/buildguard-admin/src/components/resource/Table.vue)
 
 如果未来要扩展服务端分页、批量操作、操作列、URL 同步，优先在资源层扩展公共能力，再由业务页面通过 schema 使用。

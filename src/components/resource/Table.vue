@@ -6,8 +6,8 @@ import {
   getColumnHeaderClass,
   getTableClass,
   getTableWrapperClass,
-  resourceTableTheme,
-} from "@/components/resource/resourceTableTheme"
+  tableTheme,
+} from "@/components/resource/tableTheme"
 import type { TableColumn } from "@/components/resource/types"
 
 const props = withDefaults(defineProps<{
@@ -112,23 +112,23 @@ onBeforeUnmount(() => {
 <template>
   <div ref="tableWrapperRef" :class="wrapperClassName">
     <table :class="tableClassName">
-      <thead :class="resourceTableTheme.head">
+      <thead :class="tableTheme.head">
         <tr>
           <th
             v-if="showIndex"
             :class="[
-              resourceTableTheme.indexHeader.base,
-              stickyHeader ? resourceTableTheme.indexHeader.sticky : resourceTableTheme.indexHeader.static,
-              stickyHeader && stickyHeaderActive ? resourceTableTheme.indexHeader.active : '',
+              tableTheme.indexHeader.base,
+              stickyHeader ? tableTheme.indexHeader.sticky : tableTheme.indexHeader.static,
+              stickyHeader && stickyHeaderActive ? tableTheme.indexHeader.active : '',
             ]"
           />
           <th
             v-for="column in columns"
             :key="column.key"
             :class="[
-              resourceTableTheme.headerCell.base,
-              stickyHeader ? resourceTableTheme.headerCell.sticky : '',
-              stickyHeader && stickyHeaderActive ? resourceTableTheme.headerCell.active : '',
+              tableTheme.headerCell.base,
+              stickyHeader ? tableTheme.headerCell.sticky : '',
+              stickyHeader && stickyHeaderActive ? tableTheme.headerCell.active : '',
               getColumnHeaderClass(column),
             ]"
           >
@@ -137,15 +137,15 @@ onBeforeUnmount(() => {
         </tr>
       </thead>
 
-      <tbody :class="resourceTableTheme.body">
+      <tbody :class="tableTheme.body">
         <tr
           v-for="(row, index) in rows"
           :key="getRowKey(row, index)"
-          :class="resourceTableTheme.row"
+          :class="tableTheme.row"
         >
           <td
             v-if="showIndex"
-            :class="resourceTableTheme.indexCell"
+            :class="tableTheme.indexCell"
           >
             {{ index + 1 }}
           </td>
@@ -153,9 +153,9 @@ onBeforeUnmount(() => {
             v-for="(column, columnIndex) in columns"
             :key="column.key"
             :class="[
-              resourceTableTheme.bodyCell.base,
-              columnIndex > 0 ? resourceTableTheme.bodyCell.split : '',
-              isRightAlignedColumn(column) ? resourceTableTheme.bodyCell.rightAligned : '',
+              tableTheme.bodyCell.base,
+              columnIndex > 0 ? tableTheme.bodyCell.split : '',
+              isRightAlignedColumn(column) ? tableTheme.bodyCell.rightAligned : '',
               getColumnCellClass(column),
             ]"
           >
@@ -166,12 +166,12 @@ onBeforeUnmount(() => {
               :index="index"
             >
               <template v-if="column.cellRenderer?.kind === 'dual-inline'">
-                <span :class="column.cellRenderer.primaryClass ?? resourceTableTheme.renderers.contactPrimary">
+                <span :class="column.cellRenderer.primaryClass ?? tableTheme.renderers.contactPrimary">
                   {{ getRendererValue(row, column.cellRenderer.primaryKey) }}
                 </span>
                 <span
                   v-if="stringifyValue(getRendererValue(row, column.cellRenderer.secondaryKey))"
-                  :class="['ml-1', column.cellRenderer.secondaryClass ?? resourceTableTheme.renderers.contactSecondary]"
+                  :class="['ml-1', column.cellRenderer.secondaryClass ?? tableTheme.renderers.contactSecondary]"
                 >
                   {{ getRendererValue(row, column.cellRenderer.secondaryKey) }}
                 </span>
@@ -181,12 +181,12 @@ onBeforeUnmount(() => {
                 v-else-if="column.cellRenderer?.kind === 'dual-stack'"
                 class="flex flex-col gap-0.5"
               >
-                <span :class="column.cellRenderer.primaryClass ?? resourceTableTheme.renderers.contactPrimary">
+                <span :class="column.cellRenderer.primaryClass ?? tableTheme.renderers.contactPrimary">
                   {{ getRendererValue(row, column.cellRenderer.primaryKey) }}
                 </span>
                 <span
                   v-if="stringifyValue(getRendererValue(row, column.cellRenderer.secondaryKey))"
-                  :class="column.cellRenderer.secondaryClass ?? resourceTableTheme.renderers.contactSecondary"
+                  :class="column.cellRenderer.secondaryClass ?? tableTheme.renderers.contactSecondary"
                 >
                   {{ getRendererValue(row, column.cellRenderer.secondaryKey) }}
                 </span>
@@ -199,7 +199,7 @@ onBeforeUnmount(() => {
                 <span
                   v-for="(item, itemIndex) in getArrayValue(getColumnValue(row, column.key))"
                   :key="`${column.key}-${index}-${itemIndex}`"
-                  :class="column.cellRenderer.itemClass ?? resourceTableTheme.renderers.arrayItem"
+                  :class="column.cellRenderer.itemClass ?? tableTheme.renderers.arrayItem"
                 >
                   {{ item }}<template v-if="itemIndex < getArrayValue(getColumnValue(row, column.key)).length - 1">{{ column.cellRenderer.separator ?? "、" }}</template>
                 </span>
@@ -212,7 +212,7 @@ onBeforeUnmount(() => {
                 <span
                   v-for="(item, itemIndex) in getArrayValue(getColumnValue(row, column.key))"
                   :key="`${column.key}-${index}-tag-${itemIndex}`"
-                  :class="column.cellRenderer.itemClass ?? resourceTableTheme.renderers.tagItem"
+                  :class="column.cellRenderer.itemClass ?? tableTheme.renderers.tagItem"
                 >
                   {{ item }}
                 </span>
@@ -222,13 +222,13 @@ onBeforeUnmount(() => {
                 v-else-if="column.cellRenderer?.kind === 'progress'"
                 class="flex min-w-[120px] items-center gap-2"
               >
-                <div :class="column.cellRenderer.trackClass ?? resourceTableTheme.renderers.progressTrack">
+                <div :class="column.cellRenderer.trackClass ?? tableTheme.renderers.progressTrack">
                   <div
-                    :class="column.cellRenderer.fillClass ?? resourceTableTheme.renderers.progressFill"
+                    :class="column.cellRenderer.fillClass ?? tableTheme.renderers.progressFill"
                     :style="{ width: `${getProgressPercent(row, column)}%` }"
                   />
                 </div>
-                <span :class="column.cellRenderer.labelClass ?? resourceTableTheme.renderers.progressLabel">
+                <span :class="column.cellRenderer.labelClass ?? tableTheme.renderers.progressLabel">
                   {{ getColumnValue(row, column.key) }}
                 </span>
               </div>
@@ -237,17 +237,17 @@ onBeforeUnmount(() => {
                 v-else-if="column.cellRenderer?.kind === 'metric-unit'"
                 class="inline-flex items-baseline justify-end"
               >
-                <span :class="column.cellRenderer.valueClass ?? resourceTableTheme.renderers.metricValue">
+                <span :class="column.cellRenderer.valueClass ?? tableTheme.renderers.metricValue">
                   {{ getRendererValue(row, column.cellRenderer.valueKey ?? column.key) }}
                 </span>
-                <span :class="['ml-1', column.cellRenderer.unitClass ?? resourceTableTheme.renderers.metricUnit]">
+                <span :class="['ml-1', column.cellRenderer.unitClass ?? tableTheme.renderers.metricUnit]">
                   {{ column.cellRenderer.unit }}
                 </span>
               </div>
 
               <div
                 v-else-if="column.cellRenderer?.kind === 'note'"
-                :class="resourceTableTheme.renderers.note"
+                :class="tableTheme.renderers.note"
               >
                 {{ getColumnValue(row, column.key) }}
               </div>
@@ -261,7 +261,7 @@ onBeforeUnmount(() => {
       </tbody>
     </table>
 
-    <div v-if="summary" :class="resourceTableTheme.summary">
+    <div v-if="summary" :class="tableTheme.summary">
       {{ summary }}
     </div>
   </div>

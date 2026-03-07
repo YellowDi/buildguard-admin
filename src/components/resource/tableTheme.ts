@@ -7,7 +7,7 @@ import type {
 } from "@/components/resource/types"
 import { cn } from "@/lib/utils"
 
-export const resourceTableTheme = {
+export const tableTheme = {
   wrapper: "overflow-visible",
   table: "min-w-full w-max table-auto border-collapse bg-white text-[14px]",
   head: "text-[#7A7A7A]",
@@ -66,16 +66,16 @@ export const resourceTableTheme = {
 } as const
 
 export function getTableWrapperClass(override?: string) {
-  return cn(resourceTableTheme.wrapper, override)
+  return cn(tableTheme.wrapper, override)
 }
 
 export function getTableClass(override?: string) {
-  return cn(resourceTableTheme.table, override)
+  return cn(tableTheme.table, override)
 }
 
 export function getColumnHeaderClass(column: TableColumn) {
   return cn(
-    column.width === "fill" ? resourceTableTheme.widths.fill : "",
+    column.width === "fill" ? tableTheme.widths.fill : "",
     column.headerClass,
   )
 }
@@ -87,10 +87,10 @@ export function getColumnCellClass(column: TableColumn) {
   const width = column.width ?? "auto"
 
   return cn(
-    resourceTableTheme.tones[tone],
-    resourceTableTheme.emphasis[emphasis],
-    resourceTableTheme.formats[format],
-    resourceTableTheme.widths[width],
+    tableTheme.tones[tone],
+    tableTheme.emphasis[emphasis],
+    tableTheme.formats[format],
+    tableTheme.widths[width],
     column.cellClass,
   )
 }

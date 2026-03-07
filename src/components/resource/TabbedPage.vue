@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, type PropType } from "vue"
 
-import ListPage from "@/components/resource/ListPage.vue"
+import Page from "@/components/resource/Page.vue"
 import type { HeaderTab } from "@/components/resource/types"
 import type { ResourceListController } from "@/components/resource/useResourceList"
 
@@ -28,7 +28,7 @@ const activeCount = computed(() => props.activePage.visibleRows.value.length)
 </script>
 
 <template>
-  <ListPage
+  <Page
     :title="title"
     :count="activeCount"
     :tabs="tabs"

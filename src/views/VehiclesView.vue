@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from "vue"
 
-import ResourceTabbedPage from "@/components/resource/ResourceTabbedPage.vue"
+import TabbedPage from "@/components/resource/TabbedPage.vue"
 import { useResourceList } from "@/components/resource/useResourceList"
 import type { HeaderTab, ResourceListSchema } from "@/components/resource/types"
 import vehiclesData from "@/data/vehicles.json"
@@ -362,7 +362,7 @@ const tabs = computed<HeaderTab[]>(() => [
 // 新建类似页面时，推荐一直沿用这个模式：
 // - 把多个 page 收到一个 registry
 // - 通过 activeTab 选出 activePage
-// - 模板只渲染 ResourceTabbedPage
+// - 模板只渲染 TabbedPage
 const pageRegistry = {
   [VEHICLE_TAB_OVERVIEW]: operatingPage,
   [VEHICLE_TAB_ALARMS]: alarmPage,
@@ -439,7 +439,7 @@ function getDaysUntil(dateString: string) {
 <template>
   <!-- 7. 页面模板层保持极薄。
        多表格页也不要自己桥接每种筛选事件，而是把当前 activePage 交给统一页面壳。 -->
-  <ResourceTabbedPage
+  <TabbedPage
     title="车辆"
     :tabs="tabs"
     :active-page="activePage"

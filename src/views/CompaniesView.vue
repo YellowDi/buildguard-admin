@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import ResourceListPage from "@/components/resource/ResourceListPage.vue"
+import ResourcePage from "@/components/resource/ResourcePage.vue"
 import { useResourceList } from "@/components/resource/useResourceList"
 import type { ResourceListSchema } from "@/components/resource/types"
 import companiesData from "@/data/companies.json"
@@ -252,6 +252,6 @@ function toISODate(date: Date) {
 <template>
   <!-- 5. 页面模板层保持极薄。
        以后新建同类页面时，理想状态就是：
-       定义行类型 -> 准备数据 -> 写 schema -> 渲染 ResourceListPage。 -->
-  <ResourceListPage :page="page" />
+       定义行类型 -> 准备数据 -> 写 schema -> 渲染 ResourcePage。 -->
+  <ResourcePage :page="page" />
 </template>

@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { useSlots } from "vue"
 
-import ListHeader from "@/components/resource/ListHeader.vue"
-import ListTable from "@/components/resource/ListTable.vue"
+import Header from "@/components/resource/Header.vue"
+import Table from "@/components/resource/Table.vue"
 import type { SortFieldOption, SortRule } from "@/components/resource/SortPopover.vue"
 import type {
   DateFilterState,
@@ -67,7 +67,7 @@ const slots = useSlots()
   <section class="-mx-4 flex min-h-0 flex-1 flex-col bg-white">
     <div class="flex min-h-0 min-w-0 flex-1 flex-col pb-3 pt-3">
       <div class="flex min-h-0 min-w-0 flex-1 flex-col">
-        <ListHeader
+        <Header
           class="min-w-0 w-full"
           :title="title"
           :count="count"
@@ -104,7 +104,7 @@ const slots = useSlots()
         <div class="min-h-0 min-w-0 flex-1">
           <div class="min-h-0 min-w-0 w-full overflow-x-auto overflow-y-visible pr-8">
             <template v-if="sections?.length">
-              <ListTable
+              <Table
                 v-for="section in sections"
                 :key="section.key"
                 :columns="section.columns"
@@ -118,7 +118,7 @@ const slots = useSlots()
                 v-slots="slots"
               />
             </template>
-            <ListTable
+            <Table
               v-else
               :columns="columns"
               :rows="rows"
