@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { computed, ref } from "vue"
 
-import type { ResourceDateFilterOperator, ResourceDateFilterPreset, ResourceDateFilterState } from "@/components/resource/types"
+import type { DateFilterOperator, DateFilterPreset, DateFilterState } from "@/components/resource/types"
 
 const props = defineProps<{
   title: string
-  value: ResourceDateFilterState
+  value: DateFilterState
   fields?: string[]
 }>()
 
@@ -13,7 +13,7 @@ const emit = defineEmits<{
   close: []
   remove: []
   "switch-field": [field: string]
-  "update:value": [value: ResourceDateFilterState]
+  "update:value": [value: DateFilterState]
 }>()
 
 const openFieldMenu = ref(false)
@@ -24,7 +24,7 @@ const viewMonth = ref(getInitialViewMonth())
 const activeRangeField = ref<"start" | "end">("start")
 
 const weekdayLabels = ["一", "二", "三", "四", "五", "六", "日"]
-const operatorOptions: Array<{ value: ResourceDateFilterOperator; label: string }> = [
+const operatorOptions: Array<{ value: DateFilterOperator; label: string }> = [
   { value: "equals", label: "是" },
   { value: "before", label: "早于" },
   { value: "after", label: "晚于" },
@@ -35,7 +35,7 @@ const operatorOptions: Array<{ value: ResourceDateFilterOperator; label: string 
   { value: "isEmpty", label: "为空白" },
   { value: "isNotEmpty", label: "不为空白" },
 ]
-const presetOptions: Array<{ value: ResourceDateFilterPreset; label: string }> = [
+const presetOptions: Array<{ value: DateFilterPreset; label: string }> = [
   { value: "today", label: "今天" },
   { value: "tomorrow", label: "明天" },
   { value: "yesterday", label: "昨天" },
@@ -59,15 +59,15 @@ function getInitialViewMonth() {
   return new Date()
 }
 
-function getOperatorLabel(operator: ResourceDateFilterOperator) {
+function getOperatorLabel(operator: DateFilterOperator) {
   return operatorOptions.find((option) => option.value === operator)?.label ?? "是"
 }
 
-function getPresetLabel(preset: ResourceDateFilterPreset) {
+function getPresetLabel(preset: DateFilterPreset) {
   return presetOptions.find((option) => option.value === preset)?.label ?? "自定义日期"
 }
 
-function operatorNeedsDateInput(operator: ResourceDateFilterOperator) {
+function operatorNeedsDateInput(operator: DateFilterOperator) {
   return operator !== "isEmpty" && operator !== "isNotEmpty"
 }
 
@@ -136,7 +136,7 @@ function toISODate(date: Date) {
   return `${year}-${month}-${day}`
 }
 
-function getRelativeDate(preset: ResourceDateFilterPreset) {
+function getRelativeDate(preset: DateFilterPreset) {
   const now = new Date()
   const date = new Date(now.getFullYear(), now.getMonth(), now.getDate())
 
@@ -162,7 +162,7 @@ function getRelativeDate(preset: ResourceDateFilterPreset) {
   return toISODate(date)
 }
 
-function updateValue(patch: Partial<ResourceDateFilterState>) {
+function updateValue(patch: Partial<DateFilterState>) {
   const nextValue = {
     ...props.value,
     ...patch,
@@ -176,10 +176,10 @@ function updateValue(patch: Partial<ResourceDateFilterState>) {
   })
 }
 
-function handleOperatorSelect(operator: ResourceDateFilterOperator) {
+function handleOperatorSelect(operator: DateFilterOperator) {
   const clearDates = operatorNeedsDateInput(operator)
     ? {}
-    : { startDate: "", endDate: "", preset: "custom" as ResourceDateFilterPreset }
+    : { startDate: "", endDate: "", preset: "custom" as DateFilterPreset }
 
   updateValue({
     operator,
@@ -205,7 +205,7 @@ function handleFieldSelect(field: string) {
   emit("switch-field", field)
 }
 
-function handlePresetSelect(preset: ResourceDateFilterPreset) {
+function handlePresetSelect(preset: DateFilterPreset) {
   if (preset === "custom") {
     updateValue({
       preset,

@@ -1,18 +1,18 @@
 <script setup lang="ts">
 import { ref } from "vue"
 
-import type { ResourceTagFilterState, TagFilterOperator } from "@/components/resource/types"
+import type { TagFilterOperator, TagFilterState } from "@/components/resource/types"
 
 const props = defineProps<{
   title: string
-  value: ResourceTagFilterState
+  value: TagFilterState
   options: string[]
 }>()
 
 const emit = defineEmits<{
   close: []
   remove: []
-  "update:value": [value: ResourceTagFilterState]
+  "update:value": [value: TagFilterState]
 }>()
 
 const openMenu = ref(false)
@@ -33,7 +33,7 @@ function operatorNeedsSelection(operator: TagFilterOperator) {
   return operator !== "isEmpty" && operator !== "isNotEmpty"
 }
 
-function updateValue(nextValue: ResourceTagFilterState) {
+function updateValue(nextValue: TagFilterState) {
   emit("update:value", {
     ...nextValue,
     enabled: operatorNeedsSelection(nextValue.operator) ? nextValue.values.length > 0 : true,

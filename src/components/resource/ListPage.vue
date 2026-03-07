@@ -1,25 +1,25 @@
 <script setup lang="ts">
 import { useSlots } from "vue"
 
-import ResourceListHeader from "@/components/resource/ResourceListHeader.vue"
-import ResourceTable from "@/components/resource/ResourceTable.vue"
+import ListHeader from "@/components/resource/ListHeader.vue"
+import ListTable from "@/components/resource/ListTable.vue"
 import type { SortFieldOption, SortRule } from "@/components/resource/SortPopover.vue"
 import type {
-  ResourceDateFilterState,
-  ResourceHeaderField,
-  ResourceHeaderTab,
-  ResourceNumberFilterState,
-  ResourceTableColumn,
-  ResourceTableSection,
-  ResourceTagFilterState,
-  ResourceTextFilterState,
+  DateFilterState,
+  HeaderField,
+  HeaderTab,
+  NumberFilterState,
+  TableColumn,
+  TableSection,
+  TagFilterState,
+  TextFilterState,
 } from "@/components/resource/types"
 
 defineProps<{
   title: string
   count: number
-  tabs: ResourceHeaderTab[]
-  fields: ResourceHeaderField[]
+  tabs: HeaderTab[]
+  fields: HeaderField[]
   availableFilters: string[]
   showControls: boolean
   customSortEnabled: boolean
@@ -27,13 +27,13 @@ defineProps<{
   sortFieldOptions?: SortFieldOption[]
   searchQuery: string
   primaryActionLabel?: string
-  textFilters: Record<string, ResourceTextFilterState>
-  numberFilters: Record<string, ResourceNumberFilterState>
-  tagFilters: Record<string, ResourceTagFilterState>
+  textFilters: Record<string, TextFilterState>
+  numberFilters: Record<string, NumberFilterState>
+  tagFilters: Record<string, TagFilterState>
   tagFilterOptions: Record<string, string[]>
-  dateFilters: Record<string, ResourceDateFilterState>
+  dateFilters: Record<string, DateFilterState>
   dateFilterFields: string[]
-  columns: ResourceTableColumn[]
+  columns: TableColumn[]
   rows: Record<string, unknown>[]
   rowKey: string | ((row: Record<string, unknown>, index: number) => string | number)
   summary?: string
@@ -41,22 +41,22 @@ defineProps<{
   stickyHeader?: boolean
   wrapperClass?: string
   tableClass?: string
-  sections?: ResourceTableSection[]
+  sections?: TableSection[]
 }>()
 
 const emit = defineEmits<{
-  "tab-click": [tab: ResourceHeaderTab]
+  "tab-click": [tab: HeaderTab]
   "add-filter": [key: string]
-  "replace-filter": [payload: { from: string; to: string; value?: ResourceDateFilterState }]
+  "replace-filter": [payload: { from: string; to: string; value?: DateFilterState }]
   "remove-filter": [key: string]
   "set-custom-sort-enabled": [enabled: boolean]
   "update-sort-rules": [rules: SortRule[]]
   "toggle-controls": []
   "update-search-query": [query: string]
-  "update-text-filter": [payload: { label: string; value: ResourceTextFilterState }]
-  "update-number-filter": [payload: { label: string; value: ResourceNumberFilterState }]
-  "update-tag-filter": [payload: { label: string; value: ResourceTagFilterState }]
-  "update-date-filter": [payload: { label: string; value: ResourceDateFilterState }]
+  "update-text-filter": [payload: { label: string; value: TextFilterState }]
+  "update-number-filter": [payload: { label: string; value: NumberFilterState }]
+  "update-tag-filter": [payload: { label: string; value: TagFilterState }]
+  "update-date-filter": [payload: { label: string; value: DateFilterState }]
   "primary-action": []
 }>()
 
@@ -67,7 +67,7 @@ const slots = useSlots()
   <section class="-mx-4 flex min-h-0 flex-1 flex-col bg-white">
     <div class="flex min-h-0 flex-1 flex-col pb-3 pt-3">
       <div class="flex min-h-0 flex-1 flex-col">
-        <ResourceListHeader
+        <ListHeader
           :title="title"
           :count="count"
           :tabs="tabs"
@@ -103,7 +103,7 @@ const slots = useSlots()
         <div class="min-h-0 flex-1">
           <div class="inline-block min-w-full pr-8 align-top">
             <template v-if="sections?.length">
-              <ResourceTable
+              <ListTable
                 v-for="section in sections"
                 :key="section.key"
                 :columns="section.columns"
@@ -117,7 +117,7 @@ const slots = useSlots()
                 v-slots="slots"
               />
             </template>
-            <ResourceTable
+            <ListTable
               v-else
               :columns="columns"
               :rows="rows"

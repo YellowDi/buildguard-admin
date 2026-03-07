@@ -2,18 +2,18 @@
 import { computed, ref } from "vue"
 
 import vehiclesData from "@/data/vehicles.json"
-import ResourceListPage from "@/components/resource/ResourceListPage.vue"
+import ListPage from "@/components/resource/ListPage.vue"
 import type { SortFieldOption } from "@/components/resource/SortPopover.vue"
 import type {
-  ResourceDateFilterState,
-  ResourceHeaderTab,
-  ResourceNumberFilterState,
-  ResourceTableColumn,
-  ResourceTagFilterState,
-  ResourceTextFilterState,
+  DateFilterState,
+  HeaderTab,
+  NumberFilterState,
+  TableColumn,
+  TagFilterState,
+  TextFilterState,
 } from "@/components/resource/types"
-import { useResourceListController } from "@/components/resource/useResourceListController"
-import type { ResourceListPageConfig } from "@/components/resource/useResourceListController"
+import { useListController } from "@/components/resource/useListController"
+import type { ListPageConfig } from "@/components/resource/useListController"
 
 type OperatingVehicleRecord = {
   plateNumber: string
@@ -62,7 +62,7 @@ const {
   inspection: inspectionVehicles,
 } = buildVehicleDataBundle(vehiclesData as VehicleDataBundle)
 
-const operatingColumns: ResourceTableColumn[] = [
+const operatingColumns: TableColumn[] = [
   { key: "plateNumber", label: "车牌号", filterType: "text", cellClass: "font-medium text-[#1F1F1F]" },
   { key: "company", label: "所属企业", filterType: "text" },
   { key: "vehicleType", label: "车辆类型", filterType: "tag" },
@@ -71,7 +71,7 @@ const operatingColumns: ResourceTableColumn[] = [
   { key: "note", label: "备注", filterType: "none", headerClass: "w-full", cellClass: "w-full text-[#6E6E6E]", cellRenderer: { kind: "note" } },
 ]
 
-const alarmColumns: ResourceTableColumn[] = [
+const alarmColumns: TableColumn[] = [
   { key: "plateNumber", label: "车牌号", filterType: "text", cellClass: "font-medium text-[#1F1F1F]" },
   { key: "company", label: "所属企业", filterType: "text" },
   { key: "riskLevel", label: "风险等级", filterType: "tag" },
@@ -80,7 +80,7 @@ const alarmColumns: ResourceTableColumn[] = [
   { key: "note", label: "备注", filterType: "none", headerClass: "w-full", cellClass: "w-full text-[#6E6E6E]", cellRenderer: { kind: "note" } },
 ]
 
-const inspectionColumns: ResourceTableColumn[] = [
+const inspectionColumns: TableColumn[] = [
   { key: "plateNumber", label: "车牌号", filterType: "text", cellClass: "font-medium text-[#1F1F1F]" },
   { key: "company", label: "所属企业", filterType: "text" },
   { key: "annualCheck", label: "年检日期", filterType: "time" },
@@ -89,16 +89,16 @@ const inspectionColumns: ResourceTableColumn[] = [
   { key: "note", label: "备注", filterType: "none", headerClass: "w-full", cellClass: "w-full text-[#6E6E6E]", cellRenderer: { kind: "note" } },
 ]
 
-const operatingTextFilters: Record<string, ResourceTextFilterState> = {
+const operatingTextFilters: Record<string, TextFilterState> = {
   "车牌号": { enabled: false, operator: "contains", query: "", placeholder: "输入车牌号" },
   "所属企业": { enabled: false, operator: "contains", query: "", placeholder: "输入企业名称" },
 }
 
-const operatingNumberFilters: Record<string, ResourceNumberFilterState> = {
+const operatingNumberFilters: Record<string, NumberFilterState> = {
   "在线率": { enabled: false, operator: "gte", query: "", placeholder: "输入在线率" },
 }
 
-const operatingTagFilters: Record<string, ResourceTagFilterState> = {
+const operatingTagFilters: Record<string, TagFilterState> = {
   "车辆类型": { enabled: false, operator: "equals", values: [] },
   "所属区域": { enabled: false, operator: "equals", values: [] },
 }
@@ -111,7 +111,7 @@ const operatingSortFieldOptions: SortFieldOption[] = [
   { value: "onlineRate", label: "在线率", kind: "metric" },
 ]
 
-const operatingVehiclesPageConfig: ResourceListPageConfig<OperatingVehicleRecord, string> = {
+const operatingVehiclesPageConfig: ListPageConfig<OperatingVehicleRecord, string> = {
   title: "车辆",
   columns: operatingColumns,
   defaultVisibleFilterKeys: ["车牌号", "所属企业", "车辆类型"],
@@ -148,13 +148,13 @@ const operatingVehiclesPageConfig: ResourceListPageConfig<OperatingVehicleRecord
   isSortField: value => typeof value === "string" && operatingSortFieldOptions.some(option => option.value === value),
 }
 
-const alarmTextFilters: Record<string, ResourceTextFilterState> = {
+const alarmTextFilters: Record<string, TextFilterState> = {
   "车牌号": { enabled: false, operator: "contains", query: "", placeholder: "输入车牌号" },
   "所属企业": { enabled: false, operator: "contains", query: "", placeholder: "输入企业名称" },
   "最新报警": { enabled: false, operator: "contains", query: "", placeholder: "输入报警类型" },
 }
 
-const alarmTagFilters: Record<string, ResourceTagFilterState> = {
+const alarmTagFilters: Record<string, TagFilterState> = {
   "风险等级": { enabled: false, operator: "equals", values: [] },
   "处理状态": { enabled: false, operator: "equals", values: [] },
 }
@@ -167,7 +167,7 @@ const alarmSortFieldOptions: SortFieldOption[] = [
   { value: "status", label: "处理状态", kind: "text" },
 ]
 
-const alarmVehiclesPageConfig: ResourceListPageConfig<AlarmVehicleRecord, string> = {
+const alarmVehiclesPageConfig: ListPageConfig<AlarmVehicleRecord, string> = {
   title: "车辆",
   columns: alarmColumns,
   defaultVisibleFilterKeys: ["车牌号", "风险等级", "处理状态"],
@@ -203,12 +203,12 @@ const alarmVehiclesPageConfig: ResourceListPageConfig<AlarmVehicleRecord, string
   isSortField: value => typeof value === "string" && alarmSortFieldOptions.some(option => option.value === value),
 }
 
-const inspectionTextFilters: Record<string, ResourceTextFilterState> = {
+const inspectionTextFilters: Record<string, TextFilterState> = {
   "车牌号": { enabled: false, operator: "contains", query: "", placeholder: "输入车牌号" },
   "所属企业": { enabled: false, operator: "contains", query: "", placeholder: "输入企业名称" },
 }
 
-const inspectionDateFilters: Record<string, ResourceDateFilterState> = {
+const inspectionDateFilters: Record<string, DateFilterState> = {
   "年检日期": { enabled: false, operator: "equals", preset: "custom", startDate: "", endDate: "" },
   "最近维保": { enabled: false, operator: "equals", preset: "custom", startDate: "", endDate: "" },
   "下次复核": { enabled: false, operator: "equals", preset: "custom", startDate: "", endDate: "" },
@@ -222,7 +222,7 @@ const inspectionSortFieldOptions: SortFieldOption[] = [
   { value: "nextReview", label: "下次复核", kind: "text" },
 ]
 
-const inspectionVehiclesPageConfig: ResourceListPageConfig<InspectionVehicleRecord, string> = {
+const inspectionVehiclesPageConfig: ListPageConfig<InspectionVehicleRecord, string> = {
   title: "车辆",
   columns: inspectionColumns,
   defaultVisibleFilterKeys: ["车牌号", "年检日期", "下次复核"],
@@ -256,17 +256,17 @@ const inspectionVehiclesPageConfig: ResourceListPageConfig<InspectionVehicleReco
 
 const activeTab = ref(VEHICLE_TAB_OVERVIEW)
 
-const operatingController = useResourceListController<OperatingVehicleRecord, string>({
+const operatingController = useListController<OperatingVehicleRecord, string>({
   rows: operatingVehicles,
   ...operatingVehiclesPageConfig,
 })
 
-const alarmController = useResourceListController<AlarmVehicleRecord, string>({
+const alarmController = useListController<AlarmVehicleRecord, string>({
   rows: alarmVehicles,
   ...alarmVehiclesPageConfig,
 })
 
-const inspectionController = useResourceListController<InspectionVehicleRecord, string>({
+const inspectionController = useListController<InspectionVehicleRecord, string>({
   rows: inspectionVehicles,
   ...inspectionVehiclesPageConfig,
 })
@@ -356,7 +356,7 @@ function handleUpdateDateFilter(payload: Parameters<typeof activeController.valu
   activeController.value.updateDateFilter(payload.label, payload.value)
 }
 
-function vehiclesPageTabs(activeTab: string): ResourceHeaderTab[] {
+function vehiclesPageTabs(activeTab: string): HeaderTab[] {
   return [
     {
       label: "运营车辆",
@@ -441,7 +441,7 @@ function getDaysUntil(dateString: string) {
 </script>
 
 <template>
-  <ResourceListPage
+  <ListPage
     title="车辆"
     :count="activeCount"
     :tabs="tabs"

@@ -1,16 +1,16 @@
 <script setup lang="ts">
 import companiesData from "@/data/companies.json"
-import ResourceListPage from "@/components/resource/ResourceListPage.vue"
+import ListPage from "@/components/resource/ListPage.vue"
 import type { SortFieldOption } from "@/components/resource/SortPopover.vue"
 import type {
-  ResourceDateFilterState,
-  ResourceNumberFilterState,
-  ResourceTableColumn,
-  ResourceTagFilterState,
-  ResourceTextFilterState,
+  DateFilterState,
+  NumberFilterState,
+  TableColumn,
+  TagFilterState,
+  TextFilterState,
 } from "@/components/resource/types"
-import { useResourceListController } from "@/components/resource/useResourceListController"
-import type { ResourceListPageConfig } from "@/components/resource/useResourceListController"
+import { useListController } from "@/components/resource/useListController"
+import type { ListPageConfig } from "@/components/resource/useListController"
 
 type CompanyRecord = {
   id: number
@@ -29,26 +29,26 @@ type CompanyRecord = {
 
 const ALL_COMPANIES_TAB = "all"
 
-const FIXED_FILTERS: Record<string, ResourceTextFilterState> = {
+const FIXED_FILTERS: Record<string, TextFilterState> = {
   "在页面中": { enabled: false, operator: "contains", query: "", placeholder: "输入页面内筛选条件" },
 }
 
-const INITIAL_TEXT_FILTERS: Record<string, ResourceTextFilterState> = {
+const INITIAL_TEXT_FILTERS: Record<string, TextFilterState> = {
   "企业名称": { enabled: false, operator: "contains", query: "", placeholder: "输入企业名称" },
   "法人信息": { enabled: false, operator: "contains", query: "", placeholder: "输入法人或手机号" },
 }
 
-const INITIAL_NUMBER_FILTERS: Record<string, ResourceNumberFilterState> = {
+const INITIAL_NUMBER_FILTERS: Record<string, NumberFilterState> = {
   "车辆总数": { enabled: false, operator: "equals", query: "", placeholder: "输入车辆总数" },
   "服务剩余时长": { enabled: false, operator: "equals", query: "", placeholder: "输入剩余时长" },
 }
 
-const INITIAL_TAG_FILTERS: Record<string, ResourceTagFilterState> = {
+const INITIAL_TAG_FILTERS: Record<string, TagFilterState> = {
   "企业类型": { enabled: false, operator: "equals", values: [] },
   "行政区域": { enabled: false, operator: "equals", values: [] },
 }
 
-const INITIAL_DATE_FILTERS: Record<string, ResourceDateFilterState> = {
+const INITIAL_DATE_FILTERS: Record<string, DateFilterState> = {
   "开始日期": { enabled: false, operator: "equals", preset: "custom", startDate: "", endDate: "" },
   "结束日期": { enabled: false, operator: "equals", preset: "custom", startDate: "", endDate: "" },
 }
@@ -64,7 +64,7 @@ const companiesSortFieldOptions: SortFieldOption[] = [
   { value: "endDate", label: "结束日期", kind: "text" },
 ]
 
-const companiesColumns: ResourceTableColumn[] = [
+const companiesColumns: TableColumn[] = [
   { key: "name", label: "企业名称", filterType: "text", headerClass: "pr-3", cellClass: "font-medium text-[#1F1F1F]" },
   { key: "type", label: "企业类型", filterType: "tag", cellClass: "text-[#3F3F3F]" },
   { key: "district", label: "行政区域", filterType: "tag", cellClass: "text-[#3F3F3F]" },
@@ -97,7 +97,7 @@ const companiesColumns: ResourceTableColumn[] = [
   { key: "note", label: "备注", filterType: "none", headerClass: "w-full", cellClass: "w-full text-[#6E6E6E]", cellRenderer: { kind: "note" } },
 ]
 
-const companiesPageConfig: ResourceListPageConfig<CompanyRecord, string> = {
+const companiesPageConfig: ListPageConfig<CompanyRecord, string> = {
   title: "企业",
   primaryActionLabel: "添加企业",
   columns: companiesColumns,
@@ -180,7 +180,7 @@ const companies = (companiesData as RawCompanyRecord[]).map((company) => {
   }
 })
 
-const controller = useResourceListController<CompanyRecord, string>({
+const controller = useListController<CompanyRecord, string>({
   rows: companies,
   ...companiesPageConfig,
 })
@@ -222,7 +222,7 @@ function getCompanyTypes(rows: CompanyRecord[]) {
 </script>
 
 <template>
-  <ResourceListPage
+  <ListPage
     :title="companiesPageConfig.title ?? '企业'"
     :count="controller.visibleRows.value.length"
     :tabs="controller.tabs.value"

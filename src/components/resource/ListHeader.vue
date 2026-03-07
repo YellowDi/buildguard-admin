@@ -9,30 +9,30 @@ import TagFilterPopover from "@/components/resource/TagFilterPopover.vue"
 import TextFilterPopover from "@/components/resource/TextFilterPopover.vue"
 import type { SortFieldOption, SortRule } from "@/components/resource/SortPopover.vue"
 import type {
-  ResourceDateFilterState,
-  ResourceHeaderField,
-  ResourceNumberFilterState,
-  ResourceHeaderTab,
-  ResourceTagFilterState,
-  ResourceTextFilterState,
+  DateFilterState,
+  HeaderField,
+  HeaderTab,
+  NumberFilterState,
+  TagFilterState,
+  TextFilterState,
 } from "@/components/resource/types"
 
 const props = withDefaults(defineProps<{
   title: string
   count: number
-  tabs: ResourceHeaderTab[]
-  fields: ResourceHeaderField[]
+  tabs: HeaderTab[]
+  fields: HeaderField[]
   availableFilters?: string[]
   showControls: boolean
   customSortEnabled: boolean
   sortRules: SortRule[]
   sortFieldOptions?: SortFieldOption[]
   searchQuery: string
-  textFilters?: Record<string, ResourceTextFilterState>
-  numberFilters?: Record<string, ResourceNumberFilterState>
-  tagFilters?: Record<string, ResourceTagFilterState>
+  textFilters?: Record<string, TextFilterState>
+  numberFilters?: Record<string, NumberFilterState>
+  tagFilters?: Record<string, TagFilterState>
   tagFilterOptions?: Record<string, string[]>
-  dateFilters?: Record<string, ResourceDateFilterState>
+  dateFilters?: Record<string, DateFilterState>
   dateFilterFields?: string[]
   primaryActionLabel?: string
 }>(), {
@@ -48,17 +48,17 @@ const props = withDefaults(defineProps<{
 })
 
 const emit = defineEmits<{
-  "tab-click": [tab: ResourceHeaderTab]
+  "tab-click": [tab: HeaderTab]
   "toggle-controls": []
   "set-custom-sort-enabled": [enabled: boolean]
   "update-sort-rules": [rules: SortRule[]]
   "update-search-query": [query: string]
-  "update-text-filter": [payload: { label: string; value: ResourceTextFilterState }]
-  "update-number-filter": [payload: { label: string; value: ResourceNumberFilterState }]
-  "update-tag-filter": [payload: { label: string; value: ResourceTagFilterState }]
-  "update-date-filter": [payload: { label: string; value: ResourceDateFilterState }]
+  "update-text-filter": [payload: { label: string; value: TextFilterState }]
+  "update-number-filter": [payload: { label: string; value: NumberFilterState }]
+  "update-tag-filter": [payload: { label: string; value: TagFilterState }]
+  "update-date-filter": [payload: { label: string; value: DateFilterState }]
   "add-filter": [key: string]
-  "replace-filter": [payload: { from: string; to: string; value?: ResourceDateFilterState }]
+  "replace-filter": [payload: { from: string; to: string; value?: DateFilterState }]
   "remove-filter": [key: string]
   "primary-action": []
 }>()
@@ -154,11 +154,11 @@ function handleSortRulesChange(rules: SortRule[]) {
   emit("update-sort-rules", rules)
 }
 
-function handleTextFilterChange(label: string, value: ResourceTextFilterState) {
+function handleTextFilterChange(label: string, value: TextFilterState) {
   emit("update-text-filter", { label, value })
 }
 
-function handleDateFilterChange(label: string, value: ResourceDateFilterState) {
+function handleDateFilterChange(label: string, value: DateFilterState) {
   emit("update-date-filter", { label, value })
 }
 
@@ -175,15 +175,15 @@ function handleDateFilterFieldSwitch(currentKey: string, nextKey: string) {
   openPopover.value = nextKey
 }
 
-function handleNumberFilterChange(label: string, value: ResourceNumberFilterState) {
+function handleNumberFilterChange(label: string, value: NumberFilterState) {
   emit("update-number-filter", { label, value })
 }
 
-function handleTagFilterChange(label: string, value: ResourceTagFilterState) {
+function handleTagFilterChange(label: string, value: TagFilterState) {
   emit("update-tag-filter", { label, value })
 }
 
-function isFieldActive(field: ResourceHeaderField) {
+function isFieldActive(field: HeaderField) {
   if (field.kind === "sort") {
     return field.accent || (openPopover.value === "sort-popover" && sortPopoverSource.value === "chip")
   }

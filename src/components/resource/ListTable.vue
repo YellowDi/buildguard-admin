@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from "vue"
 
-import type { ResourceTableColumn } from "@/components/resource/types"
+import type { TableColumn } from "@/components/resource/types"
 
 const props = withDefaults(defineProps<{
-  columns: ResourceTableColumn[]
+  columns: TableColumn[]
   rows: Record<string, unknown>[]
   rowKey: string | ((row: Record<string, unknown>, index: number) => string | number)
   summary?: string
@@ -59,7 +59,7 @@ function getArrayValue(value: unknown) {
   return stringValue ? [stringValue] : []
 }
 
-function getProgressPercent(row: Record<string, unknown>, column: ResourceTableColumn) {
+function getProgressPercent(row: Record<string, unknown>, column: TableColumn) {
   if (column.cellRenderer?.kind !== "progress") {
     return 0
   }
@@ -75,7 +75,7 @@ function getProgressPercent(row: Record<string, unknown>, column: ResourceTableC
   return Math.max(0, Math.min(100, (numericValue / max) * 100))
 }
 
-function isRightAlignedColumn(column: ResourceTableColumn) {
+function isRightAlignedColumn(column: TableColumn) {
   return column.filterType === "number" || column.cellRenderer?.kind === "metric-unit"
 }
 

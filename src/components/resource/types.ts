@@ -1,11 +1,11 @@
-export type ResourceHeaderTab = {
+export type HeaderTab = {
   label: string
   value?: string | number
   count?: number
   active: boolean
 }
 
-export type ResourceHeaderField = {
+export type HeaderField = {
   key: string
   icon: string
   label: string
@@ -24,7 +24,7 @@ export type TextFilterOperator =
   | "isEmpty"
   | "isNotEmpty"
 
-export type ResourceTextFilterState = {
+export type TextFilterState = {
   enabled: boolean
   operator: TextFilterOperator
   query: string
@@ -33,7 +33,7 @@ export type ResourceTextFilterState = {
 
 export type NumberFilterOperator = "equals" | "notEquals" | "gt" | "lt" | "gte" | "lte" | "isEmpty" | "isNotEmpty"
 
-export type ResourceNumberFilterState = {
+export type NumberFilterState = {
   enabled: boolean
   operator: NumberFilterOperator
   query: string
@@ -42,13 +42,13 @@ export type ResourceNumberFilterState = {
 
 export type TagFilterOperator = "equals" | "notEquals" | "isEmpty" | "isNotEmpty"
 
-export type ResourceTagFilterState = {
+export type TagFilterState = {
   enabled: boolean
   operator: TagFilterOperator
   values: string[]
 }
 
-export type ResourceDateFilterOperator =
+export type DateFilterOperator =
   | "equals"
   | "before"
   | "after"
@@ -59,7 +59,7 @@ export type ResourceDateFilterOperator =
   | "isEmpty"
   | "isNotEmpty"
 
-export type ResourceDateFilterPreset =
+export type DateFilterPreset =
   | "today"
   | "tomorrow"
   | "yesterday"
@@ -69,20 +69,20 @@ export type ResourceDateFilterPreset =
   | "oneMonthAfter"
   | "custom"
 
-export type ResourceDateFilterState = {
+export type DateFilterState = {
   enabled: boolean
-  operator: ResourceDateFilterOperator
-  preset: ResourceDateFilterPreset
+  operator: DateFilterOperator
+  preset: DateFilterPreset
   startDate: string
   endDate: string
 }
 
-export type ResourceFilterType = "text" | "tag" | "number" | "contact" | "time" | "none"
+export type FilterType = "text" | "tag" | "number" | "contact" | "time" | "none"
 
-export type ResourceTableColumn = {
+export type TableColumn = {
   key: string
   label: string
-  filterType?: ResourceFilterType
+  filterType?: FilterType
   headerClass?: string
   cellClass?: string
   slot?: string
@@ -126,9 +126,9 @@ export type ResourceTableColumn = {
       }
 }
 
-export type ResourceTableSection = {
+export type TableSection = {
   key: string | number
-  columns: ResourceTableColumn[]
+  columns: TableColumn[]
   rows: Record<string, unknown>[]
   rowKey: string | ((row: Record<string, unknown>, index: number) => string | number)
   summary?: string
@@ -138,9 +138,9 @@ export type ResourceTableSection = {
   tableClass?: string
 }
 
-export type ResourceFilterStateMaps = {
-  text: Record<string, ResourceTextFilterState>
-  number: Record<string, ResourceNumberFilterState>
-  tag: Record<string, ResourceTagFilterState>
-  date: Record<string, ResourceDateFilterState>
+export type FilterStateMaps = {
+  text: Record<string, TextFilterState>
+  number: Record<string, NumberFilterState>
+  tag: Record<string, TagFilterState>
+  date: Record<string, DateFilterState>
 }

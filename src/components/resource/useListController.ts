@@ -2,36 +2,36 @@ import { computed, onMounted, ref, watch, type ComputedRef, type Ref } from "vue
 
 import type { SortFieldOption, SortRule } from "@/components/resource/SortPopover.vue"
 import type {
-  ResourceDateFilterState,
-  ResourceFilterStateMaps,
-  ResourceFilterType,
-  ResourceHeaderField,
-  ResourceHeaderTab,
-  ResourceNumberFilterState,
-  ResourceTableColumn,
-  ResourceTagFilterState,
-  ResourceTextFilterState,
+  DateFilterState,
+  FilterStateMaps,
+  FilterType,
+  HeaderField,
+  HeaderTab,
+  NumberFilterState,
+  TableColumn,
+  TagFilterState,
+  TextFilterState,
 } from "@/components/resource/types"
 
 type MaybeRows<Row> = Row[] | Ref<Row[]> | ComputedRef<Row[]>
 
-type ResourceListControllerConfig<Row, TabValue extends string | number = string | number> = {
+type ListControllerConfig<Row, TabValue extends string | number = string | number> = {
   rows: MaybeRows<Row>
   title?: string
   primaryActionLabel?: string
-  columns: ResourceTableColumn[]
+  columns: TableColumn[]
   defaultVisibleFilterKeys?: string[]
-  fixedTextFilters?: Record<string, ResourceTextFilterState>
-  textFilters?: Record<string, ResourceTextFilterState>
-  numberFilters?: Record<string, ResourceNumberFilterState>
-  tagFilters?: Record<string, ResourceTagFilterState>
-  dateFilters?: Record<string, ResourceDateFilterState>
+  fixedTextFilters?: Record<string, TextFilterState>
+  textFilters?: Record<string, TextFilterState>
+  numberFilters?: Record<string, NumberFilterState>
+  tagFilters?: Record<string, TagFilterState>
+  dateFilters?: Record<string, DateFilterState>
   tagFilterOptions?: (rows: Row[]) => Record<string, string[]>
   initialSortRules?: SortRule[]
   sortStorageKey?: string
   sortFieldOptions?: SortFieldOption[]
   defaultTab: TabValue
-  buildTabs: (rows: Row[], selectedTab: TabValue) => ResourceHeaderTab[]
+  buildTabs: (rows: Row[], selectedTab: TabValue) => HeaderTab[]
   matchesTab: (row: Row, selectedTab: TabValue) => boolean
   buildSearchText: (row: Row) => string
   getFilterValue: (key: string, row: Row) => string
@@ -40,8 +40,8 @@ type ResourceListControllerConfig<Row, TabValue extends string | number = string
   isSortField?: (value: unknown) => boolean
 }
 
-export type ResourceListPageConfig<Row, TabValue extends string | number = string | number> = Omit<
-  ResourceListControllerConfig<Row, TabValue>,
+export type ListPageConfig<Row, TabValue extends string | number = string | number> = Omit<
+  ListControllerConfig<Row, TabValue>,
   "rows"
 >
 
@@ -59,8 +59,8 @@ function cloneRecord<T extends Record<string, unknown>>(record?: T) {
   ) as T
 }
 
-export function useResourceListController<Row, TabValue extends string | number = string | number>(
-  config: ResourceListControllerConfig<Row, TabValue>,
+export function useListController<Row, TabValue extends string | number = string | number>(
+  config: ListControllerConfig<Row, TabValue>,
 ) {
   const rows = computed(() => toPlainRows(config.rows))
   const showControls = ref(true)
@@ -69,13 +69,13 @@ export function useResourceListController<Row, TabValue extends string | number 
   const selectedTab = ref<TabValue>(config.defaultTab)
   const visibleFilterKeys = ref<string[]>([...(config.defaultVisibleFilterKeys ?? [])])
 
-  const textFilters = ref<ResourceFilterStateMaps["text"]>({
+  const textFilters = ref<FilterStateMaps["text"]>({
     ...cloneRecord(config.textFilters),
     ...cloneRecord(config.fixedTextFilters),
   })
-  const numberFilters = ref<ResourceFilterStateMaps["number"]>(cloneRecord(config.numberFilters))
-  const tagFilters = ref<ResourceFilterStateMaps["tag"]>(cloneRecord(config.tagFilters))
-  const dateFilters = ref<ResourceFilterStateMaps["date"]>(cloneRecord(config.dateFilters))
+  const numberFilters = ref<FilterStateMaps["number"]>(cloneRecord(config.numberFilters))
+  const tagFilters = ref<FilterStateMaps["tag"]>(cloneRecord(config.tagFilters))
+  const dateFilters = ref<FilterStateMaps["date"]>(cloneRecord(config.dateFilters))
   const sortRules = ref<SortRule[]>([...(config.initialSortRules ?? [])])
 
   const fixedFilterKeys = Object.keys(config.fixedTextFilters ?? {})
@@ -86,7 +86,7 @@ export function useResourceListController<Row, TabValue extends string | number 
   const tabs = computed(() => config.buildTabs(rows.value, selectedTab.value))
   const primarySortRule = computed(() => sortRules.value[0] ?? null)
 
-  const fields = computed<ResourceHeaderField[]>(() => [
+  const fields = computed<HeaderField[]>(() => [
     ...(customSortEnabled.value && sortRules.value.length
       ? [{
           key: "sort",
@@ -95,7 +95,7 @@ export function useResourceListController<Row, TabValue extends string | number 
           accent: customSortEnabled.value,
           arrow: true,
           kind: "sort",
-        } as ResourceHeaderField]
+        } as HeaderField]
       : []),
     ...visibleFilterKeys.value.map((key) => buildFilterField(key)),
     ...fixedFilterKeys.map((key) => buildFilterField(key)),
@@ -147,7 +147,7 @@ export function useResourceListController<Row, TabValue extends string | number 
     return config.columns.find((column) => column.label === label)
   }
 
-  function buildFilterField(key: string): ResourceHeaderField {
+  function buildFilterField(key: string): HeaderField {
     const isFixed = fixedFilterKeys.includes(key)
     const filterColumn = getFilterColumnByLabel(key)
     const filterType = isFixed ? "text" : filterColumn?.filterType ?? "text"
@@ -180,7 +180,7 @@ export function useResourceListController<Row, TabValue extends string | number 
     }
   }
 
-  function getFilterIcon(filterType: ResourceFilterType) {
+  function getFilterIcon(filterType: FilterType) {
     if (filterType === "tag") return "ri-price-tag-3-line"
     if (filterType === "number") return "ri-hashtag"
     if (filterType === "contact") return "ri-user-line"
@@ -192,19 +192,19 @@ export function useResourceListController<Row, TabValue extends string | number 
     selectedTab.value = `${tab.value ?? tab.label}` as TabValue
   }
 
-  function updateTextFilter(label: string, value: ResourceTextFilterState) {
+  function updateTextFilter(label: string, value: TextFilterState) {
     textFilters.value[label] = value
   }
 
-  function updateNumberFilter(label: string, value: ResourceNumberFilterState) {
+  function updateNumberFilter(label: string, value: NumberFilterState) {
     numberFilters.value[label] = value
   }
 
-  function updateTagFilter(label: string, value: ResourceTagFilterState) {
+  function updateTagFilter(label: string, value: TagFilterState) {
     tagFilters.value[label] = value
   }
 
-  function updateDateFilter(label: string, value: ResourceDateFilterState) {
+  function updateDateFilter(label: string, value: DateFilterState) {
     dateFilters.value[label] = value
   }
 
@@ -216,7 +216,7 @@ export function useResourceListController<Row, TabValue extends string | number 
     visibleFilterKeys.value = [...visibleFilterKeys.value, key]
   }
 
-  function handleReplaceFilter(payload: { from: string; to: string; value?: ResourceDateFilterState }) {
+  function handleReplaceFilter(payload: { from: string; to: string; value?: DateFilterState }) {
     if (payload.from === payload.to) {
       return
     }
@@ -312,7 +312,7 @@ export function useResourceListController<Row, TabValue extends string | number 
     }
   }
 
-  function matchesFilter(filterType: ResourceFilterType | undefined, key: string, row: Row) {
+function matchesFilter(filterType: FilterType | undefined, key: string, row: Row) {
     const source = config.getFilterValue(key, row)
     if (filterType === "number") return matchesNumberFilter(source, numberFilters.value[key])
     if (filterType === "time") return matchesDateFilter(source, dateFilters.value[key])
@@ -388,7 +388,7 @@ export function useResourceListController<Row, TabValue extends string | number 
   }
 }
 
-function matchesTextFilter(source: string, filter?: ResourceTextFilterState) {
+function matchesTextFilter(source: string, filter?: TextFilterState) {
   if (!filter?.enabled) return true
   const normalizedSource = source.toLowerCase()
   const query = filter.query.trim().toLowerCase()
@@ -403,7 +403,7 @@ function matchesTextFilter(source: string, filter?: ResourceTextFilterState) {
   return normalizedSource.includes(query)
 }
 
-function matchesNumberFilter(source: string, filter?: ResourceNumberFilterState) {
+function matchesNumberFilter(source: string, filter?: NumberFilterState) {
   if (!filter?.enabled) return true
   const normalizedSource = source.trim()
   if (filter.operator === "isEmpty") return normalizedSource.length === 0
@@ -419,7 +419,7 @@ function matchesNumberFilter(source: string, filter?: ResourceNumberFilterState)
   return sourceValue <= queryValue
 }
 
-function matchesTagFilter(source: string, filter?: ResourceTagFilterState) {
+function matchesTagFilter(source: string, filter?: TagFilterState) {
   if (!filter?.enabled) return true
   const normalizedSource = source.trim()
   if (filter.operator === "isEmpty") return normalizedSource.length === 0
@@ -429,7 +429,7 @@ function matchesTagFilter(source: string, filter?: ResourceTagFilterState) {
   return filter.operator === "notEquals" ? !matched : matched
 }
 
-function matchesDateFilter(source: string, filter?: ResourceDateFilterState) {
+function matchesDateFilter(source: string, filter?: DateFilterState) {
   if (!filter?.enabled) return true
   const normalizedSource = source.trim()
   if (filter.operator === "isEmpty") return normalizedSource.length === 0
@@ -621,7 +621,7 @@ function parseChineseMonth(value: string) {
   return map[value] ?? 0
 }
 
-function getTextFilterSummary(label: string, filter?: ResourceTextFilterState) {
+function getTextFilterSummary(label: string, filter?: TextFilterState) {
   if (!filter?.enabled) return label
   const operatorLabel = getTextFilterOperatorLabel(filter.operator)
   if (filter.operator === "isEmpty" || filter.operator === "isNotEmpty") return `${label} ${operatorLabel}`
@@ -629,7 +629,7 @@ function getTextFilterSummary(label: string, filter?: ResourceTextFilterState) {
   return query ? `${label} ${operatorLabel} ${query}` : label
 }
 
-function getNumberFilterSummary(label: string, filter?: ResourceNumberFilterState) {
+function getNumberFilterSummary(label: string, filter?: NumberFilterState) {
   if (!filter?.enabled) return label
   const operatorLabel = getNumberFilterOperatorLabel(filter.operator)
   if (filter.operator === "isEmpty" || filter.operator === "isNotEmpty") return `${label} ${operatorLabel}`
@@ -637,7 +637,7 @@ function getNumberFilterSummary(label: string, filter?: ResourceNumberFilterStat
   return query ? `${label} ${operatorLabel} ${query}` : label
 }
 
-function getTagFilterSummary(label: string, filter?: ResourceTagFilterState) {
+function getTagFilterSummary(label: string, filter?: TagFilterState) {
   if (!filter?.enabled) return label
   const operatorLabel = getTagFilterOperatorLabel(filter.operator)
   if (filter.operator === "isEmpty" || filter.operator === "isNotEmpty") return `${label} ${operatorLabel}`
@@ -645,7 +645,7 @@ function getTagFilterSummary(label: string, filter?: ResourceTagFilterState) {
   return filter.values.length === 1 ? `${label} ${operatorLabel} ${filter.values[0]}` : `${label} ${operatorLabel} ${filter.values.length} 项`
 }
 
-function getDateFilterSummary(label: string, filter?: ResourceDateFilterState) {
+function getDateFilterSummary(label: string, filter?: DateFilterState) {
   if (!filter?.enabled) return label
   const operatorLabel = getDateFilterOperatorLabel(filter.operator)
   if (filter.operator === "isEmpty" || filter.operator === "isNotEmpty") return `${label} ${operatorLabel}`
@@ -653,7 +653,7 @@ function getDateFilterSummary(label: string, filter?: ResourceDateFilterState) {
   return filter.startDate ? `${label} ${operatorLabel} ${filter.startDate}` : label
 }
 
-function getTextFilterOperatorLabel(operator: ResourceTextFilterState["operator"]) {
+function getTextFilterOperatorLabel(operator: TextFilterState["operator"]) {
   if (operator === "equals") return "是"
   if (operator === "notEquals") return "不是"
   if (operator === "notContains") return "不包含"
@@ -664,7 +664,7 @@ function getTextFilterOperatorLabel(operator: ResourceTextFilterState["operator"
   return "包含"
 }
 
-function getNumberFilterOperatorLabel(operator: ResourceNumberFilterState["operator"]) {
+function getNumberFilterOperatorLabel(operator: NumberFilterState["operator"]) {
   if (operator === "notEquals") return "≠"
   if (operator === "gt") return ">"
   if (operator === "lt") return "<"
@@ -675,14 +675,14 @@ function getNumberFilterOperatorLabel(operator: ResourceNumberFilterState["opera
   return "="
 }
 
-function getTagFilterOperatorLabel(operator: ResourceTagFilterState["operator"]) {
+function getTagFilterOperatorLabel(operator: TagFilterState["operator"]) {
   if (operator === "notEquals") return "不是"
   if (operator === "isEmpty") return "为空白"
   if (operator === "isNotEmpty") return "不为空白"
   return "是"
 }
 
-function getDateFilterOperatorLabel(operator: ResourceDateFilterState["operator"]) {
+function getDateFilterOperatorLabel(operator: DateFilterState["operator"]) {
   if (operator === "before") return "早于"
   if (operator === "after") return "晚于"
   if (operator === "onOrBefore") return "不晚于"

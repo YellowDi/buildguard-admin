@@ -1,17 +1,17 @@
 <script setup lang="ts">
 import { ref } from "vue"
 
-import type { ResourceTextFilterState, TextFilterOperator } from "@/components/resource/types"
+import type { TextFilterOperator, TextFilterState } from "@/components/resource/types"
 
 const props = defineProps<{
   title: string
-  value: ResourceTextFilterState
+  value: TextFilterState
 }>()
 
 const emit = defineEmits<{
   close: []
   remove: []
-  "update:value": [value: ResourceTextFilterState]
+  "update:value": [value: TextFilterState]
 }>()
 
 const openMenu = ref(false)
@@ -55,7 +55,7 @@ function handleClearQuery() {
   handleQueryInput("")
 }
 
-function handleOperatorSelect(operator: TextFilterOperator, currentValue: ResourceTextFilterState) {
+function handleOperatorSelect(operator: TextFilterOperator, currentValue: TextFilterState) {
   const nextQuery = operatorNeedsInput(operator) ? currentValue.query : ""
   emit("update:value", {
     ...currentValue,

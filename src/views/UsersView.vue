@@ -1,16 +1,16 @@
 <script setup lang="ts">
 import usersData from "@/data/users.json"
-import ResourceListPage from "@/components/resource/ResourceListPage.vue"
+import ListPage from "@/components/resource/ListPage.vue"
 import type { SortFieldOption } from "@/components/resource/SortPopover.vue"
 import type {
-  ResourceDateFilterState,
-  ResourceNumberFilterState,
-  ResourceTableColumn,
-  ResourceTagFilterState,
-  ResourceTextFilterState,
+  DateFilterState,
+  NumberFilterState,
+  TableColumn,
+  TagFilterState,
+  TextFilterState,
 } from "@/components/resource/types"
-import { useResourceListController } from "@/components/resource/useResourceListController"
-import type { ResourceListPageConfig } from "@/components/resource/useResourceListController"
+import { useListController } from "@/components/resource/useListController"
+import type { ListPageConfig } from "@/components/resource/useListController"
 
 type PractitionerRecord = {
   id: number
@@ -31,27 +31,27 @@ type RawPractitionerRecord = Omit<PractitionerRecord, "profileDisplay">
 
 const ALL_PRACTITIONERS_TAB = "all"
 
-const FIXED_FILTERS: Record<string, ResourceTextFilterState> = {
+const FIXED_FILTERS: Record<string, TextFilterState> = {
   "在页面中": { enabled: false, operator: "contains", query: "", placeholder: "输入页面内筛选条件" },
 }
 
-const INITIAL_TEXT_FILTERS: Record<string, ResourceTextFilterState> = {
+const INITIAL_TEXT_FILTERS: Record<string, TextFilterState> = {
   "从业人员": { enabled: false, operator: "contains", query: "", placeholder: "输入姓名或手机号" },
   "所属企业": { enabled: false, operator: "contains", query: "", placeholder: "输入企业名称" },
 }
 
-const INITIAL_NUMBER_FILTERS: Record<string, ResourceNumberFilterState> = {
+const INITIAL_NUMBER_FILTERS: Record<string, NumberFilterState> = {
   "从业年限": { enabled: false, operator: "equals", query: "", placeholder: "输入从业年限" },
 }
 
-const INITIAL_TAG_FILTERS: Record<string, ResourceTagFilterState> = {
+const INITIAL_TAG_FILTERS: Record<string, TagFilterState> = {
   "岗位类型": { enabled: false, operator: "equals", values: [] },
   "行政区域": { enabled: false, operator: "equals", values: [] },
   "证件级别": { enabled: false, operator: "equals", values: [] },
   "状态": { enabled: false, operator: "equals", values: [] },
 }
 
-const INITIAL_DATE_FILTERS: Record<string, ResourceDateFilterState> = {
+const INITIAL_DATE_FILTERS: Record<string, DateFilterState> = {
   "入职日期": { enabled: false, operator: "equals", preset: "custom", startDate: "", endDate: "" },
 }
 
@@ -65,7 +65,7 @@ const practitionersSortFieldOptions: SortFieldOption[] = [
   { value: "joinedAt", label: "入职日期", kind: "text" },
 ]
 
-const practitionersColumns: ResourceTableColumn[] = [
+const practitionersColumns: TableColumn[] = [
   {
     key: "profileDisplay",
     label: "从业人员",
@@ -98,7 +98,7 @@ const practitionersColumns: ResourceTableColumn[] = [
   { key: "note", label: "备注", filterType: "none", headerClass: "w-full", cellClass: "w-full text-[#6E6E6E]", cellRenderer: { kind: "note" } },
 ]
 
-const practitionersPageConfig: ResourceListPageConfig<PractitionerRecord, string> = {
+const practitionersPageConfig: ListPageConfig<PractitionerRecord, string> = {
   title: "从业人员",
   columns: practitionersColumns,
   defaultVisibleFilterKeys: ["从业人员", "所属企业", "岗位类型", "状态"],
@@ -173,7 +173,7 @@ const practitioners = (usersData as RawPractitionerRecord[]).map((practitioner) 
   profileDisplay: `${practitioner.name} ${practitioner.phone}`,
 }))
 
-const controller = useResourceListController<PractitionerRecord, string>({
+const controller = useListController<PractitionerRecord, string>({
   rows: practitioners,
   ...practitionersPageConfig,
 })
@@ -184,7 +184,7 @@ function getStatuses(rows: PractitionerRecord[]) {
 </script>
 
 <template>
-  <ResourceListPage
+  <ListPage
     :title="practitionersPageConfig.title ?? '从业人员'"
     :count="controller.visibleRows.value.length"
     :tabs="controller.tabs.value"
