@@ -22,7 +22,6 @@ type CompanyRecord = {
   phone: string
   startDate: string
   serviceDays: number
-  serviceDaysDisplay: string
   endDate: string
   lastUpdated: string
   note: string
@@ -82,7 +81,17 @@ const companiesColumns: ResourceTableColumn[] = [
       secondaryClass: "text-[#9A9A9A]",
     },
   },
-  { key: "serviceDaysDisplay", label: "服务剩余时长", filterType: "number", cellClass: "text-[#3559E0] tabular-nums" },
+  {
+    key: "serviceDays",
+    label: "服务剩余时长",
+    filterType: "number",
+    cellRenderer: {
+      kind: "metric-unit",
+      unit: "天",
+      valueClass: "tabular-nums text-[#3559E0]",
+      unitClass: "ml-1 text-[12px] text-[#9A9A9A]",
+    },
+  },
   { key: "startDate", label: "开始日期", filterType: "time", cellClass: "tabular-nums text-[#2F2F2F]" },
   { key: "endDate", label: "结束日期", filterType: "time", cellClass: "tabular-nums text-[#2F2F2F]" },
   { key: "note", label: "备注", filterType: "none", headerClass: "w-full", cellClass: "w-full text-[#6E6E6E]", cellRenderer: { kind: "note" } },
@@ -157,7 +166,7 @@ const companiesPageConfig: ResourceListPageConfig<CompanyRecord, string> = {
   isSortField: value => typeof value === "string" && companiesSortFieldOptions.some(option => option.value === value),
 }
 
-type RawCompanyRecord = Omit<CompanyRecord, "startDate" | "endDate" | "serviceDaysDisplay">
+type RawCompanyRecord = Omit<CompanyRecord, "startDate" | "endDate">
 
 const companies = (companiesData as RawCompanyRecord[]).map((company) => {
   const startDate = extractDatePart(company.lastUpdated)
@@ -168,7 +177,6 @@ const companies = (companiesData as RawCompanyRecord[]).map((company) => {
     startDate,
     endDate,
     serviceDays: getRemainingDays(endDate),
-    serviceDaysDisplay: `${getRemainingDays(endDate)} 天`,
   }
 })
 

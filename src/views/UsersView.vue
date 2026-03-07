@@ -22,13 +22,12 @@ type PractitionerRecord = {
   district: string
   certificateLevel: string
   experienceYears: number
-  experienceDisplay: string
   joinedAt: string
   status: string
   note: string
 }
 
-type RawPractitionerRecord = Omit<PractitionerRecord, "profileDisplay" | "experienceDisplay">
+type RawPractitionerRecord = Omit<PractitionerRecord, "profileDisplay">
 
 const ALL_PRACTITIONERS_TAB = "all"
 
@@ -83,7 +82,17 @@ const practitionersColumns: ResourceTableColumn[] = [
   { key: "role", label: "岗位类型", filterType: "tag" },
   { key: "district", label: "行政区域", filterType: "tag" },
   { key: "certificateLevel", label: "证件级别", filterType: "tag" },
-  { key: "experienceDisplay", label: "从业年限", filterType: "number", cellClass: "text-[#3559E0] tabular-nums" },
+  {
+    key: "experienceYears",
+    label: "从业年限",
+    filterType: "number",
+    cellRenderer: {
+      kind: "metric-unit",
+      unit: "年",
+      valueClass: "tabular-nums text-[#3559E0]",
+      unitClass: "ml-1 text-[12px] text-[#9A9A9A]",
+    },
+  },
   { key: "joinedAt", label: "入职日期", filterType: "time", cellClass: "tabular-nums text-[#2F2F2F]" },
   { key: "status", label: "状态", filterType: "tag" },
   { key: "note", label: "备注", filterType: "none", headerClass: "w-full", cellClass: "w-full text-[#6E6E6E]", cellRenderer: { kind: "note" } },
@@ -162,7 +171,6 @@ const practitionersPageConfig: ResourceListPageConfig<PractitionerRecord, string
 const practitioners = (usersData as RawPractitionerRecord[]).map((practitioner) => ({
   ...practitioner,
   profileDisplay: `${practitioner.name} ${practitioner.phone}`,
-  experienceDisplay: `${practitioner.experienceYears} 年`,
 }))
 
 const controller = useResourceListController<PractitionerRecord, string>({

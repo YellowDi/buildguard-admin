@@ -115,6 +115,13 @@ export type ResourceTableColumn = {
         labelClass?: string
       }
     | {
+        kind: "metric-unit"
+        valueKey?: string
+        unit: string
+        valueClass?: string
+        unitClass?: string
+      }
+    | {
         kind: "note"
       }
 }

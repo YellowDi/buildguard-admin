@@ -75,6 +75,10 @@ function getProgressPercent(row: Record<string, unknown>, column: ResourceTableC
   return Math.max(0, Math.min(100, (numericValue / max) * 100))
 }
 
+function isRightAlignedColumn(column: ResourceTableColumn) {
+  return column.filterType === "number" || column.cellRenderer?.kind === "metric-unit"
+}
+
 function updateStickyHeaderState() {
   if (!props.stickyHeader || !tableWrapperRef.value) {
     stickyHeaderActive.value = false
@@ -144,6 +148,7 @@ onBeforeUnmount(() => {
             :class="[
               'border-b border-[#F0F0F0] px-3 py-3 whitespace-nowrap',
               columnIndex > 0 ? 'border-l' : '',
+              isRightAlignedColumn(column) ? 'text-right' : '',
               column.cellClass,
             ]"
           >
@@ -218,6 +223,18 @@ onBeforeUnmount(() => {
                 </div>
                 <span :class="column.cellRenderer.labelClass ?? 'text-[12px] tabular-nums text-[#6B7280]'">
                   {{ getColumnValue(row, column.key) }}
+                </span>
+              </div>
+
+              <div
+                v-else-if="column.cellRenderer?.kind === 'metric-unit'"
+                class="inline-flex items-baseline justify-end"
+              >
+                <span :class="column.cellRenderer.valueClass ?? 'tabular-nums text-[#3559E0]'">
+                  {{ getRendererValue(row, column.cellRenderer.valueKey ?? column.key) }}
+                </span>
+                <span :class="['ml-1', column.cellRenderer.unitClass ?? 'text-[12px] text-[#9A9A9A]']">
+                  {{ column.cellRenderer.unit }}
                 </span>
               </div>
 
