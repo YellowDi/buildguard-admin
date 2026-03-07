@@ -1,22 +1,15 @@
 <script setup lang="ts">
+import ResourceListPage from "@/components/resource/ResourceListPage.vue"
+import { useResourceList } from "@/components/resource/useResourceList"
+import type { ResourceListSchema } from "@/components/resource/types"
 import usersData from "@/data/users.json"
-import ListPage from "@/components/resource/ListPage.vue"
-import type { SortFieldOption } from "@/components/resource/SortPopover.vue"
-import type {
-  DateFilterState,
-  NumberFilterState,
-  TableColumn,
-  TagFilterState,
-  TextFilterState,
-} from "@/components/resource/types"
-import { useListController } from "@/components/resource/useListController"
-import type { ListPageConfig } from "@/components/resource/useListController"
 
+// 1. 先定义“表格每一行”的数据结构。
+// 新建同类页面时，优先把这里改成接口返回或本地 mock 的真实行类型。
 type PractitionerRecord = {
   id: number
   name: string
   phone: string
-  profileDisplay: string
   company: string
   role: string
   district: string
@@ -27,198 +20,189 @@ type PractitionerRecord = {
   note: string
 }
 
-type RawPractitionerRecord = Omit<PractitionerRecord, "profileDisplay">
+// 2. 准备列表数据。
+// 当前示例直接读取本地 JSON；未来接接口时，只要最终得到同结构的数组即可。
+const practitioners = usersData as PractitionerRecord[]
 
-const ALL_PRACTITIONERS_TAB = "all"
-
-const FIXED_FILTERS: Record<string, TextFilterState> = {
-  "在页面中": { enabled: false, operator: "contains", query: "", placeholder: "输入页面内筛选条件" },
-}
-
-const INITIAL_TEXT_FILTERS: Record<string, TextFilterState> = {
-  "从业人员": { enabled: false, operator: "contains", query: "", placeholder: "输入姓名或手机号" },
-  "所属企业": { enabled: false, operator: "contains", query: "", placeholder: "输入企业名称" },
-}
-
-const INITIAL_NUMBER_FILTERS: Record<string, NumberFilterState> = {
-  "从业年限": { enabled: false, operator: "equals", query: "", placeholder: "输入从业年限" },
-}
-
-const INITIAL_TAG_FILTERS: Record<string, TagFilterState> = {
-  "岗位类型": { enabled: false, operator: "equals", values: [] },
-  "行政区域": { enabled: false, operator: "equals", values: [] },
-  "证件级别": { enabled: false, operator: "equals", values: [] },
-  "状态": { enabled: false, operator: "equals", values: [] },
-}
-
-const INITIAL_DATE_FILTERS: Record<string, DateFilterState> = {
-  "入职日期": { enabled: false, operator: "equals", preset: "custom", startDate: "", endDate: "" },
-}
-
-const practitionersSortFieldOptions: SortFieldOption[] = [
-  { value: "name", label: "从业人员", kind: "text" },
-  { value: "company", label: "所属企业", kind: "text" },
-  { value: "role", label: "岗位类型", kind: "text" },
-  { value: "district", label: "行政区域", kind: "text" },
-  { value: "certificateLevel", label: "证件级别", kind: "text" },
-  { value: "experienceYears", label: "从业年限", kind: "metric" },
-  { value: "joinedAt", label: "入职日期", kind: "text" },
-]
-
-const practitionersColumns: TableColumn[] = [
-  {
-    key: "profileDisplay",
-    label: "从业人员",
-    filterType: "contact",
-    cellRenderer: {
-      kind: "dual-inline",
-      primaryKey: "name",
-      secondaryKey: "phone",
-      primaryClass: "text-[#1F1F1F]",
-      secondaryClass: "text-[#9A9A9A]",
-    },
-  },
-  { key: "company", label: "所属企业", filterType: "text", cellClass: "font-medium text-[#1F1F1F]" },
-  { key: "role", label: "岗位类型", filterType: "tag" },
-  { key: "district", label: "行政区域", filterType: "tag" },
-  { key: "certificateLevel", label: "证件级别", filterType: "tag" },
-  {
-    key: "experienceYears",
-    label: "从业年限",
-    filterType: "number",
-    cellRenderer: {
-      kind: "metric-unit",
-      unit: "年",
-      valueClass: "tabular-nums text-[#3559E0]",
-      unitClass: "ml-1 text-[12px] text-[#9A9A9A]",
-    },
-  },
-  { key: "joinedAt", label: "入职日期", filterType: "time", cellClass: "tabular-nums text-[#2F2F2F]" },
-  { key: "status", label: "状态", filterType: "tag" },
-  { key: "note", label: "备注", filterType: "none", headerClass: "w-full", cellClass: "w-full text-[#6E6E6E]", cellRenderer: { kind: "note" } },
-]
-
-const practitionersPageConfig: ListPageConfig<PractitionerRecord, string> = {
+// 3. 用一个 schema 描述整张资源表格页。
+// 页面作者主要维护这里：
+// - 顶部标题、行主键
+// - columns: 列展示、列搜索、列筛选、列排序
+// - filters: 不直接对应某一列的附加筛选
+// - sort: 默认排序和排序持久化 key
+// - tabs: 顶部标签页如何分组
+//
+// 这就是以后新建表格页时最主要的工作区，原则上不需要理解资源层内部实现。
+const schema: ResourceListSchema<PractitionerRecord> = {
   title: "从业人员",
-  columns: practitionersColumns,
-  defaultVisibleFilterKeys: ["从业人员", "所属企业", "岗位类型", "状态"],
-  fixedTextFilters: FIXED_FILTERS,
-  textFilters: INITIAL_TEXT_FILTERS,
-  numberFilters: INITIAL_NUMBER_FILTERS,
-  tagFilters: INITIAL_TAG_FILTERS,
-  dateFilters: INITIAL_DATE_FILTERS,
-  tagFilterOptions: rows => ({
-    "岗位类型": [...new Set(rows.map(row => row.role))],
-    "行政区域": [...new Set(rows.map(row => row.district))],
-    "证件级别": [...new Set(rows.map(row => row.certificateLevel))],
-    "状态": [...new Set(rows.map(row => row.status))],
-  }),
-  initialSortRules: [{ id: "sort-experience-years", field: "experienceYears", direction: "desc" }],
-  sortStorageKey: "practitioners-sort-preferences",
-  sortFieldOptions: practitionersSortFieldOptions,
-  defaultTab: ALL_PRACTITIONERS_TAB,
-  buildTabs: (rows, selectedTab) => [
+  rowKey: "id",
+  data: practitioners,
+  showIndex: true,
+  stickyHeader: true,
+  wrapperClass: "overflow-visible",
+  tableClass: "min-w-full w-max table-auto border-collapse bg-white text-[14px]",
+  columns: [
+    // columns 决定“表格长什么样”，同时也顺带声明“这列怎么参与搜索/筛选/排序”。
+    // 一个典型列通常只需要关心 4 件事：
+    // - key: 对应哪一个字段
+    // - label: 表头文案
+    // - filter: 这列是否可以筛选
+    // - sort/searchable: 这列是否参与排序或全文搜索
     {
-      label: "全部",
-      value: ALL_PRACTITIONERS_TAB,
-      count: rows.length,
-      active: selectedTab === ALL_PRACTITIONERS_TAB,
+      key: "name",
+      label: "从业人员",
+      filterType: "contact",
+      searchable: row => `${row.name} ${row.phone}`,
+      filter: {
+        type: "text",
+        placeholder: "输入姓名或手机号",
+        defaultVisible: true,
+        value: row => `${row.name} ${row.phone}`,
+      },
+      sort: {
+        label: "从业人员",
+        kind: "text",
+        value: row => row.name,
+      },
+      cellRenderer: {
+        kind: "dual-inline",
+        primaryKey: "name",
+        secondaryKey: "phone",
+        primaryClass: "text-[#1F1F1F]",
+        secondaryClass: "text-[#9A9A9A]",
+      },
     },
-    ...getStatuses(rows).map(status => ({
-      label: status,
-      value: status,
-      count: rows.filter(row => row.status === status).length,
-      active: selectedTab === status,
-    })),
+    {
+      key: "company",
+      label: "所属企业",
+      filterType: "text",
+      searchable: true,
+      filter: {
+        type: "text",
+        placeholder: "输入企业名称",
+        defaultVisible: true,
+      },
+      sort: true,
+      cellClass: "font-medium text-[#1F1F1F]",
+    },
+    {
+      key: "role",
+      label: "岗位类型",
+      filterType: "tag",
+      searchable: true,
+      filter: {
+        type: "tag",
+        defaultVisible: true,
+      },
+      sort: true,
+    },
+    {
+      key: "district",
+      label: "行政区域",
+      filterType: "tag",
+      searchable: true,
+      filter: {
+        type: "tag",
+      },
+      sort: true,
+    },
+    {
+      key: "certificateLevel",
+      label: "证件级别",
+      filterType: "tag",
+      searchable: true,
+      filter: {
+        type: "tag",
+      },
+      sort: true,
+    },
+    {
+      key: "experienceYears",
+      label: "从业年限",
+      filterType: "number",
+      searchable: row => `${row.experienceYears}`,
+      filter: {
+        type: "number",
+        placeholder: "输入从业年限",
+      },
+      sort: {
+        label: "从业年限",
+        kind: "metric",
+      },
+      cellRenderer: {
+        kind: "metric-unit",
+        unit: "年",
+        valueClass: "tabular-nums text-[#3559E0]",
+        unitClass: "ml-1 text-[12px] text-[#9A9A9A]",
+      },
+    },
+    {
+      key: "joinedAt",
+      label: "入职日期",
+      filterType: "time",
+      searchable: true,
+      filter: {
+        type: "date",
+      },
+      sort: true,
+      cellClass: "tabular-nums text-[#2F2F2F]",
+    },
+    {
+      key: "status",
+      label: "状态",
+      filterType: "tag",
+      searchable: true,
+      filter: {
+        type: "tag",
+        defaultVisible: true,
+      },
+    },
+    {
+      key: "note",
+      label: "备注",
+      filterType: "none",
+      searchable: true,
+      headerClass: "w-full",
+      cellClass: "w-full text-[#6E6E6E]",
+      cellRenderer: { kind: "note" },
+    },
   ],
-  matchesTab: (row, selectedTab) => selectedTab === ALL_PRACTITIONERS_TAB || row.status === selectedTab,
-  buildSearchText: row => [
-    row.name,
-    row.phone,
-    row.company,
-    row.role,
-    row.district,
-    row.certificateLevel,
-    row.note,
-    row.joinedAt,
-    `${row.experienceYears}`,
-  ].join(" "),
-  getFilterValue: (key, row) => {
-    if (key === "从业人员") return `${row.name} ${row.phone}`
-    if (key === "所属企业") return row.company
-    if (key === "岗位类型") return row.role
-    if (key === "行政区域") return row.district
-    if (key === "证件级别") return row.certificateLevel
-    if (key === "从业年限") return `${row.experienceYears}`
-    if (key === "入职日期") return row.joinedAt
-    if (key === "状态") return row.status
-    if (key === "在页面中") return row.note
-    return row.name
+  // filters 用来放“不完全等于某一列”的筛选项。
+  // 比如这里的“在页面中”本质是全页备注检索，所以单独声明为 fixed filter。
+  filters: [
+    {
+      key: "在页面中",
+      label: "在页面中",
+      type: "text",
+      fixed: true,
+      placeholder: "输入页面内筛选条件",
+      value: row => row.note,
+    },
+  ],
+  // sort 只负责默认排序和本地持久化。
+  // 如果某一列没声明 sort，它就不会出现在排序面板里。
+  sort: {
+    storageKey: "practitioners-sort-preferences",
+    initialField: "experienceYears",
+    initialDirection: "desc",
   },
-  getSortSummaryLabel: field => practitionersSortFieldOptions.find(option => option.value === field)?.label ?? "从业年限",
-  compareSort: (field, a, b) => {
-    if (field === "experienceYears") return a.experienceYears - b.experienceYears
-    if (field === "company") return a.company.localeCompare(b.company, "zh-CN")
-    if (field === "role") return a.role.localeCompare(b.role, "zh-CN")
-    if (field === "district") return a.district.localeCompare(b.district, "zh-CN")
-    if (field === "certificateLevel") return a.certificateLevel.localeCompare(b.certificateLevel, "zh-CN")
-    if (field === "joinedAt") return a.joinedAt.localeCompare(b.joinedAt, "zh-CN")
-    return a.name.localeCompare(b.name, "zh-CN")
+  // tabs 描述顶部标签页的来源。
+  // 这里表示：按 status 字段自动生成“全部 + 各状态”标签。
+  tabs: {
+    mode: "enum",
+    all: { label: "全部", value: "all" },
+    field: "status",
   },
-  isSortField: value => typeof value === "string" && practitionersSortFieldOptions.some(option => option.value === value),
 }
 
-const practitioners = (usersData as RawPractitionerRecord[]).map((practitioner) => ({
-  ...practitioner,
-  profileDisplay: `${practitioner.name} ${practitioner.phone}`,
-}))
-
-const controller = useListController<PractitionerRecord, string>({
-  rows: practitioners,
-  ...practitionersPageConfig,
-})
-
-function getStatuses(rows: PractitionerRecord[]) {
-  return [...new Set(rows.map(row => row.status))]
-}
+// 4. 把 schema 交给通用资源控制器。
+// 它会统一产出页面渲染所需的 tabs、filters、rows、sort state 等响应式状态。
+const page = useResourceList(schema)
 </script>
 
 <template>
-  <ListPage
-    :title="practitionersPageConfig.title ?? '从业人员'"
-    :count="controller.visibleRows.value.length"
-    :tabs="controller.tabs.value"
-    :fields="controller.fields.value"
-    :available-filters="controller.availableFilterKeys.value"
-    :show-controls="controller.showControls.value"
-    :custom-sort-enabled="controller.customSortEnabled.value"
-    :sort-rules="controller.sortRules.value"
-    :sort-field-options="practitionersSortFieldOptions"
-    :search-query="controller.searchQuery.value"
-    :text-filters="controller.textFilters.value"
-    :number-filters="controller.numberFilters.value"
-    :tag-filters="controller.tagFilters.value"
-    :tag-filter-options="controller.tagFilterOptions.value"
-    :date-filters="controller.dateFilters.value"
-    :date-filter-fields="controller.dateFilterFields.value"
-    :columns="practitionersColumns"
-    :rows="controller.visibleRows.value"
-    row-key="id"
-    show-index
-    sticky-header
-    wrapper-class="overflow-visible"
-    table-class="min-w-full w-max table-auto border-collapse bg-white text-[14px]"
-    @tab-click="controller.handleTabClick"
-    @add-filter="controller.handleAddFilter"
-    @replace-filter="controller.handleReplaceFilter"
-    @remove-filter="controller.handleRemoveFilter"
-    @set-custom-sort-enabled="controller.customSortEnabled.value = $event"
-    @update-sort-rules="controller.sortRules.value = $event"
-    @toggle-controls="controller.showControls.value = !controller.showControls.value"
-    @update-search-query="controller.searchQuery.value = $event"
-    @update-text-filter="controller.updateTextFilter($event.label, $event.value)"
-    @update-number-filter="controller.updateNumberFilter($event.label, $event.value)"
-    @update-tag-filter="controller.updateTagFilter($event.label, $event.value)"
-    @update-date-filter="controller.updateDateFilter($event.label, $event.value)"
-  />
+  <!-- 5. 页面模板层保持极薄。
+       以后新建同类页面时，理想状态就是：
+       定义行类型 -> 准备数据 -> 写 schema -> 渲染 ResourceListPage。 -->
+  <ResourceListPage :page="page" />
 </template>

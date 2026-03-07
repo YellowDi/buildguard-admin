@@ -144,3 +144,79 @@ export type FilterStateMaps = {
   tag: Record<string, TagFilterState>
   date: Record<string, DateFilterState>
 }
+
+export type ResourceRowKey<Row> = Extract<keyof Row, string> | ((row: Row, index: number) => string | number)
+
+export type ResourceFilterType = "text" | "number" | "tag" | "date"
+
+export type ResourceFilterDefinition<Row> = {
+  key: string
+  label: string
+  type: ResourceFilterType
+  placeholder?: string
+  defaultVisible?: boolean
+  fixed?: boolean
+  options?: string[] | ((rows: Row[]) => string[])
+  value?: (row: Row) => unknown
+}
+
+export type ResourceSortDefinition<Row> = {
+  storageKey?: string
+  initialField?: string
+  initialDirection?: "asc" | "desc"
+  fields?: Array<{
+    field: string
+    label: string
+    kind?: "text" | "metric"
+    value?: (row: Row) => string | number | null | undefined
+  }>
+}
+
+export type ResourceTabsDefinition<Row> =
+  | {
+      mode?: "none"
+    }
+  | {
+      mode: "enum"
+      all?: {
+        label: string
+        value: string
+      }
+      field?: keyof Row & string
+      value?: (row: Row) => string
+      options?: string[]
+      labelMap?: Record<string, string>
+      order?: string[]
+    }
+
+export type ResourceListColumn<Row> = TableColumn & {
+  key: keyof Row & string
+  searchable?: boolean | ((row: Row) => string)
+  filter?: Omit<ResourceFilterDefinition<Row>, "key" | "label"> & {
+    label?: string
+  }
+  sort?: boolean | {
+    label?: string
+    kind?: "text" | "metric"
+    value?: (row: Row) => string | number | null | undefined
+  }
+}
+
+export type ResourceListSchema<Row> = {
+  title: string
+  rowKey: ResourceRowKey<Row>
+  data: Row[]
+  columns: Array<ResourceListColumn<Row>>
+  search?: {
+    placeholder?: string
+  }
+  filters?: ResourceFilterDefinition<Row>[]
+  sort?: ResourceSortDefinition<Row>
+  tabs?: ResourceTabsDefinition<Row>
+  primaryActionLabel?: string
+  summary?: string
+  showIndex?: boolean
+  stickyHeader?: boolean
+  wrapperClass?: string
+  tableClass?: string
+}
