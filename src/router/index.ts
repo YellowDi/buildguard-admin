@@ -4,11 +4,11 @@ import AdminLayout from "@/layouts/AdminLayout.vue"
 import LoginView from "@/views/auth/LoginView.vue"
 import OtpView from "@/views/auth/OtpView.vue"
 import SignupView from "@/views/auth/SignupView.vue"
-import CompaniesView from "@/views/companies/CompaniesView.vue"
+import CompaniesView from "@/views/CompaniesView.vue"
 import DashboardView from "@/views/dashboard/DashboardView.vue"
 import SettingsView from "@/views/settings/SettingsView.vue"
-import UsersView from "@/views/users/UsersView.vue"
-import VehiclesView from "@/views/vehicles/VehiclesView.vue"
+import UsersView from "@/views/UsersView.vue"
+import VehiclesView from "@/views/VehiclesView.vue"
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),

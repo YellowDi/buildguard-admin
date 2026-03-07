@@ -1,3 +1,6 @@
+<script setup lang="ts">
+import usersData from "@/data/users.json"
+import ResourceListPage from "@/components/resource/ResourceListPage.vue"
 import type { SortFieldOption } from "@/components/resource/SortPopover.vue"
 import type {
   ResourceDateFilterState,
@@ -6,9 +9,10 @@ import type {
   ResourceTagFilterState,
   ResourceTextFilterState,
 } from "@/components/resource/types"
+import { useResourceListController } from "@/components/resource/useResourceListController"
 import type { ResourceListPageConfig } from "@/components/resource/useResourceListController"
 
-export type PractitionerRecord = {
+type PractitionerRecord = {
   id: number
   name: string
   phone: string
@@ -24,7 +28,9 @@ export type PractitionerRecord = {
   note: string
 }
 
-export const ALL_PRACTITIONERS_TAB = "all"
+type RawPractitionerRecord = Omit<PractitionerRecord, "profileDisplay" | "experienceDisplay">
+
+const ALL_PRACTITIONERS_TAB = "all"
 
 const FIXED_FILTERS: Record<string, ResourceTextFilterState> = {
   "在页面中": { enabled: false, operator: "contains", query: "", placeholder: "输入页面内筛选条件" },
@@ -50,7 +56,7 @@ const INITIAL_DATE_FILTERS: Record<string, ResourceDateFilterState> = {
   "入职日期": { enabled: false, operator: "equals", preset: "custom", startDate: "", endDate: "" },
 }
 
-export const practitionersSortFieldOptions: SortFieldOption[] = [
+const practitionersSortFieldOptions: SortFieldOption[] = [
   { value: "name", label: "从业人员", kind: "text" },
   { value: "company", label: "所属企业", kind: "text" },
   { value: "role", label: "岗位类型", kind: "text" },
@@ -60,7 +66,7 @@ export const practitionersSortFieldOptions: SortFieldOption[] = [
   { value: "joinedAt", label: "入职日期", kind: "text" },
 ]
 
-export const practitionersColumns: ResourceTableColumn[] = [
+const practitionersColumns: ResourceTableColumn[] = [
   {
     key: "profileDisplay",
     label: "从业人员",
@@ -83,7 +89,7 @@ export const practitionersColumns: ResourceTableColumn[] = [
   { key: "note", label: "备注", filterType: "none", headerClass: "w-full", cellClass: "w-full text-[#6E6E6E]", cellRenderer: { kind: "note" } },
 ]
 
-export const practitionersPageConfig: ResourceListPageConfig<PractitionerRecord, string> = {
+const practitionersPageConfig: ResourceListPageConfig<PractitionerRecord, string> = {
   title: "从业人员",
   columns: practitionersColumns,
   defaultVisibleFilterKeys: ["从业人员", "所属企业", "岗位类型", "状态"],
@@ -153,6 +159,58 @@ export const practitionersPageConfig: ResourceListPageConfig<PractitionerRecord,
   isSortField: value => typeof value === "string" && practitionersSortFieldOptions.some(option => option.value === value),
 }
 
+const practitioners = (usersData as RawPractitionerRecord[]).map((practitioner) => ({
+  ...practitioner,
+  profileDisplay: `${practitioner.name} ${practitioner.phone}`,
+  experienceDisplay: `${practitioner.experienceYears} 年`,
+}))
+
+const controller = useResourceListController<PractitionerRecord, string>({
+  rows: practitioners,
+  ...practitionersPageConfig,
+})
+
 function getStatuses(rows: PractitionerRecord[]) {
   return [...new Set(rows.map(row => row.status))]
 }
+</script>
+
+<template>
+  <ResourceListPage
+    :title="practitionersPageConfig.title ?? '从业人员'"
+    :count="controller.visibleRows.value.length"
+    :tabs="controller.tabs.value"
+    :fields="controller.fields.value"
+    :available-filters="controller.availableFilterKeys.value"
+    :show-controls="controller.showControls.value"
+    :custom-sort-enabled="controller.customSortEnabled.value"
+    :sort-rules="controller.sortRules.value"
+    :sort-field-options="practitionersSortFieldOptions"
+    :search-query="controller.searchQuery.value"
+    :text-filters="controller.textFilters.value"
+    :number-filters="controller.numberFilters.value"
+    :tag-filters="controller.tagFilters.value"
+    :tag-filter-options="controller.tagFilterOptions.value"
+    :date-filters="controller.dateFilters.value"
+    :date-filter-fields="controller.dateFilterFields.value"
+    :columns="practitionersColumns"
+    :rows="controller.visibleRows.value"
+    row-key="id"
+    show-index
+    sticky-header
+    wrapper-class="overflow-visible"
+    table-class="min-w-full w-max table-auto border-collapse bg-white text-[14px]"
+    @tab-click="controller.handleTabClick"
+    @add-filter="controller.handleAddFilter"
+    @replace-filter="controller.handleReplaceFilter"
+    @remove-filter="controller.handleRemoveFilter"
+    @set-custom-sort-enabled="controller.customSortEnabled.value = $event"
+    @update-sort-rules="controller.sortRules.value = $event"
+    @toggle-controls="controller.showControls.value = !controller.showControls.value"
+    @update-search-query="controller.searchQuery.value = $event"
+    @update-text-filter="controller.updateTextFilter($event.label, $event.value)"
+    @update-number-filter="controller.updateNumberFilter($event.label, $event.value)"
+    @update-tag-filter="controller.updateTagFilter($event.label, $event.value)"
+    @update-date-filter="controller.updateDateFilter($event.label, $event.value)"
+  />
+</template>

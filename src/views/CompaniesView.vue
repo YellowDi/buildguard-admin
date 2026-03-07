@@ -1,3 +1,6 @@
+<script setup lang="ts">
+import companiesData from "@/data/companies.json"
+import ResourceListPage from "@/components/resource/ResourceListPage.vue"
 import type { SortFieldOption } from "@/components/resource/SortPopover.vue"
 import type {
   ResourceDateFilterState,
@@ -6,9 +9,10 @@ import type {
   ResourceTagFilterState,
   ResourceTextFilterState,
 } from "@/components/resource/types"
+import { useResourceListController } from "@/components/resource/useResourceListController"
 import type { ResourceListPageConfig } from "@/components/resource/useResourceListController"
 
-export type CompanyRecord = {
+type CompanyRecord = {
   id: number
   name: string
   type: string
@@ -24,7 +28,7 @@ export type CompanyRecord = {
   note: string
 }
 
-export const ALL_COMPANIES_TAB = "all"
+const ALL_COMPANIES_TAB = "all"
 
 const FIXED_FILTERS: Record<string, ResourceTextFilterState> = {
   "在页面中": { enabled: false, operator: "contains", query: "", placeholder: "输入页面内筛选条件" },
@@ -50,7 +54,7 @@ const INITIAL_DATE_FILTERS: Record<string, ResourceDateFilterState> = {
   "结束日期": { enabled: false, operator: "equals", preset: "custom", startDate: "", endDate: "" },
 }
 
-export const companiesSortFieldOptions: SortFieldOption[] = [
+const companiesSortFieldOptions: SortFieldOption[] = [
   { value: "name", label: "企业名称", kind: "text" },
   { value: "type", label: "企业类型", kind: "text" },
   { value: "district", label: "行政区域", kind: "text" },
@@ -61,7 +65,7 @@ export const companiesSortFieldOptions: SortFieldOption[] = [
   { value: "endDate", label: "结束日期", kind: "text" },
 ]
 
-export const companiesColumns: ResourceTableColumn[] = [
+const companiesColumns: ResourceTableColumn[] = [
   { key: "name", label: "企业名称", filterType: "text", headerClass: "pr-3", cellClass: "font-medium text-[#1F1F1F]" },
   { key: "type", label: "企业类型", filterType: "tag", cellClass: "text-[#3F3F3F]" },
   { key: "district", label: "行政区域", filterType: "tag", cellClass: "text-[#3F3F3F]" },
@@ -84,7 +88,7 @@ export const companiesColumns: ResourceTableColumn[] = [
   { key: "note", label: "备注", filterType: "none", headerClass: "w-full", cellClass: "w-full text-[#6E6E6E]", cellRenderer: { kind: "note" } },
 ]
 
-export const companiesPageConfig: ResourceListPageConfig<CompanyRecord, string> = {
+const companiesPageConfig: ResourceListPageConfig<CompanyRecord, string> = {
   title: "企业",
   primaryActionLabel: "添加企业",
   columns: companiesColumns,
@@ -153,6 +157,99 @@ export const companiesPageConfig: ResourceListPageConfig<CompanyRecord, string> 
   isSortField: value => typeof value === "string" && companiesSortFieldOptions.some(option => option.value === value),
 }
 
+type RawCompanyRecord = Omit<CompanyRecord, "startDate" | "endDate" | "serviceDaysDisplay">
+
+const companies = (companiesData as RawCompanyRecord[]).map((company) => {
+  const startDate = extractDatePart(company.lastUpdated)
+  const endDate = buildEndDate(company.serviceDays)
+
+  return {
+    ...company,
+    startDate,
+    endDate,
+    serviceDays: getRemainingDays(endDate),
+    serviceDaysDisplay: `${getRemainingDays(endDate)} 天`,
+  }
+})
+
+const controller = useResourceListController<CompanyRecord, string>({
+  rows: companies,
+  ...companiesPageConfig,
+})
+
+function buildEndDate(serviceDays: number) {
+  const baseDate = new Date()
+  baseDate.setHours(0, 0, 0, 0)
+  baseDate.setDate(baseDate.getDate() + serviceDays)
+  return toISODate(baseDate)
+}
+
+function extractDatePart(value: string) {
+  const [datePart] = value.split(" ")
+  return datePart ?? ""
+}
+
+function getRemainingDays(endDate: string) {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const targetDate = new Date(`${endDate}T00:00:00`)
+  if (Number.isNaN(targetDate.getTime())) {
+    return 0
+  }
+
+  const diff = targetDate.getTime() - today.getTime()
+  return Math.max(0, Math.round(diff / (1000 * 60 * 60 * 24)))
+}
+
+function toISODate(date: Date) {
+  const year = date.getFullYear()
+  const month = `${date.getMonth() + 1}`.padStart(2, "0")
+  const day = `${date.getDate()}`.padStart(2, "0")
+  return `${year}-${month}-${day}`
+}
+
 function getCompanyTypes(rows: CompanyRecord[]) {
   return [...new Set(rows.map(row => row.type))]
 }
+</script>
+
+<template>
+  <ResourceListPage
+    :title="companiesPageConfig.title ?? '企业'"
+    :count="controller.visibleRows.value.length"
+    :tabs="controller.tabs.value"
+    :fields="controller.fields.value"
+    :available-filters="controller.availableFilterKeys.value"
+    :show-controls="controller.showControls.value"
+    :custom-sort-enabled="controller.customSortEnabled.value"
+    :sort-rules="controller.sortRules.value"
+    :sort-field-options="companiesSortFieldOptions"
+    :search-query="controller.searchQuery.value"
+    :primary-action-label="companiesPageConfig.primaryActionLabel"
+    :text-filters="controller.textFilters.value"
+    :number-filters="controller.numberFilters.value"
+    :tag-filters="controller.tagFilters.value"
+    :tag-filter-options="controller.tagFilterOptions.value"
+    :date-filters="controller.dateFilters.value"
+    :date-filter-fields="controller.dateFilterFields.value"
+    :columns="companiesColumns"
+    :rows="controller.visibleRows.value"
+    row-key="id"
+    show-index
+    sticky-header
+    wrapper-class="overflow-visible"
+    table-class="min-w-full w-max table-auto border-collapse bg-white text-[14px]"
+    @tab-click="controller.handleTabClick"
+    @add-filter="controller.handleAddFilter"
+    @replace-filter="controller.handleReplaceFilter"
+    @remove-filter="controller.handleRemoveFilter"
+    @set-custom-sort-enabled="controller.customSortEnabled.value = $event"
+    @update-sort-rules="controller.sortRules.value = $event"
+    @toggle-controls="controller.showControls.value = !controller.showControls.value"
+    @update-search-query="controller.searchQuery.value = $event"
+    @update-text-filter="controller.updateTextFilter($event.label, $event.value)"
+    @update-number-filter="controller.updateNumberFilter($event.label, $event.value)"
+    @update-tag-filter="controller.updateTagFilter($event.label, $event.value)"
+    @update-date-filter="controller.updateDateFilter($event.label, $event.value)"
+  />
+</template>
