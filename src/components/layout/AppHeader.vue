@@ -2,7 +2,6 @@
 import {
   Breadcrumb,
   BreadcrumbItem,
-  BreadcrumbLink,
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
@@ -20,14 +19,8 @@ const route = useRoute()
     <Separator orientation="vertical" class="mr-2 h-4" />
     <Breadcrumb>
       <BreadcrumbList>
-        <BreadcrumbItem class="hidden md:block">
-          <BreadcrumbLink href="#">components</BreadcrumbLink>
-        </BreadcrumbItem>
-        <BreadcrumbSeparator class="hidden md:block" />
-        <BreadcrumbItem class="hidden md:block">
-          <BreadcrumbLink href="#">ui</BreadcrumbLink>
-        </BreadcrumbItem>
-        <BreadcrumbSeparator class="hidden md:block" />
+        <BreadcrumbItem>控制中心</BreadcrumbItem>
+        <BreadcrumbSeparator />
         <BreadcrumbItem>
           <BreadcrumbPage>{{ route.meta.title }}</BreadcrumbPage>
         </BreadcrumbItem>

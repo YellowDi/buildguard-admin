@@ -47,7 +47,7 @@ const router = createRouter({
           name: "dashboard",
           component: DashboardView,
           meta: {
-            title: "button.vue",
+            title: "工作台",
           },
         },
         {
@@ -55,7 +55,7 @@ const router = createRouter({
           name: "users",
           component: UsersView,
           meta: {
-            title: "breadcrumb.vue",
+            title: "报警查询",
           },
         },
         {
@@ -63,7 +63,7 @@ const router = createRouter({
           name: "settings",
           component: SettingsView,
           meta: {
-            title: "dialog.vue",
+            title: "总报表",
           },
         },
       ],
