@@ -73,7 +73,7 @@ const router = createRouter({
           name: "users",
           component: UsersView,
           meta: {
-            title: "报警查询",
+            title: "从业人员",
           },
         },
         {

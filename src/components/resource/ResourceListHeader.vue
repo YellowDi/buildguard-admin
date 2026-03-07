@@ -34,6 +34,7 @@ const props = withDefaults(defineProps<{
   tagFilterOptions?: Record<string, string[]>
   dateFilters?: Record<string, ResourceDateFilterState>
   dateFilterFields?: string[]
+  primaryActionLabel?: string
 }>(), {
   availableFilters: () => [],
   textFilters: () => ({}),
@@ -43,6 +44,7 @@ const props = withDefaults(defineProps<{
   dateFilters: () => ({}),
   dateFilterFields: () => [],
   sortFieldOptions: () => [],
+  primaryActionLabel: "",
 })
 
 const emit = defineEmits<{
@@ -58,6 +60,7 @@ const emit = defineEmits<{
   "add-filter": [key: string]
   "replace-filter": [payload: { from: string; to: string; value?: ResourceDateFilterState }]
   "remove-filter": [key: string]
+  "primary-action": []
 }>()
 
 const openPopover = ref<string | null>(null)
@@ -98,7 +101,7 @@ function openSortPopover(source: "toolbar" | "chip") {
 }
 
 function buildNextSortRule(): SortRule {
-  const fallbackField = props.sortFieldOptions[0]?.value ?? "name"
+  const fallbackField = props.sortFieldOptions[0]?.value ?? ""
   const unusedField = props.sortFieldOptions.find((option) => !props.sortRules.some((rule) => rule.field === option.value))?.value
     ?? fallbackField
   const fieldMeta = props.sortFieldOptions.find((option) => option.value === unusedField)
@@ -111,6 +114,10 @@ function buildNextSortRule(): SortRule {
 }
 
 function handleToolbarAddSort() {
+  if (!props.sortFieldOptions.length) {
+    return
+  }
+
   closePopover()
 
   if (!props.showControls) {
@@ -307,11 +314,13 @@ onBeforeUnmount(() => {
             <i class="ri-more-line text-base" />
           </button>
           <button
+            v-if="primaryActionLabel"
             type="button"
             class="inline-flex h-8 items-center gap-1 rounded-md border border-[#E3E3E3] bg-white px-3 text-[14px] font-medium text-[#4A4A4A] transition hover:bg-[#F8F8F8]"
+            @click="emit('primary-action')"
           >
             <i class="ri-add-line text-base" />
-            添加企业
+            {{ primaryActionLabel }}
           </button>
         </div>
       </div>

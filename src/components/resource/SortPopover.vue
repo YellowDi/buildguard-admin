@@ -5,7 +5,6 @@ export type SortField = string
 export type SortFieldOption = {
   value: SortField
   label: string
-  icon: string
   kind?: "text" | "metric"
 }
 
@@ -20,15 +19,7 @@ const props = withDefaults(defineProps<{
   rules: SortRule[]
   fieldOptions?: SortFieldOption[]
 }>(), {
-  fieldOptions: () => [
-    { value: "name", label: "企业名称", icon: "ri-text", kind: "text" },
-    { value: "type", label: "企业类型", icon: "ri-folder-line", kind: "text" },
-    { value: "district", label: "行政区域", icon: "ri-map-pin-line", kind: "text" },
-    { value: "vehicles", label: "车辆总数", icon: "ri-bus-2-line", kind: "metric" },
-    { value: "legalPerson", label: "法人信息", icon: "ri-user-line", kind: "text" },
-    { value: "serviceDays", label: "服务剩余时长", icon: "ri-arrow-down-line", kind: "metric" },
-    { value: "note", label: "备注", icon: "ri-file-text-line", kind: "text" },
-  ],
+  fieldOptions: () => [],
 })
 
 const emit = defineEmits<{
@@ -41,14 +32,12 @@ const openMenu = ref<{ id: string; kind: "field" | "direction" } | null>(null)
 const draggingRuleId = ref<string | null>(null)
 const dragOverRuleId = ref<string | null>(null)
 
-const sortFieldOptions = computed(() => props.fieldOptions.length ? props.fieldOptions : [
-  { value: "name", label: "企业名称", icon: "ri-text", kind: "text" },
-])
+const sortFieldOptions = computed(() => props.fieldOptions ?? [])
 
 const visibleRules = computed(() => (props.enabled ? props.rules : []))
 
 function getFieldMeta(field: SortField) {
-  return sortFieldOptions.value.find((option) => option.value === field) ?? sortFieldOptions.value[0]
+  return sortFieldOptions.value.find((option) => option.value === field) ?? null
 }
 
 function getDirectionOptions(field: SortField) {
@@ -74,7 +63,7 @@ function toggleMenu(id: string, kind: "field" | "direction") {
 }
 
 function buildNextRule(): SortRule {
-  const fallbackField = sortFieldOptions.value[0]?.value ?? "name"
+  const fallbackField = sortFieldOptions.value[0]?.value ?? ""
   const unusedField = sortFieldOptions.value.find((option) => !props.rules.some((rule) => rule.field === option.value))?.value
     ?? fallbackField
 
@@ -86,6 +75,10 @@ function buildNextRule(): SortRule {
 }
 
 function handleAddSort() {
+  if (!sortFieldOptions.value.length) {
+    return
+  }
+
   const nextRules = props.enabled ? [...props.rules, buildNextRule()] : [buildNextRule()]
   emit("set-enabled", true)
   emit("update-rules", nextRules)
@@ -216,7 +209,7 @@ function handleDragEnd() {
             class="inline-flex h-9 min-w-[136px] max-w-[220px] items-center rounded-md border border-[#E4E4E7] bg-white px-3 text-[13px] font-medium text-[#3F3F46] ring-offset-background transition hover:bg-[#FAFAFA] focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
             @click="toggleMenu(rule.id, 'field')"
           >
-            <span class="whitespace-nowrap">{{ getFieldMeta(rule.field).label }}</span>
+            <span class="whitespace-nowrap">{{ getFieldMeta(rule.field)?.label ?? "选择字段" }}</span>
             <i class="ri-arrow-down-s-line ml-auto shrink-0 text-[16px] text-[#A1A1AA]" />
           </button>
 

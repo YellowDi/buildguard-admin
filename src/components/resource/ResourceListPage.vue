@@ -10,6 +10,7 @@ import type {
   ResourceHeaderTab,
   ResourceNumberFilterState,
   ResourceTableColumn,
+  ResourceTableSection,
   ResourceTagFilterState,
   ResourceTextFilterState,
 } from "@/components/resource/types"
@@ -25,6 +26,7 @@ defineProps<{
   sortRules: SortRule[]
   sortFieldOptions?: SortFieldOption[]
   searchQuery: string
+  primaryActionLabel?: string
   textFilters: Record<string, ResourceTextFilterState>
   numberFilters: Record<string, ResourceNumberFilterState>
   tagFilters: Record<string, ResourceTagFilterState>
@@ -39,6 +41,7 @@ defineProps<{
   stickyHeader?: boolean
   wrapperClass?: string
   tableClass?: string
+  sections?: ResourceTableSection[]
 }>()
 
 const emit = defineEmits<{
@@ -54,6 +57,7 @@ const emit = defineEmits<{
   "update-number-filter": [payload: { label: string; value: ResourceNumberFilterState }]
   "update-tag-filter": [payload: { label: string; value: ResourceTagFilterState }]
   "update-date-filter": [payload: { label: string; value: ResourceDateFilterState }]
+  "primary-action": []
 }>()
 
 const slots = useSlots()
@@ -74,6 +78,7 @@ const slots = useSlots()
           :sort-rules="sortRules"
           :sort-field-options="sortFieldOptions"
           :search-query="searchQuery"
+          :primary-action-label="primaryActionLabel"
           :text-filters="textFilters"
           :number-filters="numberFilters"
           :tag-filters="tagFilters"
@@ -92,11 +97,28 @@ const slots = useSlots()
           @update-number-filter="emit('update-number-filter', $event)"
           @update-tag-filter="emit('update-tag-filter', $event)"
           @update-date-filter="emit('update-date-filter', $event)"
+          @primary-action="emit('primary-action')"
         />
 
         <div class="min-h-0 flex-1">
           <div class="inline-block min-w-full pr-8 align-top">
+            <template v-if="sections?.length">
+              <ResourceTable
+                v-for="section in sections"
+                :key="section.key"
+                :columns="section.columns"
+                :rows="section.rows"
+                :row-key="section.rowKey"
+                :summary="section.summary"
+                :show-index="section.showIndex ?? showIndex"
+                :sticky-header="section.stickyHeader ?? stickyHeader"
+                :wrapper-class="section.wrapperClass ?? wrapperClass"
+                :table-class="section.tableClass ?? tableClass"
+                v-slots="slots"
+              />
+            </template>
             <ResourceTable
+              v-else
               :columns="columns"
               :rows="rows"
               :row-key="rowKey"

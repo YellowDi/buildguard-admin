@@ -77,6 +77,7 @@ const businessItems = reactive<NavItem[]>([
   {
     label: "从业人员",
     icon: "ri-team-line",
+    path: "/users",
   },
   {
     label: "运营商",
@@ -92,7 +93,6 @@ const businessItems = reactive<NavItem[]>([
       },
       {
         label: "报警查询",
-        path: "/users",
       },
     ],
   },

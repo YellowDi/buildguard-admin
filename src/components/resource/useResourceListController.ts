@@ -17,6 +17,8 @@ type MaybeRows<Row> = Row[] | Ref<Row[]> | ComputedRef<Row[]>
 
 type ResourceListControllerConfig<Row, TabValue extends string | number = string | number> = {
   rows: MaybeRows<Row>
+  title?: string
+  primaryActionLabel?: string
   columns: ResourceTableColumn[]
   defaultVisibleFilterKeys?: string[]
   fixedTextFilters?: Record<string, ResourceTextFilterState>
@@ -37,6 +39,11 @@ type ResourceListControllerConfig<Row, TabValue extends string | number = string
   compareSort: (field: string, a: Row, b: Row) => number
   isSortField?: (value: unknown) => boolean
 }
+
+export type ResourceListPageConfig<Row, TabValue extends string | number = string | number> = Omit<
+  ResourceListControllerConfig<Row, TabValue>,
+  "rows"
+>
 
 function toPlainRows<Row>(rows: MaybeRows<Row>) {
   if (Array.isArray(rows)) {

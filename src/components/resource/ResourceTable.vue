@@ -38,6 +38,43 @@ function getColumnValue(row: Record<string, unknown>, key: string) {
   return row[key]
 }
 
+function getRendererValue(row: Record<string, unknown>, key: string) {
+  return row[key]
+}
+
+function stringifyValue(value: unknown) {
+  if (value === null || value === undefined) {
+    return ""
+  }
+
+  return `${value}`
+}
+
+function getArrayValue(value: unknown) {
+  if (Array.isArray(value)) {
+    return value.map(item => stringifyValue(item)).filter(Boolean)
+  }
+
+  const stringValue = stringifyValue(value)
+  return stringValue ? [stringValue] : []
+}
+
+function getProgressPercent(row: Record<string, unknown>, column: ResourceTableColumn) {
+  if (column.cellRenderer?.kind !== "progress") {
+    return 0
+  }
+
+  const rawValue = getRendererValue(row, column.cellRenderer.valueKey ?? column.key)
+  const numericValue = Number(rawValue)
+  const max = column.cellRenderer.max ?? 100
+
+  if (Number.isNaN(numericValue) || max <= 0) {
+    return 0
+  }
+
+  return Math.max(0, Math.min(100, (numericValue / max) * 100))
+}
+
 function updateStickyHeaderState() {
   if (!props.stickyHeader || !tableWrapperRef.value) {
     stickyHeaderActive.value = false
@@ -116,7 +153,84 @@ onBeforeUnmount(() => {
               :value="getColumnValue(row, column.key)"
               :index="index"
             >
-              {{ getColumnValue(row, column.key) }}
+              <template v-if="column.cellRenderer?.kind === 'dual-inline'">
+                <span :class="column.cellRenderer.primaryClass ?? 'text-[#1F1F1F]'">
+                  {{ getRendererValue(row, column.cellRenderer.primaryKey) }}
+                </span>
+                <span
+                  v-if="stringifyValue(getRendererValue(row, column.cellRenderer.secondaryKey))"
+                  :class="['ml-1', column.cellRenderer.secondaryClass ?? 'text-[#9A9A9A]']"
+                >
+                  {{ getRendererValue(row, column.cellRenderer.secondaryKey) }}
+                </span>
+              </template>
+
+              <div
+                v-else-if="column.cellRenderer?.kind === 'dual-stack'"
+                class="flex flex-col gap-0.5"
+              >
+                <span :class="column.cellRenderer.primaryClass ?? 'text-[#1F1F1F]'">
+                  {{ getRendererValue(row, column.cellRenderer.primaryKey) }}
+                </span>
+                <span
+                  v-if="stringifyValue(getRendererValue(row, column.cellRenderer.secondaryKey))"
+                  :class="column.cellRenderer.secondaryClass ?? 'text-[#9A9A9A]'"
+                >
+                  {{ getRendererValue(row, column.cellRenderer.secondaryKey) }}
+                </span>
+              </div>
+
+              <div
+                v-else-if="column.cellRenderer?.kind === 'array'"
+                class="flex flex-wrap items-center gap-1"
+              >
+                <span
+                  v-for="(item, itemIndex) in getArrayValue(getColumnValue(row, column.key))"
+                  :key="`${column.key}-${index}-${itemIndex}`"
+                  :class="column.cellRenderer.itemClass ?? 'text-[#3F3F3F]'"
+                >
+                  {{ item }}<template v-if="itemIndex < getArrayValue(getColumnValue(row, column.key)).length - 1">{{ column.cellRenderer.separator ?? "、" }}</template>
+                </span>
+              </div>
+
+              <div
+                v-else-if="column.cellRenderer?.kind === 'tags'"
+                class="flex flex-wrap items-center gap-1.5"
+              >
+                <span
+                  v-for="(item, itemIndex) in getArrayValue(getColumnValue(row, column.key))"
+                  :key="`${column.key}-${index}-tag-${itemIndex}`"
+                  :class="column.cellRenderer.itemClass ?? 'inline-flex items-center rounded-md bg-[#F5F5F5] px-2 py-0.5 text-[12px] text-[#4B4B4B]'"
+                >
+                  {{ item }}
+                </span>
+              </div>
+
+              <div
+                v-else-if="column.cellRenderer?.kind === 'progress'"
+                class="flex min-w-[120px] items-center gap-2"
+              >
+                <div :class="column.cellRenderer.trackClass ?? 'h-2 flex-1 overflow-hidden rounded-full bg-[#E9EEF5]'">
+                  <div
+                    :class="column.cellRenderer.fillClass ?? 'h-full rounded-full bg-[#4A86E8]'"
+                    :style="{ width: `${getProgressPercent(row, column)}%` }"
+                  />
+                </div>
+                <span :class="column.cellRenderer.labelClass ?? 'text-[12px] tabular-nums text-[#6B7280]'">
+                  {{ getColumnValue(row, column.key) }}
+                </span>
+              </div>
+
+              <div
+                v-else-if="column.cellRenderer?.kind === 'note'"
+                class="max-w-[320px] whitespace-normal leading-6 text-[#6E6E6E]"
+              >
+                {{ getColumnValue(row, column.key) }}
+              </div>
+
+              <template v-else>
+                {{ getColumnValue(row, column.key) }}
+              </template>
             </slot>
           </td>
         </tr>

@@ -86,6 +86,49 @@ export type ResourceTableColumn = {
   headerClass?: string
   cellClass?: string
   slot?: string
+  cellRenderer?:
+    | {
+        kind: "text"
+      }
+    | {
+        kind: "dual-inline" | "dual-stack"
+        primaryKey: string
+        secondaryKey: string
+        primaryClass?: string
+        secondaryClass?: string
+      }
+    | {
+        kind: "array"
+        itemClass?: string
+        separator?: string
+      }
+    | {
+        kind: "tags"
+        itemClass?: string
+      }
+    | {
+        kind: "progress"
+        valueKey?: string
+        max?: number
+        trackClass?: string
+        fillClass?: string
+        labelClass?: string
+      }
+    | {
+        kind: "note"
+      }
+}
+
+export type ResourceTableSection = {
+  key: string | number
+  columns: ResourceTableColumn[]
+  rows: Record<string, unknown>[]
+  rowKey: string | ((row: Record<string, unknown>, index: number) => string | number)
+  summary?: string
+  showIndex?: boolean
+  stickyHeader?: boolean
+  wrapperClass?: string
+  tableClass?: string
 }
 
 export type ResourceFilterStateMaps = {
