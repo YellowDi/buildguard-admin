@@ -209,6 +209,10 @@ function toggleSearch() {
   }
 }
 
+function clearSearch() {
+  emit("update-search-query", "")
+}
+
 onMounted(() => {
   document.addEventListener("click", handleDocumentClick)
 })
@@ -275,38 +279,49 @@ onBeforeUnmount(() => {
               <i :class="['ri-sort-asc text-[17px]', customSortEnabled ? 'text-[#3559E0]' : '']" />
             </button>
           </div>
-          <button
-            type="button"
-            :class="[
-              ghostIconButtonClass,
-              showSearchInput || searchQuery ? ghostIconButtonActiveClass : '',
-            ]"
-            @click="toggleSearch"
-          >
-            <i :class="['ri-search-line text-[17px]', showSearchInput || searchQuery ? 'text-[#3559E0]' : '']" />
-          </button>
-          <Transition
-            enter-active-class="transition-all duration-200 ease-out"
-            enter-from-class="max-w-0 opacity-0"
-            enter-to-class="max-w-[240px] opacity-100"
-            leave-active-class="transition-all duration-150 ease-in"
-            leave-from-class="max-w-[240px] opacity-100"
-            leave-to-class="max-w-0 opacity-0"
-          >
-            <label
-              v-if="showSearchInput || searchQuery"
-              class="flex h-8 w-[220px] items-center gap-2 overflow-hidden rounded-md border border-[#E3E3E3] bg-white px-2 text-[13px] text-[#606060]"
+          <div class="flex items-center gap-0">
+            <button
+              type="button"
+              :class="[
+                ghostIconButtonClass,
+                showSearchInput || searchQuery ? ghostIconButtonActiveClass : '',
+              ]"
+              @click="toggleSearch"
             >
-              <i class="ri-search-line text-[15px] text-[#8B8B8B]" />
-              <input
-                :value="searchQuery"
-                type="text"
-                placeholder="搜索本表格"
-                class="w-full border-0 bg-transparent p-0 text-[13px] text-[#303030] outline-none placeholder:text-[#A0A0A0]"
-                @input="emit('update-search-query', ($event.target as HTMLInputElement).value)"
-              />
-            </label>
-          </Transition>
+              <i :class="['ri-search-line text-[17px]', showSearchInput || searchQuery ? 'text-[#3559E0]' : '']" />
+            </button>
+            <Transition
+              enter-active-class="transition-all duration-200 ease-out"
+              enter-from-class="max-w-0 opacity-0"
+              enter-to-class="max-w-[240px] opacity-100"
+              leave-active-class="transition-all duration-150 ease-in"
+              leave-from-class="max-w-[240px] opacity-100"
+              leave-to-class="max-w-0 opacity-0"
+            >
+              <div
+                v-if="showSearchInput || searchQuery"
+                class="flex h-8 w-[220px] items-center gap-2 overflow-hidden rounded-md bg-white px-2 text-[13px] text-[#606060]"
+              >
+                <input
+                  :value="searchQuery"
+                  type="text"
+                  placeholder="输入并搜索..."
+                  class="w-full border-0 bg-transparent p-0 text-[13px] text-[#303030] outline-none placeholder:text-[#A0A0A0]"
+                  aria-label="输入并搜索..."
+                  @input="emit('update-search-query', ($event.target as HTMLInputElement).value)"
+                />
+                <button
+                  v-if="searchQuery"
+                  type="button"
+                  class="inline-flex size-5 shrink-0 items-center justify-center rounded-sm text-[#9A9A9A] transition hover:bg-[#F3F3F3] hover:text-[#5F5F5F]"
+                  aria-label="清除搜索文字"
+                  @click="clearSearch"
+                >
+                  <i class="ri-close-line text-[14px]" />
+                </button>
+              </div>
+            </Transition>
+          </div>
           <button
             type="button"
             :class="ghostIconButtonClass"
