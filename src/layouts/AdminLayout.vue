@@ -36,9 +36,9 @@ function closeInbox() {
       aria-label="关闭收件箱"
       @click="closeInbox"
     />
-    <div class="relative flex min-h-svh flex-1 flex-col bg-white">
+    <div class="relative flex min-h-svh min-w-0 flex-1 flex-col overflow-x-hidden bg-white">
       <AppHeader />
-      <main class="flex flex-1 flex-col gap-4 p-4">
+      <main class="flex min-w-0 flex-1 flex-col gap-4 p-4">
         <RouterView />
       </main>
     </div>

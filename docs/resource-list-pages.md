@@ -55,6 +55,7 @@
 - `key`: 对应哪一个数据字段
 - `label`: 表头文案
 - `filterType`: 表格列的筛选类型表现
+- `tone / emphasis / format / width`: 列样式的语义表达
 - `searchable`: 是否参与全文搜索
 - `filter`: 是否生成筛选项，以及筛选如何取值
 - `sort`: 是否进入排序面板，以及排序如何取值
@@ -72,6 +73,33 @@
 - 一列展示两个字段，如“姓名 + 手机号”
 - 排序值和展示值不同，如 `"99.2%"` 需要转成数字
 - 筛选值和展示值不同，如“法人信息”实际要匹配 `legalPerson + phone`
+
+## 样式写法
+表格样式优先使用资源层语义，不要直接在页面里堆 `cellClass/headerClass`。
+
+当前推荐优先使用这些字段：
+
+- `tone`: `default | primary | muted | accent | warning`
+- `emphasis`: `default | strong`
+- `format`: `default | numeric | note`
+- `width`: `auto | fill`
+- `variant`: `default | contact | note | metric`
+
+常见映射：
+
+- 主标识列：`tone: "primary", emphasis: "strong"`
+- 数字或日期列：`format: "numeric"`
+- 备注列：`variant: "note", format: "note", tone: "muted", width: "fill"`
+- 强调数值列：`tone: "accent"`
+- 风险或告警状态列：`tone: "warning"`
+
+只有在资源层语义确实表达不了时，才允许保留 `cellClass/headerClass` 作为 escape hatch。
+
+不要这样做：
+
+- 不要在每个页面重复写 `wrapperClass` / `tableClass`
+- 不要把主列加粗、备注灰度、日期列数字字体这些主题级样式散落在页面里
+- 不要把页面里的 class 当作常规能力使用
 
 ## filters / sort / tabs 什么时候用
 `filters` 只放页面级附加筛选。例如“在页面中”这种并不对应某一列，但要参与列表过滤。
@@ -137,5 +165,10 @@
 
 1. 业务页面只写 schema，不直接拼控制器内部协议
 2. 新能力如果能抽成 schema 语义，就不要把逻辑再压回业务页面
+
+表格视觉统一入口位于：
+
+- [resourceTableTheme.ts](/Users/Rolly/buildguard-admin/src/components/resource/resourceTableTheme.ts)
+- [ListTable.vue](/Users/Rolly/buildguard-admin/src/components/resource/ListTable.vue)
 
 如果未来要扩展服务端分页、批量操作、操作列、URL 同步，优先在资源层扩展公共能力，再由业务页面通过 schema 使用。

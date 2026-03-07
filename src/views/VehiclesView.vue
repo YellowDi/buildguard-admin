@@ -66,8 +66,6 @@ const operatingSchema: ResourceListSchema<OperatingVehicleRecord> = {
   data: operatingVehicles,
   showIndex: true,
   stickyHeader: true,
-  wrapperClass: "overflow-visible",
-  tableClass: "min-w-full w-max table-auto border-collapse bg-white text-[14px]",
   columns: [
     // columns 的维护规则和单表格页完全一致。
     // 每个子表都只在这里声明：列展示、列搜索、列筛选、列排序。
@@ -75,6 +73,8 @@ const operatingSchema: ResourceListSchema<OperatingVehicleRecord> = {
       key: "plateNumber",
       label: "车牌号",
       filterType: "text",
+      emphasis: "strong",
+      tone: "primary",
       searchable: true,
       filter: {
         type: "text",
@@ -82,7 +82,6 @@ const operatingSchema: ResourceListSchema<OperatingVehicleRecord> = {
         defaultVisible: true,
       },
       sort: true,
-      cellClass: "font-medium text-[#1F1F1F]",
     },
     {
       key: "company",
@@ -121,6 +120,8 @@ const operatingSchema: ResourceListSchema<OperatingVehicleRecord> = {
       key: "onlineRate",
       label: "在线率",
       filterType: "number",
+      tone: "accent",
+      format: "numeric",
       searchable: true,
       filter: {
         type: "number",
@@ -131,15 +132,16 @@ const operatingSchema: ResourceListSchema<OperatingVehicleRecord> = {
         kind: "metric",
         value: row => parseRate(row.onlineRate),
       },
-      cellClass: "text-[#3559E0]",
     },
     {
       key: "note",
       label: "备注",
       filterType: "none",
+      variant: "note",
+      format: "note",
+      tone: "muted",
+      width: "fill",
       searchable: true,
-      headerClass: "w-full",
-      cellClass: "w-full text-[#6E6E6E]",
       cellRenderer: { kind: "note" },
     },
   ],
@@ -157,13 +159,13 @@ const alarmSchema: ResourceListSchema<AlarmVehicleRecord> = {
   data: alarmVehicles,
   showIndex: true,
   stickyHeader: true,
-  wrapperClass: "overflow-visible",
-  tableClass: "min-w-full w-max table-auto border-collapse bg-white text-[14px]",
   columns: [
     {
       key: "plateNumber",
       label: "车牌号",
       filterType: "text",
+      emphasis: "strong",
+      tone: "primary",
       searchable: true,
       filter: {
         type: "text",
@@ -171,7 +173,6 @@ const alarmSchema: ResourceListSchema<AlarmVehicleRecord> = {
         defaultVisible: true,
       },
       sort: true,
-      cellClass: "font-medium text-[#1F1F1F]",
     },
     {
       key: "company",
@@ -212,21 +213,23 @@ const alarmSchema: ResourceListSchema<AlarmVehicleRecord> = {
       key: "status",
       label: "处理状态",
       filterType: "tag",
+      tone: "warning",
       searchable: true,
       filter: {
         type: "tag",
         defaultVisible: true,
       },
       sort: true,
-      cellClass: "text-[#B65A2A]",
     },
     {
       key: "note",
       label: "备注",
       filterType: "none",
+      variant: "note",
+      format: "note",
+      tone: "muted",
+      width: "fill",
       searchable: true,
-      headerClass: "w-full",
-      cellClass: "w-full text-[#6E6E6E]",
       cellRenderer: { kind: "note" },
     },
   ],
@@ -244,13 +247,13 @@ const inspectionSchema: ResourceListSchema<InspectionVehicleRecord> = {
   data: inspectionVehicles,
   showIndex: true,
   stickyHeader: true,
-  wrapperClass: "overflow-visible",
-  tableClass: "min-w-full w-max table-auto border-collapse bg-white text-[14px]",
   columns: [
     {
       key: "plateNumber",
       label: "车牌号",
       filterType: "text",
+      emphasis: "strong",
+      tone: "primary",
       searchable: true,
       filter: {
         type: "text",
@@ -258,7 +261,6 @@ const inspectionSchema: ResourceListSchema<InspectionVehicleRecord> = {
         defaultVisible: true,
       },
       sort: true,
-      cellClass: "font-medium text-[#1F1F1F]",
     },
     {
       key: "company",
@@ -275,6 +277,7 @@ const inspectionSchema: ResourceListSchema<InspectionVehicleRecord> = {
       key: "annualCheck",
       label: "年检日期",
       filterType: "time",
+      format: "numeric",
       searchable: true,
       filter: {
         type: "date",
@@ -286,6 +289,7 @@ const inspectionSchema: ResourceListSchema<InspectionVehicleRecord> = {
       key: "maintenance",
       label: "最近维保",
       filterType: "time",
+      format: "numeric",
       searchable: true,
       filter: {
         type: "date",
@@ -296,21 +300,24 @@ const inspectionSchema: ResourceListSchema<InspectionVehicleRecord> = {
       key: "nextReview",
       label: "下次复核",
       filterType: "time",
+      tone: "accent",
+      format: "numeric",
       searchable: true,
       filter: {
         type: "date",
         defaultVisible: true,
       },
       sort: true,
-      cellClass: "text-[#3559E0]",
     },
     {
       key: "note",
       label: "备注",
       filterType: "none",
+      variant: "note",
+      format: "note",
+      tone: "muted",
+      width: "fill",
       searchable: true,
-      headerClass: "w-full",
-      cellClass: "w-full text-[#6E6E6E]",
       cellRenderer: { kind: "note" },
     },
   ],

@@ -65,9 +65,10 @@ const slots = useSlots()
 
 <template>
   <section class="-mx-4 flex min-h-0 flex-1 flex-col bg-white">
-    <div class="flex min-h-0 flex-1 flex-col pb-3 pt-3">
-      <div class="flex min-h-0 flex-1 flex-col">
+    <div class="flex min-h-0 min-w-0 flex-1 flex-col pb-3 pt-3">
+      <div class="flex min-h-0 min-w-0 flex-1 flex-col">
         <ListHeader
+          class="min-w-0 w-full"
           :title="title"
           :count="count"
           :tabs="tabs"
@@ -100,8 +101,8 @@ const slots = useSlots()
           @primary-action="emit('primary-action')"
         />
 
-        <div class="min-h-0 flex-1">
-          <div class="inline-block min-w-full pr-8 align-top">
+        <div class="min-h-0 min-w-0 flex-1">
+          <div class="min-h-0 min-w-0 w-full overflow-x-auto overflow-y-visible pr-8">
             <template v-if="sections?.length">
               <ListTable
                 v-for="section in sections"

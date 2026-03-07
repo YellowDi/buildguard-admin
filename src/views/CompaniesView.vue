@@ -54,8 +54,6 @@ const schema: ResourceListSchema<CompanyRecord> = {
   primaryActionLabel: "添加企业",
   showIndex: true,
   stickyHeader: true,
-  wrapperClass: "overflow-visible",
-  tableClass: "min-w-full w-max table-auto border-collapse bg-white text-[14px]",
   columns: [
     // columns 决定“表格长什么样”，同时也顺带声明“这列怎么参与搜索/筛选/排序”。
     // 一个典型列通常只需要关心 4 件事：
@@ -67,6 +65,8 @@ const schema: ResourceListSchema<CompanyRecord> = {
       key: "name",
       label: "企业名称",
       filterType: "text",
+      emphasis: "strong",
+      tone: "primary",
       searchable: true,
       filter: {
         type: "text",
@@ -75,7 +75,6 @@ const schema: ResourceListSchema<CompanyRecord> = {
       },
       sort: true,
       headerClass: "pr-3",
-      cellClass: "font-medium text-[#1F1F1F]",
     },
     {
       key: "type",
@@ -86,7 +85,6 @@ const schema: ResourceListSchema<CompanyRecord> = {
         type: "tag",
       },
       sort: true,
-      cellClass: "text-[#3F3F3F]",
     },
     {
       key: "district",
@@ -97,12 +95,12 @@ const schema: ResourceListSchema<CompanyRecord> = {
         type: "tag",
       },
       sort: true,
-      cellClass: "text-[#3F3F3F]",
     },
     {
       key: "vehicles",
       label: "车辆总数",
       filterType: "number",
+      format: "numeric",
       searchable: row => `${row.vehicles}`,
       filter: {
         type: "number",
@@ -112,12 +110,12 @@ const schema: ResourceListSchema<CompanyRecord> = {
       sort: {
         kind: "metric",
       },
-      cellClass: "tabular-nums text-[#2F2F2F]",
     },
     {
       key: "legalPerson",
       label: "法人信息",
       filterType: "contact",
+      variant: "contact",
       searchable: row => `${row.legalPerson} ${row.phone}`,
       filter: {
         type: "text",
@@ -139,6 +137,7 @@ const schema: ResourceListSchema<CompanyRecord> = {
       key: "serviceDays",
       label: "服务剩余时长",
       filterType: "number",
+      variant: "metric",
       searchable: row => `${row.serviceDays}`,
       filter: {
         type: "number",
@@ -156,31 +155,33 @@ const schema: ResourceListSchema<CompanyRecord> = {
       key: "startDate",
       label: "开始日期",
       filterType: "time",
+      format: "numeric",
       searchable: true,
       filter: {
         type: "date",
       },
       sort: true,
-      cellClass: "tabular-nums text-[#2F2F2F]",
     },
     {
       key: "endDate",
       label: "结束日期",
       filterType: "time",
+      format: "numeric",
       searchable: true,
       filter: {
         type: "date",
       },
       sort: true,
-      cellClass: "tabular-nums text-[#2F2F2F]",
     },
     {
       key: "note",
       label: "备注",
       filterType: "none",
+      variant: "note",
+      format: "note",
+      tone: "muted",
+      width: "fill",
       searchable: true,
-      headerClass: "w-full",
-      cellClass: "w-full text-[#6E6E6E]",
       cellRenderer: { kind: "note" },
     },
   ],

@@ -223,17 +223,17 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="flex flex-col">
-    <div class="px-8">
-      <div class="flex items-end gap-2">
-        <h1 class="text-[48px] font-semibold tracking-[-0.05em] text-[#191919]">{{ title }}</h1>
-        <span class="pb-1 text-[20px] font-normal text-[#8C8C8C]">{{ count }}</span>
+  <div class="flex min-w-0 w-full flex-col">
+    <div class="px-4 sm:px-8">
+      <div class="flex min-w-0 flex-wrap items-end gap-x-2 gap-y-1">
+        <h1 class="min-w-0 text-[40px] font-semibold tracking-[-0.05em] text-[#191919] sm:text-[48px]">{{ title }}</h1>
+        <span class="pb-0 text-[18px] font-normal text-[#8C8C8C] sm:pb-1 sm:text-[20px]">{{ count }}</span>
       </div>
     </div>
 
-    <div class="px-8">
-      <div class="flex items-end justify-between gap-6 border-b border-[#ECECEC]">
-        <nav class="flex flex-1 flex-wrap items-center text-[14px]">
+    <div class="px-4 sm:px-8">
+      <div class="flex min-w-0 flex-wrap items-end gap-x-6 gap-y-3 border-b border-[#ECECEC]">
+        <nav class="flex min-w-0 flex-[999_1_24rem] flex-wrap items-center text-[14px]">
           <button
             v-for="tab in tabs"
             :key="tab.label"
@@ -256,7 +256,7 @@ onBeforeUnmount(() => {
           </button>
         </nav>
 
-        <div class="flex shrink-0 items-center gap-1 pb-2 text-[#606060]">
+        <div class="flex min-w-0 flex-[1_1_100%] flex-wrap items-center justify-end gap-1 pb-2 text-[#606060] sm:flex-[0_0_auto] sm:flex-nowrap">
           <button
             type="button"
             :class="[
@@ -279,7 +279,7 @@ onBeforeUnmount(() => {
               <i :class="['ri-sort-asc text-[17px]', customSortEnabled ? 'text-[#3559E0]' : '']" />
             </button>
           </div>
-          <div class="flex items-center gap-0">
+          <div class="flex min-w-0 flex-1 items-center justify-end gap-0 sm:w-auto sm:flex-none sm:justify-start">
             <button
               type="button"
               :class="[
@@ -300,7 +300,7 @@ onBeforeUnmount(() => {
             >
               <div
                 v-if="showSearchInput || searchQuery"
-                class="flex h-8 w-[220px] items-center gap-2 overflow-hidden rounded-md bg-white px-2 text-[13px] text-[#606060]"
+                class="flex h-8 min-w-0 flex-1 items-center gap-2 overflow-hidden rounded-md bg-white px-2 text-[13px] text-[#606060] sm:w-[220px] sm:flex-none"
               >
                 <input
                   :value="searchQuery"
@@ -349,9 +349,9 @@ onBeforeUnmount(() => {
       leave-from-class="max-h-16 opacity-100 translate-y-0"
       leave-to-class="max-h-0 opacity-0 -translate-y-1"
     >
-      <div v-if="showControls" class="px-8 py-2">
-        <div class="flex items-center gap-0.5 text-[14px] text-[#666]">
-          <div class="flex min-w-0 items-center gap-0.5">
+      <div v-if="showControls" class="px-4 py-2 sm:px-8">
+        <div class="flex flex-wrap items-center gap-0.5 text-[14px] text-[#666]">
+          <div class="flex min-w-0 flex-wrap items-center gap-0.5">
             <template v-for="(field, index) in fields" :key="field.key">
               <div class="relative" data-list-popover>
                 <FilterChip

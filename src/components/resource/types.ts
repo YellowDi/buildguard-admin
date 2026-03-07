@@ -79,10 +79,21 @@ export type DateFilterState = {
 
 export type FilterType = "text" | "tag" | "number" | "contact" | "time" | "none"
 
+export type TableColumnTone = "default" | "primary" | "muted" | "accent" | "warning"
+export type TableColumnEmphasis = "default" | "strong"
+export type TableColumnFormat = "default" | "numeric" | "note"
+export type TableColumnWidth = "auto" | "fill"
+export type TableColumnVariant = "default" | "contact" | "note" | "metric"
+
 export type TableColumn = {
   key: string
   label: string
   filterType?: FilterType
+  tone?: TableColumnTone
+  emphasis?: TableColumnEmphasis
+  format?: TableColumnFormat
+  width?: TableColumnWidth
+  variant?: TableColumnVariant
   headerClass?: string
   cellClass?: string
   slot?: string

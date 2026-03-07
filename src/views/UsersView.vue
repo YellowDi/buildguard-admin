@@ -39,8 +39,6 @@ const schema: ResourceListSchema<PractitionerRecord> = {
   data: practitioners,
   showIndex: true,
   stickyHeader: true,
-  wrapperClass: "overflow-visible",
-  tableClass: "min-w-full w-max table-auto border-collapse bg-white text-[14px]",
   columns: [
     // columns 决定“表格长什么样”，同时也顺带声明“这列怎么参与搜索/筛选/排序”。
     // 一个典型列通常只需要关心 4 件事：
@@ -52,6 +50,7 @@ const schema: ResourceListSchema<PractitionerRecord> = {
       key: "name",
       label: "从业人员",
       filterType: "contact",
+      variant: "contact",
       searchable: row => `${row.name} ${row.phone}`,
       filter: {
         type: "text",
@@ -76,6 +75,8 @@ const schema: ResourceListSchema<PractitionerRecord> = {
       key: "company",
       label: "所属企业",
       filterType: "text",
+      emphasis: "strong",
+      tone: "primary",
       searchable: true,
       filter: {
         type: "text",
@@ -120,6 +121,7 @@ const schema: ResourceListSchema<PractitionerRecord> = {
       key: "experienceYears",
       label: "从业年限",
       filterType: "number",
+      variant: "metric",
       searchable: row => `${row.experienceYears}`,
       filter: {
         type: "number",
@@ -140,12 +142,12 @@ const schema: ResourceListSchema<PractitionerRecord> = {
       key: "joinedAt",
       label: "入职日期",
       filterType: "time",
+      format: "numeric",
       searchable: true,
       filter: {
         type: "date",
       },
       sort: true,
-      cellClass: "tabular-nums text-[#2F2F2F]",
     },
     {
       key: "status",
@@ -161,9 +163,11 @@ const schema: ResourceListSchema<PractitionerRecord> = {
       key: "note",
       label: "备注",
       filterType: "none",
+      variant: "note",
+      format: "note",
+      tone: "muted",
+      width: "fill",
       searchable: true,
-      headerClass: "w-full",
-      cellClass: "w-full text-[#6E6E6E]",
       cellRenderer: { kind: "note" },
     },
   ],
