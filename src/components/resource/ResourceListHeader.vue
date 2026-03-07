@@ -97,6 +97,35 @@ function openSortPopover(source: "toolbar" | "chip") {
   openPopover.value = sameSource ? null : "sort-popover"
 }
 
+function buildNextSortRule(): SortRule {
+  const fallbackField = props.sortFieldOptions[0]?.value ?? "name"
+  const unusedField = props.sortFieldOptions.find((option) => !props.sortRules.some((rule) => rule.field === option.value))?.value
+    ?? fallbackField
+  const fieldMeta = props.sortFieldOptions.find((option) => option.value === unusedField)
+
+  return {
+    id: `sort-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    field: unusedField,
+    direction: fieldMeta?.kind === "metric" ? "desc" : "asc",
+  }
+}
+
+function handleToolbarAddSort() {
+  closePopover()
+
+  if (!props.showControls) {
+    emit("toggle-controls")
+  }
+
+  if (props.customSortEnabled && props.sortRules.length) {
+    return
+  }
+
+  const nextRules = props.sortRules.length ? props.sortRules : [buildNextSortRule()]
+  emit("set-custom-sort-enabled", true)
+  emit("update-sort-rules", nextRules)
+}
+
 function closePopover() {
   openPopover.value = null
 }
@@ -234,24 +263,10 @@ onBeforeUnmount(() => {
                 ghostIconButtonClass,
                 customSortEnabled ? ghostIconButtonActiveClass : '',
               ]"
-              @click="openSortPopover('toolbar')"
+              @click="handleToolbarAddSort"
             >
               <i :class="['ri-sort-asc text-[17px]', customSortEnabled ? 'text-[#3559E0]' : '']" />
             </button>
-
-            <div
-              v-if="openPopover === 'sort-popover' && sortPopoverSource === 'toolbar'"
-              class="absolute right-0 top-[calc(100%+10px)] z-40"
-            >
-              <SortPopover
-                :enabled="customSortEnabled"
-                :rules="sortRules"
-                :field-options="sortFieldOptions"
-                @close="closePopover"
-                @set-enabled="handleSortEnabledChange"
-                @update-rules="handleSortRulesChange"
-              />
-            </div>
           </div>
           <button
             type="button"
