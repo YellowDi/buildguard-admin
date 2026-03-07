@@ -4,6 +4,8 @@ import { useResourceList } from "@/components/resource/useResourceList"
 import type { ResourceListSchema } from "@/components/resource/types"
 import companiesData from "@/data/companies.json"
 
+// 1. 先定义“表格每一行”的数据结构。
+// 新建同类页面时，优先把这里改成接口返回或本地 mock 的真实行类型。
 type CompanyRecord = {
   id: number
   name: string
@@ -21,6 +23,9 @@ type CompanyRecord = {
 
 type RawCompanyRecord = Omit<CompanyRecord, "startDate" | "endDate">
 
+// 2. 准备列表数据。
+// 当前示例先把原始 JSON 转成最终页面使用的数据结构；
+// 接接口时也建议把这种轻量转换留在页面顶部，避免把业务脏数据传进 schema。
 const companies = (companiesData as RawCompanyRecord[]).map((company) => {
   const startDate = extractDatePart(company.lastUpdated)
   const endDate = buildEndDate(company.serviceDays)
@@ -33,6 +38,15 @@ const companies = (companiesData as RawCompanyRecord[]).map((company) => {
   }
 })
 
+// 3. 用一个 schema 描述整张资源表格页。
+// 页面作者主要维护这里：
+// - 顶部标题、行主键
+// - columns: 列展示、列搜索、列筛选、列排序
+// - filters: 不直接对应某一列的附加筛选
+// - sort: 默认排序和排序持久化 key
+// - tabs: 顶部标签页如何分组
+//
+// 这就是以后新建表格页时最主要的工作区，原则上不需要理解资源层内部实现。
 const schema: ResourceListSchema<CompanyRecord> = {
   title: "企业",
   rowKey: "id",
@@ -43,6 +57,12 @@ const schema: ResourceListSchema<CompanyRecord> = {
   wrapperClass: "overflow-visible",
   tableClass: "min-w-full w-max table-auto border-collapse bg-white text-[14px]",
   columns: [
+    // columns 决定“表格长什么样”，同时也顺带声明“这列怎么参与搜索/筛选/排序”。
+    // 一个典型列通常只需要关心 4 件事：
+    // - key: 对应哪一个字段
+    // - label: 表头文案
+    // - filter: 这列是否可以筛选
+    // - sort/searchable: 这列是否参与排序或全文搜索
     {
       key: "name",
       label: "企业名称",
@@ -164,6 +184,8 @@ const schema: ResourceListSchema<CompanyRecord> = {
       cellRenderer: { kind: "note" },
     },
   ],
+  // filters 用来放“不完全等于某一列”的筛选项。
+  // 比如这里的“在页面中”本质是备注检索，所以单独声明为 fixed filter。
   filters: [
     {
       key: "在页面中",
@@ -174,11 +196,15 @@ const schema: ResourceListSchema<CompanyRecord> = {
       value: row => row.note,
     },
   ],
+  // sort 只负责默认排序和本地持久化。
+  // 如果某一列没声明 sort，它就不会出现在排序面板里。
   sort: {
     storageKey: "companies-sort-preferences",
     initialField: "serviceDays",
     initialDirection: "desc",
   },
+  // tabs 描述顶部标签页的来源。
+  // 这里表示：按 type 字段自动生成“全部 + 各企业类型”标签。
   tabs: {
     mode: "enum",
     all: { label: "全部", value: "all" },
@@ -186,6 +212,8 @@ const schema: ResourceListSchema<CompanyRecord> = {
   },
 }
 
+// 4. 把 schema 交给通用资源控制器。
+// 它会统一产出页面渲染所需的 tabs、filters、rows、sort state 等响应式状态。
 const page = useResourceList(schema)
 
 function buildEndDate(serviceDays: number) {
@@ -221,5 +249,8 @@ function toISODate(date: Date) {
 </script>
 
 <template>
+  <!-- 5. 页面模板层保持极薄。
+       以后新建同类页面时，理想状态就是：
+       定义行类型 -> 准备数据 -> 写 schema -> 渲染 ResourceListPage。 -->
   <ResourceListPage :page="page" />
 </template>

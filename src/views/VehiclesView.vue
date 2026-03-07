@@ -6,6 +6,8 @@ import { useResourceList } from "@/components/resource/useResourceList"
 import type { HeaderTab, ResourceListSchema } from "@/components/resource/types"
 import vehiclesData from "@/data/vehicles.json"
 
+// 1. 先定义“表格每一行”的数据结构。
+// 车辆页是多表格页，所以这里会有多种行类型，分别对应不同子表。
 type OperatingVehicleRecord = {
   plateNumber: string
   company: string
@@ -39,6 +41,8 @@ type VehicleDataBundle = {
   inspection: InspectionVehicleRecord[]
 }
 
+// 2. 准备页面数据。
+// 当前示例读取本地 JSON，并在进入 schema 前统一补齐 note 等派生字段。
 const VEHICLE_TAB_OVERVIEW = "overview"
 const VEHICLE_TAB_ALARMS = "alarms"
 const VEHICLE_TAB_INSPECTIONS = "inspections"
@@ -49,8 +53,12 @@ const {
   inspection: inspectionVehicles,
 } = buildVehicleDataBundle(vehiclesData as VehicleDataBundle)
 
+// 3. 多表格页的核心规则：
+// 不是为整页写一个复杂 controller，而是“每个子表各写一个 schema”。
 // 车辆页和单表格页的区别只在这里：
-// 它维护多个资源 schema，并通过顶部一级 tab 决定当前展示哪一个资源页面。
+// - 单表格页：一个 schema -> 一个 page
+// - 多表格页：多个 schema -> 多个 page -> 顶层 tab 决定当前显示哪个 page
+//
 // 每一个子表本身仍然遵循“数据 -> schema -> useResourceList”的唯一方式。
 const operatingSchema: ResourceListSchema<OperatingVehicleRecord> = {
   title: "车辆",
@@ -61,6 +69,8 @@ const operatingSchema: ResourceListSchema<OperatingVehicleRecord> = {
   wrapperClass: "overflow-visible",
   tableClass: "min-w-full w-max table-auto border-collapse bg-white text-[14px]",
   columns: [
+    // columns 的维护规则和单表格页完全一致。
+    // 每个子表都只在这里声明：列展示、列搜索、列筛选、列排序。
     {
       key: "plateNumber",
       label: "车牌号",
@@ -140,6 +150,7 @@ const operatingSchema: ResourceListSchema<OperatingVehicleRecord> = {
   },
 }
 
+// 报警车辆子表 schema。
 const alarmSchema: ResourceListSchema<AlarmVehicleRecord> = {
   title: "车辆",
   rowKey: "plateNumber",
@@ -226,6 +237,7 @@ const alarmSchema: ResourceListSchema<AlarmVehicleRecord> = {
   },
 }
 
+// 年检与维保子表 schema。
 const inspectionSchema: ResourceListSchema<InspectionVehicleRecord> = {
   title: "车辆",
   rowKey: "plateNumber",
@@ -309,12 +321,15 @@ const inspectionSchema: ResourceListSchema<InspectionVehicleRecord> = {
   },
 }
 
+// 4. 每个 schema 各自生成一个 page。
+// 这一步之后，每个子表都已经拥有完整的搜索、筛选、排序和表格状态。
 const operatingPage = useResourceList(operatingSchema)
 const alarmPage = useResourceList(alarmSchema)
 const inspectionPage = useResourceList(inspectionSchema)
 
 const activeTab = ref(VEHICLE_TAB_OVERVIEW)
 
+// 5. 顶层 tabs 只负责“切换当前看哪个子表”，不负责子表内部筛选逻辑。
 const tabs = computed<HeaderTab[]>(() => [
   {
     label: "运营车辆",
@@ -336,6 +351,11 @@ const tabs = computed<HeaderTab[]>(() => [
   },
 ])
 
+// 6. pageRegistry 是多表格页最关键的组织方式。
+// 新建类似页面时，推荐一直沿用这个模式：
+// - 把多个 page 收到一个 registry
+// - 通过 activeTab 选出 activePage
+// - 模板只渲染 ResourceTabbedPage
 const pageRegistry = {
   [VEHICLE_TAB_OVERVIEW]: operatingPage,
   [VEHICLE_TAB_ALARMS]: alarmPage,
@@ -410,6 +430,8 @@ function getDaysUntil(dateString: string) {
 </script>
 
 <template>
+  <!-- 7. 页面模板层保持极薄。
+       多表格页也不要自己桥接每种筛选事件，而是把当前 activePage 交给统一页面壳。 -->
   <ResourceTabbedPage
     title="车辆"
     :tabs="tabs"
