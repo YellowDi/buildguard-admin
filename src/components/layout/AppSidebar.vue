@@ -61,10 +61,6 @@ const pinnedItems: NavItem[] = [
 
 const businessItems = reactive<NavItem[]>([
   {
-    label: "QR",
-    icon: "ri-qr-code-line",
-  },
-  {
     label: "企业",
     icon: "ri-building-line",
     path: "/companies",
