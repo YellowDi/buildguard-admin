@@ -1,4 +1,8 @@
 <script setup lang="ts">
+import { computed, ref } from "vue"
+
+import ControlChip from "@/components/companies/ControlChip.vue"
+
 type CompanyRecord = {
   id: number
   name: string
@@ -18,13 +22,21 @@ const tabs = [
   { label: "道路危险货物运输", count: 338, active: false },
 ]
 
-const fields = [
-  { icon: "ri-arrow-up-down-line", label: "服务剩余时长", accent: true, arrow: true },
-  { icon: "ri-text", label: "企业名称", arrow: false },
-  { icon: "ri-user-line", label: "法人信息", arrow: true },
-  { icon: "ri-checkbox-multiple-blank-line", label: "在页项中", arrow: true },
-  { icon: "ri-calendar-line", label: "日期", arrow: true },
-]
+const sortDirection = ref<"asc" | "desc">("desc")
+
+const fields = computed(() => [
+  {
+    icon: sortDirection.value === "desc" ? "ri-sort-desc" : "ri-sort-asc",
+    label: "服务剩余时长",
+    accent: true,
+    arrow: true,
+    kind: "sort",
+  },
+  { icon: "ri-text", label: "企业名称", arrow: false, kind: "filter" },
+  { icon: "ri-user-line", label: "法人信息", arrow: true, kind: "filter" },
+  { icon: "ri-checkbox-multiple-blank-line", label: "在页项中", arrow: true, kind: "filter" },
+  { icon: "ri-calendar-line", label: "日期", arrow: true, kind: "filter" },
+])
 
 const companies: CompanyRecord[] = [
   {
@@ -388,6 +400,18 @@ const companies: CompanyRecord[] = [
     note: "审计记录已归档",
   },
 ]
+
+const sortedCompanies = computed(() => {
+  return [...companies].sort((a, b) => {
+    return sortDirection.value === "desc"
+      ? b.serviceDays - a.serviceDays
+      : a.serviceDays - b.serviceDays
+  })
+})
+
+function toggleSort() {
+  sortDirection.value = sortDirection.value === "desc" ? "asc" : "desc"
+}
 </script>
 
 <template>
@@ -461,19 +485,13 @@ const companies: CompanyRecord[] = [
           <div class="flex items-center gap-0.5 text-[14px] text-[#666]">
             <div class="flex min-w-0 items-center gap-0.5">
               <template v-for="(field, index) in fields" :key="field.label">
-                <button
-                  type="button"
-                  :class="[
-                    'inline-flex h-6 shrink-0 items-center gap-1 rounded-full px-2.5 transition',
-                    field.accent
-                      ? 'bg-[#EEF3FF] text-[#3559E0]'
-                      : 'text-[#666] hover:bg-[#F5F5F5]',
-                  ]"
-                >
-                  <i :class="[field.icon, 'text-[15px]']" />
-                  <span>{{ field.label }}</span>
-                  <i v-if="field.arrow" class="ri-arrow-down-s-line text-sm text-[#8A8A8A]" />
-                </button>
+                <ControlChip
+                  @click="field.kind === 'sort' ? toggleSort() : undefined"
+                  :icon="field.icon"
+                  :label="field.label"
+                  :caret="field.arrow"
+                  :selected="field.accent"
+                />
 
                 <div
                   v-if="index === 0"
@@ -481,13 +499,7 @@ const companies: CompanyRecord[] = [
                 />
               </template>
 
-              <button
-                type="button"
-                class="inline-flex h-6 shrink-0 items-center gap-1 rounded-md px-2 text-[#9A9A9A] transition hover:bg-transparent hover:text-[#5F5F5F]"
-              >
-                <i class="ri-add-line text-[15px]" />
-                筛选
-              </button>
+              <ControlChip icon="ri-add-line" label="筛选" variant="ghost" />
             </div>
           </div>
         </div>
@@ -497,24 +509,24 @@ const companies: CompanyRecord[] = [
             <table class="min-w-full w-max table-auto border-collapse bg-white text-[14px]">
               <thead class="text-[#7A7A7A]">
                 <tr>
-                  <th class="w-8 min-w-8 py-2 pr-2 text-right font-normal"></th>
-                  <th class="border-b border-[#ECECEC] px-3 py-2 text-left font-normal whitespace-nowrap transition-colors hover:bg-[#F7F7F7]">企业名称</th>
-                  <th class="border-b border-[#ECECEC] px-3 py-2 text-left font-normal whitespace-nowrap transition-colors hover:bg-[#F7F7F7]">企业类型</th>
-                  <th class="border-b border-[#ECECEC] px-3 py-2 text-left font-normal whitespace-nowrap transition-colors hover:bg-[#F7F7F7]">行政区域</th>
-                  <th class="border-b border-[#ECECEC] px-3 py-2 text-left font-normal whitespace-nowrap transition-colors hover:bg-[#F7F7F7]">车辆总数</th>
-                  <th class="border-b border-[#ECECEC] px-3 py-2 text-left font-normal whitespace-nowrap transition-colors hover:bg-[#F7F7F7]">法人信息</th>
-                  <th class="border-b border-[#ECECEC] px-3 py-2 text-left font-normal whitespace-nowrap transition-colors hover:bg-[#F7F7F7]">服务剩余时长</th>
-                  <th class="w-full border-b border-[#ECECEC] px-3 py-2 text-left font-normal whitespace-nowrap transition-colors hover:bg-[#F7F7F7]">备注</th>
+                  <th class="sticky top-0 z-10 w-8 min-w-8 bg-white py-2 pr-2 text-right font-normal"></th>
+                  <th class="sticky top-0 z-10 border-b border-[#ECECEC] bg-white px-3 py-2 text-left font-normal whitespace-nowrap transition-colors hover:bg-[#F7F7F7]">企业名称</th>
+                  <th class="sticky top-0 z-10 border-b border-[#ECECEC] bg-white px-3 py-2 text-left font-normal whitespace-nowrap transition-colors hover:bg-[#F7F7F7]">企业类型</th>
+                  <th class="sticky top-0 z-10 border-b border-[#ECECEC] bg-white px-3 py-2 text-left font-normal whitespace-nowrap transition-colors hover:bg-[#F7F7F7]">行政区域</th>
+                  <th class="sticky top-0 z-10 border-b border-[#ECECEC] bg-white px-3 py-2 text-left font-normal whitespace-nowrap transition-colors hover:bg-[#F7F7F7]">车辆总数</th>
+                  <th class="sticky top-0 z-10 border-b border-[#ECECEC] bg-white px-3 py-2 text-left font-normal whitespace-nowrap transition-colors hover:bg-[#F7F7F7]">法人信息</th>
+                  <th class="sticky top-0 z-10 border-b border-[#ECECEC] bg-white px-3 py-2 text-left font-normal whitespace-nowrap transition-colors hover:bg-[#F7F7F7]">服务剩余时长</th>
+                  <th class="sticky top-0 z-10 w-full border-b border-[#ECECEC] bg-white px-3 py-2 text-left font-normal whitespace-nowrap transition-colors hover:bg-[#F7F7F7]">备注</th>
                 </tr>
               </thead>
 
               <tbody class="text-[#2F2F2F]">
                 <tr
-                  v-for="company in companies"
+                  v-for="(company, index) in sortedCompanies"
                   :key="company.id"
                   class="transition hover:bg-[#FBFBFB]"
                 >
-                  <td class="w-8 min-w-8 py-3 pr-2 text-right text-[#A0A0A0] whitespace-nowrap">{{ company.id }}</td>
+                  <td class="w-8 min-w-8 py-3 pr-2 text-right text-[#A0A0A0] whitespace-nowrap">{{ index + 1 }}</td>
                   <td class="border-b border-[#F0F0F0] px-3 py-3 font-medium text-[#1F1F1F] whitespace-nowrap">{{ company.name }}</td>
                   <td class="border-b border-l border-[#F0F0F0] px-3 py-3 text-[#3F3F3F] whitespace-nowrap">{{ company.type }}</td>
                   <td class="border-b border-l border-[#F0F0F0] px-3 py-3 text-[#3F3F3F] whitespace-nowrap">{{ company.district }}</td>
