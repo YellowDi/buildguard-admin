@@ -4,6 +4,7 @@ import AdminLayout from "@/layouts/AdminLayout.vue"
 import LoginView from "@/views/auth/LoginView.vue"
 import OtpView from "@/views/auth/OtpView.vue"
 import SignupView from "@/views/auth/SignupView.vue"
+import CompaniesView from "@/views/companies/CompaniesView.vue"
 import DashboardView from "@/views/dashboard/DashboardView.vue"
 import SettingsView from "@/views/settings/SettingsView.vue"
 import UsersView from "@/views/users/UsersView.vue"
@@ -48,6 +49,14 @@ const router = createRouter({
           component: DashboardView,
           meta: {
             title: "工作台",
+          },
+        },
+        {
+          path: "companies",
+          name: "companies",
+          component: CompaniesView,
+          meta: {
+            title: "企业",
           },
         },
         {

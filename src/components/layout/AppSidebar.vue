@@ -67,6 +67,7 @@ const businessItems = reactive<NavItem[]>([
   {
     label: "企业",
     icon: "ri-building-line",
+    path: "/companies",
   },
   {
     label: "车辆",
@@ -215,9 +216,16 @@ watch(openMobile, (value) => {
     <SidebarContent class="min-h-0 px-3 pb-4 pt-4">
       <nav class="overflow-y-auto pr-1">
         <div v-for="item in businessItems" :key="item.label">
-          <button
+          <component
+            :is="item.path && !item.children?.length ? 'RouterLink' : 'button'"
+            :to="item.path"
             type="button"
-            class="group flex h-9 w-full items-center gap-3 rounded-lg px-3 text-left text-sm font-medium transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            :class="[
+              'group flex h-9 w-full items-center gap-3 rounded-lg px-3 text-left text-sm font-medium transition-colors',
+              isActive(item)
+                ? activeItemClass
+                : 'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+            ]"
             @click="toggleItem(item)"
           >
             <i v-if="item.icon" :class="[item.icon, 'text-lg leading-none']" />
@@ -229,7 +237,7 @@ watch(openMobile, (value) => {
                 item.open ? 'rotate-0' : '-rotate-90',
               ]"
             />
-          </button>
+          </component>
 
           <SidebarMenuSub
             v-if="item.children?.length && item.open"
