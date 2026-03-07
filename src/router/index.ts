@@ -8,6 +8,7 @@ import CompaniesView from "@/views/companies/CompaniesView.vue"
 import DashboardView from "@/views/dashboard/DashboardView.vue"
 import SettingsView from "@/views/settings/SettingsView.vue"
 import UsersView from "@/views/users/UsersView.vue"
+import VehiclesView from "@/views/vehicles/VehiclesView.vue"
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -57,6 +58,14 @@ const router = createRouter({
           component: CompaniesView,
           meta: {
             title: "企业",
+          },
+        },
+        {
+          path: "vehicles",
+          name: "vehicles",
+          component: VehiclesView,
+          meta: {
+            title: "车辆",
           },
         },
         {

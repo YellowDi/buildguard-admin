@@ -72,6 +72,7 @@ const businessItems = reactive<NavItem[]>([
   {
     label: "车辆",
     icon: "ri-truck-line",
+    path: "/vehicles",
   },
   {
     label: "从业人员",
