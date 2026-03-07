@@ -493,43 +493,45 @@ const companies: CompanyRecord[] = [
         </div>
 
         <div class="overflow-auto">
-          <table class="w-full min-w-max table-auto border-collapse bg-white text-[14px]">
-            <thead class="text-[#7A7A7A]">
-              <tr>
-                <th class="w-8 min-w-8 py-2 pr-2 text-right font-normal"></th>
-                <th class="border-b border-[#ECECEC] px-3 py-2 text-left font-normal whitespace-nowrap">企业名称</th>
-                <th class="border-b border-[#ECECEC] px-3 py-2 text-left font-normal whitespace-nowrap">企业类型</th>
-                <th class="border-b border-[#ECECEC] px-3 py-2 text-left font-normal whitespace-nowrap">行政区域</th>
-                <th class="border-b border-[#ECECEC] px-3 py-2 text-left font-normal whitespace-nowrap">车辆总数</th>
-                <th class="border-b border-[#ECECEC] px-3 py-2 text-left font-normal whitespace-nowrap">法人信息</th>
-                <th class="border-b border-[#ECECEC] px-3 py-2 text-left font-normal whitespace-nowrap">服务剩余时长</th>
-                <th class="w-full border-b border-[#ECECEC] px-3 py-2 text-left font-normal whitespace-nowrap">备注</th>
-              </tr>
-            </thead>
+          <div class="inline-block min-w-full pr-8 align-top">
+            <table class="min-w-full w-max table-auto border-collapse bg-white text-[14px]">
+              <thead class="text-[#7A7A7A]">
+                <tr>
+                  <th class="w-8 min-w-8 py-2 pr-2 text-right font-normal"></th>
+                  <th class="border-b border-[#ECECEC] px-3 py-2 text-left font-normal whitespace-nowrap transition-colors hover:bg-[#F7F7F7]">企业名称</th>
+                  <th class="border-b border-[#ECECEC] px-3 py-2 text-left font-normal whitespace-nowrap transition-colors hover:bg-[#F7F7F7]">企业类型</th>
+                  <th class="border-b border-[#ECECEC] px-3 py-2 text-left font-normal whitespace-nowrap transition-colors hover:bg-[#F7F7F7]">行政区域</th>
+                  <th class="border-b border-[#ECECEC] px-3 py-2 text-left font-normal whitespace-nowrap transition-colors hover:bg-[#F7F7F7]">车辆总数</th>
+                  <th class="border-b border-[#ECECEC] px-3 py-2 text-left font-normal whitespace-nowrap transition-colors hover:bg-[#F7F7F7]">法人信息</th>
+                  <th class="border-b border-[#ECECEC] px-3 py-2 text-left font-normal whitespace-nowrap transition-colors hover:bg-[#F7F7F7]">服务剩余时长</th>
+                  <th class="w-full border-b border-[#ECECEC] px-3 py-2 text-left font-normal whitespace-nowrap transition-colors hover:bg-[#F7F7F7]">备注</th>
+                </tr>
+              </thead>
 
-            <tbody class="text-[#2F2F2F]">
-              <tr
-                v-for="company in companies"
-                :key="company.id"
-                class="transition hover:bg-[#FBFBFB]"
-              >
-                <td class="w-8 min-w-8 py-3 pr-2 text-right text-[#A0A0A0] whitespace-nowrap">{{ company.id }}</td>
-                <td class="border-b border-[#F0F0F0] px-3 py-3 font-medium text-[#1F1F1F] whitespace-nowrap">{{ company.name }}</td>
-                <td class="border-b border-l border-[#F0F0F0] px-3 py-3 text-[#3F3F3F] whitespace-nowrap">{{ company.type }}</td>
-                <td class="border-b border-l border-[#F0F0F0] px-3 py-3 text-[#3F3F3F] whitespace-nowrap">{{ company.district }}</td>
-                <td class="border-b border-l border-[#F0F0F0] px-3 py-3 tabular-nums text-[#2F2F2F] whitespace-nowrap">{{ company.vehicles }}</td>
-                <td class="border-b border-l border-[#F0F0F0] px-3 py-3 whitespace-nowrap">
-                  <span class="text-[#1F1F1F]">{{ company.legalPerson }}</span>
-                  <span class="ml-1 text-[#9A9A9A]">{{ company.phone }}</span>
-                </td>
-                <td class="border-b border-l border-[#F0F0F0] px-3 py-3 text-[#3559E0] tabular-nums whitespace-nowrap">{{ company.serviceDays }} 天</td>
-                <td class="w-full border-b border-l border-[#F0F0F0] px-3 py-3 text-[#6E6E6E] whitespace-nowrap">{{ company.note }}</td>
-              </tr>
-            </tbody>
-          </table>
+              <tbody class="text-[#2F2F2F]">
+                <tr
+                  v-for="company in companies"
+                  :key="company.id"
+                  class="transition hover:bg-[#FBFBFB]"
+                >
+                  <td class="w-8 min-w-8 py-3 pr-2 text-right text-[#A0A0A0] whitespace-nowrap">{{ company.id }}</td>
+                  <td class="border-b border-[#F0F0F0] px-3 py-3 font-medium text-[#1F1F1F] whitespace-nowrap">{{ company.name }}</td>
+                  <td class="border-b border-l border-[#F0F0F0] px-3 py-3 text-[#3F3F3F] whitespace-nowrap">{{ company.type }}</td>
+                  <td class="border-b border-l border-[#F0F0F0] px-3 py-3 text-[#3F3F3F] whitespace-nowrap">{{ company.district }}</td>
+                  <td class="border-b border-l border-[#F0F0F0] px-3 py-3 tabular-nums text-[#2F2F2F] whitespace-nowrap">{{ company.vehicles }}</td>
+                  <td class="border-b border-l border-[#F0F0F0] px-3 py-3 whitespace-nowrap">
+                    <span class="text-[#1F1F1F]">{{ company.legalPerson }}</span>
+                    <span class="ml-1 text-[#9A9A9A]">{{ company.phone }}</span>
+                  </td>
+                  <td class="border-b border-l border-[#F0F0F0] px-3 py-3 text-[#3559E0] tabular-nums whitespace-nowrap">{{ company.serviceDays }} 天</td>
+                  <td class="w-full border-b border-l border-[#F0F0F0] px-3 py-3 text-[#6E6E6E] whitespace-nowrap">{{ company.note }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
 
           <div class="px-3 py-3 text-[13px] text-[#9B9B9B]">
-              显示 8 条企业记录，支持按企业名称、法人信息、服务剩余时长进行筛选与排序。
+              显示 30 条企业记录，支持按企业名称、法人信息、服务剩余时长进行筛选与排序。
           </div>
         </div>
       </div>
