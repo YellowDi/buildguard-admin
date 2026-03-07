@@ -115,8 +115,15 @@ const slots = useSlots()
                 :sticky-header="section.stickyHeader ?? stickyHeader"
                 :wrapper-class="section.wrapperClass ?? wrapperClass"
                 :table-class="section.tableClass ?? tableClass"
-                v-slots="slots"
-              />
+              >
+                <template
+                  v-for="(_, name) in slots"
+                  :key="name"
+                  #[name]="slotProps"
+                >
+                  <slot :name="name" v-bind="slotProps" />
+                </template>
+              </Table>
             </template>
             <Table
               v-else
@@ -128,8 +135,15 @@ const slots = useSlots()
               :sticky-header="stickyHeader"
               :wrapper-class="wrapperClass"
               :table-class="tableClass"
-              v-slots="slots"
-            />
+            >
+              <template
+                v-for="(_, name) in slots"
+                :key="name"
+                #[name]="slotProps"
+              >
+                <slot :name="name" v-bind="slotProps" />
+              </template>
+            </Table>
           </div>
         </div>
       </div>
