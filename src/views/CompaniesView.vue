@@ -77,8 +77,6 @@ const companiesColumns: TableColumn[] = [
       kind: "dual-inline",
       primaryKey: "legalPerson",
       secondaryKey: "phone",
-      primaryClass: "text-[#1F1F1F]",
-      secondaryClass: "text-[#9A9A9A]",
     },
   },
   {
@@ -88,8 +86,6 @@ const companiesColumns: TableColumn[] = [
     cellRenderer: {
       kind: "metric-unit",
       unit: "天",
-      valueClass: "tabular-nums text-[#3559E0]",
-      unitClass: "ml-1 text-[12px] text-[#9A9A9A]",
     },
   },
   { key: "startDate", label: "开始日期", filterType: "time", cellClass: "tabular-nums text-[#2F2F2F]" },
