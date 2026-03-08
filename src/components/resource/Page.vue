@@ -59,6 +59,7 @@ const emit = defineEmits<{
   "update-number-filter": [payload: { label: string; value: NumberFilterState }]
   "update-tag-filter": [payload: { label: string; value: TagFilterState }]
   "update-date-filter": [payload: { label: string; value: DateFilterState }]
+  "export-action": []
   "primary-action": []
 }>()
 
@@ -103,6 +104,7 @@ const slots = useSlots()
           @update-number-filter="emit('update-number-filter', $event)"
           @update-tag-filter="emit('update-tag-filter', $event)"
           @update-date-filter="emit('update-date-filter', $event)"
+          @export-action="emit('export-action')"
           @primary-action="emit('primary-action')"
         />
 

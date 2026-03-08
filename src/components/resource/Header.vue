@@ -61,6 +61,7 @@ const emit = defineEmits<{
   "add-filter": [key: string]
   "replace-filter": [payload: { from: string; to: string; value?: DateFilterState }]
   "remove-filter": [key: string]
+  "export-action": []
   "primary-action": []
 }>()
 
@@ -329,6 +330,15 @@ onBeforeUnmount(() => {
           >
             <i class="ri-more-line text-base" />
           </button>
+          <Button
+            v-if="primaryActionLabel"
+            variant="outline"
+            class="h-8 gap-1 px-3 text-[14px]"
+            @click="emit('export-action')"
+          >
+            <i class="ri-download-line text-base" />
+            导出
+          </Button>
           <Button
             v-if="primaryActionLabel"
             variant="default"
