@@ -41,7 +41,7 @@ const groups: InboxGroup[] = [
       <div class="flex items-center gap-3">
         <button
           type="button"
-          class="flex size-7 items-center justify-center rounded-md text-[#4b5563] transition-colors hover:bg-black/5"
+          class="flex size-7 items-center justify-center rounded-md text-[#4b5563] transition-colors hover:bg-surface-tertiary"
         >
           <i class="ri-inbox-unarchive-fill text-base" />
         </button>
@@ -51,13 +51,13 @@ const groups: InboxGroup[] = [
       <div class="flex items-center gap-2 text-[#6b7280]">
         <button
           type="button"
-          class="flex size-8 items-center justify-center rounded-md transition-colors hover:bg-black/5"
+          class="flex size-8 items-center justify-center rounded-md transition-colors hover:bg-surface-tertiary"
         >
           <i class="ri-filter-3-line text-lg" />
         </button>
         <button
           type="button"
-          class="flex size-8 items-center justify-center rounded-md transition-colors hover:bg-black/5"
+          class="flex size-8 items-center justify-center rounded-md transition-colors hover:bg-surface-tertiary"
         >
           <i class="ri-more-2-fill text-lg" />
         </button>
@@ -73,7 +73,7 @@ const groups: InboxGroup[] = [
         <article
           v-for="item in group.items"
           :key="item.id"
-          class="group relative border-b border-black/8 bg-white px-4 py-4 transition-colors hover:bg-black/[0.02]"
+          class="group relative border-b border-black/8 bg-white px-4 py-4 transition-colors hover:bg-surface-tertiary"
         >
           <div class="flex gap-4">
             <div class="flex size-10 shrink-0 items-center justify-center rounded-full border border-black/10 bg-white text-[#666]">
@@ -99,7 +99,7 @@ const groups: InboxGroup[] = [
                       <TooltipTrigger as-child>
                         <button
                           type="button"
-                          class="flex size-8 items-center justify-center rounded-lg text-[#666] transition-colors hover:bg-black/5"
+                          class="flex size-8 items-center justify-center rounded-lg text-[#666] transition-colors hover:bg-surface-tertiary"
                         >
                           <i class="ri-notification-3-line text-lg" />
                         </button>
@@ -110,7 +110,7 @@ const groups: InboxGroup[] = [
                       <TooltipTrigger as-child>
                         <button
                           type="button"
-                          class="flex size-8 items-center justify-center rounded-lg text-[#666] transition-colors hover:bg-black/5"
+                          class="flex size-8 items-center justify-center rounded-lg text-[#666] transition-colors hover:bg-surface-tertiary"
                         >
                           <i class="ri-notification-badge-line text-lg" />
                         </button>
@@ -121,7 +121,7 @@ const groups: InboxGroup[] = [
                       <TooltipTrigger as-child>
                         <button
                           type="button"
-                          class="flex size-8 items-center justify-center rounded-lg text-[#666] transition-colors hover:bg-black/5"
+                          class="flex size-8 items-center justify-center rounded-lg text-[#666] transition-colors hover:bg-surface-tertiary"
                         >
                           <i class="ri-archive-line text-lg" />
                         </button>

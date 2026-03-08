@@ -91,7 +91,7 @@ const businessItems = reactive<NavItem[]>([
 ])
 
 const activePath = computed(() => route.path)
-const activeItemClass = "bg-black/5 text-sidebar-accent-foreground"
+const activeItemClass = "bg-surface-tertiary text-sidebar-accent-foreground"
 
 function isActive(item: NavItem) {
   return item.path === activePath.value
@@ -211,7 +211,7 @@ watch(openMobile, (value) => {
             >
               <div
                 class="pointer-events-none absolute inset-y-0 -left-8 right-0 rounded-lg opacity-0 transition-opacity group-hover/sub-item:bg-sidebar-accent group-hover/sub-item:opacity-100 group-focus-within/sub-item:bg-sidebar-accent group-focus-within/sub-item:opacity-100 group-has-[[data-active=true]]/sub-item:bg-sidebar-accent group-has-[[data-active=true]]/sub-item:opacity-100"
-                :class="{ 'bg-black/5 opacity-100': isActive(child) }"
+                :class="{ 'bg-surface-tertiary opacity-100': isActive(child) }"
               />
               <div
                 class="pointer-events-none absolute left-[-1.3125rem] top-1/2 h-5 w-0.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-sidebar-foreground/40 opacity-0 transition-opacity group-hover/sub-item:opacity-100 group-focus-within/sub-item:opacity-100 group-has-[[data-active=true]]/sub-item:opacity-100"

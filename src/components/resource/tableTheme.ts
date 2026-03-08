@@ -12,7 +12,7 @@ export const tableTheme = {
   table: "min-w-full w-max table-auto border-collapse bg-white text-[14px]",
   head: "text-[#7A7A7A]",
   body: "text-[#2F2F2F]",
-  row: "transition hover:bg-[#FBFBFB]",
+  row: "transition hover:bg-surface-tertiary",
   summary: "px-3 py-3 text-[13px] text-[#9B9B9B]",
   indexHeader: {
     base: "w-8 min-w-8 py-2 pr-2 text-right font-normal",
@@ -23,7 +23,7 @@ export const tableTheme = {
   indexCell: "w-8 min-w-8 py-3 pr-2 text-right text-[#A0A0A0] whitespace-nowrap",
   headerCell: {
     base: "border-b border-[#ECECEC] px-3 py-2 text-left font-normal whitespace-nowrap",
-    sticky: "sticky top-0 z-10 bg-white transition-colors hover:bg-[#F7F7F7]",
+    sticky: "sticky top-0 z-10 bg-white transition-colors hover:bg-surface-tertiary",
     active: "shadow-[inset_0_-1px_0_#ECECEC]",
   },
   bodyCell: {

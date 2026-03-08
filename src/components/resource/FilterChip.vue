@@ -34,7 +34,7 @@ const classes = computed(() => {
     base,
     props.selected
       ? "bg-[#EEF3FF] text-[#3559E0] hover:bg-[#E6EEFF] active:bg-[#DCE7FF]"
-      : "text-[#666] hover:bg-[#F5F5F5] active:bg-[#EBEBEB]",
+      : "text-[#666] hover:bg-surface-tertiary active:bg-surface-secondary",
     props.class,
   )
 })

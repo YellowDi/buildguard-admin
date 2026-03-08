@@ -98,7 +98,7 @@ function handleOptionToggle(option: string) {
               type="button"
               :class="[
                 'flex w-full items-center rounded-sm px-2 py-1.5 text-left text-[11px] font-medium transition whitespace-nowrap',
-                value.operator === option.value ? 'bg-[#F4F4F5] text-[#18181B]' : 'text-[#52525B] hover:bg-[#F8F8F9]',
+                value.operator === option.value ? 'bg-surface-tertiary text-[#18181B]' : 'text-[#52525B] hover:bg-surface-tertiary',
               ]"
               @click="handleOperatorSelect(option.value)"
             >
@@ -111,7 +111,7 @@ function handleOptionToggle(option: string) {
       <div class="relative shrink-0" data-list-popover>
         <button
           type="button"
-          class="inline-flex size-6 items-center justify-center rounded-md text-[#8B8B8B] ring-offset-background transition hover:bg-[#F5F5F5] hover:text-[#4B4B55] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          class="inline-flex size-6 items-center justify-center rounded-md text-[#8B8B8B] ring-offset-background transition hover:bg-surface-tertiary hover:text-[#4B4B55] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           aria-label="删除当前筛选"
           @click="openActionMenu = !openActionMenu; openMenu = false"
         >
@@ -151,7 +151,7 @@ function handleOptionToggle(option: string) {
             ? 'cursor-not-allowed text-[#B4B4B4]'
             : value.values.includes(option)
               ? 'bg-[#F4F4F5] text-[#18181B]'
-              : 'text-[#52525B] hover:bg-[#F8F8F9]',
+              : 'text-[#52525B] hover:bg-surface-tertiary',
         ]"
         @click="handleOptionToggle(option)"
       >

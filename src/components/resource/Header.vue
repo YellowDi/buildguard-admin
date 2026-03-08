@@ -67,9 +67,9 @@ const openPopover = ref<string | null>(null)
 const sortPopoverSource = ref<"toolbar" | "chip">("toolbar")
 const showSearchInput = ref(false)
 const ghostIconButtonClass =
-  "inline-flex size-8 items-center justify-center rounded-md bg-transparent text-[#7A7A7A] transition-colors hover:bg-[#F5F5F5] hover:text-[#3F3F3F] active:bg-[#EBEBEB] active:text-[#1F1F1F]"
+  "inline-flex size-8 items-center justify-center rounded-md bg-transparent text-[#7A7A7A] transition-colors hover:bg-surface-tertiary hover:text-[#3F3F3F] active:bg-surface-secondary active:text-[#1F1F1F]"
 const ghostIconButtonActiveClass =
-  "bg-transparent text-[#3559E0] hover:bg-[#F5F5F5] hover:text-[#2448C8] active:bg-[#EBEBEB] active:text-[#1E3DA7]"
+  "bg-transparent text-[#3559E0] hover:bg-surface-tertiary hover:text-[#2448C8] active:bg-surface-secondary active:text-[#1E3DA7]"
 
 const visibleFilterKeys = computed(() => props.fields.filter((field) => field.kind !== "sort").map((field) => field.key))
 const addableFilters = computed(() => props.availableFilters.filter((key) => !visibleFilterKeys.value.includes(key)))
@@ -246,7 +246,7 @@ onBeforeUnmount(() => {
             @click="emit('tab-click', tab)"
           >
             <span class="relative isolate inline-block">
-              <span class="pointer-events-none absolute -inset-x-2 -inset-y-1 rounded-md transition-colors group-hover:bg-[#F2F2F2]" />
+              <span class="pointer-events-none absolute -inset-x-2 -inset-y-1 rounded-md transition-colors group-hover:bg-surface-tertiary" />
               <span class="relative z-10">{{ tab.label }}</span>
             </span>
             <span
@@ -313,7 +313,7 @@ onBeforeUnmount(() => {
                 <button
                   v-if="searchQuery"
                   type="button"
-                  class="inline-flex size-5 shrink-0 items-center justify-center rounded-sm text-[#9A9A9A] transition hover:bg-[#F3F3F3] hover:text-[#5F5F5F]"
+                  class="inline-flex size-5 shrink-0 items-center justify-center rounded-sm text-[#9A9A9A] transition hover:bg-surface-tertiary hover:text-[#5F5F5F]"
                   aria-label="清除搜索文字"
                   @click="clearSearch"
                 >
@@ -331,7 +331,7 @@ onBeforeUnmount(() => {
           <button
             v-if="primaryActionLabel"
             type="button"
-            class="inline-flex h-8 items-center gap-1 rounded-md border border-[#E3E3E3] bg-white px-3 text-[14px] font-medium text-[#4A4A4A] transition hover:bg-[#F8F8F8]"
+            class="inline-flex h-8 items-center gap-1 rounded-md border border-[#E3E3E3] bg-white px-3 text-[14px] font-medium text-[#4A4A4A] transition hover:bg-surface-tertiary"
             @click="emit('primary-action')"
           >
             <i class="ri-add-line text-base" />
@@ -454,7 +454,7 @@ onBeforeUnmount(() => {
                   v-for="item in addableFilters"
                   :key="item"
                   type="button"
-                  class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-[13px] text-[#4F4F4F] transition hover:bg-[#F6F6F6]"
+                  class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-[13px] text-[#4F4F4F] transition hover:bg-surface-tertiary"
                   @click="handleAddFilter(item)"
                 >
                   <span>{{ item }}</span>

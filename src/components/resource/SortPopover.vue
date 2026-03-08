@@ -195,7 +195,7 @@ function handleDragEnd() {
         <button
           type="button"
           draggable="true"
-          class="mt-0.5 inline-flex h-8 w-6 shrink-0 cursor-grab items-center justify-center rounded-sm text-[#A1A1AA] transition hover:bg-[#F4F4F5] hover:text-[#71717A] active:cursor-grabbing"
+          class="mt-0.5 inline-flex h-8 w-6 shrink-0 cursor-grab items-center justify-center rounded-sm text-[#A1A1AA] transition hover:bg-surface-tertiary hover:text-[#71717A] active:cursor-grabbing"
           aria-label="拖动排序"
           @dragstart="handleDragStart($event, rule.id)"
           @dragend="handleDragEnd"
@@ -206,7 +206,7 @@ function handleDragEnd() {
         <div class="relative" data-list-popover>
           <button
             type="button"
-            class="inline-flex h-9 min-w-[136px] max-w-[220px] items-center rounded-md border border-[#E4E4E7] bg-white px-3 text-[13px] font-medium text-[#3F3F46] ring-offset-background transition hover:bg-[#FAFAFA] focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+            class="inline-flex h-9 min-w-[136px] max-w-[220px] items-center rounded-md border border-[#E4E4E7] bg-white px-3 text-[13px] font-medium text-[#3F3F46] ring-offset-background transition hover:bg-surface-tertiary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
             @click="toggleMenu(rule.id, 'field')"
           >
             <span class="whitespace-nowrap">{{ getFieldMeta(rule.field)?.label ?? "选择字段" }}</span>
@@ -224,7 +224,7 @@ function handleDragEnd() {
               type="button"
               :class="[
                 'flex w-full items-center gap-2 rounded-sm px-2.5 py-2 text-left text-[12px] transition whitespace-nowrap',
-                rule.field === option.value ? 'bg-[#F4F4F5] text-[#18181B]' : 'text-[#52525B] hover:bg-[#F8F8F9]',
+                rule.field === option.value ? 'bg-surface-tertiary text-[#18181B]' : 'text-[#52525B] hover:bg-surface-tertiary',
               ]"
               @click="handleFieldSelect(rule.id, option.value)"
             >
@@ -237,7 +237,7 @@ function handleDragEnd() {
         <div class="relative shrink-0" data-list-popover>
           <button
             type="button"
-            class="inline-flex h-9 min-w-[88px] items-center gap-2 rounded-md border border-[#E4E4E7] bg-white px-3 text-[13px] font-medium text-[#3F3F46] ring-offset-background transition hover:bg-[#FAFAFA] focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+            class="inline-flex h-9 min-w-[88px] items-center gap-2 rounded-md border border-[#E4E4E7] bg-white px-3 text-[13px] font-medium text-[#3F3F46] ring-offset-background transition hover:bg-surface-tertiary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
             @click="toggleMenu(rule.id, 'direction')"
           >
             <span class="whitespace-nowrap">{{ getDirectionLabel(rule) }}</span>
@@ -255,7 +255,7 @@ function handleDragEnd() {
               type="button"
               :class="[
                 'flex w-full items-center justify-between rounded-sm px-2.5 py-2 text-left text-[12px] transition whitespace-nowrap',
-                rule.direction === option.value ? 'bg-[#F4F4F5] text-[#18181B]' : 'text-[#52525B] hover:bg-[#F8F8F9]',
+                rule.direction === option.value ? 'bg-surface-tertiary text-[#18181B]' : 'text-[#52525B] hover:bg-surface-tertiary',
               ]"
               @click="handleDirectionSelect(rule.id, option.value)"
             >
@@ -267,7 +267,7 @@ function handleDragEnd() {
 
         <button
           type="button"
-          class="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-[#A1A1AA] transition hover:bg-[#F4F4F5] hover:text-[#71717A]"
+          class="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-[#A1A1AA] transition hover:bg-surface-tertiary hover:text-[#71717A]"
           aria-label="删除当前排序"
           @click="handleRemoveSort(rule.id)"
         >
@@ -278,7 +278,7 @@ function handleDragEnd() {
 
     <button
       type="button"
-      class="mt-1 flex h-9 w-full items-center gap-2 rounded-md px-2.5 text-left text-[13px] font-medium text-[#3F3F46] transition hover:bg-[#F4F4F5]"
+      class="mt-1 flex h-9 w-full items-center gap-2 rounded-md px-2.5 text-left text-[13px] font-medium text-[#3F3F46] transition hover:bg-surface-tertiary"
       @click="handleAddSort"
     >
       <i class="ri-add-line text-[18px]" />
