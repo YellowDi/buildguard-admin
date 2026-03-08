@@ -48,14 +48,14 @@ const breadcrumbItems = computed<BreadcrumbItemConfig[]>(() => {
   <header
     :class="
       cn(
-        'relative z-30 flex h-16 shrink-0 items-center gap-2 bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/80',
+        'relative z-30 flex h-16 shrink-0 items-center gap-2 overflow-hidden bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/80',
         props.class,
       )
     "
   >
     <button
       type="button"
-      class="-ml-1 inline-flex h-7 w-7 items-center justify-center rounded-md text-foreground transition-colors hover:bg-accent hover:text-accent-foreground md:hidden"
+      class="-ml-1 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-foreground transition-colors hover:bg-accent hover:text-accent-foreground md:hidden"
       aria-label="打开侧边栏"
       @click.stop="props.onToggleMobileSidebar?.()"
     >
@@ -63,26 +63,34 @@ const breadcrumbItems = computed<BreadcrumbItemConfig[]>(() => {
     </button>
     <button
       type="button"
-      class="-ml-1 hidden h-7 w-7 items-center justify-center rounded-md text-foreground transition-colors hover:bg-accent hover:text-accent-foreground md:inline-flex"
+      class="-ml-1 hidden h-7 w-7 shrink-0 items-center justify-center rounded-md text-foreground transition-colors hover:bg-accent hover:text-accent-foreground md:inline-flex"
       aria-label="切换侧边栏"
       @click.stop="props.onToggleDesktopSidebar?.()"
     >
       <ViewVerticalIcon class="h-4 w-4" />
     </button>
-    <Separator orientation="vertical" class="mr-2 h-4" />
-    <Breadcrumb>
-      <BreadcrumbList>
-        <BreadcrumbItem>BuildGuard Admin</BreadcrumbItem>
+    <Separator orientation="vertical" class="mr-2 h-4 shrink-0" />
+    <Breadcrumb class="min-w-0 flex-1 overflow-hidden">
+      <BreadcrumbList class="flex-nowrap overflow-hidden whitespace-nowrap">
+        <BreadcrumbItem class="min-w-0 shrink overflow-hidden">
+          <span class="block truncate">BuildGuard Admin</span>
+        </BreadcrumbItem>
         <template v-for="item in breadcrumbItems" :key="item.title">
-          <BreadcrumbSeparator />
-          <BreadcrumbItem>
-            <BreadcrumbPage v-if="item.isCurrent">{{ item.title }}</BreadcrumbPage>
-            <BreadcrumbLink v-else-if="item.to" as-child>
+          <BreadcrumbSeparator class="shrink-0" />
+          <BreadcrumbItem
+            :class="
+              item.isCurrent
+                ? 'min-w-0 flex-[1_1_auto] overflow-hidden'
+                : 'min-w-0 shrink overflow-hidden'
+            "
+          >
+            <BreadcrumbPage v-if="item.isCurrent" class="block truncate">{{ item.title }}</BreadcrumbPage>
+            <BreadcrumbLink v-else-if="item.to" as-child class="block truncate">
               <RouterLink :to="{ name: item.to }">
                 {{ item.title }}
               </RouterLink>
             </BreadcrumbLink>
-            <BreadcrumbPage v-else>{{ item.title }}</BreadcrumbPage>
+            <BreadcrumbPage v-else class="block truncate">{{ item.title }}</BreadcrumbPage>
           </BreadcrumbItem>
         </template>
       </BreadcrumbList>
