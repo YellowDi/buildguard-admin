@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useRouter } from "vue-router"
+
 import ResourcePage from "@/components/resource/ResourcePage.vue"
 import { useResourceList } from "@/components/resource/useResourceList"
 import type { ResourceListSchema } from "@/components/resource/types"
@@ -23,6 +25,7 @@ type PractitionerRecord = {
 // 2. 准备列表数据。
 // 当前示例直接读取本地 JSON；未来接接口时，只要最终得到同结构的数组即可。
 const practitioners = usersData as PractitionerRecord[]
+const router = useRouter()
 
 // 3. 用一个 schema 描述整张资源表格页。
 // 页面作者主要维护这里：
@@ -210,11 +213,15 @@ const schema: ResourceListSchema<PractitionerRecord> = {
 // 4. 把 schema 交给通用资源控制器。
 // 它会统一产出页面渲染所需的 tabs、filters、rows、sort state 等响应式状态。
 const page = useResourceList(schema)
+
+function handleCreatePractitioner() {
+  router.push({ name: "user-create" })
+}
 </script>
 
 <template>
   <!-- 5. 页面模板层保持极薄。
        以后新建同类页面时，理想状态就是：
        定义行类型 -> 准备数据 -> 写 schema -> 渲染 ResourcePage。 -->
-  <ResourcePage :page="page" />
+  <ResourcePage :page="page" @primary-action="handleCreatePractitioner" />
 </template>

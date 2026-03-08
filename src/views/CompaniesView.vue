@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { useRouter } from "vue-router"
+
 import ResourcePage from "@/components/resource/ResourcePage.vue"
 import { useResourceList } from "@/components/resource/useResourceList"
 import type { ResourceListSchema } from "@/components/resource/types"
@@ -223,6 +225,11 @@ const schema: ResourceListSchema<CompanyRecord> = {
 // 4. 把 schema 交给通用资源控制器。
 // 它会统一产出页面渲染所需的 tabs、filters、rows、sort state 等响应式状态。
 const page = useResourceList(schema)
+const router = useRouter()
+
+function handleCreateCompany() {
+  router.push({ name: "company-create" })
+}
 
 function buildEndDate(serviceDays: number) {
   const baseDate = new Date()
@@ -260,5 +267,5 @@ function toISODate(date: Date) {
   <!-- 5. 页面模板层保持极薄。
        以后新建同类页面时，理想状态就是：
        定义行类型 -> 准备数据 -> 写 schema -> 渲染 ResourcePage。 -->
-  <ResourcePage :page="page" />
+  <ResourcePage :page="page" @primary-action="handleCreateCompany" />
 </template>

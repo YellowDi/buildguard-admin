@@ -10,6 +10,10 @@ defineProps({
     required: true,
   },
 })
+
+const emit = defineEmits<{
+  "primary-action": []
+}>()
 </script>
 
 <template>
@@ -52,5 +56,6 @@ defineProps({
     @update-number-filter="page.updateNumberFilter($event.label, $event.value)"
     @update-tag-filter="page.updateTagFilter($event.label, $event.value)"
     @update-date-filter="page.updateDateFilter($event.label, $event.value)"
+    @primary-action="emit('primary-action')"
   />
 </template>

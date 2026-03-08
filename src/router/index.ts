@@ -5,10 +5,12 @@ import LoginView from "@/views/auth/LoginView.vue"
 import OtpView from "@/views/auth/OtpView.vue"
 import SignupView from "@/views/auth/SignupView.vue"
 import CompaniesView from "@/views/CompaniesView.vue"
+import CompanyCreateView from "@/views/companies/CompanyCreateView.vue"
 import DashboardView from "@/views/dashboard/DashboardView.vue"
 import SettingsView from "@/views/settings/SettingsView.vue"
 import UsersView from "@/views/UsersView.vue"
 import VehiclesView from "@/views/VehiclesView.vue"
+import UserCreateView from "@/views/users/UserCreateView.vue"
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -61,6 +63,14 @@ const router = createRouter({
           },
         },
         {
+          path: "companies/create",
+          name: "company-create",
+          component: CompanyCreateView,
+          meta: {
+            title: "添加企业",
+          },
+        },
+        {
           path: "vehicles",
           name: "vehicles",
           component: VehiclesView,
@@ -74,6 +84,14 @@ const router = createRouter({
           component: UsersView,
           meta: {
             title: "从业人员",
+          },
+        },
+        {
+          path: "users/create",
+          name: "user-create",
+          component: UserCreateView,
+          meta: {
+            title: "添加从业人员",
           },
         },
         {
