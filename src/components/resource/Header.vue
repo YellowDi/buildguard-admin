@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from "vue"
 
+import { Button } from "@/components/ui/button"
 import DateFilterPopover from "@/components/resource/DateFilterPopover.vue"
 import FilterChip from "@/components/resource/FilterChip.vue"
 import NumberFilterPopover from "@/components/resource/NumberFilterPopover.vue"
@@ -328,15 +329,15 @@ onBeforeUnmount(() => {
           >
             <i class="ri-more-line text-base" />
           </button>
-          <button
+          <Button
             v-if="primaryActionLabel"
-            type="button"
-            class="inline-flex h-8 items-center gap-1 rounded-md border border-border bg-background px-3 text-[14px] font-medium text-foreground transition hover:bg-surface-tertiary"
+            variant="default"
+            class="h-8 gap-1 px-3 text-[14px]"
             @click="emit('primary-action')"
           >
             <i class="ri-add-line text-base" />
             {{ primaryActionLabel }}
-          </button>
+          </Button>
         </div>
       </div>
     </div>
