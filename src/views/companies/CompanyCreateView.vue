@@ -101,6 +101,7 @@ const formSectionsRef = ref<HTMLElement | null>(null)
 const sectionClass = "scroll-mt-28 border-b border-dashed border-border py-5"
 const formRowClass = `${sectionClass} flex flex-col gap-3 md:flex-row md:items-center md:gap-6`
 const formRowTopClass = `${sectionClass} flex flex-col gap-3 md:flex-row md:items-start md:gap-6`
+const formRowLastTopClass = "scroll-mt-28 flex flex-col gap-3 py-5 md:flex-row md:items-start md:gap-6"
 const formLabelClass = "min-w-0 flex-1 text-sm font-medium text-foreground"
 const formFieldClass = "w-full min-w-0 md:w-[360px] md:shrink-0"
 
@@ -458,7 +459,7 @@ onUnmounted(() => {
             </div>
           </div>
 
-          <div id="section-note" data-quick-nav-label="备注" :class="formRowTopClass">
+          <div id="section-note" data-quick-nav-label="备注" :class="formRowLastTopClass">
             <label :class="formLabelClass">
               备注
               <span class="font-normal text-muted-foreground">(选填)</span>
