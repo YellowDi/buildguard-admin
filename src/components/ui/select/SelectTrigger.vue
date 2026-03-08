@@ -22,12 +22,19 @@ const forwarded = useForwardProps(delegatedProps)
 <template>
   <SelectTrigger
     v-bind="{ ...forwarded, ...$attrs }"
-    :class="cn('flex h-9 w-full items-center justify-between rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-sm ring-offset-background data-[placeholder]:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-50 [&>span]:line-clamp-1', props.class)"
+    :class="
+      cn(
+        'border-input data-[placeholder]:text-muted-foreground dark:bg-input/30 flex h-9 w-full min-w-0 items-center justify-between gap-2 rounded-md border bg-transparent px-3 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm [&>span]:line-clamp-1',
+        'focus:border-ring focus:ring-ring/50 focus:ring-[3px]',
+        'aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40',
+        props.class,
+      )
+    "
   >
     <slot />
 
     <SelectIcon as-child>
-      <ChevronDown class="h-4 w-4 opacity-50" />
+      <ChevronDown class="size-4 shrink-0 opacity-50" />
     </SelectIcon>
   </SelectTrigger>
 </template>

@@ -1,20 +1,12 @@
 <script setup lang="ts">
 import { DateFormatter, getLocalTimeZone, parseDate } from "@internationalized/date"
+import { Calendar as CalendarIcon } from "lucide-vue-next"
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref } from "vue"
 import { useRouter } from "vue-router"
 
+import FormFieldSection from "@/components/form/FormFieldSection.vue"
+import FormHeader from "@/components/form/FormHeader.vue"
 import FormQuickNav from "@/components/form/FormQuickNav.vue"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { Input } from "@/components/ui/input"
@@ -33,6 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
 
 type PractitionerFormState = {
@@ -83,16 +76,7 @@ const form = reactive<PractitionerFormState>({
 const submittedRecord = ref<SubmittedPractitionerRecord | null>(null)
 const anchorItems = ref<QuickNavItem[]>([])
 const activeNavId = ref("")
-const isHeaderSticky = ref(false)
-const headerStickySentinel = ref<HTMLElement | null>(null)
 const formSectionsRef = ref<HTMLElement | null>(null)
-
-const sectionClass = "scroll-mt-28 border-b border-dashed border-border py-5"
-const formRowClass = `${sectionClass} flex flex-col gap-3 md:flex-row md:items-center md:gap-6`
-const formRowTopClass = `${sectionClass} flex flex-col gap-3 md:flex-row md:items-start md:gap-6`
-const formRowLastTopClass = "scroll-mt-28 flex flex-col gap-3 py-5 md:flex-row md:items-start md:gap-6"
-const formLabelClass = "min-w-0 flex-1 text-sm font-medium text-foreground"
-const formFieldClass = "w-full min-w-0 md:w-[360px] md:shrink-0"
 const STICKY_HEADER_OFFSET = 112
 const joinedAtFormatter = new DateFormatter("zh-CN", { dateStyle: "long" })
 
@@ -187,20 +171,11 @@ function goBack() {
 }
 
 let observer: IntersectionObserver | null = null
-let headerStickyObserver: IntersectionObserver | null = null
 let observerActive = false
 
 onMounted(() => {
   nextTick(() => {
     syncAnchorItems()
-
-    if (headerStickySentinel.value) {
-      headerStickyObserver = new IntersectionObserver(
-        ([entry]) => { isHeaderSticky.value = !entry.isIntersecting },
-        { threshold: 0, rootMargin: "64px 0px 0px 0px" },
-      )
-      headerStickyObserver.observe(headerStickySentinel.value)
-    }
 
     observer = new IntersectionObserver(
       (entries) => {
@@ -228,229 +203,220 @@ onMounted(() => {
 
 onUnmounted(() => {
   observer?.disconnect()
-  headerStickyObserver?.disconnect()
 })
 </script>
 
 <template>
   <section class="mx-auto flex w-full max-w-5xl min-w-0 flex-col gap-6 pb-8">
-    <div ref="headerStickySentinel" class="h-px w-full -mt-4 shrink-0" aria-hidden="true" />
-    <div
-      class="sticky top-[-1rem] z-10 -mx-4 bg-background xl:-mt-px xl:ml-[calc(50%-50vw)] xl:w-screen"
-      :class="{ 'border-b border-border': isHeaderSticky }"
-    >
-      <div class="mx-auto flex w-full max-w-5xl min-w-0 flex-col gap-4 px-4 pb-4 pt-4 sm:gap-5 md:grid md:grid-cols-[minmax(0,1fr)_max-content] md:gap-8 xl:px-0">
-        <h1 class="min-w-0 text-2xl font-semibold tracking-tight text-foreground">
-          添加从业人员
-        </h1>
-        <div class="flex w-full min-w-0 items-center gap-2 overflow-x-auto overflow-y-hidden whitespace-nowrap md:w-auto md:justify-end">
-          <Button variant="outline" class="h-9 shrink-0 px-3 sm:h-10 sm:px-4" @click="goBack">
-            返回列表
-          </Button>
-          <AlertDialog>
-            <AlertDialogTrigger as-child>
-              <Button variant="outline" class="h-9 shrink-0 px-3 sm:h-10 sm:px-4">
-                重置表单
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>确认重置表单？</AlertDialogTitle>
-                <AlertDialogDescription>
-                  当前已填写的从业人员信息都会被清空，此操作不可撤销。
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>取消</AlertDialogCancel>
-                <AlertDialogAction @click="handleReset">
-                  确认重置
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-          <Button :disabled="!canSubmit" class="h-9 shrink-0 px-3 sm:h-10 sm:px-4" @click="handleSubmit">
-            <i class="ri-add-line mr-2 text-base" />
-            添加
-          </Button>
-        </div>
-      </div>
-    </div>
+    <FormHeader
+      title="添加从业人员"
+      :primary-action="{ label: '添加', icon: 'ri-add-line', disabled: !canSubmit }"
+      :secondary-actions="[
+        { key: 'back', label: '返回列表' },
+        { key: 'reset', label: '重置表单' },
+      ]"
+      :reset-dialog="{ description: '当前已填写的从业人员信息都会被清空，此操作不可撤销。' }"
+      @back="goBack"
+      @reset="handleReset"
+      @submit="handleSubmit"
+    />
 
     <div class="grid min-w-0 gap-8 xl:grid-cols-[minmax(0,1fr)_250px]">
       <form class="min-w-0 space-y-0" @submit.prevent="handleSubmit">
         <div ref="formSectionsRef" class="min-w-0 space-y-0">
-          <div id="section-name" data-quick-nav-label="姓名" :class="formRowClass">
-            <label :class="formLabelClass">姓名</label>
-            <div :class="formFieldClass">
-              <Input v-model="form.name" required placeholder="请输入从业人员姓名" class="w-full" @focus="handleFocus('section-name')" />
-            </div>
-          </div>
-
-          <div id="section-phone" data-quick-nav-label="手机号" :class="formRowClass">
-            <label :class="formLabelClass">手机号</label>
-            <div :class="formFieldClass">
-              <Input
-                v-model="form.phone"
-                required
-                type="tel"
-                inputmode="numeric"
-                pattern="^1[3-9]\\d{9}$"
-                placeholder="请输入 11 位手机号"
-                class="w-full"
-                @focus="handleFocus('section-phone')"
-              />
-            </div>
-          </div>
-
-          <div id="section-company" data-quick-nav-label="所属企业" :class="formRowClass">
-            <label :class="formLabelClass">所属企业</label>
-            <div :class="formFieldClass">
-              <Input v-model="form.company" required placeholder="请输入企业名称" class="w-full" @focus="handleFocus('section-company')" />
-            </div>
-          </div>
-
-          <div id="section-role" data-quick-nav-label="岗位类型" :class="formRowClass">
-            <label :class="formLabelClass">岗位类型</label>
-            <div :class="formFieldClass">
-              <Select v-model="form.role" required>
-                <SelectTrigger class="w-full" @focus="handleFocus('section-role')">
-                  <SelectValue placeholder="请选择岗位类型" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem v-for="role in ROLE_OPTIONS" :key="role" :value="role">
-                    {{ role }}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div id="section-district" data-quick-nav-label="行政区域" :class="formRowClass">
-            <label :class="formLabelClass">行政区域</label>
-            <div :class="formFieldClass">
-              <Select v-model="form.district" required>
-                <SelectTrigger class="w-full" @focus="handleFocus('section-district')">
-                  <SelectValue placeholder="请选择行政区域" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem v-for="district in DISTRICT_OPTIONS" :key="district" :value="district">
-                    {{ district }}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div id="section-joined-at" data-quick-nav-label="入职日期" :class="formRowClass">
-            <label :class="formLabelClass">入职日期</label>
-            <div :class="formFieldClass">
-              <Popover>
-                <PopoverTrigger as-child>
-                  <Button
-                    variant="outline"
-                    :class="
-                      cn(
-                        'h-9 w-full justify-between px-3 text-left font-normal',
-                        !form.joinedAt && 'text-muted-foreground',
-                      )
-                    "
-                    @focus="handleFocus('section-joined-at')"
-                  >
-                    {{
-                      form.joinedAt
-                        ? joinedAtFormatter.format(parseDate(form.joinedAt).toDate(getLocalTimeZone()))
-                        : "请选择入职日期"
-                    }}
-                    <i class="ri-calendar-line ml-2 shrink-0 text-base text-muted-foreground" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent class="w-auto p-0" align="start">
-                  <Calendar
-                    v-model="joinedAtValue"
-                    initial-focus
-                  />
-                </PopoverContent>
-              </Popover>
-            </div>
-          </div>
-
-          <div id="section-certificate" data-quick-nav-label="证件级别" :class="formRowClass">
-            <label :class="formLabelClass">证件级别</label>
-            <div :class="formFieldClass">
-              <Select v-model="form.certificateLevel" required>
-                <SelectTrigger class="w-full" @focus="handleFocus('section-certificate')">
-                  <SelectValue placeholder="请选择证件级别" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem
-                    v-for="certificateLevel in CERTIFICATE_LEVEL_OPTIONS"
-                    :key="certificateLevel"
-                    :value="certificateLevel"
-                  >
-                    {{ certificateLevel }}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div id="section-experience" data-quick-nav-label="从业年限" :class="formRowClass">
-            <label :class="formLabelClass">从业年限</label>
-            <div :class="formFieldClass">
-              <NumberField
-                v-model="experienceYearsValue"
-                :min="0"
-                :max="50"
-                :step="1"
-                class="w-full"
-              >
-                <NumberFieldContent>
-                  <NumberFieldDecrement />
-                  <NumberFieldInput
-                    placeholder="请输入从业年限"
-                    @focus="handleFocus('section-experience')"
-                  />
-                  <NumberFieldIncrement />
-                </NumberFieldContent>
-              </NumberField>
-            </div>
-          </div>
-
-          <div id="section-status" data-quick-nav-label="状态" :class="formRowClass">
-            <label :class="formLabelClass">状态</label>
-            <div :class="formFieldClass">
-              <Select v-model="form.status">
-                <SelectTrigger class="w-full" @focus="handleFocus('section-status')">
-                  <SelectValue placeholder="请选择状态" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem v-for="status in STATUS_OPTIONS" :key="status" :value="status">
-                    {{ status }}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div
-            id="section-note"
-            data-quick-nav-label="备注"
-            :class="formRowLastTopClass"
+          <FormFieldSection
+            id="section-name"
+            quick-nav-label="姓名"
+            label="姓名"
+            label-for="user-name"
           >
-            <label :class="formLabelClass">
+            <Input id="user-name" v-model="form.name" required placeholder="请输入从业人员姓名" class="w-full" @focus="handleFocus('section-name')" />
+          </FormFieldSection>
+
+          <FormFieldSection
+            id="section-phone"
+            quick-nav-label="手机号"
+            label="手机号"
+            label-for="user-phone"
+          >
+            <Input
+              id="user-phone"
+              v-model="form.phone"
+              required
+              type="tel"
+              inputmode="numeric"
+              pattern="^1[3-9]\\d{9}$"
+              placeholder="请输入 11 位手机号"
+              class="w-full"
+              @focus="handleFocus('section-phone')"
+            />
+          </FormFieldSection>
+
+          <FormFieldSection
+            id="section-company"
+            quick-nav-label="所属企业"
+            label="所属企业"
+            label-for="user-company"
+          >
+            <Input id="user-company" v-model="form.company" required placeholder="请输入企业名称" class="w-full" @focus="handleFocus('section-company')" />
+          </FormFieldSection>
+
+          <FormFieldSection
+            id="section-role"
+            quick-nav-label="岗位类型"
+            label="岗位类型"
+            label-for="user-role"
+          >
+            <Select v-model="form.role" required>
+              <SelectTrigger id="user-role" class="w-full" @focus="handleFocus('section-role')">
+                <SelectValue placeholder="请选择岗位类型" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem v-for="role in ROLE_OPTIONS" :key="role" :value="role">
+                  {{ role }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </FormFieldSection>
+
+          <FormFieldSection
+            id="section-district"
+            quick-nav-label="行政区域"
+            label="行政区域"
+            label-for="user-district"
+          >
+            <Select v-model="form.district" required>
+              <SelectTrigger id="user-district" class="w-full" @focus="handleFocus('section-district')">
+                <SelectValue placeholder="请选择行政区域" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem v-for="district in DISTRICT_OPTIONS" :key="district" :value="district">
+                  {{ district }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </FormFieldSection>
+
+          <FormFieldSection
+            id="section-joined-at"
+            quick-nav-label="入职日期"
+            label="入职日期"
+            label-for="user-joined-at"
+          >
+            <Popover>
+              <PopoverTrigger as-child>
+                <Button
+                  id="user-joined-at"
+                  variant="outline"
+                  :class="
+                    cn(
+                      'w-full justify-start text-left font-normal',
+                      !form.joinedAt && 'text-muted-foreground',
+                    )
+                  "
+                  @focus="handleFocus('section-joined-at')"
+                >
+                  <CalendarIcon class="mr-2 h-4 w-4" />
+                  {{
+                    form.joinedAt
+                      ? joinedAtFormatter.format(parseDate(form.joinedAt).toDate(getLocalTimeZone()))
+                      : "请选择入职日期"
+                  }}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent class="w-auto p-0" align="start">
+                <Calendar
+                  v-model="joinedAtValue"
+                  layout="month-and-year"
+                  locale="zh-CN"
+                  initial-focus
+                />
+              </PopoverContent>
+            </Popover>
+          </FormFieldSection>
+
+          <FormFieldSection
+            id="section-certificate"
+            quick-nav-label="证件级别"
+            label="证件级别"
+            label-for="user-certificate"
+          >
+            <Select v-model="form.certificateLevel" required>
+              <SelectTrigger id="user-certificate" class="w-full" @focus="handleFocus('section-certificate')">
+                <SelectValue placeholder="请选择证件级别" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem
+                  v-for="certificateLevel in CERTIFICATE_LEVEL_OPTIONS"
+                  :key="certificateLevel"
+                  :value="certificateLevel"
+                >
+                  {{ certificateLevel }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </FormFieldSection>
+
+          <FormFieldSection
+            id="section-experience"
+            quick-nav-label="从业年限"
+            label="从业年限"
+          >
+            <NumberField
+              v-model="experienceYearsValue"
+              :min="0"
+              :max="50"
+              :step="1"
+              class="w-full"
+            >
+              <NumberFieldContent>
+                <NumberFieldDecrement />
+                <NumberFieldInput
+                  placeholder="请输入从业年限"
+                  @focus="handleFocus('section-experience')"
+                />
+                <NumberFieldIncrement />
+              </NumberFieldContent>
+            </NumberField>
+          </FormFieldSection>
+
+          <FormFieldSection
+            id="section-status"
+            quick-nav-label="状态"
+            label="状态"
+            label-for="user-status"
+          >
+            <Select v-model="form.status">
+              <SelectTrigger id="user-status" class="w-full" @focus="handleFocus('section-status')">
+                <SelectValue placeholder="请选择状态" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem v-for="status in STATUS_OPTIONS" :key="status" :value="status">
+                  {{ status }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </FormFieldSection>
+
+          <FormFieldSection
+            id="section-note"
+            quick-nav-label="备注"
+            label-for="user-note"
+            align="start"
+            last
+          >
+            <template #label>
               备注
               <span class="font-normal text-muted-foreground">(选填)</span>
-            </label>
-            <div :class="formFieldClass">
-              <textarea
-                v-model="form.note"
-                rows="4"
-                class="flex w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                placeholder="请输入备注信息，用于测试新增后的详情展示或列表回填。"
-                @focus="handleFocus('section-note')"
-              />
-            </div>
-          </div>
+            </template>
+            <Textarea
+              id="user-note"
+              v-model="form.note"
+              rows="4"
+              placeholder="请输入备注信息，用于测试新增后的详情展示或列表回填。"
+              @focus="handleFocus('section-note')"
+            />
+          </FormFieldSection>
         </div>
       </form>
 

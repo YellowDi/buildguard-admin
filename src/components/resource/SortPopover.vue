@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, ref } from "vue"
 
+import PopoverSelect from "@/components/resource/PopoverSelect.vue"
+
 export type SortField = string
 export type SortFieldOption = {
   value: SortField
@@ -28,7 +30,6 @@ const emit = defineEmits<{
   "update-rules": [rules: SortRule[]]
 }>()
 
-const openMenu = ref<{ id: string; kind: "field" | "direction" } | null>(null)
 const draggingRuleId = ref<string | null>(null)
 const dragOverRuleId = ref<string | null>(null)
 
@@ -58,10 +59,6 @@ function getDirectionLabel(rule: SortRule) {
   return getDirectionOptions(rule.field).find((option) => option.value === rule.direction)?.label ?? "降序"
 }
 
-function toggleMenu(id: string, kind: "field" | "direction") {
-  openMenu.value = openMenu.value?.id === id && openMenu.value.kind === kind ? null : { id, kind }
-}
-
 function buildNextRule(): SortRule {
   const fallbackField = sortFieldOptions.value[0]?.value ?? ""
   const unusedField = sortFieldOptions.value.find((option) => !props.rules.some((rule) => rule.field === option.value))?.value
@@ -88,17 +85,12 @@ function handleRemoveSort(id?: string) {
   if (!id) {
     emit("update-rules", [])
     emit("set-enabled", false)
-    openMenu.value = null
     return
   }
 
   const nextRules = props.rules.filter((rule) => rule.id !== id)
   emit("update-rules", nextRules)
   emit("set-enabled", nextRules.length > 0)
-
-  if (openMenu.value?.id === id) {
-    openMenu.value = null
-  }
 }
 
 function handleFieldSelect(id: string, field: SortField) {
@@ -115,7 +107,6 @@ function handleFieldSelect(id: string, field: SortField) {
         : rule,
     ),
   )
-  openMenu.value = null
 }
 
 function handleDirectionSelect(id: string, direction: "asc" | "desc") {
@@ -124,7 +115,6 @@ function handleDirectionSelect(id: string, direction: "asc" | "desc") {
     "update-rules",
     props.rules.map((rule) => (rule.id === id ? { ...rule, direction } : rule)),
   )
-  openMenu.value = null
 }
 
 function handleDragStart(event: DragEvent, id: string) {
@@ -203,67 +193,27 @@ function handleDragEnd() {
           <i class="ri-draggable text-[16px]" />
         </button>
 
-        <div class="relative" data-list-popover>
-          <button
-            type="button"
-            class="inline-flex h-9 min-w-[136px] max-w-[220px] items-center rounded-md border border-input bg-background px-3 py-2 text-[13px] font-medium text-foreground ring-offset-background transition-[color,box-shadow] hover:bg-surface-tertiary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
-            @click="toggleMenu(rule.id, 'field')"
-          >
-            <span class="whitespace-nowrap">{{ getFieldMeta(rule.field)?.label ?? "选择字段" }}</span>
-            <i class="ri-arrow-down-s-line ml-auto shrink-0 text-[16px] text-muted-foreground" />
-          </button>
+        <PopoverSelect
+          :model-value="rule.field"
+          :options="sortFieldOptions"
+          placeholder="选择字段"
+          trigger-label="排序字段"
+          variant="field"
+          trigger-class="min-w-[136px] max-w-[220px] text-[13px]"
+          content-class="min-w-[160px]"
+          @update:model-value="(field) => handleFieldSelect(rule.id, String(field))"
+        />
 
-          <div
-            v-if="openMenu?.id === rule.id && openMenu.kind === 'field'"
-            class="absolute left-0 top-[calc(100%+6px)] z-40 min-w-[160px] rounded-md border border-border bg-popover p-1 shadow-lg"
-            data-list-popover
-          >
-            <button
-              v-for="option in sortFieldOptions"
-              :key="option.value"
-              type="button"
-              :class="[
-                'flex w-full items-center gap-2 rounded-sm px-2.5 py-2 text-left text-[12px] transition whitespace-nowrap',
-                rule.field === option.value ? 'bg-surface-tertiary text-foreground' : 'text-muted-foreground hover:bg-surface-tertiary',
-              ]"
-              @click="handleFieldSelect(rule.id, option.value)"
-            >
-              <span class="whitespace-nowrap">{{ option.label }}</span>
-              <i v-if="rule.field === option.value" class="ri-check-line ml-auto shrink-0 text-[14px] text-link" />
-            </button>
-          </div>
-        </div>
-
-        <div class="relative shrink-0" data-list-popover>
-          <button
-            type="button"
-            class="inline-flex h-9 min-w-[88px] items-center gap-2 rounded-md border border-input bg-background px-3 py-2 text-[13px] font-medium text-foreground ring-offset-background transition-[color,box-shadow] hover:bg-surface-tertiary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
-            @click="toggleMenu(rule.id, 'direction')"
-          >
-            <span class="whitespace-nowrap">{{ getDirectionLabel(rule) }}</span>
-            <i class="ri-arrow-down-s-line ml-auto shrink-0 text-[16px] text-muted-foreground" />
-          </button>
-
-          <div
-            v-if="openMenu?.id === rule.id && openMenu.kind === 'direction'"
-            class="absolute right-0 top-[calc(100%+6px)] z-40 min-w-[128px] rounded-md border border-border bg-popover p-1 shadow-lg"
-            data-list-popover
-          >
-            <button
-              v-for="option in getDirectionOptions(rule.field)"
-              :key="option.value"
-              type="button"
-              :class="[
-                'flex w-full items-center justify-between rounded-sm px-2.5 py-2 text-left text-[12px] transition whitespace-nowrap',
-                rule.direction === option.value ? 'bg-surface-tertiary text-foreground' : 'text-muted-foreground hover:bg-surface-tertiary',
-              ]"
-              @click="handleDirectionSelect(rule.id, option.value)"
-            >
-              <span>{{ option.label }}</span>
-              <i v-if="rule.direction === option.value" class="ri-check-line text-[14px] text-link" />
-            </button>
-          </div>
-        </div>
+        <PopoverSelect
+          :model-value="rule.direction"
+          :options="getDirectionOptions(rule.field)"
+          :placeholder="getDirectionLabel(rule)"
+          trigger-label="排序方向"
+          variant="field"
+          trigger-class="min-w-[88px] text-[13px]"
+          content-class="min-w-[128px]"
+          @update:model-value="(direction) => handleDirectionSelect(rule.id, direction as 'asc' | 'desc')"
+        />
 
         <button
           type="button"

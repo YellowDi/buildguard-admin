@@ -139,9 +139,14 @@ function closePopover() {
   openPopover.value = null
 }
 
+function isListPopoverTarget(event: MouseEvent) {
+  return event.composedPath().some((node) => {
+    return node instanceof HTMLElement && node.hasAttribute("data-list-popover")
+  })
+}
+
 function handleDocumentClick(event: MouseEvent) {
-  const target = event.target
-  if (!(target instanceof Element) || target.closest("[data-list-popover]")) {
+  if (isListPopoverTarget(event)) {
     return
   }
 

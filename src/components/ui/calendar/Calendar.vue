@@ -1,30 +1,132 @@
 <script lang="ts" setup>
-import type { CalendarRootEmits, CalendarRootProps } from "reka-ui"
-import type { HTMLAttributes } from "vue"
-import { reactiveOmit } from "@vueuse/core"
-import { CalendarRoot, useForwardPropsEmits } from "reka-ui"
+import type { CalendarRootEmits, CalendarRootProps, DateValue } from "reka-ui"
+import type { HTMLAttributes, Ref } from "vue"
+import type { LayoutTypes } from "."
+import { getLocalTimeZone, today } from "@internationalized/date"
+import { createReusableTemplate, reactiveOmit, useVModel } from "@vueuse/core"
+import { ChevronLeftIcon, ChevronRightIcon } from "@radix-icons/vue"
+import { CalendarRoot, useDateFormatter, useForwardPropsEmits } from "reka-ui"
+import { createYear, createYearRange, toDate } from "reka-ui/date"
+import { computed, toRaw } from "vue"
 import { cn } from "@/lib/utils"
+import CalendarSelect from "./CalendarSelect.vue"
 import { CalendarCell, CalendarCellTrigger, CalendarGrid, CalendarGridBody, CalendarGridHead, CalendarGridRow, CalendarHeadCell, CalendarHeader, CalendarHeading, CalendarNextButton, CalendarPrevButton } from "."
 
-const props = defineProps<CalendarRootProps & { class?: HTMLAttributes["class"] }>()
-
+const props = withDefaults(defineProps<CalendarRootProps & { class?: HTMLAttributes["class"], layout?: LayoutTypes, yearRange?: DateValue[] }>(), {
+  modelValue: undefined,
+  layout: undefined,
+  locale: "zh-CN",
+})
 const emits = defineEmits<CalendarRootEmits>()
 
-const delegatedProps = reactiveOmit(props, "class")
+const delegatedProps = reactiveOmit(props, "class", "layout", "placeholder")
+
+const placeholder = useVModel(props, "placeholder", emits, {
+  passive: true,
+  defaultValue: props.defaultPlaceholder ?? today(getLocalTimeZone()),
+}) as Ref<DateValue>
+
+const formatter = useDateFormatter(props.locale ?? "zh-CN")
+
+const yearRange = computed(() => {
+  return props.yearRange ?? createYearRange({
+    start: props?.minValue ?? (toRaw(props.placeholder) ?? props.defaultPlaceholder ?? today(getLocalTimeZone()))
+      .cycle("year", -100),
+
+    end: props?.maxValue ?? (toRaw(props.placeholder) ?? props.defaultPlaceholder ?? today(getLocalTimeZone()))
+      .cycle("year", 10),
+  })
+})
+
+const monthOptions = computed(() => {
+  return createYear({ dateObj: placeholder.value }).map(month => ({
+    value: month.month,
+    label: formatter.custom(toDate(month), { month: "long" }),
+  }))
+})
+
+const yearOptions = computed(() => {
+  return yearRange.value.map(year => ({
+    value: year.year,
+    label: formatter.custom(toDate(year), { year: "numeric" }),
+  }))
+})
+
+const [DefineMonthTemplate, ReuseMonthTemplate] = createReusableTemplate<{ date: DateValue }>()
+const [DefineYearTemplate, ReuseYearTemplate] = createReusableTemplate<{ date: DateValue }>()
 
 const forwarded = useForwardPropsEmits(delegatedProps, emits)
 </script>
 
 <template>
+  <DefineMonthTemplate v-slot="{ date }">
+    <CalendarSelect
+      :model-value="date.month"
+      :options="monthOptions"
+      trigger-label="选择月份"
+      content-class="min-w-[8rem]"
+      @update:model-value="(month) => {
+        placeholder = placeholder.set({ month })
+      }"
+    />
+  </DefineMonthTemplate>
+
+  <DefineYearTemplate v-slot="{ date }">
+    <CalendarSelect
+      :model-value="date.year"
+      :options="yearOptions"
+      trigger-label="选择年份"
+      content-class="min-w-[6rem]"
+      @update:model-value="(year) => {
+        placeholder = placeholder.set({ year })
+      }"
+    />
+  </DefineYearTemplate>
+
   <CalendarRoot
-    v-slot="{ grid, weekDays }"
-    :class="cn('p-3', props.class)"
+    v-slot="{ grid, weekDays, date }"
     v-bind="forwarded"
+    v-model:placeholder="placeholder"
+    data-slot="calendar"
+    :class="cn('p-3', props.class)"
   >
-    <CalendarHeader>
-      <CalendarPrevButton />
-      <CalendarHeading />
-      <CalendarNextButton />
+    <CalendarHeader class="pt-0">
+      <div class="relative flex min-h-8 items-center justify-center">
+        <CalendarPrevButton class="absolute left-0">
+          <slot name="calendar-prev-icon">
+            <ChevronLeftIcon class="size-4" />
+          </slot>
+        </CalendarPrevButton>
+        <CalendarNextButton class="absolute right-0">
+          <slot name="calendar-next-icon">
+            <ChevronRightIcon class="size-4" />
+          </slot>
+        </CalendarNextButton>
+
+        <slot name="calendar-heading" :date="date" :month="ReuseMonthTemplate" :year="ReuseYearTemplate">
+          <template v-if="layout === 'month-and-year'">
+            <div class="flex items-center justify-center gap-1">
+              <ReuseMonthTemplate :date="date" />
+              <ReuseYearTemplate :date="date" />
+            </div>
+          </template>
+          <template v-else-if="layout === 'month-only'">
+            <div class="flex items-center justify-center gap-1">
+              <ReuseMonthTemplate :date="date" />
+              {{ formatter.custom(toDate(date), { year: 'numeric' }) }}
+            </div>
+          </template>
+          <template v-else-if="layout === 'year-only'">
+            <div class="flex items-center justify-center gap-1">
+              {{ formatter.custom(toDate(date), { month: 'short' }) }}
+              <ReuseYearTemplate :date="date" />
+            </div>
+          </template>
+          <template v-else>
+            <CalendarHeading />
+          </template>
+        </slot>
+      </div>
     </CalendarHeader>
 
     <div class="flex flex-col gap-y-4 mt-4 sm:flex-row sm:gap-x-4 sm:gap-y-0">

@@ -131,7 +131,7 @@ function handleLogout() {
         :align="'start'"
         :class="
           cn(
-            'z-50 w-[280px] overflow-hidden rounded-xl border border-border bg-popover p-0 shadow-[0_12px_32px_rgba(15,23,42,0.10)] dark:shadow-lg',
+            'z-50 w-[280px] overflow-hidden rounded-xl border border-border bg-popover p-0 shadow-[0_10px_24px_rgba(15,23,42,0.08)] dark:shadow-md',
             'data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95',
             'data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95',
           )
@@ -175,7 +175,7 @@ function handleLogout() {
                   cn(
                     'flex flex-1 items-center justify-center gap-1.5 rounded-md py-1.5 text-xs font-medium transition-colors',
                     themeMode === opt.value
-                      ? 'bg-background text-foreground shadow-sm'
+                      ? 'bg-background text-foreground shadow-xs'
                       : 'text-muted-foreground hover:text-foreground',
                   )
                 "
