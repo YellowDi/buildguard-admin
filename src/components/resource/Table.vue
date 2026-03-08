@@ -31,6 +31,11 @@ const wrapperClassName = computed(() => getTableWrapperClass(props.wrapperClass)
 const tableClassName = computed(() => getTableClass(props.tableClass))
 const tableWrapperRef = ref<HTMLElement | null>(null)
 const stickyHeaderActive = ref(false)
+const stickyHeaderStyle = computed(() => (
+  props.stickyHeader
+    ? { top: "var(--resource-table-sticky-top, 0px)" }
+    : undefined
+))
 
 function getRowKey(row: Record<string, unknown>, index: number) {
   if (typeof props.rowKey === "function") {
@@ -86,6 +91,25 @@ function isRightAlignedColumn(column: TableColumn) {
   return column.filterType === "number" || column.cellRenderer?.kind === "metric-unit"
 }
 
+function getStickyTopOffset() {
+  if (!tableWrapperRef.value || typeof window === "undefined") {
+    return 0
+  }
+
+  const wrapperStyles = window.getComputedStyle(tableWrapperRef.value)
+  const wrapperOffset = Number.parseFloat(wrapperStyles.getPropertyValue("--resource-table-sticky-top"))
+
+  if (!Number.isNaN(wrapperOffset)) {
+    return wrapperOffset
+  }
+
+  const rootOffset = Number.parseFloat(
+    window.getComputedStyle(document.documentElement).getPropertyValue("--resource-table-sticky-top"),
+  )
+
+  return Number.isNaN(rootOffset) ? 0 : rootOffset
+}
+
 function updateStickyHeaderState() {
   if (!props.stickyHeader || !tableWrapperRef.value) {
     stickyHeaderActive.value = false
@@ -93,8 +117,9 @@ function updateStickyHeaderState() {
   }
 
   const rect = tableWrapperRef.value.getBoundingClientRect()
+  const stickyTopOffset = getStickyTopOffset()
   const headerHeight = 41
-  stickyHeaderActive.value = rect.top <= 0 && rect.bottom > headerHeight
+  stickyHeaderActive.value = rect.top <= stickyTopOffset && rect.bottom > stickyTopOffset + headerHeight
 }
 
 onMounted(() => {
@@ -112,15 +137,15 @@ onBeforeUnmount(() => {
 <template>
   <div ref="tableWrapperRef" :class="wrapperClassName">
     <table :class="tableClassName">
-      <thead :class="tableTheme.head">
+      <thead :class="[tableTheme.head, stickyHeader && stickyHeaderActive ? tableTheme.headActive : '']">
         <tr>
           <th
             v-if="showIndex"
             :class="[
               tableTheme.indexHeader.base,
               stickyHeader ? tableTheme.indexHeader.sticky : tableTheme.indexHeader.static,
-              stickyHeader && stickyHeaderActive ? tableTheme.indexHeader.active : '',
             ]"
+            :style="stickyHeaderStyle"
           />
           <th
             v-for="column in columns"
@@ -128,9 +153,9 @@ onBeforeUnmount(() => {
             :class="[
               tableTheme.headerCell.base,
               stickyHeader ? tableTheme.headerCell.sticky : '',
-              stickyHeader && stickyHeaderActive ? tableTheme.headerCell.active : '',
               getColumnHeaderClass(column),
             ]"
+            :style="stickyHeaderStyle"
           >
             {{ column.label }}
           </th>

@@ -101,8 +101,8 @@ const slots = useSlots()
           @primary-action="emit('primary-action')"
         />
 
-        <div class="min-h-0 min-w-0 flex-1">
-          <div class="min-h-0 min-w-0 w-full overflow-x-auto overflow-y-visible pr-8">
+        <div class="min-h-0 min-w-0 flex-1 overflow-visible">
+          <div class="min-h-0 min-w-0 w-full overflow-visible pr-8">
             <template v-if="sections?.length">
               <Table
                 v-for="section in sections"

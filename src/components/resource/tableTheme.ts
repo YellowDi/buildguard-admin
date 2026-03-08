@@ -8,23 +8,22 @@ import type {
 import { cn } from "@/lib/utils"
 
 export const tableTheme = {
-  wrapper: "overflow-visible",
-  table: "min-w-full w-max table-auto border-collapse bg-background text-[14px] text-foreground",
-  head: "text-muted-foreground",
+  wrapper: "relative overflow-visible",
+  table: "min-w-full w-max table-auto border-separate border-spacing-0 bg-background text-[14px] text-foreground",
+  head: "relative z-20 text-muted-foreground",
+  headActive: "shadow-[inset_0_-1px_0_hsl(var(--border))]",
   body: "text-foreground",
   row: "transition hover:bg-surface-tertiary",
   summary: "px-3 py-3 text-[13px] text-muted-foreground",
   indexHeader: {
     base: "w-8 min-w-8 py-2 pr-2 text-right font-normal",
     static: "border-b border-border",
-    sticky: "sticky top-0 z-10 bg-background",
-    active: "shadow-[inset_0_-1px_0_hsl(var(--border))]",
+    sticky: "sticky z-20 bg-background bg-clip-padding",
   },
   indexCell: "w-8 min-w-8 py-3 pr-2 text-right text-muted-foreground whitespace-nowrap",
   headerCell: {
     base: "border-b border-border px-3 py-2 text-left font-normal whitespace-nowrap",
-    sticky: "sticky top-0 z-10 bg-background transition-colors hover:bg-surface-tertiary",
-    active: "shadow-[inset_0_-1px_0_hsl(var(--border))]",
+    sticky: "sticky z-20 bg-background bg-clip-padding transition-colors hover:bg-surface-tertiary",
   },
   bodyCell: {
     base: "border-b border-border px-3 py-3 whitespace-nowrap",
