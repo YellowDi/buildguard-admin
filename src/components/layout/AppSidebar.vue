@@ -157,7 +157,7 @@ watch(openMobile, (value) => {
           type="button"
           @click="handlePinnedItemClick(item)"
           :class="[
-            'group flex h-9 w-full items-center gap-3 rounded-lg px-2 text-left text-sm font-medium transition-colors',
+            'group flex h-9 w-full items-center gap-3 rounded-lg px-3 text-left text-sm font-medium transition-colors',
             isActive(item)
               ? activeItemClass
               : 'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
