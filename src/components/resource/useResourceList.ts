@@ -14,6 +14,7 @@ import type {
   ResourceFilterType,
   ResourceRowKey,
   TableColumn,
+  TableRowAction,
   TagFilterState,
   TextFilterState,
 } from "@/components/resource/types"
@@ -36,6 +37,7 @@ export type ResourceListDefinition<Row> = {
   rowKey: ResourceRowKey<Row>
   rows: MaybeRows<Row>
   columns: TableColumn[]
+  rowActions?: Array<TableRowAction<Row>>
   summary?: string
   primaryActionLabel?: string
   showIndex?: boolean
@@ -120,6 +122,7 @@ export function createResourceListDefinition<Row>(schema: ResourceListSchema<Row
     rowKey: schema.rowKey,
     rows: schema.data,
     columns: schema.columns,
+    rowActions: schema.rowActions,
     summary: schema.summary,
     primaryActionLabel: schema.primaryActionLabel,
     showIndex: schema.showIndex,
@@ -375,6 +378,7 @@ export function useResourceList<Row>(input: ResourceListSchema<Row> | ResourceLi
     title: definition.title,
     summary: definition.summary,
     columns: definition.columns,
+    rowActions: definition.rowActions,
     rowKey: definition.rowKey,
     primaryActionLabel: definition.primaryActionLabel,
     showIndex: definition.showIndex,

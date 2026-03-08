@@ -13,7 +13,7 @@ export const tableTheme = {
   head: "relative z-20 text-muted-foreground",
   headActive: "shadow-[inset_0_-1px_0_hsl(var(--border))]",
   body: "text-foreground",
-  row: "transition hover:bg-surface-tertiary",
+  row: "group transition hover:bg-surface-tertiary",
   summary: "px-3 py-3 text-[13px] text-muted-foreground",
   indexHeader: {
     base: "w-8 min-w-8 py-2 pr-2 text-right font-normal",
@@ -30,6 +30,9 @@ export const tableTheme = {
     split: "border-l",
     rightAligned: "text-right",
   },
+  actionHeader: "w-[148px] min-w-[148px] border-b border-border py-2 pl-0 pr-3",
+  actionCell: "sticky right-0 z-10 w-[148px] min-w-[148px] border-b border-border py-2 pl-0 pr-3 align-middle",
+  actionPanel: "relative flex justify-end py-1 pl-3 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100",
   tones: {
     default: "text-foreground",
     primary: "text-foreground",

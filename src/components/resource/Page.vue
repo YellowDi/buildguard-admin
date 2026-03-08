@@ -10,6 +10,7 @@ import type {
   HeaderTab,
   NumberFilterState,
   TableColumn,
+  TableRowAction,
   TableSection,
   TagFilterState,
   TextFilterState,
@@ -34,6 +35,7 @@ defineProps<{
   dateFilters: Record<string, DateFilterState>
   dateFilterFields: string[]
   columns: TableColumn[]
+  rowActions?: TableRowAction[]
   rows: Record<string, unknown>[]
   rowKey: string | ((row: Record<string, unknown>, index: number) => string | number)
   summary?: string
@@ -110,6 +112,7 @@ const slots = useSlots()
                 :columns="section.columns"
                 :rows="section.rows"
                 :row-key="section.rowKey"
+                :row-actions="section.rowActions ?? rowActions"
                 :summary="section.summary"
                 :show-index="section.showIndex ?? showIndex"
                 :sticky-header="section.stickyHeader ?? stickyHeader"
@@ -128,6 +131,7 @@ const slots = useSlots()
             <Table
               v-else
               :columns="columns"
+              :row-actions="rowActions"
               :rows="rows"
               :row-key="rowKey"
               :summary="summary"

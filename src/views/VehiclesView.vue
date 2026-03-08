@@ -66,6 +66,13 @@ const operatingSchema: ResourceListSchema<OperatingVehicleRecord> = {
   data: operatingVehicles,
   showIndex: true,
   stickyHeader: true,
+  rowActions: [
+    {
+      key: "view-detail",
+      label: "查看详情",
+      onClick: row => console.info("查看车辆详情", row),
+    },
+  ],
   columns: [
     // columns 的维护规则和单表格页完全一致。
     // 每个子表都只在这里声明：列展示、列搜索、列筛选、列排序。
@@ -159,6 +166,13 @@ const alarmSchema: ResourceListSchema<AlarmVehicleRecord> = {
   data: alarmVehicles,
   showIndex: true,
   stickyHeader: true,
+  rowActions: [
+    {
+      key: "view-detail",
+      label: "查看详情",
+      onClick: row => console.info("查看车辆详情", row),
+    },
+  ],
   columns: [
     {
       key: "plateNumber",
@@ -247,6 +261,13 @@ const inspectionSchema: ResourceListSchema<InspectionVehicleRecord> = {
   data: inspectionVehicles,
   showIndex: true,
   stickyHeader: true,
+  rowActions: [
+    {
+      key: "view-detail",
+      label: "查看详情",
+      onClick: row => console.info("查看车辆详情", row),
+    },
+  ],
   columns: [
     {
       key: "plateNumber",

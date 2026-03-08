@@ -47,6 +47,7 @@ const activeCount = computed(() => props.activePage.visibleRows.value.length)
     :date-filters="activePage.dateFilters.value"
     :date-filter-fields="activePage.dateFilterFields.value"
     :columns="activePage.columns"
+    :row-actions="activePage.rowActions"
     :rows="activePage.visibleRows.value"
     :row-key="activePage.rowKey"
     :summary="activePage.summary"

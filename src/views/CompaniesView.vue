@@ -54,6 +54,13 @@ const schema: ResourceListSchema<CompanyRecord> = {
   primaryActionLabel: "添加企业",
   showIndex: true,
   stickyHeader: true,
+  rowActions: [
+    {
+      key: "view-detail",
+      label: "查看详情",
+      onClick: row => console.info("查看企业详情", row),
+    },
+  ],
   columns: [
     // columns 决定“表格长什么样”，同时也顺带声明“这列怎么参与搜索/筛选/排序”。
     // 一个典型列通常只需要关心 4 件事：

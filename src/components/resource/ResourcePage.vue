@@ -32,6 +32,7 @@ defineProps({
     :date-filters="page.dateFilters.value"
     :date-filter-fields="page.dateFilterFields.value"
     :columns="page.columns"
+    :row-actions="page.rowActions"
     :rows="page.visibleRows.value"
     :row-key="page.rowKey"
     :summary="page.summary"

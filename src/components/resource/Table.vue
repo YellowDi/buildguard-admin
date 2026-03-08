@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from "vue"
 
+import { Button } from "@/components/ui/button"
 import {
   getColumnCellClass,
   getColumnHeaderClass,
@@ -8,10 +9,11 @@ import {
   getTableWrapperClass,
   tableTheme,
 } from "@/components/resource/tableTheme"
-import type { TableColumn } from "@/components/resource/types"
+import type { TableColumn, TableRowAction } from "@/components/resource/types"
 
 const props = withDefaults(defineProps<{
   columns: TableColumn[]
+  rowActions?: TableRowAction[]
   rows: Record<string, unknown>[]
   rowKey: string | ((row: Record<string, unknown>, index: number) => string | number)
   summary?: string
@@ -29,6 +31,7 @@ const props = withDefaults(defineProps<{
 
 const wrapperClassName = computed(() => getTableWrapperClass(props.wrapperClass))
 const tableClassName = computed(() => getTableClass(props.tableClass))
+const hasRowActions = computed(() => (props.rowActions?.length ?? 0) > 0)
 const tableWrapperRef = ref<HTMLElement | null>(null)
 const stickyHeaderActive = ref(false)
 const stickyHeaderStyle = computed(() => (
@@ -89,6 +92,10 @@ function getProgressPercent(row: Record<string, unknown>, column: TableColumn) {
 
 function isRightAlignedColumn(column: TableColumn) {
   return column.filterType === "number" || column.cellRenderer?.kind === "metric-unit"
+}
+
+function handleRowActionClick(action: TableRowAction, row: Record<string, unknown>, index: number) {
+  action.onClick?.(row, index)
 }
 
 function getStickyTopOffset() {
@@ -159,6 +166,14 @@ onBeforeUnmount(() => {
           >
             {{ column.label }}
           </th>
+          <th
+            v-if="hasRowActions"
+            :class="[
+              tableTheme.actionHeader,
+              stickyHeader ? tableTheme.headerCell.sticky : '',
+            ]"
+            :style="stickyHeaderStyle"
+          />
         </tr>
       </thead>
 
@@ -281,6 +296,25 @@ onBeforeUnmount(() => {
                 {{ getColumnValue(row, column.key) }}
               </template>
             </slot>
+          </td>
+          <td
+            v-if="hasRowActions"
+            :class="tableTheme.actionCell"
+          >
+            <div class="flex justify-end">
+              <div :class="tableTheme.actionPanel">
+                <Button
+                  v-for="action in rowActions"
+                  :key="action.key"
+                  variant="outline"
+                  size="sm"
+                  class="h-8 border-border/80 bg-background/95 text-foreground shadow-sm"
+                  @click="handleRowActionClick(action, row, index)"
+                >
+                  {{ action.label }}
+                </Button>
+              </div>
+            </div>
           </td>
         </tr>
       </tbody>

@@ -84,6 +84,11 @@ export type TableColumnEmphasis = "default" | "strong"
 export type TableColumnFormat = "default" | "numeric" | "note"
 export type TableColumnWidth = "auto" | "fill"
 export type TableColumnVariant = "default" | "contact" | "note" | "metric"
+export type TableRowAction<Row = Record<string, unknown>> = {
+  key: string
+  label: string
+  onClick?: (row: Row, index: number) => void
+}
 
 export type TableColumn = {
   key: string
@@ -142,6 +147,7 @@ export type TableSection = {
   columns: TableColumn[]
   rows: Record<string, unknown>[]
   rowKey: string | ((row: Record<string, unknown>, index: number) => string | number)
+  rowActions?: TableRowAction[]
   summary?: string
   showIndex?: boolean
   stickyHeader?: boolean
@@ -218,6 +224,7 @@ export type ResourceListSchema<Row> = {
   rowKey: ResourceRowKey<Row>
   data: Row[]
   columns: Array<ResourceListColumn<Row>>
+  rowActions?: Array<TableRowAction<Row>>
   search?: {
     placeholder?: string
   }
