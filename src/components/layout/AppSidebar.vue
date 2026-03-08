@@ -13,6 +13,7 @@ import {
   SidebarRail,
   useSidebar,
 } from "@/components/ui/sidebar"
+import UserCardPopover from "@/components/layout/UserCardPopover.vue"
 
 type NavItem = {
   label: string
@@ -246,28 +247,7 @@ watch(openMobile, (value) => {
     </SidebarContent>
 
     <SidebarFooter class="shrink-0 border-t border-black/10 p-0 pt-1">
-      <button
-        type="button"
-        class="flex w-full items-center gap-3 rounded-lg px-1 py-1 text-left transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-      >
-        <div
-          class="flex size-11 items-center justify-center rounded-full bg-sidebar-primary text-lg font-semibold text-sidebar-primary-foreground"
-        >
-          R
-        </div>
-        <div class="min-w-0 flex-1">
-          <div class="flex items-center gap-2">
-            <span class="truncate text-sm font-semibold">Rolly</span>
-            <span
-              class="rounded-md bg-sidebar-accent px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-sidebar-accent-foreground"
-            >
-              Pro
-            </span>
-          </div>
-          <p class="truncate text-xs text-muted-foreground">yellowdi@me.com</p>
-        </div>
-        <i class="ri-arrow-up-s-line text-base" />
-      </button>
+      <UserCardPopover />
     </SidebarFooter>
 
     <SidebarRail />
