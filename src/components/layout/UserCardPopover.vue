@@ -1,44 +1,97 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from "vue"
+import { onMounted, onUnmounted, ref, watch } from "vue"
 import {
   PopoverContent,
   PopoverPortal,
   PopoverRoot,
   PopoverTrigger,
 } from "reka-ui"
-import { SwitchRoot, SwitchThumb } from "reka-ui"
 import { useSidebar } from "@/components/ui/sidebar"
 import { cn } from "@/lib/utils"
 
 const { state } = useSidebar()
 
-const DARK_STORAGE_KEY = "buildguard-dark-mode"
+const THEME_STORAGE_KEY = "buildguard-theme"
 
-const isDark = computed({
-  get() {
-    if (typeof document === "undefined") return false
-    return document.documentElement.classList.contains("dark")
-  },
-  set(value: boolean) {
-    if (typeof document === "undefined") return
-    if (value) {
-      document.documentElement.classList.add("dark")
-      localStorage.setItem(DARK_STORAGE_KEY, "true")
-    } else {
-      document.documentElement.classList.remove("dark")
-      localStorage.setItem(DARK_STORAGE_KEY, "false")
+type ThemeMode = "system" | "light" | "dark"
+
+const THEME_OPTIONS: { value: ThemeMode; label: string; icon: string }[] = [
+  { value: "system", label: "系统", icon: "ri-computer-line" },
+  { value: "light", label: "浅色", icon: "ri-sun-line" },
+  { value: "dark", label: "暗色", icon: "ri-moon-line" },
+]
+
+function getInitialTheme(): ThemeMode {
+  if (typeof document === "undefined") return "system"
+  try {
+    let stored = localStorage.getItem(THEME_STORAGE_KEY)
+    if (stored === "system" || stored === "light" || stored === "dark")
+      return stored
+    const legacy = localStorage.getItem("buildguard-dark-mode")
+    if (legacy === "true") {
+      stored = "dark"
+      localStorage.setItem(THEME_STORAGE_KEY, "dark")
+      localStorage.removeItem("buildguard-dark-mode")
+    } else if (legacy === "false") {
+      stored = "light"
+      localStorage.setItem(THEME_STORAGE_KEY, "light")
+      localStorage.removeItem("buildguard-dark-mode")
     }
-  },
-})
+    return stored === "dark" || stored === "light" ? stored : "system"
+  } catch {
+    return "system"
+  }
+}
 
+function shouldUseDark(mode: ThemeMode): boolean {
+  if (mode === "light") return false
+  if (mode === "dark") return true
+  return (
+    typeof window !== "undefined" &&
+    window.matchMedia("(prefers-color-scheme: dark)").matches
+  )
+}
+
+function applyTheme(dark: boolean) {
+  if (dark) document.documentElement.classList.add("dark")
+  else document.documentElement.classList.remove("dark")
+}
+
+const themeMode = ref<ThemeMode>(getInitialTheme())
 const open = ref(false)
+let mediaQuery: MediaQueryList | null = null
+let mediaListener: ((e: MediaQueryListEvent) => void) | null = null
 
 onMounted(() => {
-  const stored = localStorage.getItem(DARK_STORAGE_KEY)
-  if (stored === "true") {
-    document.documentElement.classList.add("dark")
-  } else if (stored === "false") {
-    document.documentElement.classList.remove("dark")
+  applyTheme(shouldUseDark(themeMode.value))
+  if (themeMode.value === "system" && typeof window !== "undefined") {
+    mediaQuery = window.matchMedia("(prefers-color-scheme: dark)")
+    mediaListener = () => applyTheme(shouldUseDark(themeMode.value))
+    mediaQuery.addEventListener("change", mediaListener)
+  }
+})
+
+onUnmounted(() => {
+  if (mediaQuery && mediaListener) {
+    mediaQuery.removeEventListener("change", mediaListener)
+  }
+})
+
+watch(themeMode, (mode) => {
+  if (typeof document === "undefined") return
+  localStorage.setItem(THEME_STORAGE_KEY, mode)
+  applyTheme(shouldUseDark(mode))
+  if (mode === "system" && typeof window !== "undefined") {
+    if (mediaQuery && mediaListener) {
+      mediaQuery.removeEventListener("change", mediaListener)
+    }
+    mediaQuery = window.matchMedia("(prefers-color-scheme: dark)")
+    mediaListener = () => applyTheme(shouldUseDark(themeMode.value))
+    mediaQuery.addEventListener("change", mediaListener)
+  } else if (mediaQuery && mediaListener) {
+    mediaQuery.removeEventListener("change", mediaListener)
+    mediaQuery = null
+    mediaListener = null
   }
 })
 
@@ -101,32 +154,37 @@ function handleLogout() {
 
         <!-- 菜单项 -->
         <div class="py-1">
-          <!-- 暗黑模式 -->
-          <div
-            class="flex items-center justify-between gap-0 px-3 py-1.5 text-sm text-foreground"
-          >
-            <div class="flex items-center gap-2">
-              <i class="ri-moon-line text-base text-muted-foreground" />
-              <span>暗黑模式</span>
+          <!-- 外观 / 主题 -->
+          <div class="px-3 py-1.5">
+            <div class="mb-1.5 flex items-center gap-2 text-sm text-foreground">
+              <i class="ri-palette-line text-base text-muted-foreground" />
+              <span>外观</span>
             </div>
-            <SwitchRoot
-              v-model="isDark"
-              :class="
-                cn(
-                  'peer inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-0 transition-colors',
-                  'data-[state=checked]:bg-success data-[state=unchecked]:bg-input dark:data-[state=unchecked]:bg-secondary',
-                )
-              "
+            <div
+              class="flex rounded-lg bg-muted/60 p-0.5"
+              role="radiogroup"
+              aria-label="主题"
             >
-              <SwitchThumb
+              <button
+                v-for="opt in THEME_OPTIONS"
+                :key="opt.value"
+                type="button"
+                role="radio"
+                :aria-checked="themeMode === opt.value"
                 :class="
                   cn(
-                    'pointer-events-none block size-4 rounded-full bg-background shadow-sm ring-0 transition-transform',
-                    'translate-x-0.5 data-[state=checked]:translate-x-[18px]',
+                    'flex flex-1 items-center justify-center gap-1.5 rounded-md py-1.5 text-xs font-medium transition-colors',
+                    themeMode === opt.value
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground',
                   )
                 "
-              />
-            </SwitchRoot>
+                @click="themeMode = opt.value"
+              >
+                <i :class="[opt.icon, 'text-sm']" />
+                <span>{{ opt.label }}</span>
+              </button>
+            </div>
           </div>
 
           <!-- 偏好设置 -->
