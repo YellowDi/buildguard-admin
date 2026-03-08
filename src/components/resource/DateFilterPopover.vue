@@ -323,15 +323,15 @@ function handleDeleteFilter() {
 
 <template>
   <div
-    class="w-[300px] max-w-[calc(100vw-2rem)] rounded-xl border border-[#E5E7EB] bg-white p-2.5 shadow-[0_12px_32px_rgba(15,23,42,0.10)]"
+    class="w-[300px] max-w-[calc(100vw-2rem)] rounded-xl border border-border bg-popover p-2.5 shadow-lg"
     data-list-popover
   >
     <div class="flex items-center justify-between gap-3">
-      <div class="flex items-center gap-1.5 text-[12px] font-semibold text-[#666]">
+      <div class="flex items-center gap-1.5 text-[12px] font-semibold text-muted-foreground">
         <div class="relative" data-list-popover>
           <button
             type="button"
-            class="inline-flex items-center gap-1 rounded-sm px-1 text-[#666] ring-offset-background transition hover:text-[#303030] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            class="inline-flex items-center gap-1 rounded-sm px-1 text-muted-foreground ring-offset-background transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             @click="openFieldMenu = !openFieldMenu; openOperatorMenu = false; openActionMenu = false"
           >
             <span>{{ title }}</span>
@@ -340,7 +340,7 @@ function handleDeleteFilter() {
 
           <div
             v-if="openFieldMenu && (props.fields?.length ?? 0) > 0"
-            class="absolute left-0 top-[calc(100%+8px)] z-40 min-w-[156px] rounded-xl border border-[#E5E7EB] bg-white p-1 shadow-[0_12px_28px_rgba(15,23,42,0.12)]"
+            class="absolute left-0 top-[calc(100%+8px)] z-40 min-w-[156px] rounded-xl border border-border bg-popover p-1 shadow-lg"
             data-list-popover
           >
             <button
@@ -349,7 +349,7 @@ function handleDeleteFilter() {
               type="button"
               :class="[
                 'flex w-full items-center rounded-md px-3 py-2 text-left text-[12px] font-medium transition',
-                title === field ? 'bg-surface-tertiary text-[#18181B]' : 'text-[#52525B] hover:bg-surface-tertiary',
+                title === field ? 'bg-surface-tertiary text-foreground' : 'text-muted-foreground hover:bg-surface-tertiary',
               ]"
               @click="handleFieldSelect(field)"
             >
@@ -361,7 +361,7 @@ function handleDeleteFilter() {
         <div class="relative" data-list-popover>
           <button
             type="button"
-            class="inline-flex items-center gap-1 rounded-sm px-1 text-[#666] ring-offset-background transition hover:text-[#303030] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            class="inline-flex items-center gap-1 rounded-sm px-1 text-muted-foreground ring-offset-background transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
             @click="openOperatorMenu = !openOperatorMenu; openFieldMenu = false; openActionMenu = false"
           >
             <span>{{ getOperatorLabel(value.operator) }}</span>
@@ -370,7 +370,7 @@ function handleDeleteFilter() {
 
           <div
             v-if="openOperatorMenu"
-            class="absolute left-0 top-[calc(100%+8px)] z-40 min-w-[156px] rounded-xl border border-[#E5E7EB] bg-white p-1 shadow-[0_12px_28px_rgba(15,23,42,0.12)]"
+            class="absolute left-0 top-[calc(100%+8px)] z-40 min-w-[156px] rounded-xl border border-border bg-popover p-1 shadow-lg"
             data-list-popover
           >
             <button
@@ -379,7 +379,7 @@ function handleDeleteFilter() {
               type="button"
               :class="[
                 'flex w-full items-center rounded-md px-3 py-2 text-left text-[12px] font-medium transition',
-                value.operator === option.value ? 'bg-surface-tertiary text-[#18181B]' : 'text-[#52525B] hover:bg-surface-tertiary',
+                value.operator === option.value ? 'bg-surface-tertiary text-foreground' : 'text-muted-foreground hover:bg-surface-tertiary',
               ]"
               @click="handleOperatorSelect(option.value)"
             >
@@ -392,7 +392,7 @@ function handleDeleteFilter() {
       <div class="relative shrink-0" data-list-popover>
         <button
           type="button"
-          class="inline-flex size-6 items-center justify-center rounded-md text-[#8B8B8B] ring-offset-background transition hover:bg-surface-tertiary hover:text-[#4B4B55] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          class="inline-flex size-6 items-center justify-center rounded-md text-muted-foreground ring-offset-background transition hover:bg-surface-tertiary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           aria-label="删除当前筛选"
           @click="openActionMenu = !openActionMenu; openFieldMenu = false; openOperatorMenu = false"
         >
@@ -401,12 +401,12 @@ function handleDeleteFilter() {
 
         <div
           v-if="openActionMenu"
-          class="absolute left-[calc(100%+6px)] top-1/2 z-40 min-w-[104px] -translate-y-1/2 rounded-md border border-[#E5E7EB] bg-white p-1 shadow-[0_12px_28px_rgba(15,23,42,0.12)]"
+          class="absolute left-[calc(100%+6px)] top-1/2 z-40 min-w-[104px] -translate-y-1/2 rounded-md border border-border bg-popover p-1 shadow-lg"
           data-list-popover
         >
           <button
             type="button"
-            class="flex w-full items-center rounded-sm px-2 py-1.5 text-left text-[11px] font-medium text-[#B42318] transition hover:bg-[#FEF3F2]"
+            class="flex w-full items-center rounded-sm px-2 py-1.5 text-left text-[11px] font-medium text-destructive transition hover:bg-destructive/10"
             @click="handleDeleteFilter"
           >
             删除筛选
@@ -421,20 +421,20 @@ function handleDeleteFilter() {
         class="grid grid-cols-2 gap-2"
       >
         <label
-          class="flex h-9 items-center rounded-md border border-[#E4E4E7] bg-white px-3 ring-offset-background transition focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2"
+          class="flex h-9 items-center rounded-md border border-input bg-background px-3 ring-offset-background transition focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2"
         >
           <input
             :value="value.startDate"
             type="text"
             placeholder="开始日期..."
-            class="w-full border-0 bg-transparent p-0 text-[12px] text-[#303030] outline-none placeholder:text-[#B4B4B4]"
+            class="w-full border-0 bg-transparent p-0 text-[12px] text-foreground outline-none placeholder:text-muted-foreground"
             @focus="focusRangeField('start')"
             @input="handleBetweenDateInput('start', ($event.target as HTMLInputElement).value)"
           >
           <button
             v-if="value.startDate"
             type="button"
-            class="ml-2 inline-flex size-5 shrink-0 items-center justify-center rounded-sm text-[#A1A1AA] transition hover:bg-surface-tertiary hover:text-[#52525B]"
+            class="ml-2 inline-flex size-5 shrink-0 items-center justify-center rounded-sm text-muted-foreground transition hover:bg-surface-tertiary hover:text-foreground"
             aria-label="清空开始日期"
             @mousedown.prevent.stop
             @click.stop="clearBetweenDateInput('start')"
@@ -444,20 +444,20 @@ function handleDeleteFilter() {
         </label>
 
         <label
-          class="flex h-9 items-center rounded-md border border-[#E4E4E7] bg-white px-3 ring-offset-background transition focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2"
+          class="flex h-9 items-center rounded-md border border-input bg-background px-3 ring-offset-background transition focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2"
         >
           <input
             :value="value.endDate"
             type="text"
             placeholder="结束日期..."
-            class="w-full border-0 bg-transparent p-0 text-[12px] text-[#303030] outline-none placeholder:text-[#B4B4B4]"
+            class="w-full border-0 bg-transparent p-0 text-[12px] text-foreground outline-none placeholder:text-muted-foreground"
             @focus="focusRangeField('end')"
             @input="handleBetweenDateInput('end', ($event.target as HTMLInputElement).value)"
           >
           <button
             v-if="value.endDate"
             type="button"
-            class="ml-2 inline-flex size-5 shrink-0 items-center justify-center rounded-sm text-[#A1A1AA] transition hover:bg-surface-tertiary hover:text-[#52525B]"
+            class="ml-2 inline-flex size-5 shrink-0 items-center justify-center rounded-sm text-muted-foreground transition hover:bg-surface-tertiary hover:text-foreground"
             aria-label="清空结束日期"
             @mousedown.prevent.stop
             @click.stop="clearBetweenDateInput('end')"
@@ -471,7 +471,7 @@ function handleDeleteFilter() {
         v-else
         :class="[
           'flex h-9 items-center rounded-md border px-3 ring-offset-background transition focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2',
-          operatorNeedsDateInput(value.operator) ? 'border-[#E4E4E7] bg-white' : 'cursor-not-allowed border-[#ECECEC] bg-[#F8F8F8] opacity-70',
+          operatorNeedsDateInput(value.operator) ? 'border-input bg-background' : 'cursor-not-allowed border-border bg-muted opacity-70',
         ]"
       >
         <input
@@ -480,15 +480,15 @@ function handleDeleteFilter() {
           :disabled="!operatorNeedsDateInput(value.operator)"
           placeholder="选择或输入日期..."
           :class="[
-            'w-full border-0 bg-transparent p-0 text-[12px] text-[#303030] outline-none placeholder:text-[#B4B4B4]',
-            operatorNeedsDateInput(value.operator) ? '' : 'cursor-not-allowed text-[#B4B4B4]',
+            'w-full border-0 bg-transparent p-0 text-[12px] text-foreground outline-none placeholder:text-muted-foreground',
+            operatorNeedsDateInput(value.operator) ? '' : 'cursor-not-allowed text-muted-foreground',
           ]"
           @input="handleDateInput(($event.target as HTMLInputElement).value)"
         >
         <button
           v-if="formatDisplayValue()"
           type="button"
-          class="ml-2 inline-flex size-5 shrink-0 items-center justify-center rounded-sm text-[#A1A1AA] transition hover:bg-surface-tertiary hover:text-[#52525B]"
+          class="ml-2 inline-flex size-5 shrink-0 items-center justify-center rounded-sm text-muted-foreground transition hover:bg-surface-tertiary hover:text-foreground"
           aria-label="清空日期"
           @mousedown.prevent.stop
           @click.stop="clearSingleDateInput"
@@ -498,7 +498,7 @@ function handleDeleteFilter() {
         <div class="relative ml-2 shrink-0" data-list-popover>
           <button
             type="button"
-            class="inline-flex size-6 items-center justify-center rounded-md text-[#A1A1AA] transition hover:bg-surface-tertiary hover:text-[#52525B]"
+            class="inline-flex size-6 items-center justify-center rounded-md text-muted-foreground transition hover:bg-surface-tertiary hover:text-foreground"
             :disabled="!operatorNeedsDateInput(value.operator)"
             @click="openPresetMenu = !openPresetMenu"
           >
@@ -507,7 +507,7 @@ function handleDeleteFilter() {
 
           <div
             v-if="openPresetMenu && operatorNeedsDateInput(value.operator)"
-            class="absolute right-0 top-[calc(100%+8px)] z-40 min-w-[148px] rounded-xl border border-[#E5E7EB] bg-white p-1 shadow-[0_12px_28px_rgba(15,23,42,0.12)]"
+            class="absolute right-0 top-[calc(100%+8px)] z-40 min-w-[148px] rounded-xl border border-border bg-popover p-1 shadow-lg"
             data-list-popover
           >
             <button
@@ -516,12 +516,12 @@ function handleDeleteFilter() {
               type="button"
               :class="[
                 'flex w-full items-center rounded-md px-3 py-2 text-left text-[12px] transition',
-                value.preset === option.value ? 'bg-surface-tertiary text-[#18181B]' : 'text-[#52525B] hover:bg-surface-tertiary',
+                value.preset === option.value ? 'bg-surface-tertiary text-foreground' : 'text-muted-foreground hover:bg-surface-tertiary',
               ]"
               @click="handlePresetSelect(option.value)"
             >
               <span>{{ option.label }}</span>
-              <i v-if="value.preset === option.value" class="ri-check-line ml-auto text-[14px] text-[#18181B]" />
+              <i v-if="value.preset === option.value" class="ri-check-line ml-auto text-[14px] text-foreground" />
             </button>
           </div>
         </div>
@@ -534,18 +534,18 @@ function handleDeleteFilter() {
     >
       <div>
         <div class="flex items-center justify-between">
-          <h4 class="text-[14px] font-semibold text-[#2E2E2E]">{{ formatMonthTitle(viewMonth) }}</h4>
+          <h4 class="text-[14px] font-semibold text-foreground">{{ formatMonthTitle(viewMonth) }}</h4>
           <div class="flex items-center gap-1">
             <button
               type="button"
-              class="inline-flex size-7 items-center justify-center rounded-full text-[#707070] ring-offset-background transition hover:bg-surface-tertiary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              class="inline-flex size-7 items-center justify-center rounded-full text-muted-foreground ring-offset-background transition hover:bg-surface-tertiary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               @click="shiftMonth(-1)"
             >
               <i class="ri-arrow-left-s-line text-[18px]" />
             </button>
             <button
               type="button"
-              class="inline-flex size-7 items-center justify-center rounded-full text-[#707070] ring-offset-background transition hover:bg-surface-tertiary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              class="inline-flex size-7 items-center justify-center rounded-full text-muted-foreground ring-offset-background transition hover:bg-surface-tertiary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               @click="shiftMonth(1)"
             >
               <i class="ri-arrow-right-s-line text-[18px]" />
@@ -553,7 +553,7 @@ function handleDeleteFilter() {
           </div>
         </div>
 
-        <div class="mt-2 grid grid-cols-7 text-center text-[11px] text-[#98A2A2]">
+        <div class="mt-2 grid grid-cols-7 text-center text-[11px] text-muted-foreground">
           <div v-for="weekday in weekdayLabels" :key="weekday" class="py-1 font-medium">
             {{ weekday }}
           </div>
@@ -568,7 +568,7 @@ function handleDeleteFilter() {
             <span
               v-if="day.inRange || (isBetweenOperator() && day.rangeStart) || (isBetweenOperator() && day.rangeEnd)"
               :class="[
-                'pointer-events-none absolute inset-y-1 bg-[#DDE9FB]',
+                'pointer-events-none absolute inset-y-1 bg-date-range',
                 day.inRange ? 'inset-x-0' : '',
                 day.rangeStart && day.rangeEnd ? 'inset-x-1 rounded-full' : '',
                 day.rangeStart && !day.rangeEnd ? 'left-1 right-0 rounded-l-full' : '',
@@ -581,12 +581,12 @@ function handleDeleteFilter() {
               :class="[
                 'relative z-10 inline-flex h-10 min-w-10 items-center justify-center rounded-full px-0 text-[12px] ring-offset-background transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
                 day.selected
-                  ? 'bg-[#2F7DE1] text-white shadow-[0_4px_10px_rgba(47,125,225,0.18)]'
+                  ? 'bg-date-primary text-link-foreground shadow-[0_4px_10px_hsl(var(--date-primary)_/_0.3)]'
                   : day.today
-                    ? 'rounded-full bg-[#E56D5B] text-white shadow-[0_4px_10px_rgba(229,109,91,0.22)]'
+                    ? 'rounded-full bg-date-today text-link-foreground shadow-[0_4px_10px_hsl(var(--date-today)_/_0.3)]'
                     : day.muted
-                      ? 'text-[#9BA6A7]'
-                      : 'text-[#2E2E2E] hover:bg-surface-tertiary',
+                      ? 'text-muted-foreground'
+                      : 'text-foreground hover:bg-surface-tertiary',
               ]"
               @click="handleDaySelect(day.iso)"
             >

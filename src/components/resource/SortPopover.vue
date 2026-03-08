@@ -177,7 +177,7 @@ function handleDragEnd() {
 
 <template>
   <div
-    class="w-fit min-w-[320px] max-w-[calc(100vw-2rem)] rounded-xl border border-[#E5E7EB] bg-white p-1.5 shadow-[0_12px_32px_rgba(15,23,42,0.10)]"
+    class="w-fit min-w-[320px] max-w-[calc(100vw-2rem)] rounded-xl border border-border bg-popover p-1.5 shadow-lg"
     data-list-popover
   >
     <div v-if="visibleRules.length" class="space-y-1.5">
@@ -186,7 +186,7 @@ function handleDragEnd() {
         :key="rule.id"
         :class="[
           'flex items-start gap-1.5 rounded-lg transition-colors',
-          dragOverRuleId === rule.id && draggingRuleId !== rule.id ? 'bg-[#F8F8F9]' : '',
+          dragOverRuleId === rule.id && draggingRuleId !== rule.id ? 'bg-surface-tertiary' : '',
           draggingRuleId === rule.id ? 'opacity-60' : '',
         ]"
         @dragover="handleDragOver($event, rule.id)"
@@ -195,7 +195,7 @@ function handleDragEnd() {
         <button
           type="button"
           draggable="true"
-          class="mt-0.5 inline-flex h-8 w-6 shrink-0 cursor-grab items-center justify-center rounded-sm text-[#A1A1AA] transition hover:bg-surface-tertiary hover:text-[#71717A] active:cursor-grabbing"
+          class="mt-0.5 inline-flex h-8 w-6 shrink-0 cursor-grab items-center justify-center rounded-sm text-muted-foreground transition hover:bg-surface-tertiary hover:text-foreground active:cursor-grabbing"
           aria-label="拖动排序"
           @dragstart="handleDragStart($event, rule.id)"
           @dragend="handleDragEnd"
@@ -206,16 +206,16 @@ function handleDragEnd() {
         <div class="relative" data-list-popover>
           <button
             type="button"
-            class="inline-flex h-9 min-w-[136px] max-w-[220px] items-center rounded-md border border-[#E4E4E7] bg-white px-3 text-[13px] font-medium text-[#3F3F46] ring-offset-background transition hover:bg-surface-tertiary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+            class="inline-flex h-9 min-w-[136px] max-w-[220px] items-center rounded-md border border-input bg-background px-3 text-[13px] font-medium text-foreground ring-offset-background transition hover:bg-surface-tertiary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
             @click="toggleMenu(rule.id, 'field')"
           >
             <span class="whitespace-nowrap">{{ getFieldMeta(rule.field)?.label ?? "选择字段" }}</span>
-            <i class="ri-arrow-down-s-line ml-auto shrink-0 text-[16px] text-[#A1A1AA]" />
+            <i class="ri-arrow-down-s-line ml-auto shrink-0 text-[16px] text-muted-foreground" />
           </button>
 
           <div
             v-if="openMenu?.id === rule.id && openMenu.kind === 'field'"
-            class="absolute left-0 top-[calc(100%+6px)] z-40 min-w-[160px] rounded-md border border-[#E5E7EB] bg-white p-1 shadow-[0_12px_28px_rgba(15,23,42,0.12)]"
+            class="absolute left-0 top-[calc(100%+6px)] z-40 min-w-[160px] rounded-md border border-border bg-popover p-1 shadow-lg"
             data-list-popover
           >
             <button
@@ -224,12 +224,12 @@ function handleDragEnd() {
               type="button"
               :class="[
                 'flex w-full items-center gap-2 rounded-sm px-2.5 py-2 text-left text-[12px] transition whitespace-nowrap',
-                rule.field === option.value ? 'bg-surface-tertiary text-[#18181B]' : 'text-[#52525B] hover:bg-surface-tertiary',
+                rule.field === option.value ? 'bg-surface-tertiary text-foreground' : 'text-muted-foreground hover:bg-surface-tertiary',
               ]"
               @click="handleFieldSelect(rule.id, option.value)"
             >
               <span class="whitespace-nowrap">{{ option.label }}</span>
-              <i v-if="rule.field === option.value" class="ri-check-line ml-auto shrink-0 text-[14px] text-[#3559E0]" />
+              <i v-if="rule.field === option.value" class="ri-check-line ml-auto shrink-0 text-[14px] text-link" />
             </button>
           </div>
         </div>
@@ -237,16 +237,16 @@ function handleDragEnd() {
         <div class="relative shrink-0" data-list-popover>
           <button
             type="button"
-            class="inline-flex h-9 min-w-[88px] items-center gap-2 rounded-md border border-[#E4E4E7] bg-white px-3 text-[13px] font-medium text-[#3F3F46] ring-offset-background transition hover:bg-surface-tertiary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+            class="inline-flex h-9 min-w-[88px] items-center gap-2 rounded-md border border-input bg-background px-3 text-[13px] font-medium text-foreground ring-offset-background transition hover:bg-surface-tertiary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
             @click="toggleMenu(rule.id, 'direction')"
           >
             <span class="whitespace-nowrap">{{ getDirectionLabel(rule) }}</span>
-            <i class="ri-arrow-down-s-line ml-auto shrink-0 text-[16px] text-[#A1A1AA]" />
+            <i class="ri-arrow-down-s-line ml-auto shrink-0 text-[16px] text-muted-foreground" />
           </button>
 
           <div
             v-if="openMenu?.id === rule.id && openMenu.kind === 'direction'"
-            class="absolute right-0 top-[calc(100%+6px)] z-40 min-w-[128px] rounded-md border border-[#E5E7EB] bg-white p-1 shadow-[0_12px_28px_rgba(15,23,42,0.12)]"
+            class="absolute right-0 top-[calc(100%+6px)] z-40 min-w-[128px] rounded-md border border-border bg-popover p-1 shadow-lg"
             data-list-popover
           >
             <button
@@ -255,19 +255,19 @@ function handleDragEnd() {
               type="button"
               :class="[
                 'flex w-full items-center justify-between rounded-sm px-2.5 py-2 text-left text-[12px] transition whitespace-nowrap',
-                rule.direction === option.value ? 'bg-surface-tertiary text-[#18181B]' : 'text-[#52525B] hover:bg-surface-tertiary',
+                rule.direction === option.value ? 'bg-surface-tertiary text-foreground' : 'text-muted-foreground hover:bg-surface-tertiary',
               ]"
               @click="handleDirectionSelect(rule.id, option.value)"
             >
               <span>{{ option.label }}</span>
-              <i v-if="rule.direction === option.value" class="ri-check-line text-[14px] text-[#3559E0]" />
+              <i v-if="rule.direction === option.value" class="ri-check-line text-[14px] text-link" />
             </button>
           </div>
         </div>
 
         <button
           type="button"
-          class="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-[#A1A1AA] transition hover:bg-surface-tertiary hover:text-[#71717A]"
+          class="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition hover:bg-surface-tertiary hover:text-foreground"
           aria-label="删除当前排序"
           @click="handleRemoveSort(rule.id)"
         >
@@ -278,7 +278,7 @@ function handleDragEnd() {
 
     <button
       type="button"
-      class="mt-1 flex h-9 w-full items-center gap-2 rounded-md px-2.5 text-left text-[13px] font-medium text-[#3F3F46] transition hover:bg-surface-tertiary"
+      class="mt-1 flex h-9 w-full items-center gap-2 rounded-md px-2.5 text-left text-[13px] font-medium text-foreground transition hover:bg-surface-tertiary"
       @click="handleAddSort"
     >
       <i class="ri-add-line text-[18px]" />
@@ -288,7 +288,7 @@ function handleDragEnd() {
     <button
       type="button"
       class="flex h-9 w-full items-center gap-2 rounded-md px-2.5 text-left text-[13px] font-medium transition"
-      :class="enabled ? 'text-[#71717A] hover:bg-[#FEF2F2] hover:text-[#DC2626]' : 'cursor-not-allowed text-[#C7C7CC]'"
+      :class="enabled ? 'text-muted-foreground hover:bg-destructive/10 hover:text-destructive' : 'cursor-not-allowed text-muted-foreground'"
       :disabled="!enabled"
       @click="handleRemoveSort()"
     >

@@ -67,8 +67,8 @@ const schema: ResourceListSchema<PractitionerRecord> = {
         kind: "dual-inline",
         primaryKey: "name",
         secondaryKey: "phone",
-        primaryClass: "text-[#1F1F1F]",
-        secondaryClass: "text-[#9A9A9A]",
+        primaryClass: "text-foreground",
+        secondaryClass: "text-muted-foreground",
       },
     },
     {
@@ -84,7 +84,7 @@ const schema: ResourceListSchema<PractitionerRecord> = {
         defaultVisible: true,
       },
       sort: true,
-      cellClass: "font-medium text-[#1F1F1F]",
+      cellClass: "font-medium text-foreground",
     },
     {
       key: "role",
@@ -134,8 +134,8 @@ const schema: ResourceListSchema<PractitionerRecord> = {
       cellRenderer: {
         kind: "metric-unit",
         unit: "年",
-        valueClass: "tabular-nums text-[#3559E0]",
-        unitClass: "ml-1 text-[12px] text-[#9A9A9A]",
+        valueClass: "tabular-nums text-link",
+        unitClass: "ml-1 text-[12px] text-muted-foreground",
       },
     },
     {

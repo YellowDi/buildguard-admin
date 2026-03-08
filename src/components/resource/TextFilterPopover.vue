@@ -70,16 +70,16 @@ function handleOperatorSelect(operator: TextFilterOperator, currentValue: TextFi
 
 <template>
   <div
-    class="w-[252px] max-w-[calc(100vw-2rem)] rounded-xl border border-[#E5E7EB] bg-white p-2.5 shadow-[0_12px_32px_rgba(15,23,42,0.10)]"
+    class="w-[252px] max-w-[calc(100vw-2rem)] rounded-xl border border-border bg-popover p-2.5 shadow-lg"
     data-list-popover
   >
     <div class="flex items-center justify-between gap-2">
-      <div class="flex min-w-0 items-center gap-1 text-[12px] font-semibold text-[#727272]">
+      <div class="flex min-w-0 items-center gap-1 text-[12px] font-semibold text-muted-foreground">
         <span class="truncate">{{ title }}</span>
         <div class="relative" data-list-popover>
         <button
           type="button"
-          class="inline-flex items-center gap-0.5 rounded-sm px-0.5 text-[#6A6A6A] ring-offset-background transition hover:text-[#303030] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          class="inline-flex items-center gap-0.5 rounded-sm px-0.5 text-muted-foreground ring-offset-background transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           @click="openMenu = !openMenu; openActionMenu = false"
         >
           <span>{{ getOperatorLabel(value.operator) }}</span>
@@ -88,7 +88,7 @@ function handleOperatorSelect(operator: TextFilterOperator, currentValue: TextFi
 
           <div
             v-if="openMenu"
-            class="absolute left-[-8px] top-[calc(100%+8px)] z-40 min-w-[132px] rounded-md border border-[#E5E7EB] bg-white p-1 shadow-[0_12px_28px_rgba(15,23,42,0.12)]"
+            class="absolute left-[-8px] top-[calc(100%+8px)] z-40 min-w-[132px] rounded-md border border-border bg-popover p-1 shadow-lg"
             data-list-popover
           >
             <button
@@ -97,7 +97,7 @@ function handleOperatorSelect(operator: TextFilterOperator, currentValue: TextFi
               type="button"
               :class="[
                 'flex w-full items-center rounded-sm px-2 py-1.5 text-left text-[11px] font-medium transition whitespace-nowrap',
-                value.operator === option.value ? 'bg-surface-tertiary text-[#18181B]' : 'text-[#52525B] hover:bg-surface-tertiary',
+                value.operator === option.value ? 'bg-surface-tertiary text-foreground' : 'text-muted-foreground hover:bg-surface-tertiary',
               ]"
               @click="handleOperatorSelect(option.value, value)"
             >
@@ -110,7 +110,7 @@ function handleOperatorSelect(operator: TextFilterOperator, currentValue: TextFi
       <div class="relative shrink-0" data-list-popover>
         <button
           type="button"
-          class="inline-flex size-6 items-center justify-center rounded-md text-[#8B8B8B] ring-offset-background transition hover:bg-surface-tertiary hover:text-[#4B4B55] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          class="inline-flex size-6 items-center justify-center rounded-md text-muted-foreground ring-offset-background transition hover:bg-surface-tertiary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
           aria-label="删除当前筛选"
           @click="openActionMenu = !openActionMenu; openMenu = false"
         >
@@ -119,12 +119,12 @@ function handleOperatorSelect(operator: TextFilterOperator, currentValue: TextFi
 
         <div
           v-if="openActionMenu"
-          class="absolute left-[calc(100%+6px)] top-1/2 z-40 min-w-[104px] -translate-y-1/2 rounded-md border border-[#E5E7EB] bg-white p-1 shadow-[0_12px_28px_rgba(15,23,42,0.12)]"
+          class="absolute left-[calc(100%+6px)] top-1/2 z-40 min-w-[104px] -translate-y-1/2 rounded-md border border-border bg-popover p-1 shadow-lg"
           data-list-popover
         >
           <button
             type="button"
-            class="flex w-full items-center rounded-sm px-2 py-1.5 text-left text-[11px] font-medium text-[#B42318] transition hover:bg-[#FEF3F2]"
+            class="flex w-full items-center rounded-sm px-2 py-1.5 text-left text-[11px] font-medium text-destructive transition hover:bg-destructive/10"
             @click="handleDeleteFilter"
           >
             删除筛选
@@ -137,9 +137,9 @@ function handleOperatorSelect(operator: TextFilterOperator, currentValue: TextFi
       <label
         :class="[
           'flex h-9 items-center rounded-md border bg-background px-3 py-2 text-sm ring-offset-background transition focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2',
-          operatorNeedsInput(value.operator)
-            ? 'border-[#E4E4E7] bg-white'
-            : 'cursor-not-allowed border-[#ECECEC] bg-[#F8F8F8] opacity-70',
+            operatorNeedsInput(value.operator)
+            ? 'border-input bg-background'
+            : 'cursor-not-allowed border-border bg-muted opacity-70',
         ]"
       >
         <input
@@ -148,8 +148,8 @@ function handleOperatorSelect(operator: TextFilterOperator, currentValue: TextFi
           :disabled="!operatorNeedsInput(value.operator)"
           :placeholder="operatorNeedsInput(value.operator) ? (value.placeholder ?? `输入${title}`) : '当前条件无需输入内容'"
           :class="[
-            'w-full border-0 bg-transparent p-0 text-[12px] outline-none placeholder:text-[#B4B4B4] focus-visible:outline-none',
-            operatorNeedsInput(value.operator) ? 'text-[#303030]' : 'cursor-not-allowed text-[#B4B4B4]',
+            'w-full border-0 bg-transparent p-0 text-[12px] outline-none placeholder:text-muted-foreground focus-visible:outline-none',
+            operatorNeedsInput(value.operator) ? 'text-foreground' : 'cursor-not-allowed text-muted-foreground',
           ]"
           @input="handleQueryInput(($event.target as HTMLInputElement).value)"
         >
@@ -157,7 +157,7 @@ function handleOperatorSelect(operator: TextFilterOperator, currentValue: TextFi
         <button
           v-if="operatorNeedsInput(value.operator) && value.query"
           type="button"
-          class="ml-2 inline-flex size-4 shrink-0 items-center justify-center rounded-full text-[#A1A1AA] transition hover:bg-surface-tertiary hover:text-[#52525B]"
+          class="ml-2 inline-flex size-4 shrink-0 items-center justify-center rounded-full text-muted-foreground transition hover:bg-surface-tertiary hover:text-foreground"
           aria-label="清空输入内容"
           @click="handleClearQuery"
         >

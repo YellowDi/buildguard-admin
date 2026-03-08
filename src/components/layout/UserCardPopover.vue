@@ -62,7 +62,7 @@ function handleLogout() {
       >
         <div class="flex min-w-0 flex-1 items-center gap-2">
           <div
-            class="flex size-[22px] shrink-0 items-center justify-center overflow-hidden rounded-sm bg-[#E8D5B7] text-sidebar-primary"
+            class="flex size-[22px] shrink-0 items-center justify-center overflow-hidden rounded-sm bg-avatar-placeholder text-sidebar-primary"
           >
             <span class="text-[10px] font-semibold">R</span>
           </div>
@@ -78,18 +78,17 @@ function handleLogout() {
         :align="'start'"
         :class="
           cn(
-            'z-50 w-[280px] overflow-hidden rounded-xl border border-[#E5E7EB] bg-white p-0 shadow-[0_12px_32px_rgba(15,23,42,0.10)]',
-            'dark:border-border dark:bg-popover dark:shadow-lg',
+            'z-50 w-[280px] overflow-hidden rounded-xl border border-border bg-popover p-0 shadow-[0_12px_32px_rgba(15,23,42,0.10)] dark:shadow-lg',
             'data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95',
             'data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95',
           )
         "
       >
         <!-- 用户信息卡片 -->
-        <div class="flex flex-col gap-0.5 border-b border-[#E5E7EB] px-3 py-3">
+        <div class="flex flex-col gap-0.5 border-b border-border px-3 py-3">
           <div class="flex items-start gap-2">
             <div
-              class="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-sm bg-[#E8D5B7] text-sidebar-primary"
+              class="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-sm bg-avatar-placeholder text-sidebar-primary"
             >
               <span class="text-sm font-semibold">R</span>
             </div>
@@ -115,14 +114,14 @@ function handleLogout() {
               :class="
                 cn(
                   'peer inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full border-0 transition-colors',
-                  'data-[state=checked]:bg-[#22c55e] data-[state=unchecked]:bg-[#E5E7EB]',
+                  'data-[state=checked]:bg-success data-[state=unchecked]:bg-input dark:data-[state=unchecked]:bg-secondary',
                 )
               "
             >
               <SwitchThumb
                 :class="
                   cn(
-                    'pointer-events-none block size-4 rounded-full bg-white shadow-sm ring-0 transition-transform',
+                    'pointer-events-none block size-4 rounded-full bg-background shadow-sm ring-0 transition-transform',
                     'translate-x-0.5 data-[state=checked]:translate-x-[18px]',
                   )
                 "
@@ -151,7 +150,7 @@ function handleLogout() {
         </div>
 
         <!-- 底部版本信息 -->
-        <div class="border-t border-[#E5E7EB] px-3 py-2">
+        <div class="border-t border-border px-3 py-2">
           <p class="text-xs text-muted-foreground">v.1.5.69 · 服务条款与条件</p>
         </div>
       </PopoverContent>

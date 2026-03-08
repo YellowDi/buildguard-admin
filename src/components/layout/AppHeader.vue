@@ -19,7 +19,7 @@ const route = useRoute()
     <Separator orientation="vertical" class="mr-2 h-4" />
     <Breadcrumb>
       <BreadcrumbList>
-        <BreadcrumbItem>控制中心</BreadcrumbItem>
+        <BreadcrumbItem>BuildGuard Admin</BreadcrumbItem>
         <BreadcrumbSeparator />
         <BreadcrumbItem>
           <BreadcrumbPage>{{ route.meta.title }}</BreadcrumbPage>

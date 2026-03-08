@@ -49,7 +49,7 @@ const pinnedItems: NavItem[] = [
     path: "/",
   },
   {
-    label: "会议",
+    label: "日历",
     icon: "ri-calendar-event-line",
   },
   {
@@ -133,9 +133,9 @@ watch(openMobile, (value) => {
         class="flex items-center gap-3 rounded-lg px-2 py-1.5 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
       >
         <div
-          class="flex size-8 items-center justify-center rounded-full bg-sidebar-primary text-sidebar-primary-foreground"
+          class="flex size-8 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground"
         >
-          <div class="grid size-5 grid-cols-2 gap-0.5 rounded-full bg-white/10 p-0.5">
+          <div class="grid size-5 grid-cols-2 gap-0.5 rounded-sm bg-white/10 p-0.5">
             <span class="rounded-full bg-current opacity-90" />
             <span class="rounded-full bg-current opacity-60" />
             <span class="rounded-full bg-current opacity-60" />
@@ -143,7 +143,7 @@ watch(openMobile, (value) => {
           </div>
         </div>
         <div class="min-w-0 flex-1">
-          <p class="truncate text-sm font-semibold">控制中心</p>
+          <p class="truncate text-sm font-semibold">BuildGuard Admin</p>
         </div>
         <i class="ri-arrow-down-s-line text-base" />
       </RouterLink>
@@ -167,7 +167,7 @@ watch(openMobile, (value) => {
           <span class="flex-1 truncate">{{ item.label }}</span>
           <span
             v-if="item.badge"
-            class="min-w-5 rounded-[4px] bg-[#FA7319] px-1.5 text-center text-[11px] font-semibold leading-5 text-white"
+            class="min-w-5 rounded-[4px] bg-badge px-1.5 text-center text-[11px] font-semibold leading-5 text-link-foreground"
           >
             {{ item.badge }}
           </span>
@@ -175,8 +175,8 @@ watch(openMobile, (value) => {
       </nav>
     </SidebarHeader>
 
-    <SidebarContent class="min-h-0 border-t border-black/10 pt-1">
-      <nav class="overflow-y-auto">
+    <SidebarContent class="min-h-0 overflow-x-hidden border-t border-sidebar-border pt-1">
+      <nav class="min-w-0 overflow-y-auto overflow-x-hidden">
         <div v-for="item in businessItems" :key="item.label">
           <component
             :is="item.path && !item.children?.length ? 'RouterLink' : 'button'"
@@ -246,7 +246,7 @@ watch(openMobile, (value) => {
       </nav>
     </SidebarContent>
 
-    <SidebarFooter class="shrink-0 border-t border-black/10 p-0 pt-1">
+    <SidebarFooter class="shrink-0 border-t border-sidebar-border p-0 pt-1">
       <UserCardPopover />
     </SidebarFooter>
 

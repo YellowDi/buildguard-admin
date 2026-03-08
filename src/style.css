@@ -41,6 +41,21 @@
     --sidebar-accent-foreground: 240 5.9% 10%;
     --sidebar-border: 220 13% 91%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+    /* 链接/强调色 */
+    --link: 225 75% 55%;
+    --link-foreground: 0 0% 100%;
+    --selection: 225 100% 97%;
+    --selection-hover: 225 100% 95%;
+    --selection-active: 225 100% 93%;
+    /* 日期选择器 */
+    --date-range: 214 76% 93%;
+    --date-primary: 213 75% 53%;
+    --date-today: 7 75% 63%;
+    /* 徽章、头像占位、成功 */
+    --badge: 25 96% 54%;
+    --avatar-placeholder: 35 50% 82%;
+    --success: 142 71% 45%;
+    --warning: 21 62% 45%;
   }
 
   * {
@@ -91,5 +106,20 @@
     --sidebar-accent-foreground: 240 4.8% 95.9%;
     --sidebar-border: 240 3.7% 15.9%;
     --sidebar-ring: 217.2 91.2% 59.8%;
+    /* 链接/强调色 */
+    --link: 213 93% 68%;
+    --link-foreground: 0 0% 100%;
+    --selection: 214 52% 25%;
+    --selection-hover: 214 52% 30%;
+    --selection-active: 214 52% 33%;
+    /* 日期选择器 */
+    --date-range: 214 52% 25%;
+    --date-primary: 217 91% 60%;
+    --date-today: 25 95% 53%;
+    /* 徽章、头像占位、成功 */
+    --badge: 25 96% 54%;
+    --avatar-placeholder: 35 50% 82%;
+    --success: 142 71% 45%;
+    --warning: 25 95% 53%;
   }
 }

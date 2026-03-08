@@ -55,6 +55,23 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        /* 链接/强调/选择/日期/状态 */
+        link: {
+          DEFAULT: "hsl(var(--link))",
+          foreground: "hsl(var(--link-foreground))",
+        },
+        selection: {
+          DEFAULT: "hsl(var(--selection))",
+          hover: "hsl(var(--selection-hover))",
+          active: "hsl(var(--selection-active))",
+        },
+        "date-range": "hsl(var(--date-range))",
+        "date-primary": "hsl(var(--date-primary))",
+        "date-today": "hsl(var(--date-today))",
+        badge: "hsl(var(--badge))",
+        "avatar-placeholder": "hsl(var(--avatar-placeholder))",
+        success: "hsl(var(--success))",
+        warning: "hsl(var(--warning))",
       },
       borderRadius: {
         lg: "var(--radius)",

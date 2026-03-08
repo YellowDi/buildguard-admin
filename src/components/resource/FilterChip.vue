@@ -25,7 +25,7 @@ const classes = computed(() => {
   if (props.variant === "ghost") {
     return cn(
       "inline-flex h-6 shrink-0 items-center gap-1 rounded-md px-2 text-[14px] transition-colors outline-none",
-      "text-[#9A9A9A] hover:bg-transparent hover:text-[#5F5F5F] active:text-[#3F3F3F]",
+      "text-muted-foreground hover:bg-transparent hover:text-foreground active:text-foreground",
       props.class,
     )
   }
@@ -33,8 +33,8 @@ const classes = computed(() => {
   return cn(
     base,
     props.selected
-      ? "bg-[#EEF3FF] text-[#3559E0] hover:bg-[#E6EEFF] active:bg-[#DCE7FF]"
-      : "text-[#666] hover:bg-surface-tertiary active:bg-surface-secondary",
+      ? "bg-selection text-link hover:bg-selection-hover active:bg-selection-active"
+      : "text-muted-foreground hover:bg-surface-tertiary active:bg-surface-secondary",
     props.class,
   )
 })
@@ -44,6 +44,6 @@ const classes = computed(() => {
   <button type="button" :class="classes" :aria-pressed="selected">
     <i v-if="icon" :class="[icon, 'text-[15px]']" />
     <span>{{ label }}</span>
-    <i v-if="caret" class="ri-arrow-down-s-line text-sm text-[#8A8A8A]" />
+    <i v-if="caret" class="ri-arrow-down-s-line text-sm text-muted-foreground" />
   </button>
 </template>

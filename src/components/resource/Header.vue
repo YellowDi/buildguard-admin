@@ -67,9 +67,9 @@ const openPopover = ref<string | null>(null)
 const sortPopoverSource = ref<"toolbar" | "chip">("toolbar")
 const showSearchInput = ref(false)
 const ghostIconButtonClass =
-  "inline-flex size-8 items-center justify-center rounded-md bg-transparent text-[#7A7A7A] transition-colors hover:bg-surface-tertiary hover:text-[#3F3F3F] active:bg-surface-secondary active:text-[#1F1F1F]"
+  "inline-flex size-8 items-center justify-center rounded-md bg-transparent text-muted-foreground transition-colors hover:bg-surface-tertiary hover:text-foreground active:bg-surface-secondary"
 const ghostIconButtonActiveClass =
-  "bg-transparent text-[#3559E0] hover:bg-surface-tertiary hover:text-[#2448C8] active:bg-surface-secondary active:text-[#1E3DA7]"
+  "bg-transparent text-link hover:bg-surface-tertiary active:bg-surface-secondary"
 
 const visibleFilterKeys = computed(() => props.fields.filter((field) => field.kind !== "sort").map((field) => field.key))
 const addableFilters = computed(() => props.availableFilters.filter((key) => !visibleFilterKeys.value.includes(key)))
@@ -226,13 +226,13 @@ onBeforeUnmount(() => {
   <div class="flex min-w-0 w-full flex-col">
     <div class="px-4 sm:px-8">
       <div class="flex min-w-0 flex-wrap items-end gap-x-2 gap-y-1">
-        <h1 class="min-w-0 text-[40px] font-semibold tracking-[-0.05em] text-[#191919] sm:text-[48px]">{{ title }}</h1>
-        <span class="pb-0 text-[18px] font-normal text-[#8C8C8C] sm:pb-1 sm:text-[20px]">{{ count }}</span>
+        <h1 class="min-w-0 text-[40px] font-semibold text-foreground sm:text-[48px]">{{ title }}</h1>
+        <span class="pb-0 text-[18px] font-normal text-muted-foreground sm:pb-1 sm:text-[20px]">{{ count }}</span>
       </div>
     </div>
 
     <div class="px-4 sm:px-8">
-      <div class="flex min-w-0 flex-wrap items-end gap-x-6 gap-y-3 border-b border-[#ECECEC]">
+      <div class="flex min-w-0 flex-wrap items-end gap-x-6 gap-y-3 border-b border-border">
         <nav class="flex min-w-0 flex-[999_1_24rem] flex-wrap items-center text-[14px]">
           <button
             v-for="tab in tabs"
@@ -240,8 +240,8 @@ onBeforeUnmount(() => {
             type="button"
             :aria-pressed="tab.active"
             :class="[
-              'group relative px-3 pb-[11px] text-[#6B6B6B] transition-colors hover:text-[#1F1F1F]',
-              tab.active ? 'font-semibold text-[#1F1F1F]' : '',
+              'group relative px-3 pb-[11px] text-muted-foreground transition-colors hover:text-foreground',
+              tab.active ? 'font-semibold text-foreground' : '',
             ]"
             @click="emit('tab-click', tab)"
           >
@@ -251,12 +251,12 @@ onBeforeUnmount(() => {
             </span>
             <span
               v-if="tab.active"
-              class="absolute inset-x-0 bottom-0 h-0.5 bg-[#1F1F1F]"
+              class="absolute inset-x-0 bottom-0 h-0.5 bg-foreground"
             />
           </button>
         </nav>
 
-        <div class="flex min-w-0 flex-[1_1_100%] flex-wrap items-center justify-end gap-1 pb-2 text-[#606060] sm:flex-[0_0_auto] sm:flex-nowrap">
+        <div class="flex min-w-0 flex-[1_1_100%] flex-wrap items-center justify-end gap-1 pb-2 text-muted-foreground sm:flex-[0_0_auto] sm:flex-nowrap">
           <button
             type="button"
             :class="[
@@ -265,7 +265,7 @@ onBeforeUnmount(() => {
             ]"
             @click="emit('toggle-controls')"
           >
-            <i :class="['ri-filter-3-line text-[17px]', showControls ? 'text-[#3559E0]' : '']" />
+            <i :class="['ri-filter-3-line text-[17px]', showControls ? 'text-link' : '']" />
           </button>
           <div class="relative" data-list-popover>
             <button
@@ -276,7 +276,7 @@ onBeforeUnmount(() => {
               ]"
               @click="handleToolbarAddSort"
             >
-              <i :class="['ri-sort-asc text-[17px]', customSortEnabled ? 'text-[#3559E0]' : '']" />
+              <i :class="['ri-sort-asc text-[17px]', customSortEnabled ? 'text-link' : '']" />
             </button>
           </div>
           <div class="flex min-w-0 flex-1 items-center justify-end gap-0 sm:w-auto sm:flex-none sm:justify-start">
@@ -288,7 +288,7 @@ onBeforeUnmount(() => {
               ]"
               @click="toggleSearch"
             >
-              <i :class="['ri-search-line text-[17px]', showSearchInput || searchQuery ? 'text-[#3559E0]' : '']" />
+              <i :class="['ri-search-line text-[17px]', showSearchInput || searchQuery ? 'text-link' : '']" />
             </button>
             <Transition
               enter-active-class="transition-all duration-200 ease-out"
@@ -300,20 +300,20 @@ onBeforeUnmount(() => {
             >
               <div
                 v-if="showSearchInput || searchQuery"
-                class="flex h-8 min-w-0 flex-1 items-center gap-2 overflow-hidden rounded-md bg-white px-2 text-[13px] text-[#606060] sm:w-[220px] sm:flex-none"
+                class="flex h-8 min-w-0 flex-1 items-center gap-2 overflow-hidden rounded-md bg-background px-2 text-[13px] text-muted-foreground sm:w-[220px] sm:flex-none"
               >
                 <input
                   :value="searchQuery"
                   type="text"
                   placeholder="输入并搜索..."
-                  class="w-full border-0 bg-transparent p-0 text-[13px] text-[#303030] outline-none placeholder:text-[#A0A0A0]"
+                  class="w-full border-0 bg-transparent p-0 text-[13px] text-foreground outline-none placeholder:text-muted-foreground"
                   aria-label="输入并搜索..."
                   @input="emit('update-search-query', ($event.target as HTMLInputElement).value)"
                 />
                 <button
                   v-if="searchQuery"
                   type="button"
-                  class="inline-flex size-5 shrink-0 items-center justify-center rounded-sm text-[#9A9A9A] transition hover:bg-surface-tertiary hover:text-[#5F5F5F]"
+                  class="inline-flex size-5 shrink-0 items-center justify-center rounded-sm text-muted-foreground transition hover:bg-surface-tertiary hover:text-foreground"
                   aria-label="清除搜索文字"
                   @click="clearSearch"
                 >
@@ -331,7 +331,7 @@ onBeforeUnmount(() => {
           <button
             v-if="primaryActionLabel"
             type="button"
-            class="inline-flex h-8 items-center gap-1 rounded-md border border-[#E3E3E3] bg-white px-3 text-[14px] font-medium text-[#4A4A4A] transition hover:bg-surface-tertiary"
+            class="inline-flex h-8 items-center gap-1 rounded-md border border-border bg-background px-3 text-[14px] font-medium text-foreground transition hover:bg-surface-tertiary"
             @click="emit('primary-action')"
           >
             <i class="ri-add-line text-base" />
@@ -350,7 +350,7 @@ onBeforeUnmount(() => {
       leave-to-class="max-h-0 opacity-0 -translate-y-1"
     >
       <div v-if="showControls" class="px-4 py-2 sm:px-8">
-        <div class="flex flex-wrap items-center gap-0.5 text-[14px] text-[#666]">
+        <div class="flex flex-wrap items-center gap-0.5 text-[14px] text-muted-foreground">
           <div class="flex min-w-0 flex-wrap items-center gap-0.5">
             <template v-for="(field, index) in fields" :key="field.key">
               <div class="relative" data-list-popover>
@@ -434,7 +434,7 @@ onBeforeUnmount(() => {
 
               <div
                 v-if="index === 0 && field.kind === 'sort' && fields.length > 1"
-                class="mx-2 h-5 w-px shrink-0 bg-[#E7E7E7]"
+                class="mx-2 h-5 w-px shrink-0 bg-border"
               />
             </template>
 
@@ -448,17 +448,17 @@ onBeforeUnmount(() => {
 
               <div
                 v-if="openPopover === 'add-filter'"
-                class="absolute left-0 top-[calc(100%+8px)] z-30 min-w-[184px] rounded-xl border border-[#E8E8E8] bg-white p-1.5 shadow-[0_8px_30px_rgba(0,0,0,0.08)]"
+                class="absolute left-0 top-[calc(100%+8px)] z-30 min-w-[184px] rounded-xl border border-border bg-popover p-1.5 shadow-lg"
               >
                 <button
                   v-for="item in addableFilters"
                   :key="item"
                   type="button"
-                  class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-[13px] text-[#4F4F4F] transition hover:bg-surface-tertiary"
+                  class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-[13px] text-foreground transition hover:bg-surface-tertiary"
                   @click="handleAddFilter(item)"
                 >
                   <span>{{ item }}</span>
-                  <i class="ri-add-line text-sm text-[#9A9A9A]" />
+                  <i class="ri-add-line text-sm text-muted-foreground" />
                 </button>
               </div>
             </div>
