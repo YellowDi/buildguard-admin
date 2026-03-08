@@ -206,7 +206,7 @@ function handleDragEnd() {
         <div class="relative" data-list-popover>
           <button
             type="button"
-            class="inline-flex h-9 min-w-[136px] max-w-[220px] items-center rounded-md border border-input bg-background px-3 text-[13px] font-medium text-foreground ring-offset-background transition hover:bg-surface-tertiary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+            class="inline-flex h-9 min-w-[136px] max-w-[220px] items-center rounded-md border border-input bg-background px-3 py-2 text-[13px] font-medium text-foreground ring-offset-background transition-[color,box-shadow] hover:bg-surface-tertiary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
             @click="toggleMenu(rule.id, 'field')"
           >
             <span class="whitespace-nowrap">{{ getFieldMeta(rule.field)?.label ?? "选择字段" }}</span>
@@ -237,7 +237,7 @@ function handleDragEnd() {
         <div class="relative shrink-0" data-list-popover>
           <button
             type="button"
-            class="inline-flex h-9 min-w-[88px] items-center gap-2 rounded-md border border-input bg-background px-3 text-[13px] font-medium text-foreground ring-offset-background transition hover:bg-surface-tertiary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+            class="inline-flex h-9 min-w-[88px] items-center gap-2 rounded-md border border-input bg-background px-3 py-2 text-[13px] font-medium text-foreground ring-offset-background transition-[color,box-shadow] hover:bg-surface-tertiary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
             @click="toggleMenu(rule.id, 'direction')"
           >
             <span class="whitespace-nowrap">{{ getDirectionLabel(rule) }}</span>

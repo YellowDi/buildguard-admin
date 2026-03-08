@@ -300,7 +300,7 @@ onBeforeUnmount(() => {
             >
               <div
                 v-if="showSearchInput || searchQuery"
-                class="flex h-8 min-w-0 flex-1 items-center gap-2 overflow-hidden rounded-md bg-background px-2 text-[13px] text-muted-foreground sm:w-[220px] sm:flex-none"
+                class="flex h-8 min-w-0 flex-1 items-center gap-2 overflow-hidden rounded-md border border-input bg-background px-3 py-2 text-[13px] text-muted-foreground ring-offset-background transition-[color,box-shadow] focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:ring-offset-background sm:w-[220px] sm:flex-none"
               >
                 <input
                   :value="searchQuery"

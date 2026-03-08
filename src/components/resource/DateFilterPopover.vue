@@ -331,7 +331,7 @@ function handleDeleteFilter() {
         <div class="relative" data-list-popover>
           <button
             type="button"
-            class="inline-flex items-center gap-1 rounded-sm px-1 text-muted-foreground ring-offset-background transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            class="inline-flex items-center gap-1 rounded-sm px-1 text-muted-foreground ring-offset-background transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-0"
             @click="openFieldMenu = !openFieldMenu; openOperatorMenu = false; openActionMenu = false"
           >
             <span>{{ title }}</span>
@@ -361,7 +361,7 @@ function handleDeleteFilter() {
         <div class="relative" data-list-popover>
           <button
             type="button"
-            class="inline-flex items-center gap-1 rounded-sm px-1 text-muted-foreground ring-offset-background transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            class="inline-flex items-center gap-1 rounded-sm px-1 text-muted-foreground ring-offset-background transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-0"
             @click="openOperatorMenu = !openOperatorMenu; openFieldMenu = false; openActionMenu = false"
           >
             <span>{{ getOperatorLabel(value.operator) }}</span>
@@ -392,7 +392,7 @@ function handleDeleteFilter() {
       <div class="relative shrink-0" data-list-popover>
         <button
           type="button"
-          class="inline-flex size-6 items-center justify-center rounded-md text-muted-foreground ring-offset-background transition hover:bg-surface-tertiary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          class="inline-flex size-6 items-center justify-center rounded-md text-muted-foreground ring-offset-background transition hover:bg-surface-tertiary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-0"
           aria-label="删除当前筛选"
           @click="openActionMenu = !openActionMenu; openFieldMenu = false; openOperatorMenu = false"
         >
@@ -421,7 +421,7 @@ function handleDeleteFilter() {
         class="grid grid-cols-2 gap-2"
       >
         <label
-          class="flex h-9 items-center rounded-md border border-input bg-background px-3 ring-offset-background transition focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2"
+          class="flex h-9 items-center rounded-md border border-input bg-background px-3 py-2 transition-[color,box-shadow] ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:ring-offset-background"
         >
           <input
             :value="value.startDate"
@@ -444,7 +444,7 @@ function handleDeleteFilter() {
         </label>
 
         <label
-          class="flex h-9 items-center rounded-md border border-input bg-background px-3 ring-offset-background transition focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2"
+          class="flex h-9 items-center rounded-md border border-input bg-background px-3 py-2 transition-[color,box-shadow] ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:ring-offset-background"
         >
           <input
             :value="value.endDate"
@@ -470,7 +470,7 @@ function handleDeleteFilter() {
       <label
         v-else
         :class="[
-          'flex h-9 items-center rounded-md border px-3 ring-offset-background transition focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2',
+          'flex h-9 items-center rounded-md border px-3 py-2 transition-[color,box-shadow] ring-offset-background focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:ring-offset-background',
           operatorNeedsDateInput(value.operator) ? 'border-input bg-background' : 'cursor-not-allowed border-border bg-muted opacity-70',
         ]"
       >
@@ -538,14 +538,14 @@ function handleDeleteFilter() {
           <div class="flex items-center gap-1">
             <button
               type="button"
-              class="inline-flex size-7 items-center justify-center rounded-full text-muted-foreground ring-offset-background transition hover:bg-surface-tertiary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              class="inline-flex size-7 items-center justify-center rounded-full text-muted-foreground ring-offset-background transition hover:bg-surface-tertiary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-0"
               @click="shiftMonth(-1)"
             >
               <i class="ri-arrow-left-s-line text-[18px]" />
             </button>
             <button
               type="button"
-              class="inline-flex size-7 items-center justify-center rounded-full text-muted-foreground ring-offset-background transition hover:bg-surface-tertiary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              class="inline-flex size-7 items-center justify-center rounded-full text-muted-foreground ring-offset-background transition hover:bg-surface-tertiary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-0"
               @click="shiftMonth(1)"
             >
               <i class="ri-arrow-right-s-line text-[18px]" />
@@ -579,7 +579,7 @@ function handleDeleteFilter() {
             <button
               type="button"
               :class="[
-                'relative z-10 inline-flex h-10 min-w-10 items-center justify-center rounded-full px-0 text-[12px] ring-offset-background transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+                'relative z-10 inline-flex h-10 min-w-10 items-center justify-center rounded-full px-0 text-[12px] ring-offset-background transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-0',
                 day.selected
                   ? 'bg-date-primary text-link-foreground shadow-[0_4px_10px_hsl(var(--date-primary)_/_0.3)]'
                   : day.today

@@ -80,7 +80,7 @@ function handleOptionToggle(option: string) {
         <div class="relative" data-list-popover>
           <button
             type="button"
-            class="inline-flex items-center gap-0.5 rounded-sm px-0.5 text-muted-foreground ring-offset-background transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            class="inline-flex items-center gap-0.5 rounded-sm px-0.5 text-muted-foreground ring-offset-background transition hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-0"
             @click="openMenu = !openMenu; openActionMenu = false"
           >
             <span>{{ getOperatorLabel(value.operator) }}</span>
@@ -111,7 +111,7 @@ function handleOptionToggle(option: string) {
       <div class="relative shrink-0" data-list-popover>
         <button
           type="button"
-          class="inline-flex size-6 items-center justify-center rounded-md text-muted-foreground ring-offset-background transition hover:bg-surface-tertiary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          class="inline-flex size-6 items-center justify-center rounded-md text-muted-foreground ring-offset-background transition hover:bg-surface-tertiary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-0"
           aria-label="删除当前筛选"
           @click="openActionMenu = !openActionMenu; openMenu = false"
         >

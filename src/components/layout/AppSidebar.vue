@@ -175,7 +175,7 @@ watch(openMobile, (value) => {
       </nav>
     </SidebarHeader>
 
-    <SidebarContent class="min-h-0 overflow-x-hidden border-t border-sidebar-border pt-1">
+    <SidebarContent class="min-h-0 overflow-x-hidden border-t border-sidebar-border">
       <nav class="min-w-0 overflow-y-auto overflow-x-hidden">
         <div v-for="item in businessItems" :key="item.label">
           <component
@@ -246,7 +246,7 @@ watch(openMobile, (value) => {
       </nav>
     </SidebarContent>
 
-    <SidebarFooter class="shrink-0 border-t border-sidebar-border p-0 pt-1">
+    <SidebarFooter class="shrink-0 border-t border-sidebar-border">
       <UserCardPopover />
     </SidebarFooter>
 

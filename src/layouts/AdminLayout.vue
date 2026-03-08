@@ -32,7 +32,7 @@ function closeInbox() {
     <button
       v-if="inboxOpen"
       type="button"
-      class="fixed inset-y-0 left-[16rem] right-0 z-20 bg-black/[0.04] dark:bg-black/40 backdrop-blur-[2px]"
+      class="fixed inset-y-0 left-[var(--sidebar-width)] right-0 z-20 bg-black/[0.04] dark:bg-black/40 backdrop-blur-[2px]"
       aria-label="关闭收件箱"
       @click="closeInbox"
     />
