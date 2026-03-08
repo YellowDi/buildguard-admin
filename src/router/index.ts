@@ -12,6 +12,11 @@ import UsersView from "@/views/UsersView.vue"
 import VehiclesView from "@/views/VehiclesView.vue"
 import UserCreateView from "@/views/users/UserCreateView.vue"
 
+type BreadcrumbMetaItem = {
+  title: string
+  to?: string
+}
+
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -68,6 +73,10 @@ const router = createRouter({
           component: CompanyCreateView,
           meta: {
             title: "添加企业",
+            breadcrumb: [
+              { title: "企业", to: "companies" },
+              { title: "添加企业" },
+            ] satisfies BreadcrumbMetaItem[],
           },
         },
         {
@@ -92,6 +101,10 @@ const router = createRouter({
           component: UserCreateView,
           meta: {
             title: "添加从业人员",
+            breadcrumb: [
+              { title: "从业人员", to: "users" },
+              { title: "添加从业人员" },
+            ] satisfies BreadcrumbMetaItem[],
           },
         },
         {

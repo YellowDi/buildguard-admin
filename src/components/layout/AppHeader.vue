@@ -2,15 +2,23 @@
 import {
   Breadcrumb,
   BreadcrumbItem,
+  BreadcrumbLink,
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
+import { computed } from "vue"
 import type { HTMLAttributes } from "vue"
 import { ViewVerticalIcon } from "@radix-icons/vue"
 import { cn } from "@/lib/utils"
 import { Separator } from "@/components/ui/separator"
-import { useRoute } from "vue-router"
+import { RouterLink, useRoute } from "vue-router"
+
+type BreadcrumbItemConfig = {
+  title: string
+  to?: string
+  isCurrent: boolean
+}
 
 const props = defineProps<{
   onToggleMobileSidebar?: () => void
@@ -19,6 +27,21 @@ const props = defineProps<{
 }>()
 
 const route = useRoute()
+
+const breadcrumbItems = computed<BreadcrumbItemConfig[]>(() => {
+  const metaItems = Array.isArray(route.meta.breadcrumb)
+    ? route.meta.breadcrumb
+    : typeof route.meta.title === "string"
+      ? [{ title: route.meta.title }]
+      : []
+
+  return metaItems
+    .filter((item): item is { title: string; to?: string } => typeof item === "object" && item !== null && typeof item.title === "string")
+    .map((item, index) => ({
+      ...item,
+      isCurrent: index === metaItems.length - 1,
+    }))
+})
 </script>
 
 <template>
@@ -50,10 +73,18 @@ const route = useRoute()
     <Breadcrumb>
       <BreadcrumbList>
         <BreadcrumbItem>BuildGuard Admin</BreadcrumbItem>
-        <BreadcrumbSeparator />
-        <BreadcrumbItem>
-          <BreadcrumbPage>{{ route.meta.title }}</BreadcrumbPage>
-        </BreadcrumbItem>
+        <template v-for="item in breadcrumbItems" :key="item.title">
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage v-if="item.isCurrent">{{ item.title }}</BreadcrumbPage>
+            <BreadcrumbLink v-else-if="item.to" as-child>
+              <RouterLink :to="{ name: item.to }">
+                {{ item.title }}
+              </RouterLink>
+            </BreadcrumbLink>
+            <BreadcrumbPage v-else>{{ item.title }}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </template>
       </BreadcrumbList>
     </Breadcrumb>
   </header>
