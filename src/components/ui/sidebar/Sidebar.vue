@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { SidebarProps } from "."
 import { cn } from "@/lib/utils"
-import { Sheet, SheetContent } from '@/components/ui/sheet'
 import { SIDEBAR_WIDTH_MOBILE, useSidebar } from "./utils"
 
 defineOptions({
@@ -14,7 +13,7 @@ const props = withDefaults(defineProps<SidebarProps>(), {
   collapsible: "offcanvas",
 })
 
-const { isMobile, state, openMobile, setOpenMobile } = useSidebar()
+const { state, openMobile } = useSidebar()
 </script>
 
 <template>
@@ -26,24 +25,34 @@ const { isMobile, state, openMobile, setOpenMobile } = useSidebar()
     <slot />
   </div>
 
-  <Sheet v-else-if="isMobile" :open="openMobile" v-bind="$attrs" @update:open="setOpenMobile">
-    <SheetContent
+  <div
+    v-else
+    :data-state="openMobile ? 'expanded' : 'collapsed'"
+    :data-mobile-open="openMobile ? 'true' : 'false'"
+    :data-side="side"
+    :class="cn('fixed inset-y-0 left-0 z-30 flex md:hidden', props.class)"
+    :style="{
+      '--sidebar-width': SIDEBAR_WIDTH_MOBILE,
+    }"
+    v-bind="$attrs"
+  >
+    <div
       data-sidebar="sidebar"
       data-mobile="true"
-      :side="side"
-      class="w-[--sidebar-width] bg-sidebar p-0 text-sidebar-foreground [&>button]:hidden"
-      :style="{
-        '--sidebar-width': SIDEBAR_WIDTH_MOBILE,
-      }"
+      :class="cn(
+        'flex h-full w-[--sidebar-width] max-w-[90vw] flex-col overflow-y-auto overflow-x-hidden overscroll-y-contain bg-sidebar p-0 text-sidebar-foreground shadow-[0_18px_48px_rgba(15,23,42,0.18)] transition-transform duration-300 ease-out',
+        side === 'left'
+          ? (openMobile ? 'translate-x-0' : '-translate-x-full')
+          : (openMobile ? 'translate-x-0' : 'translate-x-full'),
+      )"
     >
-      <div class="flex h-full w-full flex-col">
-        <slot />
-      </div>
-    </SheetContent>
-  </Sheet>
+      <slot />
+    </div>
+  </div>
 
   <div
-    v-else class="group peer hidden md:block"
+    v-if="collapsible !== 'none'"
+    class="group peer hidden md:block"
     :data-state="state"
     :data-collapsible="state === 'collapsed' ? collapsible : ''"
     :data-variant="variant"

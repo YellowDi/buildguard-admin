@@ -6,16 +6,39 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
+import type { HTMLAttributes } from "vue"
+import { ViewVerticalIcon } from "@radix-icons/vue"
+import { cn } from "@/lib/utils"
 import { Separator } from "@/components/ui/separator"
-import { SidebarTrigger } from "@/components/ui/sidebar"
 import { useRoute } from "vue-router"
+
+const props = defineProps<{
+  onToggleMobileSidebar?: () => void
+  onToggleDesktopSidebar?: () => void
+  class?: HTMLAttributes["class"]
+}>()
 
 const route = useRoute()
 </script>
 
 <template>
-  <header class="flex h-16 shrink-0 items-center gap-2 px-4">
-    <SidebarTrigger class="-ml-1" />
+  <header :class="cn('flex h-16 shrink-0 items-center gap-2 px-4', props.class)">
+    <button
+      type="button"
+      class="-ml-1 inline-flex h-7 w-7 items-center justify-center rounded-md text-foreground transition-colors hover:bg-accent hover:text-accent-foreground md:hidden"
+      aria-label="打开侧边栏"
+      @click.stop="props.onToggleMobileSidebar?.()"
+    >
+      <ViewVerticalIcon class="h-4 w-4" />
+    </button>
+    <button
+      type="button"
+      class="-ml-1 hidden h-7 w-7 items-center justify-center rounded-md text-foreground transition-colors hover:bg-accent hover:text-accent-foreground md:inline-flex"
+      aria-label="切换侧边栏"
+      @click.stop="props.onToggleDesktopSidebar?.()"
+    >
+      <ViewVerticalIcon class="h-4 w-4" />
+    </button>
     <Separator orientation="vertical" class="mr-2 h-4" />
     <Breadcrumb>
       <BreadcrumbList>

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { HTMLAttributes, Ref } from "vue"
-import { defaultDocument, useEventListener, useMediaQuery, useVModel } from "@vueuse/core"
+import { defaultDocument, defaultWindow, useEventListener, useMediaQuery, useVModel } from "@vueuse/core"
 import { TooltipProvider } from "reka-ui"
 import { computed, ref } from "vue"
 import { cn } from "@/lib/utils"
@@ -9,18 +9,24 @@ import { provideSidebarContext, SIDEBAR_COOKIE_MAX_AGE, SIDEBAR_COOKIE_NAME, SID
 const props = withDefaults(defineProps<{
   defaultOpen?: boolean
   open?: boolean
+  openMobile?: boolean
   class?: HTMLAttributes["class"]
 }>(), {
   defaultOpen: !defaultDocument?.cookie.includes(`${SIDEBAR_COOKIE_NAME}=false`),
   open: undefined,
+  openMobile: undefined,
 })
 
 const emits = defineEmits<{
   "update:open": [open: boolean]
+  "update:openMobile": [open: boolean]
 }>()
 
-const isMobile = useMediaQuery("(max-width: 768px)")
-const openMobile = ref(false)
+const isMobile = useMediaQuery("(max-width: 767.98px)")
+const openMobile = useVModel(props, "openMobile", emits, {
+  defaultValue: false,
+  passive: (props.openMobile === undefined) as false,
+}) as Ref<boolean>
 
 const open = useVModel(props, "open", emits, {
   defaultValue: props.defaultOpen ?? false,
@@ -38,9 +44,13 @@ function setOpenMobile(value: boolean) {
   openMobile.value = value
 }
 
+function isMobileViewport() {
+  return defaultWindow?.matchMedia("(max-width: 767.98px)").matches ?? isMobile.value
+}
+
 // Helper to toggle the sidebar.
 function toggleSidebar() {
-  return isMobile.value ? setOpenMobile(!openMobile.value) : setOpen(!open.value)
+  return isMobileViewport() ? setOpenMobile(!openMobile.value) : setOpen(!open.value)
 }
 
 useEventListener("keydown", (event: KeyboardEvent) => {
@@ -75,7 +85,7 @@ provideSidebarContext({
       :class="cn('group/sidebar-wrapper flex min-h-svh w-full has-[[data-variant=inset]]:bg-sidebar', props.class)"
       v-bind="$attrs"
     >
-      <slot />
+      <slot :toggleSidebar="toggleSidebar" />
     </div>
   </TooltipProvider>
 </template>
