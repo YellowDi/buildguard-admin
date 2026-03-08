@@ -64,6 +64,7 @@ const operatingSchema: ResourceListSchema<OperatingVehicleRecord> = {
   title: "车辆",
   rowKey: "plateNumber",
   data: operatingVehicles,
+  primaryActionLabel: "添加车辆",
   showIndex: true,
   stickyHeader: true,
   rowActions: [
@@ -164,6 +165,7 @@ const alarmSchema: ResourceListSchema<AlarmVehicleRecord> = {
   title: "车辆",
   rowKey: "plateNumber",
   data: alarmVehicles,
+  primaryActionLabel: "添加车辆",
   showIndex: true,
   stickyHeader: true,
   rowActions: [
@@ -259,6 +261,7 @@ const inspectionSchema: ResourceListSchema<InspectionVehicleRecord> = {
   title: "车辆",
   rowKey: "plateNumber",
   data: inspectionVehicles,
+  primaryActionLabel: "添加车辆",
   showIndex: true,
   stickyHeader: true,
   rowActions: [

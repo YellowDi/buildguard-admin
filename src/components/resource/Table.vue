@@ -299,21 +299,19 @@ onBeforeUnmount(() => {
           </td>
           <td
             v-if="hasRowActions"
-            :class="tableTheme.actionCell"
+            :class="[tableTheme.actionCell, 'relative']"
           >
-            <div class="flex justify-end">
-              <div :class="tableTheme.actionPanel">
-                <Button
-                  v-for="action in rowActions"
-                  :key="action.key"
-                  variant="outline"
-                  size="sm"
-                  class="h-8 border-border/80 bg-background/95 text-foreground shadow-sm"
-                  @click="handleRowActionClick(action, row, index)"
-                >
-                  {{ action.label }}
-                </Button>
-              </div>
+            <div :class="tableTheme.actionPanel">
+              <Button
+                v-for="action in rowActions"
+                :key="action.key"
+                variant="outline"
+                size="sm"
+                class="border-border/80 bg-background/95 text-foreground shadow-sm"
+                @click="handleRowActionClick(action, row, index)"
+              >
+                {{ action.label }}
+              </Button>
             </div>
           </td>
         </tr>

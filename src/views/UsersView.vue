@@ -37,6 +37,7 @@ const schema: ResourceListSchema<PractitionerRecord> = {
   title: "从业人员",
   rowKey: "id",
   data: practitioners,
+  primaryActionLabel: "添加从业人员",
   showIndex: true,
   stickyHeader: true,
   rowActions: [

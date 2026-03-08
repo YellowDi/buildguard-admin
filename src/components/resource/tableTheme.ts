@@ -31,8 +31,8 @@ export const tableTheme = {
     rightAligned: "text-right",
   },
   actionHeader: "w-[148px] min-w-[148px] border-b border-border py-2 pl-0 pr-3",
-  actionCell: "sticky right-0 z-10 w-[148px] min-w-[148px] border-b border-border py-2 pl-0 pr-3 align-middle",
-  actionPanel: "relative flex justify-end py-1 pl-3 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100",
+  actionCell: "sticky right-0 z-10 w-[148px] min-w-[148px] border-b border-border p-0 align-middle",
+  actionPanel: "absolute inset-y-0 right-0 flex items-center justify-end pr-3 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100",
   tones: {
     default: "text-foreground",
     primary: "text-foreground",
