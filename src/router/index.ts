@@ -5,12 +5,11 @@ import LoginView from "@/views/auth/LoginView.vue"
 import OtpView from "@/views/auth/OtpView.vue"
 import SignupView from "@/views/auth/SignupView.vue"
 import CompaniesView from "@/views/CompaniesView.vue"
-import CompanyCreateView from "@/views/companies/CompanyCreateView.vue"
 import DashboardView from "@/views/dashboard/DashboardView.vue"
-import SettingsView from "@/views/settings/SettingsView.vue"
+import CompanyCreateView from "@/views/form/CompanyCreateView.vue"
+import UserCreateView from "@/views/form/UserCreateView.vue"
 import UsersView from "@/views/UsersView.vue"
 import VehiclesView from "@/views/VehiclesView.vue"
-import UserCreateView from "@/views/users/UserCreateView.vue"
 
 type BreadcrumbMetaItem = {
   title: string
@@ -105,14 +104,6 @@ const router = createRouter({
               { title: "从业人员", to: "users" },
               { title: "添加从业人员" },
             ] satisfies BreadcrumbMetaItem[],
-          },
-        },
-        {
-          path: "settings",
-          name: "settings",
-          component: SettingsView,
-          meta: {
-            title: "总报表",
           },
         },
       ],

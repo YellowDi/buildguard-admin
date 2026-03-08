@@ -91,41 +91,44 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
     :class="cn('p-3', props.class)"
   >
     <CalendarHeader class="pt-0">
-      <div class="relative flex min-h-8 items-center justify-center">
-        <CalendarPrevButton class="absolute left-0">
+      <div class="grid w-full grid-cols-[2rem_minmax(0,1fr)_2rem] items-center gap-1">
+        <CalendarPrevButton class="justify-self-start">
           <slot name="calendar-prev-icon">
             <ChevronLeftIcon class="size-4" />
           </slot>
         </CalendarPrevButton>
-        <CalendarNextButton class="absolute right-0">
+
+        <div class="flex min-w-0 items-center justify-center">
+          <slot name="calendar-heading" :date="date" :month="ReuseMonthTemplate" :year="ReuseYearTemplate">
+            <template v-if="layout === 'month-and-year'">
+              <div class="flex items-center justify-center gap-1">
+                <ReuseMonthTemplate :date="date" />
+                <ReuseYearTemplate :date="date" />
+              </div>
+            </template>
+            <template v-else-if="layout === 'month-only'">
+              <div class="flex items-center justify-center gap-1">
+                <ReuseMonthTemplate :date="date" />
+                {{ formatter.custom(toDate(date), { year: 'numeric' }) }}
+              </div>
+            </template>
+            <template v-else-if="layout === 'year-only'">
+              <div class="flex items-center justify-center gap-1">
+                {{ formatter.custom(toDate(date), { month: 'short' }) }}
+                <ReuseYearTemplate :date="date" />
+              </div>
+            </template>
+            <template v-else>
+              <CalendarHeading />
+            </template>
+          </slot>
+        </div>
+
+        <CalendarNextButton class="justify-self-end">
           <slot name="calendar-next-icon">
             <ChevronRightIcon class="size-4" />
           </slot>
         </CalendarNextButton>
-
-        <slot name="calendar-heading" :date="date" :month="ReuseMonthTemplate" :year="ReuseYearTemplate">
-          <template v-if="layout === 'month-and-year'">
-            <div class="flex items-center justify-center gap-1">
-              <ReuseMonthTemplate :date="date" />
-              <ReuseYearTemplate :date="date" />
-            </div>
-          </template>
-          <template v-else-if="layout === 'month-only'">
-            <div class="flex items-center justify-center gap-1">
-              <ReuseMonthTemplate :date="date" />
-              {{ formatter.custom(toDate(date), { year: 'numeric' }) }}
-            </div>
-          </template>
-          <template v-else-if="layout === 'year-only'">
-            <div class="flex items-center justify-center gap-1">
-              {{ formatter.custom(toDate(date), { month: 'short' }) }}
-              <ReuseYearTemplate :date="date" />
-            </div>
-          </template>
-          <template v-else>
-            <CalendarHeading />
-          </template>
-        </slot>
       </div>
     </CalendarHeader>
 

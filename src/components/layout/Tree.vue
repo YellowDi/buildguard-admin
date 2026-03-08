@@ -42,7 +42,7 @@ const folders: TreeFolder[] = [
     files: [
       { name: "button.vue", path: "/" },
       { name: "breadcrumb.vue", path: "/users" },
-      { name: "dialog.vue", path: "/settings" },
+      { name: "dialog.vue", path: "/vehicles" },
     ],
   },
   {

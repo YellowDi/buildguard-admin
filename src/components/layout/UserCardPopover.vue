@@ -187,15 +187,6 @@ function handleLogout() {
             </div>
           </div>
 
-          <!-- 偏好设置 -->
-          <RouterLink
-            to="/settings"
-            class="flex items-center gap-2 px-3 py-1.5 text-sm text-foreground transition-colors hover:bg-surface-tertiary"
-          >
-            <i class="ri-settings-3-line text-base text-muted-foreground" />
-            <span>偏好设置</span>
-          </RouterLink>
-
           <!-- 账号登出 -->
           <button
             type="button"

@@ -241,14 +241,6 @@ watch(() => route.fullPath, () => {
             </SidebarMenuSub>
           </div>
 
-          <RouterLink
-            to="/settings"
-            class="flex h-9 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-            :class="{ [activeItemClass]: activePath === '/settings' }"
-          >
-            <i class="ri-settings-3-line text-lg leading-none" />
-            <span class="truncate">偏好设置</span>
-          </RouterLink>
         </nav>
       </div>
 
@@ -367,14 +359,6 @@ watch(() => route.fullPath, () => {
           </SidebarMenuSub>
         </div>
 
-        <RouterLink
-          to="/settings"
-          class="flex h-9 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-          :class="{ [activeItemClass]: activePath === '/settings' }"
-        >
-          <i class="ri-settings-3-line text-lg leading-none" />
-          <span class="truncate">偏好设置</span>
-        </RouterLink>
       </nav>
     </SidebarContent>
 
