@@ -69,14 +69,14 @@ const { isMobile, state, openMobile, setOpenMobile } = useSidebar()
         // Adjust the padding for floating and inset variants.
         variant === 'floating' || variant === 'inset'
           ? 'p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4)_+_2px)]'
-          : 'group-data-[collapsible=icon]:w-[--sidebar-width-icon] group-data-[side=left]:border-r group-data-[side=right]:border-l',
+          : 'group-data-[collapsible=icon]:w-[--sidebar-width-icon]',
         props.class,
       )"
       v-bind="$attrs"
     >
       <div
         data-sidebar="sidebar"
-        class="flex h-full w-full flex-col text-sidebar-foreground bg-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:border-sidebar-border group-data-[variant=floating]:shadow"
+        class="flex h-full w-full flex-col p-2 text-sidebar-foreground bg-sidebar group-data-[variant=floating]:rounded-lg group-data-[variant=floating]:border group-data-[variant=floating]:border-sidebar-border group-data-[variant=floating]:shadow group-data-[side=left]:shadow-[inset_-1px_0px_0px_0px_rgba(84,72,49,0.08)] group-data-[side=right]:shadow-[inset_1px_0px_0px_0px_rgba(84,72,49,0.08)]"
       >
         <slot />
       </div>

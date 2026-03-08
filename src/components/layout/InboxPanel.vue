@@ -35,7 +35,7 @@ const groups: InboxGroup[] = [
 
 <template>
   <aside
-    class="fixed inset-y-0 left-[16rem] z-30 w-[24.5rem] border-r border-black/10 bg-white"
+    class="fixed inset-y-0 left-[270px] z-30 w-[24.5rem] border-r border-black/10 bg-white"
   >
     <header class="flex h-14 items-center justify-between border-b border-black/8 bg-white/75 px-4 backdrop-blur-sm">
       <div class="flex items-center gap-3">

@@ -126,7 +126,7 @@ watch(openMobile, (value) => {
 
 <template>
   <Sidebar collapsible="offcanvas" class="z-40 bg-transparent">
-    <SidebarHeader class="shrink-0 border-b px-4 pb-4 pt-5">
+    <SidebarHeader class="shrink-0 pb-1">
       <RouterLink
         to="/"
         class="flex items-center gap-3 rounded-lg px-2 py-1.5 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
@@ -147,7 +147,7 @@ watch(openMobile, (value) => {
         <i class="ri-arrow-down-s-line text-base" />
       </RouterLink>
 
-      <nav class="mt-4">
+      <nav>
         <component
           :is="item.path ? 'RouterLink' : 'button'"
           v-for="item in pinnedItems"
@@ -166,7 +166,7 @@ watch(openMobile, (value) => {
           <span class="flex-1 truncate">{{ item.label }}</span>
           <span
             v-if="item.badge"
-            class="min-w-5 rounded-md bg-sidebar-primary px-1.5 text-center text-[11px] font-semibold leading-5 text-sidebar-primary-foreground"
+            class="min-w-5 rounded-[4px] bg-[#FA7319] px-1.5 text-center text-[11px] font-semibold leading-5 text-white"
           >
             {{ item.badge }}
           </span>
@@ -174,8 +174,8 @@ watch(openMobile, (value) => {
       </nav>
     </SidebarHeader>
 
-    <SidebarContent class="min-h-0 px-3 pb-4 pt-4">
-      <nav class="overflow-y-auto pr-1">
+    <SidebarContent class="min-h-0 border-t border-black/10 pt-1">
+      <nav class="overflow-y-auto">
         <div v-for="item in businessItems" :key="item.label">
           <component
             :is="item.path && !item.children?.length ? 'RouterLink' : 'button'"
@@ -245,10 +245,10 @@ watch(openMobile, (value) => {
       </nav>
     </SidebarContent>
 
-    <SidebarFooter class="shrink-0 border-t px-4 py-4">
+    <SidebarFooter class="shrink-0 border-t border-black/10 p-0 pt-1">
       <button
         type="button"
-        class="flex w-full items-center gap-3 rounded-2xl px-1 py-1 text-left transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+        class="flex w-full items-center gap-3 rounded-lg px-1 py-1 text-left transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
       >
         <div
           class="flex size-11 items-center justify-center rounded-full bg-sidebar-primary text-lg font-semibold text-sidebar-primary-foreground"
