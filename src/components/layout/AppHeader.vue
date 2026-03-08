@@ -22,7 +22,14 @@ const route = useRoute()
 </script>
 
 <template>
-  <header :class="cn('flex h-16 shrink-0 items-center gap-2 px-4', props.class)">
+  <header
+    :class="
+      cn(
+        'relative z-30 flex h-16 shrink-0 items-center gap-2 bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/80',
+        props.class,
+      )
+    "
+  >
     <button
       type="button"
       class="-ml-1 inline-flex h-7 w-7 items-center justify-center rounded-md text-foreground transition-colors hover:bg-accent hover:text-accent-foreground md:hidden"

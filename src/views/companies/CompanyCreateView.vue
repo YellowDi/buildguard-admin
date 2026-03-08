@@ -241,7 +241,7 @@ onUnmounted(() => {
     <!-- 标题行：吸顶固定时显示底边分割线，撑满视口宽度；内容与表单 grid 同构对齐 -->
     <div ref="headerStickySentinel" class="h-px w-full -mt-4 shrink-0" aria-hidden="true" />
     <div
-      class="sticky top-0 z-10 -mx-4 bg-background xl:-mt-px xl:ml-[calc(50%-50vw)] xl:w-screen"
+      class="sticky top-[-1rem] z-10 -mx-4 bg-background xl:-mt-px xl:ml-[calc(50%-50vw)] xl:w-screen"
       :class="{ 'border-b border-border': isHeaderSticky }"
     >
       <div class="mx-auto flex w-full max-w-5xl min-w-0 flex-col gap-4 px-4 pb-4 pt-4 sm:gap-5 md:grid md:grid-cols-[minmax(0,1fr)_max-content] md:gap-8 xl:px-0">

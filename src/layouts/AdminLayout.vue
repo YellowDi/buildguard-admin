@@ -59,7 +59,7 @@ function closeMobileSidebar() {
       @click="closeMobileSidebar"
     />
     <div
-      class="relative z-10 flex min-h-svh min-w-0 flex-1 flex-col bg-background transition-transform duration-300 ease-out"
+      class="relative z-10 flex h-svh min-w-0 flex-1 flex-col overflow-hidden bg-background transition-transform duration-300 ease-out"
       :class="mobileSidebarOpen ? 'max-md:translate-x-[334px] max-md:pointer-events-none' : ''"
       @click="mobileSidebarOpen && closeMobileSidebar()"
     >
@@ -67,7 +67,7 @@ function closeMobileSidebar() {
         :on-toggle-mobile-sidebar="toggleMobileSidebar"
         :on-toggle-desktop-sidebar="toggleSidebar"
       />
-      <main class="flex min-w-0 flex-1 flex-col gap-4 p-4">
+      <main class="flex min-w-0 min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
         <RouterView />
       </main>
     </div>

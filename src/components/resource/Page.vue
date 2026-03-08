@@ -66,7 +66,10 @@ const slots = useSlots()
 </script>
 
 <template>
-  <section class="-mx-4 flex min-h-0 flex-1 flex-col bg-background">
+  <section
+    class="-mx-4 flex min-h-0 flex-1 flex-col bg-background"
+    style="--resource-table-sticky-top: -1rem;"
+  >
     <div class="flex min-h-0 min-w-0 flex-1 flex-col pb-3 pt-3">
       <div class="flex min-h-0 min-w-0 flex-1 flex-col">
         <Header
