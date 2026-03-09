@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from "vue"
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -10,6 +10,8 @@ import {
   tableTheme,
 } from "@/components/resource/tableTheme"
 import type { TableColumn, TableRowAction } from "@/components/resource/types"
+
+type ScrollRoot = HTMLElement | Window
 
 const props = withDefaults(defineProps<{
   columns: TableColumn[]
@@ -25,7 +27,7 @@ const props = withDefaults(defineProps<{
   summary: "",
   showIndex: false,
   stickyHeader: false,
-  wrapperClass: "overflow-visible",
+  wrapperClass: "",
   tableClass: "",
 })
 
@@ -33,12 +35,34 @@ const wrapperClassName = computed(() => getTableWrapperClass(props.wrapperClass)
 const tableClassName = computed(() => getTableClass(props.tableClass))
 const hasRowActions = computed(() => (props.rowActions?.length ?? 0) > 0)
 const tableWrapperRef = ref<HTMLElement | null>(null)
+const tableRef = ref<HTMLTableElement | null>(null)
 const stickyHeaderActive = ref(false)
-const stickyHeaderStyle = computed(() => (
+const stickyHeaderLeft = ref(0)
+const stickyHeaderTop = ref(0)
+const stickyHeaderWidth = ref(0)
+const stickyTableWidth = ref(0)
+const stickyScrollLeft = ref(0)
+const stickyColumnWidths = ref<number[]>([])
+const stickyHeaderVisible = computed(() => (
   props.stickyHeader
-    ? { top: "var(--resource-table-sticky-top, 0px)" }
-    : undefined
+  && stickyHeaderActive.value
+  && stickyHeaderWidth.value > 0
+  && stickyColumnWidths.value.length > 0
 ))
+const stickyViewportStyle = computed(() => ({
+  left: `${stickyHeaderLeft.value}px`,
+  top: `${stickyHeaderTop.value}px`,
+  width: `${stickyHeaderWidth.value}px`,
+}))
+const stickyTableStyle = computed(() => ({
+  minWidth: `${stickyTableWidth.value}px`,
+  width: `${stickyTableWidth.value}px`,
+  tableLayout: "fixed" as const,
+  transform: `translateX(${-stickyScrollLeft.value}px)`,
+}))
+
+let scrollRoot: ScrollRoot | null = null
+let resizeObserver: ResizeObserver | null = null
 
 function getRowKey(row: Record<string, unknown>, index: number) {
   if (typeof props.rowKey === "function") {
@@ -98,6 +122,28 @@ function handleRowActionClick(action: TableRowAction, row: Record<string, unknow
   action.onClick?.(row, index)
 }
 
+function getStickyCellStyle(columnIndex: number) {
+  const width = stickyColumnWidths.value[columnIndex]
+
+  if (!width) {
+    return undefined
+  }
+
+  return {
+    width: `${width}px`,
+    minWidth: `${width}px`,
+    maxWidth: `${width}px`,
+  }
+}
+
+function getHeaderCells() {
+  if (!tableRef.value) {
+    return []
+  }
+
+  return Array.from(tableRef.value.querySelectorAll("thead > tr:first-child > th")) as HTMLElement[]
+}
+
 function getStickyTopOffset() {
   if (!tableWrapperRef.value || typeof window === "undefined") {
     return 0
@@ -117,62 +163,220 @@ function getStickyTopOffset() {
   return Number.isNaN(rootOffset) ? 0 : rootOffset
 }
 
-function updateStickyHeaderState() {
-  if (!props.stickyHeader || !tableWrapperRef.value) {
-    stickyHeaderActive.value = false
+function getScrollRootTop() {
+  if (scrollRoot === null || scrollRoot === window) {
+    return 0
+  }
+
+  return (scrollRoot as HTMLElement).getBoundingClientRect().top
+}
+
+function clearStickyState() {
+  stickyHeaderActive.value = false
+  stickyHeaderWidth.value = 0
+  stickyTableWidth.value = 0
+  stickyScrollLeft.value = 0
+  stickyColumnWidths.value = []
+}
+
+function syncStickyHeaderState() {
+  if (!props.stickyHeader || !tableWrapperRef.value || !tableRef.value) {
+    clearStickyState()
     return
   }
 
-  const rect = tableWrapperRef.value.getBoundingClientRect()
-  const stickyTopOffset = getStickyTopOffset()
-  const headerHeight = 41
-  stickyHeaderActive.value = rect.top <= stickyTopOffset && rect.bottom > stickyTopOffset + headerHeight
+  const headerCells = getHeaderCells()
+  if (!headerCells.length) {
+    clearStickyState()
+    return
+  }
+
+  const wrapperRect = tableWrapperRef.value.getBoundingClientRect()
+  const stickyLine = getScrollRootTop() + getStickyTopOffset()
+  const headerHeight = headerCells[0]?.getBoundingClientRect().height ?? 41
+
+  stickyHeaderLeft.value = wrapperRect.left
+  stickyHeaderTop.value = stickyLine
+  stickyHeaderWidth.value = wrapperRect.width
+  stickyTableWidth.value = tableRef.value.scrollWidth
+  stickyScrollLeft.value = tableWrapperRef.value.scrollLeft
+  stickyColumnWidths.value = headerCells.map(cell => cell.getBoundingClientRect().width)
+  stickyHeaderActive.value = wrapperRect.top <= stickyLine && wrapperRect.bottom > stickyLine + headerHeight
 }
 
+function handleWrapperScroll() {
+  stickyScrollLeft.value = tableWrapperRef.value?.scrollLeft ?? 0
+}
+
+function isScrollableAncestor(element: HTMLElement) {
+  const styles = window.getComputedStyle(element)
+  const overflowY = styles.overflowY
+  return /(auto|scroll|overlay)/.test(overflowY) && element.scrollHeight > element.clientHeight
+}
+
+function getScrollRoot(element: HTMLElement): ScrollRoot {
+  let current: HTMLElement | null = element.parentElement
+
+  while (current) {
+    if (isScrollableAncestor(current)) {
+      return current
+    }
+
+    current = current.parentElement
+  }
+
+  return window
+}
+
+function detachScrollRootListener() {
+  if (scrollRoot === null) {
+    return
+  }
+
+  if (scrollRoot === window) {
+    window.removeEventListener("scroll", syncStickyHeaderState)
+    return
+  }
+
+  scrollRoot.removeEventListener("scroll", syncStickyHeaderState)
+}
+
+function attachScrollRootListener() {
+  if (!tableWrapperRef.value || typeof window === "undefined") {
+    return
+  }
+
+  const nextScrollRoot = getScrollRoot(tableWrapperRef.value)
+  detachScrollRootListener()
+  scrollRoot = nextScrollRoot
+
+  if (scrollRoot === window) {
+    window.addEventListener("scroll", syncStickyHeaderState, { passive: true })
+    return
+  }
+
+  scrollRoot.addEventListener("scroll", syncStickyHeaderState, { passive: true })
+}
+
+function scheduleStickySync() {
+  void nextTick(() => {
+    attachScrollRootListener()
+    syncStickyHeaderState()
+  })
+}
+
+function observeStickyLayout() {
+  if (typeof ResizeObserver === "undefined") {
+    return
+  }
+
+  resizeObserver = new ResizeObserver(() => {
+    syncStickyHeaderState()
+  })
+
+  if (tableWrapperRef.value) {
+    resizeObserver.observe(tableWrapperRef.value)
+  }
+
+  if (tableRef.value) {
+    resizeObserver.observe(tableRef.value)
+  }
+}
+
+function stopObservingStickyLayout() {
+  resizeObserver?.disconnect()
+  resizeObserver = null
+}
+
+watch(() => props.columns, scheduleStickySync, { deep: true })
+watch(() => props.rows, scheduleStickySync, { deep: true })
+watch(() => props.showIndex, scheduleStickySync)
+watch(() => hasRowActions.value, scheduleStickySync)
+watch(() => props.stickyHeader, scheduleStickySync)
+
 onMounted(() => {
-  updateStickyHeaderState()
-  window.addEventListener("scroll", updateStickyHeaderState, { passive: true })
-  window.addEventListener("resize", updateStickyHeaderState, { passive: true })
+  attachScrollRootListener()
+  tableWrapperRef.value?.addEventListener("scroll", handleWrapperScroll, { passive: true })
+  window.addEventListener("resize", syncStickyHeaderState, { passive: true })
+  observeStickyLayout()
+  scheduleStickySync()
 })
 
 onBeforeUnmount(() => {
-  window.removeEventListener("scroll", updateStickyHeaderState)
-  window.removeEventListener("resize", updateStickyHeaderState)
+  tableWrapperRef.value?.removeEventListener("scroll", handleWrapperScroll)
+  window.removeEventListener("resize", syncStickyHeaderState)
+  detachScrollRootListener()
+  stopObservingStickyLayout()
 })
 </script>
 
 <template>
   <div ref="tableWrapperRef" :class="wrapperClassName">
-    <table :class="tableClassName">
-      <thead :class="[tableTheme.head, stickyHeader && stickyHeaderActive ? tableTheme.headActive : '']">
+    <div
+      v-if="stickyHeaderVisible"
+      aria-hidden="true"
+      :class="tableTheme.stickyViewport"
+      :style="stickyViewportStyle"
+    >
+      <table :class="tableClassName" :style="stickyTableStyle">
+        <colgroup>
+          <col
+            v-for="(width, columnIndex) in stickyColumnWidths"
+            :key="`sticky-col-${columnIndex}`"
+            :style="{ width: `${width}px` }"
+          >
+        </colgroup>
+        <thead :class="[tableTheme.head, tableTheme.headActive]">
+          <tr>
+            <th
+              v-if="showIndex"
+              :class="[tableTheme.indexHeader.base, tableTheme.indexHeader.static]"
+              :style="getStickyCellStyle(0)"
+            />
+            <th
+              v-for="(column, columnIndex) in columns"
+              :key="`sticky-${column.key}`"
+              :class="[
+                tableTheme.headerCell.base,
+                getColumnHeaderClass(column),
+              ]"
+              :style="getStickyCellStyle(columnIndex + (showIndex ? 1 : 0))"
+            >
+              {{ column.label }}
+            </th>
+            <th
+              v-if="hasRowActions"
+              :class="tableTheme.actionHeader"
+              :style="getStickyCellStyle(stickyColumnWidths.length - 1)"
+            />
+          </tr>
+        </thead>
+      </table>
+    </div>
+
+    <table ref="tableRef" :class="tableClassName">
+      <thead :class="tableTheme.head">
         <tr>
           <th
             v-if="showIndex"
             :class="[
               tableTheme.indexHeader.base,
-              stickyHeader ? tableTheme.indexHeader.sticky : tableTheme.indexHeader.static,
+              tableTheme.indexHeader.static,
             ]"
-            :style="stickyHeaderStyle"
           />
           <th
             v-for="column in columns"
             :key="column.key"
             :class="[
               tableTheme.headerCell.base,
-              stickyHeader ? tableTheme.headerCell.sticky : '',
               getColumnHeaderClass(column),
             ]"
-            :style="stickyHeaderStyle"
           >
             {{ column.label }}
           </th>
           <th
             v-if="hasRowActions"
-            :class="[
-              tableTheme.actionHeader,
-              stickyHeader ? tableTheme.headerCell.sticky : '',
-            ]"
-            :style="stickyHeaderStyle"
+            :class="tableTheme.actionHeader"
           />
         </tr>
       </thead>

@@ -8,10 +8,11 @@ import type {
 import { cn } from "@/lib/utils"
 
 export const tableTheme = {
-  wrapper: "relative overflow-visible",
+  wrapper: "relative min-w-0 w-full max-w-full overflow-x-auto overflow-y-visible overscroll-x-contain",
   table: "min-w-full w-max table-auto border-separate border-spacing-0 bg-background text-[14px] text-foreground",
   head: "relative z-20 text-muted-foreground",
   headActive: "shadow-[inset_0_-1px_0_hsl(var(--border))]",
+  stickyViewport: "pointer-events-none fixed z-30 overflow-hidden bg-background",
   body: "text-foreground",
   row: "group transition hover:bg-surface-tertiary",
   summary: "px-3 py-3 text-[13px] text-muted-foreground",

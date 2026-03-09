@@ -68,7 +68,7 @@ const slots = useSlots()
 
 <template>
   <section
-    class="-mx-4 flex min-h-0 flex-1 flex-col bg-background"
+    class="-mx-4 flex min-h-0 min-w-0 flex-1 flex-col bg-background"
     style="--resource-table-sticky-top: -1rem;"
   >
     <div class="flex min-h-0 min-w-0 flex-1 flex-col pb-3 pt-3">
@@ -108,7 +108,7 @@ const slots = useSlots()
           @primary-action="emit('primary-action')"
         />
 
-        <div class="min-h-0 min-w-0 flex-1 overflow-visible">
+        <div class="min-h-0 min-w-0 flex-1">
           <div class="min-h-0 min-w-0 w-full overflow-visible pr-8">
             <template v-if="sections?.length">
               <Table
