@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed, reactive } from "vue"
-import { GalleryVerticalEnd } from "lucide-vue-next"
 import { useRoute } from "vue-router"
 
 import otpVisual from "@/assets/auth-otp-visual.svg"
+import BrandLogo from "@/components/layout/BrandLogo.vue"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -33,10 +33,11 @@ function handleSubmit() {
     <div class="flex flex-col gap-4 p-6 md:p-10">
       <div class="flex justify-center gap-2 md:justify-start">
         <RouterLink to="/login" class="flex items-center gap-2 font-medium">
-          <div class="bg-primary text-primary-foreground flex size-6 items-center justify-center rounded-md">
-            <GalleryVerticalEnd class="size-4" />
-          </div>
-          BuildGuard
+          <BrandLogo
+            label="BuildGuard"
+            image-class="size-8"
+            text-class="truncate text-base font-semibold"
+          />
         </RouterLink>
       </div>
 

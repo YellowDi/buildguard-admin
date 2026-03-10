@@ -1,15 +1,24 @@
 <script setup lang="ts">
+import { computed } from "vue"
+import type { HTMLAttributes } from "vue"
+import { ViewVerticalIcon } from "@radix-icons/vue"
+import { useWindowSize } from "@vueuse/core"
+
+import BrandLogo from "@/components/layout/BrandLogo.vue"
 import {
   Breadcrumb,
+  BreadcrumbEllipsis,
   BreadcrumbItem,
   BreadcrumbLink,
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
-import { computed } from "vue"
-import type { HTMLAttributes } from "vue"
-import { ViewVerticalIcon } from "@radix-icons/vue"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
 import { Separator } from "@/components/ui/separator"
 import { RouterLink, useRoute } from "vue-router"
@@ -29,6 +38,8 @@ const props = defineProps<{
 }>()
 
 const route = useRoute()
+const { width } = useWindowSize()
+const isMobile = computed(() => width.value < 768)
 
 const breadcrumbItems = computed<BreadcrumbItemConfig[]>(() => {
   const metaItems = Array.isArray(route.meta.breadcrumb)
@@ -48,6 +59,36 @@ const breadcrumbItems = computed<BreadcrumbItemConfig[]>(() => {
     }))
 
   return list
+})
+
+const visibleLeadingItems = computed(() => {
+  const items = breadcrumbItems.value
+
+  if (isMobile.value) {
+    return items.length <= 1 ? items : []
+  }
+
+  return items.length <= 3 ? items.slice(0, -1) : items.slice(0, 1)
+})
+
+const collapsedItems = computed(() => {
+  const items = breadcrumbItems.value
+
+  if (isMobile.value) {
+    return items.length <= 1 ? [] : items.slice(0, -1)
+  }
+
+  return items.length <= 3 ? [] : items.slice(1, -1)
+})
+
+const visibleTrailingItems = computed(() => {
+  const items = breadcrumbItems.value
+
+  if (isMobile.value) {
+    return items.length <= 1 ? [] : items.slice(-1)
+  }
+
+  return items.length <= 3 ? [] : items.slice(-1)
 })
 </script>
 
@@ -79,10 +120,72 @@ const breadcrumbItems = computed<BreadcrumbItemConfig[]>(() => {
     <Separator orientation="vertical" class="mr-2 h-4 shrink-0" />
     <Breadcrumb class="min-w-0 flex-1 overflow-hidden">
       <BreadcrumbList class="flex-nowrap overflow-hidden whitespace-nowrap">
-        <BreadcrumbItem class="min-w-0 shrink overflow-hidden">
-          <span class="block truncate">BuildGuard Admin</span>
+        <BreadcrumbItem class="shrink-0">
+          <BreadcrumbLink as-child>
+            <RouterLink
+              to="/"
+              class="inline-flex rounded-md p-1 text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+              aria-label="返回首页"
+            >
+              <BrandLogo label="" image-class="size-6" />
+            </RouterLink>
+          </BreadcrumbLink>
         </BreadcrumbItem>
-        <template v-for="item in breadcrumbItems" :key="item.title">
+
+        <template v-for="item in visibleLeadingItems" :key="`leading-${item.title}-${item.to ?? 'current'}`">
+          <BreadcrumbSeparator class="shrink-0" />
+          <BreadcrumbItem
+            :class="
+              item.isCurrent
+                ? 'min-w-0 flex-[1_1_auto] overflow-hidden'
+                : 'min-w-0 shrink overflow-hidden'
+            "
+          >
+            <BreadcrumbPage v-if="item.isCurrent" class="block truncate">{{ item.title }}</BreadcrumbPage>
+            <BreadcrumbLink v-else-if="item.to" as-child class="block truncate">
+              <RouterLink :to="{ name: item.to }">
+                {{ item.title }}
+              </RouterLink>
+            </BreadcrumbLink>
+            <BreadcrumbPage v-else class="block truncate">{{ item.title }}</BreadcrumbPage>
+          </BreadcrumbItem>
+        </template>
+
+        <BreadcrumbSeparator v-if="collapsedItems.length" class="shrink-0" />
+        <BreadcrumbItem v-if="collapsedItems.length" class="shrink-0">
+          <Popover>
+            <PopoverTrigger as-child>
+              <button
+                type="button"
+                class="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                aria-label="展开面包屑"
+              >
+                <BreadcrumbEllipsis class="h-8 w-8" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent align="start" class="w-52 p-2">
+              <nav class="flex flex-col">
+                <template v-for="item in collapsedItems" :key="`collapsed-${item.title}-${item.to ?? 'current'}`">
+                  <RouterLink
+                    v-if="item.to"
+                    :to="{ name: item.to }"
+                    class="rounded-md px-3 py-2 text-sm text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                  >
+                    {{ item.title }}
+                  </RouterLink>
+                  <span
+                    v-else
+                    class="rounded-md px-3 py-2 text-sm text-muted-foreground"
+                  >
+                    {{ item.title }}
+                  </span>
+                </template>
+              </nav>
+            </PopoverContent>
+          </Popover>
+        </BreadcrumbItem>
+
+        <template v-for="item in visibleTrailingItems" :key="`trailing-${item.title}-${item.to ?? 'current'}`">
           <BreadcrumbSeparator class="shrink-0" />
           <BreadcrumbItem
             :class="

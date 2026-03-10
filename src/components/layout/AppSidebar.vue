@@ -13,6 +13,7 @@ import {
   SidebarMenuSubItem,
   SidebarRail,
 } from "@/components/ui/sidebar"
+import BrandLogo from "@/components/layout/BrandLogo.vue"
 import UserCardPopover from "@/components/layout/UserCardPopover.vue"
 import { Calendar } from "@/components/ui/calendar"
 import Input from "@/components/ui/input/Input.vue"
@@ -300,19 +301,7 @@ onBeforeUnmount(() => {
           to="/"
           class="flex items-center gap-3 rounded-lg px-2 py-1.5 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
         >
-          <div
-            class="flex size-8 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground"
-          >
-            <div class="grid size-5 grid-cols-2 gap-0.5 rounded-sm bg-white/10 p-0.5">
-              <span class="rounded-full bg-current opacity-90" />
-              <span class="rounded-full bg-current opacity-60" />
-              <span class="rounded-full bg-current opacity-60" />
-              <span class="rounded-full bg-current opacity-90" />
-            </div>
-          </div>
-          <div class="min-w-0 flex-1">
-            <p class="truncate text-sm font-semibold">BuildGuard Admin</p>
-          </div>
+          <BrandLogo />
           <i class="ri-arrow-down-s-line text-base" />
         </RouterLink>
       </div>
@@ -525,19 +514,7 @@ onBeforeUnmount(() => {
           to="/"
           class="flex items-center gap-3 rounded-lg px-2 py-1.5 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
         >
-          <div
-            class="flex size-8 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground"
-          >
-            <div class="grid size-5 grid-cols-2 gap-0.5 rounded-sm bg-white/10 p-0.5">
-              <span class="rounded-full bg-current opacity-90" />
-              <span class="rounded-full bg-current opacity-60" />
-              <span class="rounded-full bg-current opacity-60" />
-              <span class="rounded-full bg-current opacity-90" />
-            </div>
-          </div>
-          <div class="min-w-0 flex-1">
-            <p class="truncate text-sm font-semibold">BuildGuard Admin</p>
-          </div>
+          <BrandLogo />
           <i class="ri-arrow-down-s-line text-base" />
         </RouterLink>
       </div>
