@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from "vue"
+import { nextTick, onMounted, ref, watch } from "vue"
 
 import { Input } from "@/components/ui/input"
 import PopoverSelect from "@/components/resource/PopoverSelect.vue"
@@ -17,6 +17,7 @@ const emit = defineEmits<{
 }>()
 
 const openActionMenu = ref(false)
+const rootRef = ref<HTMLElement | null>(null)
 
 const operatorOptions: Array<{ value: NumberFilterOperator; label: string }> = [
   { value: "equals", label: "=" },
@@ -65,10 +66,37 @@ function handleOperatorSelect(operator: NumberFilterOperator, currentValue: Numb
   })
   openActionMenu.value = false
 }
+
+function focusSingleInput() {
+  nextTick(() => {
+    const inputs = rootRef.value?.querySelectorAll<HTMLInputElement>("input:not([disabled])") ?? []
+    if (inputs.length !== 1) {
+      return
+    }
+
+    const [input] = inputs
+    input.focus()
+    const cursorPosition = input.value.length
+    input.setSelectionRange(cursorPosition, cursorPosition)
+  })
+}
+
+onMounted(() => {
+  focusSingleInput()
+})
+
+watch(() => props.value.operator, () => {
+  if (!operatorNeedsInput(props.value.operator)) {
+    return
+  }
+
+  focusSingleInput()
+})
 </script>
 
 <template>
   <div
+    ref="rootRef"
     class="w-[252px] max-w-[calc(100vw-2rem)] rounded-xl border border-border bg-popover p-2.5 shadow-lg"
     data-list-popover
   >

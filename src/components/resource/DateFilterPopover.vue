@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { getLocalTimeZone, parseDate, today } from "@internationalized/date"
-import { computed, ref } from "vue"
+import { computed, nextTick, onMounted, ref, watch } from "vue"
 
 import PopoverSelect from "@/components/resource/PopoverSelect.vue"
 import { Calendar, RangeCalendar } from "@/components/ui/calendar"
@@ -20,6 +20,7 @@ const emit = defineEmits<{
 }>()
 
 const openActionMenu = ref(false)
+const rootRef = ref<HTMLElement | null>(null)
 const calendarPlaceholder = ref<any>(getInitialPlaceholder())
 const operatorOptions: Array<{ value: DateFilterOperator; label: string }> = [
   { value: "equals", label: "是" },
@@ -252,10 +253,40 @@ function handleDeleteFilter() {
   emit("remove")
   emit("close")
 }
+
+function focusSingleInput() {
+  nextTick(() => {
+    const inputs = rootRef.value?.querySelectorAll<HTMLInputElement>("input:not([disabled])") ?? []
+    if (inputs.length !== 1) {
+      return
+    }
+
+    const [input] = inputs
+    input.focus()
+    const cursorPosition = input.value.length
+    input.setSelectionRange(cursorPosition, cursorPosition)
+  })
+}
+
+onMounted(() => {
+  focusSingleInput()
+})
+
+watch(
+  () => [props.value.operator, props.value.preset] as const,
+  () => {
+    if (!operatorNeedsDateInput(props.value.operator)) {
+      return
+    }
+
+    focusSingleInput()
+  },
+)
 </script>
 
 <template>
   <div
+    ref="rootRef"
     class="w-[300px] max-w-[calc(100vw-2rem)] rounded-xl border border-border bg-popover p-2.5 shadow-lg"
     data-list-popover
   >
