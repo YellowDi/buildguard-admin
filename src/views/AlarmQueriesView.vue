@@ -2,16 +2,7 @@
 import ResourcePage from "@/components/resource/ResourcePage.vue"
 import { useResourceList } from "@/components/resource/useResourceList"
 import type { ResourceListSchema } from "@/components/resource/types"
-import vehiclesData from "@/data/vehicles.json"
-
-type RawAlarmVehicleRecord = {
-  plateNumber: string
-  company: string
-  riskLevel: string
-  latestAlarm: string
-  status: string
-  note: string
-}
+import alarmQueriesData from "@/data/alarm-queries.json"
 
 type AlarmQueryRecord = {
   id: number
@@ -25,34 +16,7 @@ type AlarmQueryRecord = {
   note: string
 }
 
-type VehicleDataBundle = {
-  alarm: RawAlarmVehicleRecord[]
-}
-
-const { alarm: rawAlarmVehicles } = vehiclesData as VehicleDataBundle
-
-const handlers = ["王立峰", "陈雨晴", "赵明昊", "李心妍"]
-const alarmTimes = [
-  "2026-03-10 09:18",
-  "2026-03-10 08:46",
-  "2026-03-10 08:12",
-  "2026-03-10 07:55",
-  "2026-03-09 22:41",
-  "2026-03-09 21:33",
-  "2026-03-09 19:28",
-  "2026-03-09 18:06",
-  "2026-03-09 16:44",
-  "2026-03-09 15:09",
-  "2026-03-09 11:27",
-  "2026-03-09 10:18",
-]
-
-const alarmQueries: AlarmQueryRecord[] = rawAlarmVehicles.map((row, index) => ({
-  id: index + 1,
-  ...row,
-  alarmTime: alarmTimes[index] ?? "2026-03-09 09:00",
-  handler: handlers[index % handlers.length] ?? "未分配",
-}))
+const alarmQueries = alarmQueriesData as AlarmQueryRecord[]
 
 const schema: ResourceListSchema<AlarmQueryRecord> = {
   title: "报警查询",

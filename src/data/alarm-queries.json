@@ -1,0 +1,134 @@
+[
+  {
+    "id": 1,
+    "plateNumber": "粤B88231",
+    "company": "鹏程危运",
+    "riskLevel": "高",
+    "latestAlarm": "疲劳驾驶",
+    "alarmTime": "2026-03-10 09:18",
+    "status": "待复核",
+    "handler": "王立峰",
+    "note": "报警记录待人工复核，建议优先核查处置结论"
+  },
+  {
+    "id": 2,
+    "plateNumber": "粤B91027",
+    "company": "海湾冷链运输",
+    "riskLevel": "中",
+    "latestAlarm": "超速报警",
+    "alarmTime": "2026-03-10 08:46",
+    "status": "处理中",
+    "handler": "陈雨晴",
+    "note": "事件已进入处置流程，需持续跟进反馈结果"
+  },
+  {
+    "id": 3,
+    "plateNumber": "粤B73564",
+    "company": "深港危货联运",
+    "riskLevel": "高",
+    "latestAlarm": "偏航报警",
+    "alarmTime": "2026-03-10 08:12",
+    "status": "已派单",
+    "handler": "赵明昊",
+    "note": "工单已下发，等待现场回传处理结果"
+  },
+  {
+    "id": 4,
+    "plateNumber": "粤B70186",
+    "company": "深南特种运输",
+    "riskLevel": "中",
+    "latestAlarm": "急加速报警",
+    "alarmTime": "2026-03-10 07:55",
+    "status": "待复核",
+    "handler": "李心妍",
+    "note": "报警记录待人工复核，建议优先核查处置结论"
+  },
+  {
+    "id": 5,
+    "plateNumber": "粤B72415",
+    "company": "湾区化工物流",
+    "riskLevel": "高",
+    "latestAlarm": "长时停车",
+    "alarmTime": "2026-03-09 22:41",
+    "status": "处理中",
+    "handler": "王立峰",
+    "note": "事件已进入处置流程，需持续跟进反馈结果"
+  },
+  {
+    "id": 6,
+    "plateNumber": "粤B76803",
+    "company": "港城危品配送",
+    "riskLevel": "高",
+    "latestAlarm": "路线偏移",
+    "alarmTime": "2026-03-09 21:33",
+    "status": "已派单",
+    "handler": "陈雨晴",
+    "note": "工单已下发，等待现场回传处理结果"
+  },
+  {
+    "id": 7,
+    "plateNumber": "粤B79324",
+    "company": "大鹏冷运",
+    "riskLevel": "中",
+    "latestAlarm": "超速报警",
+    "alarmTime": "2026-03-09 19:28",
+    "status": "待复核",
+    "handler": "赵明昊",
+    "note": "报警记录待人工复核，建议优先核查处置结论"
+  },
+  {
+    "id": 8,
+    "plateNumber": "粤B84517",
+    "company": "鹏海联运",
+    "riskLevel": "高",
+    "latestAlarm": "疲劳驾驶",
+    "alarmTime": "2026-03-09 18:06",
+    "status": "处理中",
+    "handler": "李心妍",
+    "note": "事件已进入处置流程，需持续跟进反馈结果"
+  },
+  {
+    "id": 9,
+    "plateNumber": "粤B86752",
+    "company": "南湾危运服务",
+    "riskLevel": "中",
+    "latestAlarm": "异常熄火",
+    "alarmTime": "2026-03-09 16:44",
+    "status": "已派单",
+    "handler": "王立峰",
+    "note": "工单已下发，等待现场回传处理结果"
+  },
+  {
+    "id": 10,
+    "plateNumber": "粤B89361",
+    "company": "龙岗危货通",
+    "riskLevel": "高",
+    "latestAlarm": "偏航报警",
+    "alarmTime": "2026-03-09 15:09",
+    "status": "待复核",
+    "handler": "陈雨晴",
+    "note": "报警记录待人工复核，建议优先核查处置结论"
+  },
+  {
+    "id": 11,
+    "plateNumber": "粤B92640",
+    "company": "海港能源运输",
+    "riskLevel": "中",
+    "latestAlarm": "急减速报警",
+    "alarmTime": "2026-03-09 11:27",
+    "status": "处理中",
+    "handler": "赵明昊",
+    "note": "事件已进入处置流程，需持续跟进反馈结果"
+  },
+  {
+    "id": 12,
+    "plateNumber": "粤B95872",
+    "company": "鹏远特运",
+    "riskLevel": "高",
+    "latestAlarm": "超速报警",
+    "alarmTime": "2026-03-09 10:18",
+    "status": "已派单",
+    "handler": "李心妍",
+    "note": "工单已下发，等待现场回传处理结果"
+  }
+]
