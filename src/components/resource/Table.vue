@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue"
+import { useRoute } from "vue-router"
+import { toast } from "vue-sonner"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -12,6 +14,7 @@ import {
 import type { TableColumn, TableRowAction } from "@/components/resource/types"
 
 type ScrollRoot = HTMLElement | Window
+const HORIZONTAL_SCROLL_HINT_MESSAGE = "可按住 Shift + 鼠标滚轮进行横向移动。"
 
 const props = withDefaults(defineProps<{
   columns: TableColumn[]
@@ -67,6 +70,8 @@ const stickyTableStyle = computed(() => ({
   tableLayout: "fixed" as const,
   transform: `translateX(${-stickyScrollLeft.value}px)`,
 }))
+const route = useRoute()
+const horizontalScrollHintId = computed(() => `resource-table-horizontal-scroll-hint:${route.path}`)
 
 let scrollRoot: ScrollRoot | null = null
 let resizeObserver: ResizeObserver | null = null
@@ -78,6 +83,18 @@ function getRowKey(row: Record<string, unknown>, index: number) {
 
   const value = row[props.rowKey]
   return typeof value === "string" || typeof value === "number" ? value : index
+}
+
+function maybeShowHorizontalScrollHint() {
+  if (!horizontalOverflow.value) {
+    return
+  }
+
+  toast.info(HORIZONTAL_SCROLL_HINT_MESSAGE, {
+    id: horizontalScrollHintId.value,
+    duration: 5200,
+    position: "top-center",
+  })
 }
 
 function getColumnValue(row: Record<string, unknown>, key: string) {
@@ -245,10 +262,41 @@ function syncHorizontalScrollState() {
   }
 
   const wrapper = tableWrapperRef.value
-  const overflow = tableRef.value.scrollWidth > wrapper.clientWidth + 1
+  const overflow = wrapper.scrollWidth > wrapper.clientWidth + 1
+    || tableRef.value.scrollWidth > wrapper.clientWidth + 1
+    || measureNaturalTableOverflow()
 
   horizontalOverflow.value = overflow
   scrolledToInlineEnd.value = !overflow || wrapper.scrollLeft + wrapper.clientWidth >= wrapper.scrollWidth - 1
+}
+
+function measureNaturalTableOverflow() {
+  if (!tableWrapperRef.value || !tableRef.value || typeof document === "undefined") {
+    return false
+  }
+
+  const measurementHost = document.createElement("div")
+  measurementHost.style.position = "absolute"
+  measurementHost.style.left = "-99999px"
+  measurementHost.style.top = "0"
+  measurementHost.style.visibility = "hidden"
+  measurementHost.style.pointerEvents = "none"
+  measurementHost.style.width = "max-content"
+  measurementHost.style.maxWidth = "none"
+  measurementHost.style.overflow = "visible"
+
+  const tableClone = tableRef.value.cloneNode(true) as HTMLTableElement
+  tableClone.style.minWidth = "0"
+  tableClone.style.width = "max-content"
+  tableClone.style.maxWidth = "none"
+
+  measurementHost.appendChild(tableClone)
+  document.body.appendChild(measurementHost)
+
+  const naturalWidth = Math.ceil(tableClone.getBoundingClientRect().width)
+  measurementHost.remove()
+
+  return naturalWidth > tableWrapperRef.value.clientWidth + 1
 }
 
 function measureFillColumnState() {
@@ -430,6 +478,14 @@ watch(() => props.rows, scheduleStickySync, { deep: true })
 watch(() => props.showIndex, scheduleStickySync)
 watch(() => hasRowActions.value, scheduleStickySync)
 watch(() => props.stickyHeader, scheduleStickySync)
+watch(() => horizontalOverflow.value, overflow => {
+  if (overflow) {
+    maybeShowHorizontalScrollHint()
+  }
+})
+watch(() => route.path, () => {
+  maybeShowHorizontalScrollHint()
+})
 
 onMounted(() => {
   attachScrollRootListener()
@@ -437,6 +493,9 @@ onMounted(() => {
   window.addEventListener("resize", scheduleStickySync, { passive: true })
   observeStickyLayout()
   scheduleStickySync()
+  void nextTick(() => {
+    maybeShowHorizontalScrollHint()
+  })
 })
 
 onBeforeUnmount(() => {
