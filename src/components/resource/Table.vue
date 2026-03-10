@@ -34,9 +34,12 @@ const props = withDefaults(defineProps<{
 const wrapperClassName = computed(() => getTableWrapperClass(props.wrapperClass))
 const tableClassName = computed(() => getTableClass(props.tableClass))
 const hasRowActions = computed(() => (props.rowActions?.length ?? 0) > 0)
+const INLINE_END_SPACE = 32
 const tableWrapperRef = ref<HTMLElement | null>(null)
 const tableRef = ref<HTMLTableElement | null>(null)
 const fillColumnActive = ref(false)
+const horizontalOverflow = ref(false)
+const scrolledToInlineEnd = ref(true)
 const stickyHeaderActive = ref(false)
 const stickyHeaderLeft = ref(0)
 const stickyHeaderTop = ref(0)
@@ -49,6 +52,9 @@ const stickyHeaderVisible = computed(() => (
   && stickyHeaderActive.value
   && stickyHeaderWidth.value > 0
   && stickyColumnWidths.value.length > 0
+))
+const inlineEndSpaceVisible = computed(() => (
+  !horizontalOverflow.value || scrolledToInlineEnd.value ? INLINE_END_SPACE : 0
 ))
 const stickyViewportStyle = computed(() => ({
   left: `${stickyHeaderLeft.value}px`,
@@ -231,6 +237,20 @@ function clearStickyState() {
   stickyColumnWidths.value = []
 }
 
+function syncHorizontalScrollState() {
+  if (!tableWrapperRef.value || !tableRef.value) {
+    horizontalOverflow.value = false
+    scrolledToInlineEnd.value = true
+    return
+  }
+
+  const wrapper = tableWrapperRef.value
+  const overflow = tableRef.value.scrollWidth > wrapper.clientWidth + 1
+
+  horizontalOverflow.value = overflow
+  scrolledToInlineEnd.value = !overflow || wrapper.scrollLeft + wrapper.clientWidth >= wrapper.scrollWidth - 1
+}
+
 function measureFillColumnState() {
   if (!tableWrapperRef.value || !tableRef.value || typeof document === "undefined") {
     return false
@@ -291,6 +311,7 @@ async function syncTableLayoutState() {
     await nextTick()
   }
 
+  syncHorizontalScrollState()
   syncStickyHeaderState()
 }
 
@@ -321,6 +342,7 @@ function syncStickyHeaderState() {
 
 function handleWrapperScroll() {
   stickyScrollLeft.value = tableWrapperRef.value?.scrollLeft ?? 0
+  syncHorizontalScrollState()
 }
 
 function isScrollableAncestor(element: HTMLElement) {
@@ -462,6 +484,10 @@ onBeforeUnmount(() => {
             <th
               v-if="hasRowActions"
               :class="tableTheme.actionHeader"
+              :style="getStickyCellStyle(stickyColumnWidths.length - 2)"
+            />
+            <th
+              :class="tableTheme.endSpacerHeader"
               :style="getStickyCellStyle(stickyColumnWidths.length - 1)"
             />
           </tr>
@@ -493,6 +519,7 @@ onBeforeUnmount(() => {
             v-if="hasRowActions"
             :class="tableTheme.actionHeader"
           />
+          <th :class="tableTheme.endSpacerHeader" />
         </tr>
       </thead>
 
@@ -619,6 +646,7 @@ onBeforeUnmount(() => {
           <td
             v-if="hasRowActions"
             :class="[tableTheme.actionCell, 'relative']"
+            :style="{ right: `${inlineEndSpaceVisible}px` }"
           >
             <div aria-hidden="true" :class="tableTheme.actionSizer">
               <Button
@@ -632,7 +660,7 @@ onBeforeUnmount(() => {
                 {{ action.label }}
               </Button>
             </div>
-            <div :class="tableTheme.actionPanel">
+            <div :class="tableTheme.actionPanel" :style="{ right: '0px' }">
               <Button
                 v-for="action in rowActions"
                 :key="action.key"
@@ -645,6 +673,7 @@ onBeforeUnmount(() => {
               </Button>
             </div>
           </td>
+          <td :class="tableTheme.endSpacerCell" />
         </tr>
       </tbody>
     </table>

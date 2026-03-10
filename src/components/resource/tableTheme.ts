@@ -32,9 +32,11 @@ export const tableTheme = {
     rightAligned: "text-right",
   },
   actionHeader: "w-px whitespace-nowrap border-b border-border py-2 pl-0 pr-3",
-  actionCell: "sticky right-0 z-10 border-b border-border p-0 align-middle whitespace-nowrap",
+  actionCell: "sticky z-10 border-b border-border p-0 align-middle whitespace-nowrap",
   actionSizer: "invisible h-0 overflow-hidden flex items-center justify-end gap-2 px-3 py-0",
-  actionPanel: "absolute inset-y-0 right-0 flex items-center justify-end gap-2 px-3 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100",
+  actionPanel: "absolute inset-y-0 flex items-center justify-end gap-2 px-3 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100",
+  endSpacerHeader: "w-8 min-w-8 border-b-0 p-0",
+  endSpacerCell: "w-8 min-w-8 border-b-0 p-0",
   tones: {
     default: "text-foreground",
     primary: "text-foreground",
