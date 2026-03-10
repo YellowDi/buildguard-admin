@@ -23,6 +23,7 @@ const props = defineProps({
 const emit = defineEmits<{
   "tab-click": [tab: HeaderTab]
   "export-action": []
+  "primary-action": []
 }>()
 
 const activeCount = computed(() => props.activePage.visibleRows.value.length)
@@ -69,5 +70,6 @@ const activeCount = computed(() => props.activePage.visibleRows.value.length)
     @update-tag-filter="activePage.updateTagFilter($event.label, $event.value)"
     @update-date-filter="activePage.updateDateFilter($event.label, $event.value)"
     @export-action="emit('export-action')"
+    @primary-action="emit('primary-action')"
   />
 </template>

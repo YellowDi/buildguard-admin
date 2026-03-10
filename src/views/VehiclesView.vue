@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from "vue"
+import { useRouter } from "vue-router"
 
 import TabbedPage from "@/components/resource/TabbedPage.vue"
 import { useResourceList } from "@/components/resource/useResourceList"
@@ -52,6 +53,7 @@ const {
   alarm: alarmVehicles,
   inspection: inspectionVehicles,
 } = buildVehicleDataBundle(vehiclesData as VehicleDataBundle)
+const router = useRouter()
 
 // 3. 多表格页的核心规则：
 // 不是为整页写一个复杂 controller，而是“每个子表各写一个 schema”。
@@ -399,6 +401,10 @@ function handleTopLevelTabClick(tab: HeaderTab) {
   activeTab.value = `${tab.value ?? tab.label}`
 }
 
+function handleCreateVehicle() {
+  router.push({ name: "vehicle-create" })
+}
+
 function parseRate(value: string) {
   return Number.parseFloat(value.replace("%", "")) || 0
 }
@@ -468,5 +474,6 @@ function getDaysUntil(dateString: string) {
     :tabs="tabs"
     :active-page="activePage"
     @tab-click="handleTopLevelTabClick"
+    @primary-action="handleCreateVehicle"
   />
 </template>

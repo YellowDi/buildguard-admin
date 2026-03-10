@@ -8,6 +8,7 @@ import CompaniesView from "@/views/CompaniesView.vue"
 import DashboardView from "@/views/dashboard/DashboardView.vue"
 import CompanyCreateView from "@/views/form/CompanyCreateView.vue"
 import UserCreateView from "@/views/form/UserCreateView.vue"
+import VehicleCreateView from "@/views/form/VehicleCreateView.vue"
 import UsersView from "@/views/UsersView.vue"
 import VehiclesView from "@/views/VehiclesView.vue"
 
@@ -84,6 +85,18 @@ const router = createRouter({
           component: VehiclesView,
           meta: {
             title: "车辆",
+          },
+        },
+        {
+          path: "vehicles/create",
+          name: "vehicle-create",
+          component: VehicleCreateView,
+          meta: {
+            title: "添加车辆",
+            breadcrumb: [
+              { title: "车辆", to: "vehicles" },
+              { title: "添加车辆" },
+            ] satisfies BreadcrumbMetaItem[],
           },
         },
         {
