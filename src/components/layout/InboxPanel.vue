@@ -56,7 +56,7 @@ function buildInboxTime(groupLabel: string, date: string) {
 
 <template>
   <aside
-    class="fixed inset-y-0 left-[var(--sidebar-width)] z-30 w-[24.5rem] border-r border-border bg-background"
+    class="fixed inset-y-0 left-(--sidebar-width) z-30 w-98 border-r border-border bg-background"
   >
     <header class="border-b border-border bg-background px-4 py-3.5">
       <div class="flex items-center justify-between">

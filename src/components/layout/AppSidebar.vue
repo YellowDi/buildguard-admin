@@ -396,7 +396,7 @@ onBeforeUnmount(() => {
 
             <SidebarMenuSub
               v-if="item.children?.length && item.open"
-              class="mx-0 mr-0 ml-[1.3125rem] gap-0 px-0 pl-[1.3125rem] py-0"
+              class="mx-0 mr-0 ml-5.25 gap-0 px-0 pl-5.25 py-0"
             >
               <SidebarMenuSubItem
                 v-for="child in item.children"
@@ -404,16 +404,16 @@ onBeforeUnmount(() => {
                 class="group/sub-item relative"
               >
                 <div
-                  class="pointer-events-none absolute inset-y-0 -left-8 right-0 rounded-lg opacity-0 transition-opacity group-hover/sub-item:bg-sidebar-accent group-hover/sub-item:opacity-100 group-focus-within/sub-item:bg-sidebar-accent group-focus-within/sub-item:opacity-100 group-has-[[data-active=true]]/sub-item:bg-sidebar-accent group-has-[[data-active=true]]/sub-item:opacity-100"
+                  class="pointer-events-none absolute inset-y-0 -left-8 right-0 rounded-lg opacity-0 transition-opacity group-hover/sub-item:bg-sidebar-accent group-hover/sub-item:opacity-100 group-focus-within/sub-item:bg-sidebar-accent group-focus-within/sub-item:opacity-100 group-has-data-[active=true]/sub-item:bg-sidebar-accent group-has-data-[active=true]/sub-item:opacity-100"
                   :class="{ 'bg-surface-tertiary opacity-100': isActive(child) }"
                 />
                 <div
-                  class="pointer-events-none absolute left-[-1.3125rem] top-1/2 h-5 w-0.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-sidebar-foreground/40 opacity-0 transition-opacity group-hover/sub-item:opacity-100 group-focus-within/sub-item:opacity-100 group-has-[[data-active=true]]/sub-item:opacity-100"
+                  class="pointer-events-none absolute -left-5.25 top-1/2 h-5 w-0.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-sidebar-foreground/40 opacity-0 transition-opacity group-hover/sub-item:opacity-100 group-focus-within/sub-item:opacity-100 group-has-data-[active=true]/sub-item:opacity-100"
                 />
                 <SidebarMenuSubButton
                   as-child
                   :is-active="isActive(child)"
-                  class="relative z-10 h-9 -ml-[1.3125rem] rounded-lg bg-transparent pl-[1.3125rem] pr-3 hover:bg-transparent active:bg-transparent data-[active=true]:bg-transparent"
+                  class="relative z-10 h-9 -ml-5.25 rounded-lg bg-transparent pl-5.25 pr-3 hover:bg-transparent active:bg-transparent data-[active=true]:bg-transparent"
                 >
                   <component
                     :is="child.path ? 'RouterLink' : 'button'"
@@ -622,7 +622,7 @@ onBeforeUnmount(() => {
 
           <SidebarMenuSub
             v-if="item.children?.length && item.open"
-            class="mx-0 mr-0 ml-[1.3125rem] gap-0 px-0 pl-[1.3125rem] py-0"
+            class="mx-0 mr-0 ml-5.25 gap-0 px-0 pl-5.25 py-0"
           >
             <SidebarMenuSubItem
               v-for="child in item.children"
@@ -630,16 +630,16 @@ onBeforeUnmount(() => {
               class="group/sub-item relative"
             >
               <div
-                class="pointer-events-none absolute inset-y-0 -left-8 right-0 rounded-lg opacity-0 transition-opacity group-hover/sub-item:bg-sidebar-accent group-hover/sub-item:opacity-100 group-focus-within/sub-item:bg-sidebar-accent group-focus-within/sub-item:opacity-100 group-has-[[data-active=true]]/sub-item:bg-sidebar-accent group-has-[[data-active=true]]/sub-item:opacity-100"
+                class="pointer-events-none absolute inset-y-0 -left-8 right-0 rounded-lg opacity-0 transition-opacity group-hover/sub-item:bg-sidebar-accent group-hover/sub-item:opacity-100 group-focus-within/sub-item:bg-sidebar-accent group-focus-within/sub-item:opacity-100 group-has-data-[active=true]/sub-item:bg-sidebar-accent group-has-data-[active=true]/sub-item:opacity-100"
                 :class="{ 'bg-surface-tertiary opacity-100': isActive(child) }"
               />
               <div
-                class="pointer-events-none absolute left-[-1.3125rem] top-1/2 h-5 w-0.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-sidebar-foreground/40 opacity-0 transition-opacity group-hover/sub-item:opacity-100 group-focus-within/sub-item:opacity-100 group-has-[[data-active=true]]/sub-item:opacity-100"
+                class="pointer-events-none absolute -left-5.25 top-1/2 h-5 w-0.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-sidebar-foreground/40 opacity-0 transition-opacity group-hover/sub-item:opacity-100 group-focus-within/sub-item:opacity-100 group-has-data-[active=true]/sub-item:opacity-100"
               />
               <SidebarMenuSubButton
                 as-child
                 :is-active="isActive(child)"
-                class="relative z-10 h-9 -ml-[1.3125rem] rounded-lg bg-transparent pl-[1.3125rem] pr-3 hover:bg-transparent active:bg-transparent data-[active=true]:bg-transparent"
+                class="relative z-10 h-9 -ml-5.25 rounded-lg bg-transparent pl-5.25 pr-3 hover:bg-transparent active:bg-transparent data-[active=true]:bg-transparent"
               >
                 <component
                   :is="child.path ? 'RouterLink' : 'button'"
