@@ -145,7 +145,7 @@ onUnmounted(() => { detailBreadcrumbTitle.value = null })
 <template>
   <section class="mx-auto flex w-full max-w-[1440px] min-w-0 flex-1 flex-col px-4 pb-10 xl:px-8">
     <template v-if="company">
-      <div class="sticky -top-4 z-10 -mx-4 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
+      <div class="sticky -top-4 z-10 -mx-4 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80">
         <div class="px-8 py-5">
           <div class="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
             <div class="min-w-0">

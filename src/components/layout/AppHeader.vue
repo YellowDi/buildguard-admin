@@ -55,7 +55,7 @@ const breadcrumbItems = computed<BreadcrumbItemConfig[]>(() => {
   <header
     :class="
       cn(
-        'relative z-30 flex h-16 shrink-0 items-center gap-2 overflow-hidden bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/80',
+        'relative z-30 flex h-16 shrink-0 items-center gap-2 overflow-hidden bg-background/95 px-4 backdrop-blur supports-backdrop-filter:bg-background/80',
         props.class,
       )
     "
