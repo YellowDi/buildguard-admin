@@ -96,10 +96,8 @@ const businessItems = reactive<NavItem[]>([
     open: true,
     children: [
       {
-        label: "工作台",
-      },
-      {
         label: "报警查询",
+        path: "/alarm-queries",
       },
     ],
   },
@@ -192,7 +190,9 @@ function selectTopTab(tabId: TopTabId) {
 }
 
 function isBusinessRoute(path: string) {
-  return ["/", "/companies", "/vehicles", "/users"].some(prefix => path === prefix || path.startsWith(`${prefix}/`))
+  return ["/", "/companies", "/vehicles", "/users", "/alarm-queries"].some(
+    prefix => path === prefix || path.startsWith(`${prefix}/`),
+  )
 }
 
 function handleSearch() {

@@ -4,6 +4,7 @@ import AdminLayout from "@/layouts/AdminLayout.vue"
 import LoginView from "@/views/auth/LoginView.vue"
 import OtpView from "@/views/auth/OtpView.vue"
 import SignupView from "@/views/auth/SignupView.vue"
+import AlarmQueriesView from "@/views/AlarmQueriesView.vue"
 import CompaniesView from "@/views/CompaniesView.vue"
 import DashboardView from "@/views/dashboard/DashboardView.vue"
 import CompanyCreateView from "@/views/form/CompanyCreateView.vue"
@@ -105,6 +106,14 @@ const router = createRouter({
           component: UsersView,
           meta: {
             title: "从业人员",
+          },
+        },
+        {
+          path: "alarm-queries",
+          name: "alarm-queries",
+          component: AlarmQueriesView,
+          meta: {
+            title: "报警查询",
           },
         },
         {
