@@ -61,6 +61,7 @@ const activeCount = computed(() => props.activePage.visibleRows.value.length)
     @add-filter="activePage.handleAddFilter"
     @replace-filter="activePage.handleReplaceFilter"
     @remove-filter="activePage.handleRemoveFilter"
+    @clear-all-filters="activePage.clearAllFilters"
     @set-custom-sort-enabled="activePage.customSortEnabled.value = $event"
     @update-sort-rules="activePage.sortRules.value = $event"
     @toggle-controls="activePage.showControls.value = !activePage.showControls.value"

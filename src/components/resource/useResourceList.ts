@@ -333,6 +333,29 @@ export function useResourceList<Row>(input: ResourceListSchema<Row> | ResourceLi
     visibleFilterKeys.value = visibleFilterKeys.value.filter(item => item !== key)
   }
 
+  function clearAllFilters() {
+    const activeTextKeys = Object.keys(textFilters.value).filter(key => textFilters.value[key]?.enabled)
+    const activeNumberKeys = Object.keys(numberFilters.value).filter(key => numberFilters.value[key]?.enabled)
+    const activeTagKeys = Object.keys(tagFilters.value).filter(key => tagFilters.value[key]?.enabled)
+    const activeDateKeys = Object.keys(dateFilters.value).filter(key => dateFilters.value[key]?.enabled)
+
+    for (const key of activeTextKeys) {
+      resetTextFilter(textFilters.value, key)
+    }
+
+    for (const key of activeNumberKeys) {
+      resetNumberFilter(numberFilters.value, key)
+    }
+
+    for (const key of activeTagKeys) {
+      resetTagFilter(tagFilters.value, key)
+    }
+
+    for (const key of activeDateKeys) {
+      resetDateFilter(dateFilters.value, key)
+    }
+  }
+
   if (definition.sort.storageKey) {
     onMounted(() => {
       const storedValue = window.localStorage.getItem(definition.sort.storageKey!)
@@ -406,6 +429,7 @@ export function useResourceList<Row>(input: ResourceListSchema<Row> | ResourceLi
     handleAddFilter,
     handleReplaceFilter,
     handleRemoveFilter,
+    clearAllFilters,
     updateTextFilter,
     updateNumberFilter,
     updateTagFilter,

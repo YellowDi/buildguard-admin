@@ -51,6 +51,7 @@ const emit = defineEmits<{
   "add-filter": [key: string]
   "replace-filter": [payload: { from: string; to: string; value?: DateFilterState }]
   "remove-filter": [key: string]
+  "clear-all-filters": []
   "set-custom-sort-enabled": [enabled: boolean]
   "update-sort-rules": [rules: SortRule[]]
   "toggle-controls": []
@@ -96,6 +97,7 @@ const slots = useSlots()
           @add-filter="emit('add-filter', $event)"
           @replace-filter="emit('replace-filter', $event)"
           @remove-filter="emit('remove-filter', $event)"
+          @clear-all-filters="emit('clear-all-filters')"
           @set-custom-sort-enabled="emit('set-custom-sort-enabled', $event)"
           @update-sort-rules="emit('update-sort-rules', $event)"
           @toggle-controls="emit('toggle-controls')"

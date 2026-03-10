@@ -49,6 +49,7 @@ const emit = defineEmits<{
     @add-filter="page.handleAddFilter"
     @replace-filter="page.handleReplaceFilter"
     @remove-filter="page.handleRemoveFilter"
+    @clear-all-filters="page.clearAllFilters"
     @set-custom-sort-enabled="page.customSortEnabled.value = $event"
     @update-sort-rules="page.sortRules.value = $event"
     @toggle-controls="page.showControls.value = !page.showControls.value"

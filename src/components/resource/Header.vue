@@ -61,6 +61,7 @@ const emit = defineEmits<{
   "add-filter": [key: string]
   "replace-filter": [payload: { from: string; to: string; value?: DateFilterState }]
   "remove-filter": [key: string]
+  "clear-all-filters": []
   "export-action": []
   "primary-action": []
 }>()
@@ -73,6 +74,9 @@ const ghostIconButtonClass =
 const ghostIconButtonActiveClass =
   "bg-transparent text-link hover:bg-surface-tertiary active:bg-surface-secondary"
 
+const sortFields = computed(() => props.fields.filter(field => field.kind === "sort"))
+const activeFilterFields = computed(() => props.fields.filter(field => field.kind !== "sort" && field.accent))
+const inactiveFilterFields = computed(() => props.fields.filter(field => field.kind !== "sort" && !field.accent))
 const visibleFilterKeys = computed(() => props.fields.filter((field) => field.kind !== "sort").map((field) => field.key))
 const addableFilters = computed(() => props.availableFilters.filter((key) => !visibleFilterKeys.value.includes(key)))
 
@@ -198,6 +202,10 @@ function isFieldActive(field: HeaderField) {
   return field.accent || openPopover.value === field.key
 }
 
+function shouldShowDividerBeforeInactiveFilters() {
+  return inactiveFilterFields.value.length > 0 && (sortFields.value.length > 0 || activeFilterFields.value.length > 0)
+}
+
 function handleAddFilter(key: string) {
   emit("add-filter", key)
   closePopover()
@@ -205,6 +213,11 @@ function handleAddFilter(key: string) {
 
 function handleRemoveFilter(key: string) {
   emit("remove-filter", key)
+  closePopover()
+}
+
+function handleClearAllFilters() {
+  emit("clear-all-filters")
   closePopover()
 }
 
@@ -368,7 +381,33 @@ onBeforeUnmount(() => {
       <div v-if="showControls" class="px-4 py-2 sm:px-8">
         <div class="flex flex-wrap items-center gap-0.5 text-[14px] text-muted-foreground">
           <div class="flex min-w-0 flex-wrap items-center gap-0.5">
-            <template v-for="(field, index) in fields" :key="field.key">
+            <template v-for="field in sortFields" :key="field.key">
+              <div class="relative" data-list-popover>
+                <FilterChip
+                  :icon="field.icon"
+                  :label="field.label"
+                  :caret="field.arrow"
+                  :selected="isFieldActive(field)"
+                  @click="field.kind === 'sort' ? openSortPopover('chip') : togglePopover(field.key)"
+                />
+
+                <div
+                  v-if="field.kind === 'sort' && openPopover === 'sort-popover' && sortPopoverSource === 'chip'"
+                  class="absolute left-0 top-[calc(100%+10px)] z-40"
+                >
+                  <SortPopover
+                    :enabled="customSortEnabled"
+                    :rules="sortRules"
+                    :field-options="sortFieldOptions"
+                    @close="closePopover"
+                    @set-enabled="handleSortEnabledChange"
+                    @update-rules="handleSortRulesChange"
+                  />
+                </div>
+              </div>
+            </template>
+
+            <template v-for="field in activeFilterFields" :key="field.key">
               <div class="relative" data-list-popover>
                 <FilterChip
                   :icon="field.icon"
@@ -432,26 +471,87 @@ onBeforeUnmount(() => {
                     @update:value="handleDateFilterChange(field.key, $event)"
                   />
                 </div>
+              </div>
+            </template>
+
+            <FilterChip
+              v-if="activeFilterFields.length"
+              icon="ri-close-circle-line"
+              label="清空筛选"
+              variant="ghost"
+              @click="handleClearAllFilters"
+            />
+
+            <div
+              v-if="shouldShowDividerBeforeInactiveFilters()"
+              class="mx-2 h-5 w-px shrink-0 bg-border"
+            />
+
+            <template v-for="field in inactiveFilterFields" :key="field.key">
+              <div class="relative" data-list-popover>
+                <FilterChip
+                  :icon="field.icon"
+                  :label="field.label"
+                  :caret="field.arrow"
+                  :selected="isFieldActive(field)"
+                  @click="field.kind === 'sort' ? openSortPopover('chip') : togglePopover(field.key)"
+                />
 
                 <div
-                  v-if="field.kind === 'sort' && openPopover === 'sort-popover' && sortPopoverSource === 'chip'"
+                  v-if="field.kind === 'text-filter' && openPopover === field.key && getTextFilter(field.key)"
                   class="absolute left-0 top-[calc(100%+10px)] z-40"
                 >
-                  <SortPopover
-                    :enabled="customSortEnabled"
-                    :rules="sortRules"
-                    :field-options="sortFieldOptions"
+                  <TextFilterPopover
+                    :title="field.key"
+                    :value="getTextFilter(field.key)!"
                     @close="closePopover"
-                    @set-enabled="handleSortEnabledChange"
-                    @update-rules="handleSortRulesChange"
+                    @remove="handleRemoveFilter(field.key)"
+                    @update:value="handleTextFilterChange(field.key, $event)"
+                  />
+                </div>
+
+                <div
+                  v-if="field.kind === 'tag-filter' && openPopover === field.key && getTagFilter(field.key)"
+                  class="absolute left-0 top-[calc(100%+10px)] z-40"
+                >
+                  <TagFilterPopover
+                    :title="field.key"
+                    :value="getTagFilter(field.key)!"
+                    :options="props.tagFilterOptions[field.key] ?? []"
+                    @close="closePopover"
+                    @remove="handleRemoveFilter(field.key)"
+                    @update:value="handleTagFilterChange(field.key, $event)"
+                  />
+                </div>
+
+                <div
+                  v-if="field.kind === 'number-filter' && openPopover === field.key && getNumberFilter(field.key)"
+                  class="absolute left-0 top-[calc(100%+10px)] z-40"
+                >
+                  <NumberFilterPopover
+                    :title="field.key"
+                    :value="getNumberFilter(field.key)!"
+                    @close="closePopover"
+                    @remove="handleRemoveFilter(field.key)"
+                    @update:value="handleNumberFilterChange(field.key, $event)"
+                  />
+                </div>
+
+                <div
+                  v-if="field.kind === 'date-filter' && openPopover === field.key && getDateFilter(field.key)"
+                  class="absolute left-0 top-[calc(100%+10px)] z-40"
+                >
+                  <DateFilterPopover
+                    :title="field.key"
+                    :value="getDateFilter(field.key)!"
+                    :fields="props.dateFilterFields"
+                    @close="closePopover"
+                    @remove="handleRemoveFilter(field.key)"
+                    @switch-field="handleDateFilterFieldSwitch(field.key, $event)"
+                    @update:value="handleDateFilterChange(field.key, $event)"
                   />
                 </div>
               </div>
-
-              <div
-                v-if="index === 0 && field.kind === 'sort' && fields.length > 1"
-                class="mx-2 h-5 w-px shrink-0 bg-border"
-              />
             </template>
 
             <div v-if="addableFilters.length" class="relative" data-list-popover>
