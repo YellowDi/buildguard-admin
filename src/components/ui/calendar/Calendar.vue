@@ -29,12 +29,11 @@ const placeholder = useVModel(props, "placeholder", emits, {
 const formatter = useDateFormatter(props.locale ?? "zh-CN")
 
 const yearRange = computed(() => {
-  return props.yearRange ?? createYearRange({
-    start: props?.minValue ?? (toRaw(props.placeholder) ?? props.defaultPlaceholder ?? today(getLocalTimeZone()))
-      .cycle("year", -100),
+  const baseDate = toRaw(props.placeholder) ?? props.defaultPlaceholder ?? today(getLocalTimeZone())
 
-    end: props?.maxValue ?? (toRaw(props.placeholder) ?? props.defaultPlaceholder ?? today(getLocalTimeZone()))
-      .cycle("year", 10),
+  return props.yearRange ?? createYearRange({
+    start: props?.minValue ?? baseDate.cycle("year", -100),
+    end: props?.maxValue ?? baseDate,
   })
 })
 
@@ -46,7 +45,7 @@ const monthOptions = computed(() => {
 })
 
 const yearOptions = computed(() => {
-  return yearRange.value.map(year => ({
+  return [...yearRange.value].reverse().map(year => ({
     value: year.year,
     label: formatter.custom(toDate(year), { year: "numeric" }),
   }))
@@ -76,7 +75,7 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
       :model-value="date.year"
       :options="yearOptions"
       trigger-label="选择年份"
-      content-class="min-w-[6rem]"
+      content-class="min-w-[6rem] max-h-64 overflow-y-auto"
       @update:model-value="(year) => {
         placeholder = placeholder.set({ year })
       }"

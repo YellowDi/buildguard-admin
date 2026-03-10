@@ -483,7 +483,7 @@ onBeforeUnmount(() => {
         <div v-else class="flex h-full min-h-0 flex-col overflow-hidden">
           <Calendar
             locale="zh-CN"
-            layout="month-only"
+            layout="month-and-year"
             class="w-full max-w-full p-0"
           />
 
@@ -709,7 +709,7 @@ onBeforeUnmount(() => {
       <div v-else class="flex h-full min-h-0 flex-col overflow-hidden p-2">
         <Calendar
           locale="zh-CN"
-          layout="month-only"
+          layout="month-and-year"
           class="w-full max-w-full p-0"
         />
 
