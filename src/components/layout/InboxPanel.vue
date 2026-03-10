@@ -1,148 +1,109 @@
 <script setup lang="ts">
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import { computed, ref } from "vue"
+
+import Input from "@/components/ui/input/Input.vue"
+import { Switch } from "@/components/ui/switch"
+import inboxData from "@/data/inbox.json"
+
+type InboxItem = {
+  id: number
+  title: string
+  source: string
+  date: string
+  dueLabel: string
+  dueAt: string
+  summary: string
+  severity: "info" | "warning" | "danger"
+}
 
 type InboxGroup = {
   label: string
-  items: Array<{
-    id: number
-    title: string
-    source: string
-    date: string
-    dueAt: string
-  }>
+  items: InboxItem[]
 }
 
-const groups: InboxGroup[] = [
-  {
-    label: "今天",
-    items: [
-      { id: 1, title: "提醒", source: "Spotify", date: "2024/06/01", dueAt: "2017 年 10 月 6 日 20:49" },
-      { id: 2, title: "提醒", source: "Spotify", date: "2024/06/01", dueAt: "2017 年 10 月 6 日 20:49" },
-      { id: 3, title: "提醒", source: "Spotify", date: "2024/06/01", dueAt: "2017 年 10 月 6 日 20:49" },
-    ],
-  },
-  {
-    label: "更早",
-    items: [
-      { id: 4, title: "提醒", source: "Spotify", date: "2024/06/01", dueAt: "2017 年 10 月 6 日 20:49" },
-      { id: 5, title: "提醒", source: "Spotify", date: "2024/06/01", dueAt: "2017 年 10 月 6 日 20:49" },
-      { id: 6, title: "提醒", source: "Spotify", date: "2024/06/01", dueAt: "2017 年 10 月 6 日 20:49" },
-      { id: 7, title: "提醒", source: "Spotify", date: "2024/06/01", dueAt: "2017 年 10 月 6 日 20:49" },
-    ],
-  },
-]
+const groups = inboxData as InboxGroup[]
+const search = ref("")
+const unreadOnly = ref(false)
+
+const items = computed(() =>
+  groups.flatMap((group) =>
+    group.items.map((item) => ({
+      ...item,
+      inboxTime: buildInboxTime(group.label, item.date),
+      unread: item.severity !== "info",
+    })),
+  ),
+)
+
+const filteredItems = computed(() => {
+  const keyword = search.value.trim().toLowerCase()
+
+  return items.value.filter((item) => {
+    if (unreadOnly.value && !item.unread) return false
+    if (!keyword) return true
+
+    const haystack = `${item.source} ${item.title} ${item.summary} ${item.dueAt}`.toLowerCase()
+    return haystack.includes(keyword)
+  })
+})
+
+function buildInboxTime(groupLabel: string, date: string) {
+  if (groupLabel === "今天") return date.slice(-5)
+  if (groupLabel === "更早") return "1 天前"
+  return date
+}
 </script>
 
 <template>
   <aside
     class="fixed inset-y-0 left-[var(--sidebar-width)] z-30 w-[24.5rem] border-r border-border bg-background"
   >
-    <header class="flex h-14 items-center justify-between border-b border-border bg-background/75 px-4 backdrop-blur-sm">
-      <div class="flex items-center gap-3">
-        <button
-          type="button"
-          class="flex size-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-surface-tertiary"
-        >
-          <i class="ri-inbox-unarchive-fill text-base" />
-        </button>
-        <span class="text-lg font-semibold text-foreground">收件箱</span>
+    <header class="border-b border-border bg-background px-4 py-3.5">
+      <div class="flex items-center justify-between">
+        <h2 class="text-lg font-semibold leading-none text-foreground">收件箱</h2>
+        <label class="flex items-center gap-3">
+          <span class="text-xs font-medium text-foreground">仅看未读</span>
+          <Switch v-model="unreadOnly" />
+        </label>
       </div>
 
-      <div class="flex items-center gap-2 text-muted-foreground">
-        <button
-          type="button"
-          class="flex size-8 items-center justify-center rounded-md transition-colors hover:bg-surface-tertiary"
-        >
-          <i class="ri-filter-3-line text-lg" />
-        </button>
-        <button
-          type="button"
-          class="flex size-8 items-center justify-center rounded-md transition-colors hover:bg-surface-tertiary"
-        >
-          <i class="ri-more-2-fill text-lg" />
-        </button>
-      </div>
+      <Input
+        v-model="search"
+        placeholder="搜索收件箱..."
+        class="mt-3 h-9 rounded-lg bg-background px-3 text-sm shadow-none"
+      />
     </header>
 
-    <div class="h-[calc(100svh-3.5rem)] overflow-y-auto">
-      <section v-for="group in groups" :key="group.label">
-        <div class="sticky top-0 z-10 border-b border-border bg-surface-secondary px-4 py-1.5 text-sm text-muted-foreground">
-          {{ group.label }}
+    <div class="h-[calc(100svh-6.75rem)] overflow-y-auto">
+      <article
+        v-for="item in filteredItems"
+        :key="item.id"
+        class="group border-b border-border px-4 py-4 transition-colors hover:bg-accent/60"
+      >
+        <div class="flex items-start justify-between gap-3">
+          <p class="min-w-0 truncate text-sm font-medium leading-tight text-foreground transition-colors group-hover:text-foreground">
+            {{ item.source }}
+          </p>
+          <p class="shrink-0 pt-0.5 text-xs font-normal leading-none text-muted-foreground">
+            {{ item.inboxTime }}
+          </p>
         </div>
 
-        <article
-          v-for="item in group.items"
-          :key="item.id"
-          class="group relative border-b border-border bg-background px-4 py-4 transition-colors hover:bg-surface-tertiary"
-        >
-          <div class="flex gap-4">
-            <div class="flex size-10 shrink-0 items-center justify-center rounded-full border border-border bg-background text-muted-foreground">
-              <i class="ri-notification-3-line text-lg" />
-            </div>
+        <p class="mt-2.5 text-sm font-semibold leading-tight text-foreground">
+          {{ item.title }}
+        </p>
 
-            <div class="min-w-0 flex-1">
-              <div class="flex items-start justify-between gap-4">
-                <div class="min-w-0">
-                  <p class="text-sm font-medium leading-5 text-foreground">{{ item.title }}</p>
-                  <p class="truncate text-xl font-medium leading-tight text-foreground underline underline-offset-2">
-                    {{ item.source }}
-                  </p>
-                </div>
-                <div class="flex h-8 w-[7rem] shrink-0 items-start justify-end">
-                  <span class="pt-1 text-right text-sm text-muted-foreground group-hover:hidden">
-                    {{ item.date }}
-                  </span>
-                  <div
-                    class="hidden items-start justify-end gap-1 rounded-xl border border-border bg-background p-1 shadow-sm group-hover:flex"
-                  >
-                    <Tooltip>
-                      <TooltipTrigger as-child>
-                        <button
-                          type="button"
-                          class="flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-surface-tertiary"
-                        >
-                          <i class="ri-notification-3-line text-lg" />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent side="top">提醒</TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                      <TooltipTrigger as-child>
-                        <button
-                          type="button"
-                          class="flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-surface-tertiary"
-                        >
-                          <i class="ri-notification-badge-line text-lg" />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent side="top">标记未读</TooltipContent>
-                    </Tooltip>
-                    <Tooltip>
-                      <TooltipTrigger as-child>
-                        <button
-                          type="button"
-                          class="flex size-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-surface-tertiary"
-                        >
-                          <i class="ri-archive-line text-lg" />
-                        </button>
-                      </TooltipTrigger>
-                      <TooltipContent side="top">归档</TooltipContent>
-                    </Tooltip>
-                  </div>
-                </div>
-              </div>
+        <p class="mt-2 line-clamp-2 text-xs leading-5 text-muted-foreground">
+          {{ item.summary }}
+        </p>
+      </article>
 
-              <div class="mt-4 space-y-1 text-muted-foreground">
-                <p class="text-xs">到期时间</p>
-                <p class="flex items-center gap-2 text-base font-semibold text-foreground">
-                  <i class="ri-calendar-line text-base font-normal text-muted-foreground" />
-                  <span>{{ item.dueAt }}</span>
-                </p>
-              </div>
-            </div>
-          </div>
-        </article>
-      </section>
+      <div
+        v-if="filteredItems.length === 0"
+        class="px-4 py-10 text-sm text-muted-foreground"
+      >
+        No messages found.
+      </div>
     </div>
   </aside>
 </template>
