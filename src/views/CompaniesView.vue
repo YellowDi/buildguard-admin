@@ -60,7 +60,7 @@ const schema: ResourceListSchema<CompanyRecord> = {
     {
       key: "view-detail",
       label: "查看详情",
-      onClick: row => console.info("查看企业详情", row),
+      onClick: row => router.push({ name: "company-detail", params: { id: String((row as CompanyRecord).id) } }),
     },
   ],
   columns: [

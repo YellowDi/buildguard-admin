@@ -6,6 +6,7 @@ import OtpView from "@/views/auth/OtpView.vue"
 import SignupView from "@/views/auth/SignupView.vue"
 import AlarmQueriesView from "@/views/AlarmQueriesView.vue"
 import CompaniesView from "@/views/CompaniesView.vue"
+import CompanyDetailView from "@/views/CompanyDetailView.vue"
 import DashboardView from "@/views/dashboard/DashboardView.vue"
 import CompanyCreateView from "@/views/form/CompanyCreateView.vue"
 import UserCreateView from "@/views/form/UserCreateView.vue"
@@ -66,6 +67,18 @@ const router = createRouter({
           component: CompaniesView,
           meta: {
             title: "企业",
+          },
+        },
+        {
+          path: "companies/:id",
+          name: "company-detail",
+          component: CompanyDetailView,
+          meta: {
+            title: "企业详情",
+            breadcrumb: [
+              { title: "企业", to: "companies" },
+              { title: "详情" },
+            ] satisfies BreadcrumbMetaItem[],
           },
         },
         {

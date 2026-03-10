@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from "vue"
+import { computed, ref } from "vue"
 
 import { Button } from "@/components/ui/button"
 import DateFilterPopover from "@/components/resource/DateFilterPopover.vue"
@@ -8,6 +8,7 @@ import NumberFilterPopover from "@/components/resource/NumberFilterPopover.vue"
 import SortPopover from "@/components/resource/SortPopover.vue"
 import TagFilterPopover from "@/components/resource/TagFilterPopover.vue"
 import TextFilterPopover from "@/components/resource/TextFilterPopover.vue"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import type { SortFieldOption, SortRule } from "@/components/resource/SortPopover.vue"
 import type {
   DateFilterState,
@@ -143,20 +144,6 @@ function closePopover() {
   openPopover.value = null
 }
 
-function isListPopoverTarget(event: MouseEvent) {
-  return event.composedPath().some((node) => {
-    return node instanceof HTMLElement && node.hasAttribute("data-list-popover")
-  })
-}
-
-function handleDocumentClick(event: MouseEvent) {
-  if (isListPopoverTarget(event)) {
-    return
-  }
-
-  closePopover()
-}
-
 function handleSortEnabledChange(enabled: boolean) {
   emit("set-custom-sort-enabled", enabled)
 }
@@ -232,14 +219,6 @@ function toggleSearch() {
 function clearSearch() {
   emit("update-search-query", "")
 }
-
-onMounted(() => {
-  document.addEventListener("click", handleDocumentClick)
-})
-
-onBeforeUnmount(() => {
-  document.removeEventListener("click", handleDocumentClick)
-})
 </script>
 
 <template>
@@ -382,18 +361,35 @@ onBeforeUnmount(() => {
         <div class="flex flex-wrap items-center gap-0.5 text-[14px] text-muted-foreground">
           <div class="flex min-w-0 flex-wrap items-center gap-0.5">
             <template v-for="field in sortFields" :key="field.key">
-              <div class="relative" data-list-popover>
-                <FilterChip
-                  :icon="field.icon"
-                  :label="field.label"
-                  :caret="field.arrow"
-                  :selected="isFieldActive(field)"
-                  @click="field.kind === 'sort' ? openSortPopover('chip') : togglePopover(field.key)"
-                />
+              <Popover
+                :open="field.kind === 'sort' && openPopover === 'sort-popover' && sortPopoverSource === 'chip'"
+                @update:open="(nextOpen) => {
+                  if (field.kind !== 'sort') {
+                    return
+                  }
 
-                <div
-                  v-if="field.kind === 'sort' && openPopover === 'sort-popover' && sortPopoverSource === 'chip'"
-                  class="absolute left-0 top-[calc(100%+10px)] z-40"
+                  if (nextOpen) {
+                    openSortPopover('chip')
+                    return
+                  }
+
+                  closePopover()
+                }"
+              >
+                <PopoverTrigger as-child>
+                  <FilterChip
+                    :icon="field.icon"
+                    :label="field.label"
+                    :caret="field.arrow"
+                    :selected="isFieldActive(field)"
+                  />
+                </PopoverTrigger>
+
+                <PopoverContent
+                  v-if="field.kind === 'sort'"
+                  align="start"
+                  :side-offset="10"
+                  class="w-auto border-0 bg-transparent p-0 shadow-none"
                 >
                   <SortPopover
                     :enabled="customSortEnabled"
@@ -403,38 +399,48 @@ onBeforeUnmount(() => {
                     @set-enabled="handleSortEnabledChange"
                     @update-rules="handleSortRulesChange"
                   />
-                </div>
-              </div>
+                </PopoverContent>
+              </Popover>
             </template>
 
             <template v-for="field in activeFilterFields" :key="field.key">
-              <div class="relative" data-list-popover>
-                <FilterChip
-                  :icon="field.icon"
-                  :label="field.label"
-                  :caret="field.arrow"
-                  :selected="isFieldActive(field)"
-                  @click="field.kind === 'sort' ? openSortPopover('chip') : togglePopover(field.key)"
-                />
+              <Popover
+                :open="openPopover === field.key"
+                @update:open="(nextOpen) => {
+                  if (nextOpen) {
+                    togglePopover(field.key)
+                    return
+                  }
 
-                <div
-                  v-if="field.kind === 'text-filter' && openPopover === field.key && getTextFilter(field.key)"
-                  class="absolute left-0 top-[calc(100%+10px)] z-40"
+                  closePopover()
+                }"
+              >
+                <PopoverTrigger as-child>
+                  <FilterChip
+                    :icon="field.icon"
+                    :label="field.label"
+                    :caret="field.arrow"
+                    :selected="isFieldActive(field)"
+                  />
+                </PopoverTrigger>
+
+                <PopoverContent
+                  v-if="openPopover === field.key"
+                  align="start"
+                  :side-offset="10"
+                  class="w-auto border-0 bg-transparent p-0 shadow-none"
                 >
                   <TextFilterPopover
+                    v-if="field.kind === 'text-filter' && getTextFilter(field.key)"
                     :title="field.key"
                     :value="getTextFilter(field.key)!"
                     @close="closePopover"
                     @remove="handleRemoveFilter(field.key)"
                     @update:value="handleTextFilterChange(field.key, $event)"
                   />
-                </div>
 
-                <div
-                  v-if="field.kind === 'tag-filter' && openPopover === field.key && getTagFilter(field.key)"
-                  class="absolute left-0 top-[calc(100%+10px)] z-40"
-                >
                   <TagFilterPopover
+                    v-else-if="field.kind === 'tag-filter' && getTagFilter(field.key)"
                     :title="field.key"
                     :value="getTagFilter(field.key)!"
                     :options="props.tagFilterOptions[field.key] ?? []"
@@ -442,26 +448,18 @@ onBeforeUnmount(() => {
                     @remove="handleRemoveFilter(field.key)"
                     @update:value="handleTagFilterChange(field.key, $event)"
                   />
-                </div>
 
-                <div
-                  v-if="field.kind === 'number-filter' && openPopover === field.key && getNumberFilter(field.key)"
-                  class="absolute left-0 top-[calc(100%+10px)] z-40"
-                >
                   <NumberFilterPopover
+                    v-else-if="field.kind === 'number-filter' && getNumberFilter(field.key)"
                     :title="field.key"
                     :value="getNumberFilter(field.key)!"
                     @close="closePopover"
                     @remove="handleRemoveFilter(field.key)"
                     @update:value="handleNumberFilterChange(field.key, $event)"
                   />
-                </div>
 
-                <div
-                  v-if="field.kind === 'date-filter' && openPopover === field.key && getDateFilter(field.key)"
-                  class="absolute left-0 top-[calc(100%+10px)] z-40"
-                >
                   <DateFilterPopover
+                    v-else-if="field.kind === 'date-filter' && getDateFilter(field.key)"
                     :title="field.key"
                     :value="getDateFilter(field.key)!"
                     :fields="props.dateFilterFields"
@@ -470,8 +468,8 @@ onBeforeUnmount(() => {
                     @switch-field="handleDateFilterFieldSwitch(field.key, $event)"
                     @update:value="handleDateFilterChange(field.key, $event)"
                   />
-                </div>
-              </div>
+                </PopoverContent>
+              </Popover>
             </template>
 
             <FilterChip
@@ -488,33 +486,43 @@ onBeforeUnmount(() => {
             />
 
             <template v-for="field in inactiveFilterFields" :key="field.key">
-              <div class="relative" data-list-popover>
-                <FilterChip
-                  :icon="field.icon"
-                  :label="field.label"
-                  :caret="field.arrow"
-                  :selected="isFieldActive(field)"
-                  @click="field.kind === 'sort' ? openSortPopover('chip') : togglePopover(field.key)"
-                />
+              <Popover
+                :open="openPopover === field.key"
+                @update:open="(nextOpen) => {
+                  if (nextOpen) {
+                    togglePopover(field.key)
+                    return
+                  }
 
-                <div
-                  v-if="field.kind === 'text-filter' && openPopover === field.key && getTextFilter(field.key)"
-                  class="absolute left-0 top-[calc(100%+10px)] z-40"
+                  closePopover()
+                }"
+              >
+                <PopoverTrigger as-child>
+                  <FilterChip
+                    :icon="field.icon"
+                    :label="field.label"
+                    :caret="field.arrow"
+                    :selected="isFieldActive(field)"
+                  />
+                </PopoverTrigger>
+
+                <PopoverContent
+                  v-if="openPopover === field.key"
+                  align="start"
+                  :side-offset="10"
+                  class="w-auto border-0 bg-transparent p-0 shadow-none"
                 >
                   <TextFilterPopover
+                    v-if="field.kind === 'text-filter' && getTextFilter(field.key)"
                     :title="field.key"
                     :value="getTextFilter(field.key)!"
                     @close="closePopover"
                     @remove="handleRemoveFilter(field.key)"
                     @update:value="handleTextFilterChange(field.key, $event)"
                   />
-                </div>
 
-                <div
-                  v-if="field.kind === 'tag-filter' && openPopover === field.key && getTagFilter(field.key)"
-                  class="absolute left-0 top-[calc(100%+10px)] z-40"
-                >
                   <TagFilterPopover
+                    v-else-if="field.kind === 'tag-filter' && getTagFilter(field.key)"
                     :title="field.key"
                     :value="getTagFilter(field.key)!"
                     :options="props.tagFilterOptions[field.key] ?? []"
@@ -522,26 +530,18 @@ onBeforeUnmount(() => {
                     @remove="handleRemoveFilter(field.key)"
                     @update:value="handleTagFilterChange(field.key, $event)"
                   />
-                </div>
 
-                <div
-                  v-if="field.kind === 'number-filter' && openPopover === field.key && getNumberFilter(field.key)"
-                  class="absolute left-0 top-[calc(100%+10px)] z-40"
-                >
                   <NumberFilterPopover
+                    v-else-if="field.kind === 'number-filter' && getNumberFilter(field.key)"
                     :title="field.key"
                     :value="getNumberFilter(field.key)!"
                     @close="closePopover"
                     @remove="handleRemoveFilter(field.key)"
                     @update:value="handleNumberFilterChange(field.key, $event)"
                   />
-                </div>
 
-                <div
-                  v-if="field.kind === 'date-filter' && openPopover === field.key && getDateFilter(field.key)"
-                  class="absolute left-0 top-[calc(100%+10px)] z-40"
-                >
                   <DateFilterPopover
+                    v-else-if="field.kind === 'date-filter' && getDateFilter(field.key)"
                     :title="field.key"
                     :value="getDateFilter(field.key)!"
                     :fields="props.dateFilterFields"
@@ -550,21 +550,34 @@ onBeforeUnmount(() => {
                     @switch-field="handleDateFilterFieldSwitch(field.key, $event)"
                     @update:value="handleDateFilterChange(field.key, $event)"
                   />
-                </div>
-              </div>
+                </PopoverContent>
+              </Popover>
             </template>
 
-            <div v-if="addableFilters.length" class="relative" data-list-popover>
-              <FilterChip
-                icon="ri-add-line"
-                label="筛选"
-                variant="ghost"
-                @click="togglePopover('add-filter')"
-              />
+            <Popover
+              v-if="addableFilters.length"
+              :open="openPopover === 'add-filter'"
+              @update:open="(nextOpen) => {
+                if (nextOpen) {
+                  togglePopover('add-filter')
+                  return
+                }
 
-              <div
-                v-if="openPopover === 'add-filter'"
-                class="absolute left-0 top-[calc(100%+8px)] z-30 min-w-[184px] rounded-xl border border-border bg-popover p-1.5 shadow-lg"
+                closePopover()
+              }"
+            >
+              <PopoverTrigger as-child>
+                <FilterChip
+                  icon="ri-add-line"
+                  label="筛选"
+                  variant="ghost"
+                />
+              </PopoverTrigger>
+
+              <PopoverContent
+                align="start"
+                :side-offset="8"
+                class="min-w-[184px] rounded-xl p-1.5"
               >
                 <button
                   v-for="item in addableFilters"
@@ -576,8 +589,8 @@ onBeforeUnmount(() => {
                   <span>{{ item }}</span>
                   <i class="ri-add-line text-sm text-muted-foreground" />
                 </button>
-              </div>
-            </div>
+              </PopoverContent>
+            </Popover>
           </div>
         </div>
       </div>

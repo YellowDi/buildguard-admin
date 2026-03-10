@@ -287,152 +287,154 @@ watch(
 <template>
   <div
     ref="rootRef"
-    class="w-[300px] max-w-[calc(100vw-2rem)] rounded-xl border border-border bg-popover p-2.5 shadow-lg"
+    class="w-[300px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-border bg-popover shadow-lg"
     data-list-popover
   >
-    <div class="flex items-center justify-between gap-3">
-      <div class="flex min-w-0 flex-1 items-center gap-2.5">
-        <PopoverSelect
-          v-if="(props.fields?.length ?? 0) > 0"
-          :model-value="title"
-          :options="(props.fields ?? []).map(field => ({ value: field, label: field }))"
-          :placeholder="title"
-          trigger-label="筛选字段"
-          content-class="min-w-[156px]"
-          @update:model-value="(field) => handleFieldSelect(String(field))"
-        />
+    <div class="p-2.5">
+      <div class="flex items-center justify-between gap-3">
+        <div class="flex min-w-0 flex-1 items-center gap-2.5">
+          <PopoverSelect
+            v-if="(props.fields?.length ?? 0) > 0"
+            :model-value="title"
+            :options="(props.fields ?? []).map(field => ({ value: field, label: field }))"
+            :placeholder="title"
+            trigger-label="筛选字段"
+            content-class="min-w-[156px]"
+            @update:model-value="(field) => handleFieldSelect(String(field))"
+          />
 
-        <span v-else class="truncate text-[12px] font-semibold leading-none text-muted-foreground">{{ title }}</span>
-
-        <PopoverSelect
-          :model-value="value.operator"
-          :options="operatorOptions"
-          :placeholder="getOperatorLabel(value.operator)"
-          trigger-label="筛选条件"
-          content-class="min-w-[156px]"
-          @update:model-value="(operator) => handleOperatorSelect(operator as DateFilterOperator)"
-        />
-      </div>
-
-      <div class="relative shrink-0" data-list-popover>
-        <button
-          type="button"
-          class="inline-flex size-6 items-center justify-center rounded-md text-muted-foreground ring-offset-background transition hover:bg-surface-tertiary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-0"
-          aria-label="删除当前筛选"
-          @click="openActionMenu = !openActionMenu"
-        >
-          <i class="ri-more-line text-[14px]" />
-        </button>
-
-        <div
-          v-if="openActionMenu"
-          class="absolute left-[calc(100%+6px)] top-1/2 z-40 min-w-[104px] -translate-y-1/2 rounded-md border border-border bg-popover p-1 shadow-lg"
-          data-list-popover
-        >
-          <button
-            type="button"
-            class="flex w-full items-center rounded-sm px-2 py-1.5 text-left text-[11px] font-medium text-destructive transition hover:bg-destructive/10"
-            @click="handleDeleteFilter"
-          >
-            删除筛选
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <div class="mt-2.5">
-      <div
-        v-if="isBetweenOperator()"
-        class="grid grid-cols-2 gap-2"
-      >
-        <label
-          class="border-input dark:bg-input/30 flex h-9 items-center rounded-md border bg-transparent px-3 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50 md:text-sm"
-        >
-          <input
-            :value="value.startDate"
-            type="text"
-            placeholder="开始日期..."
-            class="w-full border-0 bg-transparent p-0 text-[12px] text-foreground outline-none placeholder:text-muted-foreground"
-            @input="handleBetweenDateInput('start', ($event.target as HTMLInputElement).value)"
-          >
-          <button
-            v-if="value.startDate"
-            type="button"
-            class="ml-2 inline-flex size-5 shrink-0 items-center justify-center rounded-sm text-muted-foreground transition hover:bg-surface-tertiary hover:text-foreground"
-            aria-label="清空开始日期"
-            @mousedown.prevent.stop
-            @click.stop="clearBetweenDateInput('start')"
-          >
-            <i class="ri-close-line text-[13px]" />
-          </button>
-        </label>
-
-        <label
-          class="border-input dark:bg-input/30 flex h-9 items-center rounded-md border bg-transparent px-3 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50 md:text-sm"
-        >
-          <input
-            :value="value.endDate"
-            type="text"
-            placeholder="结束日期..."
-            class="w-full border-0 bg-transparent p-0 text-[12px] text-foreground outline-none placeholder:text-muted-foreground"
-            @input="handleBetweenDateInput('end', ($event.target as HTMLInputElement).value)"
-          >
-          <button
-            v-if="value.endDate"
-            type="button"
-            class="ml-2 inline-flex size-5 shrink-0 items-center justify-center rounded-sm text-muted-foreground transition hover:bg-surface-tertiary hover:text-foreground"
-            aria-label="清空结束日期"
-            @mousedown.prevent.stop
-            @click.stop="clearBetweenDateInput('end')"
-          >
-            <i class="ri-close-line text-[13px]" />
-          </button>
-        </label>
-      </div>
-
-      <div v-else>
-        <label
-          :class="[
-            'flex h-9 items-center rounded-md border px-3 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none md:text-sm',
-            operatorNeedsDateInput(value.operator)
-              ? 'border-input bg-transparent dark:bg-input/30 focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50'
-              : 'cursor-not-allowed border-border bg-muted opacity-70',
-          ]"
-        >
-          <input
-            :value="formatDisplayValue()"
-            type="text"
-            :disabled="!operatorNeedsDateInput(value.operator)"
-            placeholder="选择或输入日期..."
-            :class="[
-              'w-full border-0 bg-transparent p-0 text-[12px] text-foreground outline-none placeholder:text-muted-foreground',
-              operatorNeedsDateInput(value.operator) ? '' : 'cursor-not-allowed text-muted-foreground',
-            ]"
-            @input="handleDateInput(($event.target as HTMLInputElement).value)"
-          >
-          <button
-            v-if="formatDisplayValue()"
-            type="button"
-            class="ml-2 inline-flex size-5 shrink-0 items-center justify-center rounded-sm text-muted-foreground transition hover:bg-surface-tertiary hover:text-foreground"
-            aria-label="清空日期"
-            @mousedown.prevent.stop
-            @click.stop="clearSingleDateInput"
-          >
-            <i class="ri-close-line text-[13px]" />
-          </button>
+          <span v-else class="truncate text-[12px] font-semibold leading-none text-muted-foreground">{{ title }}</span>
 
           <PopoverSelect
-            v-if="operatorNeedsDateInput(value.operator)"
-            :model-value="value.preset"
-            :options="presetOptions"
-            :placeholder="getPresetLabel(value.preset)"
-            trigger-label="日期预设"
-            align="right"
-            trigger-class="ml-2 shrink-0 text-[12px] font-medium text-muted-foreground hover:text-foreground"
-            content-class="min-w-[148px]"
-            @update:model-value="(preset) => handlePresetSelect(preset as DateFilterPreset)"
+            :model-value="value.operator"
+            :options="operatorOptions"
+            :placeholder="getOperatorLabel(value.operator)"
+            trigger-label="筛选条件"
+            content-class="min-w-[156px]"
+            @update:model-value="(operator) => handleOperatorSelect(operator as DateFilterOperator)"
           />
-        </label>
+        </div>
+
+        <div class="relative shrink-0" data-list-popover>
+          <button
+            type="button"
+            class="inline-flex size-6 items-center justify-center rounded-md text-muted-foreground ring-offset-background transition hover:bg-surface-tertiary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-0"
+            aria-label="删除当前筛选"
+            @click="openActionMenu = !openActionMenu"
+          >
+            <i class="ri-more-line text-[14px]" />
+          </button>
+
+          <div
+            v-if="openActionMenu"
+            class="absolute left-[calc(100%+6px)] top-1/2 z-40 min-w-[104px] -translate-y-1/2 rounded-md border border-border bg-popover p-1 shadow-lg"
+            data-list-popover
+          >
+            <button
+              type="button"
+              class="flex w-full items-center rounded-sm px-2 py-1.5 text-left text-[11px] font-medium text-destructive transition hover:bg-destructive/10"
+              @click="handleDeleteFilter"
+            >
+              删除筛选
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-2.5">
+        <div
+          v-if="isBetweenOperator()"
+          class="grid grid-cols-2 gap-2"
+        >
+          <label
+            class="border-input dark:bg-input/30 flex h-9 items-center rounded-md border bg-transparent px-3 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50 md:text-sm"
+          >
+            <input
+              :value="value.startDate"
+              type="text"
+              placeholder="开始日期..."
+              class="w-full border-0 bg-transparent p-0 text-[12px] text-foreground outline-none placeholder:text-muted-foreground"
+              @input="handleBetweenDateInput('start', ($event.target as HTMLInputElement).value)"
+            >
+            <button
+              v-if="value.startDate"
+              type="button"
+              class="ml-2 inline-flex size-5 shrink-0 items-center justify-center rounded-sm text-muted-foreground transition hover:bg-surface-tertiary hover:text-foreground"
+              aria-label="清空开始日期"
+              @mousedown.prevent.stop
+              @click.stop="clearBetweenDateInput('start')"
+            >
+              <i class="ri-close-line text-[13px]" />
+            </button>
+          </label>
+
+          <label
+            class="border-input dark:bg-input/30 flex h-9 items-center rounded-md border bg-transparent px-3 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50 md:text-sm"
+          >
+            <input
+              :value="value.endDate"
+              type="text"
+              placeholder="结束日期..."
+              class="w-full border-0 bg-transparent p-0 text-[12px] text-foreground outline-none placeholder:text-muted-foreground"
+              @input="handleBetweenDateInput('end', ($event.target as HTMLInputElement).value)"
+            >
+            <button
+              v-if="value.endDate"
+              type="button"
+              class="ml-2 inline-flex size-5 shrink-0 items-center justify-center rounded-sm text-muted-foreground transition hover:bg-surface-tertiary hover:text-foreground"
+              aria-label="清空结束日期"
+              @mousedown.prevent.stop
+              @click.stop="clearBetweenDateInput('end')"
+            >
+              <i class="ri-close-line text-[13px]" />
+            </button>
+          </label>
+        </div>
+
+        <div v-else>
+          <label
+            :class="[
+              'flex h-9 items-center rounded-md border px-3 py-2 text-base shadow-xs transition-[color,box-shadow] outline-none md:text-sm',
+              operatorNeedsDateInput(value.operator)
+                ? 'border-input bg-transparent dark:bg-input/30 focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50'
+                : 'cursor-not-allowed border-border bg-muted opacity-70',
+            ]"
+          >
+            <input
+              :value="formatDisplayValue()"
+              type="text"
+              :disabled="!operatorNeedsDateInput(value.operator)"
+              placeholder="选择或输入日期..."
+              :class="[
+                'w-full border-0 bg-transparent p-0 text-[12px] text-foreground outline-none placeholder:text-muted-foreground',
+                operatorNeedsDateInput(value.operator) ? '' : 'cursor-not-allowed text-muted-foreground',
+              ]"
+              @input="handleDateInput(($event.target as HTMLInputElement).value)"
+            >
+            <button
+              v-if="formatDisplayValue()"
+              type="button"
+              class="ml-2 inline-flex size-5 shrink-0 items-center justify-center rounded-sm text-muted-foreground transition hover:bg-surface-tertiary hover:text-foreground"
+              aria-label="清空日期"
+              @mousedown.prevent.stop
+              @click.stop="clearSingleDateInput"
+            >
+              <i class="ri-close-line text-[13px]" />
+            </button>
+
+            <PopoverSelect
+              v-if="operatorNeedsDateInput(value.operator)"
+              :model-value="value.preset"
+              :options="presetOptions"
+              :placeholder="getPresetLabel(value.preset)"
+              trigger-label="日期预设"
+              align="right"
+              trigger-class="ml-2 shrink-0 text-[12px] font-medium text-muted-foreground hover:text-foreground"
+              content-class="min-w-[148px]"
+              @update:model-value="(preset) => handlePresetSelect(preset as DateFilterPreset)"
+            />
+          </label>
+        </div>
       </div>
     </div>
 
@@ -446,7 +448,6 @@ watch(
         :placeholder="calendarPlaceholder"
         layout="month-and-year"
         locale="zh-CN"
-        class="rounded-md border"
         @update:placeholder="(value) => { calendarPlaceholder = value }"
       />
       <Calendar
@@ -455,7 +456,6 @@ watch(
         :placeholder="calendarPlaceholder"
         layout="month-and-year"
         locale="zh-CN"
-        class="rounded-md border"
         @update:placeholder="(value) => { calendarPlaceholder = value }"
       />
     </div>
