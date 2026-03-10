@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils"
 
 export const tableTheme = {
   wrapper: "relative min-w-0 w-full max-w-full overflow-x-auto overflow-y-visible overscroll-x-contain",
-  table: "min-w-full w-max table-auto border-separate border-spacing-0 bg-background text-[14px] text-foreground",
+  table: "min-w-full w-full table-auto border-separate border-spacing-0 bg-background text-[14px] text-foreground",
   head: "relative z-20 text-muted-foreground",
   headActive: "shadow-[inset_0_-1px_0_hsl(var(--border))]",
   stickyViewport: "pointer-events-none fixed z-30 overflow-hidden bg-background",
@@ -31,9 +31,10 @@ export const tableTheme = {
     split: "border-l",
     rightAligned: "text-right",
   },
-  actionHeader: "w-[148px] min-w-[148px] border-b border-border py-2 pl-0 pr-3",
-  actionCell: "sticky right-0 z-10 w-[148px] min-w-[148px] border-b border-border p-0 align-middle",
-  actionPanel: "absolute inset-y-0 right-0 flex items-center justify-end pr-3 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100",
+  actionHeader: "w-px whitespace-nowrap border-b border-border py-2 pl-0 pr-3",
+  actionCell: "sticky right-0 z-10 border-b border-border p-0 align-middle whitespace-nowrap",
+  actionSizer: "invisible h-0 overflow-hidden flex items-center justify-end gap-2 px-3 py-0",
+  actionPanel: "absolute inset-y-0 right-0 flex items-center justify-end gap-2 px-3 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100",
   tones: {
     default: "text-foreground",
     primary: "text-foreground",
@@ -48,11 +49,11 @@ export const tableTheme = {
   formats: {
     default: "",
     numeric: "tabular-nums",
-    note: "max-w-[320px] whitespace-normal leading-6",
+    note: "whitespace-normal leading-6",
   } satisfies Record<TableColumnFormat, string>,
   widths: {
     auto: "",
-    fill: "w-full",
+    fill: "",
   } satisfies Record<TableColumnWidth, string>,
   renderers: {
     contactPrimary: "text-foreground",
@@ -64,7 +65,7 @@ export const tableTheme = {
     progressLabel: "text-[12px] tabular-nums text-muted-foreground",
     metricValue: "tabular-nums text-link",
     metricUnit: "text-[12px] text-muted-foreground",
-    note: "max-w-[320px] whitespace-normal leading-6 text-muted-foreground",
+    note: "whitespace-normal leading-6 text-muted-foreground",
   },
 } as const
 
@@ -76,18 +77,18 @@ export function getTableClass(override?: string) {
   return cn(tableTheme.table, override)
 }
 
-export function getColumnHeaderClass(column: TableColumn) {
+export function getColumnHeaderClass(column: TableColumn, applyFill = column.width === "fill") {
   return cn(
-    column.width === "fill" ? tableTheme.widths.fill : "",
+    applyFill ? tableTheme.widths.fill : "",
     column.headerClass,
   )
 }
 
-export function getColumnCellClass(column: TableColumn) {
+export function getColumnCellClass(column: TableColumn, applyFill = column.width === "fill") {
   const tone = column.tone ?? getDefaultTone(column)
   const emphasis = column.emphasis ?? "default"
   const format = column.format ?? getDefaultFormat(column)
-  const width = column.width ?? "auto"
+  const width = applyFill ? "fill" : "auto"
 
   return cn(
     tableTheme.tones[tone],

@@ -36,6 +36,7 @@ const tableClassName = computed(() => getTableClass(props.tableClass))
 const hasRowActions = computed(() => (props.rowActions?.length ?? 0) > 0)
 const tableWrapperRef = ref<HTMLElement | null>(null)
 const tableRef = ref<HTMLTableElement | null>(null)
+const fillColumnActive = ref(false)
 const stickyHeaderActive = ref(false)
 const stickyHeaderLeft = ref(0)
 const stickyHeaderTop = ref(0)
@@ -136,6 +137,57 @@ function getStickyCellStyle(columnIndex: number) {
   }
 }
 
+function getFillColumnIndex() {
+  for (let index = props.columns.length - 1; index >= 0; index -= 1) {
+    if (props.columns[index]?.width === "fill") {
+      return index
+    }
+  }
+
+  return -1
+}
+
+function isFillColumnActive(column: TableColumn, columnIndex: number) {
+  return column.width === "fill"
+    && columnIndex === getFillColumnIndex()
+    && fillColumnActive.value
+}
+
+function getResolvedColumnHeaderClass(column: TableColumn, columnIndex: number) {
+  const fillActive = isFillColumnActive(column, columnIndex)
+
+  return [
+    getColumnHeaderClass(column, fillActive),
+    column.width === "fill" ? "" : "w-px",
+  ]
+}
+
+function getResolvedColumnCellClass(column: TableColumn, columnIndex: number) {
+  const fillActive = isFillColumnActive(column, columnIndex)
+
+  return [
+    getColumnCellClass(column, fillActive),
+    column.width === "fill" ? "" : "w-px",
+    column.width === "fill"
+      ? fillActive
+        ? "max-w-none"
+        : "max-w-none whitespace-nowrap"
+      : "",
+  ]
+}
+
+function getNoteContentClass(column: TableColumn, columnIndex: number) {
+  const fillActive = isFillColumnActive(column, columnIndex)
+
+  if (column.width === "fill") {
+    return fillActive
+      ? "w-full max-w-none whitespace-normal leading-6 text-muted-foreground"
+      : "max-w-none whitespace-nowrap text-muted-foreground"
+  }
+
+  return tableTheme.renderers.note
+}
+
 function getHeaderCells() {
   if (!tableRef.value) {
     return []
@@ -177,6 +229,69 @@ function clearStickyState() {
   stickyTableWidth.value = 0
   stickyScrollLeft.value = 0
   stickyColumnWidths.value = []
+}
+
+function measureFillColumnState() {
+  if (!tableWrapperRef.value || !tableRef.value || typeof document === "undefined") {
+    return false
+  }
+
+  const fillColumnIndex = getFillColumnIndex()
+  if (fillColumnIndex < 0) {
+    return false
+  }
+
+  const measurementHost = document.createElement("div")
+  measurementHost.style.position = "absolute"
+  measurementHost.style.left = "-99999px"
+  measurementHost.style.top = "0"
+  measurementHost.style.visibility = "hidden"
+  measurementHost.style.pointerEvents = "none"
+  measurementHost.style.width = "max-content"
+  measurementHost.style.maxWidth = "none"
+  measurementHost.style.overflow = "visible"
+
+  const tableClone = tableRef.value.cloneNode(true) as HTMLTableElement
+  tableClone.style.minWidth = "0"
+  tableClone.style.width = "max-content"
+  tableClone.style.maxWidth = "none"
+
+  const cellIndex = fillColumnIndex + (props.showIndex ? 1 : 0)
+  for (const row of tableClone.querySelectorAll("tr")) {
+    const cell = row.children.item(cellIndex)
+
+    if (cell instanceof HTMLElement) {
+      cell.style.width = "auto"
+      cell.style.maxWidth = "none"
+      cell.style.whiteSpace = "nowrap"
+
+      const noteContent = cell.firstElementChild
+      if (noteContent instanceof HTMLElement) {
+        noteContent.style.width = "auto"
+        noteContent.style.maxWidth = "none"
+        noteContent.style.whiteSpace = "nowrap"
+      }
+    }
+  }
+
+  measurementHost.appendChild(tableClone)
+  document.body.appendChild(measurementHost)
+
+  const naturalWidth = Math.ceil(tableClone.getBoundingClientRect().width)
+  measurementHost.remove()
+
+  return naturalWidth <= tableWrapperRef.value.clientWidth + 1
+}
+
+async function syncTableLayoutState() {
+  const nextFillColumnActive = measureFillColumnState()
+
+  if (fillColumnActive.value !== nextFillColumnActive) {
+    fillColumnActive.value = nextFillColumnActive
+    await nextTick()
+  }
+
+  syncStickyHeaderState()
 }
 
 function syncStickyHeaderState() {
@@ -261,7 +376,7 @@ function attachScrollRootListener() {
 function scheduleStickySync() {
   void nextTick(() => {
     attachScrollRootListener()
-    syncStickyHeaderState()
+    void syncTableLayoutState()
   })
 }
 
@@ -271,7 +386,7 @@ function observeStickyLayout() {
   }
 
   resizeObserver = new ResizeObserver(() => {
-    syncStickyHeaderState()
+    void syncTableLayoutState()
   })
 
   if (tableWrapperRef.value) {
@@ -297,14 +412,14 @@ watch(() => props.stickyHeader, scheduleStickySync)
 onMounted(() => {
   attachScrollRootListener()
   tableWrapperRef.value?.addEventListener("scroll", handleWrapperScroll, { passive: true })
-  window.addEventListener("resize", syncStickyHeaderState, { passive: true })
+  window.addEventListener("resize", scheduleStickySync, { passive: true })
   observeStickyLayout()
   scheduleStickySync()
 })
 
 onBeforeUnmount(() => {
   tableWrapperRef.value?.removeEventListener("scroll", handleWrapperScroll)
-  window.removeEventListener("resize", syncStickyHeaderState)
+  window.removeEventListener("resize", scheduleStickySync)
   detachScrollRootListener()
   stopObservingStickyLayout()
 })
@@ -338,7 +453,7 @@ onBeforeUnmount(() => {
               :key="`sticky-${column.key}`"
               :class="[
                 tableTheme.headerCell.base,
-                getColumnHeaderClass(column),
+                getResolvedColumnHeaderClass(column, columnIndex),
               ]"
               :style="getStickyCellStyle(columnIndex + (showIndex ? 1 : 0))"
             >
@@ -365,11 +480,11 @@ onBeforeUnmount(() => {
             ]"
           />
           <th
-            v-for="column in columns"
+            v-for="(column, columnIndex) in columns"
             :key="column.key"
             :class="[
               tableTheme.headerCell.base,
-              getColumnHeaderClass(column),
+              getResolvedColumnHeaderClass(column, columnIndex),
             ]"
           >
             {{ column.label }}
@@ -400,7 +515,7 @@ onBeforeUnmount(() => {
               tableTheme.bodyCell.base,
               columnIndex > 0 ? tableTheme.bodyCell.split : '',
               isRightAlignedColumn(column) ? tableTheme.bodyCell.rightAligned : '',
-              getColumnCellClass(column),
+              getResolvedColumnCellClass(column, columnIndex),
             ]"
           >
             <slot
@@ -491,7 +606,7 @@ onBeforeUnmount(() => {
 
               <div
                 v-else-if="column.cellRenderer?.kind === 'note'"
-                :class="tableTheme.renderers.note"
+                :class="getNoteContentClass(column, columnIndex)"
               >
                 {{ getColumnValue(row, column.key) }}
               </div>
@@ -505,6 +620,18 @@ onBeforeUnmount(() => {
             v-if="hasRowActions"
             :class="[tableTheme.actionCell, 'relative']"
           >
+            <div aria-hidden="true" :class="tableTheme.actionSizer">
+              <Button
+                v-for="action in rowActions"
+                :key="`sizer-${action.key}`"
+                variant="outline"
+                size="sm"
+                class="border-border/80 bg-background/95 text-foreground shadow-sm"
+                tabindex="-1"
+              >
+                {{ action.label }}
+              </Button>
+            </div>
             <div :class="tableTheme.actionPanel">
               <Button
                 v-for="action in rowActions"

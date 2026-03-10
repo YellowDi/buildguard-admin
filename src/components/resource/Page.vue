@@ -109,7 +109,7 @@ const slots = useSlots()
         />
 
         <div class="min-h-0 min-w-0 flex-1">
-          <div class="min-h-0 min-w-0 w-full overflow-visible pr-8">
+          <div class="min-h-0 min-w-0 w-full overflow-visible">
             <template v-if="sections?.length">
               <Table
                 v-for="section in sections"
