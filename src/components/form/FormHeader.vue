@@ -111,7 +111,8 @@ onUnmounted(() => {
           v-for="action in regularActions"
           :key="action.key"
           :variant="action.variant ?? 'outline'"
-          class="h-9 shrink-0 px-3 sm:h-10 sm:px-4"
+          size="sm"
+          class="shrink-0"
           @click="emitSecondaryAction(action.key)"
         >
           {{ action.label }}
@@ -121,7 +122,8 @@ onUnmounted(() => {
           <AlertDialogTrigger as-child>
             <Button
               :variant="resetAction.variant ?? 'outline'"
-              class="h-9 shrink-0 px-3 sm:h-10 sm:px-4"
+              size="sm"
+              class="shrink-0"
             >
               {{ resetAction.label }}
             </Button>
@@ -145,7 +147,8 @@ onUnmounted(() => {
         <Button
           v-if="primaryAction"
           :disabled="primaryAction.disabled"
-          class="h-9 shrink-0 px-3 sm:h-10 sm:px-4"
+          size="sm"
+          class="shrink-0"
           @click="emitSubmit"
         >
           <i

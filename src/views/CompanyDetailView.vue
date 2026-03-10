@@ -159,7 +159,8 @@ onUnmounted(() => { detailBreadcrumbTitle.value = null })
             <div class="flex w-full items-center justify-start md:w-auto md:justify-end">
               <Button
                 variant="outline"
-                class="h-10 rounded-md border-border/80 bg-background px-5 text-[15px] font-medium text-foreground shadow-none"
+                size="sm"
+                class="border-border/80 bg-background font-medium text-foreground shadow-none"
               >
                 编辑企业资料
               </Button>
