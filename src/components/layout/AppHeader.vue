@@ -15,10 +15,11 @@ import {
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb"
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover"
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
 import { Separator } from "@/components/ui/separator"
 import { RouterLink, useRoute } from "vue-router"
@@ -153,8 +154,8 @@ const visibleTrailingItems = computed(() => {
 
         <BreadcrumbSeparator v-if="collapsedItems.length" class="shrink-0" />
         <BreadcrumbItem v-if="collapsedItems.length" class="shrink-0">
-          <Popover>
-            <PopoverTrigger as-child>
+          <DropdownMenu>
+            <DropdownMenuTrigger as-child>
               <button
                 type="button"
                 class="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
@@ -162,27 +163,31 @@ const visibleTrailingItems = computed(() => {
               >
                 <BreadcrumbEllipsis class="h-8 w-8" />
               </button>
-            </PopoverTrigger>
-            <PopoverContent align="start" class="w-52 p-2">
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" class="w-52 p-1.5">
               <nav class="flex flex-col">
                 <template v-for="item in collapsedItems" :key="`collapsed-${item.title}-${item.to ?? 'current'}`">
-                  <RouterLink
+                  <DropdownMenuItem
                     v-if="item.to"
-                    :to="{ name: item.to }"
-                    class="rounded-md px-3 py-2 text-sm text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                    as-child
                   >
-                    {{ item.title }}
-                  </RouterLink>
+                    <RouterLink
+                      :to="{ name: item.to }"
+                      class="w-full"
+                    >
+                      {{ item.title }}
+                    </RouterLink>
+                  </DropdownMenuItem>
                   <span
                     v-else
-                    class="rounded-md px-3 py-2 text-sm text-muted-foreground"
+                    class="rounded-md px-2 py-1.5 text-sm text-muted-foreground"
                   >
                     {{ item.title }}
                   </span>
                 </template>
               </nav>
-            </PopoverContent>
-          </Popover>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </BreadcrumbItem>
 
         <template v-for="item in visibleTrailingItems" :key="`trailing-${item.title}-${item.to ?? 'current'}`">

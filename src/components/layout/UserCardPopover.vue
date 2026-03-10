@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, watch } from "vue"
 import {
-  PopoverContent,
-  PopoverPortal,
-  PopoverRoot,
-  PopoverTrigger,
-} from "reka-ui"
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { useSidebar } from "@/components/ui/sidebar"
 import { cn } from "@/lib/utils"
 
@@ -107,8 +108,8 @@ function handleLogout() {
 </script>
 
 <template>
-  <PopoverRoot v-model:open="open">
-    <PopoverTrigger as-child>
+  <DropdownMenu v-model:open="open">
+    <DropdownMenuTrigger as-child>
       <button
         type="button"
         class="flex w-full items-center gap-3 rounded-lg px-1 py-1 text-left transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
@@ -123,20 +124,17 @@ function handleLogout() {
         </div>
         <i class="ri-arrow-up-s-line shrink-0 text-base text-muted-foreground" />
       </button>
-    </PopoverTrigger>
-    <PopoverPortal>
-      <PopoverContent
-        :side="'top'"
-        :side-offset="8"
-        :align="'start'"
-        :class="
-          cn(
-            'z-50 w-[280px] overflow-hidden rounded-xl border border-border bg-popover p-0 shadow-[0_10px_24px_rgba(15,23,42,0.08)] dark:shadow-md',
-            'data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95',
-            'data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95',
-          )
-        "
-      >
+    </DropdownMenuTrigger>
+    <DropdownMenuContent
+      :side="'top'"
+      :side-offset="8"
+      :align="'start'"
+      :class="
+        cn(
+          'w-[280px] rounded-xl border-border p-0 shadow-[0_10px_24px_rgba(15,23,42,0.08)] dark:shadow-md',
+        )
+      "
+    >
         <!-- 用户信息卡片 -->
         <div class="flex flex-col gap-0.5 border-b border-border px-3 py-3">
           <div class="flex items-start gap-2">
@@ -188,21 +186,25 @@ function handleLogout() {
           </div>
 
           <!-- 账号登出 -->
-          <button
-            type="button"
+          <DropdownMenuSeparator class="mx-0 my-1 bg-border" />
+          <DropdownMenuItem
+            as-child
             class="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm text-destructive transition-colors hover:bg-destructive/10"
-            @click="handleLogout"
           >
-            <i class="ri-logout-box-r-line text-base" />
-            <span>账号登出</span>
-          </button>
+            <button
+              type="button"
+              @click="handleLogout"
+            >
+              <i class="ri-logout-box-r-line text-base" />
+              <span>账号登出</span>
+            </button>
+          </DropdownMenuItem>
         </div>
 
         <!-- 底部版本信息 -->
         <div class="border-t border-border px-3 py-2">
           <p class="text-xs text-muted-foreground">v.1.5.69 · 服务条款与条件</p>
         </div>
-      </PopoverContent>
-    </PopoverPortal>
-  </PopoverRoot>
+    </DropdownMenuContent>
+  </DropdownMenu>
 </template>
