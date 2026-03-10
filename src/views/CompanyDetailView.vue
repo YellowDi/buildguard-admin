@@ -209,9 +209,9 @@ onUnmounted(() => { detailBreadcrumbTitle.value = null })
 
         <div class="min-w-0 pt-8 xl:pt-0 xl:pl-8">
           <div class="pb-5">
-            <div class="detail-table-scroll">
+            <div class="detail-table-scroll detail-table-scroll--vehicles">
               <div class="detail-table-frame detail-table-frame--vehicles">
-                <div class="detail-table-grid detail-table-grid--vehicles mb-2 items-center gap-4">
+                <div class="detail-table-grid detail-table-grid--vehicles mb-2 items-center gap-3 xl:gap-4">
                   <div class="flex min-w-0 items-center gap-2">
                     <span class="shrink-0 whitespace-nowrap text-[15px] font-semibold leading-none text-foreground">关联车辆</span>
                     <span class="inline-flex min-w-6 items-center justify-center rounded-md bg-muted px-1.5 py-0.5 text-[12px] font-medium leading-none text-muted-foreground">
@@ -233,15 +233,15 @@ onUnmounted(() => { detailBreadcrumbTitle.value = null })
                     <div
                       v-for="(row, idx) in vehiclesGrouped.expiring"
                       :key="`expiring-${idx}`"
-                      class="detail-table-grid detail-table-grid--vehicles min-h-[44px] items-center gap-4 text-[14px] transition-colors hover:bg-accent/35"
+                      class="detail-table-grid detail-table-grid--vehicles min-h-[44px] items-center gap-3 text-[14px] transition-colors hover:bg-accent/35 xl:gap-4"
                     >
                       <div class="flex min-w-0 items-center gap-2 text-foreground">
                         <i class="ri-time-fill text-[18px] text-[#F97316]" />
                         <span class="truncate">{{ row.plate }}</span>
                       </div>
                       <div class="min-w-0 text-foreground">{{ row.operator }}</div>
-                      <div class="min-w-0 text-foreground">{{ row.startDate }}</div>
-                      <div class="min-w-0 text-foreground">{{ row.endDate }}</div>
+                      <div class="min-w-0 whitespace-nowrap text-foreground">{{ row.startDate }}</div>
+                      <div class="min-w-0 whitespace-nowrap text-foreground">{{ row.endDate }}</div>
                       <Button variant="ghost" size="icon-sm" class="h-7 w-7 rounded-md text-muted-foreground hover:text-foreground">
                         <i class="ri-more-line text-[18px]" />
                       </Button>
@@ -256,15 +256,15 @@ onUnmounted(() => { detailBreadcrumbTitle.value = null })
                     <div
                       v-for="(row, idx) in vehiclesGrouped.overdue"
                       :key="`overdue-${idx}`"
-                      class="detail-table-grid detail-table-grid--vehicles min-h-[44px] items-center gap-4 text-[14px] transition-colors hover:bg-accent/35"
+                      class="detail-table-grid detail-table-grid--vehicles min-h-[44px] items-center gap-3 text-[14px] transition-colors hover:bg-accent/35 xl:gap-4"
                     >
                       <div class="flex min-w-0 items-center gap-2 text-foreground">
                         <i class="ri-close-circle-fill text-[18px] text-[#EF4444]" />
                         <span class="truncate">{{ row.plate }}</span>
                       </div>
                       <div class="min-w-0 text-foreground">{{ row.operator }}</div>
-                      <div class="min-w-0 text-foreground">{{ row.startDate }}</div>
-                      <div class="min-w-0 text-foreground">{{ row.endDate }}</div>
+                      <div class="min-w-0 whitespace-nowrap text-foreground">{{ row.startDate }}</div>
+                      <div class="min-w-0 whitespace-nowrap text-foreground">{{ row.endDate }}</div>
                       <Button variant="ghost" size="icon-sm" class="h-7 w-7 rounded-md text-muted-foreground hover:text-foreground">
                         <i class="ri-more-line text-[18px]" />
                       </Button>
@@ -279,15 +279,15 @@ onUnmounted(() => { detailBreadcrumbTitle.value = null })
                     <div
                       v-for="(row, idx) in vehiclesGrouped.normal"
                       :key="`normal-${idx}`"
-                      class="detail-table-grid detail-table-grid--vehicles min-h-[44px] items-center gap-4 text-[14px] transition-colors hover:bg-accent/35"
+                      class="detail-table-grid detail-table-grid--vehicles min-h-[44px] items-center gap-3 text-[14px] transition-colors hover:bg-accent/35 xl:gap-4"
                     >
                       <div class="flex min-w-0 items-center gap-2 text-foreground">
                         <i class="ri-checkbox-circle-fill text-[18px] text-[#22C55E]" />
                         <span class="truncate">{{ row.plate }}</span>
                       </div>
                       <div class="min-w-0 text-foreground">{{ row.operator }}</div>
-                      <div class="min-w-0 text-foreground">{{ row.startDate }}</div>
-                      <div class="min-w-0 text-foreground">{{ row.endDate }}</div>
+                      <div class="min-w-0 whitespace-nowrap text-foreground">{{ row.startDate }}</div>
+                      <div class="min-w-0 whitespace-nowrap text-foreground">{{ row.endDate }}</div>
                       <Button variant="ghost" size="icon-sm" class="h-7 w-7 rounded-md text-muted-foreground hover:text-foreground">
                         <i class="ri-more-line text-[18px]" />
                       </Button>
@@ -381,7 +381,7 @@ onUnmounted(() => { detailBreadcrumbTitle.value = null })
 
 .detail-table-frame--vehicles {
   width: max-content;
-  min-width: 40rem;
+  min-width: 39rem;
 }
 
 .detail-table-frame--employees {
@@ -395,7 +395,7 @@ onUnmounted(() => { detailBreadcrumbTitle.value = null })
 }
 
 .detail-table-grid--vehicles {
-  grid-template-columns: 9rem 4.5rem 8rem 8rem 1.75rem;
+  grid-template-columns: minmax(8.5rem, 1.55fr) minmax(4.5rem, 0.65fr) minmax(8rem, 0.95fr) minmax(8rem, 0.95fr) 2rem;
 }
 
 .detail-table-grid--employees {
@@ -403,14 +403,18 @@ onUnmounted(() => { detailBreadcrumbTitle.value = null })
 }
 
 @media (min-width: 640px) {
+  .detail-table-scroll--vehicles {
+    overflow-x: visible;
+  }
+
   .detail-table-frame--vehicles,
   .detail-table-frame--employees {
-    width: auto;
+    width: 100%;
     min-width: 100%;
   }
 
   .detail-table-grid--vehicles {
-    grid-template-columns: minmax(0, 1.7fr) minmax(0, 0.75fr) minmax(0, 1fr) minmax(0, 1fr) 1.75rem;
+    grid-template-columns: minmax(6rem, 2fr) minmax(3.5rem, 0.6fr) minmax(6.75rem, 0.92fr) minmax(6.75rem, 0.92fr) 2rem;
   }
 
   .detail-table-grid--employees {
