@@ -96,10 +96,10 @@ onUnmounted(() => {
 <template>
   <div ref="sentinelRef" class="h-px w-full -mt-4 shrink-0" aria-hidden="true" />
   <div
-    class="sticky top-[-1rem] z-10 -mx-4 bg-background xl:-mt-px xl:ml-[calc(50%-50vw)] xl:w-screen"
+    class="sticky top-[-1rem] z-10 -mx-4 bg-background xl:-mt-px xl:mx-0"
     :class="{ 'border-b border-border': isSticky }"
   >
-    <div class="mx-auto flex w-full max-w-5xl min-w-0 flex-col gap-4 px-4 pb-4 pt-4 sm:gap-5 md:grid md:grid-cols-[minmax(0,1fr)_max-content] md:gap-8 xl:px-0">
+    <div class="mx-auto flex w-full max-w-4xl min-w-0 flex-col gap-4 px-4 pb-4 pt-4 sm:gap-5 md:grid md:grid-cols-[minmax(0,1fr)_max-content] md:gap-8 xl:px-0">
       <h1 class="min-w-0 text-2xl font-semibold tracking-tight text-foreground">
         {{ title }}
       </h1>

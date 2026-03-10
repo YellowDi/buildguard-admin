@@ -207,7 +207,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <section class="mx-auto flex w-full max-w-5xl min-w-0 flex-col gap-6 pb-8">
+  <section class="mx-auto flex w-full max-w-4xl min-w-0 flex-col gap-6 pb-8">
     <FormHeader
       title="添加从业人员"
       :primary-action="{ label: '添加', icon: 'ri-add-line', disabled: !canSubmit }"
@@ -221,7 +221,7 @@ onUnmounted(() => {
       @submit="handleSubmit"
     />
 
-    <div class="grid min-w-0 gap-8 xl:grid-cols-[minmax(0,1fr)_250px]">
+    <div class="grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1fr)_220px] xl:grid-cols-[minmax(0,1fr)_250px]">
       <form class="min-w-0 space-y-0" @submit.prevent="handleSubmit">
         <div ref="formSectionsRef" class="min-w-0 space-y-0">
           <FormFieldSection
@@ -420,7 +420,7 @@ onUnmounted(() => {
         </div>
       </form>
 
-      <div class="hidden xl:block xl:self-start">
+      <div class="hidden lg:block lg:self-start">
         <FormQuickNav
           v-if="anchorItems.length"
           class="sticky top-24"

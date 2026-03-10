@@ -213,7 +213,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <section class="mx-auto flex w-full max-w-5xl min-w-0 flex-col gap-6 pb-8">
+  <section class="mx-auto flex w-full max-w-4xl min-w-0 flex-col gap-6 pb-8">
     <FormHeader
       title="添加企业"
       :primary-action="{ label: '添加', icon: 'ri-add-line', disabled: !canSubmit }"
@@ -228,7 +228,7 @@ onUnmounted(() => {
     />
 
     <!-- Section：设计稿 表单 + 右侧表单快速导航，无卡片容器 -->
-    <div class="grid min-w-0 gap-8 xl:grid-cols-[minmax(0,1fr)_250px]">
+    <div class="grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1fr)_220px] xl:grid-cols-[minmax(0,1fr)_250px]">
       <form class="min-w-0 space-y-0" @submit.prevent="handleSubmit">
         <!-- 表单：设计稿 Row + Segment 交替，无 Card -->
         <div ref="formSectionsRef" class="min-w-0 space-y-0">
@@ -445,7 +445,7 @@ onUnmounted(() => {
 
       <FormQuickNav
         v-if="anchorItems.length"
-        class="hidden xl:sticky xl:top-24 xl:block xl:self-start"
+        class="hidden lg:sticky lg:top-24 lg:block lg:self-start"
         :items="anchorItems"
         :active-id="activeNavId"
         @select="scrollToSection"
