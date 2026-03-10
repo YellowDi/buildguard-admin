@@ -143,10 +143,10 @@ onUnmounted(() => { detailBreadcrumbTitle.value = null })
 </script>
 
 <template>
-  <section class="mx-auto flex w-full max-w-[1440px] min-w-0 flex-1 flex-col px-4 pb-10 xl:px-8">
+  <section class="mx-auto flex w-full max-w-[1440px] min-w-0 flex-1 flex-col px-0 pb-8 sm:px-4 sm:pb-10 xl:px-8">
     <template v-if="company">
-      <div class="sticky -top-4 z-10 -mx-4 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80">
-        <div class="px-8 py-5">
+      <div class="sticky -top-4 z-10 -mx-0 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80 sm:-mx-4">
+        <div class="px-2 py-4 sm:px-4 sm:py-5 md:px-6 xl:px-8">
           <div class="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
             <div class="min-w-0">
               <h1 class="flex flex-wrap items-end gap-x-3 gap-y-2 text-[24px] tracking-[-0.04em] text-foreground md:text-[28px]">
@@ -168,20 +168,20 @@ onUnmounted(() => { detailBreadcrumbTitle.value = null })
         </div>
       </div>
 
-      <div class="grid min-h-0 flex-1 grid-cols-1 gap-0 px-3 pt-8 xl:grid-cols-[1fr_1px_0.98fr] xl:px-4">
+      <div class="grid min-h-0 flex-1 grid-cols-1 gap-0 px-0 pt-6 sm:px-3 sm:pt-8 xl:grid-cols-[0.88fr_1px_1.12fr] xl:px-4">
         <div class="min-w-0 pr-0 xl:pr-8">
           <div class="pb-7">
-            <h2 class="mb-4 px-3 text-[14px] font-semibold leading-none text-foreground md:text-[15px]">
+            <h2 class="mb-4 px-1 text-[14px] font-semibold leading-none text-foreground sm:px-3 md:text-[15px]">
               企业基础信息
             </h2>
             <div>
               <div
                 v-for="(row, index) in baseInfoRows"
                 :key="`base-${index}`"
-                class="group grid grid-cols-[180px_minmax(0,1fr)] items-center py-1.5 text-[14px] leading-6 transition-colors hover:bg-accent/35"
+                class="group grid grid-cols-[6.5rem_minmax(0,1fr)] items-center py-1.5 text-[14px] leading-6 transition-colors hover:bg-accent/35 sm:grid-cols-[180px_minmax(0,1fr)]"
               >
-                <div class="px-3 text-muted-foreground transition-colors group-hover:text-foreground">{{ row.label }}</div>
-                <div class="truncate pr-5 text-foreground">{{ row.value }}</div>
+                <div class="px-1 text-muted-foreground transition-colors group-hover:text-foreground sm:px-3">{{ row.label }}</div>
+                <div class="truncate pr-2 text-foreground sm:pr-5">{{ row.value }}</div>
               </div>
             </div>
           </div>
@@ -189,17 +189,17 @@ onUnmounted(() => { detailBreadcrumbTitle.value = null })
           <Separator class="bg-border/80" />
 
           <div class="pt-5">
-            <h2 class="mb-4 px-3 text-[14px] font-semibold leading-none text-foreground md:text-[15px]">
+            <h2 class="mb-4 px-1 text-[14px] font-semibold leading-none text-foreground sm:px-3 md:text-[15px]">
               企业联系人
             </h2>
             <div>
               <div
                 v-for="(row, idx) in contactRows"
                 :key="`contact-${idx}`"
-                class="group grid grid-cols-[180px_minmax(0,1fr)] items-center py-1.5 text-[14px] leading-6 transition-colors hover:bg-accent/35"
+                class="group grid grid-cols-[6.5rem_minmax(0,1fr)] items-center py-1.5 text-[14px] leading-6 transition-colors hover:bg-accent/35 sm:grid-cols-[180px_minmax(0,1fr)]"
               >
-                <div class="px-3 text-muted-foreground">{{ row.label }}</div>
-                <div class="pr-5 text-foreground">{{ row.value }}</div>
+                <div class="px-1 text-muted-foreground sm:px-3">{{ row.label }}</div>
+                <div class="pr-2 text-foreground sm:pr-5">{{ row.value }}</div>
               </div>
             </div>
           </div>
@@ -209,86 +209,90 @@ onUnmounted(() => { detailBreadcrumbTitle.value = null })
 
         <div class="min-w-0 pt-8 xl:pt-0 xl:pl-8">
           <div class="pb-5">
-            <div class="mb-2 grid grid-cols-[minmax(0,1fr)_96px_128px_128px_28px] items-center gap-4">
-              <div class="flex items-center gap-2">
-                <span class="text-[15px] font-semibold leading-none text-foreground">关联车辆</span>
-                <span class="inline-flex min-w-6 items-center justify-center rounded-md bg-muted px-1.5 py-0.5 text-[12px] font-medium leading-none text-muted-foreground">
-                  {{ vehicleCount }}
-                </span>
-              </div>
-              <div class="text-[12px] text-muted-foreground">运营商</div>
-              <div class="text-[12px] text-muted-foreground">监管开始时间</div>
-              <div class="text-[12px] text-muted-foreground">服务到期时间</div>
-              <div />
-            </div>
-
-            <div class="space-y-4">
-              <div>
-                <div class="mb-1 flex items-center gap-3">
-                  <div class="shrink-0 text-[14px] font-medium text-muted-foreground">即将到期</div>
-                  <div class="h-px flex-1 bg-border/80" />
-                </div>
-                <div
-                  v-for="(row, idx) in vehiclesGrouped.expiring"
-                  :key="`expiring-${idx}`"
-                  class="grid min-h-[44px] grid-cols-[minmax(0,1fr)_96px_128px_128px_28px] items-center gap-4 text-[14px] transition-colors hover:bg-accent/35"
-                >
-                  <div class="flex min-w-0 items-center gap-2 text-foreground">
-                    <i class="ri-time-fill text-[18px] text-[#F97316]" />
-                    <span class="truncate">{{ row.plate }}</span>
+            <div class="detail-table-scroll">
+              <div class="detail-table-frame detail-table-frame--vehicles">
+                <div class="detail-table-grid detail-table-grid--vehicles mb-2 items-center gap-4">
+                  <div class="flex min-w-0 items-center gap-2">
+                    <span class="shrink-0 whitespace-nowrap text-[15px] font-semibold leading-none text-foreground">关联车辆</span>
+                    <span class="inline-flex min-w-6 items-center justify-center rounded-md bg-muted px-1.5 py-0.5 text-[12px] font-medium leading-none text-muted-foreground">
+                      {{ vehicleCount }}
+                    </span>
                   </div>
-                  <div class="text-foreground">{{ row.operator }}</div>
-                  <div class="text-foreground">{{ row.startDate }}</div>
-                  <div class="text-foreground">{{ row.endDate }}</div>
-                  <Button variant="ghost" size="icon-sm" class="h-7 w-7 rounded-md text-muted-foreground hover:text-foreground">
-                    <i class="ri-more-line text-[18px]" />
-                  </Button>
+                  <div class="whitespace-nowrap text-[12px] text-muted-foreground">运营商</div>
+                  <div class="whitespace-nowrap text-[12px] text-muted-foreground">监管开始时间</div>
+                  <div class="whitespace-nowrap text-[12px] text-muted-foreground">服务到期时间</div>
+                  <div />
                 </div>
-              </div>
 
-              <div>
-                <div class="mb-1 flex items-center gap-3">
-                  <div class="shrink-0 text-[14px] font-medium text-muted-foreground">已逾期</div>
-                  <div class="h-px flex-1 bg-border/80" />
-                </div>
-                <div
-                  v-for="(row, idx) in vehiclesGrouped.overdue"
-                  :key="`overdue-${idx}`"
-                  class="grid min-h-[44px] grid-cols-[minmax(0,1fr)_96px_128px_128px_28px] items-center gap-4 text-[14px] transition-colors hover:bg-accent/35"
-                >
-                  <div class="flex min-w-0 items-center gap-2 text-foreground">
-                    <i class="ri-close-circle-fill text-[18px] text-[#EF4444]" />
-                    <span class="truncate">{{ row.plate }}</span>
+                <div class="space-y-4">
+                  <div>
+                    <div class="mb-1 flex items-center gap-3">
+                      <div class="shrink-0 text-[14px] font-medium text-muted-foreground">即将到期</div>
+                      <div class="h-px flex-1 bg-border/80" />
+                    </div>
+                    <div
+                      v-for="(row, idx) in vehiclesGrouped.expiring"
+                      :key="`expiring-${idx}`"
+                      class="detail-table-grid detail-table-grid--vehicles min-h-[44px] items-center gap-4 text-[14px] transition-colors hover:bg-accent/35"
+                    >
+                      <div class="flex min-w-0 items-center gap-2 text-foreground">
+                        <i class="ri-time-fill text-[18px] text-[#F97316]" />
+                        <span class="truncate">{{ row.plate }}</span>
+                      </div>
+                      <div class="min-w-0 text-foreground">{{ row.operator }}</div>
+                      <div class="min-w-0 text-foreground">{{ row.startDate }}</div>
+                      <div class="min-w-0 text-foreground">{{ row.endDate }}</div>
+                      <Button variant="ghost" size="icon-sm" class="h-7 w-7 rounded-md text-muted-foreground hover:text-foreground">
+                        <i class="ri-more-line text-[18px]" />
+                      </Button>
+                    </div>
                   </div>
-                  <div class="text-foreground">{{ row.operator }}</div>
-                  <div class="text-foreground">{{ row.startDate }}</div>
-                  <div class="text-foreground">{{ row.endDate }}</div>
-                  <Button variant="ghost" size="icon-sm" class="h-7 w-7 rounded-md text-muted-foreground hover:text-foreground">
-                    <i class="ri-more-line text-[18px]" />
-                  </Button>
-                </div>
-              </div>
 
-              <div>
-                <div class="mb-1 flex items-center gap-3">
-                  <div class="shrink-0 text-[14px] font-medium text-muted-foreground">正常</div>
-                  <div class="h-px flex-1 bg-border/80" />
-                </div>
-                <div
-                  v-for="(row, idx) in vehiclesGrouped.normal"
-                  :key="`normal-${idx}`"
-                  class="grid min-h-[44px] grid-cols-[minmax(0,1fr)_96px_128px_128px_28px] items-center gap-4 text-[14px] transition-colors hover:bg-accent/35"
-                >
-                  <div class="flex min-w-0 items-center gap-2 text-foreground">
-                    <i class="ri-checkbox-circle-fill text-[18px] text-[#22C55E]" />
-                    <span class="truncate">{{ row.plate }}</span>
+                  <div>
+                    <div class="mb-1 flex items-center gap-3">
+                      <div class="shrink-0 text-[14px] font-medium text-muted-foreground">已逾期</div>
+                      <div class="h-px flex-1 bg-border/80" />
+                    </div>
+                    <div
+                      v-for="(row, idx) in vehiclesGrouped.overdue"
+                      :key="`overdue-${idx}`"
+                      class="detail-table-grid detail-table-grid--vehicles min-h-[44px] items-center gap-4 text-[14px] transition-colors hover:bg-accent/35"
+                    >
+                      <div class="flex min-w-0 items-center gap-2 text-foreground">
+                        <i class="ri-close-circle-fill text-[18px] text-[#EF4444]" />
+                        <span class="truncate">{{ row.plate }}</span>
+                      </div>
+                      <div class="min-w-0 text-foreground">{{ row.operator }}</div>
+                      <div class="min-w-0 text-foreground">{{ row.startDate }}</div>
+                      <div class="min-w-0 text-foreground">{{ row.endDate }}</div>
+                      <Button variant="ghost" size="icon-sm" class="h-7 w-7 rounded-md text-muted-foreground hover:text-foreground">
+                        <i class="ri-more-line text-[18px]" />
+                      </Button>
+                    </div>
                   </div>
-                  <div class="text-foreground">{{ row.operator }}</div>
-                  <div class="text-foreground">{{ row.startDate }}</div>
-                  <div class="text-foreground">{{ row.endDate }}</div>
-                  <Button variant="ghost" size="icon-sm" class="h-7 w-7 rounded-md text-muted-foreground hover:text-foreground">
-                    <i class="ri-more-line text-[18px]" />
-                  </Button>
+
+                  <div>
+                    <div class="mb-1 flex items-center gap-3">
+                      <div class="shrink-0 text-[14px] font-medium text-muted-foreground">正常</div>
+                      <div class="h-px flex-1 bg-border/80" />
+                    </div>
+                    <div
+                      v-for="(row, idx) in vehiclesGrouped.normal"
+                      :key="`normal-${idx}`"
+                      class="detail-table-grid detail-table-grid--vehicles min-h-[44px] items-center gap-4 text-[14px] transition-colors hover:bg-accent/35"
+                    >
+                      <div class="flex min-w-0 items-center gap-2 text-foreground">
+                        <i class="ri-checkbox-circle-fill text-[18px] text-[#22C55E]" />
+                        <span class="truncate">{{ row.plate }}</span>
+                      </div>
+                      <div class="min-w-0 text-foreground">{{ row.operator }}</div>
+                      <div class="min-w-0 text-foreground">{{ row.startDate }}</div>
+                      <div class="min-w-0 text-foreground">{{ row.endDate }}</div>
+                      <Button variant="ghost" size="icon-sm" class="h-7 w-7 rounded-md text-muted-foreground hover:text-foreground">
+                        <i class="ri-more-line text-[18px]" />
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -297,51 +301,55 @@ onUnmounted(() => { detailBreadcrumbTitle.value = null })
           <Separator class="bg-border/80" />
 
           <div class="pt-5">
-            <div class="mb-2 grid grid-cols-[minmax(0,1fr)_160px_28px] items-center gap-4">
-              <div class="flex items-center gap-2">
-                <span class="text-[15px] font-semibold leading-none text-foreground">关联从业人员</span>
-                <span class="inline-flex min-w-6 items-center justify-center rounded-md bg-muted px-1.5 py-0.5 text-[12px] font-medium leading-none text-muted-foreground">
-                  {{ employeeCount }}
-                </span>
-              </div>
-              <div class="text-[12px] text-muted-foreground">绑定车辆</div>
-              <div />
-            </div>
+            <div class="detail-table-scroll">
+              <div class="detail-table-frame detail-table-frame--employees">
+                <div class="detail-table-grid detail-table-grid--employees mb-2 items-center gap-4">
+                  <div class="flex min-w-0 items-center gap-2">
+                    <span class="shrink-0 whitespace-nowrap text-[15px] font-semibold leading-none text-foreground">关联从业人员</span>
+                    <span class="inline-flex min-w-6 items-center justify-center rounded-md bg-muted px-1.5 py-0.5 text-[12px] font-medium leading-none text-muted-foreground">
+                      {{ employeeCount }}
+                    </span>
+                  </div>
+                  <div class="whitespace-nowrap text-[12px] text-muted-foreground">绑定车辆</div>
+                  <div />
+                </div>
 
-            <div class="space-y-4">
-              <div>
-                <div class="mb-1 flex items-center gap-3">
-                  <div class="shrink-0 text-[14px] font-medium text-muted-foreground">司机</div>
-                  <div class="h-px flex-1 bg-border/80" />
-                </div>
-                <div
-                  v-for="(row, idx) in driverRows"
-                  :key="`driver-${idx}`"
-                  class="grid min-h-[44px] grid-cols-[minmax(0,1fr)_160px_32px] items-center gap-4 text-[14px] transition-colors hover:bg-accent/35"
-                >
-                  <div class="truncate text-foreground">{{ row.name }} {{ row.phone }}</div>
-                  <div class="text-foreground">{{ row.vehicle }}</div>
-                  <Button variant="ghost" size="icon-sm" class="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground">
-                    <i class="ri-more-line text-[18px]" />
-                  </Button>
-                </div>
-              </div>
+                <div class="space-y-4">
+                  <div>
+                    <div class="mb-1 flex items-center gap-3">
+                      <div class="shrink-0 text-[14px] font-medium text-muted-foreground">司机</div>
+                      <div class="h-px flex-1 bg-border/80" />
+                    </div>
+                    <div
+                      v-for="(row, idx) in driverRows"
+                      :key="`driver-${idx}`"
+                      class="detail-table-grid detail-table-grid--employees min-h-[44px] items-center gap-4 text-[14px] transition-colors hover:bg-accent/35"
+                    >
+                      <div class="truncate text-foreground">{{ row.name }} {{ row.phone }}</div>
+                      <div class="min-w-0 text-foreground">{{ row.vehicle }}</div>
+                      <Button variant="ghost" size="icon-sm" class="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground">
+                        <i class="ri-more-line text-[18px]" />
+                      </Button>
+                    </div>
+                  </div>
 
-              <div>
-                <div class="mb-1 flex items-center gap-3">
-                  <div class="shrink-0 text-[14px] font-medium text-muted-foreground">押运员</div>
-                  <div class="h-px flex-1 bg-border/80" />
-                </div>
-                <div
-                  v-for="(row, idx) in escortRows"
-                  :key="`escort-${idx}`"
-                  class="grid min-h-[44px] grid-cols-[minmax(0,1fr)_160px_32px] items-center gap-4 text-[14px] transition-colors hover:bg-accent/35"
-                >
-                  <div class="truncate text-foreground">{{ row.name }} {{ row.phone }}</div>
-                  <div class="text-foreground">{{ row.vehicle }}</div>
-                  <Button variant="ghost" size="icon-sm" class="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground">
-                    <i class="ri-more-line text-[18px]" />
-                  </Button>
+                  <div>
+                    <div class="mb-1 flex items-center gap-3">
+                      <div class="shrink-0 text-[14px] font-medium text-muted-foreground">押运员</div>
+                      <div class="h-px flex-1 bg-border/80" />
+                    </div>
+                    <div
+                      v-for="(row, idx) in escortRows"
+                      :key="`escort-${idx}`"
+                      class="detail-table-grid detail-table-grid--employees min-h-[44px] items-center gap-4 text-[14px] transition-colors hover:bg-accent/35"
+                    >
+                      <div class="truncate text-foreground">{{ row.name }} {{ row.phone }}</div>
+                      <div class="min-w-0 text-foreground">{{ row.vehicle }}</div>
+                      <Button variant="ghost" size="icon-sm" class="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground">
+                        <i class="ri-more-line text-[18px]" />
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -360,3 +368,53 @@ onUnmounted(() => { detailBreadcrumbTitle.value = null })
     </template>
   </section>
 </template>
+
+<style scoped>
+.detail-table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.detail-table-frame {
+  min-width: 100%;
+}
+
+.detail-table-frame--vehicles {
+  width: max-content;
+  min-width: 40rem;
+}
+
+.detail-table-frame--employees {
+  width: max-content;
+  min-width: 24rem;
+}
+
+.detail-table-grid {
+  display: grid;
+  min-width: 0;
+}
+
+.detail-table-grid--vehicles {
+  grid-template-columns: 9rem 4.5rem 8rem 8rem 1.75rem;
+}
+
+.detail-table-grid--employees {
+  grid-template-columns: 12rem 7rem 2rem;
+}
+
+@media (min-width: 640px) {
+  .detail-table-frame--vehicles,
+  .detail-table-frame--employees {
+    width: auto;
+    min-width: 100%;
+  }
+
+  .detail-table-grid--vehicles {
+    grid-template-columns: minmax(0, 1.7fr) minmax(0, 0.75fr) minmax(0, 1fr) minmax(0, 1fr) 1.75rem;
+  }
+
+  .detail-table-grid--employees {
+    grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) 2rem;
+  }
+}
+</style>
