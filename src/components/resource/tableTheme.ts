@@ -18,7 +18,7 @@ export const tableTheme = {
   summary: "px-3 py-3 text-[13px] text-muted-foreground",
   indexHeader: {
     base: "w-8 min-w-8 py-2 pr-2 text-right font-normal",
-    static: "border-b border-border",
+    static: "",
     sticky: "sticky z-20 bg-background bg-clip-padding",
   },
   indexCell: "w-8 min-w-8 py-3 pr-2 text-right text-muted-foreground whitespace-nowrap",
