@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, useSlots } from "vue"
+import { computed, useSlots } from "vue"
 
+import SectionHeader from "@/components/layout/SectionHeader.vue"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -50,8 +51,6 @@ const emit = defineEmits<{
 }>()
 
 const slots = useSlots()
-const isSticky = ref(false)
-const sentinelRef = ref<HTMLElement | null>(null)
 
 const regularActions = computed(() =>
   (props.secondaryActions ?? []).filter(action => action.key !== "reset"),
@@ -76,88 +75,72 @@ function emitReset() {
   emit("action", "reset")
   emit("reset")
 }
-
-let stickyObserver: IntersectionObserver | null = null
-
-onMounted(() => {
-  if (!sentinelRef.value) return
-  stickyObserver = new IntersectionObserver(
-    ([entry]) => { isSticky.value = !entry.isIntersecting },
-    { threshold: 0, rootMargin: "64px 0px 0px 0px" },
-  )
-  stickyObserver.observe(sentinelRef.value)
-})
-
-onUnmounted(() => {
-  stickyObserver?.disconnect()
-})
 </script>
 
 <template>
-  <div ref="sentinelRef" class="h-px w-full -mt-4 shrink-0" aria-hidden="true" />
-  <div
-    class="sticky top-[-1rem] z-10 -mx-4 bg-background xl:-mt-px xl:mx-0"
-    :class="{ 'border-b border-border': isSticky }"
-  >
-    <div class="mx-auto flex w-full max-w-4xl min-w-0 flex-col gap-4 px-4 pb-4 pt-4 sm:gap-5 md:grid md:grid-cols-[minmax(0,1fr)_max-content] md:gap-8 xl:px-0">
-      <h1 class="min-w-0 text-2xl font-semibold tracking-tight text-foreground">
-        {{ title }}
-      </h1>
-      <div
-        v-if="hasActions"
-        class="flex w-full min-w-0 items-center gap-2 overflow-x-auto overflow-y-hidden whitespace-nowrap md:w-auto md:justify-end"
+  <div class="sticky top-0 z-10 mx-0 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80 sm:-mx-4">
+    <div class="px-4 py-5">
+      <SectionHeader
+        :title="title"
+        :has-actions="hasActions"
+        layout-class="gap-4 md:gap-5"
+        actions-class="w-full min-w-0 gap-2 overflow-x-auto overflow-y-hidden whitespace-nowrap md:w-auto"
       >
-        <Button
-          v-for="action in regularActions"
-          :key="action.key"
-          :variant="action.variant ?? 'outline'"
-          size="sm"
-          class="shrink-0"
-          @click="emitSecondaryAction(action.key)"
-        >
-          {{ action.label }}
-        </Button>
-
-        <AlertDialog v-if="resetAction && resetDialog">
-          <AlertDialogTrigger as-child>
+        <template #actions>
+          <template v-if="hasActions">
             <Button
-              :variant="resetAction.variant ?? 'outline'"
+              v-for="action in regularActions"
+              :key="action.key"
+              :variant="action.variant ?? 'outline'"
               size="sm"
               class="shrink-0"
+              @click="emitSecondaryAction(action.key)"
             >
-              {{ resetAction.label }}
+              {{ action.label }}
             </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>{{ resetDialog.title ?? "确认重置表单？" }}</AlertDialogTitle>
-              <AlertDialogDescription>{{ resetDialog.description }}</AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>{{ resetDialog.cancelText ?? "取消" }}</AlertDialogCancel>
-              <AlertDialogAction @click="emitReset">
-                {{ resetDialog.confirmText ?? "确认重置" }}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
 
-        <slot name="actions" />
+            <AlertDialog v-if="resetAction && resetDialog">
+              <AlertDialogTrigger as-child>
+                <Button
+                  :variant="resetAction.variant ?? 'outline'"
+                  size="sm"
+                  class="shrink-0"
+                >
+                  {{ resetAction.label }}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>{{ resetDialog.title ?? "确认重置表单？" }}</AlertDialogTitle>
+                  <AlertDialogDescription>{{ resetDialog.description }}</AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>{{ resetDialog.cancelText ?? "取消" }}</AlertDialogCancel>
+                  <AlertDialogAction @click="emitReset">
+                    {{ resetDialog.confirmText ?? "确认重置" }}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
 
-        <Button
-          v-if="primaryAction"
-          :disabled="primaryAction.disabled"
-          size="sm"
-          class="shrink-0"
-          @click="emitSubmit"
-        >
-          <i
-            v-if="primaryAction.icon"
-            :class="cn(primaryAction.icon, 'mr-2 text-base')"
-          />
-          {{ primaryAction.label }}
-        </Button>
-      </div>
+            <slot name="actions" />
+
+            <Button
+              v-if="primaryAction"
+              :disabled="primaryAction.disabled"
+              size="sm"
+              class="shrink-0"
+              @click="emitSubmit"
+            >
+              <i
+                v-if="primaryAction.icon"
+                :class="cn(primaryAction.icon, 'mr-2 text-base')"
+              />
+              {{ primaryAction.label }}
+            </Button>
+          </template>
+        </template>
+      </SectionHeader>
     </div>
   </div>
 </template>

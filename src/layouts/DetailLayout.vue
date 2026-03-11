@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, useSlots } from "vue"
 
+import SectionHeader from "@/components/layout/SectionHeader.vue"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 
@@ -33,26 +34,11 @@ const hasSecondary = computed(() => Boolean(slots.secondary))
     <template v-if="!props.empty">
       <div class="sticky top-0 z-10 -mx-0 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80 sm:-mx-4">
         <div class="px-4 py-5">
-          <div class="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
-            <div class="min-w-0">
-              <h1 class="flex flex-wrap items-end gap-x-3 gap-y-2 text-[24px] tracking-[-0.04em] text-foreground md:text-[28px]">
-                <span class="font-semibold leading-none">{{ props.title }}</span>
-                <span
-                  v-if="props.subtitle"
-                  class="text-[20px] font-normal leading-none text-muted-foreground md:text-[22px]"
-                >
-                  {{ props.subtitle }}
-                </span>
-              </h1>
-            </div>
-
-            <div
-              v-if="$slots.actions"
-              class="flex w-full items-center justify-start md:w-auto md:justify-end"
-            >
+          <SectionHeader :title="props.title" :subtitle="props.subtitle" :has-actions="Boolean($slots.actions)">
+            <template #actions>
               <slot name="actions" />
-            </div>
-          </div>
+            </template>
+          </SectionHeader>
         </div>
       </div>
 
