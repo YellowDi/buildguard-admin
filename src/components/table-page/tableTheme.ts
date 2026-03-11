@@ -4,7 +4,7 @@ import type {
   TableColumnFormat,
   TableColumnTone,
   TableColumnWidth,
-} from "@/components/resource/types"
+} from "@/components/table-page/types"
 import { cn } from "@/lib/utils"
 
 export const tableTheme = {

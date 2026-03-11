@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { useRouter } from "vue-router"
 
-import ResourcePage from "@/components/resource/ResourcePage.vue"
-import { useResourceList } from "@/components/resource/useResourceList"
-import type { ResourceListSchema } from "@/components/resource/types"
-import companiesData from "@/data/companies.json"
+import TablePage from "@/components/table-page/TablePage.vue"
+import { useTablePage } from "@/components/table-page/useTablePage"
+import type { TablePageSchema } from "@/components/table-page/types"
+import companiesData from "@/mocks/companies.json"
 
 // 1. 先定义“表格每一行”的数据结构。
 // 新建同类页面时，优先把这里改成接口返回或本地 mock 的真实行类型。
@@ -40,7 +40,7 @@ const companies = (companiesData as RawCompanyRecord[]).map((company) => {
   }
 })
 
-// 3. 用一个 schema 描述整张资源表格页。
+// 3. 用一个 schema 描述整张通用表格页。
 // 页面作者主要维护这里：
 // - 顶部标题、行主键
 // - columns: 列展示、列筛选、列排序
@@ -48,8 +48,8 @@ const companies = (companiesData as RawCompanyRecord[]).map((company) => {
 // - sort: 默认排序和排序持久化 key
 // - tabs: 顶部标签页如何分组
 //
-// 这就是以后新建表格页时最主要的工作区，原则上不需要理解资源层内部实现。
-const schema: ResourceListSchema<CompanyRecord> = {
+// 这就是以后新建表格页时最主要的工作区，原则上不需要理解 table-page 层内部实现。
+const schema: TablePageSchema<CompanyRecord> = {
   title: "企业",
   rowKey: "id",
   data: companies,
@@ -213,9 +213,9 @@ const schema: ResourceListSchema<CompanyRecord> = {
   },
 }
 
-// 4. 把 schema 交给通用资源控制器。
+// 4. 把 schema 交给通用表格页控制器。
 // 它会统一产出页面渲染所需的 tabs、filters、rows、sort state 等响应式状态。
-const page = useResourceList(schema)
+const page = useTablePage(schema)
 const router = useRouter()
 
 function handleCreateCompany() {
@@ -272,6 +272,6 @@ function buildPageFilterText(row: CompanyRecord) {
 <template>
   <!-- 5. 页面模板层保持极薄。
        以后新建同类页面时，理想状态就是：
-       定义行类型 -> 准备数据 -> 写 schema -> 渲染 ResourcePage。 -->
-  <ResourcePage :page="page" @primary-action="handleCreateCompany" />
+       定义行类型 -> 准备数据 -> 写 schema -> 渲染 TablePage。 -->
+  <TablePage :page="page" @primary-action="handleCreateCompany" />
 </template>

@@ -1,12 +1,12 @@
 <script setup lang="ts">
 import type { PropType } from "vue"
 
-import Page from "@/components/resource/Page.vue"
-import type { ResourceListController } from "@/components/resource/useResourceList"
+import Page from "@/components/table-page/TablePageShell.vue"
+import type { TablePageController } from "@/components/table-page/useTablePage"
 
 defineProps({
   page: {
-    type: Object as PropType<ResourceListController<any>>,
+    type: Object as PropType<TablePageController<any>>,
     required: true,
   },
 })

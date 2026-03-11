@@ -2,14 +2,14 @@
 import { computed, ref } from "vue"
 
 import { Button } from "@/components/ui/button"
-import DateFilterPopover from "@/components/resource/DateFilterPopover.vue"
-import FilterChip from "@/components/resource/FilterChip.vue"
-import NumberFilterPopover from "@/components/resource/NumberFilterPopover.vue"
-import SortPopover from "@/components/resource/SortPopover.vue"
-import TagFilterPopover from "@/components/resource/TagFilterPopover.vue"
-import TextFilterPopover from "@/components/resource/TextFilterPopover.vue"
+import DateFilterPopover from "@/components/table-page/TableDateFilterPopover.vue"
+import FilterChip from "@/components/table-page/TableFilterChip.vue"
+import NumberFilterPopover from "@/components/table-page/TableNumberFilterPopover.vue"
+import SortPopover from "@/components/table-page/TableSortPopover.vue"
+import TagFilterPopover from "@/components/table-page/TableTagFilterPopover.vue"
+import TextFilterPopover from "@/components/table-page/TableTextFilterPopover.vue"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import type { SortFieldOption, SortRule } from "@/components/resource/SortPopover.vue"
+import type { SortFieldOption, SortRule } from "@/components/table-page/TableSortPopover.vue"
 import type {
   DateFilterState,
   HeaderField,
@@ -17,7 +17,7 @@ import type {
   NumberFilterState,
   TagFilterState,
   TextFilterState,
-} from "@/components/resource/types"
+} from "@/components/table-page/types"
 
 const props = withDefaults(defineProps<{
   title: string

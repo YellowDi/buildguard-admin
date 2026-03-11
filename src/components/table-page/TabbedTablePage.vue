@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { computed, type PropType } from "vue"
 
-import Page from "@/components/resource/Page.vue"
-import type { HeaderTab } from "@/components/resource/types"
-import type { ResourceListController } from "@/components/resource/useResourceList"
+import Page from "@/components/table-page/TablePageShell.vue"
+import type { HeaderTab } from "@/components/table-page/types"
+import type { TablePageController } from "@/components/table-page/useTablePage"
 
 const props = defineProps({
   title: {
@@ -15,7 +15,7 @@ const props = defineProps({
     required: true,
   },
   activePage: {
-    type: Object as PropType<ResourceListController<any>>,
+    type: Object as PropType<TablePageController<any>>,
     required: true,
   },
 })

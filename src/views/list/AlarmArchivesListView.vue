@@ -1,43 +1,55 @@
 <script setup lang="ts">
-import ResourcePage from "@/components/resource/ResourcePage.vue"
-import { useResourceList } from "@/components/resource/useResourceList"
-import type { ResourceListSchema } from "@/components/resource/types"
-import alarmQueriesData from "@/data/alarm-queries.json"
+import TablePage from "@/components/table-page/TablePage.vue"
+import { useTablePage } from "@/components/table-page/useTablePage"
+import type { TablePageSchema } from "@/components/table-page/types"
+import alarmArchivesData from "@/mocks/alarm-archives.json"
 
-type AlarmQueryRecord = {
+type AlarmArchiveRecord = {
   id: number
+  archiveNumber: string
   plateNumber: string
   company: string
+  alarmType: string
   riskLevel: string
-  latestAlarm: string
-  alarmTime: string
-  status: string
-  handler: string
+  archivedAt: string
+  archiveStatus: string
+  archivedBy: string
   note: string
 }
 
-const alarmQueries = alarmQueriesData as AlarmQueryRecord[]
+const alarmArchives = alarmArchivesData as AlarmArchiveRecord[]
 
-const schema: ResourceListSchema<AlarmQueryRecord> = {
-  title: "报警查询",
+const schema: TablePageSchema<AlarmArchiveRecord> = {
+  title: "历史归档",
   rowKey: "id",
-  data: alarmQueries,
+  data: alarmArchives,
   showIndex: true,
   stickyHeader: true,
   rowActions: [
     {
       key: "view-detail",
-      label: "查看详情",
-      onClick: row => console.info("查看报警详情", row),
+      label: "查看归档",
+      onClick: row => console.info("查看历史归档", row),
     },
   ],
   columns: [
     {
-      key: "plateNumber",
-      label: "车牌号",
+      key: "archiveNumber",
+      label: "归档编号",
       filterType: "text",
       emphasis: "strong",
       tone: "primary",
+      filter: {
+        type: "text",
+        placeholder: "输入归档编号",
+        defaultVisible: true,
+      },
+      sort: true,
+    },
+    {
+      key: "plateNumber",
+      label: "车牌号",
+      filterType: "text",
       filter: {
         type: "text",
         placeholder: "输入车牌号",
@@ -57,7 +69,7 @@ const schema: ResourceListSchema<AlarmQueryRecord> = {
       sort: true,
     },
     {
-      key: "latestAlarm",
+      key: "alarmType",
       label: "报警类型",
       filterType: "tag",
       filter: {
@@ -72,27 +84,26 @@ const schema: ResourceListSchema<AlarmQueryRecord> = {
       filterType: "tag",
       filter: {
         type: "tag",
-        defaultVisible: true,
       },
       sort: {
         value: row => getRiskLevelWeight(row.riskLevel),
       },
     },
     {
-      key: "alarmTime",
-      label: "报警时间",
+      key: "archivedAt",
+      label: "归档时间",
       filterType: "time",
       format: "numeric",
       filter: {
         type: "date",
         defaultVisible: true,
-        value: row => extractDatePart(row.alarmTime),
+        value: row => extractDatePart(row.archivedAt),
       },
       sort: true,
     },
     {
-      key: "status",
-      label: "处理状态",
+      key: "archiveStatus",
+      label: "归档状态",
       filterType: "tag",
       tone: "warning",
       filter: {
@@ -102,18 +113,18 @@ const schema: ResourceListSchema<AlarmQueryRecord> = {
       sort: true,
     },
     {
-      key: "handler",
-      label: "处理人",
+      key: "archivedBy",
+      label: "归档人",
       filterType: "text",
       filter: {
         type: "text",
-        placeholder: "输入处理人",
+        placeholder: "输入归档人",
       },
       sort: true,
     },
     {
       key: "note",
-      label: "备注",
+      label: "归档说明",
       filterType: "none",
       variant: "note",
       format: "note",
@@ -133,18 +144,18 @@ const schema: ResourceListSchema<AlarmQueryRecord> = {
     },
   ],
   sort: {
-    storageKey: "alarm-queries-sort-preferences",
-    initialField: "alarmTime",
+    storageKey: "alarm-archives-sort-preferences",
+    initialField: "archivedAt",
     initialDirection: "desc",
   },
   tabs: {
     mode: "enum",
     all: { label: "全部", value: "all" },
-    field: "status",
+    field: "archiveStatus",
   },
 }
 
-const page = useResourceList(schema)
+const page = useTablePage(schema)
 
 function extractDatePart(value: string) {
   const [datePart] = value.split(" ")
@@ -158,20 +169,21 @@ function getRiskLevelWeight(value: string) {
   return 0
 }
 
-function buildPageFilterText(row: AlarmQueryRecord) {
+function buildPageFilterText(row: AlarmArchiveRecord) {
   return [
+    row.archiveNumber,
     row.plateNumber,
     row.company,
-    row.latestAlarm,
+    row.alarmType,
     row.riskLevel,
-    row.alarmTime,
-    row.status,
-    row.handler,
+    row.archivedAt,
+    row.archiveStatus,
+    row.archivedBy,
     row.note,
   ].join(" ")
 }
 </script>
 
 <template>
-  <ResourcePage :page="page" />
+  <TablePage :page="page" />
 </template>

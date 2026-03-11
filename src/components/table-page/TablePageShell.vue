@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { useSlots } from "vue"
 
-import Header from "@/components/resource/Header.vue"
-import Table from "@/components/resource/Table.vue"
-import type { SortFieldOption, SortRule } from "@/components/resource/SortPopover.vue"
+import Header from "@/components/table-page/TablePageHeader.vue"
+import Table from "@/components/table-page/TablePageTable.vue"
+import type { SortFieldOption, SortRule } from "@/components/table-page/TableSortPopover.vue"
 import type {
   DateFilterState,
   HeaderField,
@@ -14,7 +14,7 @@ import type {
   TableSection,
   TagFilterState,
   TextFilterState,
-} from "@/components/resource/types"
+} from "@/components/table-page/types"
 
 defineProps<{
   title: string
@@ -68,7 +68,7 @@ const slots = useSlots()
 <template>
   <section
     class="-mx-4 flex min-h-0 min-w-0 flex-1 flex-col bg-background"
-    style="--resource-table-sticky-top: -1rem;"
+    style="--table-page-sticky-top: -1rem;"
   >
     <div class="flex min-h-0 min-w-0 flex-1 flex-col pb-3 pt-3">
       <div class="flex min-h-0 min-w-0 flex-1 flex-col">

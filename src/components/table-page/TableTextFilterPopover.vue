@@ -2,8 +2,8 @@
 import { nextTick, onMounted, ref, watch } from "vue"
 
 import { Input } from "@/components/ui/input"
-import PopoverSelect from "@/components/resource/PopoverSelect.vue"
-import type { TextFilterOperator, TextFilterState } from "@/components/resource/types"
+import PopoverSelect from "@/components/table-page/TablePopoverSelect.vue"
+import type { TextFilterOperator, TextFilterState } from "@/components/table-page/types"
 
 const props = defineProps<{
   title: string

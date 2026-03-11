@@ -1,9 +1,9 @@
 <script setup lang="ts">
 import { ref } from "vue"
 
-import PopoverSelect from "@/components/resource/PopoverSelect.vue"
+import PopoverSelect from "@/components/table-page/TablePopoverSelect.vue"
 import { Checkbox } from "@/components/ui/checkbox"
-import type { TagFilterOperator, TagFilterState } from "@/components/resource/types"
+import type { TagFilterOperator, TagFilterState } from "@/components/table-page/types"
 
 const props = defineProps<{
   title: string

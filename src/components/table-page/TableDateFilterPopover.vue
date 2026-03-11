@@ -2,9 +2,9 @@
 import { getLocalTimeZone, parseDate, today } from "@internationalized/date"
 import { computed, nextTick, onMounted, ref, watch } from "vue"
 
-import PopoverSelect from "@/components/resource/PopoverSelect.vue"
+import PopoverSelect from "@/components/table-page/TablePopoverSelect.vue"
 import { Calendar, RangeCalendar } from "@/components/ui/calendar"
-import type { DateFilterOperator, DateFilterPreset, DateFilterState } from "@/components/resource/types"
+import type { DateFilterOperator, DateFilterPreset, DateFilterState } from "@/components/table-page/types"
 
 const props = defineProps<{
   title: string

@@ -2,10 +2,10 @@
 import { computed, ref } from "vue"
 import { useRouter } from "vue-router"
 
-import TabbedPage from "@/components/resource/TabbedPage.vue"
-import { useResourceList } from "@/components/resource/useResourceList"
-import type { HeaderTab, ResourceListSchema } from "@/components/resource/types"
-import vehiclesData from "@/data/vehicles.json"
+import TabbedTablePage from "@/components/table-page/TabbedTablePage.vue"
+import { useTablePage } from "@/components/table-page/useTablePage"
+import type { HeaderTab, TablePageSchema } from "@/components/table-page/types"
+import vehiclesData from "@/mocks/vehicles.json"
 
 // 1. 先定义“表格每一行”的数据结构。
 // 车辆页是多表格页，所以这里会有多种行类型，分别对应不同子表。
@@ -61,8 +61,8 @@ const router = useRouter()
 // - 单表格页：一个 schema -> 一个 page
 // - 多表格页：多个 schema -> 多个 page -> 顶层 tab 决定当前显示哪个 page
 //
-// 每一个子表本身仍然遵循“数据 -> schema -> useResourceList”的唯一方式。
-const operatingSchema: ResourceListSchema<OperatingVehicleRecord> = {
+// 每一个子表本身仍然遵循“数据 -> schema -> useTablePage”的唯一方式。
+const operatingSchema: TablePageSchema<OperatingVehicleRecord> = {
   title: "车辆",
   rowKey: "plateNumber",
   data: operatingVehicles,
@@ -157,7 +157,7 @@ const operatingSchema: ResourceListSchema<OperatingVehicleRecord> = {
 }
 
 // 报警车辆子表 schema。
-const alarmSchema: ResourceListSchema<AlarmVehicleRecord> = {
+const alarmSchema: TablePageSchema<AlarmVehicleRecord> = {
   title: "车辆",
   rowKey: "plateNumber",
   data: alarmVehicles,
@@ -247,7 +247,7 @@ const alarmSchema: ResourceListSchema<AlarmVehicleRecord> = {
 }
 
 // 年检与维保子表 schema。
-const inspectionSchema: ResourceListSchema<InspectionVehicleRecord> = {
+const inspectionSchema: TablePageSchema<InspectionVehicleRecord> = {
   title: "车辆",
   rowKey: "plateNumber",
   data: inspectionVehicles,
@@ -338,9 +338,9 @@ const inspectionSchema: ResourceListSchema<InspectionVehicleRecord> = {
 
 // 4. 每个 schema 各自生成一个 page。
 // 这一步之后，每个子表都已经拥有完整的筛选、排序和表格状态。
-const operatingPage = useResourceList(operatingSchema)
-const alarmPage = useResourceList(alarmSchema)
-const inspectionPage = useResourceList(inspectionSchema)
+const operatingPage = useTablePage(operatingSchema)
+const alarmPage = useTablePage(alarmSchema)
+const inspectionPage = useTablePage(inspectionSchema)
 
 const activeTab = ref(VEHICLE_TAB_OVERVIEW)
 
@@ -370,7 +370,7 @@ const tabs = computed<HeaderTab[]>(() => [
 // 新建类似页面时，推荐一直沿用这个模式：
 // - 把多个 page 收到一个 registry
 // - 通过 activeTab 选出 activePage
-// - 模板只渲染 TabbedPage
+// - 模板只渲染 TabbedTablePage
 const pageRegistry = {
   [VEHICLE_TAB_OVERVIEW]: operatingPage,
   [VEHICLE_TAB_ALARMS]: alarmPage,
@@ -451,7 +451,7 @@ function getDaysUntil(dateString: string) {
 <template>
   <!-- 7. 页面模板层保持极薄。
        多表格页也不要自己桥接每种筛选事件，而是把当前 activePage 交给统一页面壳。 -->
-  <TabbedPage
+  <TabbedTablePage
     title="车辆"
     :tabs="tabs"
     :active-page="activePage"

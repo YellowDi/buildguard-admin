@@ -18,7 +18,7 @@ import UserCardPopover from "@/components/layout/UserCardPopover.vue"
 import { Calendar } from "@/components/ui/calendar"
 import Input from "@/components/ui/input/Input.vue"
 import { Switch } from "@/components/ui/switch"
-import inboxData from "@/data/inbox.json"
+import inboxData from "@/mocks/inbox.json"
 
 type TopTabId = "home" | "calendar" | "inbox"
 

@@ -1,19 +1,19 @@
 import { createRouter, createWebHistory } from "vue-router"
 
 import AdminLayout from "@/layouts/AdminLayout.vue"
-import AlarmArchivesView from "@/views/AlarmArchivesView.vue"
+import AlarmArchivesView from "@/views/list/AlarmArchivesListView.vue"
 import LoginView from "@/views/auth/LoginView.vue"
 import OtpView from "@/views/auth/OtpView.vue"
 import SignupView from "@/views/auth/SignupView.vue"
-import AlarmQueriesView from "@/views/AlarmQueriesView.vue"
-import CompaniesView from "@/views/CompaniesView.vue"
+import AlarmQueriesView from "@/views/list/AlarmQueriesListView.vue"
+import CompaniesView from "@/views/list/CompaniesListView.vue"
 import CompanyDetailView from "@/views/detail/CompanyDetailView.vue"
 import DashboardView from "@/views/dashboard/DashboardView.vue"
 import CompanyCreateView from "@/views/form/CompanyCreateView.vue"
 import UserCreateView from "@/views/form/UserCreateView.vue"
 import VehicleCreateView from "@/views/form/VehicleCreateView.vue"
-import UsersView from "@/views/UsersView.vue"
-import VehiclesView from "@/views/VehiclesView.vue"
+import UsersView from "@/views/list/UsersListView.vue"
+import VehiclesView from "@/views/list/VehiclesListView.vue"
 
 type BreadcrumbMetaItem = {
   title: string

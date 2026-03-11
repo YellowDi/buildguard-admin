@@ -162,14 +162,14 @@ export type FilterStateMaps = {
   date: Record<string, DateFilterState>
 }
 
-export type ResourceRowKey<Row> = Extract<keyof Row, string> | ((row: Row, index: number) => string | number)
+export type TablePageRowKey<Row> = Extract<keyof Row, string> | ((row: Row, index: number) => string | number)
 
-export type ResourceFilterType = "text" | "number" | "tag" | "date"
+export type TablePageFilterType = "text" | "number" | "tag" | "date"
 
-export type ResourceFilterDefinition<Row> = {
+export type TablePageFilterDefinition<Row> = {
   key: string
   label: string
-  type: ResourceFilterType
+  type: TablePageFilterType
   placeholder?: string
   defaultVisible?: boolean
   fixed?: boolean
@@ -177,7 +177,7 @@ export type ResourceFilterDefinition<Row> = {
   value?: (row: Row) => unknown
 }
 
-export type ResourceSortDefinition<Row> = {
+export type TablePageSortDefinition<Row> = {
   storageKey?: string
   initialField?: string
   initialDirection?: "asc" | "desc"
@@ -189,7 +189,7 @@ export type ResourceSortDefinition<Row> = {
   }>
 }
 
-export type ResourceTabsDefinition<Row> =
+export type TablePageTabsDefinition<Row> =
   | {
       mode?: "none"
     }
@@ -206,9 +206,9 @@ export type ResourceTabsDefinition<Row> =
       order?: string[]
     }
 
-export type ResourceListColumn<Row> = TableColumn & {
+export type TablePageColumn<Row> = TableColumn & {
   key: keyof Row & string
-  filter?: Omit<ResourceFilterDefinition<Row>, "key" | "label"> & {
+  filter?: Omit<TablePageFilterDefinition<Row>, "key" | "label"> & {
     label?: string
   }
   sort?: boolean | {
@@ -218,15 +218,15 @@ export type ResourceListColumn<Row> = TableColumn & {
   }
 }
 
-export type ResourceListSchema<Row> = {
+export type TablePageSchema<Row> = {
   title: string
-  rowKey: ResourceRowKey<Row>
+  rowKey: TablePageRowKey<Row>
   data: Row[]
-  columns: Array<ResourceListColumn<Row>>
+  columns: Array<TablePageColumn<Row>>
   rowActions?: Array<TableRowAction<Row>>
-  filters?: ResourceFilterDefinition<Row>[]
-  sort?: ResourceSortDefinition<Row>
-  tabs?: ResourceTabsDefinition<Row>
+  filters?: TablePageFilterDefinition<Row>[]
+  sort?: TablePageSortDefinition<Row>
+  tabs?: TablePageTabsDefinition<Row>
   primaryActionLabel?: string
   summary?: string
   showIndex?: boolean

@@ -1,22 +1,22 @@
 import { computed, onMounted, ref, watch, type ComputedRef, type Ref } from "vue"
 
-import type { SortFieldOption, SortRule } from "@/components/resource/SortPopover.vue"
+import type { SortFieldOption, SortRule } from "@/components/table-page/TableSortPopover.vue"
 import type {
   DateFilterState,
   FilterStateMaps,
   HeaderField,
   HeaderTab,
   NumberFilterState,
-  ResourceFilterDefinition,
-  ResourceListSchema,
-  ResourceTabsDefinition,
-  ResourceFilterType,
-  ResourceRowKey,
+  TablePageFilterType,
+  TablePageFilterDefinition,
+  TablePageRowKey,
+  TablePageSchema,
+  TablePageTabsDefinition,
   TableColumn,
   TableRowAction,
   TagFilterState,
   TextFilterState,
-} from "@/components/resource/types"
+} from "@/components/table-page/types"
 
 type MaybeRows<Row> = Row[] | Ref<Row[]> | ComputedRef<Row[]>
 
@@ -27,13 +27,13 @@ type NormalizedSortField<Row> = {
   value: (row: Row) => string | number | null | undefined
 }
 
-type NormalizedFilter<Row> = ResourceFilterDefinition<Row> & {
+type NormalizedFilter<Row> = TablePageFilterDefinition<Row> & {
   value: (row: Row) => unknown
 }
 
-export type ResourceListDefinition<Row> = {
+export type TablePageDefinition<Row> = {
   title: string
-  rowKey: ResourceRowKey<Row>
+  rowKey: TablePageRowKey<Row>
   rows: MaybeRows<Row>
   columns: TableColumn[]
   rowActions?: Array<TableRowAction<Row>>
@@ -49,12 +49,12 @@ export type ResourceListDefinition<Row> = {
     fields: NormalizedSortField<Row>[]
     initialSortRules: SortRule[]
   }
-  tabs: ResourceTabsDefinition<Row>
+  tabs: TablePageTabsDefinition<Row>
 }
 
-export type ResourceListController<Row> = ReturnType<typeof useResourceList<Row>>
+export type TablePageController<Row> = ReturnType<typeof useTablePage<Row>>
 
-export function createResourceListDefinition<Row>(schema: ResourceListSchema<Row>): ResourceListDefinition<Row> {
+export function createTablePageDefinition<Row>(schema: TablePageSchema<Row>): TablePageDefinition<Row> {
   const columnFilters = schema.columns.flatMap((column) => {
     if (!column.filter) {
       return []
@@ -137,8 +137,8 @@ export function createResourceListDefinition<Row>(schema: ResourceListSchema<Row
   }
 }
 
-export function useResourceList<Row>(input: ResourceListSchema<Row> | ResourceListDefinition<Row>) {
-  const definition = isResourceListDefinition(input) ? input : createResourceListDefinition(input)
+export function useTablePage<Row>(input: TablePageSchema<Row> | TablePageDefinition<Row>) {
+  const definition = isTablePageDefinition(input) ? input : createTablePageDefinition(input)
   const rows = computed(() => toPlainRows(definition.rows))
 
   const showControls = ref(true)
@@ -437,11 +437,11 @@ export function useResourceList<Row>(input: ResourceListSchema<Row> | ResourceLi
   }
 }
 
-function isResourceListDefinition<Row>(value: ResourceListSchema<Row> | ResourceListDefinition<Row>): value is ResourceListDefinition<Row> {
+function isTablePageDefinition<Row>(value: TablePageSchema<Row> | TablePageDefinition<Row>): value is TablePageDefinition<Row> {
   return "rows" in value && "filters" in value && "sort" in value
 }
 
-function normalizeFilter<Row>(filter: ResourceFilterDefinition<Row>): NormalizedFilter<Row> {
+function normalizeFilter<Row>(filter: TablePageFilterDefinition<Row>): NormalizedFilter<Row> {
   return {
     ...filter,
     value: filter.value ?? (() => ""),
@@ -524,7 +524,7 @@ function resolveTagOptions<Row>(filter: NormalizedFilter<Row>, rows: Row[]) {
   return [...new Set(rows.map(row => stringifyValue(filter.value(row))).filter(Boolean))]
 }
 
-function getDefaultTabValue<Row>(tabs: ResourceTabsDefinition<Row>) {
+function getDefaultTabValue<Row>(tabs: TablePageTabsDefinition<Row>) {
   if (tabs.mode === "enum") {
     return tabs.all?.value ?? "all"
   }
@@ -532,7 +532,7 @@ function getDefaultTabValue<Row>(tabs: ResourceTabsDefinition<Row>) {
   return "all"
 }
 
-function buildTabs<Row>(rows: Row[], tabs: ResourceTabsDefinition<Row>, selectedTab: string): HeaderTab[] {
+function buildTabs<Row>(rows: Row[], tabs: TablePageTabsDefinition<Row>, selectedTab: string): HeaderTab[] {
   if (tabs.mode !== "enum") {
     return []
   }
@@ -560,11 +560,11 @@ function buildTabs<Row>(rows: Row[], tabs: ResourceTabsDefinition<Row>, selected
   ]
 }
 
-function getTabValues<Row>(rows: Row[], tabs: Extract<ResourceTabsDefinition<Row>, { mode: "enum" }>) {
+function getTabValues<Row>(rows: Row[], tabs: Extract<TablePageTabsDefinition<Row>, { mode: "enum" }>) {
   return [...new Set(rows.map(row => getTabValue(row, tabs)).filter(Boolean))]
 }
 
-function getTabValue<Row>(row: Row, tabs: Extract<ResourceTabsDefinition<Row>, { mode: "enum" }>) {
+function getTabValue<Row>(row: Row, tabs: Extract<TablePageTabsDefinition<Row>, { mode: "enum" }>) {
   if (tabs.value) {
     return tabs.value(row)
   }
@@ -576,7 +576,7 @@ function getTabValue<Row>(row: Row, tabs: Extract<ResourceTabsDefinition<Row>, {
   return ""
 }
 
-function matchesTab<Row>(row: Row, tabs: ResourceTabsDefinition<Row>, selectedTab: string) {
+function matchesTab<Row>(row: Row, tabs: TablePageTabsDefinition<Row>, selectedTab: string) {
   if (tabs.mode !== "enum") {
     return true
   }
@@ -625,7 +625,7 @@ function stringifyValue(value: unknown) {
   return `${value}`
 }
 
-function getFilterIcon(filterType: ResourceFilterType) {
+function getFilterIcon(filterType: TablePageFilterType) {
   if (filterType === "tag") return "ri-price-tag-3-line"
   if (filterType === "number") return "ri-hashtag"
   if (filterType === "date") return "ri-calendar-line"

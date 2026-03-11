@@ -24,7 +24,7 @@ import { cn } from "@/lib/utils"
 import { Separator } from "@/components/ui/separator"
 import { RouterLink, useRoute } from "vue-router"
 
-import { detailBreadcrumbTitle } from "@/router/detailBreadcrumbTitle"
+import { detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
 
 type BreadcrumbItemConfig = {
   title: string

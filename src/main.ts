@@ -2,8 +2,8 @@ import { createApp } from "vue"
 
 import App from "./App.vue"
 import router from "./router"
-import "./style.css"
-import "./styles/detail-page.css"
+import "./styles/global.css"
+import "./styles/detail-layout.css"
 import "remixicon/fonts/remixicon.css"
 import "vue-sonner/style.css"
 

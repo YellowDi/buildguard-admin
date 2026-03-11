@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from "vue"
 
-import PopoverSelect from "@/components/resource/PopoverSelect.vue"
+import PopoverSelect from "@/components/table-page/TablePopoverSelect.vue"
 
 export type SortField = string
 export type SortFieldOption = {

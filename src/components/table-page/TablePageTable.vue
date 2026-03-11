@@ -11,8 +11,8 @@ import {
   getTableClass,
   getTableWrapperClass,
   tableTheme,
-} from "@/components/resource/tableTheme"
-import type { TableColumn, TableRowAction } from "@/components/resource/types"
+} from "@/components/table-page/tableTheme"
+import type { TableColumn, TableRowAction } from "@/components/table-page/types"
 import { cn } from "@/lib/utils"
 
 type ScrollRoot = HTMLElement | Window
@@ -88,7 +88,7 @@ const stickyTableStyle = computed(() => ({
   transform: `translateX(${-stickyScrollLeft.value}px)`,
 }))
 const route = useRoute()
-const horizontalScrollHintId = computed(() => `resource-table-horizontal-scroll-hint:${route.path}`)
+const horizontalScrollHintId = computed(() => `table-page-horizontal-scroll-hint:${route.path}`)
 
 let scrollRoot: ScrollRoot | null = null
 let resizeObserver: ResizeObserver | null = null
@@ -324,14 +324,14 @@ function getStickyTopOffset() {
   }
 
   const wrapperStyles = window.getComputedStyle(tableWrapperRef.value)
-  const wrapperOffset = Number.parseFloat(wrapperStyles.getPropertyValue("--resource-table-sticky-top"))
+  const wrapperOffset = Number.parseFloat(wrapperStyles.getPropertyValue("--table-page-sticky-top"))
 
   if (!Number.isNaN(wrapperOffset)) {
     return wrapperOffset
   }
 
   const rootOffset = Number.parseFloat(
-    window.getComputedStyle(document.documentElement).getPropertyValue("--resource-table-sticky-top"),
+    window.getComputedStyle(document.documentElement).getPropertyValue("--table-page-sticky-top"),
   )
 
   return Number.isNaN(rootOffset) ? 0 : rootOffset
