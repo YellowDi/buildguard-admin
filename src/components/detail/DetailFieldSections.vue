@@ -30,7 +30,7 @@ function displayValue(value: string | number | null | undefined) {
 <template>
   <div class="detail-field-sections" :style="sectionStyle">
     <template v-for="(section, sectionIndex) in sections" :key="section.key">
-      <section class="detail-field-section">
+      <section :class="cn('detail-field-section', sectionIndex > 0 && 'detail-field-section--after-separator')">
         <h2 class="detail-field-section__heading">{{ section.title }}</h2>
         <div>
           <div

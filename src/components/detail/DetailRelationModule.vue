@@ -87,7 +87,7 @@ function hasNamedSlot(name?: string) {
             <div
               v-for="(row, rowIndex) in group.rows"
               :key="`${group.key}-${getRowKey(row, rowIndex)}`"
-              class="detail-relation-row detail-table-grid detail-relation-grid detail-section-inset items-center text-[14px] transition-colors hover:bg-[#000000]/[0.05]"
+              class="detail-relation-row detail-table-grid detail-relation-grid detail-section-inset items-center text-[14px] transition-colors hover:bg-[#000000]/5"
             >
               <div
                 v-for="column in schema.columns"

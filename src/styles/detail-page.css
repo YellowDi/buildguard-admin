@@ -41,11 +41,7 @@
   padding-bottom: 1.75rem;
 }
 
-.detail-field-section + .border-border\/80 {
-  margin-top: 0;
-}
-
-.detail-field-sections > .border-border\/80 + .detail-field-section {
+.detail-field-section--after-separator {
   padding-top: 1.25rem;
 }
 
