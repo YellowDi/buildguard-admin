@@ -206,7 +206,6 @@ const employeeGroups = computed(() => [
 const vehicleModule = computed<DetailRelationModuleSchema<VehicleRelationRow>>(() => ({
   key: "vehicles",
   title: "关联车辆",
-  count: company.value?.vehicles ?? 0,
   rowKey: "id",
   mobileMinWidth: "39rem",
   columnTemplateMobile: "minmax(8.5rem, 1.55fr) minmax(4.5rem, 0.65fr) minmax(8rem, 0.95fr) minmax(8rem, 0.95fr) 2rem",
@@ -226,7 +225,6 @@ const vehicleModule = computed<DetailRelationModuleSchema<VehicleRelationRow>>((
 const employeeModule = computed<DetailRelationModuleSchema<EmployeeRelationRow>>(() => ({
   key: "employees",
   title: "关联从业人员",
-  count: employeeGroups.value.reduce((sum, group) => sum + group.rows.length, 0),
   rowKey: "id",
   mobileMinWidth: "24rem",
   columnTemplateMobile: "12rem 7rem 2rem",
@@ -309,17 +307,15 @@ onUnmounted(() => { detailBreadcrumbTitle.value = null })
             </template>
           </DetailRelationModule>
 
-          <Separator class="bg-border/80" />
+          <Separator class="my-5 bg-border/80" />
 
-          <div class="pt-5">
-            <DetailRelationModule :schema="employeeModule">
-              <template #employee-action-cell>
-                <Button variant="ghost" size="icon-sm" class="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground">
-                  <i class="ri-more-line text-[18px]" />
-                </Button>
-              </template>
-            </DetailRelationModule>
-          </div>
+          <DetailRelationModule :schema="employeeModule">
+            <template #employee-action-cell>
+              <Button variant="ghost" size="icon-sm" class="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground">
+                <i class="ri-more-line text-[18px]" />
+              </Button>
+            </template>
+          </DetailRelationModule>
         </div>
       </template>
     </template>

@@ -2,6 +2,7 @@
 import { computed, useSlots } from "vue"
 
 import type { DetailRelationColumn, DetailRelationModuleSchema } from "@/components/detail/types"
+import { Badge } from "@/components/ui/badge"
 import { cn } from "@/lib/utils"
 
 type RelationRow = Record<string, unknown>
@@ -22,6 +23,11 @@ const moduleStyle = computed(() => ({
   "--detail-relation-grid-gap-mobile": props.schema.columnGapMobile ?? "0.75rem",
   "--detail-relation-grid-gap-desktop": props.schema.columnGapDesktop ?? props.schema.columnGapMobile ?? "1rem",
 }))
+
+const displayCount = computed(() => (
+  props.schema.count
+  ?? props.schema.groups.reduce((sum, group) => sum + group.rows.length, 0)
+))
 
 const trailingColumns = computed(() => props.schema.columns.slice(1))
 
@@ -63,9 +69,12 @@ function hasNamedSlot(name?: string) {
         <div class="detail-table-heading-row detail-table-grid detail-relation-grid detail-section-inset items-center">
           <div class="flex min-w-0 items-center gap-2">
             <span class="shrink-0 whitespace-nowrap text-[15px] font-semibold leading-none text-foreground">{{ schema.title }}</span>
-            <span class="inline-flex min-w-6 items-center justify-center rounded-md bg-muted px-1.5 py-0.5 text-[12px] font-medium leading-none text-muted-foreground">
-              {{ schema.count }}
-            </span>
+            <Badge
+              variant="secondary"
+              class="min-w-6 justify-center rounded-md px-1.5 py-0.5 text-[12px] font-medium leading-none"
+            >
+              {{ displayCount }}
+            </Badge>
           </div>
 
           <div

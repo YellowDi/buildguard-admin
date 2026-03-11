@@ -39,7 +39,7 @@ export type DetailRelationGroup<Row extends Record<string, unknown> = Record<str
 export type DetailRelationModuleSchema<Row extends Record<string, unknown> = Record<string, unknown>> = {
   key: string
   title: string
-  count: number
+  count?: number
   columns: DetailRelationColumn<Row>[]
   groups: DetailRelationGroup<Row>[]
   rowKey: DetailRelationRowKey<Row>

@@ -36,6 +36,12 @@
   padding-right: 0.5rem;
 }
 
+.detail-section-heading-row {
+  display: flex;
+  min-height: 56px;
+  align-items: center;
+}
+
 .detail-field-section {
   padding-top: 0;
   padding-bottom: 1.75rem;
@@ -46,8 +52,6 @@
 }
 
 .detail-field-section__heading {
-  margin-bottom: 1rem;
-  padding-left: 0.25rem;
   font-size: 14px;
   font-weight: 600;
   line-height: 1;
@@ -123,7 +127,6 @@
     padding-right: 1.25rem;
   }
 
-  .detail-field-section__heading,
   .detail-field-row__label {
     padding-left: 0.75rem;
   }
