@@ -100,6 +100,10 @@ const businessItems = reactive<NavItem[]>([
         label: "报警查询",
         path: "/alarm-queries",
       },
+      {
+        label: "历史归档",
+        path: "/alarm-archives",
+      },
     ],
   },
 ])
@@ -132,7 +136,7 @@ const calendarItems = [
 const selectedTopTab = ref<TopTabId>("home")
 
 const activePath = computed(() => route.path)
-const activeItemClass = "bg-surface-tertiary text-sidebar-accent-foreground"
+const activeItemClass = "bg-sidebar-accent text-sidebar-accent-foreground"
 const mobileTabRefs = ref<Array<HTMLElement | null>>([])
 const desktopTabRefs = ref<Array<HTMLElement | null>>([])
 const mobileIndicatorStyle = ref({
@@ -199,7 +203,7 @@ function selectTopTab(tabId: TopTabId) {
 }
 
 function isBusinessRoute(path: string) {
-  return ["/", "/companies", "/vehicles", "/users", "/alarm-queries"].some(
+  return ["/", "/companies", "/vehicles", "/users", "/alarm-queries", "/alarm-archives"].some(
     prefix => path === prefix || path.startsWith(`${prefix}/`),
   )
 }
@@ -401,8 +405,15 @@ onBeforeUnmount(() => {
                 class="group/sub-item relative"
               >
                 <div
+                  class="pointer-events-none absolute inset-y-0 -left-8 right-0 rounded-lg bg-sidebar opacity-0 transition-opacity group-hover/sub-item:opacity-100 group-focus-within/sub-item:opacity-100 group-has-data-[active=true]/sub-item:opacity-100"
+                  :class="{ 'opacity-100': isActive(child) }"
+                />
+                <div
                   class="pointer-events-none absolute inset-y-0 -left-8 right-0 rounded-lg opacity-0 transition-opacity group-hover/sub-item:bg-sidebar-accent group-hover/sub-item:opacity-100 group-focus-within/sub-item:bg-sidebar-accent group-focus-within/sub-item:opacity-100 group-has-data-[active=true]/sub-item:bg-sidebar-accent group-has-data-[active=true]/sub-item:opacity-100"
-                  :class="{ 'bg-surface-tertiary opacity-100': isActive(child) }"
+                  :class="{ 'bg-sidebar-accent opacity-100': isActive(child) }"
+                />
+                <div
+                  class="pointer-events-none absolute inset-y-0 -left-8 right-0 rounded-lg opacity-0 ring-2 ring-sidebar-ring transition-opacity group-focus-within/sub-item:opacity-100"
                 />
                 <div
                   class="pointer-events-none absolute -left-5.25 top-1/2 h-5 w-0.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-sidebar-foreground/40 opacity-0 transition-opacity group-hover/sub-item:opacity-100 group-focus-within/sub-item:opacity-100 group-has-data-[active=true]/sub-item:opacity-100"
@@ -410,7 +421,7 @@ onBeforeUnmount(() => {
                 <SidebarMenuSubButton
                   as-child
                   :is-active="isActive(child)"
-                  class="relative z-10 h-9 -ml-5.25 rounded-lg bg-transparent pl-5.25 pr-3 hover:bg-transparent active:bg-transparent data-[active=true]:bg-transparent"
+                  class="relative z-10 h-9 -ml-5.25 rounded-lg bg-transparent pl-5.25 pr-3 hover:bg-transparent focus-visible:ring-0 active:bg-transparent data-[active=true]:bg-transparent"
                 >
                   <component
                     :is="child.path ? 'RouterLink' : 'button'"
@@ -615,16 +626,23 @@ onBeforeUnmount(() => {
               class="group/sub-item relative"
             >
               <div
-                class="pointer-events-none absolute inset-y-0 -left-8 right-0 rounded-lg opacity-0 transition-opacity group-hover/sub-item:bg-sidebar-accent group-hover/sub-item:opacity-100 group-focus-within/sub-item:bg-sidebar-accent group-focus-within/sub-item:opacity-100 group-has-data-[active=true]/sub-item:bg-sidebar-accent group-has-data-[active=true]/sub-item:opacity-100"
-                :class="{ 'bg-surface-tertiary opacity-100': isActive(child) }"
+                class="pointer-events-none absolute inset-y-0 -left-8 right-0 rounded-lg bg-sidebar opacity-0 transition-opacity group-hover/sub-item:opacity-100 group-focus-within/sub-item:opacity-100 group-has-data-[active=true]/sub-item:opacity-100"
+                :class="{ 'opacity-100': isActive(child) }"
               />
               <div
-                class="pointer-events-none absolute -left-5.25 top-1/2 h-5 w-0.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-sidebar-foreground/40 opacity-0 transition-opacity group-hover/sub-item:opacity-100 group-focus-within/sub-item:opacity-100 group-has-data-[active=true]/sub-item:opacity-100"
+                class="pointer-events-none absolute inset-y-0 -left-8 right-0 rounded-lg opacity-0 transition-opacity group-hover/sub-item:bg-sidebar-accent group-hover/sub-item:opacity-100 group-focus-within/sub-item:bg-sidebar-accent group-focus-within/sub-item:opacity-100 group-has-data-[active=true]/sub-item:bg-sidebar-accent group-has-data-[active=true]/sub-item:opacity-100"
+                :class="{ 'bg-sidebar-accent opacity-100': isActive(child) }"
+              />
+              <div
+                class="pointer-events-none absolute inset-y-0 -left-8 right-0 rounded-lg opacity-0 ring-2 ring-sidebar-ring transition-opacity group-focus-within/sub-item:opacity-100"
+              />
+              <div
+                  class="pointer-events-none absolute -left-5.25 top-1/2 h-5 w-0.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-sidebar-foreground/40 opacity-0 transition-opacity group-hover/sub-item:opacity-100 group-focus-within/sub-item:opacity-100 group-has-data-[active=true]/sub-item:opacity-100"
               />
               <SidebarMenuSubButton
                 as-child
                 :is-active="isActive(child)"
-                class="relative z-10 h-9 -ml-5.25 rounded-lg bg-transparent pl-5.25 pr-3 hover:bg-transparent active:bg-transparent data-[active=true]:bg-transparent"
+                class="relative z-10 h-9 -ml-5.25 rounded-lg bg-transparent pl-5.25 pr-3 hover:bg-transparent focus-visible:ring-0 active:bg-transparent data-[active=true]:bg-transparent"
               >
                 <component
                   :is="child.path ? 'RouterLink' : 'button'"

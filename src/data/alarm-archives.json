@@ -1,0 +1,122 @@
+[
+  {
+    "id": 1,
+    "archiveNumber": "GD-20260310-001",
+    "plateNumber": "粤B88231",
+    "company": "鹏程危运",
+    "alarmType": "疲劳驾驶",
+    "riskLevel": "高",
+    "archivedAt": "2026-03-10 18:20",
+    "archiveStatus": "已归档",
+    "archivedBy": "王立峰",
+    "note": "处置闭环已确认，相关回访记录与截图已归档。"
+  },
+  {
+    "id": 2,
+    "archiveNumber": "GD-20260310-002",
+    "plateNumber": "粤B91027",
+    "company": "海湾冷链运输",
+    "alarmType": "超速报警",
+    "riskLevel": "中",
+    "archivedAt": "2026-03-10 17:42",
+    "archiveStatus": "已归档",
+    "archivedBy": "陈雨晴",
+    "note": "司机已完成复训，事件处置单和复核意见已归档。"
+  },
+  {
+    "id": 3,
+    "archiveNumber": "GD-20260310-003",
+    "plateNumber": "粤B73564",
+    "company": "深港危货联运",
+    "alarmType": "偏航报警",
+    "riskLevel": "高",
+    "archivedAt": "2026-03-10 16:55",
+    "archiveStatus": "待复盘",
+    "archivedBy": "赵明昊",
+    "note": "已完成现场核查，待月度复盘会补充结论。"
+  },
+  {
+    "id": 4,
+    "archiveNumber": "GD-20260309-011",
+    "plateNumber": "粤B70186",
+    "company": "深南特种运输",
+    "alarmType": "急加速报警",
+    "riskLevel": "中",
+    "archivedAt": "2026-03-09 20:18",
+    "archiveStatus": "已归档",
+    "archivedBy": "李心妍",
+    "note": "车载视频抽检通过，处置结果已回传。"
+  },
+  {
+    "id": 5,
+    "archiveNumber": "GD-20260309-012",
+    "plateNumber": "粤B72415",
+    "company": "湾区化工物流",
+    "alarmType": "长时停车",
+    "riskLevel": "高",
+    "archivedAt": "2026-03-09 19:36",
+    "archiveStatus": "已归档",
+    "archivedBy": "王立峰",
+    "note": "核验停车原因为装卸等待，已补齐佐证材料。"
+  },
+  {
+    "id": 6,
+    "archiveNumber": "GD-20260309-013",
+    "plateNumber": "粤B76803",
+    "company": "港城危品配送",
+    "alarmType": "路线偏移",
+    "riskLevel": "高",
+    "archivedAt": "2026-03-09 18:27",
+    "archiveStatus": "已撤销",
+    "archivedBy": "陈雨晴",
+    "note": "经核查为地图偏移误报，已撤销并保留判断依据。"
+  },
+  {
+    "id": 7,
+    "archiveNumber": "GD-20260308-021",
+    "plateNumber": "粤B79324",
+    "company": "大鹏冷运",
+    "alarmType": "超速报警",
+    "riskLevel": "中",
+    "archivedAt": "2026-03-08 21:14",
+    "archiveStatus": "待复盘",
+    "archivedBy": "赵明昊",
+    "note": "整改通知已发送，等待企业补充培训证明。"
+  },
+  {
+    "id": 8,
+    "archiveNumber": "GD-20260308-022",
+    "plateNumber": "粤B84517",
+    "company": "鹏海联运",
+    "alarmType": "疲劳驾驶",
+    "riskLevel": "高",
+    "archivedAt": "2026-03-08 18:53",
+    "archiveStatus": "已归档",
+    "archivedBy": "李心妍",
+    "note": "驾驶员停班学习完成，企业复核回执已归档。"
+  },
+  {
+    "id": 9,
+    "archiveNumber": "GD-20260308-023",
+    "plateNumber": "粤B86752",
+    "company": "南湾危运服务",
+    "alarmType": "异常熄火",
+    "riskLevel": "中",
+    "archivedAt": "2026-03-08 16:40",
+    "archiveStatus": "已归档",
+    "archivedBy": "王立峰",
+    "note": "设备故障原因已确认，维修记录与回访结果已归档。"
+  },
+  {
+    "id": 10,
+    "archiveNumber": "GD-20260307-031",
+    "plateNumber": "粤B89361",
+    "company": "龙岗危货通",
+    "alarmType": "偏航报警",
+    "riskLevel": "高",
+    "archivedAt": "2026-03-07 17:08",
+    "archiveStatus": "已归档",
+    "archivedBy": "陈雨晴",
+    "note": "现场核查与企业说明一致，事件已完成归档。"
+  }
+]

@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from "vue-router"
 
 import AdminLayout from "@/layouts/AdminLayout.vue"
+import AlarmArchivesView from "@/views/AlarmArchivesView.vue"
 import LoginView from "@/views/auth/LoginView.vue"
 import OtpView from "@/views/auth/OtpView.vue"
 import SignupView from "@/views/auth/SignupView.vue"
@@ -134,6 +135,14 @@ const router = createRouter({
           component: AlarmQueriesView,
           meta: {
             title: "报警查询",
+          } satisfies RouteMetaConfig,
+        },
+        {
+          path: "alarm-archives",
+          name: "alarm-archives",
+          component: AlarmArchivesView,
+          meta: {
+            title: "历史归档",
           } satisfies RouteMetaConfig,
         },
         {
