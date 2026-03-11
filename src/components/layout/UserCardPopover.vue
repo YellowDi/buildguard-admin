@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, onUnmounted, ref, watch } from "vue"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,6 +22,14 @@ const THEME_OPTIONS: { value: ThemeMode; label: string; icon: string }[] = [
   { value: "light", label: "浅色", icon: "ri-sun-line" },
   { value: "dark", label: "暗色", icon: "ri-moon-line" },
 ]
+
+const user = {
+  name: "Rolly",
+  email: "yellowdi@me.com",
+  avatarSrc: "",
+}
+
+const userInitial = user.name.charAt(0).toUpperCase()
 
 function getInitialTheme(): ThemeMode {
   if (typeof document === "undefined") return "system"
@@ -115,12 +124,18 @@ function handleLogout() {
         class="flex w-full items-center gap-3 rounded-lg px-1 py-1 text-left transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
       >
         <div class="flex min-w-0 flex-1 items-center gap-2">
-          <div
-            class="flex size-[22px] shrink-0 items-center justify-center overflow-hidden rounded-sm bg-avatar-placeholder text-sidebar-primary"
-          >
-            <span class="text-[10px] font-semibold">R</span>
-          </div>
-          <span class="truncate text-sm font-semibold text-foreground">Rolly</span>
+          <Avatar class="size-[22px] rounded-sm">
+            <AvatarImage
+              v-if="user.avatarSrc"
+              :src="user.avatarSrc"
+              :alt="`${user.name} avatar`"
+              class="object-cover"
+            />
+            <AvatarFallback class="rounded-sm bg-avatar-placeholder text-sidebar-primary">
+              <span class="text-[10px] font-semibold">{{ userInitial }}</span>
+            </AvatarFallback>
+          </Avatar>
+          <span class="truncate text-sm font-semibold text-foreground">{{ user.name }}</span>
         </div>
         <i class="ri-arrow-up-s-line shrink-0 text-base text-muted-foreground" />
       </button>
@@ -138,14 +153,20 @@ function handleLogout() {
         <!-- 用户信息卡片 -->
         <div class="flex flex-col gap-0.5 border-b border-border px-3 py-3">
           <div class="flex items-start gap-2">
-            <div
-              class="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-sm bg-avatar-placeholder text-sidebar-primary"
-            >
-              <span class="text-sm font-semibold">R</span>
-            </div>
+            <Avatar class="size-9 rounded-sm">
+              <AvatarImage
+                v-if="user.avatarSrc"
+                :src="user.avatarSrc"
+                :alt="`${user.name} avatar`"
+                class="object-cover"
+              />
+              <AvatarFallback class="rounded-sm bg-avatar-placeholder text-sidebar-primary">
+                <span class="text-sm font-semibold">{{ userInitial }}</span>
+              </AvatarFallback>
+            </Avatar>
             <div class="min-w-0 flex-1">
-              <span class="block truncate text-sm font-semibold text-foreground">Rolly</span>
-              <p class="truncate text-xs text-muted-foreground">yellowdi@me.com</p>
+              <span class="block truncate text-sm font-semibold text-foreground">{{ user.name }}</span>
+              <p class="truncate text-xs text-muted-foreground">{{ user.email }}</p>
             </div>
           </div>
         </div>
