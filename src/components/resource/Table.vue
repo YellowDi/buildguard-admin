@@ -17,7 +17,9 @@ import { cn } from "@/lib/utils"
 
 type ScrollRoot = HTMLElement | Window
 type RowSelectionKey = string | number
+type CheckboxState = boolean | "indeterminate"
 const HORIZONTAL_SCROLL_HINT_MESSAGE = "可按住 Shift + 鼠标滚轮进行横向移动。"
+const selectionCheckboxClass = "border-[#B7C4E0] bg-white data-[state=checked]:border-[#2B67F6] data-[state=checked]:bg-[#2B67F6] data-[state=indeterminate]:border-[#2B67F6] data-[state=indeterminate]:bg-[#2B67F6] focus-visible:ring-[#2B67F6]/20"
 
 const props = withDefaults(defineProps<{
   columns: TableColumn[]
@@ -52,6 +54,22 @@ const stickyTableWidth = ref(0)
 const stickyScrollLeft = ref(0)
 const stickyColumnWidths = ref<number[]>([])
 const selectedRowKeys = ref<Set<RowSelectionKey>>(new Set())
+const currentRowKeys = computed(() => props.rows.map((row, index) => getRowKey(row, index)))
+const selectedCurrentRowCount = computed(() => (
+  currentRowKeys.value.filter(rowKey => selectedRowKeys.value.has(rowKey)).length
+))
+const shouldShowHeaderCheckbox = computed(() => selectedCurrentRowCount.value > 0)
+const headerCheckboxState = computed<CheckboxState>(() => {
+  if (currentRowKeys.value.length === 0 || selectedCurrentRowCount.value === 0) {
+    return false
+  }
+
+  if (selectedCurrentRowCount.value === currentRowKeys.value.length) {
+    return true
+  }
+
+  return "indeterminate"
+})
 const stickyHeaderVisible = computed(() => (
   props.stickyHeader
   && stickyHeaderActive.value
@@ -162,6 +180,15 @@ function updateRowSelection(row: Record<string, unknown>, index: number, checked
   selectedRowKeys.value = nextSelections
 }
 
+function updateAllRowsSelection(checked: unknown) {
+  if (checked === true) {
+    selectedRowKeys.value = new Set(currentRowKeys.value)
+    return
+  }
+
+  selectedRowKeys.value = new Set()
+}
+
 function getRowClass(row: Record<string, unknown>, index: number) {
   return cn(
     tableTheme.row,
@@ -197,6 +224,15 @@ function getIndexCheckboxWrapperClass(row: Record<string, unknown>, index: numbe
   return cn(
     "absolute inset-0 flex items-center justify-center transition-opacity duration-150",
     isRowSelected(row, index)
+      ? "opacity-100"
+      : "pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100",
+  )
+}
+
+function getHeaderCheckboxWrapperClass() {
+  return cn(
+    "ml-auto flex h-4 w-4 items-center justify-center transition-opacity duration-150",
+    shouldShowHeaderCheckbox.value
       ? "opacity-100"
       : "pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100",
   )
@@ -599,9 +635,18 @@ onBeforeUnmount(() => {
           <tr>
             <th
               v-if="showIndex"
-              :class="[tableTheme.indexHeader.base, tableTheme.indexHeader.sticky]"
+              :class="[tableTheme.indexHeader.base, tableTheme.indexHeader.sticky, 'group']"
               :style="getStickyCellStyle(0)"
-            />
+            >
+              <div :class="getHeaderCheckboxWrapperClass()">
+                <Checkbox
+                  :model-value="headerCheckboxState"
+                  :disabled="rows.length === 0"
+                  :class="selectionCheckboxClass"
+                  @update:model-value="updateAllRowsSelection($event)"
+                />
+              </div>
+            </th>
             <th
               v-for="(column, columnIndex) in columns"
               :key="`sticky-${column.key}`"
@@ -635,8 +680,18 @@ onBeforeUnmount(() => {
             :class="[
               tableTheme.indexHeader.base,
               tableTheme.indexHeader.static,
+              'group',
             ]"
-          />
+          >
+            <div :class="getHeaderCheckboxWrapperClass()">
+              <Checkbox
+                :model-value="headerCheckboxState"
+                :disabled="rows.length === 0"
+                :class="selectionCheckboxClass"
+                @update:model-value="updateAllRowsSelection($event)"
+              />
+            </div>
+          </th>
           <th
             v-for="(column, columnIndex) in columns"
             :key="column.key"
@@ -672,7 +727,7 @@ onBeforeUnmount(() => {
               <span :class="getIndexCheckboxWrapperClass(row, index)">
                 <Checkbox
                   :model-value="isRowSelected(row, index)"
-                  class="border-[#B7C4E0] bg-white data-[state=checked]:border-[#2B67F6] data-[state=checked]:bg-[#2B67F6] focus-visible:ring-[#2B67F6]/20"
+                  :class="selectionCheckboxClass"
                   @update:model-value="updateRowSelection(row, index, $event)"
                 />
               </span>
