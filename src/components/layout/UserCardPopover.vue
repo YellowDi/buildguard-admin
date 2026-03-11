@@ -9,6 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useSidebar } from "@/components/ui/sidebar"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { cn } from "@/lib/utils"
 
 const { state } = useSidebar()
@@ -180,31 +181,22 @@ function handleLogout() {
               <i class="ri-palette-line text-base text-muted-foreground" />
               <span>外观</span>
             </div>
-            <div
-              class="flex rounded-lg bg-muted/60 p-0.5"
-              role="radiogroup"
+            <Tabs
+              v-model="themeMode"
               aria-label="主题"
             >
-              <button
-                v-for="opt in THEME_OPTIONS"
-                :key="opt.value"
-                type="button"
-                role="radio"
-                :aria-checked="themeMode === opt.value"
-                :class="
-                  cn(
-                    'flex flex-1 items-center justify-center gap-1.5 rounded-md py-1.5 text-xs font-medium transition-colors',
-                    themeMode === opt.value
-                      ? 'bg-background text-foreground shadow-xs'
-                      : 'text-muted-foreground hover:text-foreground',
-                  )
-                "
-                @click="themeMode = opt.value"
-              >
-                <i :class="[opt.icon, 'text-sm']" />
-                <span>{{ opt.label }}</span>
-              </button>
-            </div>
+              <TabsList class="h-auto w-full rounded-lg bg-muted/60">
+                <TabsTrigger
+                  v-for="opt in THEME_OPTIONS"
+                  :key="opt.value"
+                  :value="opt.value"
+                  class="h-auto flex-1 px-2 py-1.5 text-xs data-[state=active]:shadow-xs"
+                >
+                  <i :class="[opt.icon, 'text-sm']" />
+                  <span>{{ opt.label }}</span>
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
           </div>
 
           <!-- 账号登出 -->
