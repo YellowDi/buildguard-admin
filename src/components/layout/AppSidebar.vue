@@ -136,7 +136,7 @@ const calendarItems = [
 const selectedTopTab = ref<TopTabId>("home")
 
 const activePath = computed(() => route.path)
-const activeItemClass = "bg-sidebar-accent text-sidebar-accent-foreground"
+const activeItemClass = "sidebar-nav-active-surface text-sidebar-accent-foreground"
 const mobileTabRefs = ref<Array<HTMLElement | null>>([])
 const desktopTabRefs = ref<Array<HTMLElement | null>>([])
 const mobileIndicatorStyle = ref({
@@ -369,8 +369,8 @@ onBeforeUnmount(() => {
         </div>
       </div>
 
-      <div class="min-h-0 flex-1 overflow-x-hidden p-2">
-        <nav v-if="selectedTopTab === 'home'" class="min-w-0 overflow-y-auto overflow-x-hidden">
+      <div class="min-h-0 flex-1 overflow-x-visible p-2">
+        <nav v-if="selectedTopTab === 'home'" class="min-w-0 overflow-y-auto overflow-x-visible">
           <div v-for="item in businessItems" :key="`mobile-business-${item.label}`">
             <component
               :is="item.path && !item.children?.length ? 'RouterLink' : 'button'"
@@ -384,7 +384,10 @@ onBeforeUnmount(() => {
               ]"
               @click="toggleItem(item)"
             >
-              <i v-if="item.icon" :class="[item.icon, 'text-lg leading-none']" />
+              <i
+                v-if="item.icon"
+                :class="[item.icon, 'text-lg leading-none transition-colors', isActive(item) ? 'text-link' : '']"
+              />
               <span class="flex-1 truncate">{{ item.label }}</span>
               <i
                 v-if="item.children?.length"
@@ -405,18 +408,22 @@ onBeforeUnmount(() => {
                 class="group/sub-item relative"
               >
                 <div
-                  class="pointer-events-none absolute inset-y-0 -left-8 right-0 rounded-lg bg-sidebar opacity-0 transition-opacity group-hover/sub-item:opacity-100 group-focus-within/sub-item:opacity-100 group-has-data-[active=true]/sub-item:opacity-100"
+                  class="pointer-events-none absolute inset-y-0 -left-8 right-0 rounded-lg bg-sidebar opacity-0 transition-opacity group-hover/sub-item:opacity-100 group-has-[:focus-visible]/sub-item:opacity-100 group-has-data-[active=true]/sub-item:opacity-100"
                   :class="{ 'opacity-100': isActive(child) }"
                 />
                 <div
-                  class="pointer-events-none absolute inset-y-0 -left-8 right-0 rounded-lg opacity-0 transition-opacity group-hover/sub-item:bg-sidebar-accent group-hover/sub-item:opacity-100 group-focus-within/sub-item:bg-sidebar-accent group-focus-within/sub-item:opacity-100 group-has-data-[active=true]/sub-item:bg-sidebar-accent group-has-data-[active=true]/sub-item:opacity-100"
-                  :class="{ 'bg-sidebar-accent opacity-100': isActive(child) }"
+                  class="pointer-events-none absolute inset-y-0 -left-8 right-0 rounded-lg opacity-0 transition-opacity group-has-data-[active=true]/sub-item:opacity-100"
+                  :class="isActive(child)
+                    ? 'sidebar-nav-active-surface opacity-100'
+                    : 'group-hover/sub-item:bg-sidebar-accent group-hover/sub-item:opacity-100 group-has-[:focus-visible]/sub-item:bg-sidebar-accent group-has-[:focus-visible]/sub-item:opacity-100'"
                 />
                 <div
-                  class="pointer-events-none absolute inset-y-0 -left-8 right-0 rounded-lg opacity-0 ring-2 ring-sidebar-ring transition-opacity group-focus-within/sub-item:opacity-100"
+                  class="pointer-events-none absolute inset-y-0 -left-8 right-0 rounded-lg opacity-0 ring-2 ring-sidebar-ring transition-opacity group-has-[:focus-visible]/sub-item:opacity-100"
+                  :class="{ 'hidden': isActive(child) }"
                 />
                 <div
-                  class="pointer-events-none absolute -left-5.25 top-1/2 h-5 w-0.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-sidebar-foreground/40 opacity-0 transition-opacity group-hover/sub-item:opacity-100 group-focus-within/sub-item:opacity-100 group-has-data-[active=true]/sub-item:opacity-100"
+                  class="pointer-events-none absolute -left-5.25 top-1/2 h-5 w-0.5 -translate-x-1/2 -translate-y-1/2 rounded-full opacity-0 transition-[opacity,background-color] group-hover/sub-item:opacity-100 group-has-[:focus-visible]/sub-item:opacity-100 group-has-data-[active=true]/sub-item:opacity-100"
+                  :class="isActive(child) ? 'bg-link' : 'bg-sidebar-foreground/40'"
                 />
                 <SidebarMenuSubButton
                   as-child
@@ -590,8 +597,8 @@ onBeforeUnmount(() => {
       </div>
     </SidebarHeader>
 
-    <SidebarContent class="min-h-0 overflow-x-hidden">
-      <nav v-if="selectedTopTab === 'home'" class="min-w-0 overflow-y-auto overflow-x-hidden p-2">
+    <SidebarContent class="min-h-0 overflow-x-visible">
+      <nav v-if="selectedTopTab === 'home'" class="min-w-0 overflow-y-auto overflow-x-visible p-2">
         <div v-for="item in businessItems" :key="item.label">
           <component
             :is="item.path && !item.children?.length ? 'RouterLink' : 'button'"
@@ -605,7 +612,10 @@ onBeforeUnmount(() => {
             ]"
             @click="toggleItem(item)"
           >
-            <i v-if="item.icon" :class="[item.icon, 'text-lg leading-none']" />
+            <i
+              v-if="item.icon"
+              :class="[item.icon, 'text-lg leading-none transition-colors', isActive(item) ? 'text-link' : '']"
+            />
             <span class="flex-1 truncate">{{ item.label }}</span>
             <i
               v-if="item.children?.length"
@@ -626,18 +636,22 @@ onBeforeUnmount(() => {
               class="group/sub-item relative"
             >
               <div
-                class="pointer-events-none absolute inset-y-0 -left-8 right-0 rounded-lg bg-sidebar opacity-0 transition-opacity group-hover/sub-item:opacity-100 group-focus-within/sub-item:opacity-100 group-has-data-[active=true]/sub-item:opacity-100"
+                class="pointer-events-none absolute inset-y-0 -left-8 right-0 rounded-lg bg-sidebar opacity-0 transition-opacity group-hover/sub-item:opacity-100 group-has-[:focus-visible]/sub-item:opacity-100 group-has-data-[active=true]/sub-item:opacity-100"
                 :class="{ 'opacity-100': isActive(child) }"
               />
               <div
-                class="pointer-events-none absolute inset-y-0 -left-8 right-0 rounded-lg opacity-0 transition-opacity group-hover/sub-item:bg-sidebar-accent group-hover/sub-item:opacity-100 group-focus-within/sub-item:bg-sidebar-accent group-focus-within/sub-item:opacity-100 group-has-data-[active=true]/sub-item:bg-sidebar-accent group-has-data-[active=true]/sub-item:opacity-100"
-                :class="{ 'bg-sidebar-accent opacity-100': isActive(child) }"
+                class="pointer-events-none absolute inset-y-0 -left-8 right-0 rounded-lg opacity-0 transition-opacity group-has-data-[active=true]/sub-item:opacity-100"
+                :class="isActive(child)
+                  ? 'sidebar-nav-active-surface opacity-100'
+                  : 'group-hover/sub-item:bg-sidebar-accent group-hover/sub-item:opacity-100 group-has-[:focus-visible]/sub-item:bg-sidebar-accent group-has-[:focus-visible]/sub-item:opacity-100'"
               />
               <div
-                class="pointer-events-none absolute inset-y-0 -left-8 right-0 rounded-lg opacity-0 ring-2 ring-sidebar-ring transition-opacity group-focus-within/sub-item:opacity-100"
+                class="pointer-events-none absolute inset-y-0 -left-8 right-0 rounded-lg opacity-0 ring-2 ring-sidebar-ring transition-opacity group-has-[:focus-visible]/sub-item:opacity-100"
+                :class="{ 'hidden': isActive(child) }"
               />
               <div
-                  class="pointer-events-none absolute -left-5.25 top-1/2 h-5 w-0.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-sidebar-foreground/40 opacity-0 transition-opacity group-hover/sub-item:opacity-100 group-focus-within/sub-item:opacity-100 group-has-data-[active=true]/sub-item:opacity-100"
+                  class="pointer-events-none absolute -left-5.25 top-1/2 h-5 w-0.5 -translate-x-1/2 -translate-y-1/2 rounded-full opacity-0 transition-[opacity,background-color] group-hover/sub-item:opacity-100 group-has-[:focus-visible]/sub-item:opacity-100 group-has-data-[active=true]/sub-item:opacity-100"
+                  :class="isActive(child) ? 'bg-link' : 'bg-sidebar-foreground/40'"
               />
               <SidebarMenuSubButton
                 as-child
