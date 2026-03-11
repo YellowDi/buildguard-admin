@@ -263,7 +263,7 @@ watch(() => route.fullPath, () => {
       </div>
 
       <div class="min-h-0 flex-1 overflow-x-visible p-2">
-        <nav v-if="selectedTopTab === 'home'" class="min-w-0 overflow-y-auto overflow-x-visible">
+        <nav v-if="selectedTopTab === 'home'" class="min-w-0 overflow-x-visible">
           <div v-for="item in businessItems" :key="`mobile-business-${item.label}`">
             <component
               :is="item.path && !item.children?.length ? 'RouterLink' : 'button'"
@@ -460,7 +460,7 @@ watch(() => route.fullPath, () => {
     </SidebarHeader>
 
     <SidebarContent class="min-h-0 overflow-x-visible">
-      <nav v-if="selectedTopTab === 'home'" class="min-w-0 overflow-y-auto overflow-x-visible p-2">
+      <nav v-if="selectedTopTab === 'home'" class="min-w-0 overflow-x-visible p-2">
         <div v-for="item in businessItems" :key="item.label">
           <component
             :is="item.path && !item.children?.length ? 'RouterLink' : 'button'"
