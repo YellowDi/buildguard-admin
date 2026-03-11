@@ -24,242 +24,252 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import alarmArchivesData from "@/mocks/alarm-archives.json"
+import alarmQueriesData from "@/mocks/alarm-queries.json"
+import companiesData from "@/mocks/companies.json"
+import usersData from "@/mocks/users.json"
 
-const chartData = [
-  { date: new Date("2024-04-01"), desktop: 222, mobile: 150 },
-  { date: new Date("2024-04-02"), desktop: 97, mobile: 180 },
-  { date: new Date("2024-04-03"), desktop: 167, mobile: 120 },
-  { date: new Date("2024-04-04"), desktop: 242, mobile: 260 },
-  { date: new Date("2024-04-05"), desktop: 373, mobile: 290 },
-  { date: new Date("2024-04-06"), desktop: 301, mobile: 340 },
-  { date: new Date("2024-04-07"), desktop: 245, mobile: 180 },
-  { date: new Date("2024-04-08"), desktop: 409, mobile: 320 },
-  { date: new Date("2024-04-09"), desktop: 59, mobile: 110 },
-  { date: new Date("2024-04-10"), desktop: 261, mobile: 190 },
-  { date: new Date("2024-04-11"), desktop: 327, mobile: 350 },
-  { date: new Date("2024-04-12"), desktop: 292, mobile: 210 },
-  { date: new Date("2024-04-13"), desktop: 342, mobile: 380 },
-  { date: new Date("2024-04-14"), desktop: 137, mobile: 220 },
-  { date: new Date("2024-04-15"), desktop: 120, mobile: 170 },
-  { date: new Date("2024-04-16"), desktop: 138, mobile: 190 },
-  { date: new Date("2024-04-17"), desktop: 446, mobile: 360 },
-  { date: new Date("2024-04-18"), desktop: 364, mobile: 410 },
-  { date: new Date("2024-04-19"), desktop: 243, mobile: 180 },
-  { date: new Date("2024-04-20"), desktop: 89, mobile: 150 },
-  { date: new Date("2024-04-21"), desktop: 137, mobile: 200 },
-  { date: new Date("2024-04-22"), desktop: 224, mobile: 170 },
-  { date: new Date("2024-04-23"), desktop: 138, mobile: 230 },
-  { date: new Date("2024-04-24"), desktop: 387, mobile: 290 },
-  { date: new Date("2024-04-25"), desktop: 215, mobile: 250 },
-  { date: new Date("2024-04-26"), desktop: 75, mobile: 130 },
-  { date: new Date("2024-04-27"), desktop: 383, mobile: 420 },
-  { date: new Date("2024-04-28"), desktop: 122, mobile: 180 },
-  { date: new Date("2024-04-29"), desktop: 315, mobile: 240 },
-  { date: new Date("2024-04-30"), desktop: 454, mobile: 380 },
-  { date: new Date("2024-05-01"), desktop: 165, mobile: 220 },
-  { date: new Date("2024-05-02"), desktop: 293, mobile: 310 },
-  { date: new Date("2024-05-03"), desktop: 247, mobile: 190 },
-  { date: new Date("2024-05-04"), desktop: 385, mobile: 420 },
-  { date: new Date("2024-05-05"), desktop: 481, mobile: 390 },
-  { date: new Date("2024-05-06"), desktop: 498, mobile: 520 },
-  { date: new Date("2024-05-07"), desktop: 388, mobile: 300 },
-  { date: new Date("2024-05-08"), desktop: 149, mobile: 210 },
-  { date: new Date("2024-05-09"), desktop: 227, mobile: 180 },
-  { date: new Date("2024-05-10"), desktop: 293, mobile: 330 },
-  { date: new Date("2024-05-11"), desktop: 335, mobile: 270 },
-  { date: new Date("2024-05-12"), desktop: 197, mobile: 240 },
-  { date: new Date("2024-05-13"), desktop: 197, mobile: 160 },
-  { date: new Date("2024-05-14"), desktop: 448, mobile: 490 },
-  { date: new Date("2024-05-15"), desktop: 473, mobile: 380 },
-  { date: new Date("2024-05-16"), desktop: 338, mobile: 400 },
-  { date: new Date("2024-05-17"), desktop: 499, mobile: 420 },
-  { date: new Date("2024-05-18"), desktop: 315, mobile: 350 },
-  { date: new Date("2024-05-19"), desktop: 235, mobile: 180 },
-  { date: new Date("2024-05-20"), desktop: 177, mobile: 230 },
-  { date: new Date("2024-05-21"), desktop: 82, mobile: 140 },
-  { date: new Date("2024-05-22"), desktop: 81, mobile: 120 },
-  { date: new Date("2024-05-23"), desktop: 252, mobile: 290 },
-  { date: new Date("2024-05-24"), desktop: 294, mobile: 220 },
-  { date: new Date("2024-05-25"), desktop: 201, mobile: 250 },
-  { date: new Date("2024-05-26"), desktop: 213, mobile: 170 },
-  { date: new Date("2024-05-27"), desktop: 420, mobile: 460 },
-  { date: new Date("2024-05-28"), desktop: 233, mobile: 190 },
-  { date: new Date("2024-05-29"), desktop: 78, mobile: 130 },
-  { date: new Date("2024-05-30"), desktop: 340, mobile: 280 },
-  { date: new Date("2024-05-31"), desktop: 178, mobile: 230 },
-  { date: new Date("2024-06-01"), desktop: 178, mobile: 200 },
-  { date: new Date("2024-06-02"), desktop: 470, mobile: 410 },
-  { date: new Date("2024-06-03"), desktop: 103, mobile: 160 },
-  { date: new Date("2024-06-04"), desktop: 439, mobile: 380 },
-  { date: new Date("2024-06-05"), desktop: 88, mobile: 140 },
-  { date: new Date("2024-06-06"), desktop: 294, mobile: 250 },
-  { date: new Date("2024-06-07"), desktop: 323, mobile: 370 },
-  { date: new Date("2024-06-08"), desktop: 385, mobile: 320 },
-  { date: new Date("2024-06-09"), desktop: 438, mobile: 480 },
-  { date: new Date("2024-06-10"), desktop: 155, mobile: 200 },
-  { date: new Date("2024-06-11"), desktop: 92, mobile: 150 },
-  { date: new Date("2024-06-12"), desktop: 492, mobile: 420 },
-  { date: new Date("2024-06-13"), desktop: 81, mobile: 130 },
-  { date: new Date("2024-06-14"), desktop: 426, mobile: 380 },
-  { date: new Date("2024-06-15"), desktop: 307, mobile: 350 },
-  { date: new Date("2024-06-16"), desktop: 371, mobile: 310 },
-  { date: new Date("2024-06-17"), desktop: 475, mobile: 520 },
-  { date: new Date("2024-06-18"), desktop: 107, mobile: 170 },
-  { date: new Date("2024-06-19"), desktop: 341, mobile: 290 },
-  { date: new Date("2024-06-20"), desktop: 408, mobile: 450 },
-  { date: new Date("2024-06-21"), desktop: 169, mobile: 210 },
-  { date: new Date("2024-06-22"), desktop: 317, mobile: 270 },
-  { date: new Date("2024-06-23"), desktop: 480, mobile: 530 },
-  { date: new Date("2024-06-24"), desktop: 132, mobile: 180 },
-  { date: new Date("2024-06-25"), desktop: 141, mobile: 190 },
-  { date: new Date("2024-06-26"), desktop: 434, mobile: 380 },
-  { date: new Date("2024-06-27"), desktop: 448, mobile: 490 },
-  { date: new Date("2024-06-28"), desktop: 149, mobile: 200 },
-  { date: new Date("2024-06-29"), desktop: 103, mobile: 160 },
-  { date: new Date("2024-06-30"), desktop: 446, mobile: 400 },
-] as const
+type TimeRange = "7d" | "3d" | "1d"
 
-type DataPoint = (typeof chartData)[number]
-type TimeRange = "90d" | "30d" | "7d"
+type CompanyRecord = {
+  type: string
+  district: string
+  vehicles: number
+  lastUpdated: string
+}
 
-const chartConfig = {
-  mobile: {
-    label: "Mobile",
+type UserRecord = {
+  role: string
+  status: string
+}
+
+type AlarmQueryRecord = {
+  alarmTime: string
+  status: string
+  riskLevel: string
+}
+
+type AlarmArchiveRecord = {
+  archivedAt: string
+  archiveStatus: string
+}
+
+const companyRecords = companiesData as CompanyRecord[]
+const userRecords = usersData as UserRecord[]
+const alarmQueryRecords = alarmQueriesData as AlarmQueryRecord[]
+const alarmArchiveRecords = alarmArchivesData as AlarmArchiveRecord[]
+
+const companyTrendData = Object.values(
+  companyRecords.reduce<Record<string, { date: Date, passenger: number, dangerous: number }>>((acc, item) => {
+    const dateKey = item.lastUpdated.slice(0, 10)
+
+    acc[dateKey] ??= {
+      date: new Date(`${dateKey}T00:00:00`),
+      passenger: 0,
+      dangerous: 0,
+    }
+
+    if (item.type.includes("旅客")) {
+      acc[dateKey].passenger += item.vehicles
+    }
+    else {
+      acc[dateKey].dangerous += item.vehicles
+    }
+
+    return acc
+  }, {}),
+).sort((a, b) => a.date.getTime() - b.date.getTime())
+
+type CompanyTrendDatum = (typeof companyTrendData)[number]
+
+const companyChartConfig = {
+  passenger: {
+    label: "客运车辆",
     color: "var(--chart-2)",
   },
-  desktop: {
-    label: "Desktop",
+  dangerous: {
+    label: "危货车辆",
     color: "var(--chart-1)",
   },
 } satisfies ChartConfig
 
 const svgDefs = `
-  <linearGradient id="fillDesktop" x1="0" y1="0" x2="0" y2="1">
-    <stop offset="5%" stop-color="var(--color-desktop)" stop-opacity="0.8" />
-    <stop offset="95%" stop-color="var(--color-desktop)" stop-opacity="0.1" />
+  <linearGradient id="fillDangerous" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="5%" stop-color="var(--color-dangerous)" stop-opacity="0.8" />
+    <stop offset="95%" stop-color="var(--color-dangerous)" stop-opacity="0.1" />
   </linearGradient>
-  <linearGradient id="fillMobile" x1="0" y1="0" x2="0" y2="1">
-    <stop offset="5%" stop-color="var(--color-mobile)" stop-opacity="0.8" />
-    <stop offset="95%" stop-color="var(--color-mobile)" stop-opacity="0.1" />
+  <linearGradient id="fillPassenger" x1="0" y1="0" x2="0" y2="1">
+    <stop offset="5%" stop-color="var(--color-passenger)" stop-opacity="0.8" />
+    <stop offset="95%" stop-color="var(--color-passenger)" stop-opacity="0.1" />
   </linearGradient>
 `
 
-const timeRange = ref<TimeRange>("90d")
+const timeRange = ref<TimeRange>("7d")
 
-const filteredChartData = computed(() => {
-  const referenceDate = new Date("2024-06-30")
-  const daysToSubtract = timeRange.value === "30d" ? 30 : timeRange.value === "7d" ? 7 : 90
+const filteredCompanyTrendData = computed(() => {
+  const referenceDate = companyTrendData[companyTrendData.length - 1]?.date ?? new Date("2026-03-07T00:00:00")
+  const days = timeRange.value === "3d" ? 3 : timeRange.value === "1d" ? 1 : 7
   const startDate = new Date(referenceDate)
 
-  startDate.setDate(startDate.getDate() - daysToSubtract)
+  startDate.setDate(startDate.getDate() - (days - 1))
 
-  return chartData.filter(item => item.date >= startDate)
+  return companyTrendData.filter(item => item.date >= startDate)
 })
 
-const barChartData = [
-  { date: new Date("2024-07-15"), running: 450, swimming: 300 },
-  { date: new Date("2024-07-16"), running: 380, swimming: 420 },
-  { date: new Date("2024-07-17"), running: 520, swimming: 120 },
-  { date: new Date("2024-07-18"), running: 140, swimming: 550 },
-  { date: new Date("2024-07-19"), running: 600, swimming: 350 },
-  { date: new Date("2024-07-20"), running: 480, swimming: 400 },
-] as const
+const companyTrendMax = computed(() => {
+  const max = Math.max(...filteredCompanyTrendData.value.map(item => item.passenger + item.dangerous), 0)
+  return Math.max(500, Math.ceil(max / 500) * 500)
+})
 
-type BarChartDatum = (typeof barChartData)[number]
+const alarmStatusTrendData = Object.values(
+  [
+    ...alarmQueryRecords.map(item => ({
+      dateKey: item.alarmTime.slice(0, 10),
+      pending: item.status === "待复核" ? 1 : 0,
+      archived: 0,
+    })),
+    ...alarmArchiveRecords.map(item => ({
+      dateKey: item.archivedAt.slice(0, 10),
+      pending: 0,
+      archived: item.archiveStatus === "已归档" ? 1 : 0,
+    })),
+  ].reduce<Record<string, { date: Date, pending: number, archived: number }>>((acc, item) => {
+    acc[item.dateKey] ??= {
+      date: new Date(`${item.dateKey}T00:00:00`),
+      pending: 0,
+      archived: 0,
+    }
 
-const horizontalBarChartData = [
-  { label: "Windows", index: 1, sessions: 275 },
-  { label: "macOS", index: 2, sessions: 200 },
-  { label: "iOS", index: 3, sessions: 187 },
-  { label: "Android", index: 4, sessions: 173 },
-  { label: "Linux", index: 5, sessions: 90 },
-] as const
+    acc[item.dateKey].pending += item.pending
+    acc[item.dateKey].archived += item.archived
 
-type HorizontalBarChartDatum = (typeof horizontalBarChartData)[number]
+    return acc
+  }, {}),
+).sort((a, b) => a.date.getTime() - b.date.getTime())
 
-const multipleBarChartData = [
-  { month: "Jan", index: 1, desktop: 186, mobile: 80 },
-  { month: "Feb", index: 2, desktop: 305, mobile: 200 },
-  { month: "Mar", index: 3, desktop: 237, mobile: 120 },
-  { month: "Apr", index: 4, desktop: 73, mobile: 190 },
-  { month: "May", index: 5, desktop: 209, mobile: 130 },
-  { month: "Jun", index: 6, desktop: 214, mobile: 140 },
-] as const
+type AlarmTrendDatum = (typeof alarmStatusTrendData)[number]
 
-type MultipleBarChartDatum = (typeof multipleBarChartData)[number]
-
-const singleBarChartConfig = {
-  running: {
-    label: "Running",
-    color: "var(--chart-1)",
-  },
-  swimming: {
-    label: "Swimming",
-    color: "var(--chart-2)",
-  },
-} satisfies ChartConfig
-
-const horizontalBarChartConfig = {
-  sessions: {
-    label: "Sessions",
-    color: "var(--chart-3)",
-  },
-} satisfies ChartConfig
-
-const pieChartData = [
-  { browser: "chrome", visitors: 275, fill: "var(--color-chrome)" },
-  { browser: "safari", visitors: 200, fill: "var(--color-safari)" },
-  { browser: "firefox", visitors: 187, fill: "var(--color-firefox)" },
-  { browser: "edge", visitors: 173, fill: "var(--color-edge)" },
-  { browser: "other", visitors: 90, fill: "var(--color-other)" },
-] as const
-
-type PieChartDatum = (typeof pieChartData)[number]
-
-const pieChartConfig = {
-  visitors: {
-    label: "Visitors",
-    color: undefined,
-  },
-  chrome: {
-    label: "Chrome",
-    color: "var(--chart-1)",
-  },
-  safari: {
-    label: "Safari",
-    color: "var(--chart-2)",
-  },
-  firefox: {
-    label: "Firefox",
-    color: "var(--chart-3)",
-  },
-  edge: {
-    label: "Edge",
+const alarmStatusChartConfig = {
+  pending: {
+    label: "待复核",
     color: "var(--chart-4)",
   },
-  other: {
-    label: "Other",
-    color: "var(--chart-5)",
-  },
-} satisfies ChartConfig
-
-const multipleBarChartConfig = {
-  desktop: {
-    label: "Desktop",
-    color: "var(--chart-1)",
-  },
-  mobile: {
-    label: "Mobile",
+  archived: {
+    label: "已归档",
     color: "var(--chart-2)",
   },
 } satisfies ChartConfig
 
-const chartShellClass = "flex h-full min-w-0 w-full flex-col gap-2 rounded-xl p-0 transition-colors hover:bg-surface-tertiary sm:p-2"
-const chartCardClass = "gap-0 min-w-0 w-full overflow-hidden border-border/60 py-0 shadow-sm"
-const chartHeaderClass = "px-0 sm:pl-2 sm:pr-0"
+const alarmTrendMax = Math.max(
+  4,
+  Math.max(...alarmStatusTrendData.map(item => item.pending + item.archived), 0),
+)
+
+const personnelRoleData = Object.entries(
+  userRecords.reduce<Record<string, number>>((acc, item) => {
+    acc[item.role] = (acc[item.role] ?? 0) + 1
+    return acc
+  }, {}),
+).map(([role, count]) => ({
+  role,
+  count,
+}))
+
+type PersonnelRoleDatum = (typeof personnelRoleData)[number]
+
+const personnelRoleChartConfig = {
+  count: {
+    label: "人数",
+    color: undefined,
+  },
+  安全员: {
+    label: "安全员",
+    color: "var(--chart-1)",
+  },
+  驾驶员: {
+    label: "驾驶员",
+    color: "var(--chart-2)",
+  },
+  押运员: {
+    label: "押运员",
+    color: "var(--chart-3)",
+  },
+  调度员: {
+    label: "调度员",
+    color: "var(--chart-4)",
+  },
+} satisfies ChartConfig
+
+const districtEnterpriseData = Object.values(
+  companyRecords.reduce<Record<string, { district: string, index: number, passenger: number, dangerous: number }>>((acc, item) => {
+    acc[item.district] ??= {
+      district: item.district,
+      index: 0,
+      passenger: 0,
+      dangerous: 0,
+    }
+
+    if (item.type.includes("旅客")) {
+      acc[item.district].passenger += 1
+    }
+    else {
+      acc[item.district].dangerous += 1
+    }
+
+    return acc
+  }, {}),
+)
+  .sort((a, b) => (b.passenger + b.dangerous) - (a.passenger + a.dangerous))
+  .slice(0, 6)
+  .map((item, index) => ({
+    ...item,
+    index: index + 1,
+  }))
+
+type DistrictEnterpriseDatum = (typeof districtEnterpriseData)[number]
+
+const districtEnterpriseChartConfig = {
+  passenger: {
+    label: "客运企业",
+    color: "var(--chart-1)",
+  },
+  dangerous: {
+    label: "危货企业",
+    color: "var(--chart-2)",
+  },
+} satisfies ChartConfig
+
+const numberFormatter = new Intl.NumberFormat("zh-CN")
+
+const statsCards = [
+  {
+    title: "纳管企业",
+    value: `${numberFormatter.format(companyRecords.length)} 家`,
+    detail: "当前已接入运输企业台账",
+    highlight: `${companyRecords.filter(item => item.type.includes("旅客")).length} 家客运企业`,
+  },
+  {
+    title: "在册车辆",
+    value: `${numberFormatter.format(companyRecords.reduce((sum, item) => sum + item.vehicles, 0))} 辆`,
+    detail: "企业名下客运与危货车辆总量",
+    highlight: `${numberFormatter.format(companyRecords.filter(item => item.type.includes("危")).reduce((sum, item) => sum + item.vehicles, 0))} 辆危货车辆`,
+  },
+  {
+    title: "待复核预警",
+    value: `${numberFormatter.format(alarmQueryRecords.filter(item => item.status === "待复核").length)} 条`,
+    detail: "当前仍需人工复核的报警事件",
+    highlight: `${alarmQueryRecords.filter(item => item.riskLevel === "高").length} 条高风险预警`,
+  },
+] as const
+
+const chartShellClass = "group flex h-full min-w-0 w-full flex-col gap-2 rounded-xl p-0 transition-colors hover:bg-surface-tertiary sm:p-2"
+const chartCardClass = "flex h-full min-w-0 w-full flex-col gap-0 overflow-hidden border-border/60 bg-surface-tertiary py-0 shadow-none transition-[background-color,box-shadow] group-hover:bg-card group-hover:shadow-sm"
+const chartHeaderClass = "flex items-center px-0 sm:min-h-8 sm:pl-2 sm:pr-0"
 const chartTitleClass = "text-sm font-semibold tracking-tight text-foreground"
-const chartContentClass = "min-w-0 px-3 pt-3 pb-4 sm:px-5 sm:pt-4"
-const chartBodyClass = "h-full min-h-[220px] min-w-0 w-full sm:min-h-[240px]"
+const chartContentClass = "flex min-w-0 flex-1 flex-col p-2 sm:p-4"
+const chartContainerClass = "aspect-auto min-w-0 w-full justify-start"
+const chartBodyClass = "h-[260px] min-w-0 w-full sm:h-[300px]"
+const chartMainBodyClass = "h-[220px] min-w-0 w-full sm:h-[250px]"
 
 function getAxisLabel<T extends { index: number } & Record<K, string>, K extends string>(
   items: readonly T[],
@@ -268,39 +278,71 @@ function getAxisLabel<T extends { index: number } & Record<K, string>, K extends
 ) {
   return items.find(item => item.index === Math.round(value))?.[key] ?? ""
 }
+
+function formatShortDate(date: number | Date, locale = "zh-CN") {
+  return new Date(date).toLocaleDateString(locale, {
+    month: "numeric",
+    day: "numeric",
+  })
+}
 </script>
 
 <template>
   <div class="flex flex-col gap-4">
     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-      <div class="h-full min-h-40 bg-muted/50" />
-      <div class="h-full min-h-40 bg-muted/50" />
-      <div class="h-full min-h-40 bg-muted/50" />
+      <div
+        v-for="stat in statsCards"
+        :key="stat.title"
+        :class="chartShellClass"
+      >
+        <CardHeader :class="chartHeaderClass">
+          <CardTitle :class="chartTitleClass">
+            {{ stat.title }}
+          </CardTitle>
+        </CardHeader>
+
+        <Card :class="chartCardClass">
+          <CardContent class="flex min-h-32 flex-col justify-between px-4 py-3">
+            <div class="space-y-1.5">
+              <div class="text-[1.75rem] font-semibold tracking-tight text-foreground sm:text-[1.875rem]">
+                {{ stat.value }}
+              </div>
+              <div class="text-sm text-muted-foreground">
+                {{ stat.detail }}
+              </div>
+            </div>
+
+            <div class="text-sm font-medium text-foreground">
+              {{ stat.highlight }}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
 
     <div :class="chartShellClass">
-      <CardHeader class="flex flex-col gap-2 px-0 sm:flex-row sm:items-center sm:justify-between sm:pl-2 sm:pr-0">
+      <CardHeader class="flex flex-col gap-2 px-0 sm:min-h-8 sm:flex-row sm:items-center sm:justify-between sm:pl-2 sm:pr-0">
         <CardTitle :class="chartTitleClass">
-          Area Chart - Interactive
+          企业车辆规模趋势
         </CardTitle>
 
         <Select v-model="timeRange">
           <SelectTrigger
-            class="flex h-8 w-full rounded-lg sm:ml-auto sm:w-[148px]"
-            aria-label="Select a value"
+            class="flex h-8 w-full rounded-lg sm:ml-auto sm:w-[132px]"
+            aria-label="选择时间范围"
           >
-            <SelectValue placeholder="Last 3 months" />
+            <SelectValue placeholder="最近 7 天" />
           </SelectTrigger>
 
           <SelectContent class="rounded-xl">
-            <SelectItem value="90d" class="rounded-lg">
-              Last 3 months
-            </SelectItem>
-            <SelectItem value="30d" class="rounded-lg">
-              Last 30 days
-            </SelectItem>
             <SelectItem value="7d" class="rounded-lg">
-              Last 7 days
+              最近 7 天
+            </SelectItem>
+            <SelectItem value="3d" class="rounded-lg">
+              最近 3 天
+            </SelectItem>
+            <SelectItem value="1d" class="rounded-lg">
+              最近 1 天
             </SelectItem>
           </SelectContent>
         </Select>
@@ -309,62 +351,58 @@ function getAxisLabel<T extends { index: number } & Record<K, string>, K extends
       <Card :class="chartCardClass">
         <CardContent :class="chartContentClass">
           <ChartContainer
-            :config="chartConfig"
-            class="aspect-auto h-[220px] w-full sm:h-[250px]"
+            :config="companyChartConfig"
+            :class="chartContainerClass"
             :cursor="false"
           >
-            <VisXYContainer
-              :data="filteredChartData"
-              :svg-defs="svgDefs"
-              :margin="{ left: -40 }"
-              :y-domain="[0, 1200]"
-            >
-              <VisArea
-                :x="(d: DataPoint) => d.date"
-                :y="[(d: DataPoint) => d.mobile, (d: DataPoint) => d.desktop]"
-                :color="(_d: DataPoint, i: number) => ['url(#fillMobile)', 'url(#fillDesktop)'][i]"
-                :opacity="0.6"
-              />
+            <div :class="chartMainBodyClass">
+              <VisXYContainer
+                :data="filteredCompanyTrendData"
+                :svg-defs="svgDefs"
+                :margin="{ left: -32 }"
+                :y-domain="[0, companyTrendMax]"
+              >
+                <VisArea
+                  :x="(d: CompanyTrendDatum) => d.date"
+                  :y="[(d: CompanyTrendDatum) => d.passenger, (d: CompanyTrendDatum) => d.dangerous]"
+                  :color="(_d: CompanyTrendDatum, i: number) => ['url(#fillPassenger)', 'url(#fillDangerous)'][i]"
+                  :opacity="0.6"
+                />
 
-              <VisLine
-                :x="(d: DataPoint) => d.date"
-                :y="[(d: DataPoint) => d.mobile, (d: DataPoint) => d.mobile + d.desktop]"
-                :color="(_d: DataPoint, i: number) => [chartConfig.mobile.color, chartConfig.desktop.color][i]"
-                :line-width="1"
-              />
+                <VisLine
+                  :x="(d: CompanyTrendDatum) => d.date"
+                  :y="[(d: CompanyTrendDatum) => d.passenger, (d: CompanyTrendDatum) => d.passenger + d.dangerous]"
+                  :color="(_d: CompanyTrendDatum, i: number) => [companyChartConfig.passenger.color, companyChartConfig.dangerous.color][i]"
+                  :line-width="1"
+                />
 
-              <VisAxis
-                type="x"
-                :x="(d: DataPoint) => d.date"
-                :tick-line="false"
-                :domain-line="false"
-                :grid-line="false"
-                :num-ticks="6"
-                :tick-format="(d: number) => new Date(d).toLocaleDateString('en-US', {
-                  month: 'short',
-                  day: 'numeric',
-                })"
-              />
+                <VisAxis
+                  type="x"
+                  :x="(d: CompanyTrendDatum) => d.date"
+                  :tick-line="false"
+                  :domain-line="false"
+                  :grid-line="false"
+                  :num-ticks="6"
+                  :tick-format="(d: number) => formatShortDate(d)"
+                />
 
-              <VisAxis
-                type="y"
-                :num-ticks="3"
-                :tick-line="false"
-                :domain-line="false"
-              />
+                <VisAxis
+                  type="y"
+                  :num-ticks="4"
+                  :tick-line="false"
+                  :domain-line="false"
+                />
 
-              <ChartTooltip />
+                <ChartTooltip />
 
-              <ChartCrosshair
-                :template="componentToString(chartConfig, ChartTooltipContent, {
-                  labelFormatter: (d) => new Date(d).toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                  }),
-                })"
-                :color="(_d: DataPoint, i: number) => [chartConfig.mobile.color, chartConfig.desktop.color][i % 2]"
-              />
-            </VisXYContainer>
+                <ChartCrosshair
+                  :template="componentToString(companyChartConfig, ChartTooltipContent, {
+                    labelFormatter: (d) => formatShortDate(d),
+                  })"
+                  :color="(_d: CompanyTrendDatum, i: number) => [companyChartConfig.passenger.color, companyChartConfig.dangerous.color][i % 2]"
+                />
+              </VisXYContainer>
+            </div>
 
             <ChartLegendContent />
           </ChartContainer>
@@ -376,49 +414,57 @@ function getAxisLabel<T extends { index: number } & Record<K, string>, K extends
       <div :class="chartShellClass">
         <CardHeader :class="chartHeaderClass">
           <CardTitle :class="chartTitleClass">
-            Tooltip - Default
+            报警处置趋势
           </CardTitle>
         </CardHeader>
 
-        <Card :class="`${chartCardClass} flex flex-1 flex-col`">
-          <CardContent :class="`${chartContentClass} flex flex-1`">
-            <ChartContainer :config="singleBarChartConfig" :class="chartBodyClass">
-              <VisXYContainer
-                :data="barChartData"
-                :padding="{ top: 10, bottom: 10, left: 10, right: 10 }"
-              >
-                <VisStackedBar
-                  :x="(d: BarChartDatum) => d.date"
-                  :y="[(d: BarChartDatum) => d.running, (d: BarChartDatum) => d.swimming]"
-                  :color="[singleBarChartConfig.running.color, singleBarChartConfig.swimming.color]"
-                  :rounded-corners="4"
-                  :bar-padding="0.1"
-                />
+        <Card :class="`${chartCardClass} flex-1`">
+          <CardContent :class="chartContentClass">
+            <ChartContainer :config="alarmStatusChartConfig" :class="chartContainerClass">
+              <div :class="chartBodyClass">
+                <VisXYContainer
+                  :data="alarmStatusTrendData"
+                  :padding="{ top: 10, bottom: 10, left: 10, right: 10 }"
+                  :y-domain="[0, alarmTrendMax]"
+                >
+                  <VisStackedBar
+                    :x="(d: AlarmTrendDatum) => d.date"
+                    :y="[(d: AlarmTrendDatum) => d.pending, (d: AlarmTrendDatum) => d.archived]"
+                    :color="[alarmStatusChartConfig.pending.color, alarmStatusChartConfig.archived.color]"
+                    :rounded-corners="4"
+                    :bar-padding="0.1"
+                  />
 
-                <VisAxis
-                  type="x"
-                  :x="(d: BarChartDatum) => d.date"
-                  :tick-line="false"
-                  :domain-line="false"
-                  :grid-line="false"
-                  :num-ticks="6"
-                  :tick-format="(d: number) => new Date(d).toLocaleDateString('en-US', {
-                    weekday: 'short',
-                  })"
-                  :tick-values="barChartData.map(d => d.date)"
-                />
+                  <VisAxis
+                    type="x"
+                    :x="(d: AlarmTrendDatum) => d.date"
+                    :tick-line="false"
+                    :domain-line="false"
+                    :grid-line="false"
+                    :num-ticks="4"
+                    :tick-format="(d: number) => formatShortDate(d)"
+                    :tick-values="alarmStatusTrendData.map(d => d.date)"
+                  />
 
-                <ChartTooltip />
+                  <VisAxis
+                    type="y"
+                    :tick-line="false"
+                    :domain-line="false"
+                    :num-ticks="4"
+                  />
 
-                <ChartCrosshair
-                  :template="componentToString(singleBarChartConfig, ChartTooltipContent, {
-                    labelFormatter(d) {
-                      return new Date(d).toLocaleDateString('sv-SE')
-                    },
-                  })"
-                  color="#0000"
-                />
-              </VisXYContainer>
+                  <ChartTooltip />
+
+                  <ChartCrosshair
+                    :template="componentToString(alarmStatusChartConfig, ChartTooltipContent, {
+                      labelFormatter: d => formatShortDate(d),
+                    })"
+                    color="#0000"
+                  />
+                </VisXYContainer>
+              </div>
+
+              <ChartLegendContent />
             </ChartContainer>
           </CardContent>
         </Card>
@@ -427,32 +473,34 @@ function getAxisLabel<T extends { index: number } & Record<K, string>, K extends
       <div :class="chartShellClass">
         <CardHeader :class="chartHeaderClass">
           <CardTitle :class="chartTitleClass">
-            Pie Chart
+            从业人员角色分布
           </CardTitle>
         </CardHeader>
 
-        <Card :class="`${chartCardClass} flex flex-1 flex-col`">
-          <CardContent :class="`${chartContentClass} flex flex-1 pb-0`">
+        <Card :class="`${chartCardClass} flex-1`">
+          <CardContent :class="chartContentClass">
             <ChartContainer
-              :config="pieChartConfig"
-              class="mx-auto flex h-full min-h-[220px] w-full items-center justify-center sm:min-h-[240px]"
+              :config="personnelRoleChartConfig"
+              class="mx-auto flex min-w-0 w-full items-center justify-start"
             >
-              <VisSingleContainer
-                :data="pieChartData"
-                class="h-full w-full"
-                :margin="{ top: 30, bottom: 30 }"
-              >
-                <VisDonut
-                  :value="(d: PieChartDatum) => d.visitors"
-                  :color="(d: PieChartDatum) => pieChartConfig[d.browser as keyof typeof pieChartConfig].color"
-                  :arc-width="30"
-                />
-                <ChartTooltip
-                  :triggers="{
-                    [VisDonutSelectors.segment]: componentToString(pieChartConfig, ChartTooltipContent, { hideLabel: true })!,
-                  }"
-                />
-              </VisSingleContainer>
+              <div :class="chartBodyClass">
+                <VisSingleContainer
+                  :data="personnelRoleData"
+                  class="h-full w-full"
+                  :margin="{ top: 30, bottom: 30 }"
+                >
+                  <VisDonut
+                    :value="(d: PersonnelRoleDatum) => d.count"
+                    :color="(d: PersonnelRoleDatum) => personnelRoleChartConfig[d.role as keyof typeof personnelRoleChartConfig].color"
+                    :arc-width="30"
+                  />
+                  <ChartTooltip
+                    :triggers="{
+                      [VisDonutSelectors.segment]: componentToString(personnelRoleChartConfig, ChartTooltipContent, { hideLabel: true })!,
+                    }"
+                  />
+                </VisSingleContainer>
+              </div>
             </ChartContainer>
           </CardContent>
         </Card>
@@ -461,46 +509,47 @@ function getAxisLabel<T extends { index: number } & Record<K, string>, K extends
       <div :class="chartShellClass">
         <CardHeader :class="chartHeaderClass">
           <CardTitle :class="chartTitleClass">
-            Bar Chart - Multiple
+            重点区域企业分布
           </CardTitle>
         </CardHeader>
 
-        <Card :class="`${chartCardClass} flex flex-1 flex-col`">
-          <CardContent :class="`${chartContentClass} flex flex-1`">
+        <Card :class="`${chartCardClass} flex-1`">
+          <CardContent :class="chartContentClass">
             <ChartContainer
-              :config="multipleBarChartConfig"
-              :class="chartBodyClass"
+              :config="districtEnterpriseChartConfig"
+              :class="chartContainerClass"
             >
-              <VisXYContainer
-                :data="multipleBarChartData"
-                :margin="{ left: 8, right: 8, top: 8, bottom: 0 }"
-                :y-domain="[0, 360]"
-              >
-                <VisGroupedBar
-                  :x="(d: MultipleBarChartDatum) => d.index"
-                  :y="[(d: MultipleBarChartDatum) => d.desktop, (d: MultipleBarChartDatum) => d.mobile]"
-                  :color="(_d: MultipleBarChartDatum, i: number) => [multipleBarChartConfig.desktop.color, multipleBarChartConfig.mobile.color][i]"
-                  :group-padding="0.2"
-                  :bar-padding="0.15"
-                  :rounded-corners="4"
-                />
+              <div :class="chartBodyClass">
+                <VisXYContainer
+                  :data="districtEnterpriseData"
+                  :margin="{ left: 8, right: 8, top: 8, bottom: 0 }"
+                >
+                  <VisGroupedBar
+                    :x="(d: DistrictEnterpriseDatum) => d.index"
+                    :y="[(d: DistrictEnterpriseDatum) => d.passenger, (d: DistrictEnterpriseDatum) => d.dangerous]"
+                    :color="(_d: DistrictEnterpriseDatum, i: number) => [districtEnterpriseChartConfig.passenger.color, districtEnterpriseChartConfig.dangerous.color][i]"
+                    :group-padding="0.2"
+                    :bar-padding="0.15"
+                    :rounded-corners="4"
+                  />
 
-                <VisAxis
-                  type="x"
-                  :tick-line="false"
-                  :domain-line="false"
-                  :grid-line="false"
-                  :num-ticks="6"
-                  :tick-format="(value: number) => getAxisLabel(multipleBarChartData, value, 'month')"
-                />
+                  <VisAxis
+                    type="x"
+                    :tick-line="false"
+                    :domain-line="false"
+                    :grid-line="false"
+                    :num-ticks="6"
+                    :tick-format="(value: number) => getAxisLabel(districtEnterpriseData, value, 'district')"
+                  />
 
-                <VisAxis
-                  type="y"
-                  :tick-line="false"
-                  :domain-line="false"
-                  :num-ticks="4"
-                />
-              </VisXYContainer>
+                  <VisAxis
+                    type="y"
+                    :tick-line="false"
+                    :domain-line="false"
+                    :num-ticks="4"
+                  />
+                </VisXYContainer>
+              </div>
 
               <ChartLegendContent />
             </ChartContainer>
