@@ -7,7 +7,7 @@ import DetailRelationModule from "@/components/detail/DetailRelationModule.vue"
 import type { DetailFieldSection, DetailRelationModuleSchema } from "@/components/detail/types"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import { detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
+import { detailBreadcrumbTitle } from "@/router/detailBreadcrumbTitle"
 import companiesData from "@/data/companies.json"
 import DetailLayout from "@/layouts/DetailLayout.vue"
 

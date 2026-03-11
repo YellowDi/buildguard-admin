@@ -19,6 +19,12 @@ type BreadcrumbMetaItem = {
   to?: string
 }
 
+type RouteMetaConfig = {
+  title: string
+  breadcrumb?: BreadcrumbMetaItem[]
+  useDetailBreadcrumbTitle?: boolean
+}
+
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -28,7 +34,7 @@ const router = createRouter({
       component: LoginView,
       meta: {
         title: "登录",
-      },
+      } satisfies RouteMetaConfig,
     },
     {
       path: "/signup",
@@ -36,7 +42,7 @@ const router = createRouter({
       component: SignupView,
       meta: {
         title: "注册",
-      },
+      } satisfies RouteMetaConfig,
     },
     {
       path: "/otp",
@@ -44,14 +50,14 @@ const router = createRouter({
       component: OtpView,
       meta: {
         title: "验证码登录",
-      },
+      } satisfies RouteMetaConfig,
     },
     {
       path: "/",
       component: AdminLayout,
       meta: {
         title: "BuildGuard",
-      },
+      } satisfies RouteMetaConfig,
       children: [
         {
           path: "",
@@ -59,7 +65,7 @@ const router = createRouter({
           component: DashboardView,
           meta: {
             title: "工作台",
-          },
+          } satisfies RouteMetaConfig,
         },
         {
           path: "companies",
@@ -67,7 +73,7 @@ const router = createRouter({
           component: CompaniesView,
           meta: {
             title: "企业",
-          },
+          } satisfies RouteMetaConfig,
         },
         {
           path: "companies/:id",
@@ -75,11 +81,12 @@ const router = createRouter({
           component: CompanyDetailView,
           meta: {
             title: "企业详情",
+            useDetailBreadcrumbTitle: true,
             breadcrumb: [
               { title: "企业", to: "companies" },
               { title: "详情" },
             ] satisfies BreadcrumbMetaItem[],
-          },
+          } satisfies RouteMetaConfig,
         },
         {
           path: "companies/create",
@@ -91,7 +98,7 @@ const router = createRouter({
               { title: "企业", to: "companies" },
               { title: "添加企业" },
             ] satisfies BreadcrumbMetaItem[],
-          },
+          } satisfies RouteMetaConfig,
         },
         {
           path: "vehicles",
@@ -99,7 +106,7 @@ const router = createRouter({
           component: VehiclesView,
           meta: {
             title: "车辆",
-          },
+          } satisfies RouteMetaConfig,
         },
         {
           path: "vehicles/create",
@@ -111,7 +118,7 @@ const router = createRouter({
               { title: "车辆", to: "vehicles" },
               { title: "添加车辆" },
             ] satisfies BreadcrumbMetaItem[],
-          },
+          } satisfies RouteMetaConfig,
         },
         {
           path: "users",
@@ -119,7 +126,7 @@ const router = createRouter({
           component: UsersView,
           meta: {
             title: "从业人员",
-          },
+          } satisfies RouteMetaConfig,
         },
         {
           path: "alarm-queries",
@@ -127,7 +134,7 @@ const router = createRouter({
           component: AlarmQueriesView,
           meta: {
             title: "报警查询",
-          },
+          } satisfies RouteMetaConfig,
         },
         {
           path: "users/create",
@@ -139,7 +146,7 @@ const router = createRouter({
               { title: "从业人员", to: "users" },
               { title: "添加从业人员" },
             ] satisfies BreadcrumbMetaItem[],
-          },
+          } satisfies RouteMetaConfig,
         },
       ],
     },

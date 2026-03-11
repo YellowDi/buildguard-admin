@@ -24,7 +24,7 @@ import { cn } from "@/lib/utils"
 import { Separator } from "@/components/ui/separator"
 import { RouterLink, useRoute } from "vue-router"
 
-import { detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
+import { detailBreadcrumbTitle } from "@/router/detailBreadcrumbTitle"
 
 type BreadcrumbItemConfig = {
   title: string
@@ -48,13 +48,16 @@ const breadcrumbItems = computed<BreadcrumbItemConfig[]>(() => {
     : typeof route.meta.title === "string"
       ? [{ title: route.meta.title }]
       : []
+  const overrideTitle = route.meta.useDetailBreadcrumbTitle && detailBreadcrumbTitle.value
+    ? detailBreadcrumbTitle.value
+    : null
 
   const list = metaItems
     .filter((item): item is { title: string; to?: string } => typeof item === "object" && item !== null && typeof item.title === "string")
     .map((item, index) => ({
       ...item,
-      title: index === metaItems.length - 1 && route.name === "company-detail" && detailBreadcrumbTitle.value
-        ? detailBreadcrumbTitle.value
+      title: index === metaItems.length - 1 && overrideTitle
+        ? overrideTitle
         : item.title,
       isCurrent: index === metaItems.length - 1,
     }))
