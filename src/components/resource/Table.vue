@@ -185,6 +185,13 @@ function getResolvedColumnHeaderClass(column: TableColumn, columnIndex: number) 
   ]
 }
 
+function getStickyHeaderCellClass(column: TableColumn, columnIndex: number) {
+  return [
+    tableTheme.headerCell.sticky,
+    getResolvedColumnHeaderClass(column, columnIndex),
+  ]
+}
+
 function getResolvedColumnCellClass(column: TableColumn, columnIndex: number) {
   const fillActive = isFillColumnActive(column, columnIndex)
 
@@ -526,7 +533,7 @@ onBeforeUnmount(() => {
           <tr>
             <th
               v-if="showIndex"
-              :class="[tableTheme.indexHeader.base, tableTheme.indexHeader.static]"
+              :class="[tableTheme.indexHeader.base, tableTheme.indexHeader.sticky]"
               :style="getStickyCellStyle(0)"
             />
             <th
@@ -534,7 +541,7 @@ onBeforeUnmount(() => {
               :key="`sticky-${column.key}`"
               :class="[
                 tableTheme.headerCell.base,
-                getResolvedColumnHeaderClass(column, columnIndex),
+                getStickyHeaderCellClass(column, columnIndex),
               ]"
               :style="getStickyCellStyle(columnIndex + (showIndex ? 1 : 0))"
             >
@@ -542,7 +549,7 @@ onBeforeUnmount(() => {
             </th>
             <th
               v-if="hasRowActions"
-              :class="tableTheme.actionHeader"
+              :class="[tableTheme.actionHeader, tableTheme.actionHeaderSticky]"
               :style="getStickyCellStyle(stickyColumnWidths.length - 2)"
             />
             <th
