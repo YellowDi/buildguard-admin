@@ -273,7 +273,7 @@ watch(() => route.fullPath, () => {
                 'group flex h-9 w-full items-center gap-3 rounded-lg px-3 text-left text-sm font-medium transition-colors',
                 isActive(item)
                   ? activeItemClass
-                  : 'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+                  : 'sidebar-nav-hover-surface hover:text-sidebar-accent-foreground',
               ]"
               @click="toggleItem(item)"
             >
@@ -308,7 +308,7 @@ watch(() => route.fullPath, () => {
                   class="pointer-events-none absolute inset-y-0 -left-8 right-0 rounded-lg opacity-0 transition-opacity group-has-data-[active=true]/sub-item:opacity-100"
                   :class="isActive(child)
                     ? 'sidebar-nav-active-surface opacity-100'
-                    : 'group-hover/sub-item:bg-sidebar-accent group-hover/sub-item:opacity-100 group-has-[:focus-visible]/sub-item:bg-sidebar-accent group-has-[:focus-visible]/sub-item:opacity-100'"
+                    : 'sidebar-nav-hover-fill group-hover/sub-item:opacity-100 group-has-[:focus-visible]/sub-item:opacity-100'"
                 />
                 <div
                   class="pointer-events-none absolute inset-y-0 -left-8 right-0 rounded-lg opacity-0 ring-2 ring-sidebar-ring transition-opacity group-has-[:focus-visible]/sub-item:opacity-100"
@@ -470,7 +470,7 @@ watch(() => route.fullPath, () => {
               'group flex h-9 w-full items-center gap-3 rounded-lg px-3 text-left text-sm font-medium transition-colors',
               isActive(item)
                 ? activeItemClass
-                : 'hover:bg-sidebar-accent hover:text-sidebar-accent-foreground',
+                : 'sidebar-nav-hover-surface hover:text-sidebar-accent-foreground',
             ]"
             @click="toggleItem(item)"
           >
@@ -505,7 +505,7 @@ watch(() => route.fullPath, () => {
                 class="pointer-events-none absolute inset-y-0 -left-8 right-0 rounded-lg opacity-0 transition-opacity group-has-data-[active=true]/sub-item:opacity-100"
                 :class="isActive(child)
                   ? 'sidebar-nav-active-surface opacity-100'
-                  : 'group-hover/sub-item:bg-sidebar-accent group-hover/sub-item:opacity-100 group-has-[:focus-visible]/sub-item:bg-sidebar-accent group-has-[:focus-visible]/sub-item:opacity-100'"
+                  : 'sidebar-nav-hover-fill group-hover/sub-item:opacity-100 group-has-[:focus-visible]/sub-item:opacity-100'"
               />
               <div
                 class="pointer-events-none absolute inset-y-0 -left-8 right-0 rounded-lg opacity-0 ring-2 ring-sidebar-ring transition-opacity group-has-[:focus-visible]/sub-item:opacity-100"
