@@ -70,7 +70,7 @@
 }
 
 .detail-field-row:hover {
-  background: rgb(0 0 0 / 0.05);
+  background: var(--surface-hover-strong);
 }
 
 .detail-field-row__label {
