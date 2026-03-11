@@ -38,7 +38,6 @@ const schema: ResourceListSchema<AlarmQueryRecord> = {
       filterType: "text",
       emphasis: "strong",
       tone: "primary",
-      searchable: true,
       filter: {
         type: "text",
         placeholder: "输入车牌号",
@@ -50,7 +49,6 @@ const schema: ResourceListSchema<AlarmQueryRecord> = {
       key: "company",
       label: "所属企业",
       filterType: "text",
-      searchable: true,
       filter: {
         type: "text",
         placeholder: "输入企业名称",
@@ -62,7 +60,6 @@ const schema: ResourceListSchema<AlarmQueryRecord> = {
       key: "latestAlarm",
       label: "报警类型",
       filterType: "tag",
-      searchable: true,
       filter: {
         type: "tag",
         defaultVisible: true,
@@ -73,7 +70,6 @@ const schema: ResourceListSchema<AlarmQueryRecord> = {
       key: "riskLevel",
       label: "风险等级",
       filterType: "tag",
-      searchable: true,
       filter: {
         type: "tag",
         defaultVisible: true,
@@ -87,7 +83,6 @@ const schema: ResourceListSchema<AlarmQueryRecord> = {
       label: "报警时间",
       filterType: "time",
       format: "numeric",
-      searchable: true,
       filter: {
         type: "date",
         defaultVisible: true,
@@ -100,7 +95,6 @@ const schema: ResourceListSchema<AlarmQueryRecord> = {
       label: "处理状态",
       filterType: "tag",
       tone: "warning",
-      searchable: true,
       filter: {
         type: "tag",
         defaultVisible: true,
@@ -111,7 +105,6 @@ const schema: ResourceListSchema<AlarmQueryRecord> = {
       key: "handler",
       label: "处理人",
       filterType: "text",
-      searchable: true,
       filter: {
         type: "text",
         placeholder: "输入处理人",
@@ -126,7 +119,6 @@ const schema: ResourceListSchema<AlarmQueryRecord> = {
       format: "note",
       tone: "muted",
       width: "fill",
-      searchable: true,
       cellRenderer: { kind: "note" },
     },
   ],
@@ -137,7 +129,7 @@ const schema: ResourceListSchema<AlarmQueryRecord> = {
       type: "text",
       fixed: true,
       placeholder: "输入页面内筛选条件",
-      value: row => `${row.note} ${row.handler}`,
+      value: row => buildPageFilterText(row),
     },
   ],
   sort: {
@@ -164,6 +156,19 @@ function getRiskLevelWeight(value: string) {
   if (value === "中") return 2
   if (value === "低") return 1
   return 0
+}
+
+function buildPageFilterText(row: AlarmQueryRecord) {
+  return [
+    row.plateNumber,
+    row.company,
+    row.latestAlarm,
+    row.riskLevel,
+    row.alarmTime,
+    row.status,
+    row.handler,
+    row.note,
+  ].join(" ")
 }
 </script>
 

@@ -29,7 +29,6 @@ const props = withDefaults(defineProps<{
   customSortEnabled: boolean
   sortRules: SortRule[]
   sortFieldOptions?: SortFieldOption[]
-  searchQuery: string
   textFilters?: Record<string, TextFilterState>
   numberFilters?: Record<string, NumberFilterState>
   tagFilters?: Record<string, TagFilterState>
@@ -54,7 +53,6 @@ const emit = defineEmits<{
   "toggle-controls": []
   "set-custom-sort-enabled": [enabled: boolean]
   "update-sort-rules": [rules: SortRule[]]
-  "update-search-query": [query: string]
   "update-text-filter": [payload: { label: string; value: TextFilterState }]
   "update-number-filter": [payload: { label: string; value: NumberFilterState }]
   "update-tag-filter": [payload: { label: string; value: TagFilterState }]
@@ -69,7 +67,6 @@ const emit = defineEmits<{
 
 const openPopover = ref<string | null>(null)
 const sortPopoverSource = ref<"toolbar" | "chip">("toolbar")
-const showSearchInput = ref(false)
 const ghostIconButtonClass =
   "inline-flex size-8 items-center justify-center rounded-md bg-transparent text-muted-foreground transition-colors hover:bg-surface-tertiary hover:text-foreground active:bg-surface-secondary"
 const ghostIconButtonActiveClass =
@@ -207,18 +204,6 @@ function handleClearAllFilters() {
   emit("clear-all-filters")
   closePopover()
 }
-
-function toggleSearch() {
-  showSearchInput.value = !showSearchInput.value
-
-  if (!showSearchInput.value) {
-    emit("update-search-query", "")
-  }
-}
-
-function clearSearch() {
-  emit("update-search-query", "")
-}
 </script>
 
 <template>
@@ -277,49 +262,6 @@ function clearSearch() {
             >
               <i :class="['ri-sort-asc text-[17px]', customSortEnabled ? 'text-link' : '']" />
             </button>
-          </div>
-          <div class="flex min-w-0 flex-1 items-center justify-end gap-0 sm:w-auto sm:flex-none sm:justify-start">
-            <button
-              type="button"
-              :class="[
-                ghostIconButtonClass,
-                showSearchInput || searchQuery ? ghostIconButtonActiveClass : '',
-              ]"
-              @click="toggleSearch"
-            >
-              <i :class="['ri-search-line text-[17px]', showSearchInput || searchQuery ? 'text-link' : '']" />
-            </button>
-            <Transition
-              enter-active-class="transition-all duration-200 ease-out"
-              enter-from-class="max-w-0 opacity-0"
-              enter-to-class="max-w-[240px] opacity-100"
-              leave-active-class="transition-all duration-150 ease-in"
-              leave-from-class="max-w-[240px] opacity-100"
-              leave-to-class="max-w-0 opacity-0"
-            >
-              <div
-                v-if="showSearchInput || searchQuery"
-                class="flex h-8 min-w-0 flex-1 items-center gap-2 overflow-hidden rounded-md border border-input bg-background px-3 py-2 text-[13px] text-muted-foreground ring-offset-background transition-[color,box-shadow] focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 focus-within:ring-offset-background sm:w-[220px] sm:flex-none"
-              >
-                <input
-                  :value="searchQuery"
-                  type="text"
-                  placeholder="输入并搜索..."
-                  class="w-full border-0 bg-transparent p-0 text-[13px] text-foreground outline-none placeholder:text-muted-foreground"
-                  aria-label="输入并搜索..."
-                  @input="emit('update-search-query', ($event.target as HTMLInputElement).value)"
-                />
-                <button
-                  v-if="searchQuery"
-                  type="button"
-                  class="inline-flex size-5 shrink-0 items-center justify-center rounded-sm text-muted-foreground transition hover:bg-surface-tertiary hover:text-foreground"
-                  aria-label="清除搜索文字"
-                  @click="clearSearch"
-                >
-                  <i class="ri-close-line text-[14px]" />
-                </button>
-              </div>
-            </Transition>
           </div>
           <button
             type="button"

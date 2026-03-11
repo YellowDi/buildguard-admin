@@ -26,7 +26,6 @@ defineProps<{
   customSortEnabled: boolean
   sortRules: SortRule[]
   sortFieldOptions?: SortFieldOption[]
-  searchQuery: string
   primaryActionLabel?: string
   textFilters: Record<string, TextFilterState>
   numberFilters: Record<string, NumberFilterState>
@@ -55,7 +54,6 @@ const emit = defineEmits<{
   "set-custom-sort-enabled": [enabled: boolean]
   "update-sort-rules": [rules: SortRule[]]
   "toggle-controls": []
-  "update-search-query": [query: string]
   "update-text-filter": [payload: { label: string; value: TextFilterState }]
   "update-number-filter": [payload: { label: string; value: NumberFilterState }]
   "update-tag-filter": [payload: { label: string; value: TagFilterState }]
@@ -85,7 +83,6 @@ const slots = useSlots()
           :custom-sort-enabled="customSortEnabled"
           :sort-rules="sortRules"
           :sort-field-options="sortFieldOptions"
-          :search-query="searchQuery"
           :primary-action-label="primaryActionLabel"
           :text-filters="textFilters"
           :number-filters="numberFilters"
@@ -101,7 +98,6 @@ const slots = useSlots()
           @set-custom-sort-enabled="emit('set-custom-sort-enabled', $event)"
           @update-sort-rules="emit('update-sort-rules', $event)"
           @toggle-controls="emit('toggle-controls')"
-          @update-search-query="emit('update-search-query', $event)"
           @update-text-filter="emit('update-text-filter', $event)"
           @update-number-filter="emit('update-number-filter', $event)"
           @update-tag-filter="emit('update-tag-filter', $event)"

@@ -56,14 +56,12 @@
 - `label`: 表头文案
 - `filterType`: 表格列的筛选类型表现
 - `tone / emphasis / format / width`: 列样式的语义表达
-- `searchable`: 是否参与全文搜索
 - `filter`: 是否生成筛选项，以及筛选如何取值
 - `sort`: 是否进入排序面板，以及排序如何取值
 - `cellRenderer`: 单元格如何渲染
 
 优先使用默认能力，只有必要时再自定义函数：
 
-- `searchable: true` 时，默认按该列原始值参与搜索
 - `filter.value` 不写时，默认按该列原始值筛选
 - `sort: true` 时，默认按该列原始值排序
 - `tag` 类型筛选项默认会从当前数据去重生成
@@ -124,14 +122,13 @@
 1. 先定义行类型，确保字段含义清晰
 2. 准备数据，必要时在页面顶部做一次轻量转换
 3. 先把表格列跑通，只写 `key + label + cellRenderer`
-4. 再逐列补 `searchable / filter / sort`
+4. 再逐列补 `filter / sort`
 5. 最后补页面级 `filters`、默认 `sort`、顶部 `tabs`
 6. 模板保持极薄，只保留 `<ResourcePage :page="page" />`
 
 不要这样做：
 
 - 不要重新引入 `useListController`
-- 不要在页面里手写 `buildSearchText`
 - 不要在页面里手写 `getFilterValue`
 - 不要在页面里手写 `compareSort`
 - 不要在页面里手写长串事件透传
@@ -145,7 +142,7 @@
 2. 每个 schema 单独 `useResourceList`
 3. 用一个简单的 `pageRegistry` 管理多个 page
 4. 顶层 tab 只负责切换 `activePage`
-5. 表格内部的搜索、筛选、排序仍然完全由各自 page 管理
+5. 表格内部的筛选、排序仍然完全由各自 page 管理
 
 不要这样做：
 

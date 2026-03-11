@@ -78,14 +78,13 @@ const operatingSchema: ResourceListSchema<OperatingVehicleRecord> = {
   ],
   columns: [
     // columns 的维护规则和单表格页完全一致。
-    // 每个子表都只在这里声明：列展示、列搜索、列筛选、列排序。
+    // 每个子表都只在这里声明：列展示、列筛选、列排序。
     {
       key: "plateNumber",
       label: "车牌号",
       filterType: "text",
       emphasis: "strong",
       tone: "primary",
-      searchable: true,
       filter: {
         type: "text",
         placeholder: "输入车牌号",
@@ -97,7 +96,6 @@ const operatingSchema: ResourceListSchema<OperatingVehicleRecord> = {
       key: "company",
       label: "所属企业",
       filterType: "text",
-      searchable: true,
       filter: {
         type: "text",
         placeholder: "输入企业名称",
@@ -109,7 +107,6 @@ const operatingSchema: ResourceListSchema<OperatingVehicleRecord> = {
       key: "vehicleType",
       label: "车辆类型",
       filterType: "tag",
-      searchable: true,
       filter: {
         type: "tag",
         defaultVisible: true,
@@ -120,7 +117,6 @@ const operatingSchema: ResourceListSchema<OperatingVehicleRecord> = {
       key: "district",
       label: "所属区域",
       filterType: "tag",
-      searchable: true,
       filter: {
         type: "tag",
       },
@@ -132,7 +128,6 @@ const operatingSchema: ResourceListSchema<OperatingVehicleRecord> = {
       filterType: "number",
       tone: "accent",
       format: "numeric",
-      searchable: true,
       filter: {
         type: "number",
         placeholder: "输入在线率",
@@ -151,7 +146,6 @@ const operatingSchema: ResourceListSchema<OperatingVehicleRecord> = {
       format: "note",
       tone: "muted",
       width: "fill",
-      searchable: true,
       cellRenderer: { kind: "note" },
     },
   ],
@@ -184,7 +178,6 @@ const alarmSchema: ResourceListSchema<AlarmVehicleRecord> = {
       filterType: "text",
       emphasis: "strong",
       tone: "primary",
-      searchable: true,
       filter: {
         type: "text",
         placeholder: "输入车牌号",
@@ -196,7 +189,6 @@ const alarmSchema: ResourceListSchema<AlarmVehicleRecord> = {
       key: "company",
       label: "所属企业",
       filterType: "text",
-      searchable: true,
       filter: {
         type: "text",
         placeholder: "输入企业名称",
@@ -207,7 +199,6 @@ const alarmSchema: ResourceListSchema<AlarmVehicleRecord> = {
       key: "riskLevel",
       label: "风险等级",
       filterType: "tag",
-      searchable: true,
       filter: {
         type: "tag",
         defaultVisible: true,
@@ -220,7 +211,6 @@ const alarmSchema: ResourceListSchema<AlarmVehicleRecord> = {
       key: "latestAlarm",
       label: "最新报警",
       filterType: "text",
-      searchable: true,
       filter: {
         type: "text",
         placeholder: "输入报警类型",
@@ -232,7 +222,6 @@ const alarmSchema: ResourceListSchema<AlarmVehicleRecord> = {
       label: "处理状态",
       filterType: "tag",
       tone: "warning",
-      searchable: true,
       filter: {
         type: "tag",
         defaultVisible: true,
@@ -247,7 +236,6 @@ const alarmSchema: ResourceListSchema<AlarmVehicleRecord> = {
       format: "note",
       tone: "muted",
       width: "fill",
-      searchable: true,
       cellRenderer: { kind: "note" },
     },
   ],
@@ -280,7 +268,6 @@ const inspectionSchema: ResourceListSchema<InspectionVehicleRecord> = {
       filterType: "text",
       emphasis: "strong",
       tone: "primary",
-      searchable: true,
       filter: {
         type: "text",
         placeholder: "输入车牌号",
@@ -292,7 +279,6 @@ const inspectionSchema: ResourceListSchema<InspectionVehicleRecord> = {
       key: "company",
       label: "所属企业",
       filterType: "text",
-      searchable: true,
       filter: {
         type: "text",
         placeholder: "输入企业名称",
@@ -304,7 +290,6 @@ const inspectionSchema: ResourceListSchema<InspectionVehicleRecord> = {
       label: "年检日期",
       filterType: "time",
       format: "numeric",
-      searchable: true,
       filter: {
         type: "date",
         defaultVisible: true,
@@ -316,7 +301,6 @@ const inspectionSchema: ResourceListSchema<InspectionVehicleRecord> = {
       label: "最近维保",
       filterType: "time",
       format: "numeric",
-      searchable: true,
       filter: {
         type: "date",
       },
@@ -328,7 +312,6 @@ const inspectionSchema: ResourceListSchema<InspectionVehicleRecord> = {
       filterType: "time",
       tone: "accent",
       format: "numeric",
-      searchable: true,
       filter: {
         type: "date",
         defaultVisible: true,
@@ -343,7 +326,6 @@ const inspectionSchema: ResourceListSchema<InspectionVehicleRecord> = {
       format: "note",
       tone: "muted",
       width: "fill",
-      searchable: true,
       cellRenderer: { kind: "note" },
     },
   ],
@@ -355,7 +337,7 @@ const inspectionSchema: ResourceListSchema<InspectionVehicleRecord> = {
 }
 
 // 4. 每个 schema 各自生成一个 page。
-// 这一步之后，每个子表都已经拥有完整的搜索、筛选、排序和表格状态。
+// 这一步之后，每个子表都已经拥有完整的筛选、排序和表格状态。
 const operatingPage = useResourceList(operatingSchema)
 const alarmPage = useResourceList(alarmSchema)
 const inspectionPage = useResourceList(inspectionSchema)

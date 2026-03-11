@@ -30,7 +30,7 @@ const router = useRouter()
 // 3. 用一个 schema 描述整张资源表格页。
 // 页面作者主要维护这里：
 // - 顶部标题、行主键
-// - columns: 列展示、列搜索、列筛选、列排序
+// - columns: 列展示、列筛选、列排序
 // - filters: 不直接对应某一列的附加筛选
 // - sort: 默认排序和排序持久化 key
 // - tabs: 顶部标签页如何分组
@@ -51,18 +51,17 @@ const schema: ResourceListSchema<PractitionerRecord> = {
     },
   ],
   columns: [
-    // columns 决定“表格长什么样”，同时也顺带声明“这列怎么参与搜索/筛选/排序”。
+    // columns 决定“表格长什么样”，同时也顺带声明“这列怎么参与筛选/排序”。
     // 一个典型列通常只需要关心 4 件事：
     // - key: 对应哪一个字段
     // - label: 表头文案
     // - filter: 这列是否可以筛选
-    // - sort/searchable: 这列是否参与排序或全文搜索
+    // - sort: 这列是否参与排序
     {
       key: "name",
       label: "从业人员",
       filterType: "contact",
       variant: "contact",
-      searchable: row => `${row.name} ${row.phone}`,
       filter: {
         type: "text",
         placeholder: "输入姓名或手机号",
@@ -88,7 +87,6 @@ const schema: ResourceListSchema<PractitionerRecord> = {
       filterType: "text",
       emphasis: "strong",
       tone: "primary",
-      searchable: true,
       filter: {
         type: "text",
         placeholder: "输入企业名称",
@@ -101,7 +99,6 @@ const schema: ResourceListSchema<PractitionerRecord> = {
       key: "role",
       label: "岗位类型",
       filterType: "tag",
-      searchable: true,
       filter: {
         type: "tag",
         defaultVisible: true,
@@ -112,7 +109,6 @@ const schema: ResourceListSchema<PractitionerRecord> = {
       key: "district",
       label: "行政区域",
       filterType: "tag",
-      searchable: true,
       filter: {
         type: "tag",
       },
@@ -122,7 +118,6 @@ const schema: ResourceListSchema<PractitionerRecord> = {
       key: "certificateLevel",
       label: "证件级别",
       filterType: "tag",
-      searchable: true,
       filter: {
         type: "tag",
       },
@@ -133,7 +128,6 @@ const schema: ResourceListSchema<PractitionerRecord> = {
       label: "从业年限",
       filterType: "number",
       variant: "metric",
-      searchable: row => `${row.experienceYears}`,
       filter: {
         type: "number",
         placeholder: "输入从业年限",
@@ -154,7 +148,6 @@ const schema: ResourceListSchema<PractitionerRecord> = {
       label: "入职日期",
       filterType: "time",
       format: "numeric",
-      searchable: true,
       filter: {
         type: "date",
       },
@@ -164,7 +157,6 @@ const schema: ResourceListSchema<PractitionerRecord> = {
       key: "status",
       label: "状态",
       filterType: "tag",
-      searchable: true,
       filter: {
         type: "tag",
         defaultVisible: true,
@@ -178,12 +170,11 @@ const schema: ResourceListSchema<PractitionerRecord> = {
       format: "note",
       tone: "muted",
       width: "fill",
-      searchable: true,
       cellRenderer: { kind: "note" },
     },
   ],
   // filters 用来放“不完全等于某一列”的筛选项。
-  // 比如这里的“在页面中”本质是全页备注检索，所以单独声明为 fixed filter。
+  // 比如这里的“在页面中”本质是页面级关键字检索，所以单独声明为 fixed filter。
   filters: [
     {
       key: "在页面中",
@@ -191,7 +182,7 @@ const schema: ResourceListSchema<PractitionerRecord> = {
       type: "text",
       fixed: true,
       placeholder: "输入页面内筛选条件",
-      value: row => row.note,
+      value: row => buildPageFilterText(row),
     },
   ],
   // sort 只负责默认排序和本地持久化。
@@ -216,6 +207,21 @@ const page = useResourceList(schema)
 
 function handleCreatePractitioner() {
   router.push({ name: "user-create" })
+}
+
+function buildPageFilterText(row: PractitionerRecord) {
+  return [
+    row.name,
+    row.phone,
+    row.company,
+    row.role,
+    row.district,
+    row.certificateLevel,
+    row.experienceYears,
+    row.joinedAt,
+    row.status,
+    row.note,
+  ].join(" ")
 }
 </script>
 

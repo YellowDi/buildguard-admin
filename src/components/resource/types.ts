@@ -208,7 +208,6 @@ export type ResourceTabsDefinition<Row> =
 
 export type ResourceListColumn<Row> = TableColumn & {
   key: keyof Row & string
-  searchable?: boolean | ((row: Row) => string)
   filter?: Omit<ResourceFilterDefinition<Row>, "key" | "label"> & {
     label?: string
   }
@@ -225,9 +224,6 @@ export type ResourceListSchema<Row> = {
   data: Row[]
   columns: Array<ResourceListColumn<Row>>
   rowActions?: Array<TableRowAction<Row>>
-  search?: {
-    placeholder?: string
-  }
   filters?: ResourceFilterDefinition<Row>[]
   sort?: ResourceSortDefinition<Row>
   tabs?: ResourceTabsDefinition<Row>

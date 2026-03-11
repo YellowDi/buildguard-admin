@@ -43,7 +43,7 @@ const companies = (companiesData as RawCompanyRecord[]).map((company) => {
 // 3. 用一个 schema 描述整张资源表格页。
 // 页面作者主要维护这里：
 // - 顶部标题、行主键
-// - columns: 列展示、列搜索、列筛选、列排序
+// - columns: 列展示、列筛选、列排序
 // - filters: 不直接对应某一列的附加筛选
 // - sort: 默认排序和排序持久化 key
 // - tabs: 顶部标签页如何分组
@@ -64,19 +64,18 @@ const schema: ResourceListSchema<CompanyRecord> = {
     },
   ],
   columns: [
-    // columns 决定“表格长什么样”，同时也顺带声明“这列怎么参与搜索/筛选/排序”。
+    // columns 决定“表格长什么样”，同时也顺带声明“这列怎么参与筛选/排序”。
     // 一个典型列通常只需要关心 4 件事：
     // - key: 对应哪一个字段
     // - label: 表头文案
     // - filter: 这列是否可以筛选
-    // - sort/searchable: 这列是否参与排序或全文搜索
+    // - sort: 这列是否参与排序
     {
       key: "name",
       label: "企业名称",
       filterType: "text",
       emphasis: "strong",
       tone: "primary",
-      searchable: true,
       filter: {
         type: "text",
         placeholder: "输入企业名称",
@@ -89,7 +88,6 @@ const schema: ResourceListSchema<CompanyRecord> = {
       key: "type",
       label: "企业类型",
       filterType: "tag",
-      searchable: true,
       filter: {
         type: "tag",
       },
@@ -99,7 +97,6 @@ const schema: ResourceListSchema<CompanyRecord> = {
       key: "district",
       label: "行政区域",
       filterType: "tag",
-      searchable: true,
       filter: {
         type: "tag",
       },
@@ -110,7 +107,6 @@ const schema: ResourceListSchema<CompanyRecord> = {
       label: "车辆总数",
       filterType: "number",
       format: "numeric",
-      searchable: row => `${row.vehicles}`,
       filter: {
         type: "number",
         placeholder: "输入车辆总数",
@@ -125,7 +121,6 @@ const schema: ResourceListSchema<CompanyRecord> = {
       label: "法人信息",
       filterType: "contact",
       variant: "contact",
-      searchable: row => `${row.legalPerson} ${row.phone}`,
       filter: {
         type: "text",
         placeholder: "输入法人或手机号",
@@ -147,7 +142,6 @@ const schema: ResourceListSchema<CompanyRecord> = {
       label: "服务剩余时长",
       filterType: "number",
       variant: "metric",
-      searchable: row => `${row.serviceDays}`,
       filter: {
         type: "number",
         placeholder: "输入剩余时长",
@@ -165,7 +159,6 @@ const schema: ResourceListSchema<CompanyRecord> = {
       label: "开始日期",
       filterType: "time",
       format: "numeric",
-      searchable: true,
       filter: {
         type: "date",
       },
@@ -176,7 +169,6 @@ const schema: ResourceListSchema<CompanyRecord> = {
       label: "结束日期",
       filterType: "time",
       format: "numeric",
-      searchable: true,
       filter: {
         type: "date",
       },
@@ -190,12 +182,11 @@ const schema: ResourceListSchema<CompanyRecord> = {
       format: "note",
       tone: "muted",
       width: "fill",
-      searchable: true,
       cellRenderer: { kind: "note" },
     },
   ],
   // filters 用来放“不完全等于某一列”的筛选项。
-  // 比如这里的“在页面中”本质是备注检索，所以单独声明为 fixed filter。
+  // 比如这里的“在页面中”本质是页面级关键字检索，所以单独声明为 fixed filter。
   filters: [
     {
       key: "在页面中",
@@ -203,7 +194,7 @@ const schema: ResourceListSchema<CompanyRecord> = {
       type: "text",
       fixed: true,
       placeholder: "输入页面内筛选条件",
-      value: row => row.note,
+      value: row => buildPageFilterText(row),
     },
   ],
   // sort 只负责默认排序和本地持久化。
@@ -260,6 +251,21 @@ function toISODate(date: Date) {
   const month = `${date.getMonth() + 1}`.padStart(2, "0")
   const day = `${date.getDate()}`.padStart(2, "0")
   return `${year}-${month}-${day}`
+}
+
+function buildPageFilterText(row: CompanyRecord) {
+  return [
+    row.name,
+    row.type,
+    row.district,
+    row.vehicles,
+    row.legalPerson,
+    row.phone,
+    row.startDate,
+    row.serviceDays,
+    row.endDate,
+    row.note,
+  ].join(" ")
 }
 </script>
 

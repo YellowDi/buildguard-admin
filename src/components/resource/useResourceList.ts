@@ -8,7 +8,6 @@ import type {
   HeaderTab,
   NumberFilterState,
   ResourceFilterDefinition,
-  ResourceListColumn,
   ResourceListSchema,
   ResourceTabsDefinition,
   ResourceFilterType,
@@ -44,7 +43,6 @@ export type ResourceListDefinition<Row> = {
   stickyHeader?: boolean
   wrapperClass?: string
   tableClass?: string
-  searchPlaceholder?: string
   filters: NormalizedFilter<Row>[]
   sort: {
     storageKey?: string
@@ -129,7 +127,6 @@ export function createResourceListDefinition<Row>(schema: ResourceListSchema<Row
     stickyHeader: schema.stickyHeader,
     wrapperClass: schema.wrapperClass,
     tableClass: schema.tableClass,
-    searchPlaceholder: schema.search?.placeholder,
     filters,
     sort: {
       storageKey: schema.sort?.storageKey,
@@ -146,7 +143,6 @@ export function useResourceList<Row>(input: ResourceListSchema<Row> | ResourceLi
 
   const showControls = ref(true)
   const customSortEnabled = ref(definition.sort.initialSortRules.length > 0)
-  const searchQuery = ref("")
   const selectedTab = ref(getDefaultTabValue(definition.tabs))
   const visibleFilterKeys = ref(definition.filters.filter(filter => filter.defaultVisible && !filter.fixed).map(filter => filter.key))
 
@@ -190,13 +186,7 @@ export function useResourceList<Row>(input: ResourceListSchema<Row> | ResourceLi
 
   const tabFilteredRows = computed(() => rows.value.filter(row => matchesTab(row, definition.tabs, selectedTab.value)))
   const filteredRows = computed(() => {
-    const keyword = searchQuery.value.trim().toLowerCase()
-
     return tabFilteredRows.value.filter((row) => {
-      if (keyword && !buildSearchText(row, input).toLowerCase().includes(keyword)) {
-        return false
-      }
-
       for (const filterKey of availableFilterKeys.value) {
         if (!matchesFilter(filterMap.get(filterKey), row)) {
           return false
@@ -408,10 +398,8 @@ export function useResourceList<Row>(input: ResourceListSchema<Row> | ResourceLi
     stickyHeader: definition.stickyHeader,
     wrapperClass: definition.wrapperClass,
     tableClass: definition.tableClass,
-    searchPlaceholder: definition.searchPlaceholder,
     showControls,
     customSortEnabled,
-    searchQuery,
     sortRules,
     selectedTab,
     textFilters,
@@ -595,25 +583,6 @@ function matchesTab<Row>(row: Row, tabs: ResourceTabsDefinition<Row>, selectedTa
 
   const allValue = tabs.all?.value ?? "all"
   return selectedTab === allValue || getTabValue(row, tabs) === selectedTab
-}
-
-function buildSearchText<Row>(row: Row, input: ResourceListSchema<Row> | ResourceListDefinition<Row>) {
-  const columns = isResourceListDefinition(input) ? input.columns as Array<ResourceListColumn<Row>> : input.columns
-
-  return columns
-    .map((column) => {
-      if (!column.searchable) {
-        return ""
-      }
-
-      if (typeof column.searchable === "function") {
-        return column.searchable(row)
-      }
-
-      return stringifyValue(row[column.key])
-    })
-    .filter(Boolean)
-    .join(" ")
 }
 
 function compareByRule<Row>(field: string, left: Row, right: Row, sortFields: NormalizedSortField<Row>[]) {
