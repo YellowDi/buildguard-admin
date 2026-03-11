@@ -143,10 +143,10 @@ onUnmounted(() => { detailBreadcrumbTitle.value = null })
 </script>
 
 <template>
-  <section class="mx-auto flex w-full max-w-[1440px] min-w-0 flex-1 flex-col px-0 pb-8 sm:px-4 sm:pb-10 xl:px-8">
+  <section class="detail-page mx-auto flex w-full max-w-[1440px] min-w-0 flex-1 flex-col px-0 pb-8 sm:px-4 sm:pb-10 xl:px-8">
     <template v-if="company">
-      <div class="sticky -top-4 z-10 -mx-0 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80 sm:-mx-4">
-        <div class="px-2 py-4 sm:px-4 sm:py-5 md:px-6 xl:px-8">
+      <div class="sticky top-0 z-10 -mx-0 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80 sm:-mx-4">
+        <div class="px-4 py-5">
           <div class="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
             <div class="min-w-0">
               <h1 class="flex flex-wrap items-end gap-x-3 gap-y-2 text-[24px] tracking-[-0.04em] text-foreground md:text-[28px]">
@@ -169,8 +169,8 @@ onUnmounted(() => { detailBreadcrumbTitle.value = null })
         </div>
       </div>
 
-      <div class="grid min-h-0 flex-1 grid-cols-1 gap-0 px-0 pt-6 sm:px-3 sm:pt-8 xl:grid-cols-[0.88fr_1px_1.12fr] xl:px-4">
-        <div class="min-w-0 pr-0 xl:pr-8">
+      <div class="detail-content-grid grid min-h-0 flex-1 grid-cols-1 gap-0 px-0 py-5">
+        <div class="detail-content-primary min-w-0 pr-0">
           <div class="pb-7">
             <h2 class="mb-4 px-1 text-[14px] font-semibold leading-none text-foreground sm:px-3 md:text-[15px]">
               企业基础信息
@@ -179,7 +179,7 @@ onUnmounted(() => { detailBreadcrumbTitle.value = null })
               <div
                 v-for="(row, index) in baseInfoRows"
                 :key="`base-${index}`"
-                class="group grid grid-cols-[6.5rem_minmax(0,1fr)] items-center py-1.5 text-[14px] leading-6 transition-colors hover:bg-accent/35 sm:grid-cols-[180px_minmax(0,1fr)]"
+                class="group grid grid-cols-[6.5rem_minmax(0,1fr)] items-center py-1.5 text-[14px] leading-6 transition-colors hover:bg-[#000000]/[0.05] sm:grid-cols-[180px_minmax(0,1fr)]"
               >
                 <div class="px-1 text-muted-foreground transition-colors group-hover:text-foreground sm:px-3">{{ row.label }}</div>
                 <div class="truncate pr-2 text-foreground sm:pr-5">{{ row.value }}</div>
@@ -197,7 +197,7 @@ onUnmounted(() => { detailBreadcrumbTitle.value = null })
               <div
                 v-for="(row, idx) in contactRows"
                 :key="`contact-${idx}`"
-                class="group grid grid-cols-[6.5rem_minmax(0,1fr)] items-center py-1.5 text-[14px] leading-6 transition-colors hover:bg-accent/35 sm:grid-cols-[180px_minmax(0,1fr)]"
+                class="group grid grid-cols-[6.5rem_minmax(0,1fr)] items-center py-1.5 text-[14px] leading-6 transition-colors hover:bg-[#000000]/[0.05] sm:grid-cols-[180px_minmax(0,1fr)]"
               >
                 <div class="px-1 text-muted-foreground sm:px-3">{{ row.label }}</div>
                 <div class="pr-2 text-foreground sm:pr-5">{{ row.value }}</div>
@@ -206,13 +206,13 @@ onUnmounted(() => { detailBreadcrumbTitle.value = null })
           </div>
         </div>
 
-        <Separator orientation="vertical" class="hidden h-auto bg-border/80 xl:block" />
+        <Separator orientation="vertical" class="detail-content-divider hidden h-auto bg-border/80" />
 
-        <div class="min-w-0 pt-8 xl:pt-0 xl:pl-8">
+        <div class="detail-content-secondary min-w-0 pt-8">
           <div class="pb-5">
             <div class="detail-table-scroll detail-table-scroll--vehicles">
               <div class="detail-table-frame detail-table-frame--vehicles">
-                <div class="detail-table-grid detail-table-grid--vehicles mb-2 items-center gap-3 xl:gap-4">
+                <div class="detail-table-grid detail-table-grid--vehicles detail-section-inset mb-2 items-center gap-3 xl:gap-4">
                   <div class="flex min-w-0 items-center gap-2">
                     <span class="shrink-0 whitespace-nowrap text-[15px] font-semibold leading-none text-foreground">关联车辆</span>
                     <span class="inline-flex min-w-6 items-center justify-center rounded-md bg-muted px-1.5 py-0.5 text-[12px] font-medium leading-none text-muted-foreground">
@@ -227,14 +227,14 @@ onUnmounted(() => { detailBreadcrumbTitle.value = null })
 
                 <div class="space-y-4">
                   <div>
-                    <div class="mb-1 flex items-center gap-3">
+                    <div class="detail-section-inset mb-1 flex items-center gap-3">
                       <div class="shrink-0 text-[14px] font-medium text-muted-foreground">即将到期</div>
                       <div class="h-px flex-1 bg-border/80" />
                     </div>
                     <div
                       v-for="(row, idx) in vehiclesGrouped.expiring"
                       :key="`expiring-${idx}`"
-                      class="detail-table-grid detail-table-grid--vehicles min-h-[44px] items-center gap-3 text-[14px] transition-colors hover:bg-accent/35 xl:gap-4"
+                      class="detail-table-grid detail-table-grid--vehicles detail-section-inset min-h-[44px] items-center gap-3 text-[14px] transition-colors hover:bg-[#000000]/[0.05] xl:gap-4"
                     >
                       <div class="flex min-w-0 items-center gap-2 text-foreground">
                         <i class="ri-time-fill text-[18px] text-[#F97316]" />
@@ -250,14 +250,14 @@ onUnmounted(() => { detailBreadcrumbTitle.value = null })
                   </div>
 
                   <div>
-                    <div class="mb-1 flex items-center gap-3">
+                    <div class="detail-section-inset mb-1 flex items-center gap-3">
                       <div class="shrink-0 text-[14px] font-medium text-muted-foreground">已逾期</div>
                       <div class="h-px flex-1 bg-border/80" />
                     </div>
                     <div
                       v-for="(row, idx) in vehiclesGrouped.overdue"
                       :key="`overdue-${idx}`"
-                      class="detail-table-grid detail-table-grid--vehicles min-h-[44px] items-center gap-3 text-[14px] transition-colors hover:bg-accent/35 xl:gap-4"
+                      class="detail-table-grid detail-table-grid--vehicles detail-section-inset min-h-[44px] items-center gap-3 text-[14px] transition-colors hover:bg-[#000000]/[0.05] xl:gap-4"
                     >
                       <div class="flex min-w-0 items-center gap-2 text-foreground">
                         <i class="ri-close-circle-fill text-[18px] text-[#EF4444]" />
@@ -273,14 +273,14 @@ onUnmounted(() => { detailBreadcrumbTitle.value = null })
                   </div>
 
                   <div>
-                    <div class="mb-1 flex items-center gap-3">
+                    <div class="detail-section-inset mb-1 flex items-center gap-3">
                       <div class="shrink-0 text-[14px] font-medium text-muted-foreground">正常</div>
                       <div class="h-px flex-1 bg-border/80" />
                     </div>
                     <div
                       v-for="(row, idx) in vehiclesGrouped.normal"
                       :key="`normal-${idx}`"
-                      class="detail-table-grid detail-table-grid--vehicles min-h-[44px] items-center gap-3 text-[14px] transition-colors hover:bg-accent/35 xl:gap-4"
+                      class="detail-table-grid detail-table-grid--vehicles detail-section-inset min-h-[44px] items-center gap-3 text-[14px] transition-colors hover:bg-[#000000]/[0.05] xl:gap-4"
                     >
                       <div class="flex min-w-0 items-center gap-2 text-foreground">
                         <i class="ri-checkbox-circle-fill text-[18px] text-[#22C55E]" />
@@ -304,7 +304,7 @@ onUnmounted(() => { detailBreadcrumbTitle.value = null })
           <div class="pt-5">
             <div class="detail-table-scroll">
               <div class="detail-table-frame detail-table-frame--employees">
-                <div class="detail-table-grid detail-table-grid--employees mb-2 items-center gap-4">
+                <div class="detail-table-grid detail-table-grid--employees detail-section-inset mb-2 items-center gap-4">
                   <div class="flex min-w-0 items-center gap-2">
                     <span class="shrink-0 whitespace-nowrap text-[15px] font-semibold leading-none text-foreground">关联从业人员</span>
                     <span class="inline-flex min-w-6 items-center justify-center rounded-md bg-muted px-1.5 py-0.5 text-[12px] font-medium leading-none text-muted-foreground">
@@ -317,14 +317,14 @@ onUnmounted(() => { detailBreadcrumbTitle.value = null })
 
                 <div class="space-y-4">
                   <div>
-                    <div class="mb-1 flex items-center gap-3">
+                    <div class="detail-section-inset mb-1 flex items-center gap-3">
                       <div class="shrink-0 text-[14px] font-medium text-muted-foreground">司机</div>
                       <div class="h-px flex-1 bg-border/80" />
                     </div>
                     <div
                       v-for="(row, idx) in driverRows"
                       :key="`driver-${idx}`"
-                      class="detail-table-grid detail-table-grid--employees min-h-[44px] items-center gap-4 text-[14px] transition-colors hover:bg-accent/35"
+                      class="detail-table-grid detail-table-grid--employees detail-section-inset min-h-[44px] items-center gap-4 text-[14px] transition-colors hover:bg-[#000000]/[0.05]"
                     >
                       <div class="truncate text-foreground">{{ row.name }} {{ row.phone }}</div>
                       <div class="min-w-0 text-foreground">{{ row.vehicle }}</div>
@@ -335,14 +335,14 @@ onUnmounted(() => { detailBreadcrumbTitle.value = null })
                   </div>
 
                   <div>
-                    <div class="mb-1 flex items-center gap-3">
+                    <div class="detail-section-inset mb-1 flex items-center gap-3">
                       <div class="shrink-0 text-[14px] font-medium text-muted-foreground">押运员</div>
                       <div class="h-px flex-1 bg-border/80" />
                     </div>
                     <div
                       v-for="(row, idx) in escortRows"
                       :key="`escort-${idx}`"
-                      class="detail-table-grid detail-table-grid--employees min-h-[44px] items-center gap-4 text-[14px] transition-colors hover:bg-accent/35"
+                      class="detail-table-grid detail-table-grid--employees detail-section-inset min-h-[44px] items-center gap-4 text-[14px] transition-colors hover:bg-[#000000]/[0.05]"
                     >
                       <div class="truncate text-foreground">{{ row.name }} {{ row.phone }}</div>
                       <div class="min-w-0 text-foreground">{{ row.vehicle }}</div>
@@ -371,6 +371,11 @@ onUnmounted(() => { detailBreadcrumbTitle.value = null })
 </template>
 
 <style scoped>
+.detail-page {
+  container-type: inline-size;
+  container-name: company-detail;
+}
+
 .detail-table-scroll {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
@@ -403,7 +408,36 @@ onUnmounted(() => { detailBreadcrumbTitle.value = null })
   grid-template-columns: 12rem 7rem 2rem;
 }
 
+.detail-section-inset {
+  padding-left: 0.25rem;
+  padding-right: 0.5rem;
+}
+
+@container company-detail (min-width: 68rem) {
+  .detail-content-grid {
+    grid-template-columns: 0.88fr 1px 1.12fr;
+  }
+
+  .detail-content-primary {
+    padding-right: 1rem;
+  }
+
+  .detail-content-divider {
+    display: block;
+  }
+
+  .detail-content-secondary {
+    padding-top: 0;
+    padding-left: 1rem;
+  }
+}
+
 @media (min-width: 640px) {
+  .detail-section-inset {
+    padding-left: 0.75rem;
+    padding-right: 1.25rem;
+  }
+
   .detail-table-scroll--vehicles {
     overflow-x: visible;
   }
