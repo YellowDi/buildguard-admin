@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import type { ComponentPublicInstance } from "vue"
-import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue"
+import { computed, reactive, ref, watch } from "vue"
 import { useRoute } from "vue-router"
 
 import {
@@ -14,6 +13,7 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar"
 import BrandLogo from "@/components/layout/BrandLogo.vue"
+import TopTabSwitch from "@/components/layout/TopTabSwitch.vue"
 import UserCardPopover from "@/components/layout/UserCardPopover.vue"
 import { Calendar } from "@/components/ui/calendar"
 import Input from "@/components/ui/input/Input.vue"
@@ -137,19 +137,12 @@ const selectedTopTab = ref<TopTabId>("home")
 
 const activePath = computed(() => route.path)
 const activeItemClass = "sidebar-nav-active-surface text-sidebar-accent-foreground"
-const mobileTabRefs = ref<Array<HTMLElement | null>>([])
-const desktopTabRefs = ref<Array<HTMLElement | null>>([])
-const mobileIndicatorStyle = ref({
-  width: "0px",
-  transform: "translateX(0px)",
-  opacity: "0",
-})
-const desktopIndicatorStyle = ref({
-  width: "0px",
-  transform: "translateX(0px)",
-  opacity: "0",
-})
-let indicatorRafId = 0
+const topTabItems = computed(() =>
+  topTabs.map(tab => ({
+    ...tab,
+    badge: tab.id === "inbox" ? inboxAttentionCount : undefined,
+  })),
+)
 
 const inboxEntries = computed(() =>
   inboxGroups.flatMap((group) =>
@@ -202,6 +195,10 @@ function selectTopTab(tabId: TopTabId) {
   selectedTopTab.value = tabId
 }
 
+function handleTopTabUpdate(tabId: string) {
+  selectTopTab(tabId as TopTabId)
+}
+
 function isBusinessRoute(path: string) {
   return ["/", "/companies", "/vehicles", "/users", "/alarm-queries", "/alarm-archives"].some(
     prefix => path === prefix || path.startsWith(`${prefix}/`),
@@ -218,62 +215,6 @@ function buildInboxTime(groupLabel: string, date: string) {
   return date
 }
 
-function resolveElement(target: Element | ComponentPublicInstance | null) {
-  if (!target) return null
-  if (target instanceof HTMLElement) return target
-  if ("$el" in target && target.$el instanceof HTMLElement) return target.$el
-  return null
-}
-
-function setMobileTabRef(element: Element | ComponentPublicInstance | null, index: number) {
-  mobileTabRefs.value[index] = resolveElement(element)
-}
-
-function setDesktopTabRef(element: Element | ComponentPublicInstance | null, index: number) {
-  desktopTabRefs.value[index] = resolveElement(element)
-}
-
-function updateIndicator(
-  refs: Array<HTMLElement | null>,
-  styleRef: typeof mobileIndicatorStyle,
-) {
-  const activeIndex = topTabs.findIndex(tab => tab.id === selectedTopTab.value)
-  const activeElement = refs[activeIndex]
-
-  if (!activeElement) {
-    styleRef.value = {
-      width: "0px",
-      transform: "translateX(0px)",
-      opacity: "0",
-    }
-    return
-  }
-
-  styleRef.value = {
-    width: `${activeElement.offsetWidth}px`,
-    transform: `translateX(${activeElement.offsetLeft}px)`,
-    opacity: "1",
-  }
-}
-
-function updateAllIndicators() {
-  updateIndicator(mobileTabRefs.value, mobileIndicatorStyle)
-  updateIndicator(desktopTabRefs.value, desktopIndicatorStyle)
-}
-
-async function syncIndicators() {
-  await nextTick()
-
-  if (indicatorRafId) {
-    cancelAnimationFrame(indicatorRafId)
-  }
-
-  indicatorRafId = requestAnimationFrame(() => {
-    updateAllIndicators()
-    indicatorRafId = 0
-  })
-}
-
 watch(() => route.fullPath, () => {
   if (isBusinessRoute(route.path)) {
     selectedTopTab.value = "home"
@@ -283,23 +224,6 @@ watch(() => route.fullPath, () => {
     emit("close-mobile")
   }
 }, { immediate: true })
-
-watch(selectedTopTab, () => {
-  syncIndicators()
-})
-
-onMounted(() => {
-  syncIndicators()
-  window.addEventListener("resize", updateAllIndicators)
-})
-
-onBeforeUnmount(() => {
-  if (indicatorRafId) {
-    cancelAnimationFrame(indicatorRafId)
-  }
-
-  window.removeEventListener("resize", updateAllIndicators)
-})
 </script>
 
 <template>
@@ -320,43 +244,12 @@ onBeforeUnmount(() => {
 
       <div class="shrink-0 p-2">
         <div class="flex items-center gap-1">
-          <div class="relative flex items-center gap-1">
-            <div
-              class="pointer-events-none absolute left-0 top-0 h-8 rounded-full bg-[rgba(15,23,42,0.06)] transition-[transform,width,opacity] duration-250 ease-[cubic-bezier(0.22,1,0.36,1)]"
-              :style="mobileIndicatorStyle"
-            />
-            <button
-              v-for="(tab, index) in topTabs"
-              :key="`mobile-top-tab-${tab.id}`"
-              :ref="element => setMobileTabRef(element, index)"
-              type="button"
-              :aria-pressed="selectedTopTab === tab.id"
-              :class="[
-                'relative z-10 flex h-8 items-center justify-center rounded-full border border-transparent text-[14px] font-medium transition-colors duration-200 ease-out',
-                selectedTopTab === tab.id
-                  ? (tab.id === 'inbox'
-                    ? 'w-auto shrink-0 gap-2 pl-3 pr-2 text-sidebar-accent-foreground'
-                    : 'w-auto shrink-0 gap-2 pl-3 pr-4 text-sidebar-accent-foreground')
-                  : 'w-8 shrink-0 px-0 text-sidebar-foreground/52 hover:text-sidebar-accent-foreground',
-              ]"
-              @click="selectTopTab(tab.id)"
-            >
-              <i :class="[tab.icon, 'shrink-0 text-[17px] leading-none']" />
-              <span
-                v-if="selectedTopTab === tab.id"
-                class="whitespace-nowrap transition-[opacity,transform] duration-200 ease-out"
-                :class="selectedTopTab === tab.id ? 'translate-x-0 opacity-100' : '-translate-x-1 opacity-0'"
-              >
-                {{ tab.label }}
-              </span>
-              <span
-                v-if="selectedTopTab === tab.id && tab.id === 'inbox'"
-                class="flex h-4 min-w-4 items-center justify-center rounded-full bg-badge px-1 text-center text-[10px] font-semibold leading-none text-link-foreground"
-              >
-                {{ inboxAttentionCount }}
-              </span>
-            </button>
-          </div>
+          <TopTabSwitch
+            :tabs="topTabItems"
+            :model-value="selectedTopTab"
+            aria-label="侧边栏顶部导航"
+            @update:model-value="handleTopTabUpdate"
+          />
 
           <button
             type="button"
@@ -547,43 +440,12 @@ onBeforeUnmount(() => {
 
       <div class="p-2">
         <div class="flex items-center gap-1">
-          <div class="relative flex items-center gap-1">
-            <div
-              class="pointer-events-none absolute left-0 top-0 h-8 rounded-full bg-[rgba(15,23,42,0.06)] transition-[transform,width,opacity] duration-250 ease-[cubic-bezier(0.22,1,0.36,1)]"
-              :style="desktopIndicatorStyle"
-            />
-            <button
-              v-for="(tab, index) in topTabs"
-              :key="`top-tab-${tab.id}`"
-              :ref="element => setDesktopTabRef(element, index)"
-              type="button"
-              :aria-pressed="selectedTopTab === tab.id"
-              :class="[
-                'relative z-10 flex h-8 items-center justify-center rounded-full border border-transparent text-[14px] font-medium transition-colors duration-200 ease-out',
-                selectedTopTab === tab.id
-                  ? (tab.id === 'inbox'
-                    ? 'w-auto shrink-0 gap-2 pl-3 pr-2 text-sidebar-accent-foreground'
-                    : 'w-auto shrink-0 gap-2 pl-3 pr-4 text-sidebar-accent-foreground')
-                  : 'w-8 shrink-0 px-0 text-sidebar-foreground/52 hover:text-sidebar-accent-foreground',
-              ]"
-              @click="selectTopTab(tab.id)"
-            >
-              <i :class="[tab.icon, 'shrink-0 text-[17px] leading-none']" />
-              <span
-                v-if="selectedTopTab === tab.id"
-                class="whitespace-nowrap transition-[opacity,transform] duration-200 ease-out"
-                :class="selectedTopTab === tab.id ? 'translate-x-0 opacity-100' : '-translate-x-1 opacity-0'"
-              >
-                {{ tab.label }}
-              </span>
-              <span
-                v-if="selectedTopTab === tab.id && tab.id === 'inbox'"
-                class="flex h-4 min-w-4 items-center justify-center rounded-full bg-badge px-1 text-center text-[10px] font-semibold leading-none text-link-foreground"
-              >
-                {{ inboxAttentionCount }}
-              </span>
-            </button>
-          </div>
+          <TopTabSwitch
+            :tabs="topTabItems"
+            :model-value="selectedTopTab"
+            aria-label="侧边栏顶部导航"
+            @update:model-value="handleTopTabUpdate"
+          />
 
           <button
             type="button"
