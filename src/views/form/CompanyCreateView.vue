@@ -168,10 +168,6 @@ function handleReset() {
   nextContactId = 2
 }
 
-function goBack() {
-  router.push({ name: "companies" })
-}
-
 function triggerBusinessLicenseSelect() {
   businessLicenseInput.value?.click()
 }
@@ -217,12 +213,8 @@ onUnmounted(() => {
     <FormHeader
       title="添加企业"
       :primary-action="{ label: '添加', icon: 'ri-add-line', disabled: !canSubmit }"
-      :secondary-actions="[
-        { key: 'back', label: '返回列表' },
-        { key: 'reset', label: '重置表单' },
-      ]"
+      :secondary-actions="[{ key: 'reset', label: '重置表单' }]"
       :reset-dialog="{ description: '当前已填写的企业信息和联系人内容都会被清空，此操作不可撤销。' }"
-      @back="goBack"
       @reset="handleReset"
       @submit="handleSubmit"
     />

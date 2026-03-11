@@ -44,7 +44,6 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  back: []
   submit: []
   reset: []
   action: [key: string]
@@ -64,7 +63,6 @@ const hasActions = computed(() =>
 
 function emitSecondaryAction(key: string) {
   emit("action", key)
-  if (key === "back") emit("back")
 }
 
 function emitSubmit() {

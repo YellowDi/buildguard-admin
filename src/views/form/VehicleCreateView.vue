@@ -2,7 +2,6 @@
 import { DateFormatter, getLocalTimeZone, parseDate } from "@internationalized/date"
 import { Calendar as CalendarIcon } from "lucide-vue-next"
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref } from "vue"
-import { useRouter } from "vue-router"
 
 import FormFieldSection from "@/components/form/FormFieldSection.vue"
 import FormHeader from "@/components/form/FormHeader.vue"
@@ -51,7 +50,6 @@ const DISTRICT_OPTIONS = [
 ]
 const STATUS_OPTIONS = ["运营中", "待复核", "停运"]
 
-const router = useRouter()
 const today = new Date().toISOString().slice(0, 10)
 const nextMonth = new Date()
 nextMonth.setMonth(nextMonth.getMonth() + 1)
@@ -160,10 +158,6 @@ function handleReset() {
   submittedRecord.value = null
 }
 
-function goBack() {
-  router.push({ name: "vehicles" })
-}
-
 let observer: IntersectionObserver | null = null
 let observerActive = false
 
@@ -205,12 +199,8 @@ onUnmounted(() => {
     <FormHeader
       title="添加车辆"
       :primary-action="{ label: '添加', icon: 'ri-add-line', disabled: !canSubmit }"
-      :secondary-actions="[
-        { key: 'back', label: '返回列表' },
-        { key: 'reset', label: '重置表单' },
-      ]"
+      :secondary-actions="[{ key: 'reset', label: '重置表单' }]"
       :reset-dialog="{ description: '当前已填写的车辆信息都会被清空，此操作不可撤销。' }"
-      @back="goBack"
       @reset="handleReset"
       @submit="handleSubmit"
     />
