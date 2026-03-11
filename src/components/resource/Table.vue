@@ -4,6 +4,7 @@ import { useRoute } from "vue-router"
 import { toast } from "vue-sonner"
 
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   getColumnCellClass,
   getColumnHeaderClass,
@@ -12,8 +13,10 @@ import {
   tableTheme,
 } from "@/components/resource/tableTheme"
 import type { TableColumn, TableRowAction } from "@/components/resource/types"
+import { cn } from "@/lib/utils"
 
 type ScrollRoot = HTMLElement | Window
+type RowSelectionKey = string | number
 const HORIZONTAL_SCROLL_HINT_MESSAGE = "可按住 Shift + 鼠标滚轮进行横向移动。"
 
 const props = withDefaults(defineProps<{
@@ -37,12 +40,10 @@ const props = withDefaults(defineProps<{
 const wrapperClassName = computed(() => getTableWrapperClass(props.wrapperClass))
 const tableClassName = computed(() => getTableClass(props.tableClass))
 const hasRowActions = computed(() => (props.rowActions?.length ?? 0) > 0)
-const INLINE_END_SPACE = 32
 const tableWrapperRef = ref<HTMLElement | null>(null)
 const tableRef = ref<HTMLTableElement | null>(null)
 const fillColumnActive = ref(false)
 const horizontalOverflow = ref(false)
-const scrolledToInlineEnd = ref(true)
 const stickyHeaderActive = ref(false)
 const stickyHeaderLeft = ref(0)
 const stickyHeaderTop = ref(0)
@@ -50,14 +51,12 @@ const stickyHeaderWidth = ref(0)
 const stickyTableWidth = ref(0)
 const stickyScrollLeft = ref(0)
 const stickyColumnWidths = ref<number[]>([])
+const selectedRowKeys = ref<Set<RowSelectionKey>>(new Set())
 const stickyHeaderVisible = computed(() => (
   props.stickyHeader
   && stickyHeaderActive.value
   && stickyHeaderWidth.value > 0
   && stickyColumnWidths.value.length > 0
-))
-const inlineEndSpaceVisible = computed(() => (
-  !horizontalOverflow.value || scrolledToInlineEnd.value ? INLINE_END_SPACE : 0
 ))
 const stickyViewportStyle = computed(() => ({
   left: `${stickyHeaderLeft.value}px`,
@@ -144,6 +143,63 @@ function isRightAlignedColumn(column: TableColumn) {
 
 function handleRowActionClick(action: TableRowAction, row: Record<string, unknown>, index: number) {
   action.onClick?.(row, index)
+}
+
+function isRowSelected(row: Record<string, unknown>, index: number) {
+  return selectedRowKeys.value.has(getRowKey(row, index))
+}
+
+function updateRowSelection(row: Record<string, unknown>, index: number, checked: unknown) {
+  const nextSelections = new Set(selectedRowKeys.value)
+  const rowKey = getRowKey(row, index)
+
+  if (checked === true) {
+    nextSelections.add(rowKey)
+  } else {
+    nextSelections.delete(rowKey)
+  }
+
+  selectedRowKeys.value = nextSelections
+}
+
+function getRowClass(row: Record<string, unknown>, index: number) {
+  return cn(
+    tableTheme.row,
+    isRowSelected(row, index) ? "bg-[#EBF1FF] hover:bg-[#EBF1FF]" : "",
+  )
+}
+
+function getActionCellClass(row: Record<string, unknown>, index: number) {
+  return cn(
+    tableTheme.actionCell,
+    "relative bg-background transition-colors group-hover:bg-surface-tertiary",
+    isRowSelected(row, index) ? "!bg-[#EBF1FF] group-hover:!bg-[#EBF1FF]" : "",
+  )
+}
+
+function getEndSpacerCellClass(row: Record<string, unknown>, index: number) {
+  return cn(
+    tableTheme.endSpacerCell,
+    isRowSelected(row, index) ? "bg-[#EBF1FF]" : "",
+  )
+}
+
+function getIndexLabelClass(row: Record<string, unknown>, index: number) {
+  return cn(
+    "absolute inset-0 flex items-center justify-center transition-opacity duration-150",
+    isRowSelected(row, index)
+      ? "opacity-0"
+      : "opacity-100 group-hover:opacity-0 group-focus-within:opacity-0",
+  )
+}
+
+function getIndexCheckboxWrapperClass(row: Record<string, unknown>, index: number) {
+  return cn(
+    "absolute inset-0 flex items-center justify-center transition-opacity duration-150",
+    isRowSelected(row, index)
+      ? "opacity-100"
+      : "pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100",
+  )
 }
 
 function getStickyCellStyle(columnIndex: number) {
@@ -264,7 +320,6 @@ function clearStickyState() {
 function syncHorizontalScrollState() {
   if (!tableWrapperRef.value || !tableRef.value) {
     horizontalOverflow.value = false
-    scrolledToInlineEnd.value = true
     return
   }
 
@@ -274,7 +329,6 @@ function syncHorizontalScrollState() {
     || measureNaturalTableOverflow()
 
   horizontalOverflow.value = overflow
-  scrolledToInlineEnd.value = !overflow || wrapper.scrollLeft + wrapper.clientWidth >= wrapper.scrollWidth - 1
 }
 
 function measureNaturalTableOverflow() {
@@ -485,6 +539,18 @@ watch(() => props.rows, scheduleStickySync, { deep: true })
 watch(() => props.showIndex, scheduleStickySync)
 watch(() => hasRowActions.value, scheduleStickySync)
 watch(() => props.stickyHeader, scheduleStickySync)
+watch(() => props.rows, rows => {
+  const availableRowKeys = new Set(rows.map((row, index) => getRowKey(row, index)))
+  const nextSelections = new Set(
+    Array.from(selectedRowKeys.value).filter(rowKey => availableRowKeys.has(rowKey)),
+  )
+  const selectionChanged = nextSelections.size !== selectedRowKeys.value.size
+    || Array.from(selectedRowKeys.value).some(rowKey => !nextSelections.has(rowKey))
+
+  if (selectionChanged) {
+    selectedRowKeys.value = nextSelections
+  }
+}, { deep: true })
 watch(() => horizontalOverflow.value, overflow => {
   if (overflow) {
     maybeShowHorizontalScrollHint()
@@ -593,13 +659,24 @@ onBeforeUnmount(() => {
         <tr
           v-for="(row, index) in rows"
           :key="getRowKey(row, index)"
-          :class="tableTheme.row"
+          :class="getRowClass(row, index)"
         >
           <td
             v-if="showIndex"
             :class="tableTheme.indexCell"
           >
-            {{ index + 1 }}
+            <div class="relative ml-auto h-4 w-4">
+              <span :class="getIndexLabelClass(row, index)">
+                {{ index + 1 }}
+              </span>
+              <span :class="getIndexCheckboxWrapperClass(row, index)">
+                <Checkbox
+                  :model-value="isRowSelected(row, index)"
+                  class="border-[#B7C4E0] bg-white data-[state=checked]:border-[#2B67F6] data-[state=checked]:bg-[#2B67F6] focus-visible:ring-[#2B67F6]/20"
+                  @update:model-value="updateRowSelection(row, index, $event)"
+                />
+              </span>
+            </div>
           </td>
           <td
             v-for="(column, columnIndex) in columns"
@@ -711,8 +788,7 @@ onBeforeUnmount(() => {
           </td>
           <td
             v-if="hasRowActions"
-            :class="[tableTheme.actionCell, 'relative']"
-            :style="{ right: `${inlineEndSpaceVisible}px` }"
+            :class="getActionCellClass(row, index)"
           >
             <div aria-hidden="true" :class="tableTheme.actionSizer">
               <Button
@@ -739,7 +815,7 @@ onBeforeUnmount(() => {
               </Button>
             </div>
           </td>
-          <td :class="tableTheme.endSpacerCell" />
+          <td :class="getEndSpacerCellClass(row, index)" />
         </tr>
       </tbody>
     </table>
