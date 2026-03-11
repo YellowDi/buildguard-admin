@@ -206,7 +206,7 @@ function isBusinessRoute(path: string) {
 }
 
 function handleSearch() {
-  window.dispatchEvent(new CustomEvent("buildguard-sidebar-search"))
+  window.dispatchEvent(new CustomEvent("app-sidebar-search"))
 }
 
 function buildInboxTime(groupLabel: string, date: string) {

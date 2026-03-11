@@ -1,6 +1,6 @@
 import { createRouter, createWebHistory } from "vue-router"
 
-import AdminLayout from "@/layouts/AdminLayout.vue"
+import AppShellLayout from "@/layouts/AppShellLayout.vue"
 import AlarmArchivesView from "@/views/list/AlarmArchivesListView.vue"
 import LoginView from "@/views/auth/LoginView.vue"
 import OtpView from "@/views/auth/OtpView.vue"
@@ -55,9 +55,9 @@ const router = createRouter({
     },
     {
       path: "/",
-      component: AdminLayout,
+      component: AppShellLayout,
       meta: {
-        title: "BuildGuard",
+        title: "Workspace",
       } satisfies RouteMetaConfig,
       children: [
         {

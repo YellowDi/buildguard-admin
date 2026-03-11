@@ -13,7 +13,8 @@ import { cn } from "@/lib/utils"
 
 const { state } = useSidebar()
 
-const THEME_STORAGE_KEY = "buildguard-theme"
+const THEME_STORAGE_KEY = "app-theme"
+const LEGACY_THEME_STORAGE_KEY = "app-dark-mode"
 
 type ThemeMode = "system" | "light" | "dark"
 
@@ -37,15 +38,15 @@ function getInitialTheme(): ThemeMode {
     let stored = localStorage.getItem(THEME_STORAGE_KEY)
     if (stored === "system" || stored === "light" || stored === "dark")
       return stored
-    const legacy = localStorage.getItem("buildguard-dark-mode")
+    const legacy = localStorage.getItem(LEGACY_THEME_STORAGE_KEY)
     if (legacy === "true") {
       stored = "dark"
       localStorage.setItem(THEME_STORAGE_KEY, "dark")
-      localStorage.removeItem("buildguard-dark-mode")
+      localStorage.removeItem(LEGACY_THEME_STORAGE_KEY)
     } else if (legacy === "false") {
       stored = "light"
       localStorage.setItem(THEME_STORAGE_KEY, "light")
-      localStorage.removeItem("buildguard-dark-mode")
+      localStorage.removeItem(LEGACY_THEME_STORAGE_KEY)
     }
     return stored === "dark" || stored === "light" ? stored : "system"
   } catch {

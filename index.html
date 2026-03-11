@@ -3,9 +3,9 @@
   <head>
     <script>
       (function() {
-        var stored = localStorage.getItem('buildguard-theme');
+        var stored = localStorage.getItem('app-theme');
         if (!stored || stored === 'system') {
-          var legacy = localStorage.getItem('buildguard-dark-mode');
+          var legacy = localStorage.getItem('app-dark-mode');
           if (legacy === 'true') stored = 'dark';
           else if (legacy === 'false') stored = 'light';
           else stored = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
@@ -20,7 +20,7 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0"
     />
-    <title>BuildGuard Admin</title>
+    <title>Workspace</title>
   </head>
   <body class="bg-background text-foreground">
     <div id="app"></div>

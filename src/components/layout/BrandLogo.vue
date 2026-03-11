@@ -7,8 +7,8 @@ withDefaults(defineProps<{
   imageClass?: string
   textClass?: string
 }>(), {
-  label: "BuildGuard Admin",
-  alt: "BuildGuard logo",
+  label: "Workspace",
+  alt: "Application logo",
   imageClass: "size-8",
   textClass: "truncate text-sm font-semibold",
 })

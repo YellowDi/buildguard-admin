@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue"
+
 import AppHeader from "@/components/layout/AppHeader.vue"
 import AppSidebar from "@/components/layout/AppSidebar.vue"
 import { SidebarProvider } from "@/components/ui/sidebar"

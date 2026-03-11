@@ -32,7 +32,7 @@ function handleSubmit() {
       <div class="flex justify-center gap-2 md:justify-start">
         <RouterLink to="/login" class="flex items-center gap-2 font-medium">
           <BrandLogo
-            label="BuildGuard"
+            label="Workspace"
             image-class="size-8"
             text-class="truncate text-base font-semibold"
           />
@@ -47,7 +47,7 @@ function handleSubmit() {
                 创建新账户
               </CardTitle>
               <CardDescription>
-                填写以下信息以注册 BuildGuard 管理后台账户
+                填写以下信息以创建工作区账户
               </CardDescription>
             </CardHeader>
             <CardContent class="px-0">
