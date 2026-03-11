@@ -175,7 +175,15 @@ const filteredInboxEntries = computed(() => {
 })
 
 function isActive(item: NavItem) {
-  return item.path === activePath.value
+  if (!item.path) {
+    return false
+  }
+
+  if (item.path === "/") {
+    return activePath.value === item.path
+  }
+
+  return activePath.value === item.path || activePath.value.startsWith(`${item.path}/`)
 }
 
 function toggleItem(item: NavItem) {
