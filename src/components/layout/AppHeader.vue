@@ -121,7 +121,7 @@ const visibleTrailingItems = computed(() => {
     >
       <ViewVerticalIcon class="h-4 w-4" />
     </button>
-    <Separator orientation="vertical" class="mr-2 h-4 shrink-0" />
+    <Separator orientation="vertical" class="mr-2 !h-4 self-center shrink-0" />
     <Breadcrumb class="min-w-0 flex-1 overflow-hidden">
       <BreadcrumbList class="flex-nowrap overflow-hidden whitespace-nowrap">
         <BreadcrumbItem class="shrink-0">
