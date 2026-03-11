@@ -230,6 +230,32 @@
     will-change: opacity, transform;
   }
 
+  .top-tab-switch-icon-button {
+    position: relative;
+    overflow: hidden;
+    transition: color 160ms ease-out;
+  }
+
+  .top-tab-switch-icon-button::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: 999px;
+    background: var(--top-tab-switch-active-surface);
+    opacity: 0;
+    transform: scale(0.94);
+    transition:
+      opacity 120ms ease-out,
+      transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: opacity, transform;
+  }
+
+  .top-tab-switch-icon-button:hover::before,
+  .top-tab-switch-icon-button:focus-visible::before {
+    opacity: 1;
+    transform: scale(1);
+  }
+
   .sidebar-nav-active-surface {
     border-radius: 8px;
     background: var(--sidebar-active-surface);
@@ -249,6 +275,7 @@
 @media (prefers-reduced-motion: reduce) {
   .top-tab-switch-shell,
   .top-tab-switch-bg,
+  .top-tab-switch-icon-button,
   .top-tab-switch-content,
   .top-tab-switch-badge {
     transition: none !important;

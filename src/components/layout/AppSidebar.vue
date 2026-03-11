@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from "vue"
 import { useRoute } from "vue-router"
-
 import {
   Sidebar,
   SidebarContent,
@@ -13,6 +12,7 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar"
 import BrandLogo from "@/components/layout/BrandLogo.vue"
+import GlobalCommand from "@/components/layout/GlobalCommand.vue"
 import TopTabSwitch from "@/components/layout/TopTabSwitch.vue"
 import UserCardPopover from "@/components/layout/UserCardPopover.vue"
 import { Calendar } from "@/components/ui/calendar"
@@ -134,6 +134,7 @@ const calendarItems = [
 ]
 
 const selectedTopTab = ref<TopTabId>("home")
+const isSearchDialogOpen = ref(false)
 
 const activePath = computed(() => route.path)
 const activeItemClass = "sidebar-nav-active-surface text-sidebar-accent-foreground"
@@ -206,7 +207,7 @@ function isBusinessRoute(path: string) {
 }
 
 function handleSearch() {
-  window.dispatchEvent(new CustomEvent("app-sidebar-search"))
+  isSearchDialogOpen.value = true
 }
 
 function buildInboxTime(groupLabel: string, date: string) {
@@ -253,11 +254,11 @@ watch(() => route.fullPath, () => {
 
           <button
             type="button"
-            class="ml-auto flex h-8 w-8 items-center justify-center rounded-full text-sidebar-foreground/52 transition-colors duration-200 ease-out hover:text-sidebar-accent-foreground"
+            class="top-tab-switch-icon-button ml-auto flex h-8 w-8 items-center justify-center rounded-full text-sidebar-foreground/52 hover:text-sidebar-accent-foreground"
             aria-label="搜索"
             @click="handleSearch"
           >
-            <i class="ri-search-line text-[17px] leading-none" />
+            <i class="ri-search-line relative z-10 text-[17px] leading-none" />
           </button>
         </div>
       </div>
@@ -449,11 +450,11 @@ watch(() => route.fullPath, () => {
 
           <button
             type="button"
-            class="ml-auto flex h-8 w-8 items-center justify-center rounded-full text-sidebar-foreground/52 transition-colors duration-200 ease-out hover:text-sidebar-accent-foreground"
+            class="top-tab-switch-icon-button ml-auto flex h-8 w-8 items-center justify-center rounded-full text-sidebar-foreground/52 hover:text-sidebar-accent-foreground"
             aria-label="搜索"
             @click="handleSearch"
           >
-            <i class="ri-search-line text-[17px] leading-none" />
+            <i class="ri-search-line relative z-10 text-[17px] leading-none" />
           </button>
         </div>
       </div>
@@ -623,4 +624,6 @@ watch(() => route.fullPath, () => {
 
     <SidebarRail />
   </Sidebar>
+
+  <GlobalCommand v-model:open="isSearchDialogOpen" />
 </template>

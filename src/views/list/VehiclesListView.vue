@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { computed, ref } from "vue"
-import { useRouter } from "vue-router"
+import { computed, ref, watch } from "vue"
+import { useRoute, useRouter } from "vue-router"
 
 import TabbedTablePage from "@/components/table-page/TabbedTablePage.vue"
 import { useTablePage } from "@/components/table-page/useTablePage"
 import type { HeaderTab, TablePageSchema } from "@/components/table-page/types"
+import { useRouteTableSearch } from "@/composables/useRouteTableSearch"
 import vehiclesData from "@/mocks/vehicles.json"
 
 // 1. 先定义“表格每一行”的数据结构。
@@ -53,6 +54,7 @@ const {
   alarm: alarmVehicles,
   inspection: inspectionVehicles,
 } = buildVehicleDataBundle(vehiclesData as VehicleDataBundle)
+const route = useRoute()
 const router = useRouter()
 
 // 3. 多表格页的核心规则：
@@ -149,6 +151,16 @@ const operatingSchema: TablePageSchema<OperatingVehicleRecord> = {
       cellRenderer: { kind: "note" },
     },
   ],
+  filters: [
+    {
+      key: "在页面中",
+      label: "在页面中",
+      type: "text",
+      fixed: true,
+      placeholder: "输入页面内筛选条件",
+      value: row => buildOperatingPageFilterText(row),
+    },
+  ],
   sort: {
     storageKey: "vehicles-operating-sort-preferences",
     initialField: "onlineRate",
@@ -237,6 +249,16 @@ const alarmSchema: TablePageSchema<AlarmVehicleRecord> = {
       tone: "muted",
       width: "fill",
       cellRenderer: { kind: "note" },
+    },
+  ],
+  filters: [
+    {
+      key: "在页面中",
+      label: "在页面中",
+      type: "text",
+      fixed: true,
+      placeholder: "输入页面内筛选条件",
+      value: row => buildAlarmPageFilterText(row),
     },
   ],
   sort: {
@@ -329,6 +351,16 @@ const inspectionSchema: TablePageSchema<InspectionVehicleRecord> = {
       cellRenderer: { kind: "note" },
     },
   ],
+  filters: [
+    {
+      key: "在页面中",
+      label: "在页面中",
+      type: "text",
+      fixed: true,
+      placeholder: "输入页面内筛选条件",
+      value: row => buildInspectionPageFilterText(row),
+    },
+  ],
   sort: {
     storageKey: "vehicles-inspection-sort-preferences",
     initialField: "nextReview",
@@ -341,6 +373,10 @@ const inspectionSchema: TablePageSchema<InspectionVehicleRecord> = {
 const operatingPage = useTablePage(operatingSchema)
 const alarmPage = useTablePage(alarmSchema)
 const inspectionPage = useTablePage(inspectionSchema)
+
+useRouteTableSearch(operatingPage, route)
+useRouteTableSearch(alarmPage, route)
+useRouteTableSearch(inspectionPage, route)
 
 const activeTab = ref(VEHICLE_TAB_OVERVIEW)
 
@@ -383,6 +419,16 @@ function handleTopLevelTabClick(tab: HeaderTab) {
   activeTab.value = `${tab.value ?? tab.label}`
 }
 
+watch(
+  () => route.query.tab,
+  (value) => {
+    if (value === VEHICLE_TAB_OVERVIEW || value === VEHICLE_TAB_ALARMS || value === VEHICLE_TAB_INSPECTIONS) {
+      activeTab.value = value
+    }
+  },
+  { immediate: true },
+)
+
 function handleCreateVehicle() {
   router.push({ name: "vehicle-create" })
 }
@@ -422,10 +468,32 @@ function buildOperatingNote(row: Omit<OperatingVehicleRecord, "note">) {
   return "在线率偏低，建议排查终端与网络链路"
 }
 
+function buildOperatingPageFilterText(row: OperatingVehicleRecord) {
+  return [
+    row.plateNumber,
+    row.company,
+    row.vehicleType,
+    row.district,
+    row.onlineRate,
+    row.note,
+  ].join(" ")
+}
+
 function buildAlarmNote(row: Omit<AlarmVehicleRecord, "note">) {
   if (row.status === "待复核") return "报警记录待人工复核，建议优先核查处置结论"
   if (row.status === "处理中") return "事件已进入处置流程，需持续跟进反馈结果"
   return "工单已下发，等待现场回传处理结果"
+}
+
+function buildAlarmPageFilterText(row: AlarmVehicleRecord) {
+  return [
+    row.plateNumber,
+    row.company,
+    row.riskLevel,
+    row.latestAlarm,
+    row.status,
+    row.note,
+  ].join(" ")
 }
 
 function buildInspectionNote(row: Omit<InspectionVehicleRecord, "note">) {
@@ -433,6 +501,17 @@ function buildInspectionNote(row: Omit<InspectionVehicleRecord, "note">) {
   if (remainingDays <= 7) return "复核临近，请提前准备年检与维保材料"
   if (remainingDays <= 14) return "建议本周内确认复核排期，避免临近堆积"
   return "当前检维状态正常，可按计划推进下次复核"
+}
+
+function buildInspectionPageFilterText(row: InspectionVehicleRecord) {
+  return [
+    row.plateNumber,
+    row.company,
+    row.annualCheck,
+    row.maintenance,
+    row.nextReview,
+    row.note,
+  ].join(" ")
 }
 
 function getDaysUntil(dateString: string) {

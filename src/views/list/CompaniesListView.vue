@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { useRouter } from "vue-router"
+import { useRoute, useRouter } from "vue-router"
 
 import TablePage from "@/components/table-page/TablePage.vue"
 import { useTablePage } from "@/components/table-page/useTablePage"
 import type { TablePageSchema } from "@/components/table-page/types"
+import { useRouteTableSearch } from "@/composables/useRouteTableSearch"
 import companiesData from "@/mocks/companies.json"
 
 // 1. 先定义“表格每一行”的数据结构。
@@ -216,7 +217,10 @@ const schema: TablePageSchema<CompanyRecord> = {
 // 4. 把 schema 交给通用表格页控制器。
 // 它会统一产出页面渲染所需的 tabs、filters、rows、sort state 等响应式状态。
 const page = useTablePage(schema)
+const route = useRoute()
 const router = useRouter()
+
+useRouteTableSearch(page, route)
 
 function handleCreateCompany() {
   router.push({ name: "company-create" })

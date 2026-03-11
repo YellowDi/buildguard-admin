@@ -1,7 +1,10 @@
 <script setup lang="ts">
+import { useRoute } from "vue-router"
+
 import TablePage from "@/components/table-page/TablePage.vue"
 import { useTablePage } from "@/components/table-page/useTablePage"
 import type { TablePageSchema } from "@/components/table-page/types"
+import { useRouteTableSearch } from "@/composables/useRouteTableSearch"
 import alarmArchivesData from "@/mocks/alarm-archives.json"
 
 type AlarmArchiveRecord = {
@@ -156,6 +159,9 @@ const schema: TablePageSchema<AlarmArchiveRecord> = {
 }
 
 const page = useTablePage(schema)
+const route = useRoute()
+
+useRouteTableSearch(page, route)
 
 function extractDatePart(value: string) {
   const [datePart] = value.split(" ")
