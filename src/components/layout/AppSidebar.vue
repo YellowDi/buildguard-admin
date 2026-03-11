@@ -301,21 +301,21 @@ watch(() => route.fullPath, () => {
                 class="group/sub-item relative"
               >
                 <div
-                  class="pointer-events-none absolute inset-y-0 -left-8 right-0 rounded-lg bg-sidebar opacity-0 transition-opacity group-hover/sub-item:opacity-100 group-has-[:focus-visible]/sub-item:opacity-100 group-has-data-[active=true]/sub-item:opacity-100"
+                  class="pointer-events-none absolute inset-y-0 -left-8 right-0 rounded-lg bg-sidebar opacity-0 transition-opacity group-hover/sub-item:opacity-100 group-has-focus-visible/sub-item:opacity-100 group-has-data-[active=true]/sub-item:opacity-100"
                   :class="{ 'opacity-100': isActive(child) }"
                 />
                 <div
                   class="pointer-events-none absolute inset-y-0 -left-8 right-0 rounded-lg opacity-0 transition-opacity group-has-data-[active=true]/sub-item:opacity-100"
                   :class="isActive(child)
                     ? 'sidebar-nav-active-surface opacity-100'
-                    : 'sidebar-nav-hover-fill group-hover/sub-item:opacity-100 group-has-[:focus-visible]/sub-item:opacity-100'"
+                    : 'sidebar-nav-hover-fill group-hover/sub-item:opacity-100 group-has-focus-visible/sub-item:opacity-100'"
                 />
                 <div
-                  class="pointer-events-none absolute inset-y-0 -left-8 right-0 rounded-lg opacity-0 ring-2 ring-sidebar-ring transition-opacity group-has-[:focus-visible]/sub-item:opacity-100"
+                  class="pointer-events-none absolute inset-y-0 -left-8 right-0 rounded-lg opacity-0 ring-2 ring-sidebar-ring transition-opacity group-has-focus-visible/sub-item:opacity-100"
                   :class="{ 'hidden': isActive(child) }"
                 />
                 <div
-                  class="pointer-events-none absolute -left-5.25 top-1/2 h-5 w-0.5 -translate-x-1/2 -translate-y-1/2 rounded-full opacity-0 transition-[opacity,background-color] group-hover/sub-item:opacity-100 group-has-[:focus-visible]/sub-item:opacity-100 group-has-data-[active=true]/sub-item:opacity-100"
+                  class="pointer-events-none absolute -left-5.25 top-1/2 h-5 w-0.5 -translate-x-1/2 -translate-y-1/2 rounded-full opacity-0 transition-[opacity,background-color] group-hover/sub-item:opacity-100 group-has-focus-visible/sub-item:opacity-100 group-has-data-[active=true]/sub-item:opacity-100"
                   :class="isActive(child) ? 'bg-link' : 'bg-sidebar-foreground/40'"
                 />
                 <SidebarMenuSubButton
@@ -498,21 +498,21 @@ watch(() => route.fullPath, () => {
               class="group/sub-item relative"
             >
               <div
-                class="pointer-events-none absolute inset-y-0 -left-8 right-0 rounded-lg bg-sidebar opacity-0 transition-opacity group-hover/sub-item:opacity-100 group-has-[:focus-visible]/sub-item:opacity-100 group-has-data-[active=true]/sub-item:opacity-100"
+                class="pointer-events-none absolute inset-y-0 -left-8 right-0 rounded-lg bg-sidebar opacity-0 transition-opacity group-hover/sub-item:opacity-100 group-has-focus-visible/sub-item:opacity-100 group-has-data-[active=true]/sub-item:opacity-100"
                 :class="{ 'opacity-100': isActive(child) }"
               />
               <div
                 class="pointer-events-none absolute inset-y-0 -left-8 right-0 rounded-lg opacity-0 transition-opacity group-has-data-[active=true]/sub-item:opacity-100"
                 :class="isActive(child)
                   ? 'sidebar-nav-active-surface opacity-100'
-                  : 'sidebar-nav-hover-fill group-hover/sub-item:opacity-100 group-has-[:focus-visible]/sub-item:opacity-100'"
+                  : 'sidebar-nav-hover-fill group-hover/sub-item:opacity-100 group-has-focus-visible/sub-item:opacity-100'"
               />
               <div
-                class="pointer-events-none absolute inset-y-0 -left-8 right-0 rounded-lg opacity-0 ring-2 ring-sidebar-ring transition-opacity group-has-[:focus-visible]/sub-item:opacity-100"
+                class="pointer-events-none absolute inset-y-0 -left-8 right-0 rounded-lg opacity-0 ring-2 ring-sidebar-ring transition-opacity group-has-focus-visible/sub-item:opacity-100"
                 :class="{ 'hidden': isActive(child) }"
               />
               <div
-                  class="pointer-events-none absolute -left-5.25 top-1/2 h-5 w-0.5 -translate-x-1/2 -translate-y-1/2 rounded-full opacity-0 transition-[opacity,background-color] group-hover/sub-item:opacity-100 group-has-[:focus-visible]/sub-item:opacity-100 group-has-data-[active=true]/sub-item:opacity-100"
+                  class="pointer-events-none absolute -left-5.25 top-1/2 h-5 w-0.5 -translate-x-1/2 -translate-y-1/2 rounded-full opacity-0 transition-[opacity,background-color] group-hover/sub-item:opacity-100 group-has-focus-visible/sub-item:opacity-100 group-has-data-[active=true]/sub-item:opacity-100"
                   :class="isActive(child) ? 'bg-link' : 'bg-sidebar-foreground/40'"
               />
               <SidebarMenuSubButton
