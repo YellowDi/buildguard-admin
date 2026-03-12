@@ -4,6 +4,7 @@ export type AppSidebarNavItem = {
   label: string
   icon?: string
   path?: string
+  action?: "open-settings"
   badge?: string
   children?: AppSidebarNavItem[]
   open?: boolean

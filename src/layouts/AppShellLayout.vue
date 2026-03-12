@@ -3,6 +3,7 @@ import { computed, ref } from "vue"
 
 import AppHeader from "@/components/layout/AppHeader.vue"
 import AppSidebar from "@/components/layout/AppSidebar.vue"
+import SettingsDialog from "@/components/settings/SettingsDialog.vue"
 import RouteLoadingFallback from "@/components/loading/RouteLoadingFallback.vue"
 import { useRouteLoadingState } from "@/composables/useRouteLoadingState"
 import { SidebarProvider } from "@/components/ui/sidebar"
@@ -55,5 +56,6 @@ function closeMobileSidebar() {
         </RouterView>
       </main>
     </div>
+    <SettingsDialog />
   </SidebarProvider>
 </template>

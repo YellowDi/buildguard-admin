@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref, watch } from "vue"
+import { ref, watch } from "vue"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
@@ -10,20 +10,13 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { useSidebar } from "@/components/ui/sidebar"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useAppTheme } from "@/composables/useAppTheme"
+import { useSettingsDialog } from "@/composables/useSettingsDialog"
 import { cn } from "@/lib/utils"
 
 const { state } = useSidebar()
-
-const THEME_STORAGE_KEY = "app-theme"
-const LEGACY_THEME_STORAGE_KEY = "app-dark-mode"
-
-type ThemeMode = "system" | "light" | "dark"
-
-const THEME_OPTIONS: { value: ThemeMode; label: string; icon: string }[] = [
-  { value: "system", label: "系统", icon: "ri-computer-line" },
-  { value: "light", label: "浅色", icon: "ri-sun-line" },
-  { value: "dark", label: "暗色", icon: "ri-moon-line" },
-]
+const { themeMode, themeOptions } = useAppTheme()
+const { openSettingsDialog } = useSettingsDialog()
 
 const user = {
   name: "Rolly",
@@ -32,80 +25,7 @@ const user = {
 }
 
 const userInitial = user.name.charAt(0).toUpperCase()
-
-function getInitialTheme(): ThemeMode {
-  if (typeof document === "undefined") return "system"
-  try {
-    let stored = localStorage.getItem(THEME_STORAGE_KEY)
-    if (stored === "system" || stored === "light" || stored === "dark")
-      return stored
-    const legacy = localStorage.getItem(LEGACY_THEME_STORAGE_KEY)
-    if (legacy === "true") {
-      stored = "dark"
-      localStorage.setItem(THEME_STORAGE_KEY, "dark")
-      localStorage.removeItem(LEGACY_THEME_STORAGE_KEY)
-    } else if (legacy === "false") {
-      stored = "light"
-      localStorage.setItem(THEME_STORAGE_KEY, "light")
-      localStorage.removeItem(LEGACY_THEME_STORAGE_KEY)
-    }
-    return stored === "dark" || stored === "light" ? stored : "system"
-  } catch {
-    return "system"
-  }
-}
-
-function shouldUseDark(mode: ThemeMode): boolean {
-  if (mode === "light") return false
-  if (mode === "dark") return true
-  return (
-    typeof window !== "undefined" &&
-    window.matchMedia("(prefers-color-scheme: dark)").matches
-  )
-}
-
-function applyTheme(dark: boolean) {
-  if (dark) document.documentElement.classList.add("dark")
-  else document.documentElement.classList.remove("dark")
-}
-
-const themeMode = ref<ThemeMode>(getInitialTheme())
 const open = ref(false)
-let mediaQuery: MediaQueryList | null = null
-let mediaListener: ((e: MediaQueryListEvent) => void) | null = null
-
-onMounted(() => {
-  applyTheme(shouldUseDark(themeMode.value))
-  if (themeMode.value === "system" && typeof window !== "undefined") {
-    mediaQuery = window.matchMedia("(prefers-color-scheme: dark)")
-    mediaListener = () => applyTheme(shouldUseDark(themeMode.value))
-    mediaQuery.addEventListener("change", mediaListener)
-  }
-})
-
-onUnmounted(() => {
-  if (mediaQuery && mediaListener) {
-    mediaQuery.removeEventListener("change", mediaListener)
-  }
-})
-
-watch(themeMode, (mode) => {
-  if (typeof document === "undefined") return
-  localStorage.setItem(THEME_STORAGE_KEY, mode)
-  applyTheme(shouldUseDark(mode))
-  if (mode === "system" && typeof window !== "undefined") {
-    if (mediaQuery && mediaListener) {
-      mediaQuery.removeEventListener("change", mediaListener)
-    }
-    mediaQuery = window.matchMedia("(prefers-color-scheme: dark)")
-    mediaListener = () => applyTheme(shouldUseDark(themeMode.value))
-    mediaQuery.addEventListener("change", mediaListener)
-  } else if (mediaQuery && mediaListener) {
-    mediaQuery.removeEventListener("change", mediaListener)
-    mediaQuery = null
-    mediaListener = null
-  }
-})
 
 watch(state, (value) => {
   if (value === "collapsed" && open.value) {
@@ -115,6 +35,11 @@ watch(state, (value) => {
 
 function handleLogout() {
   // TODO: 实现登出逻辑
+}
+
+function handleOpenSettings() {
+  open.value = false
+  openSettingsDialog()
 }
 </script>
 
@@ -187,7 +112,7 @@ function handleLogout() {
             >
               <TabsList class="h-auto w-full rounded-lg bg-muted/60">
                 <TabsTrigger
-                  v-for="opt in THEME_OPTIONS"
+                  v-for="opt in themeOptions"
                   :key="opt.value"
                   :value="opt.value"
                   class="h-auto flex-1 px-2 py-1.5 text-xs data-[state=active]:shadow-xs"
@@ -198,6 +123,19 @@ function handleLogout() {
               </TabsList>
             </Tabs>
           </div>
+
+          <DropdownMenuItem
+            as-child
+            class="flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm"
+          >
+            <button
+              type="button"
+              @click="handleOpenSettings"
+            >
+              <i class="ri-settings-3-line text-base text-muted-foreground" />
+              <span>打开设置</span>
+            </button>
+          </DropdownMenuItem>
 
           <!-- 账号登出 -->
           <DropdownMenuSeparator class="mx-0 my-1 bg-border" />

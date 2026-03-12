@@ -20,6 +20,7 @@ import type {
 } from "@/components/layout/app-sidebar/types"
 import GlobalCommand from "@/components/layout/GlobalCommand.vue"
 import UserCardPopover from "@/components/layout/UserCardPopover.vue"
+import { useSettingsDialog } from "@/composables/useSettingsDialog"
 import inboxData from "@/mocks/inbox.json"
 
 const props = defineProps<{
@@ -31,6 +32,7 @@ const emit = defineEmits<{
 }>()
 
 const route = useRoute()
+const { openSettingsDialog } = useSettingsDialog()
 
 const topTabs: Array<{ id: AppSidebarTopTabId, label: string, icon: string }> = [
   {
@@ -81,6 +83,11 @@ const businessItems = reactive<AppSidebarNavItem[]>([
       },
     ],
   },
+  {
+    label: "设置",
+    icon: "ri-settings-3-line",
+    action: "open-settings",
+  },
 ])
 
 const inboxGroups = inboxData as AppSidebarInboxGroup[]
@@ -119,6 +126,9 @@ const topTabItems = computed(() =>
 
 function toggleItem(item: AppSidebarNavItem) {
   if (!item.children?.length) {
+    if (item.action === "open-settings") {
+      openSettingsDialog()
+    }
     return
   }
 
