@@ -64,7 +64,6 @@ const stickyScrollLeft = ref(0)
 const stickyColumnWidths = ref<number[]>([])
 const actionColumnWidth = ref(0)
 const actionHeaderHeight = ref(41)
-const actionRailTrailingSpace = ref(32)
 const rowMetrics = ref<ActionRowMetric[]>([])
 const hoveredRowKey = ref<RowSelectionKey | null>(null)
 const focusedRowKey = ref<RowSelectionKey | null>(null)
@@ -97,6 +96,30 @@ const actionRailVisible = computed(() => (
   && rowMetrics.value.length > 0
 ))
 const actionHeaderRailVisible = computed(() => hasRowActions.value && actionColumnWidth.value > 0)
+const isAtHorizontalEnd = computed(() => {
+  if (!tableWrapperRef.value) {
+    return false
+  }
+
+  const maxScrollLeft = tableWrapperRef.value.scrollWidth - tableWrapperRef.value.clientWidth
+  return maxScrollLeft <= 0 || stickyScrollLeft.value >= maxScrollLeft - 1
+})
+const actionRailTrailingSpace = computed(() => {
+  if (!horizontalOverflow.value) {
+    return 32
+  }
+
+  if (!tableWrapperRef.value) {
+    return 0
+  }
+
+  const releaseDistance = 64
+  const maxScrollLeft = tableWrapperRef.value.scrollWidth - tableWrapperRef.value.clientWidth
+  const remainingScroll = Math.max(0, maxScrollLeft - stickyScrollLeft.value)
+  const progress = Math.max(0, Math.min(1, (releaseDistance - remainingScroll) / releaseDistance))
+
+  return Math.round(progress * 32)
+})
 const actionRailWidth = computed(() => actionColumnWidth.value + actionRailTrailingSpace.value)
 const actionRailHostStyle = computed(() => ({
   width: `${actionRailWidth.value}px`,
@@ -494,7 +517,6 @@ function clearStickyState() {
 function clearActionRailState() {
   actionColumnWidth.value = 0
   actionHeaderHeight.value = 41
-  actionRailTrailingSpace.value = 32
   rowMetrics.value = []
 }
 
@@ -622,7 +644,6 @@ function syncActionRailState() {
   }
 
   const bodyRows = Array.from(tableRef.value.querySelectorAll("tbody > tr"))
-  actionRailTrailingSpace.value = tableWrapperRef.value.clientWidth < 1280 ? 0 : 32
   actionHeaderHeight.value = Math.round(actionHeaderCell.getBoundingClientRect().height) || 41
 
   if (!bodyRows.length) {
