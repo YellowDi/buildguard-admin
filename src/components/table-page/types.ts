@@ -1,3 +1,5 @@
+import type { StatusBadgeIcon, StatusBadgeTone } from "@/components/ui/status-badge"
+
 export type HeaderTab = {
   label: string
   value?: string | number
@@ -84,6 +86,17 @@ export type TableColumnEmphasis = "default" | "strong"
 export type TableColumnFormat = "default" | "numeric" | "note"
 export type TableColumnWidth = "auto" | "fill"
 export type TableColumnVariant = "default" | "contact" | "note" | "metric"
+export type TableStatusOption = {
+  tone: StatusBadgeTone
+  label?: string
+  icon?: StatusBadgeIcon
+}
+export type TableStatusCellRenderer = {
+  kind: "status"
+  valueKey?: string
+  map: Record<string, TableStatusOption>
+  fallback?: TableStatusOption
+}
 export type TableRowAction<Row = Record<string, unknown>> = {
   key: string
   label: string
@@ -137,6 +150,7 @@ export type TableColumn = {
         valueClass?: string
         unitClass?: string
       }
+    | TableStatusCellRenderer
     | {
         kind: "note"
       }

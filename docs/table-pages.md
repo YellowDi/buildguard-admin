@@ -91,6 +91,13 @@
 - 强调数值列：`tone: "accent"`
 - 风险或告警状态列：`tone: "warning"`
 
+状态类单元格优先走 `cellRenderer: { kind: "status" }`，不要在业务页重复写 slot：
+
+- 用 `map` 声明状态值到 Notion 色盘的映射：`default | gray | brown | orange | yellow | green | blue | purple | pink | red`
+- 需要兜底时补 `fallback`
+- 适合“处理状态 / 人员状态 / 归档状态”这类“图标 + 文案”的统一展示
+- 视觉实现统一复用 [StatusBadge.vue](/Users/Rolly/buildguard-admin/src/components/ui/status-badge/StatusBadge.vue)
+
 只有在 table-page 层语义确实表达不了时，才允许保留 `cellClass/headerClass` 作为 escape hatch。
 
 不要这样做：

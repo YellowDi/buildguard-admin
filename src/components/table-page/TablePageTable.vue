@@ -5,6 +5,7 @@ import { toast } from "vue-sonner"
 
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
+import StatusChip from "@/components/table-page/TableStatusChip.vue"
 import {
   getColumnCellClass,
   getColumnHeaderClass,
@@ -1140,6 +1141,12 @@ onBeforeUnmount(() => {
                   {{ column.cellRenderer.unit }}
                 </span>
               </div>
+
+              <StatusChip
+                v-else-if="column.cellRenderer?.kind === 'status'"
+                :value="getRendererValue(row, column.cellRenderer.valueKey ?? column.key)"
+                :renderer="column.cellRenderer"
+              />
 
               <div
                 v-else-if="column.cellRenderer?.kind === 'note'"

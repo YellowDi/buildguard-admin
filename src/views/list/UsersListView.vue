@@ -2,6 +2,7 @@
 import { useRoute, useRouter } from "vue-router"
 
 import TablePage from "@/components/table-page/TablePage.vue"
+import { practitionerStatusMap } from "@/components/table-page/statusPresets"
 import { useTablePage } from "@/components/table-page/useTablePage"
 import type { TablePageSchema } from "@/components/table-page/types"
 import { useRouteTableSearch } from "@/composables/useRouteTableSearch"
@@ -158,6 +159,11 @@ const schema: TablePageSchema<PractitionerRecord> = {
       key: "status",
       label: "状态",
       filterType: "tag",
+      cellRenderer: {
+        kind: "status",
+        map: practitionerStatusMap,
+        fallback: { tone: "gray", icon: "dot" },
+      },
       filter: {
         type: "tag",
         defaultVisible: true,

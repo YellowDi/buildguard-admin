@@ -3,6 +3,7 @@ import { computed, ref, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
 
 import TabbedTablePage from "@/components/table-page/TabbedTablePage.vue"
+import { processStatusMap } from "@/components/table-page/statusPresets"
 import { useTablePage } from "@/components/table-page/useTablePage"
 import type { HeaderTab, TablePageSchema } from "@/components/table-page/types"
 import { useRouteTableSearch } from "@/composables/useRouteTableSearch"
@@ -234,6 +235,11 @@ const alarmSchema: TablePageSchema<AlarmVehicleRecord> = {
       label: "处理状态",
       filterType: "tag",
       tone: "warning",
+      cellRenderer: {
+        kind: "status",
+        map: processStatusMap,
+        fallback: { tone: "gray", icon: "dot" },
+      },
       filter: {
         type: "tag",
         defaultVisible: true,

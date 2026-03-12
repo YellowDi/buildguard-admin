@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import TablePage from "@/components/table-page/TablePage.vue"
+import { outboundTaskStatusMap } from "@/components/table-page/statusPresets"
 import { useTablePage } from "@/components/table-page/useTablePage"
 import type { TablePageSchema } from "@/components/table-page/types"
 
@@ -85,6 +86,11 @@ const schema: TablePageSchema<OutboundTaskRecord> = {
       label: "任务状态",
       filterType: "tag",
       tone: "warning",
+      cellRenderer: {
+        kind: "status",
+        map: outboundTaskStatusMap,
+        fallback: { tone: "gray", icon: "dot" },
+      },
       filter: {
         type: "tag",
       },

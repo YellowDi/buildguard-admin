@@ -2,6 +2,7 @@
 import { useRoute } from "vue-router"
 
 import TablePage from "@/components/table-page/TablePage.vue"
+import { processStatusMap } from "@/components/table-page/statusPresets"
 import { useTablePage } from "@/components/table-page/useTablePage"
 import type { TablePageSchema } from "@/components/table-page/types"
 import { useRouteTableSearch } from "@/composables/useRouteTableSearch"
@@ -98,6 +99,11 @@ const schema: TablePageSchema<AlarmQueryRecord> = {
       label: "处理状态",
       filterType: "tag",
       tone: "warning",
+      cellRenderer: {
+        kind: "status",
+        map: processStatusMap,
+        fallback: { tone: "gray", icon: "dot" },
+      },
       filter: {
         type: "tag",
         defaultVisible: true,
