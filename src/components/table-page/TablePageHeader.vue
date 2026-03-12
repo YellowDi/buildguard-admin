@@ -270,7 +270,6 @@ function handleClearAllFilters() {
             <i class="ri-more-line text-base" />
           </button>
           <Button
-            v-if="primaryActionLabel"
             variant="outline"
             class="h-8 gap-1 px-3 text-[14px]"
             @click="emit('export-action')"

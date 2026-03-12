@@ -12,6 +12,7 @@ defineProps({
 })
 
 const emit = defineEmits<{
+  "update:selected-row-keys": [keys: Array<string | number>]
   "export-action": []
   "primary-action": []
 }>()
@@ -38,7 +39,14 @@ const emit = defineEmits<{
     :columns="page.columns"
     :row-actions="page.rowActions"
     :rows="page.visibleRows.value"
+    :filtered-rows="page.filteredRows.value"
+    :selected-rows="page.selectedRows.value"
     :row-key="page.rowKey"
+    :selected-row-keys="page.selectedRowKeys.value"
+    :selected-rows-count="page.selectedRowsCount.value"
+    :filtered-rows-count="page.filteredRowsCount.value"
+    :total-rows-count="page.totalRowsCount.value"
+    :current-filters-summary="page.activeFilterSummary.value"
     :summary="page.summary"
     :show-index="page.showIndex"
     :sticky-header="page.stickyHeader"
@@ -57,6 +65,7 @@ const emit = defineEmits<{
     @update-number-filter="page.updateNumberFilter($event.label, $event.value)"
     @update-tag-filter="page.updateTagFilter($event.label, $event.value)"
     @update-date-filter="page.updateDateFilter($event.label, $event.value)"
+    @update:selected-row-keys="page.selectedRowKeys.value = $event; emit('update:selected-row-keys', $event)"
     @export-action="emit('export-action')"
     @primary-action="emit('primary-action')"
   />

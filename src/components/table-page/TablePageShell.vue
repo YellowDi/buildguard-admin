@@ -1,8 +1,16 @@
 <script setup lang="ts">
-import { useSlots } from "vue"
+import { computed, nextTick, ref, useSlots } from "vue"
+import { toast } from "vue-sonner"
 
+import ExportTableDialog from "@/components/table-page/ExportTableDialog.vue"
 import Header from "@/components/table-page/TablePageHeader.vue"
 import Table from "@/components/table-page/TablePageTable.vue"
+import {
+  exportTableData,
+  SUPPORTED_TABLE_EXPORT_FORMATS,
+  type TableExportFormat,
+  type TableExportScope,
+} from "@/components/table-page/export-utils"
 import type { SortFieldOption, SortRule } from "@/components/table-page/TableSortPopover.vue"
 import type {
   DateFilterState,
@@ -37,7 +45,14 @@ const props = defineProps<{
   columns: TableColumn[]
   rowActions?: TableRowAction[]
   rows: Record<string, unknown>[]
+  filteredRows?: Record<string, unknown>[]
+  selectedRows?: Record<string, unknown>[]
   rowKey: string | ((row: Record<string, unknown>, index: number) => string | number)
+  selectedRowKeys?: Array<string | number>
+  selectedRowsCount?: number
+  filteredRowsCount?: number
+  totalRowsCount?: number
+  currentFiltersSummary?: string[]
   summary?: string
   showIndex?: boolean
   stickyHeader?: boolean
@@ -60,11 +75,78 @@ const emit = defineEmits<{
   "update-number-filter": [payload: { label: string; value: NumberFilterState }]
   "update-tag-filter": [payload: { label: string; value: TagFilterState }]
   "update-date-filter": [payload: { label: string; value: DateFilterState }]
+  "update:selected-row-keys": [keys: Array<string | number>]
   "export-action": []
   "primary-action": []
 }>()
 
 const slots = useSlots()
+const exportDialogOpen = ref(false)
+const isExporting = ref(false)
+const availableExportFormats = [...SUPPORTED_TABLE_EXPORT_FORMATS]
+const currentPageRowsCount = computed(() => props.rows.length)
+
+function handleOpenExportDialog() {
+  exportDialogOpen.value = true
+  emit("export-action")
+}
+
+function resolveExportRows(scope: TableExportScope) {
+  if (scope === "selected") {
+    return props.selectedRows ?? []
+  }
+
+  if (scope === "page") {
+    return props.rows
+  }
+
+  return props.filteredRows ?? props.rows
+}
+
+function getExportEmptyMessage(scope: TableExportScope) {
+  if (scope === "selected") {
+    return "当前没有已选记录，请先勾选后再导出。"
+  }
+
+  if (scope === "page") {
+    return "当前页没有可导出的记录。"
+  }
+
+  return "当前筛选结果为空，请调整筛选条件后重试。"
+}
+
+async function handleExportConfirm(payload: { scope: TableExportScope; format: TableExportFormat }) {
+  if (isExporting.value) {
+    return
+  }
+
+  const exportRows = resolveExportRows(payload.scope)
+
+  if (!exportRows.length) {
+    toast.error(getExportEmptyMessage(payload.scope))
+    return
+  }
+
+  isExporting.value = true
+
+  try {
+    await nextTick()
+    exportTableData({
+      title: props.title,
+      columns: props.columns,
+      rows: exportRows,
+      format: payload.format,
+    })
+    toast.success(`已导出 ${exportRows.length} 条记录`)
+    exportDialogOpen.value = false
+  }
+  catch (error) {
+    toast.error(error instanceof Error ? error.message : "导出失败，请稍后重试。")
+  }
+  finally {
+    isExporting.value = false
+  }
+}
 </script>
 
 <template>
@@ -104,7 +186,7 @@ const slots = useSlots()
           @update-number-filter="emit('update-number-filter', $event)"
           @update-tag-filter="emit('update-tag-filter', $event)"
           @update-date-filter="emit('update-date-filter', $event)"
-          @export-action="emit('export-action')"
+          @export-action="handleOpenExportDialog"
           @primary-action="emit('primary-action')"
         />
 
@@ -118,12 +200,14 @@ const slots = useSlots()
                 :rows="section.rows"
                 :row-key="section.rowKey"
                 :row-actions="section.rowActions ?? props.rowActions"
+                :selected-row-keys="props.selectedRowKeys"
                 :summary="section.summary"
                 :show-index="section.showIndex ?? props.showIndex"
                 :sticky-header="section.stickyHeader ?? props.stickyHeader"
                 :wrapper-class="section.wrapperClass ?? props.wrapperClass"
                 :table-class="section.tableClass ?? props.tableClass"
                 :empty-state="props.emptyState"
+                @update:selected-row-keys="emit('update:selected-row-keys', $event)"
               >
                 <template
                   v-for="(_, name) in slots"
@@ -140,12 +224,14 @@ const slots = useSlots()
               :row-actions="props.rowActions"
               :rows="props.rows"
               :row-key="props.rowKey"
+              :selected-row-keys="props.selectedRowKeys"
               :summary="props.summary"
               :show-index="props.showIndex"
               :sticky-header="props.stickyHeader"
               :wrapper-class="props.wrapperClass"
               :table-class="props.tableClass"
               :empty-state="props.emptyState"
+              @update:selected-row-keys="emit('update:selected-row-keys', $event)"
             >
               <template
                 v-for="(_, name) in slots"
@@ -159,5 +245,19 @@ const slots = useSlots()
         </div>
       </div>
     </div>
+
+    <ExportTableDialog
+      :open="exportDialogOpen"
+      :table-title="props.title"
+      :selected-rows-count="props.selectedRowsCount ?? 0"
+      :current-page-rows-count="currentPageRowsCount"
+      :filtered-rows-count="props.filteredRowsCount ?? props.rows.length"
+      :total-rows-count="props.totalRowsCount ?? props.rows.length"
+      :current-filters-summary="props.currentFiltersSummary ?? []"
+      :available-formats="availableExportFormats"
+      :is-exporting="isExporting"
+      @update:open="exportDialogOpen = $event"
+      @confirm="handleExportConfirm"
+    />
   </section>
 </template>

@@ -171,7 +171,25 @@ export function useTablePage<Row>(input: TablePageSchema<Row> | TablePageDefinit
       .map((filter) => [filter.key, resolveTagOptions(filter, rows.value)]),
   ) as Record<string, string[]>)
   const tabs = computed(() => buildTabs(rows.value, definition.tabs, selectedTab.value))
+  const selectedRowKeys = ref<Array<string | number>>([])
   const primarySortRule = computed(() => sortRules.value[0] ?? null)
+  const selectedRowKeySet = computed(() => new Set(selectedRowKeys.value))
+  const currentPageRows = computed(() => visibleRows.value)
+  const selectedRows = computed(() => currentPageRows.value.filter((row, index) => selectedRowKeySet.value.has(getRowKey(row, index))))
+  const selectedRowsCount = computed(() => selectedRows.value.length)
+  const currentPageRowsCount = computed(() => currentPageRows.value.length)
+  const filteredRowsCount = computed(() => visibleRows.value.length)
+  const totalRowsCount = computed(() => rows.value.length)
+  const activeFilterSummary = computed(() => buildActiveFilterSummary({
+    tabs: definition.tabs,
+    activeTabs: tabs.value,
+    selectedTab: selectedTab.value,
+    textFilters: textFilters.value,
+    numberFilters: numberFilters.value,
+    tagFilters: tagFilters.value,
+    dateFilters: dateFilters.value,
+  }))
+  const hasActiveFilters = computed(() => activeFilterSummary.value.length > 0)
   let sortPreferencesHydrated = false
 
   const fields = computed<HeaderField[]>(() => [
@@ -259,6 +277,16 @@ export function useTablePage<Row>(input: TablePageSchema<Row> | TablePageDefinit
 
   function handleTabClick(tab: { value?: string | number; label: string }) {
     selectedTab.value = `${tab.value ?? tab.label}`
+  }
+
+  function getRowKey(row: Row, index: number) {
+    if (typeof definition.rowKey === "function") {
+      return definition.rowKey(row, index)
+    }
+
+    const record = row as Record<string, unknown>
+    const value = record[definition.rowKey]
+    return typeof value === "string" || typeof value === "number" ? value : index
   }
 
   function updateTextFilter(label: string, value: TextFilterState) {
@@ -419,6 +447,15 @@ export function useTablePage<Row>(input: TablePageSchema<Row> | TablePageDefinit
     )
   }
 
+  watch(currentPageRows, (nextRows) => {
+    const availableRowKeys = new Set(nextRows.map((row, index) => getRowKey(row, index)))
+    const nextSelectedRowKeys = selectedRowKeys.value.filter(rowKey => availableRowKeys.has(rowKey))
+
+    if (nextSelectedRowKeys.length !== selectedRowKeys.value.length) {
+      selectedRowKeys.value = nextSelectedRowKeys
+    }
+  }, { deep: true })
+
   return {
     title: definition.title,
     summary: definition.summary,
@@ -445,7 +482,17 @@ export function useTablePage<Row>(input: TablePageSchema<Row> | TablePageDefinit
     dateFilterFields,
     tagFilterOptions,
     sortFieldOptions,
+    totalRowsCount,
+    filteredRows: visibleRows,
+    filteredRowsCount,
     visibleRows,
+    currentPageRows,
+    currentPageRowsCount,
+    selectedRowKeys,
+    selectedRows,
+    selectedRowsCount,
+    activeFilterSummary,
+    hasActiveFilters,
     handleTabClick,
     handleAddFilter,
     handleReplaceFilter,
@@ -720,6 +767,53 @@ function getDateFilterSummary(key: string, filter?: DateFilterState) {
     return `${key} ${filter.startDate || "…"} - ${filter.endDate || "…"}`
   }
   return `${key} ${filter.startDate || "…"}`
+}
+
+function buildActiveFilterSummary<Row>(payload: {
+  tabs: TablePageTabsDefinition<Row>
+  activeTabs: HeaderTab[]
+  selectedTab: string
+  textFilters: Record<string, TextFilterState>
+  numberFilters: Record<string, NumberFilterState>
+  tagFilters: Record<string, TagFilterState>
+  dateFilters: Record<string, DateFilterState>
+}) {
+  const summary: string[] = []
+
+  if (payload.tabs.mode === "enum") {
+    const allValue = payload.tabs.all?.value ?? "all"
+    const activeTab = payload.activeTabs.find(tab => tab.active)
+
+    if (activeTab && payload.selectedTab !== allValue) {
+      summary.push(`分组 ${activeTab.label}`)
+    }
+  }
+
+  for (const [key, filter] of Object.entries(payload.textFilters)) {
+    if (filter?.enabled) {
+      summary.push(getTextFilterSummary(key, filter))
+    }
+  }
+
+  for (const [key, filter] of Object.entries(payload.numberFilters)) {
+    if (filter?.enabled) {
+      summary.push(getNumberFilterSummary(key, filter))
+    }
+  }
+
+  for (const [key, filter] of Object.entries(payload.tagFilters)) {
+    if (filter?.enabled) {
+      summary.push(getTagFilterSummary(key, filter))
+    }
+  }
+
+  for (const [key, filter] of Object.entries(payload.dateFilters)) {
+    if (filter?.enabled) {
+      summary.push(getDateFilterSummary(key, filter))
+    }
+  }
+
+  return summary
 }
 
 function resetTextFilter(filters: Record<string, TextFilterState>, key: string) {

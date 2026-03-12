@@ -42,6 +42,7 @@ const props = withDefaults(defineProps<{
   rowActions?: TableRowAction[]
   rows: Record<string, unknown>[]
   rowKey: string | ((row: Record<string, unknown>, index: number) => string | number)
+  selectedRowKeys?: Array<RowSelectionKey>
   summary?: string
   showIndex?: boolean
   stickyHeader?: boolean
@@ -56,6 +57,9 @@ const props = withDefaults(defineProps<{
   tableClass: "",
   emptyState: undefined,
 })
+const emit = defineEmits<{
+  "update:selected-row-keys": [keys: RowSelectionKey[]]
+}>()
 
 const wrapperClassName = computed(() => getTableWrapperClass(props.wrapperClass))
 const scrollViewportClassName = computed(() => getTableScrollViewportClass())
@@ -79,10 +83,10 @@ const actionHeaderHeight = ref(41)
 const rowMetrics = ref<ActionRowMetric[]>([])
 const hoveredRowKey = ref<RowSelectionKey | null>(null)
 const focusedRowKey = ref<RowSelectionKey | null>(null)
-const selectedRowKeys = ref<Set<RowSelectionKey>>(new Set())
+const selectedRowKeySet = computed(() => new Set(props.selectedRowKeys ?? []))
 const currentRowKeys = computed(() => props.rows.map((row, index) => getRowKey(row, index)))
 const selectedCurrentRowCount = computed(() => (
-  currentRowKeys.value.filter(rowKey => selectedRowKeys.value.has(rowKey)).length
+  currentRowKeys.value.filter(rowKey => selectedRowKeySet.value.has(rowKey)).length
 ))
 const shouldShowHeaderCheckbox = computed(() => selectedCurrentRowCount.value > 0)
 const headerCheckboxState = computed<CheckboxState>(() => {
@@ -229,11 +233,15 @@ function handleRowActionClick(action: TableRowAction, row: Record<string, unknow
 }
 
 function isRowSelected(row: Record<string, unknown>, index: number) {
-  return selectedRowKeys.value.has(getRowKey(row, index))
+  return selectedRowKeySet.value.has(getRowKey(row, index))
+}
+
+function commitSelectedRowKeys(nextSelections: Set<RowSelectionKey>) {
+  emit("update:selected-row-keys", Array.from(nextSelections))
 }
 
 function updateRowSelection(row: Record<string, unknown>, index: number, checked: unknown) {
-  const nextSelections = new Set(selectedRowKeys.value)
+  const nextSelections = new Set(selectedRowKeySet.value)
   const rowKey = getRowKey(row, index)
 
   if (checked === true) {
@@ -242,16 +250,26 @@ function updateRowSelection(row: Record<string, unknown>, index: number, checked
     nextSelections.delete(rowKey)
   }
 
-  selectedRowKeys.value = nextSelections
+  commitSelectedRowKeys(nextSelections)
 }
 
 function updateAllRowsSelection(checked: unknown) {
+  const nextSelections = new Set(selectedRowKeySet.value)
+
   if (checked === true) {
-    selectedRowKeys.value = new Set(currentRowKeys.value)
+    for (const rowKey of currentRowKeys.value) {
+      nextSelections.add(rowKey)
+    }
+
+    commitSelectedRowKeys(nextSelections)
     return
   }
 
-  selectedRowKeys.value = new Set()
+  for (const rowKey of currentRowKeys.value) {
+    nextSelections.delete(rowKey)
+  }
+
+  commitSelectedRowKeys(nextSelections)
 }
 
 function getRowClass(row: Record<string, unknown>, index: number) {
@@ -338,7 +356,7 @@ function getHeaderCheckboxWrapperClass() {
 }
 
 function isRowKeySelected(rowKey: RowSelectionKey) {
-  return selectedRowKeys.value.has(rowKey)
+  return selectedRowKeySet.value.has(rowKey)
 }
 
 function isRowKeyHighlighted(rowKey: RowSelectionKey) {
@@ -820,16 +838,17 @@ watch(() => props.rows, scheduleStickySync, { deep: true })
 watch(() => props.showIndex, scheduleStickySync)
 watch(() => hasRowActions.value, scheduleStickySync)
 watch(() => props.stickyHeader, scheduleStickySync)
-watch(() => props.rows, rows => {
+watch(() => [props.rows, props.selectedRowKeys] as const, ([rows, selectedKeys]) => {
   const availableRowKeys = new Set(rows.map((row, index) => getRowKey(row, index)))
   const nextSelections = new Set(
-    Array.from(selectedRowKeys.value).filter(rowKey => availableRowKeys.has(rowKey)),
+    (selectedKeys ?? []).filter(rowKey => availableRowKeys.has(rowKey)),
   )
-  const selectionChanged = nextSelections.size !== selectedRowKeys.value.size
-    || Array.from(selectedRowKeys.value).some(rowKey => !nextSelections.has(rowKey))
+  const currentSelections = selectedKeys ?? []
+  const selectionChanged = nextSelections.size !== currentSelections.length
+    || currentSelections.some(rowKey => !nextSelections.has(rowKey))
 
   if (selectionChanged) {
-    selectedRowKeys.value = nextSelections
+    commitSelectedRowKeys(nextSelections)
   }
 
   if (hoveredRowKey.value !== null && !availableRowKeys.has(hoveredRowKey.value)) {
