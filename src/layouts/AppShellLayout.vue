@@ -1,11 +1,18 @@
 <script setup lang="ts">
-import { ref } from "vue"
+import { computed, ref } from "vue"
 
 import AppHeader from "@/components/layout/AppHeader.vue"
 import AppSidebar from "@/components/layout/AppSidebar.vue"
+import RouteLoadingFallback from "@/components/loading/RouteLoadingFallback.vue"
+import { useRouteLoadingState } from "@/composables/useRouteLoadingState"
 import { SidebarProvider } from "@/components/ui/sidebar"
 
 const mobileSidebarOpen = ref(false)
+const { isRouteLoading, loadingKind } = useRouteLoadingState()
+
+const showContentFallback = computed(() =>
+  isRouteLoading.value && loadingKind.value !== "auth",
+)
 
 function toggleMobileSidebar() {
   mobileSidebarOpen.value = !mobileSidebarOpen.value
@@ -39,7 +46,13 @@ function closeMobileSidebar() {
         :on-toggle-desktop-sidebar="toggleSidebar"
       />
       <main class="flex min-w-0 min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 pb-4 pt-0">
-        <RouterView />
+        <RouterView v-slot="{ Component }">
+          <RouteLoadingFallback
+            v-if="showContentFallback"
+            :kind="loadingKind"
+          />
+          <component :is="Component" v-else />
+        </RouterView>
       </main>
     </div>
   </SidebarProvider>

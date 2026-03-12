@@ -21,8 +21,77 @@
       content="width=device-width, initial-scale=1.0"
     />
     <title>Workspace</title>
+    <style>
+      html, body {
+        margin: 0;
+      }
+
+      #app-bootstrap-loader {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #fafaf9;
+        transition: opacity 180ms ease, visibility 180ms ease;
+      }
+
+      html.dark #app-bootstrap-loader {
+        background: #09090b;
+      }
+
+      .app-bootstrap-spinner {
+        width: 30px;
+        height: 30px;
+        color: #18181b;
+        animation: app-bootstrap-spin 0.72s linear infinite;
+      }
+
+      html.dark .app-bootstrap-spinner {
+        color: #f4f4f5;
+      }
+
+      body.app-ready #app-bootstrap-loader {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+      }
+
+      @keyframes app-bootstrap-spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+    </style>
   </head>
   <body class="bg-background text-foreground">
+    <div id="app-bootstrap-loader" aria-hidden="true">
+      <svg
+        class="app-bootstrap-spinner"
+        viewBox="0 0 24 24"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        <circle
+          cx="12"
+          cy="12"
+          r="8"
+          stroke="currentColor"
+          stroke-opacity="0.18"
+          stroke-width="2.25"
+        />
+        <circle
+          cx="12"
+          cy="12"
+          r="8"
+          stroke="currentColor"
+          stroke-width="2.25"
+          stroke-linecap="round"
+          stroke-dasharray="26 50.3"
+        />
+      </svg>
+    </div>
     <div id="app"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>

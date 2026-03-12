@@ -1,19 +1,7 @@
 import { createRouter, createWebHistory } from "vue-router"
 
+import { beginRouteLoading, endRouteLoading, type RouteLoadingKind } from "@/composables/useRouteLoadingState"
 import AppShellLayout from "@/layouts/AppShellLayout.vue"
-import AlarmArchivesView from "@/views/list/AlarmArchivesListView.vue"
-import LoginView from "@/views/auth/LoginView.vue"
-import OtpView from "@/views/auth/OtpView.vue"
-import SignupView from "@/views/auth/SignupView.vue"
-import AlarmQueriesView from "@/views/list/AlarmQueriesListView.vue"
-import CompaniesView from "@/views/list/CompaniesListView.vue"
-import CompanyDetailView from "@/views/detail/CompanyDetailView.vue"
-import DashboardView from "@/views/dashboard/DashboardView.vue"
-import CompanyCreateView from "@/views/form/CompanyCreateView.vue"
-import UserCreateView from "@/views/form/UserCreateView.vue"
-import VehicleCreateView from "@/views/form/VehicleCreateView.vue"
-import UsersView from "@/views/list/UsersListView.vue"
-import VehiclesView from "@/views/list/VehiclesListView.vue"
 
 type BreadcrumbMetaItem = {
   title: string
@@ -22,6 +10,7 @@ type BreadcrumbMetaItem = {
 
 type RouteMetaConfig = {
   title: string
+  loading: RouteLoadingKind
   breadcrumb?: BreadcrumbMetaItem[]
   useDetailBreadcrumbTitle?: boolean
 }
@@ -32,25 +21,28 @@ const router = createRouter({
     {
       path: "/login",
       name: "login",
-      component: LoginView,
+      component: () => import("@/views/auth/LoginView.vue"),
       meta: {
         title: "登录",
+        loading: "auth",
       } satisfies RouteMetaConfig,
     },
     {
       path: "/signup",
       name: "signup",
-      component: SignupView,
+      component: () => import("@/views/auth/SignupView.vue"),
       meta: {
         title: "注册",
+        loading: "auth",
       } satisfies RouteMetaConfig,
     },
     {
       path: "/otp",
       name: "otp",
-      component: OtpView,
+      component: () => import("@/views/auth/OtpView.vue"),
       meta: {
         title: "验证码登录",
+        loading: "auth",
       } satisfies RouteMetaConfig,
     },
     {
@@ -58,30 +50,34 @@ const router = createRouter({
       component: AppShellLayout,
       meta: {
         title: "Workspace",
+        loading: "dashboard",
       } satisfies RouteMetaConfig,
       children: [
         {
           path: "",
           name: "dashboard",
-          component: DashboardView,
+          component: () => import("@/views/dashboard/DashboardView.vue"),
           meta: {
             title: "工作台",
+            loading: "dashboard",
           } satisfies RouteMetaConfig,
         },
         {
           path: "companies",
           name: "companies",
-          component: CompaniesView,
+          component: () => import("@/views/list/CompaniesListView.vue"),
           meta: {
             title: "企业",
+            loading: "table",
           } satisfies RouteMetaConfig,
         },
         {
           path: "companies/:id",
           name: "company-detail",
-          component: CompanyDetailView,
+          component: () => import("@/views/detail/CompanyDetailView.vue"),
           meta: {
             title: "企业详情",
+            loading: "detail",
             useDetailBreadcrumbTitle: true,
             breadcrumb: [
               { title: "企业", to: "companies" },
@@ -92,9 +88,10 @@ const router = createRouter({
         {
           path: "companies/create",
           name: "company-create",
-          component: CompanyCreateView,
+          component: () => import("@/views/form/CompanyCreateView.vue"),
           meta: {
             title: "添加企业",
+            loading: "form",
             breadcrumb: [
               { title: "企业", to: "companies" },
               { title: "添加企业" },
@@ -104,17 +101,19 @@ const router = createRouter({
         {
           path: "vehicles",
           name: "vehicles",
-          component: VehiclesView,
+          component: () => import("@/views/list/VehiclesListView.vue"),
           meta: {
             title: "车辆",
+            loading: "table",
           } satisfies RouteMetaConfig,
         },
         {
           path: "vehicles/create",
           name: "vehicle-create",
-          component: VehicleCreateView,
+          component: () => import("@/views/form/VehicleCreateView.vue"),
           meta: {
             title: "添加车辆",
+            loading: "form",
             breadcrumb: [
               { title: "车辆", to: "vehicles" },
               { title: "添加车辆" },
@@ -124,33 +123,37 @@ const router = createRouter({
         {
           path: "users",
           name: "users",
-          component: UsersView,
+          component: () => import("@/views/list/UsersListView.vue"),
           meta: {
             title: "从业人员",
+            loading: "table",
           } satisfies RouteMetaConfig,
         },
         {
           path: "alarm-queries",
           name: "alarm-queries",
-          component: AlarmQueriesView,
+          component: () => import("@/views/list/AlarmQueriesListView.vue"),
           meta: {
             title: "报警查询",
+            loading: "table",
           } satisfies RouteMetaConfig,
         },
         {
           path: "alarm-archives",
           name: "alarm-archives",
-          component: AlarmArchivesView,
+          component: () => import("@/views/list/AlarmArchivesListView.vue"),
           meta: {
             title: "历史归档",
+            loading: "table",
           } satisfies RouteMetaConfig,
         },
         {
           path: "users/create",
           name: "user-create",
-          component: UserCreateView,
+          component: () => import("@/views/form/UserCreateView.vue"),
           meta: {
             title: "添加从业人员",
+            loading: "form",
             breadcrumb: [
               { title: "从业人员", to: "users" },
               { title: "添加从业人员" },
@@ -160,6 +163,24 @@ const router = createRouter({
       ],
     },
   ],
+})
+
+function resolveRouteLoadingKind(value: unknown): RouteLoadingKind {
+  return value === "auth" || value === "dashboard" || value === "table" || value === "detail" || value === "form"
+    ? value
+    : "table"
+}
+
+router.beforeEach((to) => {
+  beginRouteLoading(resolveRouteLoadingKind(to.meta.loading))
+})
+
+router.afterEach(() => {
+  endRouteLoading()
+})
+
+router.onError(() => {
+  endRouteLoading()
 })
 
 export default router
