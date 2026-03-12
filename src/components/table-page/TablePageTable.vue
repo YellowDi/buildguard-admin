@@ -9,6 +9,7 @@ import {
   getColumnCellClass,
   getColumnHeaderClass,
   getTableClass,
+  getTableScrollViewportClass,
   getTableWrapperClass,
   tableTheme,
 } from "@/components/table-page/tableTheme"
@@ -18,6 +19,12 @@ import { cn } from "@/lib/utils"
 type ScrollRoot = HTMLElement | Window
 type RowSelectionKey = string | number
 type CheckboxState = boolean | "indeterminate"
+type ActionRowMetric = {
+  rowKey: RowSelectionKey
+  rowIndex: number
+  top: number
+  height: number
+}
 const HORIZONTAL_SCROLL_HINT_MESSAGE = "可按住 Shift + 鼠标滚轮进行横向移动。"
 const selectionCheckboxClass = "border-[#B7C4E0] bg-white data-[state=checked]:border-[#2B67F6] data-[state=checked]:bg-[#2B67F6] data-[state=indeterminate]:border-[#2B67F6] data-[state=indeterminate]:bg-[#2B67F6] focus-visible:ring-[#2B67F6]/20"
 
@@ -40,8 +47,10 @@ const props = withDefaults(defineProps<{
 })
 
 const wrapperClassName = computed(() => getTableWrapperClass(props.wrapperClass))
+const scrollViewportClassName = computed(() => getTableScrollViewportClass())
 const tableClassName = computed(() => getTableClass(props.tableClass))
 const hasRowActions = computed(() => (props.rowActions?.length ?? 0) > 0)
+const tableShellRef = ref<HTMLElement | null>(null)
 const tableWrapperRef = ref<HTMLElement | null>(null)
 const tableRef = ref<HTMLTableElement | null>(null)
 const fillColumnActive = ref(false)
@@ -53,6 +62,12 @@ const stickyHeaderWidth = ref(0)
 const stickyTableWidth = ref(0)
 const stickyScrollLeft = ref(0)
 const stickyColumnWidths = ref<number[]>([])
+const actionColumnWidth = ref(0)
+const actionHeaderHeight = ref(41)
+const actionRailTrailingSpace = ref(32)
+const rowMetrics = ref<ActionRowMetric[]>([])
+const hoveredRowKey = ref<RowSelectionKey | null>(null)
+const focusedRowKey = ref<RowSelectionKey | null>(null)
 const selectedRowKeys = ref<Set<RowSelectionKey>>(new Set())
 const currentRowKeys = computed(() => props.rows.map((row, index) => getRowKey(row, index)))
 const selectedCurrentRowCount = computed(() => (
@@ -76,6 +91,21 @@ const stickyHeaderVisible = computed(() => (
   && stickyHeaderWidth.value > 0
   && stickyColumnWidths.value.length > 0
 ))
+const actionRailVisible = computed(() => (
+  hasRowActions.value
+  && actionColumnWidth.value > 0
+  && rowMetrics.value.length > 0
+))
+const actionHeaderRailVisible = computed(() => hasRowActions.value && actionColumnWidth.value > 0)
+const actionRailWidth = computed(() => actionColumnWidth.value + actionRailTrailingSpace.value)
+const actionRailHostStyle = computed(() => ({
+  width: `${actionRailWidth.value}px`,
+}))
+const actionHeaderRailStyle = computed(() => ({
+  width: `${actionRailWidth.value}px`,
+  height: `${actionHeaderHeight.value}px`,
+  top: "0px",
+}))
 const stickyViewportStyle = computed(() => ({
   left: `${stickyHeaderLeft.value}px`,
   top: `${stickyHeaderTop.value}px`,
@@ -204,6 +234,40 @@ function getActionCellClass(row: Record<string, unknown>, index: number) {
   )
 }
 
+function getActionRailRowClass(rowKey: RowSelectionKey) {
+  return cn(
+    tableTheme.actionRailRow,
+    isRowKeySelected(rowKey)
+      ? "bg-[#EBF1FF]"
+      : isRowKeyHighlighted(rowKey)
+        ? "bg-surface-tertiary"
+        : "bg-background",
+  )
+}
+
+function getActionRailSurfaceClass(rowKey: RowSelectionKey) {
+  return cn(
+    tableTheme.actionRailSurface,
+    horizontalOverflow.value ? tableTheme.actionRailSurfaceShadow : "",
+    isRowKeySelected(rowKey)
+      ? "bg-[#EBF1FF]"
+      : isRowKeyHighlighted(rowKey)
+        ? "bg-surface-tertiary"
+        : "bg-background",
+  )
+}
+
+function getActionRailSpacerClass(rowKey: RowSelectionKey) {
+  return cn(
+    tableTheme.actionRailSpacer,
+    isRowKeySelected(rowKey)
+      ? "bg-[#EBF1FF]"
+      : isRowKeyHighlighted(rowKey)
+        ? "bg-surface-tertiary"
+        : "bg-background",
+  )
+}
+
 function getEndSpacerCellClass(row: Record<string, unknown>, index: number) {
   return cn(
     tableTheme.endSpacerCell,
@@ -236,6 +300,80 @@ function getHeaderCheckboxWrapperClass() {
       ? "opacity-100"
       : "pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100",
   )
+}
+
+function isRowKeySelected(rowKey: RowSelectionKey) {
+  return selectedRowKeys.value.has(rowKey)
+}
+
+function isRowKeyHighlighted(rowKey: RowSelectionKey) {
+  return hoveredRowKey.value === rowKey || focusedRowKey.value === rowKey
+}
+
+function handleRowMouseEnter(rowKey: RowSelectionKey) {
+  hoveredRowKey.value = rowKey
+}
+
+function handleRowMouseLeave(rowKey: RowSelectionKey) {
+  if (hoveredRowKey.value === rowKey) {
+    hoveredRowKey.value = null
+  }
+}
+
+function handleRowFocusIn(rowKey: RowSelectionKey) {
+  focusedRowKey.value = rowKey
+}
+
+function handleRowFocusOut(rowKey: RowSelectionKey, event: FocusEvent) {
+  const currentTarget = event.currentTarget
+
+  if (currentTarget instanceof HTMLElement && currentTarget.contains(event.relatedTarget as Node | null)) {
+    return
+  }
+
+  if (focusedRowKey.value === rowKey) {
+    focusedRowKey.value = null
+  }
+}
+
+function getActionRailRowStyle(metric: ActionRowMetric) {
+  return {
+    top: `${metric.top}px`,
+    height: `${metric.height}px`,
+    width: `${actionRailWidth.value}px`,
+  }
+}
+
+function getActionRailSurfaceStyle() {
+  return {
+    width: `${actionColumnWidth.value}px`,
+  }
+}
+
+function getActionRailSpacerStyle() {
+  return {
+    width: `${actionRailTrailingSpace.value}px`,
+    minWidth: `${actionRailTrailingSpace.value}px`,
+  }
+}
+
+function getActionHeaderRailSurfaceClass() {
+  return cn(
+    tableTheme.actionHeaderRailSurface,
+    horizontalOverflow.value ? tableTheme.actionRailSurfaceShadow : "",
+    "bg-background",
+  )
+}
+
+function getActionHeaderRailSurfaceStyle() {
+  return {
+    width: `${actionColumnWidth.value}px`,
+    height: `${actionHeaderHeight.value}px`,
+  }
+}
+
+function getActionHeaderRailSpacerClass() {
+  return cn(tableTheme.actionHeaderRailSpacer, "bg-background")
 }
 
 function getStickyCellStyle(columnIndex: number) {
@@ -353,6 +491,13 @@ function clearStickyState() {
   stickyColumnWidths.value = []
 }
 
+function clearActionRailState() {
+  actionColumnWidth.value = 0
+  actionHeaderHeight.value = 41
+  actionRailTrailingSpace.value = 32
+  rowMetrics.value = []
+}
+
 function syncHorizontalScrollState() {
   if (!tableWrapperRef.value || !tableRef.value) {
     horizontalOverflow.value = false
@@ -458,6 +603,47 @@ async function syncTableLayoutState() {
 
   syncHorizontalScrollState()
   syncStickyHeaderState()
+  syncActionRailState()
+}
+
+function syncActionRailState() {
+  if (!hasRowActions.value || !tableShellRef.value || !tableWrapperRef.value || !tableRef.value) {
+    clearActionRailState()
+    return
+  }
+
+  const headerCells = getHeaderCells()
+  const actionCellIndex = props.columns.length + (props.showIndex ? 1 : 0)
+  const actionHeaderCell = headerCells[actionCellIndex]
+
+  if (!(actionHeaderCell instanceof HTMLElement)) {
+    clearActionRailState()
+    return
+  }
+
+  const bodyRows = Array.from(tableRef.value.querySelectorAll("tbody > tr"))
+  actionRailTrailingSpace.value = tableWrapperRef.value.clientWidth < 1280 ? 0 : 32
+  actionHeaderHeight.value = Math.round(actionHeaderCell.getBoundingClientRect().height) || 41
+
+  if (!bodyRows.length) {
+    actionColumnWidth.value = Math.ceil(actionHeaderCell.getBoundingClientRect().width)
+    rowMetrics.value = []
+    return
+  }
+
+  const shellRect = tableShellRef.value.getBoundingClientRect()
+  actionColumnWidth.value = Math.ceil(actionHeaderCell.getBoundingClientRect().width)
+  rowMetrics.value = bodyRows.map((row, index) => {
+    const rowElement = row as HTMLElement
+    const rowRect = rowElement.getBoundingClientRect()
+
+      return {
+      rowKey: getRowKey(props.rows[index] ?? {}, index),
+      rowIndex: index,
+      top: Math.round(rowRect.top - shellRect.top),
+      height: Math.round(rowRect.height),
+    }
+  })
 }
 
 function syncStickyHeaderState() {
@@ -586,6 +772,14 @@ watch(() => props.rows, rows => {
   if (selectionChanged) {
     selectedRowKeys.value = nextSelections
   }
+
+  if (hoveredRowKey.value !== null && !availableRowKeys.has(hoveredRowKey.value)) {
+    hoveredRowKey.value = null
+  }
+
+  if (focusedRowKey.value !== null && !availableRowKeys.has(focusedRowKey.value)) {
+    focusedRowKey.value = null
+  }
 }, { deep: true })
 watch(() => horizontalOverflow.value, overflow => {
   if (overflow) {
@@ -616,7 +810,23 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div ref="tableWrapperRef" :class="wrapperClassName">
+  <div ref="tableShellRef" :class="wrapperClassName">
+    <div
+      v-if="actionHeaderRailVisible"
+      :class="tableTheme.actionHeaderRailHost"
+      :style="actionHeaderRailStyle"
+    >
+      <div :class="tableTheme.actionHeaderRail" :style="{ width: `${actionRailWidth}px`, height: `${actionHeaderHeight}px` }">
+        <div
+          :class="getActionHeaderRailSurfaceClass()"
+          :style="getActionHeaderRailSurfaceStyle()"
+        >
+          操作
+        </div>
+        <div :class="getActionHeaderRailSpacerClass()" :style="getActionRailSpacerStyle()" />
+      </div>
+    </div>
+
     <div
       v-if="stickyHeaderVisible"
       aria-hidden="true"
@@ -670,9 +880,26 @@ onBeforeUnmount(() => {
           </tr>
         </thead>
       </table>
+
+      <div
+        v-if="actionHeaderRailVisible"
+        :class="tableTheme.actionHeaderRailHost"
+        :style="actionHeaderRailStyle"
+      >
+        <div :class="tableTheme.actionHeaderRail" :style="{ width: `${actionRailWidth}px`, height: `${actionHeaderHeight}px` }">
+          <div
+            :class="getActionHeaderRailSurfaceClass()"
+            :style="getActionHeaderRailSurfaceStyle()"
+          >
+            操作
+          </div>
+          <div :class="getActionHeaderRailSpacerClass()" :style="getActionRailSpacerStyle()" />
+        </div>
+      </div>
     </div>
 
-    <table ref="tableRef" :class="tableClassName">
+    <div ref="tableWrapperRef" :class="scrollViewportClassName">
+      <table ref="tableRef" :class="tableClassName">
       <thead :class="tableTheme.head">
         <tr>
           <th
@@ -715,6 +942,10 @@ onBeforeUnmount(() => {
           v-for="(row, index) in rows"
           :key="getRowKey(row, index)"
           :class="getRowClass(row, index)"
+          @mouseenter="handleRowMouseEnter(getRowKey(row, index))"
+          @mouseleave="handleRowMouseLeave(getRowKey(row, index))"
+          @focusin="handleRowFocusIn(getRowKey(row, index))"
+          @focusout="handleRowFocusOut(getRowKey(row, index), $event)"
         >
           <td
             v-if="showIndex"
@@ -857,23 +1088,48 @@ onBeforeUnmount(() => {
                 {{ action.label }}
               </Button>
             </div>
-            <div :class="tableTheme.actionPanel" :style="{ right: '0px' }">
-              <Button
-                v-for="action in rowActions"
-                :key="action.key"
-                variant="outline"
-                size="sm"
-                class="border-border/80 bg-background/95 text-foreground shadow-sm"
-                @click="handleRowActionClick(action, row, index)"
-              >
-                {{ action.label }}
-              </Button>
-            </div>
           </td>
           <td :class="getEndSpacerCellClass(row, index)" />
         </tr>
       </tbody>
-    </table>
+      </table>
+    </div>
+
+    <div
+      v-if="actionRailVisible"
+      :class="tableTheme.actionRailHost"
+      :style="actionRailHostStyle"
+    >
+      <div :class="tableTheme.actionRail" :style="{ width: `${actionRailWidth}px` }">
+        <div
+          v-for="metric in rowMetrics"
+          :key="`action-rail-${metric.rowKey}`"
+          :class="getActionRailRowClass(metric.rowKey)"
+          :style="getActionRailRowStyle(metric)"
+        >
+          <div
+            :class="getActionRailSurfaceClass(metric.rowKey)"
+            :style="getActionRailSurfaceStyle()"
+            @mouseenter="handleRowMouseEnter(metric.rowKey)"
+            @mouseleave="handleRowMouseLeave(metric.rowKey)"
+            @focusin="handleRowFocusIn(metric.rowKey)"
+            @focusout="handleRowFocusOut(metric.rowKey, $event)"
+          >
+            <Button
+              v-for="action in rowActions"
+              :key="`rail-${metric.rowKey}-${action.key}`"
+              variant="outline"
+              size="sm"
+              :class="tableTheme.actionButton"
+              @click="handleRowActionClick(action, rows[metric.rowIndex] ?? {}, metric.rowIndex)"
+            >
+              {{ action.label }}
+            </Button>
+          </div>
+          <div :class="getActionRailSpacerClass(metric.rowKey)" :style="getActionRailSpacerStyle()" />
+        </div>
+      </div>
+    </div>
 
     <div v-if="summary" :class="tableTheme.summary">
       {{ summary }}

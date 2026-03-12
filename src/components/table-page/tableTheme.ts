@@ -8,7 +8,8 @@ import type {
 import { cn } from "@/lib/utils"
 
 export const tableTheme = {
-  wrapper: "relative min-w-0 w-full max-w-full overflow-x-auto overflow-y-visible overscroll-x-contain",
+  wrapper: "relative min-w-0 w-full max-w-full overflow-visible",
+  scrollViewport: "min-w-0 w-full max-w-full overflow-x-auto overflow-y-visible overscroll-x-contain",
   table: "min-w-full w-full table-auto border-separate border-spacing-0 bg-background text-[14px] text-foreground",
   head: "relative z-20 text-muted-foreground",
   headActive: "shadow-[inset_0_-1px_0_hsl(var(--border))]",
@@ -31,11 +32,21 @@ export const tableTheme = {
     split: "border-l",
     rightAligned: "text-right",
   },
-  actionHeader: "w-px whitespace-nowrap border-b border-border py-2 pl-0 pr-3 transition-colors hover:bg-surface-tertiary",
+  actionHeader: "w-px whitespace-nowrap border-b border-border px-3 py-2 text-left font-normal text-muted-foreground transition-colors hover:bg-surface-tertiary",
   actionHeaderSticky: "bg-background bg-clip-padding",
-  actionCell: "sticky z-10 border-b border-border p-0 align-middle whitespace-nowrap",
+  actionCell: "relative border-b border-border p-0 align-middle whitespace-nowrap",
   actionSizer: "invisible h-0 overflow-hidden flex items-center justify-end gap-2 px-3 py-0",
-  actionPanel: "absolute inset-y-0 flex items-center justify-end gap-2 px-3 opacity-0 transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100",
+  actionRailHost: "pointer-events-none absolute inset-y-0 right-0 z-[25] will-change-transform",
+  actionRail: "sticky right-0 ml-auto h-full",
+  actionRailRow: "absolute right-0 flex overflow-hidden transition-colors",
+  actionRailSurface: "flex items-center justify-end gap-2 border-b border-l border-border px-3 transition-colors",
+  actionRailSurfaceShadow: "shadow-[-10px_0_14px_-12px_rgba(15,23,42,0.28)]",
+  actionRailSpacer: "transition-colors",
+  actionButton: "pointer-events-auto border-border/80 bg-background/95 text-foreground shadow-sm",
+  actionHeaderRailHost: "pointer-events-none absolute right-0 z-[26]",
+  actionHeaderRail: "flex overflow-hidden",
+  actionHeaderRailSurface: "flex items-center border-b border-l border-border px-3 text-left text-[14px] font-normal text-muted-foreground transition-colors",
+  actionHeaderRailSpacer: "transition-colors",
   endSpacerHeader: "w-8 min-w-8 border-b-0 p-0",
   endSpacerCell: "w-8 min-w-8 border-b-0 p-0",
   tones: {
@@ -74,6 +85,10 @@ export const tableTheme = {
 
 export function getTableWrapperClass(override?: string) {
   return cn(tableTheme.wrapper, override)
+}
+
+export function getTableScrollViewportClass() {
+  return tableTheme.scrollViewport
 }
 
 export function getTableClass(override?: string) {
