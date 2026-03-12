@@ -155,6 +155,12 @@ export type TableSection = {
   tableClass?: string
 }
 
+export type TablePageEmptyState = {
+  title?: string
+  description?: string
+  icon?: string
+}
+
 export type FilterStateMaps = {
   text: Record<string, TextFilterState>
   number: Record<string, NumberFilterState>
@@ -233,4 +239,5 @@ export type TablePageSchema<Row> = {
   stickyHeader?: boolean
   wrapperClass?: string
   tableClass?: string
+  emptyState?: TablePageEmptyState
 }

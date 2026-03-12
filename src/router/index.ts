@@ -130,6 +130,15 @@ const router = createRouter({
           } satisfies RouteMetaConfig,
         },
         {
+          path: "call-center-tasks",
+          name: "call-center-tasks",
+          component: () => import("@/views/list/CallCenterOutboundTasksListView.vue"),
+          meta: {
+            title: "外呼任务",
+            loading: "table",
+          } satisfies RouteMetaConfig,
+        },
+        {
           path: "alarm-queries",
           name: "alarm-queries",
           component: () => import("@/views/list/AlarmQueriesListView.vue"),

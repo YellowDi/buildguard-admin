@@ -7,6 +7,7 @@ import type {
   HeaderField,
   HeaderTab,
   NumberFilterState,
+  TablePageEmptyState,
   TablePageFilterType,
   TablePageFilterDefinition,
   TablePageRowKey,
@@ -43,6 +44,7 @@ export type TablePageDefinition<Row> = {
   stickyHeader?: boolean
   wrapperClass?: string
   tableClass?: string
+  emptyState?: TablePageEmptyState
   filters: NormalizedFilter<Row>[]
   sort: {
     storageKey?: string
@@ -127,6 +129,7 @@ export function createTablePageDefinition<Row>(schema: TablePageSchema<Row>): Ta
     stickyHeader: schema.stickyHeader,
     wrapperClass: schema.wrapperClass,
     tableClass: schema.tableClass,
+    emptyState: schema.emptyState,
     filters,
     sort: {
       storageKey: schema.sort?.storageKey,
@@ -140,9 +143,10 @@ export function createTablePageDefinition<Row>(schema: TablePageSchema<Row>): Ta
 export function useTablePage<Row>(input: TablePageSchema<Row> | TablePageDefinition<Row>) {
   const definition = isTablePageDefinition(input) ? input : createTablePageDefinition(input)
   const rows = computed(() => toPlainRows(definition.rows))
+  const hasSourceRows = computed(() => rows.value.length > 0)
 
-  const showControls = ref(true)
-  const customSortEnabled = ref(definition.sort.initialSortRules.length > 0)
+  const showControls = ref(hasSourceRows.value)
+  const customSortEnabled = ref(hasSourceRows.value && definition.sort.initialSortRules.length > 0)
   const selectedTab = ref(getDefaultTabValue(definition.tabs))
   const visibleFilterKeys = ref(definition.filters.filter(filter => filter.defaultVisible && !filter.fixed).map(filter => filter.key))
 
@@ -168,6 +172,7 @@ export function useTablePage<Row>(input: TablePageSchema<Row> | TablePageDefinit
   ) as Record<string, string[]>)
   const tabs = computed(() => buildTabs(rows.value, definition.tabs, selectedTab.value))
   const primarySortRule = computed(() => sortRules.value[0] ?? null)
+  let sortPreferencesHydrated = false
 
   const fields = computed<HeaderField[]>(() => [
     ...(customSortEnabled.value && sortRules.value.length
@@ -347,7 +352,12 @@ export function useTablePage<Row>(input: TablePageSchema<Row> | TablePageDefinit
   }
 
   if (definition.sort.storageKey) {
-    onMounted(() => {
+    function hydrateStoredSortPreferences() {
+      if (!hasSourceRows.value || sortPreferencesHydrated) {
+        return
+      }
+
+      sortPreferencesHydrated = true
       const storedValue = window.localStorage.getItem(definition.sort.storageKey!)
       if (!storedValue) {
         return
@@ -376,11 +386,33 @@ export function useTablePage<Row>(input: TablePageSchema<Row> | TablePageDefinit
       catch {
         window.localStorage.removeItem(definition.sort.storageKey!)
       }
+    }
+
+    onMounted(() => {
+      hydrateStoredSortPreferences()
+    })
+
+    watch(hasSourceRows, (nextHasRows, previousHasRows) => {
+      if (!nextHasRows) {
+        showControls.value = false
+        customSortEnabled.value = false
+        return
+      }
+
+      if (!previousHasRows) {
+        showControls.value = true
+        customSortEnabled.value = definition.sort.initialSortRules.length > 0
+        hydrateStoredSortPreferences()
+      }
     })
 
     watch(
       [customSortEnabled, sortRules],
       ([enabled, rules]) => {
+        if (!hasSourceRows.value) {
+          return
+        }
+
         window.localStorage.setItem(definition.sort.storageKey!, JSON.stringify({ enabled, rules }))
       },
       { deep: true },
@@ -398,6 +430,7 @@ export function useTablePage<Row>(input: TablePageSchema<Row> | TablePageDefinit
     stickyHeader: definition.stickyHeader,
     wrapperClass: definition.wrapperClass,
     tableClass: definition.tableClass,
+    emptyState: definition.emptyState,
     showControls,
     customSortEnabled,
     sortRules,

@@ -44,6 +44,7 @@ const emit = defineEmits<{
     :sticky-header="page.stickyHeader"
     :wrapper-class="page.wrapperClass"
     :table-class="page.tableClass"
+    :empty-state="page.emptyState"
     @tab-click="page.handleTabClick"
     @add-filter="page.handleAddFilter"
     @replace-filter="page.handleReplaceFilter"

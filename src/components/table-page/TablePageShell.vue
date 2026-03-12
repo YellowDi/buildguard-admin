@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useSlots } from "vue"
+import { computed, useSlots } from "vue"
 
 import Header from "@/components/table-page/TablePageHeader.vue"
 import Table from "@/components/table-page/TablePageTable.vue"
@@ -9,14 +9,24 @@ import type {
   HeaderField,
   HeaderTab,
   NumberFilterState,
+  TablePageEmptyState,
   TableColumn,
   TableRowAction,
   TableSection,
   TagFilterState,
   TextFilterState,
 } from "@/components/table-page/types"
+import { Button } from "@/components/ui/button"
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty"
 
-defineProps<{
+const props = defineProps<{
   title: string
   count: number
   tabs: HeaderTab[]
@@ -43,6 +53,7 @@ defineProps<{
   wrapperClass?: string
   tableClass?: string
   sections?: TableSection[]
+  emptyState?: TablePageEmptyState
 }>()
 
 const emit = defineEmits<{
@@ -63,6 +74,11 @@ const emit = defineEmits<{
 }>()
 
 const slots = useSlots()
+const hasVisibleRows = computed(() => (
+  props.sections?.length
+    ? props.sections.some(section => section.rows.length > 0)
+    : props.rows.length > 0
+))
 </script>
 
 <template>
@@ -74,22 +90,22 @@ const slots = useSlots()
       <div class="flex min-h-0 min-w-0 flex-1 flex-col">
         <Header
           class="min-w-0 w-full"
-          :title="title"
-          :count="count"
-          :tabs="tabs"
-          :fields="fields"
-          :available-filters="availableFilters"
-          :show-controls="showControls"
-          :custom-sort-enabled="customSortEnabled"
-          :sort-rules="sortRules"
-          :sort-field-options="sortFieldOptions"
-          :primary-action-label="primaryActionLabel"
-          :text-filters="textFilters"
-          :number-filters="numberFilters"
-          :tag-filters="tagFilters"
-          :tag-filter-options="tagFilterOptions"
-          :date-filters="dateFilters"
-          :date-filter-fields="dateFilterFields"
+          :title="props.title"
+          :count="props.count"
+          :tabs="props.tabs"
+          :fields="props.fields"
+          :available-filters="props.availableFilters"
+          :show-controls="props.showControls"
+          :custom-sort-enabled="props.customSortEnabled"
+          :sort-rules="props.sortRules"
+          :sort-field-options="props.sortFieldOptions"
+          :primary-action-label="props.primaryActionLabel"
+          :text-filters="props.textFilters"
+          :number-filters="props.numberFilters"
+          :tag-filters="props.tagFilters"
+          :tag-filter-options="props.tagFilterOptions"
+          :date-filters="props.dateFilters"
+          :date-filter-fields="props.dateFilterFields"
           @tab-click="emit('tab-click', $event)"
           @add-filter="emit('add-filter', $event)"
           @replace-filter="emit('replace-filter', $event)"
@@ -108,19 +124,40 @@ const slots = useSlots()
 
         <div class="min-h-0 min-w-0 flex-1">
           <div class="min-h-0 min-w-0 w-full overflow-visible">
-            <template v-if="sections?.length">
+            <div
+              v-if="!hasVisibleRows"
+              class="flex min-h-0 flex-1 px-4 pb-3 pt-5 sm:px-8"
+            >
+              <Empty class="min-h-[360px] w-full border border-dashed border-border/80 bg-background">
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <i :class="[props.emptyState?.icon ?? 'ri-inbox-line', 'text-[18px]']" />
+                  </EmptyMedia>
+                  <EmptyTitle>{{ props.emptyState?.title ?? "暂无数据" }}</EmptyTitle>
+                  <EmptyDescription>
+                    {{ props.emptyState?.description ?? "当前列表还没有可展示的数据。" }}
+                  </EmptyDescription>
+                </EmptyHeader>
+                <EmptyContent v-if="props.primaryActionLabel">
+                  <Button variant="outline" @click="emit('primary-action')">
+                    {{ props.primaryActionLabel }}
+                  </Button>
+                </EmptyContent>
+              </Empty>
+            </div>
+            <template v-else-if="props.sections?.length">
               <Table
-                v-for="section in sections"
+                v-for="section in props.sections"
                 :key="section.key"
                 :columns="section.columns"
                 :rows="section.rows"
                 :row-key="section.rowKey"
-                :row-actions="section.rowActions ?? rowActions"
+                :row-actions="section.rowActions ?? props.rowActions"
                 :summary="section.summary"
-                :show-index="section.showIndex ?? showIndex"
-                :sticky-header="section.stickyHeader ?? stickyHeader"
-                :wrapper-class="section.wrapperClass ?? wrapperClass"
-                :table-class="section.tableClass ?? tableClass"
+                :show-index="section.showIndex ?? props.showIndex"
+                :sticky-header="section.stickyHeader ?? props.stickyHeader"
+                :wrapper-class="section.wrapperClass ?? props.wrapperClass"
+                :table-class="section.tableClass ?? props.tableClass"
               >
                 <template
                   v-for="(_, name) in slots"
@@ -133,15 +170,15 @@ const slots = useSlots()
             </template>
             <Table
               v-else
-              :columns="columns"
-              :row-actions="rowActions"
-              :rows="rows"
-              :row-key="rowKey"
-              :summary="summary"
-              :show-index="showIndex"
-              :sticky-header="stickyHeader"
-              :wrapper-class="wrapperClass"
-              :table-class="tableClass"
+              :columns="props.columns"
+              :row-actions="props.rowActions"
+              :rows="props.rows"
+              :row-key="props.rowKey"
+              :summary="props.summary"
+              :show-index="props.showIndex"
+              :sticky-header="props.stickyHeader"
+              :wrapper-class="props.wrapperClass"
+              :table-class="props.tableClass"
             >
               <template
                 v-for="(_, name) in slots"

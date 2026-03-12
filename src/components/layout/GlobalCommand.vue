@@ -178,6 +178,15 @@ const pageSearchItems: SearchItem[] = [
     to: "/users",
   },
   {
+    id: "page-call-center-tasks",
+    label: "外呼任务",
+    subtitle: "查看呼叫中心外呼任务列表",
+    icon: "ri-customer-service-2-line",
+    type: "页面",
+    value: "外呼任务 查看呼叫中心外呼任务列表 call center outbound tasks",
+    to: "/call-center-tasks",
+  },
+  {
     id: "page-alarm-queries",
     label: "报警查询",
     subtitle: "查看待处理报警记录",
