@@ -13,7 +13,15 @@ import {
   getTableWrapperClass,
   tableTheme,
 } from "@/components/table-page/tableTheme"
-import type { TableColumn, TableRowAction } from "@/components/table-page/types"
+import type { TableColumn, TablePageEmptyState, TableRowAction } from "@/components/table-page/types"
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty"
 import { cn } from "@/lib/utils"
 
 type ScrollRoot = HTMLElement | Window
@@ -38,18 +46,21 @@ const props = withDefaults(defineProps<{
   stickyHeader?: boolean
   wrapperClass?: string
   tableClass?: string
+  emptyState?: TablePageEmptyState
 }>(), {
   summary: "",
   showIndex: false,
   stickyHeader: false,
   wrapperClass: "",
   tableClass: "",
+  emptyState: undefined,
 })
 
 const wrapperClassName = computed(() => getTableWrapperClass(props.wrapperClass))
 const scrollViewportClassName = computed(() => getTableScrollViewportClass())
 const tableClassName = computed(() => getTableClass(props.tableClass))
 const hasRowActions = computed(() => (props.rowActions?.length ?? 0) > 0)
+const emptyColSpan = computed(() => props.columns.length + (props.showIndex ? 1 : 0) + (hasRowActions.value ? 1 : 0) + 1)
 const tableShellRef = ref<HTMLElement | null>(null)
 const tableWrapperRef = ref<HTMLElement | null>(null)
 const tableRef = ref<HTMLTableElement | null>(null)
@@ -434,6 +445,7 @@ function getResolvedColumnHeaderClass(column: TableColumn, columnIndex: number) 
 
   return [
     getColumnHeaderClass(column, fillActive),
+    props.rows.length === 0 ? getEmptyColumnWidthClass(column) : "",
     column.width === "fill" ? "" : "w-px",
   ]
 }
@@ -450,6 +462,7 @@ function getResolvedColumnCellClass(column: TableColumn, columnIndex: number) {
 
   return [
     getColumnCellClass(column, fillActive),
+    props.rows.length === 0 ? getEmptyColumnWidthClass(column) : "",
     column.width === "fill" ? "" : "w-px",
     column.width === "fill"
       ? fillActive
@@ -457,6 +470,30 @@ function getResolvedColumnCellClass(column: TableColumn, columnIndex: number) {
         : "max-w-none whitespace-nowrap"
       : "",
   ]
+}
+
+function getEmptyColumnWidthClass(column: TableColumn) {
+  if (column.width === "fill" || column.variant === "note") {
+    return "min-w-[16rem]"
+  }
+
+  if (column.variant === "contact") {
+    return "min-w-[12rem]"
+  }
+
+  if (column.variant === "metric" || column.cellRenderer?.kind === "metric-unit" || column.filterType === "number") {
+    return "min-w-[7rem]"
+  }
+
+  if (column.filterType === "time") {
+    return "min-w-[9rem]"
+  }
+
+  if (column.filterType === "tag") {
+    return "min-w-[8rem]"
+  }
+
+  return "min-w-[10rem]"
 }
 
 function getNoteContentClass(column: TableColumn, columnIndex: number) {
@@ -959,6 +996,29 @@ onBeforeUnmount(() => {
       </thead>
 
       <tbody :class="tableTheme.body">
+        <tr v-if="rows.length === 0">
+          <td
+            :colspan="emptyColSpan"
+            class="p-0"
+          >
+            <div class="px-4 py-5 sm:px-6">
+              <Empty class="min-h-[320px] w-full border border-dashed border-border/70 bg-background">
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <i :class="[props.emptyState?.icon ?? 'ri-inbox-line', 'text-[18px]']" />
+                  </EmptyMedia>
+                  <EmptyTitle>{{ props.emptyState?.title ?? "暂无数据" }}</EmptyTitle>
+                  <EmptyDescription>
+                    {{ props.emptyState?.description ?? "当前列表还没有可展示的数据。" }}
+                  </EmptyDescription>
+                </EmptyHeader>
+                <EmptyContent v-if="$slots['empty-action']">
+                  <slot name="empty-action" />
+                </EmptyContent>
+              </Empty>
+            </div>
+          </td>
+        </tr>
         <tr
           v-for="(row, index) in rows"
           :key="getRowKey(row, index)"

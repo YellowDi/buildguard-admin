@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, useSlots } from "vue"
+import { useSlots } from "vue"
 
 import Header from "@/components/table-page/TablePageHeader.vue"
 import Table from "@/components/table-page/TablePageTable.vue"
@@ -16,15 +16,6 @@ import type {
   TagFilterState,
   TextFilterState,
 } from "@/components/table-page/types"
-import { Button } from "@/components/ui/button"
-import {
-  Empty,
-  EmptyContent,
-  EmptyDescription,
-  EmptyHeader,
-  EmptyMedia,
-  EmptyTitle,
-} from "@/components/ui/empty"
 
 const props = defineProps<{
   title: string
@@ -74,11 +65,6 @@ const emit = defineEmits<{
 }>()
 
 const slots = useSlots()
-const hasVisibleRows = computed(() => (
-  props.sections?.length
-    ? props.sections.some(section => section.rows.length > 0)
-    : props.rows.length > 0
-))
 </script>
 
 <template>
@@ -124,28 +110,7 @@ const hasVisibleRows = computed(() => (
 
         <div class="min-h-0 min-w-0 flex-1">
           <div class="min-h-0 min-w-0 w-full overflow-visible">
-            <div
-              v-if="!hasVisibleRows"
-              class="flex min-h-0 flex-1 px-4 pb-3 pt-5 sm:px-8"
-            >
-              <Empty class="min-h-[360px] w-full border border-dashed border-border/80 bg-background">
-                <EmptyHeader>
-                  <EmptyMedia variant="icon">
-                    <i :class="[props.emptyState?.icon ?? 'ri-inbox-line', 'text-[18px]']" />
-                  </EmptyMedia>
-                  <EmptyTitle>{{ props.emptyState?.title ?? "暂无数据" }}</EmptyTitle>
-                  <EmptyDescription>
-                    {{ props.emptyState?.description ?? "当前列表还没有可展示的数据。" }}
-                  </EmptyDescription>
-                </EmptyHeader>
-                <EmptyContent v-if="props.primaryActionLabel">
-                  <Button variant="outline" @click="emit('primary-action')">
-                    {{ props.primaryActionLabel }}
-                  </Button>
-                </EmptyContent>
-              </Empty>
-            </div>
-            <template v-else-if="props.sections?.length">
+            <template v-if="props.sections?.length">
               <Table
                 v-for="section in props.sections"
                 :key="section.key"
@@ -158,6 +123,7 @@ const hasVisibleRows = computed(() => (
                 :sticky-header="section.stickyHeader ?? props.stickyHeader"
                 :wrapper-class="section.wrapperClass ?? props.wrapperClass"
                 :table-class="section.tableClass ?? props.tableClass"
+                :empty-state="props.emptyState"
               >
                 <template
                   v-for="(_, name) in slots"
@@ -179,6 +145,7 @@ const hasVisibleRows = computed(() => (
               :sticky-header="props.stickyHeader"
               :wrapper-class="props.wrapperClass"
               :table-class="props.tableClass"
+              :empty-state="props.emptyState"
             >
               <template
                 v-for="(_, name) in slots"
