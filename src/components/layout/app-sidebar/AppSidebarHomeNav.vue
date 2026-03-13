@@ -39,7 +39,19 @@ function isActive(item: AppSidebarNavItem) {
 <template>
   <nav class="min-w-0 overflow-x-visible">
     <div v-for="item in props.items" :key="item.label">
+      <div
+        v-if="item.kind === 'separator'"
+        class="flex items-center gap-3 px-3 py-3"
+      >
+        <div class="h-px flex-1 bg-sidebar-border/80" />
+        <span class="shrink-0 text-[11px] font-medium tracking-[0.12em] text-sidebar-foreground/55">
+          {{ item.label }}
+        </span>
+        <div class="h-px flex-1 bg-sidebar-border/80" />
+      </div>
+
       <component
+        v-else
         :is="item.path && !item.children?.length ? 'RouterLink' : 'button'"
         :to="item.path"
         type="button"

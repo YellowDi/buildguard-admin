@@ -54,6 +54,15 @@ const topTabs: Array<{ id: AppSidebarTopTabId, label: string, icon: string }> = 
 
 const businessItems = reactive<AppSidebarNavItem[]>([
   {
+    label: "客户",
+    icon: "ri-user-3-line",
+    path: "/customers",
+  },
+  {
+    kind: "separator",
+    label: "以下为 Demo 案例",
+  },
+  {
     label: "企业",
     icon: "ri-building-line",
     path: "/companies",
@@ -148,7 +157,7 @@ function handleTopTabUpdate(tabId: string) {
 }
 
 function isBusinessRoute(path: string) {
-  return ["/", "/companies", "/vehicles", "/users", "/call-center-tasks", "/alarm-queries", "/alarm-archives"].some(
+  return ["/", "/customers", "/companies", "/vehicles", "/users", "/call-center-tasks", "/alarm-queries", "/alarm-archives"].some(
     prefix => path === prefix || path.startsWith(`${prefix}/`),
   )
 }

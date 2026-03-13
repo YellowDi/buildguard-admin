@@ -2,6 +2,7 @@ export type AppSidebarTopTabId = "home" | "calendar" | "inbox"
 
 export type AppSidebarNavItem = {
   label: string
+  kind?: "item" | "separator"
   icon?: string
   path?: string
   action?: "open-settings"

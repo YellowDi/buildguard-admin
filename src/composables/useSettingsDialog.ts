@@ -75,6 +75,7 @@ const categories: SettingsCategory[] = [
             description: "登录后优先进入的主界面。",
             options: [
               { label: "工作台", value: "dashboard" },
+              { label: "客户列表", value: "customers" },
               { label: "企业列表", value: "companies" },
               { label: "车辆列表", value: "vehicles" },
               { label: "报警查询", value: "alarm-queries" },

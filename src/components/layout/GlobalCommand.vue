@@ -151,6 +151,15 @@ const pageSearchItems: SearchItem[] = [
     to: "/",
   },
   {
+    id: "page-customers",
+    label: "客户",
+    subtitle: "查看客户列表",
+    icon: "ri-user-3-line",
+    type: "页面",
+    value: "客户 查看客户列表 customer client",
+    to: "/customers",
+  },
+  {
     id: "page-companies",
     label: "企业",
     subtitle: "查看企业列表",

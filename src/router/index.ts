@@ -63,6 +63,29 @@ const router = createRouter({
           } satisfies RouteMetaConfig,
         },
         {
+          path: "customers",
+          name: "customers",
+          component: () => import("@/views/list/CustomersListView.vue"),
+          meta: {
+            title: "客户",
+            loading: "table",
+          } satisfies RouteMetaConfig,
+        },
+        {
+          path: "customers/:id",
+          name: "customer-detail",
+          component: () => import("@/views/detail/CustomerDetailView.vue"),
+          meta: {
+            title: "客户详情",
+            loading: "detail",
+            useDetailBreadcrumbTitle: true,
+            breadcrumb: [
+              { title: "客户", to: "customers" },
+              { title: "详情" },
+            ] satisfies BreadcrumbMetaItem[],
+          } satisfies RouteMetaConfig,
+        },
+        {
           path: "companies",
           name: "companies",
           component: () => import("@/views/list/CompaniesListView.vue"),
