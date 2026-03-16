@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { computed } from "vue"
+
 import { cn } from "@/lib/utils"
 import {
   Alert,
@@ -38,6 +40,11 @@ const emit = defineEmits<{
   action: [actionKey: SettingsActionKey]
 }>()
 
+const isMembersCategory = computed(() => props.category.key === "members")
+const contentWidthClass = computed(() => (
+  isMembersCategory.value ? "max-w-[980px]" : "max-w-[720px]"
+))
+
 function updateBoolean(key: keyof SettingsState, value: boolean) {
   (props.state as Record<string, boolean | string>)[key] = value
 }
@@ -58,7 +65,7 @@ function getBooleanValue(key: keyof SettingsState) {
 
 <template>
   <div class="min-h-0 flex-1 overflow-y-auto p-4">
-    <div class="mx-auto flex w-full max-w-[720px] flex-col gap-6">
+    <div :class="['mx-auto flex w-full flex-col gap-6', contentWidthClass]">
       <header class="flex flex-col gap-1.5">
         <div class="min-w-0">
           <h2 class="text-[1.625rem] font-semibold tracking-tight">{{ props.category.label }}</h2>
@@ -68,7 +75,9 @@ function getBooleanValue(key: keyof SettingsState) {
         </div>
       </header>
 
-      <div class="space-y-0">
+      <SettingsMembersTable v-if="isMembersCategory" />
+
+      <div v-else class="space-y-0">
         <template
           v-for="(section, sectionIndex) in props.category.sections"
           :key="section.key"
@@ -174,8 +183,6 @@ function getBooleanValue(key: keyof SettingsState) {
           />
         </template>
       </div>
-
-      <SettingsMembersTable v-if="props.category.key === 'members'" />
     </div>
   </div>
 </template>
