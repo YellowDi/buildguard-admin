@@ -1,9 +1,11 @@
 import type { ThemeMode } from "@/composables/useAppTheme"
 
-export type SettingsCategoryKey = "general" | "notifications" | "security"
+export type SettingsCategoryKey = "general" | "members" | "notifications" | "security"
 
 export type SettingsActionKey =
   | "save-profile"
+  | "open-members-directory"
+  | "review-member-invites"
   | "send-test-notification"
   | "review-active-sessions"
   | "revoke-other-sessions"
@@ -18,6 +20,9 @@ export type SettingsState = {
   compactTables: boolean
   reducedMotion: boolean
   showCommandHints: boolean
+  memberDefaultRole: string
+  inviteApprovalRequired: boolean
+  allowExternalMembers: boolean
   criticalAlerts: boolean
   browserNotifications: boolean
   digestFrequency: string

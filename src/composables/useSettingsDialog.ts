@@ -20,6 +20,9 @@ const state = reactive<SettingsState>({
   compactTables: false,
   reducedMotion: true,
   showCommandHints: true,
+  memberDefaultRole: "member",
+  inviteApprovalRequired: true,
+  allowExternalMembers: false,
   criticalAlerts: true,
   browserNotifications: false,
   digestFrequency: "daily",
@@ -140,6 +143,72 @@ const categories: SettingsCategory[] = [
             modelKey: "reducedMotion",
             label: "减少动效",
             description: "关闭非必要位移动画，保留必要反馈。",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    key: "members",
+    label: "成员",
+    description: "成员邀请、默认角色和协作边界设置。",
+    icon: "ri-team-line",
+    sections: [
+      {
+        key: "member-access",
+        title: "成员接入",
+        description: "控制新成员加入工作区时的默认权限和审批流程。",
+        items: [
+          {
+            key: "memberDefaultRole",
+            type: "select",
+            modelKey: "memberDefaultRole",
+            label: "默认成员角色",
+            description: "通过邀请链接加入的成员默认获得的角色。",
+            options: [
+              { label: "成员", value: "member" },
+              { label: "运营", value: "operator" },
+              { label: "观察者", value: "viewer" },
+            ],
+          },
+          {
+            key: "inviteApprovalRequired",
+            type: "toggle",
+            modelKey: "inviteApprovalRequired",
+            label: "邀请加入需审批",
+            description: "新成员接受邀请后，需要管理员确认才能进入工作区。",
+          },
+          {
+            key: "allowExternalMembers",
+            type: "toggle",
+            modelKey: "allowExternalMembers",
+            label: "允许外部联系人加入",
+            description: "允许非企业域账号以受限身份加入协作。",
+          },
+        ],
+      },
+      {
+        key: "member-operations",
+        title: "成员管理",
+        description: "快速进入成员名册和待处理邀请，便于集中处理。",
+        items: [
+          {
+            key: "openMembersDirectory",
+            type: "button",
+            actionKey: "open-members-directory",
+            label: "查看成员名册",
+            description: "查看当前工作区成员、角色分配和最近加入记录。",
+            buttonLabel: "打开名册",
+            variant: "outline",
+          },
+          {
+            key: "reviewMemberInvites",
+            type: "button",
+            actionKey: "review-member-invites",
+            label: "处理待审批邀请",
+            description: "检查邀请状态、补发邀请或撤回未接受的邀请。",
+            buttonLabel: "查看邀请",
+            variant: "outline",
           },
         ],
       },
@@ -305,6 +374,20 @@ function runAction(actionKey: SettingsActionKey) {
   if (actionKey === "send-test-notification") {
     toast.success("测试通知已发送", {
       description: "请检查浏览器通知和消息中心是否已收到。",
+    })
+    return
+  }
+
+  if (actionKey === "open-members-directory") {
+    toast("成员名册待接入", {
+      description: "入口已预留，后续可直接连到成员列表或权限页。",
+    })
+    return
+  }
+
+  if (actionKey === "review-member-invites") {
+    toast("邀请审批面板待接入", {
+      description: "当前先保留交互入口，后续可接真实邀请流。",
     })
     return
   }
