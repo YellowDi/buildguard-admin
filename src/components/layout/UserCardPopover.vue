@@ -11,18 +11,14 @@ import {
 import { useSidebar } from "@/components/ui/sidebar"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAppTheme } from "@/composables/useAppTheme"
+import { useCurrentUser } from "@/composables/useCurrentUser"
 import { useSettingsDialog } from "@/composables/useSettingsDialog"
 import { cn } from "@/lib/utils"
 
 const { state } = useSidebar()
 const { themeMode, themeOptions } = useAppTheme()
 const { openSettingsDialog } = useSettingsDialog()
-
-const user = {
-  name: "Rolly",
-  email: "yellowdi@me.com",
-  avatarSrc: "",
-}
+const { currentUser: user } = useCurrentUser()
 
 const userInitial = user.name.charAt(0).toUpperCase()
 const open = ref(false)

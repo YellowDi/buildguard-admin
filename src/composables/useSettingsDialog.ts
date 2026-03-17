@@ -2,6 +2,7 @@ import { computed, reactive, ref, watch } from "vue"
 import { toast } from "vue-sonner"
 
 import { useAppTheme } from "@/composables/useAppTheme"
+import { useCurrentUser } from "@/composables/useCurrentUser"
 import type {
   SettingsActionKey,
   SettingsCategory,
@@ -10,8 +11,11 @@ import type {
 } from "@/components/settings/types"
 
 const { themeMode } = useAppTheme()
+const { currentUser } = useCurrentUser()
 
 const state = reactive<SettingsState>({
+  accountName: currentUser.name,
+  accountEmail: currentUser.email,
   displayName: "BuildGuard Admin",
   supportEmail: "ops@buildguard.cn",
   startupView: "dashboard",
@@ -44,32 +48,69 @@ watch(() => state.themeMode, (value) => {
 
 const categories: SettingsCategory[] = [
   {
-    key: "general",
-    label: "常规",
-    description: "工作区基础信息、界面偏好和默认行为。",
-    icon: "ri-settings-3-line",
+    key: "me",
+    group: "account",
+    label: currentUser.name,
+    description: "管理你的档案、登录信息和设备",
+    pageTitle: "我",
+    pageDescription: "管理你的档案、登录信息和设备",
+    icon: "ri-user-line",
+    avatarSrc: currentUser.avatarSrc,
+    avatarFallback: currentUser.name.charAt(0).toUpperCase(),
     sections: [
       {
-        key: "profile",
-        title: "工作区资料",
-        description: "维护默认展示信息，供导航、通知和协作场景复用。",
+        key: "account-profile",
+        title: "档案",
+        description: "维护你的公开名称和登录邮箱。",
         items: [
           {
-            key: "displayName",
+            key: "accountName",
             type: "input",
-            modelKey: "displayName",
-            label: "工作区名称",
-            description: "显示在顶部标题、系统通知和导出摘要中的名称。",
-            placeholder: "输入工作区名称",
+            modelKey: "accountName",
+            label: "用户名",
+            description: "显示在头像菜单、设置导航和协作记录中的名称。",
+            placeholder: "输入用户名",
           },
           {
-            key: "supportEmail",
+            key: "accountEmail",
             type: "input",
-            modelKey: "supportEmail",
-            label: "通知回邮地址",
-            description: "报警、审批和系统提醒默认使用的回复邮箱。",
-            placeholder: "ops@company.com",
+            modelKey: "accountEmail",
+            label: "登录邮箱",
+            description: "用于登录验证、账号通知和安全提醒。",
+            placeholder: "name@example.com",
           },
+        ],
+      },
+      {
+        key: "account-devices",
+        title: "设备",
+        description: "查看你的已登录设备和最近访问记录。",
+        items: [
+          {
+            key: "reviewMySessions",
+            type: "button",
+            actionKey: "review-active-sessions",
+            label: "查看已登录设备",
+            description: "检查当前账号已登录的浏览器和设备。",
+            buttonLabel: "查看设备",
+            variant: "outline",
+          },
+        ],
+      },
+    ],
+  },
+  {
+    key: "preferences",
+    group: "account",
+    label: "偏好",
+    description: "主题、动效和默认启动行为等个人使用偏好。",
+    icon: "ri-equalizer-line",
+    sections: [
+      {
+        key: "display-preferences",
+        title: "界面与行为",
+        description: "控制设置浮窗和主界面的展示方式与默认入口。",
+        items: [
           {
             key: "startupView",
             type: "select",
@@ -84,33 +125,6 @@ const categories: SettingsCategory[] = [
               { label: "报警查询", value: "alarm-queries" },
             ],
           },
-        ],
-      },
-      {
-        key: "regional",
-        title: "区域与时间",
-        description: "保持导出、日报和操作记录的时间语义一致。",
-        items: [
-          {
-            key: "timezone",
-            type: "select",
-            modelKey: "timezone",
-            label: "默认时区",
-            description: "用于列表筛选、日报生成和调度提醒时间显示。",
-            options: [
-              { label: "上海 (UTC+08:00)", value: "asia-shanghai" },
-              { label: "新加坡 (UTC+08:00)", value: "asia-singapore" },
-              { label: "洛杉矶 (UTC-07:00)", value: "america-los-angeles" },
-              { label: "伦敦 (UTC+00:00)", value: "europe-london" },
-            ],
-          },
-        ],
-      },
-      {
-        key: "theme",
-        title: "界面样式",
-        description: "让设置窗口和主界面保持一致的桌面应用观感。",
-        items: [
           {
             key: "themeMode",
             type: "select",
@@ -146,10 +160,63 @@ const categories: SettingsCategory[] = [
           },
         ],
       },
+      {
+        key: "regional",
+        title: "区域与时间",
+        description: "保持导出、日报和操作记录的时间语义一致。",
+        items: [
+          {
+            key: "timezone",
+            type: "select",
+            modelKey: "timezone",
+            label: "默认时区",
+            description: "用于列表筛选、日报生成和调度提醒时间显示。",
+            options: [
+              { label: "上海 (UTC+08:00)", value: "asia-shanghai" },
+              { label: "新加坡 (UTC+08:00)", value: "asia-singapore" },
+              { label: "洛杉矶 (UTC-07:00)", value: "america-los-angeles" },
+              { label: "伦敦 (UTC+00:00)", value: "europe-london" },
+            ],
+          },
+        ],
+      },
+    ],
+  },
+  {
+    key: "general",
+    group: "workspace",
+    label: "通用",
+    description: "工作区基础信息和默认联络方式。",
+    icon: "ri-settings-3-line",
+    sections: [
+      {
+        key: "profile",
+        title: "工作区资料",
+        description: "维护默认展示信息，供导航、通知和协作场景复用。",
+        items: [
+          {
+            key: "displayName",
+            type: "input",
+            modelKey: "displayName",
+            label: "工作区名称",
+            description: "显示在顶部标题、系统通知和导出摘要中的名称。",
+            placeholder: "输入工作区名称",
+          },
+          {
+            key: "supportEmail",
+            type: "input",
+            modelKey: "supportEmail",
+            label: "通知回邮地址",
+            description: "报警、审批和系统提醒默认使用的回复邮箱。",
+            placeholder: "ops@company.com",
+          },
+        ],
+      },
     ],
   },
   {
     key: "members",
+    group: "workspace",
     label: "成员",
     description: "按部门管理成员、切换权限组并处理成员接入。",
     icon: "ri-team-line",
@@ -216,6 +283,7 @@ const categories: SettingsCategory[] = [
   },
   {
     key: "notifications",
+    group: "feature",
     label: "通知",
     description: "报警推送、摘要频率和浏览器提醒。",
     icon: "ri-notification-3-line",
@@ -267,6 +335,7 @@ const categories: SettingsCategory[] = [
   },
   {
     key: "security",
+    group: "admin",
     label: "安全",
     description: "会话管理、登录保护和高风险操作。",
     icon: "ri-shield-keyhole-line",
@@ -338,7 +407,7 @@ const categories: SettingsCategory[] = [
 ]
 
 const isOpen = ref(false)
-const activeKey = ref<SettingsCategoryKey>("general")
+const activeKey = ref<SettingsCategoryKey>("me")
 
 const activeCategory = computed(
   () => categories.find(category => category.key === activeKey.value) ?? categories[0],

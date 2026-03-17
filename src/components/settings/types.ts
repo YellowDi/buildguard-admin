@@ -1,6 +1,8 @@
 import type { ThemeMode } from "@/composables/useAppTheme"
 
-export type SettingsCategoryKey = "general" | "members" | "notifications" | "security"
+export type SettingsCategoryGroupKey = "account" | "workspace" | "feature" | "admin"
+
+export type SettingsCategoryKey = "me" | "preferences" | "general" | "members" | "notifications" | "security"
 
 export type SettingsActionKey =
   | "save-profile"
@@ -12,6 +14,8 @@ export type SettingsActionKey =
   | "delete-workspace"
 
 export type SettingsState = {
+  accountName: string
+  accountEmail: string
   displayName: string
   supportEmail: string
   startupView: string
@@ -76,8 +80,13 @@ export type SettingsSection = {
 
 export type SettingsCategory = {
   key: SettingsCategoryKey
+  group: SettingsCategoryGroupKey
   label: string
   description: string
+  pageTitle?: string
+  pageDescription?: string
   icon: string
+  avatarSrc?: string
+  avatarFallback?: string
   sections: SettingsSection[]
 }
