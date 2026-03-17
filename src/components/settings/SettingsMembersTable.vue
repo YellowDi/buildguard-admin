@@ -10,6 +10,14 @@ import {
 import TopTabSwitch from "@/components/layout/TopTabSwitch.vue"
 import { Button } from "@/components/ui/button"
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -20,10 +28,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
+import { NativeSelect } from "@/components/ui/native-select"
 import { API_PATHS, buildApiUrl } from "@/lib/api"
 import { cn } from "@/lib/utils"
 import TablePageTable from "@/components/table-page/TablePageTable.vue"
-import { practitionerStatusMap } from "@/components/table-page/statusPresets"
 import type { TableColumn, TablePageEmptyState } from "@/components/table-page/types"
 
 type MemberViewKey = "members" | "departments" | "permission-groups"
@@ -58,6 +66,14 @@ type PermissionGroupRow = {
   membersPreview: string
 }
 
+type ManualMemberForm = {
+  name: string
+  phone: string
+  departmentName: string
+  position: string
+  permissionGroup: string
+}
+
 type ApiEnvelope = {
   Total?: number
   List?: unknown
@@ -76,20 +92,29 @@ type MemberActionKey =
   | "invite"
   | "disable"
 
-const DEFAULT_PERMISSION_GROUPS = ["超级管理员", "管理员", "审核员", "成员", "观察者"]
 const MEMBERS_API_URL = buildApiUrl(API_PATHS.membersList)
 const toolbarIconButtonClass =
   "top-tab-switch-icon-button flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:text-foreground"
 const compactTableClass =
-  "text-[13px] [&_thead_th]:px-2.5 [&_thead_th]:py-1.5 [&_tbody_td]:px-2.5 [&_tbody_td]:py-2 [&_tbody_td]:align-middle [&_thead_th:last-child]:w-0 [&_thead_th:last-child]:min-w-0 [&_thead_th:last-child]:p-0 [&_tbody_td:last-child]:w-0 [&_tbody_td:last-child]:min-w-0 [&_tbody_td:last-child]:p-0 [&_tbody_tr:hover]:bg-transparent [&_tbody_tr:hover_td]:bg-transparent"
+  "text-[13px] [&_thead_th]:px-2.5 [&_thead_th]:py-1.5 [&_tbody_td]:px-2.5 [&_tbody_td]:py-2 [&_tbody_td]:align-middle [&_tbody_td]:!border-l-0 [&_thead_th:last-child]:w-0 [&_thead_th:last-child]:min-w-0 [&_thead_th:last-child]:p-0 [&_tbody_td:last-child]:w-0 [&_tbody_td:last-child]:min-w-0 [&_tbody_td:last-child]:p-0 [&_tbody_tr:hover]:bg-transparent [&_tbody_tr:hover_td]:bg-transparent"
+const memberStatusMap = {
+  正常: { tone: "green", icon: "check" },
+  离职: { tone: "gray", icon: "minus" },
+  未知状态: { tone: "gray", icon: "alert" },
+} as const
 
 const rows = ref<MemberRow[]>([])
 const total = ref(0)
 const loading = ref(false)
 const errorMessage = ref("")
 const activeView = ref<MemberViewKey>("members")
+const manualDialogOpen = ref(false)
 const searchExpanded = ref(false)
 const searchQuery = ref("")
+const availablePermissionGroups = computed(() => Array.from(
+  new Set(rows.value.flatMap(row => row.permissionOptions).filter(Boolean)),
+))
+const manualMemberForm = ref(createManualMemberForm())
 
 const memberColumns: TableColumn[] = [
   {
@@ -97,6 +122,7 @@ const memberColumns: TableColumn[] = [
     label: "成员",
     filterType: "contact",
     variant: "contact",
+    width: "fill",
     cellRenderer: {
       kind: "dual-inline",
       primaryKey: "name",
@@ -112,13 +138,13 @@ const memberColumns: TableColumn[] = [
     emphasis: "strong",
     tone: "primary",
     cellClass: "font-medium text-foreground",
+    width: "fill",
   },
   {
     key: "position",
     label: "职位",
     filterType: "text",
     tone: "muted",
-    width: "fill",
   },
   {
     key: "permissionGroup",
@@ -132,8 +158,7 @@ const memberColumns: TableColumn[] = [
     filterType: "tag",
     cellRenderer: {
       kind: "status",
-      map: practitionerStatusMap,
-      fallback: { tone: "gray", icon: "dot" },
+      map: memberStatusMap,
     },
   },
   {
@@ -595,7 +620,7 @@ function normalizeMemberRow(raw: unknown, index: number): MemberRow {
   const record = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>
   const roleNames = extractRoleNames(record.Roles)
   const permissionOptions = buildPermissionOptions(roleNames)
-  const initialPermissionGroup = roleNames[0] ?? "成员"
+  const initialPermissionGroup = roleNames[0] ?? "未分配"
 
   return {
     id: toNumber(record.Id, index + 1),
@@ -623,7 +648,7 @@ function extractRoleNames(value: unknown) {
 }
 
 function buildPermissionOptions(roleNames: string[]) {
-  return Array.from(new Set([...roleNames, ...DEFAULT_PERMISSION_GROUPS]))
+  return Array.from(new Set(roleNames.filter(Boolean)))
 }
 
 function normalizeStatus(value: unknown) {
@@ -636,30 +661,20 @@ function normalizeStatus(value: unknown) {
       return "离职"
     }
 
-    if (value === 0) {
-      return "待复核"
-    }
+    return "未知状态"
   }
 
   const text = toText(value).trim()
 
-  if (!text) {
-    return "待复核"
-  }
-
-  if (["启用", "正常", "active", "enabled", "1"].includes(text)) {
+  if (text === "1" || text === "正常") {
     return "正常"
   }
 
-  if (["离职", "inactive", "disabled", "2"].includes(text)) {
+  if (text === "2" || text === "离职") {
     return "离职"
   }
 
-  if (["待复核", "0"].includes(text)) {
-    return "待复核"
-  }
-
-  return text
+  return "未知状态"
 }
 
 function toNumber(value: unknown, fallback: number) {
@@ -706,9 +721,7 @@ function updatePermissionGroup(memberId: number, nextGroup: string) {
 
 function handleMemberAction(actionKey: MemberActionKey, member?: MemberRow) {
   if (actionKey === "manual") {
-    toast("成员创建入口待接入", {
-      description: "当前先保留添加成员的入口，后续可接表单或抽屉。",
-    })
+    openManualMemberDialog()
     return
   }
 
@@ -774,6 +787,53 @@ function handlePrimaryAction() {
   }
 }
 
+function createManualMemberForm(): ManualMemberForm {
+  return {
+    name: "",
+    phone: "",
+    departmentName: "",
+    position: "",
+    permissionGroup: availablePermissionGroups.value[0] ?? "",
+  }
+}
+
+function openManualMemberDialog() {
+  manualMemberForm.value = createManualMemberForm()
+  manualDialogOpen.value = true
+}
+
+function submitManualMember() {
+  const name = manualMemberForm.value.name.trim()
+
+  if (!name) {
+    toast.error("请填写成员姓名")
+    return
+  }
+
+  const permissionGroup = manualMemberForm.value.permissionGroup.trim() || "未分配"
+
+  rows.value.unshift({
+    id: getNextMemberId(),
+    name,
+    phone: manualMemberForm.value.phone.trim() || "-",
+    departmentName: manualMemberForm.value.departmentName.trim() || "未分组",
+    position: manualMemberForm.value.position.trim() || "未设置职位",
+    permissionGroup,
+    permissionOptions: permissionGroup === "未分配" ? [] : [permissionGroup],
+    status: "正常",
+  })
+  total.value = rows.value.length
+  manualDialogOpen.value = false
+  toast.success("成员已添加", {
+    description: `${name} 已加入当前成员列表。`,
+  })
+}
+
+function getNextMemberId() {
+  const maxId = rows.value.reduce((currentMax, row) => Math.max(currentMax, row.id), 0)
+  return maxId + 1
+}
+
 function asMemberRow(row: Record<string, unknown>) {
   return row as MemberRow
 }
@@ -821,30 +881,37 @@ function asMemberRow(row: Record<string, unknown>) {
             <span>刷新列表</span>
           </Button>
 
-          <DropdownMenu v-if="activeView === 'members'">
-            <DropdownMenuTrigger as-child>
-              <Button class="h-8 gap-1 rounded-md px-3 text-[14px]">
-                <i class="ri-user-add-line text-base" />
-                <span>添加成员</span>
-                <i class="ri-arrow-down-s-line text-base" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" class="w-[220px] rounded-xl p-1.5">
-              <DropdownMenuLabel class="px-2 pb-1 text-xs font-medium text-muted-foreground">
-                成员操作
-              </DropdownMenuLabel>
-              <DropdownMenuItem class="rounded-lg px-2.5 py-2" @select="handleMemberAction('manual')">
-                手动添加成员
-              </DropdownMenuItem>
-              <DropdownMenuItem class="rounded-lg px-2.5 py-2" @select="handleMemberAction('import-excel')">
-                导入数据
-              </DropdownMenuItem>
-              <DropdownMenuSeparator class="my-1" />
-              <DropdownMenuItem class="rounded-lg px-2.5 py-2" @select="handleMemberAction('sync-directory')">
-                从组织架构同步
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div v-if="activeView === 'members'" class="inline-flex items-center">
+            <Button class="h-8 gap-1 rounded-r-none pr-2.5 pl-3 text-[14px]" @click="handleMemberAction('manual')">
+              <i class="ri-user-add-line text-base" />
+              <span>添加成员</span>
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger as-child>
+                <Button
+                  class="h-8 w-8 rounded-l-none border-l border-white/15 px-0 text-[14px]"
+                  aria-label="打开成员操作菜单"
+                >
+                  <i class="ri-arrow-down-s-line text-base" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" class="w-[220px] rounded-xl p-1.5">
+                <DropdownMenuLabel class="px-2 pb-1 text-xs font-medium text-muted-foreground">
+                  成员操作
+                </DropdownMenuLabel>
+                <DropdownMenuItem class="rounded-lg px-2.5 py-2" @select="handleMemberAction('manual')">
+                  手动添加成员
+                </DropdownMenuItem>
+                <DropdownMenuItem class="rounded-lg px-2.5 py-2" @select="handleMemberAction('import-excel')">
+                  导入数据
+                </DropdownMenuItem>
+                <DropdownMenuSeparator class="my-1" />
+                <DropdownMenuItem class="rounded-lg px-2.5 py-2" @select="handleMemberAction('sync-directory')">
+                  从组织架构同步
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
 
           <Button
             v-else
@@ -896,6 +963,13 @@ function asMemberRow(row: Record<string, unknown>) {
               :model-value="asMemberRow(rawRow).permissionGroup"
               @update:model-value="updatePermissionGroup(asMemberRow(rawRow).id, String($event))"
             >
+              <DropdownMenuItem
+                v-if="asMemberRow(rawRow).permissionOptions.length === 0"
+                disabled
+                class="rounded-lg px-2.5 py-2 text-muted-foreground"
+              >
+                暂无可用权限组
+              </DropdownMenuItem>
               <DropdownMenuRadioItem
                 v-for="option in asMemberRow(rawRow).permissionOptions"
                 :key="`${asMemberRow(rawRow).id}-${option}`"
@@ -934,5 +1008,65 @@ function asMemberRow(row: Record<string, unknown>) {
         </DropdownMenu>
       </template>
     </TablePageTable>
+
+    <Dialog :open="manualDialogOpen" @update:open="manualDialogOpen = $event">
+      <DialogContent class="sm:max-w-[520px]">
+        <DialogHeader>
+          <DialogTitle>手动添加成员</DialogTitle>
+          <DialogDescription>
+            填写基础信息后，成员会先加入当前列表，后续再接真实创建接口。
+          </DialogDescription>
+        </DialogHeader>
+
+        <form class="grid gap-4 py-2" @submit.prevent="submitManualMember">
+          <div class="grid gap-2">
+            <label class="text-sm font-medium text-foreground" for="manual-member-name">成员姓名</label>
+            <Input id="manual-member-name" v-model="manualMemberForm.name" placeholder="请输入成员姓名" />
+          </div>
+
+          <div class="grid gap-2">
+            <label class="text-sm font-medium text-foreground" for="manual-member-phone">手机号</label>
+            <Input id="manual-member-phone" v-model="manualMemberForm.phone" placeholder="请输入手机号" />
+          </div>
+
+          <div class="grid gap-4 sm:grid-cols-2">
+            <div class="grid gap-2">
+              <label class="text-sm font-medium text-foreground" for="manual-member-department">部门</label>
+              <Input id="manual-member-department" v-model="manualMemberForm.departmentName" placeholder="例如：运营中心" />
+            </div>
+
+            <div class="grid gap-2">
+              <label class="text-sm font-medium text-foreground" for="manual-member-position">职位</label>
+              <Input id="manual-member-position" v-model="manualMemberForm.position" placeholder="例如：调度主管" />
+            </div>
+          </div>
+
+          <div class="grid gap-2">
+            <label class="text-sm font-medium text-foreground" for="manual-member-permission-group">权限组</label>
+            <NativeSelect id="manual-member-permission-group" v-model="manualMemberForm.permissionGroup" class="w-full">
+              <option v-if="availablePermissionGroups.length === 0" value="">
+                暂无可用权限组
+              </option>
+              <option
+                v-for="option in availablePermissionGroups"
+                :key="option"
+                :value="option"
+              >
+                {{ option }}
+              </option>
+            </NativeSelect>
+          </div>
+
+          <DialogFooter class="pt-2">
+            <Button type="button" variant="outline" @click="manualDialogOpen = false">
+              取消
+            </Button>
+            <Button type="submit">
+              添加成员
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   </section>
 </template>

@@ -443,19 +443,18 @@ function getStickyCellStyle(columnIndex: number) {
   }
 }
 
-function getFillColumnIndex() {
-  for (let index = props.columns.length - 1; index >= 0; index -= 1) {
-    if (props.columns[index]?.width === "fill") {
-      return index
+function getFillColumnIndexes() {
+  return props.columns.reduce<number[]>((indexes, column, index) => {
+    if (column.width === "fill") {
+      indexes.push(index)
     }
-  }
 
-  return -1
+    return indexes
+  }, [])
 }
 
 function isFillColumnActive(column: TableColumn, columnIndex: number) {
   return column.width === "fill"
-    && columnIndex === getFillColumnIndex()
     && fillColumnActive.value
 }
 
@@ -624,8 +623,8 @@ function measureFillColumnState() {
     return false
   }
 
-  const fillColumnIndex = getFillColumnIndex()
-  if (fillColumnIndex < 0) {
+  const fillColumnIndexes = getFillColumnIndexes()
+  if (fillColumnIndexes.length === 0) {
     return false
   }
 
@@ -644,20 +643,22 @@ function measureFillColumnState() {
   tableClone.style.width = "max-content"
   tableClone.style.maxWidth = "none"
 
-  const cellIndex = fillColumnIndex + (props.showIndex ? 1 : 0)
   for (const row of tableClone.querySelectorAll("tr")) {
-    const cell = row.children.item(cellIndex)
+    for (const fillColumnIndex of fillColumnIndexes) {
+      const cellIndex = fillColumnIndex + (props.showIndex ? 1 : 0)
+      const cell = row.children.item(cellIndex)
 
-    if (cell instanceof HTMLElement) {
-      cell.style.width = "auto"
-      cell.style.maxWidth = "none"
-      cell.style.whiteSpace = "nowrap"
+      if (cell instanceof HTMLElement) {
+        cell.style.width = "auto"
+        cell.style.maxWidth = "none"
+        cell.style.whiteSpace = "normal"
 
-      const noteContent = cell.firstElementChild
-      if (noteContent instanceof HTMLElement) {
-        noteContent.style.width = "auto"
-        noteContent.style.maxWidth = "none"
-        noteContent.style.whiteSpace = "nowrap"
+        const noteContent = cell.firstElementChild
+        if (noteContent instanceof HTMLElement) {
+          noteContent.style.width = "auto"
+          noteContent.style.maxWidth = "none"
+          noteContent.style.whiteSpace = "normal"
+        }
       }
     }
   }
