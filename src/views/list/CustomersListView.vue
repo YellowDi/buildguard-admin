@@ -24,6 +24,7 @@ import { fetchCustomers, type CustomerListItem } from "@/lib/customers-api"
 
 type CustomerRecord = {
   id: string
+  detailId: string
   business: string
   level: number | null
   levelLabel: string
@@ -50,27 +51,24 @@ const schema: TablePageSchema<CustomerRecord> = {
     description: "当前接口暂未返回可展示的客户列表。",
     icon: "ri-customer-service-2-line",
   },
+  rowActions: [
+    {
+      key: "view-detail",
+      label: "查看详情",
+      onClick: row => router.push({ name: "customer-detail", params: { id: row.detailId } }),
+    },
+  ],
   columns: [
     {
-      key: "principalName",
-      label: "责任人名称",
-      filterType: "contact",
-      variant: "contact",
+      key: "business",
+      label: "所属行业",
+      filterType: "tag",
       filter: {
-        type: "text",
-        label: "责任人",
-        placeholder: "输入责任人名称",
+        type: "tag",
+        label: "行业",
         defaultVisible: true,
-        value: row => `${row.principalName} ${row.principalPhone}`,
       },
       sort: true,
-      cellRenderer: {
-        kind: "dual-inline",
-        primaryKey: "principalName",
-        secondaryKey: "principalPhone",
-        primaryClass: "text-foreground",
-        secondaryClass: "text-muted-foreground",
-      },
     },
     {
       key: "levelLabel",
@@ -87,30 +85,26 @@ const schema: TablePageSchema<CustomerRecord> = {
       },
     },
     {
-      key: "business",
-      label: "所属行业",
-      filterType: "tag",
+      key: "principalName",
+      label: "责任人名称",
+      filterType: "contact",
+      variant: "contact",
       width: "fill",
       filter: {
-        type: "tag",
-        label: "行业",
-        defaultVisible: true,
-      },
-      sort: true,
-    },
-    {
-      key: "principalPhone",
-      label: "责任人手机号",
-      filterType: "text",
-      format: "numeric",
-      filter: {
         type: "text",
-        label: "手机号",
-        placeholder: "输入责任人手机号",
+        label: "责任人",
+        placeholder: "输入责任人名称",
         defaultVisible: true,
+        value: row => `${row.principalName} ${row.principalPhone}`,
       },
       sort: true,
-      cellClass: "font-mono text-foreground",
+      cellRenderer: {
+        kind: "dual-inline",
+        primaryKey: "principalName",
+        secondaryKey: "principalPhone",
+        primaryClass: "text-foreground",
+        secondaryClass: "text-muted-foreground",
+      },
     },
   ],
   filters: [
@@ -211,15 +205,45 @@ function normalizeCustomerRecord(item: CustomerListItem, index: number): Custome
   const business = toText(item.Business, "未填写")
   const principalName = toText(item.PrincipalName, "未填写")
   const principalPhone = toText(item.PrincipalPhone, "-")
+  const detailId = resolveCustomerDetailId(item, index, principalName, principalPhone)
 
   return {
     id: `${pageNum.value}-${index + 1}-${principalPhone}-${principalName}`,
+    detailId,
     business,
     level,
     levelLabel: formatLevelLabel(level),
     principalName,
     principalPhone,
   }
+}
+
+function resolveCustomerDetailId(
+  item: CustomerListItem,
+  index: number,
+  principalName: string,
+  principalPhone: string,
+) {
+  const candidates = [
+    item.Id,
+    item.id,
+    item.CustomerId,
+    item.customerId,
+    item.Uuid,
+    item.uuid,
+  ]
+
+  for (const candidate of candidates) {
+    if (typeof candidate === "number" && Number.isFinite(candidate)) {
+      return String(candidate)
+    }
+
+    if (typeof candidate === "string" && candidate.trim()) {
+      return candidate.trim()
+    }
+  }
+
+  return `${pageNum.value}-${index + 1}-${principalPhone}-${principalName}`
 }
 
 function formatLevelLabel(level: number | null) {
