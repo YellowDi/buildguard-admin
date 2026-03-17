@@ -1,0 +1,163 @@
+import { toast } from "vue-sonner"
+
+type ApiErrorMeta = {
+  status?: number
+  code?: string
+  requestId?: string
+}
+
+type HandleApiErrorOptions = {
+  title?: string
+  fallback?: string
+  description?: string
+  mode?: "toast" | "silent"
+}
+
+const MESSAGE_KEYS = ["message", "msg", "error", "detail", "title", "reason"] as const
+const NESTED_KEYS = ["data", "error"] as const
+const CODE_KEYS = ["code", "errorCode", "error_code"] as const
+const REQUEST_ID_KEYS = ["requestId", "request_id", "traceId", "trace_id"] as const
+
+export class ApiError extends Error {
+  status?: number
+  code?: string
+  requestId?: string
+
+  constructor(message: string, meta: ApiErrorMeta = {}) {
+    super(message)
+    this.name = "ApiError"
+    this.status = meta.status
+    this.code = meta.code
+    this.requestId = meta.requestId
+  }
+}
+
+export function getApiErrorMessage(error: unknown, fallback = "操作失败，请稍后重试。") {
+  if (error instanceof ApiError || error instanceof Error) {
+    return normalizeMessage(error.message) ?? fallback
+  }
+
+  const message = extractMessage(error)
+  return message ?? fallback
+}
+
+export function handleApiError(error: unknown, options: HandleApiErrorOptions = {}) {
+  const message = getApiErrorMessage(error, options.fallback)
+
+  if (options.mode !== "silent") {
+    toast.error(options.title ?? "操作失败", {
+      description: options.description ?? message,
+    })
+  }
+
+  return message
+}
+
+export function createHttpError(
+  response: Pick<Response, "status" | "statusText">,
+  payload?: unknown,
+  fallback = "请求失败，请稍后重试。",
+) {
+  const payloadMessage = extractMessage(payload)
+  const status = Number.isFinite(response.status) ? response.status : undefined
+  const statusSuffix = status ? `（${status}）` : ""
+
+  return new ApiError(payloadMessage ?? `${fallback}${statusSuffix}`, {
+    status,
+    code: extractScalar(payload, CODE_KEYS) ?? undefined,
+    requestId: extractScalar(payload, REQUEST_ID_KEYS) ?? undefined,
+  })
+}
+
+export async function readResponseBody(response: Response) {
+  const contentType = response.headers.get("content-type") ?? ""
+
+  if (contentType.includes("application/json")) {
+    try {
+      return await response.json()
+    } catch {
+      return null
+    }
+  }
+
+  const text = await response.text()
+  const normalizedText = normalizeMessage(text)
+
+  if (!normalizedText) {
+    return null
+  }
+
+  try {
+    return JSON.parse(normalizedText) as unknown
+  } catch {
+    return normalizedText
+  }
+}
+
+function extractMessage(value: unknown, depth = 0): string | null {
+  if (depth > 3) {
+    return null
+  }
+
+  const directMessage = normalizeMessage(value)
+  if (directMessage) {
+    return directMessage
+  }
+
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const nestedMessage = extractMessage(item, depth + 1)
+      if (nestedMessage) {
+        return nestedMessage
+      }
+    }
+
+    return null
+  }
+
+  const record = asRecord(value)
+  if (!record) {
+    return null
+  }
+
+  const topLevelMessage = extractScalar(record, MESSAGE_KEYS)
+  if (topLevelMessage) {
+    return topLevelMessage
+  }
+
+  for (const key of NESTED_KEYS) {
+    const nestedMessage = extractMessage(record[key], depth + 1)
+    if (nestedMessage) {
+      return nestedMessage
+    }
+  }
+
+  return null
+}
+
+function extractScalar(
+  value: unknown,
+  keys: readonly string[],
+) {
+  const record = asRecord(value)
+  if (!record) {
+    return null
+  }
+
+  for (const key of keys) {
+    const normalized = normalizeMessage(record[key])
+    if (normalized) {
+      return normalized
+    }
+  }
+
+  return null
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value !== null && typeof value === "object" ? value as Record<string, unknown> : null
+}
+
+function normalizeMessage(value: unknown) {
+  return typeof value === "string" && value.trim() ? value.trim() : null
+}

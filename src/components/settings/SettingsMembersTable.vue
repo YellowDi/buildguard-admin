@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { NativeSelect } from "@/components/ui/native-select"
+import { createHttpError, handleApiError, readResponseBody } from "@/lib/api-errors"
 import { API_PATHS, buildApiUrl } from "@/lib/api"
 import { cn } from "@/lib/utils"
 import TablePageTable from "@/components/table-page/TablePageTable.vue"
@@ -36,14 +37,21 @@ import type { TableColumn, TablePageEmptyState } from "@/components/table-page/t
 
 type MemberViewKey = "members" | "departments" | "permission-groups"
 
+type PermissionOption = {
+  label: string
+  uuid?: string
+}
+
 type MemberRow = {
   id: number
+  uuid: string
   name: string
   phone: string
+  departmentUuid: string
   departmentName: string
   position: string
   permissionGroup: string
-  permissionOptions: string[]
+  permissionOptions: PermissionOption[]
   status: string
 }
 
@@ -74,6 +82,15 @@ type ManualMemberForm = {
   permissionGroup: string
 }
 
+type EditMemberForm = {
+  name: string
+  phone: string
+  departmentName: string
+  position: string
+  permissionGroup: string
+  status: string
+}
+
 type ApiEnvelope = {
   Total?: number
   List?: unknown
@@ -93,6 +110,11 @@ type MemberActionKey =
   | "disable"
 
 const MEMBERS_API_URL = buildApiUrl(API_PATHS.membersList)
+const MEMBER_STATUS_UPDATE_API_URL = buildApiUrl(API_PATHS.memberStatusUpdate)
+const MEMBER_UPDATE_API_URL = buildApiUrl(API_PATHS.memberUpdate)
+const MEMBERS_LOAD_ERROR_MESSAGE = "成员列表加载失败，请稍后重试。"
+const MEMBER_STATUS_UPDATE_ERROR_MESSAGE = "成员状态更新失败，请稍后重试。"
+const MEMBER_UPDATE_ERROR_MESSAGE = "成员信息更新失败，请稍后重试。"
 const toolbarIconButtonClass =
   "top-tab-switch-icon-button flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:text-foreground"
 const compactTableClass =
@@ -107,14 +129,21 @@ const rows = ref<MemberRow[]>([])
 const total = ref(0)
 const loading = ref(false)
 const errorMessage = ref("")
+const permissionUpdatingMemberIds = ref<number[]>([])
+const statusUpdatingMemberIds = ref<number[]>([])
 const activeView = ref<MemberViewKey>("members")
 const manualDialogOpen = ref(false)
+const editDialogOpen = ref(false)
+const editingMemberId = ref<number | null>(null)
+const editSubmitting = ref(false)
+const editPermissionGroupOptions = ref<PermissionOption[]>([])
 const searchExpanded = ref(false)
 const searchQuery = ref("")
 const availablePermissionGroups = computed(() => Array.from(
-  new Set(rows.value.flatMap(row => row.permissionOptions).filter(Boolean)),
+  new Set(rows.value.flatMap(row => row.permissionOptions.map(option => option.label)).filter(Boolean)),
 ))
 const manualMemberForm = ref(createManualMemberForm())
+const editMemberForm = ref(createEditMemberForm())
 
 const memberColumns: TableColumn[] = [
   {
@@ -166,8 +195,8 @@ const memberColumns: TableColumn[] = [
     label: "",
     filterType: "none",
     slot: "cell-actions",
-    headerClass: "w-[4.5rem]",
-    cellClass: "w-[4.5rem] text-right",
+    headerClass: "w-[6.5rem]",
+    cellClass: "w-[6.5rem] text-right",
   },
 ]
 
@@ -487,7 +516,7 @@ const tableEmptyState = computed<TablePageEmptyState>(() => {
   if (errorMessage.value) {
     return {
       title: "数据加载失败",
-      description: "请检查接口地址、请求方式或重新加载当前页面。",
+      description: errorMessage.value,
       icon: "ri-error-warning-line",
     }
   }
@@ -539,18 +568,21 @@ async function loadMembers() {
       },
       body: JSON.stringify({}),
     })
+    const payload = await readResponseBody(response) as ApiEnvelope | unknown[]
 
     if (!response.ok) {
-      throw new Error(`接口请求失败（${response.status}）`)
+      throw createHttpError(response, payload, MEMBERS_LOAD_ERROR_MESSAGE)
     }
 
-    const payload = await response.json() as ApiEnvelope | unknown[]
     const list = extractList(payload)
 
     rows.value = list.map((item, index) => normalizeMemberRow(item, index))
     total.value = extractTotal(payload, rows.value.length)
   } catch (error) {
-    errorMessage.value = error instanceof Error ? error.message : "成员接口请求失败"
+    errorMessage.value = handleApiError(error, {
+      mode: "silent",
+      fallback: MEMBERS_LOAD_ERROR_MESSAGE,
+    })
   } finally {
     loading.value = false
   }
@@ -618,14 +650,15 @@ function extractTotal(payload: ApiEnvelope | unknown[], fallback: number) {
 
 function normalizeMemberRow(raw: unknown, index: number): MemberRow {
   const record = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>
-  const roleNames = extractRoleNames(record.Roles)
-  const permissionOptions = buildPermissionOptions(roleNames)
-  const initialPermissionGroup = roleNames[0] ?? "未分配"
+  const permissionOptions = extractRoleOptions(record.Roles)
+  const initialPermissionGroup = permissionOptions[0]?.label ?? "未分配"
 
   return {
     id: toNumber(record.Id, index + 1),
+    uuid: toText(record.Uuid),
     name: toText(record.Name, `成员 ${index + 1}`),
     phone: toText(record.Phone, "-"),
+    departmentUuid: toText(record.DepartmentUuid),
     departmentName: toText(record.DepartmentName, "未分组"),
     position: toText(record.Position, "未设置职位"),
     permissionGroup: initialPermissionGroup,
@@ -634,21 +667,36 @@ function normalizeMemberRow(raw: unknown, index: number): MemberRow {
   }
 }
 
-function extractRoleNames(value: unknown) {
+function extractRoleOptions(value: unknown) {
   if (!Array.isArray(value)) {
     return []
   }
 
-  return value
-    .map((item) => {
-      const roleRecord = (item && typeof item === "object" ? item : {}) as Record<string, unknown>
-      return toText(roleRecord.RoleName)
-    })
-    .filter(Boolean)
+  return buildPermissionOptions(value.map((item) => {
+    const roleRecord = (item && typeof item === "object" ? item : {}) as Record<string, unknown>
+    return {
+      label: toText(roleRecord.RoleName, roleRecord.Name),
+      uuid: toText(roleRecord.Uuid, roleRecord.RoleUuid),
+    }
+  }))
 }
 
-function buildPermissionOptions(roleNames: string[]) {
-  return Array.from(new Set(roleNames.filter(Boolean)))
+function buildPermissionOptions(options: PermissionOption[]) {
+  const deduped = new Map<string, PermissionOption>()
+
+  options.forEach((option) => {
+    if (!option.label) {
+      return
+    }
+
+    const key = option.uuid || option.label
+
+    if (!deduped.has(key)) {
+      deduped.set(key, option)
+    }
+  })
+
+  return Array.from(deduped.values())
 }
 
 function normalizeStatus(value: unknown) {
@@ -677,6 +725,18 @@ function normalizeStatus(value: unknown) {
   return "未知状态"
 }
 
+function toStatusValue(status: string) {
+  if (status === "正常") {
+    return 1
+  }
+
+  if (status === "离职") {
+    return 2
+  }
+
+  return 0
+}
+
 function toNumber(value: unknown, fallback: number) {
   const parsed = Number(value)
   return Number.isFinite(parsed) ? parsed : fallback
@@ -696,6 +756,10 @@ function toText(...values: unknown[]) {
   return ""
 }
 
+function getPermissionOption(member: MemberRow, groupLabel: string) {
+  return member.permissionOptions.find(option => option.label === groupLabel)
+}
+
 function toggleSearch() {
   if (searchExpanded.value) {
     searchQuery.value = ""
@@ -706,17 +770,133 @@ function toggleSearch() {
   searchExpanded.value = true
 }
 
-function updatePermissionGroup(memberId: number, nextGroup: string) {
+function buildMemberUpdatePayload(member: MemberRow, nextPermissionGroup = member.permissionGroup) {
+  const nextOption = getPermissionOption(member, nextPermissionGroup)
+
+  return {
+    Uuid: member.uuid || undefined,
+    DepartmentUuid: member.departmentUuid || undefined,
+    Name: member.name,
+    Phone: member.phone === "-" ? "" : member.phone,
+    Position: member.position === "未设置职位" ? "" : member.position,
+    Status: toStatusValue(member.status),
+    RoleUuids: nextPermissionGroup === "未分配"
+      ? []
+      : nextOption?.uuid
+        ? [nextOption.uuid]
+        : [],
+  }
+}
+
+function isMemberPermissionUpdating(memberId: number) {
+  return permissionUpdatingMemberIds.value.includes(memberId)
+}
+
+async function updatePermissionGroup(memberId: number, nextGroup: string) {
   const member = rows.value.find(row => row.id === memberId)
 
-  if (!member || member.permissionGroup === nextGroup) {
+  if (!member || member.permissionGroup === nextGroup || isMemberPermissionUpdating(memberId)) {
     return
   }
 
-  member.permissionGroup = nextGroup
-  toast.success("权限组已更新", {
-    description: `${member.name} 已切换到 ${nextGroup}。`,
-  })
+  if (!member.uuid) {
+    toast.error("成员信息更新失败", {
+      description: `${member.name} 缺少用户 UUID，无法提交更新。`,
+    })
+    return
+  }
+
+  if (nextGroup !== "未分配" && !getPermissionOption(member, nextGroup)?.uuid) {
+    toast.error("成员信息更新失败", {
+      description: `${nextGroup} 缺少权限组 UUID，无法提交更新。`,
+    })
+    return
+  }
+
+  permissionUpdatingMemberIds.value = [...permissionUpdatingMemberIds.value, memberId]
+
+  try {
+    const response = await fetch(MEMBER_UPDATE_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(buildMemberUpdatePayload(member, nextGroup)),
+    })
+    const payload = await readResponseBody(response)
+
+    if (!response.ok) {
+      throw createHttpError(response, payload, MEMBER_UPDATE_ERROR_MESSAGE)
+    }
+
+    member.permissionGroup = nextGroup
+    member.permissionOptions = buildPermissionOptions([
+      ...member.permissionOptions,
+      ...(nextGroup === "未分配" ? [] : [{
+        label: nextGroup,
+        uuid: getPermissionOption(member, nextGroup)?.uuid,
+      }]),
+    ])
+    toast.success("权限组已更新", {
+      description: `${member.name} 已切换到 ${nextGroup}。`,
+    })
+  } catch (error) {
+    handleApiError(error, {
+      title: "成员信息更新失败",
+      fallback: MEMBER_UPDATE_ERROR_MESSAGE,
+    })
+  } finally {
+    permissionUpdatingMemberIds.value = permissionUpdatingMemberIds.value.filter(id => id !== memberId)
+  }
+}
+
+function isMemberStatusUpdating(memberId: number) {
+  return statusUpdatingMemberIds.value.includes(memberId)
+}
+
+async function updateMemberStatus(member: MemberRow, nextStatus: number) {
+  if (isMemberStatusUpdating(member.id)) {
+    return
+  }
+
+  if (member.status === "离职") {
+    toast("成员状态未变更", {
+      description: `${member.name} 当前已是停用状态。`,
+    })
+    return
+  }
+
+  statusUpdatingMemberIds.value = [...statusUpdatingMemberIds.value, member.id]
+
+  try {
+    const response = await fetch(MEMBER_STATUS_UPDATE_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        id: member.id,
+        status: nextStatus,
+      }),
+    })
+    const payload = await readResponseBody(response)
+
+    if (!response.ok) {
+      throw createHttpError(response, payload, MEMBER_STATUS_UPDATE_ERROR_MESSAGE)
+    }
+
+    member.status = normalizeStatus(nextStatus)
+    toast.success("成员状态已更新", {
+      description: `${member.name} 已停用。`,
+    })
+  } catch (error) {
+    handleApiError(error, {
+      title: "成员状态更新失败",
+      fallback: MEMBER_STATUS_UPDATE_ERROR_MESSAGE,
+    })
+  } finally {
+    statusUpdatingMemberIds.value = statusUpdatingMemberIds.value.filter(id => id !== member.id)
+  }
 }
 
 function handleMemberAction(actionKey: MemberActionKey, member?: MemberRow) {
@@ -771,9 +951,7 @@ function handleMemberAction(actionKey: MemberActionKey, member?: MemberRow) {
     return
   }
 
-  toast.error("停用成员未开放", {
-    description: `${member.name} 的停用确认流尚未接入。`,
-  })
+  void updateMemberStatus(member, 2)
 }
 
 function handlePrimaryAction() {
@@ -797,9 +975,39 @@ function createManualMemberForm(): ManualMemberForm {
   }
 }
 
+function createEditMemberForm(): EditMemberForm {
+  return {
+    name: "",
+    phone: "",
+    departmentName: "",
+    position: "",
+    permissionGroup: "",
+    status: "",
+  }
+}
+
 function openManualMemberDialog() {
   manualMemberForm.value = createManualMemberForm()
   manualDialogOpen.value = true
+}
+
+function openEditMemberDialog(member: MemberRow) {
+  editingMemberId.value = member.id
+  editPermissionGroupOptions.value = buildPermissionOptions([
+    ...member.permissionOptions,
+    ...(member.permissionGroup && member.permissionGroup !== "未分配"
+      ? [{ label: member.permissionGroup, uuid: getPermissionOption(member, member.permissionGroup)?.uuid }]
+      : []),
+  ])
+  editMemberForm.value = {
+    name: member.name,
+    phone: member.phone === "-" ? "" : member.phone,
+    departmentName: member.departmentName === "未分组" ? "" : member.departmentName,
+    position: member.position === "未设置职位" ? "" : member.position,
+    permissionGroup: member.permissionGroup === "未分配" ? "" : member.permissionGroup,
+    status: member.status,
+  }
+  editDialogOpen.value = true
 }
 
 function submitManualMember() {
@@ -814,12 +1022,14 @@ function submitManualMember() {
 
   rows.value.unshift({
     id: getNextMemberId(),
+    uuid: "",
     name,
     phone: manualMemberForm.value.phone.trim() || "-",
+    departmentUuid: "",
     departmentName: manualMemberForm.value.departmentName.trim() || "未分组",
     position: manualMemberForm.value.position.trim() || "未设置职位",
     permissionGroup,
-    permissionOptions: permissionGroup === "未分配" ? [] : [permissionGroup],
+    permissionOptions: permissionGroup === "未分配" ? [] : [{ label: permissionGroup }],
     status: "正常",
   })
   total.value = rows.value.length
@@ -832,6 +1042,90 @@ function submitManualMember() {
 function getNextMemberId() {
   const maxId = rows.value.reduce((currentMax, row) => Math.max(currentMax, row.id), 0)
   return maxId + 1
+}
+
+async function submitEditMember() {
+  const memberId = editingMemberId.value
+  const member = rows.value.find(row => row.id === memberId)
+
+  if (!member) {
+    return
+  }
+
+  const name = editMemberForm.value.name.trim()
+
+  if (!name) {
+    toast.error("请填写成员姓名")
+    return
+  }
+
+  if (!member.uuid) {
+    toast.error("成员信息更新失败", {
+      description: `${member.name} 缺少用户 UUID，无法提交更新。`,
+    })
+    return
+  }
+
+  const nextPermissionGroup = editMemberForm.value.permissionGroup.trim() || "未分配"
+  const nextPermissionOption = editPermissionGroupOptions.value.find(option => option.label === nextPermissionGroup)
+
+  if (nextPermissionGroup !== "未分配" && !nextPermissionOption?.uuid) {
+    toast.error("成员信息更新失败", {
+      description: `${nextPermissionGroup} 缺少权限组 UUID，无法提交更新。`,
+    })
+    return
+  }
+
+  editSubmitting.value = true
+
+  try {
+    const nextMember: MemberRow = {
+      ...member,
+      name,
+      phone: editMemberForm.value.phone.trim() || "-",
+      departmentName: editMemberForm.value.departmentName.trim() || "未分组",
+      position: editMemberForm.value.position.trim() || "未设置职位",
+      permissionGroup: nextPermissionGroup,
+      status: editMemberForm.value.status || member.status,
+      permissionOptions: nextPermissionGroup === "未分配"
+        ? member.permissionOptions
+        : buildPermissionOptions([
+            ...member.permissionOptions,
+            { label: nextPermissionGroup, uuid: nextPermissionOption?.uuid },
+          ]),
+    }
+
+    const response = await fetch(MEMBER_UPDATE_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(buildMemberUpdatePayload(nextMember, nextPermissionGroup)),
+    })
+    const payload = await readResponseBody(response)
+
+    if (!response.ok) {
+      throw createHttpError(response, payload, MEMBER_UPDATE_ERROR_MESSAGE)
+    }
+
+    member.name = nextMember.name
+    member.phone = nextMember.phone
+    member.departmentName = nextMember.departmentName
+    member.position = nextMember.position
+    member.permissionGroup = nextMember.permissionGroup
+    member.permissionOptions = nextMember.permissionOptions
+    editDialogOpen.value = false
+    toast.success("成员信息已更新", {
+      description: `${member.name} 的信息已保存。`,
+    })
+  } catch (error) {
+    handleApiError(error, {
+      title: "成员信息更新失败",
+      fallback: MEMBER_UPDATE_ERROR_MESSAGE,
+    })
+  } finally {
+    editSubmitting.value = false
+  }
 }
 
 function asMemberRow(row: Record<string, unknown>) {
@@ -949,9 +1243,12 @@ function asMemberRow(row: Record<string, unknown>) {
           <DropdownMenuTrigger as-child>
             <button
               type="button"
+              :disabled="isMemberPermissionUpdating(asMemberRow(rawRow).id)"
               class="inline-flex h-7 max-w-[9rem] items-center gap-1 rounded-md px-1.5 text-[12px] font-medium text-foreground transition-colors hover:bg-surface-tertiary hover:text-foreground focus-visible:bg-surface-tertiary focus-visible:text-foreground focus-visible:outline-none"
             >
-              <span class="truncate">{{ asMemberRow(rawRow).permissionGroup }}</span>
+              <span class="truncate">
+                {{ isMemberPermissionUpdating(asMemberRow(rawRow).id) ? "更新中..." : asMemberRow(rawRow).permissionGroup }}
+              </span>
               <i class="ri-arrow-down-s-line text-sm text-muted-foreground" />
             </button>
           </DropdownMenuTrigger>
@@ -972,11 +1269,11 @@ function asMemberRow(row: Record<string, unknown>) {
               </DropdownMenuItem>
               <DropdownMenuRadioItem
                 v-for="option in asMemberRow(rawRow).permissionOptions"
-                :key="`${asMemberRow(rawRow).id}-${option}`"
-                :value="option"
+                :key="`${asMemberRow(rawRow).id}-${option.uuid ?? option.label}`"
+                :value="option.label"
                 class="rounded-lg py-2 pr-2 pl-8"
               >
-                {{ option }}
+                {{ option.label }}
               </DropdownMenuRadioItem>
             </DropdownMenuRadioGroup>
           </DropdownMenuContent>
@@ -984,28 +1281,16 @@ function asMemberRow(row: Record<string, unknown>) {
       </template>
 
       <template #cell-actions="{ row: rawRow }">
-        <DropdownMenu v-if="activeView === 'members'">
-          <DropdownMenuTrigger as-child>
-            <Button variant="ghost" size="icon-sm" class="ml-auto size-7 rounded-full">
-              <i class="ri-more-2-fill text-base" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" class="w-[180px] rounded-xl p-1.5">
-            <DropdownMenuItem class="rounded-lg px-2.5 py-2" @select="handleMemberAction('view', asMemberRow(rawRow))">
-              查看成员资料
-            </DropdownMenuItem>
-            <DropdownMenuItem class="rounded-lg px-2.5 py-2" @select="handleMemberAction('invite', asMemberRow(rawRow))">
-              重新发送邀请
-            </DropdownMenuItem>
-            <DropdownMenuSeparator class="my-1" />
-            <DropdownMenuItem
-              class="rounded-lg px-2.5 py-2 text-destructive focus:text-destructive"
-              @select="handleMemberAction('disable', asMemberRow(rawRow))"
-            >
-              停用成员
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <Button
+          v-if="activeView === 'members'"
+          variant="outline"
+          size="sm"
+          class="ml-auto h-8 gap-1 rounded-md px-2.5 text-[13px]"
+          @click="openEditMemberDialog(asMemberRow(rawRow))"
+        >
+          <i class="ri-edit-line text-base" />
+          <span>编辑</span>
+        </Button>
       </template>
     </TablePageTable>
 
@@ -1063,6 +1348,85 @@ function asMemberRow(row: Record<string, unknown>) {
             </Button>
             <Button type="submit">
               添加成员
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+
+    <Dialog :open="editDialogOpen" @update:open="editDialogOpen = $event">
+      <DialogContent class="sm:max-w-[520px]">
+        <DialogHeader>
+          <DialogTitle>编辑用户信息</DialogTitle>
+          <DialogDescription>
+            修改成员基础信息后，保存时会调用用户更新接口。
+          </DialogDescription>
+        </DialogHeader>
+
+        <form class="grid gap-4 py-2" @submit.prevent="submitEditMember">
+          <div class="grid gap-4 sm:grid-cols-2">
+            <div class="grid gap-2">
+              <label class="text-sm font-medium text-foreground" for="edit-member-name">成员姓名</label>
+              <Input id="edit-member-name" v-model="editMemberForm.name" placeholder="请输入成员姓名" />
+            </div>
+
+            <div class="grid gap-2">
+              <label class="text-sm font-medium text-foreground" for="edit-member-phone">手机号</label>
+              <Input id="edit-member-phone" v-model="editMemberForm.phone" placeholder="请输入手机号" />
+            </div>
+          </div>
+
+          <div class="grid gap-4 sm:grid-cols-2">
+            <div class="grid gap-2">
+              <label class="text-sm font-medium text-foreground" for="edit-member-department">部门</label>
+              <Input id="edit-member-department" v-model="editMemberForm.departmentName" placeholder="例如：运营中心" />
+            </div>
+
+            <div class="grid gap-2">
+              <label class="text-sm font-medium text-foreground" for="edit-member-position">职位</label>
+              <Input id="edit-member-position" v-model="editMemberForm.position" placeholder="例如：调度主管" />
+            </div>
+          </div>
+
+          <div class="grid gap-4 sm:grid-cols-2">
+            <div class="grid gap-2">
+              <label class="text-sm font-medium text-foreground" for="edit-member-permission-group">权限组</label>
+              <NativeSelect id="edit-member-permission-group" v-model="editMemberForm.permissionGroup" class="w-full">
+                <option value="">
+                  未分配
+                </option>
+                <option
+                  v-for="option in editPermissionGroupOptions"
+                  :key="option.uuid ?? option.label"
+                  :value="option.label"
+                >
+                  {{ option.label }}
+                </option>
+              </NativeSelect>
+            </div>
+
+            <div class="grid gap-2">
+              <label class="text-sm font-medium text-foreground" for="edit-member-status">成员状态</label>
+              <NativeSelect id="edit-member-status" v-model="editMemberForm.status" class="w-full">
+                <option value="正常">
+                  正常
+                </option>
+                <option value="离职">
+                  离职
+                </option>
+                <option v-if="editMemberForm.status === '未知状态'" value="未知状态">
+                  未知状态
+                </option>
+              </NativeSelect>
+            </div>
+          </div>
+
+          <DialogFooter class="pt-2">
+            <Button type="button" variant="outline" @click="editDialogOpen = false">
+              取消
+            </Button>
+            <Button type="submit" :disabled="editSubmitting">
+              {{ editSubmitting ? "保存中..." : "保存" }}
             </Button>
           </DialogFooter>
         </form>

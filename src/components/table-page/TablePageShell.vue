@@ -24,6 +24,7 @@ import type {
   TagFilterState,
   TextFilterState,
 } from "@/components/table-page/types"
+import { handleApiError } from "@/lib/api-errors"
 
 const props = defineProps<{
   title: string
@@ -141,7 +142,10 @@ async function handleExportConfirm(payload: { scope: TableExportScope; format: T
     exportDialogOpen.value = false
   }
   catch (error) {
-    toast.error(error instanceof Error ? error.message : "导出失败，请稍后重试。")
+    handleApiError(error, {
+      title: "导出失败",
+      fallback: "导出失败，请稍后重试。",
+    })
   }
   finally {
     isExporting.value = false
