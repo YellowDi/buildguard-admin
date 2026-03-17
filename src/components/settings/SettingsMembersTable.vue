@@ -7,6 +7,16 @@ import {
   AlertDescription,
   AlertTitle,
 } from "@/components/ui/alert"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import TopTabSwitch from "@/components/layout/TopTabSwitch.vue"
 import { Button } from "@/components/ui/button"
 import {
@@ -28,10 +38,19 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
-import { NativeSelect } from "@/components/ui/native-select"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { handleApiError } from "@/lib/api-errors"
 import {
+  createMember as requestMemberCreate,
+  deleteMember as requestMemberDelete,
   fetchMembers,
+  getMemberDetail,
   updateMember as requestMemberUpdate,
   updateMemberStatus as requestMemberStatusUpdate,
 } from "@/lib/members-api"
@@ -57,6 +76,7 @@ type MemberRow = {
   permissionGroup: string
   permissionOptions: PermissionOption[]
   status: string
+  source: "remote" | "local"
 }
 
 type DepartmentRow = {
@@ -127,7 +147,11 @@ const activeView = ref<MemberViewKey>("members")
 const manualDialogOpen = ref(false)
 const editDialogOpen = ref(false)
 const editingMemberId = ref<number | null>(null)
+const manualSubmitting = ref(false)
+const editDetailLoading = ref(false)
 const editSubmitting = ref(false)
+const deleteSubmitting = ref(false)
+const deleteConfirmOpen = ref(false)
 const editPermissionGroupOptions = ref<PermissionOption[]>([])
 const searchExpanded = ref(false)
 const searchQuery = ref("")
@@ -582,6 +606,7 @@ function normalizeMemberRow(raw: unknown, index: number): MemberRow {
     permissionGroup: initialPermissionGroup,
     permissionOptions,
     status: normalizeStatus(record.Status),
+    source: "remote",
   }
 }
 
@@ -678,6 +703,32 @@ function getPermissionOption(member: MemberRow, groupLabel: string) {
   return member.permissionOptions.find(option => option.label === groupLabel)
 }
 
+function getDepartmentMatch(departmentName: string) {
+  const normalizedName = departmentName.trim()
+
+  if (!normalizedName) {
+    return null
+  }
+
+  return rows.value.find(row => row.departmentName === normalizedName) ?? null
+}
+
+function getPermissionOptionByLabel(groupLabel: string) {
+  if (!groupLabel || groupLabel === "未分配") {
+    return null
+  }
+
+  for (const row of rows.value) {
+    const option = getPermissionOption(row, groupLabel)
+
+    if (option?.uuid) {
+      return option
+    }
+  }
+
+  return null
+}
+
 function toggleSearch() {
   if (searchExpanded.value) {
     searchQuery.value = ""
@@ -766,6 +817,13 @@ async function updateMemberStatus(member: MemberRow, nextStatus: number) {
     return
   }
 
+  if (!member.uuid) {
+    toast.error("成员状态更新失败", {
+      description: `${member.name} 缺少用户 UUID，无法提交更新。`,
+    })
+    return
+  }
+
   if (member.status === "离职") {
     toast("成员状态未变更", {
       description: `${member.name} 当前已是停用状态。`,
@@ -777,8 +835,8 @@ async function updateMemberStatus(member: MemberRow, nextStatus: number) {
 
   try {
     await requestMemberStatusUpdate({
-      id: member.id,
-      status: nextStatus,
+      Uuid: member.uuid,
+      Status: nextStatus,
     })
 
     member.status = normalizeStatus(nextStatus)
@@ -877,7 +935,7 @@ function createEditMemberForm(): EditMemberForm {
     phone: "",
     departmentName: "",
     position: "",
-    permissionGroup: "",
+    permissionGroup: "未分配",
     status: "",
   }
 }
@@ -889,24 +947,23 @@ function openManualMemberDialog() {
 
 function openEditMemberDialog(member: MemberRow) {
   editingMemberId.value = member.id
-  editPermissionGroupOptions.value = buildPermissionOptions([
-    ...member.permissionOptions,
-    ...(member.permissionGroup && member.permissionGroup !== "未分配"
-      ? [{ label: member.permissionGroup, uuid: getPermissionOption(member, member.permissionGroup)?.uuid }]
-      : []),
-  ])
-  editMemberForm.value = {
-    name: member.name,
-    phone: member.phone === "-" ? "" : member.phone,
-    departmentName: member.departmentName === "未分组" ? "" : member.departmentName,
-    position: member.position === "未设置职位" ? "" : member.position,
-    permissionGroup: member.permissionGroup === "未分配" ? "" : member.permissionGroup,
-    status: member.status,
-  }
+  editDetailLoading.value = false
+  applyEditMemberSnapshot(member)
   editDialogOpen.value = true
+
+  if (member.uuid) {
+    void loadEditMemberDetail(member)
+  }
 }
 
-function submitManualMember() {
+function closeEditDialog() {
+  editDialogOpen.value = false
+  editingMemberId.value = null
+  deleteConfirmOpen.value = false
+  editDetailLoading.value = false
+}
+
+async function submitManualMember() {
   const name = manualMemberForm.value.name.trim()
 
   if (!name) {
@@ -914,29 +971,51 @@ function submitManualMember() {
     return
   }
 
+  const departmentName = manualMemberForm.value.departmentName.trim()
+  const departmentMatch = getDepartmentMatch(departmentName)
+
+  if (departmentName && (!departmentMatch || !departmentMatch.departmentUuid)) {
+    toast.error("成员创建失败", {
+      description: "当前部门无法映射到 DepartmentUuid，请填写已存在的部门名称。",
+    })
+    return
+  }
+
   const permissionGroup = manualMemberForm.value.permissionGroup.trim() || "未分配"
+  const permissionOption = getPermissionOptionByLabel(permissionGroup)
 
-  rows.value.unshift({
-    id: getNextMemberId(),
-    uuid: "",
-    name,
-    phone: manualMemberForm.value.phone.trim() || "-",
-    departmentUuid: "",
-    departmentName: manualMemberForm.value.departmentName.trim() || "未分组",
-    position: manualMemberForm.value.position.trim() || "未设置职位",
-    permissionGroup,
-    permissionOptions: permissionGroup === "未分配" ? [] : [{ label: permissionGroup }],
-    status: "正常",
-  })
-  manualDialogOpen.value = false
-  toast.success("成员已添加", {
-    description: `${name} 已加入当前成员列表。`,
-  })
-}
+  if (permissionGroup !== "未分配" && !permissionOption?.uuid) {
+    toast.error("成员创建失败", {
+      description: `${permissionGroup} 缺少权限组 UUID，无法提交创建请求。`,
+    })
+    return
+  }
 
-function getNextMemberId() {
-  const maxId = rows.value.reduce((currentMax, row) => Math.max(currentMax, row.id), 0)
-  return maxId + 1
+  manualSubmitting.value = true
+
+  try {
+    await requestMemberCreate({
+      DepartmentUuid: departmentMatch?.departmentUuid || undefined,
+      Name: name,
+      Phone: manualMemberForm.value.phone.trim() || undefined,
+      Position: manualMemberForm.value.position.trim() || undefined,
+      RoleUuids: permissionOption?.uuid ? [permissionOption.uuid] : undefined,
+    })
+
+    manualDialogOpen.value = false
+    manualMemberForm.value = createManualMemberForm()
+    toast.success("成员已创建", {
+      description: `${name} 已提交到成员接口。`,
+    })
+    await loadMembers()
+  } catch (error) {
+    handleApiError(error, {
+      title: "成员创建失败",
+      fallback: "成员创建失败，请稍后重试。",
+    })
+  } finally {
+    manualSubmitting.value = false
+  }
 }
 
 async function submitEditMember() {
@@ -998,7 +1077,7 @@ async function submitEditMember() {
     member.position = nextMember.position
     member.permissionGroup = nextMember.permissionGroup
     member.permissionOptions = nextMember.permissionOptions
-    editDialogOpen.value = false
+    closeEditDialog()
     toast.success("成员信息已更新", {
       description: `${member.name} 的信息已保存。`,
     })
@@ -1009,6 +1088,113 @@ async function submitEditMember() {
     })
   } finally {
     editSubmitting.value = false
+  }
+}
+
+function applyEditMemberSnapshot(member: MemberRow) {
+  editPermissionGroupOptions.value = buildPermissionOptions([
+    ...member.permissionOptions,
+    ...(member.permissionGroup && member.permissionGroup !== "未分配"
+      ? [{ label: member.permissionGroup, uuid: getPermissionOption(member, member.permissionGroup)?.uuid }]
+      : []),
+  ])
+  editMemberForm.value = {
+    name: member.name,
+    phone: member.phone === "-" ? "" : member.phone,
+    departmentName: member.departmentName === "未分组" ? "" : member.departmentName,
+    position: member.position === "未设置职位" ? "" : member.position,
+    permissionGroup: member.permissionGroup === "未分配" ? "" : member.permissionGroup,
+    status: member.status,
+  }
+}
+
+async function loadEditMemberDetail(member: MemberRow) {
+  const currentEditingId = member.id
+
+  editDetailLoading.value = true
+
+  try {
+    const detail = await getMemberDetail({
+      Uuid: member.uuid,
+    })
+
+    if (editingMemberId.value !== currentEditingId) {
+      return
+    }
+
+    const permissionOptions = extractRoleOptions(detail.Roles)
+    const permissionGroup = permissionOptions[0]?.label ?? "未分配"
+
+    member.uuid = toText(detail.Uuid, member.uuid)
+    member.name = toText(detail.Name, member.name)
+    member.phone = toText(detail.Phone, member.phone === "-" ? "" : member.phone) || "-"
+    member.departmentUuid = toText(detail.DepartmentUuid, member.departmentUuid)
+    member.departmentName = toText(detail.DepartmentName, member.departmentName) || "未分组"
+    member.position = toText(detail.Position, member.position) || "未设置职位"
+    member.permissionOptions = permissionOptions
+    member.permissionGroup = permissionGroup
+    member.status = normalizeStatus(detail.Status ?? member.status)
+
+    applyEditMemberSnapshot(member)
+  } catch (error) {
+    handleApiError(error, {
+      title: "成员详情加载失败",
+      fallback: "成员详情加载失败，请稍后重试。",
+    })
+  } finally {
+    if (editingMemberId.value === currentEditingId) {
+      editDetailLoading.value = false
+    }
+  }
+}
+
+function promptDeleteEditingMember() {
+  if (editSubmitting.value || deleteSubmitting.value) {
+    return
+  }
+
+  deleteConfirmOpen.value = true
+}
+
+async function confirmDeleteEditingMember() {
+  const memberId = editingMemberId.value
+  const member = rows.value.find(row => row.id === memberId)
+
+  if (!member || deleteSubmitting.value) {
+    return
+  }
+
+  deleteSubmitting.value = true
+
+  try {
+    if (member.source === "local") {
+      rows.value = rows.value.filter(row => row.id !== member.id)
+    } else {
+      if (!member.uuid) {
+        toast.error("成员删除失败", {
+          description: `${member.name} 缺少 Uuid，无法提交删除请求。`,
+        })
+        return
+      }
+
+      await requestMemberDelete({
+        Uuid: member.uuid,
+      })
+      rows.value = rows.value.filter(row => row.id !== member.id)
+    }
+
+    deleteConfirmOpen.value = false
+    closeEditDialog()
+    toast.success("成员已删除", {
+      description: `${member.name} 已从当前成员列表移除。`,
+    })
+  } catch (error) {
+    handleApiError(error, {
+      title: "成员删除失败",
+      fallback: "成员删除失败，请稍后重试。",
+    })
+  } finally {
+    deleteSubmitting.value = false
   }
 }
 
@@ -1183,7 +1369,7 @@ function asMemberRow(row: Record<string, unknown>) {
         <DialogHeader>
           <DialogTitle>手动添加成员</DialogTitle>
           <DialogDescription>
-            填写基础信息后，成员会先加入当前列表，后续再接真实创建接口。
+            填写基础信息后会调用新建用户接口创建成员。
           </DialogDescription>
         </DialogHeader>
 
@@ -1212,109 +1398,155 @@ function asMemberRow(row: Record<string, unknown>) {
 
           <div class="grid gap-2">
             <label class="text-sm font-medium text-foreground" for="manual-member-permission-group">权限组</label>
-            <NativeSelect id="manual-member-permission-group" v-model="manualMemberForm.permissionGroup" class="w-full">
-              <option v-if="availablePermissionGroups.length === 0" value="">
-                暂无可用权限组
-              </option>
-              <option
-                v-for="option in availablePermissionGroups"
-                :key="option"
-                :value="option"
-              >
-                {{ option }}
-              </option>
-            </NativeSelect>
+            <Select v-model="manualMemberForm.permissionGroup">
+              <SelectTrigger id="manual-member-permission-group" class="w-full">
+                <SelectValue placeholder="选择权限组" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem v-if="availablePermissionGroups.length === 0" value="__no_permission_group__" disabled>
+                  暂无可用权限组
+                </SelectItem>
+                <SelectItem
+                  v-for="option in availablePermissionGroups"
+                  :key="option"
+                  :value="option"
+                >
+                  {{ option }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <DialogFooter class="pt-2">
-            <Button type="button" variant="outline" @click="manualDialogOpen = false">
+            <Button type="button" variant="outline" :disabled="manualSubmitting" @click="manualDialogOpen = false">
               取消
             </Button>
-            <Button type="submit">
-              添加成员
+            <Button type="submit" :disabled="manualSubmitting">
+              {{ manualSubmitting ? "创建中..." : "添加成员" }}
             </Button>
           </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
 
-    <Dialog :open="editDialogOpen" @update:open="editDialogOpen = $event">
+    <Dialog :open="editDialogOpen" @update:open="($event ? (editDialogOpen = true) : closeEditDialog())">
       <DialogContent class="sm:max-w-[520px]">
         <DialogHeader>
           <DialogTitle>编辑用户信息</DialogTitle>
           <DialogDescription>
             修改成员基础信息后，保存时会调用用户更新接口。
           </DialogDescription>
+          <p v-if="editDetailLoading" class="text-sm text-muted-foreground">
+            正在同步用户详情...
+          </p>
         </DialogHeader>
 
         <form class="grid gap-4 py-2" @submit.prevent="submitEditMember">
           <div class="grid gap-4 sm:grid-cols-2">
             <div class="grid gap-2">
               <label class="text-sm font-medium text-foreground" for="edit-member-name">成员姓名</label>
-              <Input id="edit-member-name" v-model="editMemberForm.name" placeholder="请输入成员姓名" />
+              <Input id="edit-member-name" v-model="editMemberForm.name" :disabled="editDetailLoading" placeholder="请输入成员姓名" />
             </div>
 
             <div class="grid gap-2">
               <label class="text-sm font-medium text-foreground" for="edit-member-phone">手机号</label>
-              <Input id="edit-member-phone" v-model="editMemberForm.phone" placeholder="请输入手机号" />
+              <Input id="edit-member-phone" v-model="editMemberForm.phone" :disabled="editDetailLoading" placeholder="请输入手机号" />
             </div>
           </div>
 
           <div class="grid gap-4 sm:grid-cols-2">
             <div class="grid gap-2">
               <label class="text-sm font-medium text-foreground" for="edit-member-department">部门</label>
-              <Input id="edit-member-department" v-model="editMemberForm.departmentName" placeholder="例如：运营中心" />
+              <Input id="edit-member-department" v-model="editMemberForm.departmentName" :disabled="editDetailLoading" placeholder="例如：运营中心" />
             </div>
 
             <div class="grid gap-2">
               <label class="text-sm font-medium text-foreground" for="edit-member-position">职位</label>
-              <Input id="edit-member-position" v-model="editMemberForm.position" placeholder="例如：调度主管" />
+              <Input id="edit-member-position" v-model="editMemberForm.position" :disabled="editDetailLoading" placeholder="例如：调度主管" />
             </div>
           </div>
 
           <div class="grid gap-4 sm:grid-cols-2">
             <div class="grid gap-2">
               <label class="text-sm font-medium text-foreground" for="edit-member-permission-group">权限组</label>
-              <NativeSelect id="edit-member-permission-group" v-model="editMemberForm.permissionGroup" class="w-full">
-                <option value="">
-                  未分配
-                </option>
-                <option
-                  v-for="option in editPermissionGroupOptions"
-                  :key="option.uuid ?? option.label"
-                  :value="option.label"
-                >
-                  {{ option.label }}
-                </option>
-              </NativeSelect>
+              <Select v-model="editMemberForm.permissionGroup" :disabled="editDetailLoading">
+                <SelectTrigger id="edit-member-permission-group" class="w-full">
+                  <SelectValue placeholder="选择权限组" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="未分配">
+                    未分配
+                  </SelectItem>
+                  <SelectItem
+                    v-for="option in editPermissionGroupOptions"
+                    :key="option.uuid ?? option.label"
+                    :value="option.label"
+                  >
+                    {{ option.label }}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
             </div>
 
             <div class="grid gap-2">
               <label class="text-sm font-medium text-foreground" for="edit-member-status">成员状态</label>
-              <NativeSelect id="edit-member-status" v-model="editMemberForm.status" class="w-full">
-                <option value="正常">
-                  正常
-                </option>
-                <option value="离职">
-                  离职
-                </option>
-                <option v-if="editMemberForm.status === '未知状态'" value="未知状态">
-                  未知状态
-                </option>
-              </NativeSelect>
+              <Select v-model="editMemberForm.status" :disabled="editDetailLoading">
+                <SelectTrigger id="edit-member-status" class="w-full">
+                  <SelectValue placeholder="选择成员状态" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="正常">
+                    正常
+                  </SelectItem>
+                  <SelectItem value="离职">
+                    离职
+                  </SelectItem>
+                  <SelectItem v-if="editMemberForm.status === '未知状态'" value="未知状态">
+                    未知状态
+                  </SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
-          <DialogFooter class="pt-2">
-            <Button type="button" variant="outline" @click="editDialogOpen = false">
-              取消
+          <DialogFooter class="pt-2 sm:justify-between">
+            <Button type="button" variant="destructive" :disabled="editDetailLoading || editSubmitting || deleteSubmitting" @click="promptDeleteEditingMember">
+              {{ deleteSubmitting ? "删除中..." : "删除用户" }}
             </Button>
-            <Button type="submit" :disabled="editSubmitting">
-              {{ editSubmitting ? "保存中..." : "保存" }}
-            </Button>
+            <div class="flex items-center justify-end gap-2">
+              <Button type="button" variant="outline" :disabled="editDetailLoading || editSubmitting || deleteSubmitting" @click="closeEditDialog">
+                取消
+              </Button>
+              <Button type="submit" :disabled="editDetailLoading || editSubmitting || deleteSubmitting">
+                {{ editSubmitting ? "保存中..." : "保存" }}
+              </Button>
+            </div>
           </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
+
+    <AlertDialog :open="deleteConfirmOpen" @update:open="deleteConfirmOpen = $event">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>确认删除用户？</AlertDialogTitle>
+          <AlertDialogDescription>
+            该操作会删除当前成员，且不可撤销。确认后将立即提交删除请求。
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel :disabled="deleteSubmitting">
+            取消
+          </AlertDialogCancel>
+          <AlertDialogAction
+            class="bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60"
+            :disabled="deleteSubmitting"
+            @click="confirmDeleteEditingMember"
+          >
+            {{ deleteSubmitting ? "删除中..." : "确认删除" }}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   </section>
 </template>

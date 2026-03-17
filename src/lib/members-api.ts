@@ -1,4 +1,4 @@
-import { createHttpError, readResponseBody } from "@/lib/api-errors"
+import { ApiError, createHttpError, readResponseBody } from "@/lib/api-errors"
 import { API_PATHS, buildApiUrl } from "@/lib/api"
 
 type MembersListEnvelope = {
@@ -14,6 +14,54 @@ export type MembersListResult = {
   total: number
 }
 
+export type ListMembersPayload = {
+  DepartmentUuid?: string
+  Name?: string
+  PageNum?: number
+  PageSize?: number
+  Phone?: string
+  Position?: string
+  RoleUuids?: string[]
+  Status?: number
+  [property: string]: unknown
+}
+
+export type CreateMemberPayload = {
+  DepartmentUuid?: string
+  Name?: string
+  Phone?: string
+  Position?: string
+  RoleUuids?: string[]
+  [property: string]: unknown
+}
+
+export type MemberDetailPayload = {
+  Uuid?: string
+  Remark?: string
+  [property: string]: unknown
+}
+
+export type MemberDetailRole = {
+  RoleId?: number
+  RoleName?: string
+  RoleUuid?: string
+  [property: string]: unknown
+}
+
+export type MemberDetailResult = {
+  DepartmentId?: number
+  DepartmentName?: string
+  DepartmentUuid?: string
+  Id?: number
+  Name?: string
+  Phone?: string
+  Position?: string
+  Roles?: MemberDetailRole[]
+  Status?: number
+  Uuid?: string
+  [property: string]: unknown
+}
+
 export type UpdateMemberPayload = {
   Uuid?: string
   DepartmentUuid?: string
@@ -25,47 +73,128 @@ export type UpdateMemberPayload = {
 }
 
 export type UpdateMemberStatusPayload = {
-  id: number
-  status: number
+  Uuid?: string
+  Status?: number
+  [property: string]: unknown
+}
+
+export type DeleteMemberPayload = {
+  Uuid?: string
+  Remark?: string
+  [property: string]: unknown
 }
 
 const MEMBERS_API_URL = buildApiUrl(API_PATHS.membersList)
+const MEMBER_CREATE_API_URL = buildApiUrl(API_PATHS.memberCreate)
+const MEMBER_DETAIL_API_URL = buildApiUrl(API_PATHS.memberDetail)
 const MEMBER_STATUS_UPDATE_API_URL = buildApiUrl(API_PATHS.memberStatusUpdate)
 const MEMBER_UPDATE_API_URL = buildApiUrl(API_PATHS.memberUpdate)
+const MEMBER_DELETE_API_URL = buildApiUrl(API_PATHS.memberDelete)
 
 const MEMBERS_LOAD_ERROR_MESSAGE = "成员列表加载失败，请稍后重试。"
+const MEMBER_CREATE_ERROR_MESSAGE = "成员创建失败，请稍后重试。"
+const MEMBER_DETAIL_ERROR_MESSAGE = "成员详情加载失败，请稍后重试。"
 const MEMBER_STATUS_UPDATE_ERROR_MESSAGE = "成员状态更新失败，请稍后重试。"
 const MEMBER_UPDATE_ERROR_MESSAGE = "成员信息更新失败，请稍后重试。"
+const MEMBER_DELETE_ERROR_MESSAGE = "成员删除失败，请稍后重试。"
 
-export async function fetchMembers(): Promise<MembersListResult> {
+export async function fetchMembers(payload: ListMembersPayload = {}): Promise<MembersListResult> {
+  const normalizedPayload = {
+    DepartmentUuid: getOptionalString(payload.DepartmentUuid),
+    Name: getOptionalString(payload.Name),
+    PageNum: getOptionalNumber(payload.PageNum, "PageNum"),
+    PageSize: getOptionalNumber(payload.PageSize, "PageSize"),
+    Phone: getOptionalString(payload.Phone),
+    Position: getOptionalString(payload.Position),
+    RoleUuids: getOptionalStringArray(payload.RoleUuids, "RoleUuids"),
+    Status: getOptionalStatus(payload.Status, "Status"),
+  }
+
   const response = await fetch(MEMBERS_API_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({}),
+    body: JSON.stringify(normalizedPayload),
   })
-  const payload = await readResponseBody(response) as MembersListEnvelope | unknown[]
+  const responsePayload = await readResponseBody(response) as MembersListEnvelope | unknown[]
 
   if (!response.ok) {
-    throw createHttpError(response, payload, MEMBERS_LOAD_ERROR_MESSAGE)
+    throw createHttpError(response, responsePayload, MEMBERS_LOAD_ERROR_MESSAGE)
   }
 
-  const list = extractList(payload)
+  const list = extractList(responsePayload)
 
   return {
     list,
-    total: extractTotal(payload, list.length),
+    total: extractTotal(responsePayload, list.length),
   }
 }
 
+export async function createMember(payload: CreateMemberPayload) {
+  const normalizedPayload = {
+    DepartmentUuid: getOptionalString(payload.DepartmentUuid),
+    Name: getRequiredString(payload.Name, "Name"),
+    Phone: getOptionalString(payload.Phone),
+    Position: getOptionalString(payload.Position),
+    RoleUuids: getOptionalStringArray(payload.RoleUuids, "RoleUuids"),
+  }
+
+  const response = await fetch(MEMBER_CREATE_API_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(normalizedPayload),
+  })
+  const responseBody = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responseBody, MEMBER_CREATE_ERROR_MESSAGE)
+  }
+}
+
+export async function getMemberDetail(payload: MemberDetailPayload): Promise<MemberDetailResult> {
+  const url = new URL(MEMBER_DETAIL_API_URL)
+  const uuid = getRequiredString(payload.Uuid, "Uuid")
+
+  url.searchParams.set("Uuid", uuid)
+
+  const remark = getOptionalString(payload.Remark)
+
+  if (remark) {
+    url.searchParams.set("Remark", remark)
+  }
+
+  const response = await fetch(url.toString(), {
+    method: "GET",
+  })
+  const responseBody = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responseBody, MEMBER_DETAIL_ERROR_MESSAGE)
+  }
+
+  return extractDetailRecord(responseBody)
+}
+
 export async function updateMember(payload: UpdateMemberPayload) {
+  const normalizedPayload = {
+    Uuid: getRequiredString(payload.Uuid, "Uuid"),
+    DepartmentUuid: getOptionalString(payload.DepartmentUuid),
+    Name: getRequiredString(payload.Name, "Name"),
+    Phone: getOptionalString(payload.Phone) ?? "",
+    Position: getOptionalString(payload.Position) ?? "",
+    Status: getRequiredNumber(payload.Status, "Status"),
+    RoleUuids: getStringArray(payload.RoleUuids, "RoleUuids"),
+  }
+
   const response = await fetch(MEMBER_UPDATE_API_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(payload),
+    body: JSON.stringify(normalizedPayload),
   })
   const responseBody = await readResponseBody(response)
 
@@ -75,17 +204,44 @@ export async function updateMember(payload: UpdateMemberPayload) {
 }
 
 export async function updateMemberStatus(payload: UpdateMemberStatusPayload) {
+  const normalizedPayload = {
+    Uuid: getRequiredString(payload.Uuid, "Uuid"),
+    Status: getOptionalStatus(payload.Status, "Status"),
+  }
+
   const response = await fetch(MEMBER_STATUS_UPDATE_API_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(payload),
+    body: JSON.stringify(normalizedPayload),
   })
   const responseBody = await readResponseBody(response)
 
   if (!response.ok) {
     throw createHttpError(response, responseBody, MEMBER_STATUS_UPDATE_ERROR_MESSAGE)
+  }
+}
+
+export async function deleteMember(payload: DeleteMemberPayload) {
+  const url = new URL(MEMBER_DELETE_API_URL)
+  const uuid = getRequiredString(payload.Uuid, "Uuid")
+
+  url.searchParams.set("Uuid", uuid)
+
+  const remark = getOptionalString(payload.Remark)
+
+  if (remark) {
+    url.searchParams.set("Remark", remark)
+  }
+
+  const response = await fetch(url.toString(), {
+    method: "GET",
+  })
+  const responseBody = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responseBody, MEMBER_DELETE_ERROR_MESSAGE)
   }
 }
 
@@ -147,4 +303,101 @@ function extractTotal(payload: MembersListEnvelope | unknown[], fallback: number
   }
 
   return fallback
+}
+
+function extractDetailRecord(payload: unknown) {
+  const directRecord = asRecord(payload)
+
+  if (!directRecord) {
+    return {}
+  }
+
+  const nestedRecord = asRecord(directRecord.data)
+
+  if (nestedRecord) {
+    return nestedRecord as MemberDetailResult
+  }
+
+  return directRecord as MemberDetailResult
+}
+
+function getRequiredString(value: unknown, field: string) {
+  if (typeof value === "string" && value.trim()) {
+    return value.trim()
+  }
+
+  throw new ApiError(`请求参数校验失败：${field} 不能为空。`)
+}
+
+function getOptionalString(value: unknown) {
+  if (value === undefined || value === null) {
+    return undefined
+  }
+
+  if (typeof value === "string") {
+    const normalized = value.trim()
+    return normalized || undefined
+  }
+
+  throw new ApiError("请求参数校验失败：字符串参数格式不正确。")
+}
+
+function getRequiredNumber(value: unknown, field: string) {
+  const parsed = Number(value)
+
+  if (Number.isFinite(parsed)) {
+    return parsed
+  }
+
+  throw new ApiError(`请求参数校验失败：${field} 必须是有效数字。`)
+}
+
+function getOptionalNumber(value: unknown, field: string) {
+  if (value === undefined || value === null) {
+    return undefined
+  }
+
+  return getRequiredNumber(value, field)
+}
+
+function getStringArray(value: unknown, field: string) {
+  if (!Array.isArray(value)) {
+    throw new ApiError(`请求参数校验失败：${field} 必须是数组。`)
+  }
+
+  const normalized = value.map((item) => {
+    if (typeof item !== "string" || !item.trim()) {
+      throw new ApiError(`请求参数校验失败：${field} 中存在无效值。`)
+    }
+
+    return item.trim()
+  })
+
+  return normalized
+}
+
+function getOptionalStringArray(value: unknown, field: string) {
+  if (value === undefined || value === null) {
+    return undefined
+  }
+
+  return getStringArray(value, field)
+}
+
+function getOptionalStatus(value: unknown, field: string) {
+  const normalized = getOptionalNumber(value, field)
+
+  if (normalized === undefined) {
+    return undefined
+  }
+
+  if (normalized === 1 || normalized === 2) {
+    return normalized
+  }
+
+  throw new ApiError(`请求参数校验失败：${field} 仅支持 1 或 2。`)
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value !== null && typeof value === "object" ? value as Record<string, unknown> : null
 }

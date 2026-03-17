@@ -2,8 +2,11 @@ const DEFAULT_API_BASE_URL = "http://127.0.0.1:4523/m1/7931435-7683186-default"
 
 export const API_PATHS = {
   membersList: "/bqi/user/list",
+  memberCreate: "/bqi/user/new",
+  memberDetail: "/bqi/user/detail",
   memberStatusUpdate: "/bqi/user/status/update",
   memberUpdate: "/bqi/user/update",
+  memberDelete: "/bqi/user/del",
 } as const
 
 export function getApiBaseUrl() {
