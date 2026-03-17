@@ -3,6 +3,7 @@ import { toast } from "vue-sonner"
 
 import { useAppTheme } from "@/composables/useAppTheme"
 import { useCurrentUser } from "@/composables/useCurrentUser"
+import { loadSettingsSnapshot } from "@/lib/settings-api"
 import type {
   SettingsActionKey,
   SettingsCategory,
@@ -408,15 +409,32 @@ const categories: SettingsCategory[] = [
 
 const isOpen = ref(false)
 const activeKey = ref<SettingsCategoryKey>("me")
+const settingsLoaded = ref(false)
 
 const activeCategory = computed(
   () => categories.find(category => category.key === activeKey.value) ?? categories[0],
 )
 
+async function ensureSettingsLoaded() {
+  if (settingsLoaded.value) {
+    return
+  }
+
+  settingsLoaded.value = true
+
+  try {
+    const snapshot = await loadSettingsSnapshot()
+    Object.assign(state, snapshot)
+  } catch {
+    settingsLoaded.value = false
+  }
+}
+
 function openSettingsDialog(nextKey?: SettingsCategoryKey) {
   if (nextKey) {
     activeKey.value = nextKey
   }
+  void ensureSettingsLoaded()
   isOpen.value = true
 }
 

@@ -29,8 +29,12 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { NativeSelect } from "@/components/ui/native-select"
-import { createHttpError, handleApiError, readResponseBody } from "@/lib/api-errors"
-import { API_PATHS, buildApiUrl } from "@/lib/api"
+import { handleApiError } from "@/lib/api-errors"
+import {
+  fetchMembers,
+  updateMember as requestMemberUpdate,
+  updateMemberStatus as requestMemberStatusUpdate,
+} from "@/lib/members-api"
 import { cn } from "@/lib/utils"
 import TablePageTable from "@/components/table-page/TablePageTable.vue"
 import type { TableColumn, TablePageEmptyState } from "@/components/table-page/types"
@@ -91,14 +95,6 @@ type EditMemberForm = {
   status: string
 }
 
-type ApiEnvelope = {
-  Total?: number
-  List?: unknown
-  data?: unknown
-  list?: unknown
-  rows?: unknown
-}
-
 type MemberActionKey =
   | "manual"
   | "import-excel"
@@ -109,9 +105,6 @@ type MemberActionKey =
   | "invite"
   | "disable"
 
-const MEMBERS_API_URL = buildApiUrl(API_PATHS.membersList)
-const MEMBER_STATUS_UPDATE_API_URL = buildApiUrl(API_PATHS.memberStatusUpdate)
-const MEMBER_UPDATE_API_URL = buildApiUrl(API_PATHS.memberUpdate)
 const MEMBERS_LOAD_ERROR_MESSAGE = "成员列表加载失败，请稍后重试。"
 const MEMBER_STATUS_UPDATE_ERROR_MESSAGE = "成员状态更新失败，请稍后重试。"
 const MEMBER_UPDATE_ERROR_MESSAGE = "成员信息更新失败，请稍后重试。"
@@ -126,7 +119,6 @@ const memberStatusMap = {
 } as const
 
 const rows = ref<MemberRow[]>([])
-const total = ref(0)
 const loading = ref(false)
 const errorMessage = ref("")
 const permissionUpdatingMemberIds = ref<number[]>([])
@@ -561,23 +553,9 @@ async function loadMembers() {
   errorMessage.value = ""
 
   try {
-    const response = await fetch(MEMBERS_API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({}),
-    })
-    const payload = await readResponseBody(response) as ApiEnvelope | unknown[]
+    const result = await fetchMembers()
 
-    if (!response.ok) {
-      throw createHttpError(response, payload, MEMBERS_LOAD_ERROR_MESSAGE)
-    }
-
-    const list = extractList(payload)
-
-    rows.value = list.map((item, index) => normalizeMemberRow(item, index))
-    total.value = extractTotal(payload, rows.value.length)
+    rows.value = result.list.map((item, index) => normalizeMemberRow(item, index))
   } catch (error) {
     errorMessage.value = handleApiError(error, {
       mode: "silent",
@@ -586,66 +564,6 @@ async function loadMembers() {
   } finally {
     loading.value = false
   }
-}
-
-function extractList(payload: ApiEnvelope | unknown[]) {
-  if (Array.isArray(payload)) {
-    return payload
-  }
-
-  if (Array.isArray(payload.List)) {
-    return payload.List
-  }
-
-  if (Array.isArray(payload.data)) {
-    return payload.data
-  }
-
-  if (payload.data && typeof payload.data === "object") {
-    const nested = payload.data as ApiEnvelope
-
-    if (Array.isArray(nested.List)) {
-      return nested.List
-    }
-
-    if (Array.isArray(nested.list)) {
-      return nested.list
-    }
-
-    if (Array.isArray(nested.rows)) {
-      return nested.rows
-    }
-  }
-
-  if (Array.isArray(payload.list)) {
-    return payload.list
-  }
-
-  if (Array.isArray(payload.rows)) {
-    return payload.rows
-  }
-
-  return []
-}
-
-function extractTotal(payload: ApiEnvelope | unknown[], fallback: number) {
-  if (Array.isArray(payload)) {
-    return payload.length
-  }
-
-  if (typeof payload.Total === "number") {
-    return payload.Total
-  }
-
-  if (payload.data && typeof payload.data === "object") {
-    const nested = payload.data as ApiEnvelope
-
-    if (typeof nested.Total === "number") {
-      return nested.Total
-    }
-  }
-
-  return fallback
 }
 
 function normalizeMemberRow(raw: unknown, index: number): MemberRow {
@@ -816,18 +734,7 @@ async function updatePermissionGroup(memberId: number, nextGroup: string) {
   permissionUpdatingMemberIds.value = [...permissionUpdatingMemberIds.value, memberId]
 
   try {
-    const response = await fetch(MEMBER_UPDATE_API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(buildMemberUpdatePayload(member, nextGroup)),
-    })
-    const payload = await readResponseBody(response)
-
-    if (!response.ok) {
-      throw createHttpError(response, payload, MEMBER_UPDATE_ERROR_MESSAGE)
-    }
+    await requestMemberUpdate(buildMemberUpdatePayload(member, nextGroup))
 
     member.permissionGroup = nextGroup
     member.permissionOptions = buildPermissionOptions([
@@ -869,21 +776,10 @@ async function updateMemberStatus(member: MemberRow, nextStatus: number) {
   statusUpdatingMemberIds.value = [...statusUpdatingMemberIds.value, member.id]
 
   try {
-    const response = await fetch(MEMBER_STATUS_UPDATE_API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        id: member.id,
-        status: nextStatus,
-      }),
+    await requestMemberStatusUpdate({
+      id: member.id,
+      status: nextStatus,
     })
-    const payload = await readResponseBody(response)
-
-    if (!response.ok) {
-      throw createHttpError(response, payload, MEMBER_STATUS_UPDATE_ERROR_MESSAGE)
-    }
 
     member.status = normalizeStatus(nextStatus)
     toast.success("成员状态已更新", {
@@ -1032,7 +928,6 @@ function submitManualMember() {
     permissionOptions: permissionGroup === "未分配" ? [] : [{ label: permissionGroup }],
     status: "正常",
   })
-  total.value = rows.value.length
   manualDialogOpen.value = false
   toast.success("成员已添加", {
     description: `${name} 已加入当前成员列表。`,
@@ -1095,18 +990,7 @@ async function submitEditMember() {
           ]),
     }
 
-    const response = await fetch(MEMBER_UPDATE_API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(buildMemberUpdatePayload(nextMember, nextPermissionGroup)),
-    })
-    const payload = await readResponseBody(response)
-
-    if (!response.ok) {
-      throw createHttpError(response, payload, MEMBER_UPDATE_ERROR_MESSAGE)
-    }
+    await requestMemberUpdate(buildMemberUpdatePayload(nextMember, nextPermissionGroup))
 
     member.name = nextMember.name
     member.phone = nextMember.phone
@@ -1227,7 +1111,7 @@ function asMemberRow(row: Record<string, unknown>) {
       <i class="ri-error-warning-line text-base" />
       <AlertTitle>成员接口加载失败</AlertTitle>
       <AlertDescription>
-        {{ errorMessage }}。当前请求地址为 {{ MEMBERS_API_URL }}
+        {{ errorMessage }}
       </AlertDescription>
     </Alert>
 
