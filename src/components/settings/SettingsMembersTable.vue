@@ -1292,7 +1292,7 @@ function asMemberRow(row: Record<string, unknown>) {
     <Alert
       v-if="errorMessage"
       variant="destructive"
-      class="border-destructive/20 bg-destructive/[0.03]"
+      class="border-destructive/20 bg-destructive/3"
     >
       <i class="ri-error-warning-line text-base" />
       <AlertTitle>成员接口加载失败</AlertTitle>
@@ -1314,7 +1314,7 @@ function asMemberRow(row: Record<string, unknown>) {
             <button
               type="button"
               :disabled="isMemberPermissionUpdating(asMemberRow(rawRow).id)"
-              class="inline-flex h-7 max-w-[9rem] items-center gap-1 rounded-md px-1.5 text-[12px] font-medium text-foreground transition-colors hover:bg-surface-tertiary hover:text-foreground focus-visible:bg-surface-tertiary focus-visible:text-foreground focus-visible:outline-none"
+              class="inline-flex h-7 max-w-36 items-center gap-1 rounded-md px-1.5 text-[12px] font-medium text-foreground transition-colors hover:bg-surface-tertiary hover:text-foreground focus-visible:bg-surface-tertiary focus-visible:text-foreground focus-visible:outline-none"
             >
               <span class="truncate">
                 {{ isMemberPermissionUpdating(asMemberRow(rawRow).id) ? "更新中..." : asMemberRow(rawRow).permissionGroup }}

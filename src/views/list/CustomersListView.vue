@@ -1,92 +1,96 @@
 <script setup lang="ts">
-import { useRoute, useRouter, RouterLink } from "vue-router"
+import { computed, ref, watch } from "vue"
+import { useRoute, useRouter } from "vue-router"
 
 import TablePage from "@/components/table-page/TablePage.vue"
-import { useTablePage } from "@/components/table-page/useTablePage"
+import TablePageLoading from "@/components/loading/TablePageLoading.vue"
+import { createTablePageDefinition, useTablePage } from "@/components/table-page/useTablePage"
 import type { TablePageSchema } from "@/components/table-page/types"
 import { useRouteTableSearch } from "@/composables/useRouteTableSearch"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationFirst,
+  PaginationItem,
+  PaginationLast,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
-import customersData from "@/mocks/customers.json"
+import { handleApiError } from "@/lib/api-errors"
+import { fetchCustomers, type CustomerListItem } from "@/lib/customers-api"
 
-type RawCustomerRecord = {
-  id: number
-  name: string
-  level: string
-  industry: string
-  packageName: string
-  packageCode: string
-  remainingDays: number
-  remainingFunds: number
-  inspectionTimes: number
-  inspectionCycle: string
-  parkCount: number
-  buildingCount: number
-  riskHigh: number
-  riskMedium: number
-  riskLow: number
-  packageDescription: string
+type CustomerRecord = {
+  id: string
+  business: string
+  level: number | null
+  levelLabel: string
+  principalName: string
+  principalPhone: string
 }
 
-type CustomerRecord = RawCustomerRecord & {
-  inspectionPlan: string
-  buildingHealth: string
-  riskLevel: string
-  contractEndDate: string
-}
-
-const customers = (customersData as RawCustomerRecord[]).map(customer => ({
-  ...customer,
-  inspectionPlan: `${customer.inspectionTimes} 次 / ${customer.inspectionCycle}`,
-  buildingHealth: `园区 ${customer.parkCount} 个，建筑 ${customer.buildingCount} 栋，高 ${customer.riskHigh} / 中 ${customer.riskMedium} / 低 ${customer.riskLow}`,
-  riskLevel: resolveRiskLevel(customer),
-  contractEndDate: buildContractEndDate(customer.remainingDays),
-}))
-
-const router = useRouter()
+const customers = ref<CustomerRecord[]>([])
+const loading = ref(false)
+const errorMessage = ref("")
+const pageNum = ref(1)
+const pageSize = ref(10)
+const total = ref(0)
+let latestRequestId = 0
 
 const schema: TablePageSchema<CustomerRecord> = {
   title: "客户",
   rowKey: "id",
-  data: customers,
+  data: [],
   showIndex: true,
   stickyHeader: true,
-  rowActions: [
-    {
-      key: "view-detail",
-      label: "查看详情",
-      onClick: row => router.push({ name: "customer-detail", params: { id: String((row as CustomerRecord).id) } }),
-    },
-  ],
+  emptyState: {
+    title: "暂无客户数据",
+    description: "当前接口暂未返回可展示的客户列表。",
+    icon: "ri-customer-service-2-line",
+  },
   columns: [
     {
-      key: "name",
-      label: "客户名称",
-      filterType: "text",
-      emphasis: "strong",
-      tone: "primary",
+      key: "principalName",
+      label: "责任人名称",
+      filterType: "contact",
+      variant: "contact",
       filter: {
         type: "text",
-        label: "名称",
-        placeholder: "输入客户名称",
+        label: "责任人",
+        placeholder: "输入责任人名称",
         defaultVisible: true,
+        value: row => `${row.principalName} ${row.principalPhone}`,
       },
       sort: true,
-      slot: "cell-name",
+      cellRenderer: {
+        kind: "dual-inline",
+        primaryKey: "principalName",
+        secondaryKey: "principalPhone",
+        primaryClass: "text-foreground",
+        secondaryClass: "text-muted-foreground",
+      },
     },
     {
-      key: "level",
+      key: "levelLabel",
       label: "客户等级",
       filterType: "tag",
       filter: {
         type: "tag",
         defaultVisible: true,
       },
-      sort: true,
+      sort: {
+        label: "客户等级",
+        kind: "metric",
+        value: row => row.level ?? -1,
+      },
     },
     {
-      key: "industry",
+      key: "business",
       label: "所属行业",
       filterType: "tag",
+      width: "fill",
       filter: {
         type: "tag",
         label: "行业",
@@ -95,92 +99,21 @@ const schema: TablePageSchema<CustomerRecord> = {
       sort: true,
     },
     {
-      key: "packageName",
-      label: "套餐信息",
-      filterType: "tag",
-      emphasis: "strong",
-      tone: "primary",
+      key: "principalPhone",
+      label: "责任人手机号",
+      filterType: "text",
+      format: "numeric",
       filter: {
-        type: "tag",
-        label: "套餐",
+        type: "text",
+        label: "手机号",
+        placeholder: "输入责任人手机号",
         defaultVisible: true,
       },
       sort: true,
-      slot: "cell-packageName",
-    },
-    {
-      key: "remainingDays",
-      label: "剩余时间",
-      filterType: "number",
-      variant: "metric",
-      sort: {
-        kind: "metric",
-      },
-      cellRenderer: {
-        kind: "metric-unit",
-        unit: "天",
-      },
-    },
-    {
-      key: "remainingFunds",
-      label: "剩余资金",
-      filterType: "number",
-      variant: "metric",
-      sort: {
-        kind: "metric",
-      },
-      cellRenderer: {
-        kind: "metric-unit",
-        unit: "万",
-      },
-    },
-    {
-      key: "inspectionPlan",
-      label: "检测计划",
-      filterType: "none",
-      slot: "cell-inspectionPlan",
-      sort: {
-        label: "检测次数",
-        kind: "metric",
-        value: row => row.inspectionTimes,
-      },
-    },
-    {
-      key: "buildingHealth",
-      label: "建筑体检状态",
-      filterType: "none",
-      width: "fill",
-      slot: "cell-buildingHealth",
-      sort: {
-        label: "建筑数量",
-        kind: "metric",
-        value: row => row.buildingCount,
-      },
+      cellClass: "font-mono text-foreground",
     },
   ],
   filters: [
-    {
-      key: "园区",
-      label: "园区",
-      type: "number",
-      defaultVisible: true,
-      placeholder: "输入园区数量",
-      value: row => row.parkCount,
-    },
-    {
-      key: "风险",
-      label: "风险",
-      type: "tag",
-      defaultVisible: true,
-      value: row => row.riskLevel,
-    },
-    {
-      key: "合同到期时间",
-      label: "合同到期时间",
-      type: "date",
-      defaultVisible: true,
-      value: row => row.contractEndDate,
-    },
     {
       key: "在页面中",
       label: "在页面中",
@@ -192,117 +125,178 @@ const schema: TablePageSchema<CustomerRecord> = {
   ],
   sort: {
     storageKey: "customers-sort-preferences",
-    initialField: "remainingDays",
-    initialDirection: "asc",
+    initialField: "levelLabel",
+    initialDirection: "desc",
   },
   tabs: {
     mode: "enum",
     all: { label: "全部", value: "all" },
-    field: "level",
+    field: "levelLabel",
   },
 }
 
-const page = useTablePage(schema)
+const page = useTablePage({
+  ...createTablePageDefinition(schema),
+  primaryActionLabel: "添加客户",
+  rows: customers,
+})
 const route = useRoute()
+const router = useRouter()
+const showInitialLoading = computed(() => loading.value && !customers.value.length && !errorMessage.value)
 
 useRouteTableSearch(page, route)
 
+watch([pageNum, pageSize], ([nextPageNum, nextPageSize], [previousPageNum, previousPageSize]) => {
+  if (nextPageNum === previousPageNum && nextPageSize === previousPageSize) {
+    return
+  }
+
+  void loadCustomers()
+}, { immediate: true })
+
 function buildPageFilterText(row: CustomerRecord) {
   return [
-    row.name,
-    row.level,
-    row.industry,
-    row.packageName,
-    row.packageCode,
-    row.riskLevel,
-    row.contractEndDate,
-    row.remainingDays,
-    row.remainingFunds,
-    row.inspectionPlan,
-    row.buildingHealth,
-    row.packageDescription,
+    row.principalName,
+    row.principalPhone,
+    row.levelLabel,
+    row.business,
   ].join(" ")
 }
 
-function resolveRiskLevel(customer: RawCustomerRecord) {
-  if (customer.riskHigh > 0) {
-    return "高风险"
+async function loadCustomers() {
+  const requestId = ++latestRequestId
+
+  loading.value = true
+  errorMessage.value = ""
+
+  try {
+    const result = await fetchCustomers({
+      PageNum: pageNum.value,
+      PageSize: pageSize.value,
+    })
+
+    if (requestId !== latestRequestId) {
+      return
+    }
+
+    total.value = result.total
+    customers.value = result.list.map((item, index) => normalizeCustomerRecord(item, index))
+
+    const maxPage = Math.max(1, Math.ceil((result.total || 0) / pageSize.value))
+
+    if (pageNum.value > maxPage) {
+      pageNum.value = maxPage
+      return
+    }
+  } catch (error) {
+    if (requestId !== latestRequestId) {
+      return
+    }
+
+    customers.value = []
+    total.value = 0
+    errorMessage.value = handleApiError(error, {
+      mode: "silent",
+      fallback: "客户列表加载失败，请稍后重试。",
+    })
+  } finally {
+    if (requestId === latestRequestId) {
+      loading.value = false
+    }
+  }
+}
+
+function normalizeCustomerRecord(item: CustomerListItem, index: number): CustomerRecord {
+  const level = typeof item.Level === "number" && Number.isFinite(item.Level) ? item.Level : null
+  const business = toText(item.Business, "未填写")
+  const principalName = toText(item.PrincipalName, "未填写")
+  const principalPhone = toText(item.PrincipalPhone, "-")
+
+  return {
+    id: `${pageNum.value}-${index + 1}-${principalPhone}-${principalName}`,
+    business,
+    level,
+    levelLabel: formatLevelLabel(level),
+    principalName,
+    principalPhone,
+  }
+}
+
+function formatLevelLabel(level: number | null) {
+  if (level === null) {
+    return "未评级"
   }
 
-  if (customer.riskMedium > 0) {
-    return "中风险"
+  return `等级 ${level}`
+}
+
+function toText(value: unknown, fallback = "") {
+  if (typeof value === "string" && value.trim()) {
+    return value.trim()
   }
 
-  return "低风险"
+  return fallback
 }
 
-function buildContractEndDate(remainingDays: number) {
-  const baseDate = new Date()
-  baseDate.setHours(0, 0, 0, 0)
-  baseDate.setDate(baseDate.getDate() + remainingDays)
-  return toISODate(baseDate)
+function handleCreateCustomer() {
+  router.push({ name: "customer-create" })
 }
 
-function toISODate(date: Date) {
-  const year = date.getFullYear()
-  const month = `${date.getMonth() + 1}`.padStart(2, "0")
-  const day = `${date.getDate()}`.padStart(2, "0")
-  return `${year}-${month}-${day}`
-}
 </script>
 
 <template>
-  <TablePage :page="page">
-    <template #cell-name="{ row }">
-      <Button
-        variant="link"
-        size="sm"
-        as-child
-        class="h-auto justify-start px-0 py-0 text-left text-[#2457F5]"
-      >
-        <RouterLink :to="{ name: 'customer-detail', params: { id: String(row.id) } }">
-          {{ row.name }}
-        </RouterLink>
-      </Button>
-    </template>
+  <TablePageLoading v-if="showInitialLoading" />
 
-    <template #cell-packageName="{ row }">
-      <div class="flex min-w-[12rem] flex-col gap-1">
-        <Button
-          variant="link"
-          size="sm"
-          as-child
-          class="h-auto justify-start px-0 py-0 text-[#2457F5]"
+  <section v-else class="flex min-h-0 flex-1 flex-col">
+    <div v-if="errorMessage" class="px-4 pb-3 pt-3">
+      <Alert variant="destructive">
+        <i class="ri-error-warning-line" />
+        <AlertTitle>客户接口加载失败</AlertTitle>
+        <AlertDescription class="flex flex-wrap items-center gap-3">
+          <span>{{ errorMessage }}</span>
+          <Button size="sm" variant="outline" @click="loadCustomers">
+            重试
+          </Button>
+        </AlertDescription>
+      </Alert>
+    </div>
+
+    <TablePage :page="page" @primary-action="handleCreateCustomer" />
+
+    <div class="-mx-4 pt-3">
+      <div class="flex w-full justify-end px-4">
+        <Pagination
+          v-model:page="pageNum"
+          :items-per-page="pageSize"
+          :total="total"
+          :sibling-count="1"
+          :disabled="loading"
+          show-edges
+          class="w-full justify-end"
         >
-          <RouterLink :to="{ name: 'customer-detail', params: { id: String(row.id) } }">
-            {{ row.packageName }}
-          </RouterLink>
-        </Button>
-        <span class="text-xs text-muted-foreground">
-          {{ row.packageCode }} · {{ row.packageDescription }}
-        </span>
-      </div>
-    </template>
+          <PaginationContent v-slot="{ items }" class="justify-end">
+            <PaginationFirst />
+            <PaginationPrevious />
 
-    <template #cell-inspectionPlan="{ row }">
-      <div class="flex min-w-[11rem] flex-col gap-0.5">
-        <span class="font-medium text-foreground">{{ row.inspectionTimes }} 次</span>
-        <span class="text-xs text-muted-foreground">{{ row.inspectionCycle }}</span>
-      </div>
-    </template>
+            <template
+              v-for="(item, index) in items"
+              :key="`${item.type}-${item.type === 'page' ? item.value : index}`"
+            >
+              <PaginationItem
+                v-if="item.type === 'page'"
+                :value="item.value"
+                :is-active="item.value === pageNum"
+              >
+                {{ item.value }}
+              </PaginationItem>
+              <PaginationEllipsis v-else />
+            </template>
 
-    <template #cell-buildingHealth="{ row }">
-      <div class="flex min-w-[15rem] flex-col gap-1.5">
-        <div class="flex flex-wrap gap-x-3 gap-y-1 text-sm">
-          <span class="font-medium text-foreground">园区 {{ row.parkCount }}</span>
-          <span class="font-medium text-foreground">建筑 {{ row.buildingCount }}</span>
-        </div>
-        <div class="flex flex-wrap items-center gap-2 text-xs">
-          <span class="rounded-full bg-[#FFF1F0] px-2 py-0.5 text-[#C53532]">高 {{ row.riskHigh }}</span>
-          <span class="rounded-full bg-[#FFF8E8] px-2 py-0.5 text-[#B7791F]">中 {{ row.riskMedium }}</span>
-          <span class="rounded-full bg-[#EDF7ED] px-2 py-0.5 text-[#2F855A]">低 {{ row.riskLow }}</span>
-        </div>
+            <PaginationNext />
+            <PaginationLast />
+          </PaginationContent>
+        </Pagination>
       </div>
-    </template>
-  </TablePage>
+    </div>
+  </section>
 </template>

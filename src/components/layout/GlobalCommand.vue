@@ -217,6 +217,15 @@ const pageSearchItems: SearchItem[] = [
 
 const quickSearchItems: SearchItem[] = [
   {
+    id: "action-customer-create",
+    label: "添加客户",
+    subtitle: "进入客户新建流程",
+    icon: "ri-add-circle-line",
+    type: "新建",
+    value: "添加客户 进入客户新建流程 create customer",
+    to: "/customers/create",
+  },
+  {
     id: "action-company-create",
     label: "添加企业",
     subtitle: "进入企业新建流程",
