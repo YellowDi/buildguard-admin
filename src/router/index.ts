@@ -108,6 +108,15 @@ const router = createRouter({
           } satisfies RouteMetaConfig,
         },
         {
+          path: "parks",
+          name: "parks",
+          component: () => import("@/views/list/ParksListView.vue"),
+          meta: {
+            title: "园区",
+            loading: "table",
+          } satisfies RouteMetaConfig,
+        },
+        {
           path: "companies/:id",
           name: "company-detail",
           component: () => import("@/views/detail/CompanyDetailView.vue"),
