@@ -225,12 +225,12 @@ function resolveCustomerDetailId(
   principalPhone: string,
 ) {
   const candidates = [
+    item.Uuid,
+    item.uuid,
     item.Id,
     item.id,
     item.CustomerId,
     item.customerId,
-    item.Uuid,
-    item.uuid,
   ]
 
   for (const candidate of candidates) {

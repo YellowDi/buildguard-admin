@@ -23,6 +23,32 @@ export type CustomerPrincipalPayload = {
   IsMain?: number
 }
 
+export type CustomerDetailPayload = {
+  Uuid?: string
+  [property: string]: unknown
+}
+
+export type CustomerDetailPerson = {
+  Name?: string
+  Phone?: string
+  IsMain?: number
+  [property: string]: unknown
+}
+
+export type CustomerDetailResult = {
+  Id?: number
+  Uuid?: string
+  People?: CustomerDetailPerson[]
+  Business?: string
+  Usci?: string
+  UsciFile?: string
+  CorpName?: string
+  Address?: string
+  Invoice?: string
+  Level?: number
+  [property: string]: unknown
+}
+
 export type CustomerListResult = {
   list: CustomerListItem[]
   total: number
@@ -53,8 +79,10 @@ export type ListCustomersPayload = {
 
 const CUSTOMERS_API_URL = buildApiUrl(API_PATHS.customersList)
 const CUSTOMER_CREATE_API_URL = buildApiUrl(API_PATHS.customerCreate)
+const CUSTOMER_DETAIL_API_URL = buildApiUrl(API_PATHS.customerDetail)
 const CUSTOMERS_LOAD_ERROR_MESSAGE = "客户列表加载失败，请稍后重试。"
 const CUSTOMER_CREATE_ERROR_MESSAGE = "客户创建失败，请稍后重试。"
+const CUSTOMER_DETAIL_ERROR_MESSAGE = "客户详情加载失败，请稍后重试。"
 
 export async function fetchCustomers(payload: ListCustomersPayload = {}): Promise<CustomerListResult> {
   const normalizedPayload = {
@@ -109,6 +137,24 @@ export async function createCustomer(payload: CustomerCreatePayload): Promise<Cu
   }
 
   return extractCreateResult(responseBody)
+}
+
+export async function fetchCustomerDetail(payload: CustomerDetailPayload): Promise<CustomerDetailResult> {
+  const url = new URL(CUSTOMER_DETAIL_API_URL)
+  const uuid = getRequiredString(payload.Uuid, "Uuid")
+
+  url.searchParams.set("Uuid", uuid)
+
+  const response = await fetch(url.toString(), {
+    method: "GET",
+  })
+  const responseBody = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responseBody, CUSTOMER_DETAIL_ERROR_MESSAGE)
+  }
+
+  return extractDetailRecord(responseBody)
 }
 
 function extractList(payload: CustomerListEnvelope | unknown[]) {
@@ -189,6 +235,20 @@ function extractCreateResult(value: unknown): CustomerCreateResult {
   return {}
 }
 
+function extractDetailRecord(value: unknown): CustomerDetailResult {
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>
+
+    if (record.data && typeof record.data === "object") {
+      return record.data as CustomerDetailResult
+    }
+
+    return record as CustomerDetailResult
+  }
+
+  return {}
+}
+
 function getOptionalString(value: unknown) {
   if (value === undefined || value === null) {
     return undefined
@@ -200,6 +260,16 @@ function getOptionalString(value: unknown) {
   }
 
   throw new ApiError("请求参数校验失败：字符串参数格式不正确。")
+}
+
+function getRequiredString(value: unknown, field: string) {
+  const normalized = getOptionalString(value)
+
+  if (normalized) {
+    return normalized
+  }
+
+  throw new ApiError(`请求参数校验失败：${field} 不能为空。`)
 }
 
 function getOptionalNumber(value: unknown, field: string) {
