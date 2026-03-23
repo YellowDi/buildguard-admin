@@ -4,6 +4,7 @@ export const API_PATHS = {
   customersList: "/bqi/customer/list",
   customerCreate: "/bqi/customer/new",
   customerDetail: "/bqi/customer/detail",
+  parksList: "/bqi/park/list",
   membersList: "/bqi/user/list",
   memberCreate: "/bqi/user/new",
   memberDetail: "/bqi/user/detail",

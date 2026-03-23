@@ -7,7 +7,6 @@ import DetailRelationModule from "@/components/detail/DetailRelationModule.vue"
 import type { DetailFieldSection, DetailRelationModuleSchema } from "@/components/detail/types"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
 import { detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
 import DetailLayout from "@/layouts/DetailLayout.vue"
@@ -223,34 +222,11 @@ function toDisplayText(value: unknown, fallback = "未填写") {
         <AlertDescription>{{ errorMessage }}</AlertDescription>
       </Alert>
 
-      <Card v-if="loading" class="border-border/70 shadow-none">
-        <CardHeader>
-          <CardTitle>加载中</CardTitle>
-          <CardDescription>正在获取客户详情数据。</CardDescription>
-        </CardHeader>
-      </Card>
+      <div v-if="loading" class="rounded-lg border border-border/70 px-4 py-5 text-sm text-muted-foreground">
+        正在获取客户详情数据。
+      </div>
 
       <template v-else-if="customer">
-        <Card class="gap-0 border-border/70 shadow-none">
-          <CardHeader class="gap-2 pb-4">
-            <CardDescription>客户概览</CardDescription>
-            <CardTitle class="text-[20px] leading-tight">{{ toDisplayText(customer.CorpName) }}</CardTitle>
-            <CardDescription>{{ toDisplayText(customer.Business) }} · {{ formatLevel(customer.Level) }}</CardDescription>
-          </CardHeader>
-          <CardContent class="grid gap-3 sm:grid-cols-2">
-            <div class="rounded-lg bg-surface-tertiary px-4 py-3">
-              <div class="text-xs text-muted-foreground">客户等级</div>
-              <div class="mt-1 text-xl font-semibold text-foreground">{{ formatLevel(customer.Level) }}</div>
-            </div>
-            <div class="rounded-lg bg-surface-tertiary px-4 py-3">
-              <div class="text-xs text-muted-foreground">联系人数量</div>
-              <div class="mt-1 text-xl font-semibold text-foreground">{{ customer.People?.length ?? 0 }}</div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Separator class="my-5 bg-border/80" />
-
         <DetailFieldSections :sections="fieldSections" />
       </template>
     </template>

@@ -1,35 +1,66 @@
 <script setup lang="ts">
+import { computed, ref, watch } from "vue"
 import { useRoute } from "vue-router"
 
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Button } from "@/components/ui/button"
+import TablePageLoading from "@/components/loading/TablePageLoading.vue"
 import TablePage from "@/components/table-page/TablePage.vue"
-import { useTablePage } from "@/components/table-page/useTablePage"
+import { createTablePageDefinition, useTablePage } from "@/components/table-page/useTablePage"
 import type { TablePageSchema } from "@/components/table-page/types"
 import { useRouteTableSearch } from "@/composables/useRouteTableSearch"
-import parksData from "@/mocks/parks.json"
+import { handleApiError } from "@/lib/api-errors"
+import { fetchParks, type ParkListItem } from "@/lib/parks-api"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationFirst,
+  PaginationItem,
+  PaginationLast,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
 
 type ParkRecord = {
-  id: number
+  id: string
+  uuid: string
+  customerUuid: string
   name: string
-  type: string
-  district: string
-  companyCount: number
-  buildingCount: number
-  managerName: string
-  managerPhone: string
-  area: number
-  riskLevel: "高风险" | "中风险" | "低风险"
-  launchedAt: string
-  note: string
+  builtTime: string
+  operationTime: string
+  buildingArea: string
+  contactPerson: string
+  contactPhone: string
+  latitude: string
+  longitude: string
+  coordinate: string
+  address: string
+  createdAt: string
+  updatedAt: string
 }
 
-const parks = parksData as ParkRecord[]
+const parks = ref<ParkRecord[]>([])
+const loading = ref(false)
+const errorMessage = ref("")
+const pageNum = ref(1)
+const pageSize = ref(10)
+const total = ref(0)
+const route = useRoute()
+const showInitialLoading = computed(() => loading.value && !parks.value.length && !errorMessage.value)
+let latestRequestId = 0
 
 const schema: TablePageSchema<ParkRecord> = {
   title: "园区",
-  rowKey: "id",
-  data: parks,
+  rowKey: "uuid",
+  data: [],
   showIndex: true,
   stickyHeader: true,
+  emptyState: {
+    title: "暂无园区数据",
+    description: "当前接口暂未返回可展示的园区列表。",
+    icon: "ri-community-line",
+  },
   columns: [
     {
       key: "name",
@@ -45,110 +76,59 @@ const schema: TablePageSchema<ParkRecord> = {
       sort: true,
     },
     {
-      key: "type",
-      label: "园区类型",
-      filterType: "tag",
-      filter: {
-        type: "tag",
-        defaultVisible: true,
-      },
-      sort: true,
-    },
-    {
-      key: "district",
-      label: "行政区域",
-      filterType: "tag",
-      filter: {
-        type: "tag",
-      },
-      sort: true,
-    },
-    {
-      key: "companyCount",
-      label: "入园企业数",
-      filterType: "number",
-      variant: "metric",
-      filter: {
-        type: "number",
-        placeholder: "输入企业数",
-      },
-      sort: {
-        kind: "metric",
-      },
-      cellRenderer: {
-        kind: "metric-unit",
-        unit: "家",
-      },
-    },
-    {
-      key: "buildingCount",
-      label: "建筑数量",
-      filterType: "number",
-      variant: "metric",
-      filter: {
-        type: "number",
-        placeholder: "输入建筑数量",
-      },
-      sort: {
-        kind: "metric",
-      },
-      cellRenderer: {
-        kind: "metric-unit",
-        unit: "栋",
-      },
-    },
-    {
-      key: "managerName",
-      label: "园区负责人",
+      key: "contactPerson",
+      label: "园区联系人",
       filterType: "contact",
       variant: "contact",
       filter: {
         type: "text",
-        placeholder: "输入负责人或手机号",
+        placeholder: "输入联系人或手机号",
         defaultVisible: true,
-        value: row => `${row.managerName} ${row.managerPhone}`,
+        value: row => `${row.contactPerson} ${row.contactPhone}`,
       },
       sort: {
-        label: "园区负责人",
-        value: row => `${row.managerName} ${row.managerPhone}`,
+        label: "园区联系人",
+        value: row => `${row.contactPerson} ${row.contactPhone}`,
       },
       cellRenderer: {
         kind: "dual-inline",
-        primaryKey: "managerName",
-        secondaryKey: "managerPhone",
+        primaryKey: "contactPerson",
+        secondaryKey: "contactPhone",
       },
     },
     {
-      key: "area",
-      label: "总面积",
-      filterType: "number",
-      variant: "metric",
-      format: "numeric",
+      key: "address",
+      label: "园区地址",
+      filterType: "text",
+      width: "fill",
       filter: {
-        type: "number",
-        placeholder: "输入总面积",
-      },
-      sort: {
-        kind: "metric",
-      },
-      cellRenderer: {
-        kind: "metric-unit",
-        unit: "㎡",
-      },
-    },
-    {
-      key: "riskLevel",
-      label: "风险等级",
-      filterType: "tag",
-      tone: "warning",
-      filter: {
-        type: "tag",
-        defaultVisible: true,
+        type: "text",
+        placeholder: "输入园区地址",
       },
       sort: true,
     },
     {
-      key: "launchedAt",
+      key: "buildingArea",
+      label: "建筑面积",
+      filterType: "text",
+      filter: {
+        type: "text",
+        placeholder: "输入建筑面积",
+      },
+      sort: true,
+    },
+    {
+      key: "builtTime",
+      label: "建成时间",
+      filterType: "time",
+      format: "numeric",
+      filter: {
+        type: "date",
+      },
+      sort: true,
+    },
+    {
+      key: "operationTime",
       label: "投运时间",
       filterType: "time",
       format: "numeric",
@@ -158,14 +138,24 @@ const schema: TablePageSchema<ParkRecord> = {
       sort: true,
     },
     {
-      key: "note",
-      label: "备注",
-      filterType: "none",
-      variant: "note",
-      format: "note",
-      tone: "muted",
-      width: "fill",
-      cellRenderer: { kind: "note" },
+      key: "coordinate",
+      label: "经纬度",
+      filterType: "text",
+      filter: {
+        type: "text",
+        placeholder: "输入经纬度",
+      },
+      sort: true,
+    },
+    {
+      key: "updatedAt",
+      label: "更新时间",
+      filterType: "time",
+      format: "numeric",
+      filter: {
+        type: "date",
+      },
+      sort: true,
     },
   ],
   filters: [
@@ -180,38 +170,179 @@ const schema: TablePageSchema<ParkRecord> = {
   ],
   sort: {
     storageKey: "parks-sort-preferences",
-    initialField: "companyCount",
+    initialField: "updatedAt",
     initialDirection: "desc",
-  },
-  tabs: {
-    mode: "enum",
-    all: { label: "全部", value: "all" },
-    field: "type",
   },
 }
 
-const page = useTablePage(schema)
-const route = useRoute()
+const page = useTablePage({
+  ...createTablePageDefinition(schema),
+  rows: parks,
+})
 
 useRouteTableSearch(page, route)
+
+watch([pageNum, pageSize], ([nextPageNum, nextPageSize], [previousPageNum, previousPageSize]) => {
+  if (nextPageNum === previousPageNum && nextPageSize === previousPageSize) {
+    return
+  }
+
+  void loadParks()
+}, { immediate: true })
 
 function buildPageFilterText(row: ParkRecord) {
   return [
     row.name,
-    row.type,
-    row.district,
-    row.companyCount,
-    row.buildingCount,
-    row.managerName,
-    row.managerPhone,
-    row.area,
-    row.riskLevel,
-    row.launchedAt,
-    row.note,
+    row.contactPerson,
+    row.contactPhone,
+    row.address,
+    row.buildingArea,
+    row.builtTime,
+    row.operationTime,
+    row.coordinate,
+    row.customerUuid,
+    row.createdAt,
+    row.updatedAt,
   ].join(" ")
+}
+
+async function loadParks() {
+  const requestId = ++latestRequestId
+
+  loading.value = true
+  errorMessage.value = ""
+
+  try {
+    const result = await fetchParks({
+      PageNum: pageNum.value,
+      PageSize: pageSize.value,
+    })
+
+    if (requestId !== latestRequestId) {
+      return
+    }
+
+    total.value = result.total
+    parks.value = result.list.map((item, index) => normalizeParkRecord(item, index))
+
+    const maxPage = Math.max(1, Math.ceil((result.total || 0) / pageSize.value))
+
+    if (pageNum.value > maxPage) {
+      pageNum.value = maxPage
+      return
+    }
+  } catch (error) {
+    if (requestId !== latestRequestId) {
+      return
+    }
+
+    parks.value = []
+    total.value = 0
+    errorMessage.value = handleApiError(error, {
+      mode: "silent",
+      fallback: "园区列表加载失败，请稍后重试。",
+    })
+  } finally {
+    if (requestId === latestRequestId) {
+      loading.value = false
+    }
+  }
+}
+
+function normalizeParkRecord(item: ParkListItem, index: number): ParkRecord {
+  const uuid = toText(item.Uuid)
+  const fallbackId = toText(item.Id, `${pageNum.value}-${index + 1}`)
+  const name = toText(item.Name, "未命名园区")
+  const contactPerson = toText(item.ContactPerson, "未填写")
+  const contactPhone = toText(item.ContactPhone, "-")
+  const latitude = toText(item.Latitude, "-")
+  const longitude = toText(item.Longitude, "-")
+
+  return {
+    id: uuid || fallbackId,
+    uuid: uuid || fallbackId,
+    customerUuid: toText(item.CustomerUuid, "-"),
+    name,
+    builtTime: toText(item.BuiltTime, "-"),
+    operationTime: toText(item.OperationTime, "-"),
+    buildingArea: toText(item.BuildingArea, "-"),
+    contactPerson,
+    contactPhone,
+    latitude,
+    longitude,
+    coordinate: `${latitude} / ${longitude}`,
+    address: toText(item.Address, "-"),
+    createdAt: toText(item.CreatedAt, "-"),
+    updatedAt: toText(item.UpdatedAt, "-"),
+  }
+}
+
+function toText(value: unknown, fallback = "") {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return String(value)
+  }
+
+  if (typeof value === "string" && value.trim()) {
+    return value.trim()
+  }
+
+  return fallback
 }
 </script>
 
 <template>
-  <TablePage :page="page" />
+  <TablePageLoading v-if="showInitialLoading" />
+
+  <section v-else class="flex min-h-0 flex-1 flex-col">
+    <div v-if="errorMessage" class="px-4 pb-3 pt-3">
+      <Alert variant="destructive">
+        <i class="ri-error-warning-line" />
+        <AlertTitle>园区接口加载失败</AlertTitle>
+        <AlertDescription class="flex flex-wrap items-center gap-3">
+          <span>{{ errorMessage }}</span>
+          <Button size="sm" variant="outline" @click="loadParks">
+            重试
+          </Button>
+        </AlertDescription>
+      </Alert>
+    </div>
+
+    <TablePage :page="page" />
+
+    <div class="-mx-4 pt-3">
+      <div class="flex w-full justify-end px-4">
+        <Pagination
+          v-model:page="pageNum"
+          :items-per-page="pageSize"
+          :total="total"
+          :sibling-count="1"
+          :disabled="loading"
+          show-edges
+          class="w-full justify-end"
+        >
+          <PaginationContent v-slot="{ items }" class="justify-end">
+            <PaginationFirst />
+            <PaginationPrevious />
+
+            <template
+              v-for="(item, index) in items"
+              :key="`${item.type}-${item.type === 'page' ? item.value : index}`"
+            >
+              <PaginationItem
+                v-if="item.type === 'page'"
+                :value="item.value"
+                :is-active="item.value === pageNum"
+              >
+                {{ item.value }}
+              </PaginationItem>
+              <PaginationEllipsis v-else />
+            </template>
+
+            <PaginationNext />
+            <PaginationLast />
+          </PaginationContent>
+        </Pagination>
+      </div>
+    </div>
+  </section>
 </template>
