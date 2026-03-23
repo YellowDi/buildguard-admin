@@ -45,7 +45,7 @@ const BUILDINGS_LOAD_ERROR_MESSAGE = "建筑列表加载失败，请稍后重试
 
 export async function fetchBuildings(payload: ListBuildingsPayload = {}): Promise<BuildingsListResult> {
   const normalizedPayload = {
-    ParkUuid: getRequiredString(payload.ParkUuid, "ParkUuid"),
+    ParkUuid: getOptionalString(payload.ParkUuid),
     PageNum: getOptionalNumber(payload.PageNum, "PageNum"),
     PageSize: getOptionalNumber(payload.PageSize, "PageSize"),
   }
@@ -149,7 +149,11 @@ function getOptionalNumber(value: unknown, field: string) {
   throw new ApiError(`请求参数校验失败：${field} 必须是有效数字。`)
 }
 
-function getRequiredString(value: unknown, field: string) {
+function getOptionalString(value: unknown) {
+  if (value === undefined || value === null || value === "") {
+    return undefined
+  }
+
   if (typeof value === "string" && value.trim()) {
     return value.trim()
   }
@@ -158,5 +162,5 @@ function getRequiredString(value: unknown, field: string) {
     return String(value)
   }
 
-  throw new ApiError(`请求参数校验失败：${field} 不能为空。`)
+  throw new ApiError("请求参数校验失败：ParkUuid 必须是有效字符串。")
 }

@@ -169,6 +169,15 @@ const pageSearchItems: SearchItem[] = [
     to: "/companies",
   },
   {
+    id: "page-buildings",
+    label: "建筑",
+    subtitle: "查看建筑列表",
+    icon: "ri-building-line",
+    type: "页面",
+    value: "建筑 查看建筑列表 building buildings",
+    to: "/buildings",
+  },
+  {
     id: "page-vehicles",
     label: "车辆",
     subtitle: "查看车辆列表",
@@ -176,6 +185,15 @@ const pageSearchItems: SearchItem[] = [
     type: "页面",
     value: "车辆 查看车辆列表 vehicle truck",
     to: "/vehicles",
+  },
+  {
+    id: "page-work-orders",
+    label: "工单",
+    subtitle: "查看工单列表",
+    icon: "ri-file-list-3-line",
+    type: "页面",
+    value: "工单 查看工单列表 work order work-order ticket",
+    to: "/work-orders",
   },
   {
     id: "page-users",

@@ -117,6 +117,15 @@ const router = createRouter({
           } satisfies RouteMetaConfig,
         },
         {
+          path: "buildings",
+          name: "buildings",
+          component: () => import("@/views/list/BuildingsListView.vue"),
+          meta: {
+            title: "建筑",
+            loading: "table",
+          } satisfies RouteMetaConfig,
+        },
+        {
           path: "parks/:id",
           name: "park-detail",
           component: () => import("@/views/detail/ParkDetailView.vue"),
@@ -139,7 +148,7 @@ const router = createRouter({
             loading: "detail",
             useDetailBreadcrumbTitle: true,
             breadcrumb: [
-              { title: "园区", to: "parks" },
+              { title: "建筑", to: "buildings" },
               { title: "建筑详情" },
             ] satisfies BreadcrumbMetaItem[],
           } satisfies RouteMetaConfig,
@@ -177,6 +186,15 @@ const router = createRouter({
           component: () => import("@/views/list/VehiclesListView.vue"),
           meta: {
             title: "车辆",
+            loading: "table",
+          } satisfies RouteMetaConfig,
+        },
+        {
+          path: "work-orders",
+          name: "work-orders",
+          component: () => import("@/views/list/WorkOrdersListView.vue"),
+          meta: {
+            title: "工单",
             loading: "table",
           } satisfies RouteMetaConfig,
         },

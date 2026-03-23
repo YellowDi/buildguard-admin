@@ -121,6 +121,8 @@ const categories: SettingsCategory[] = [
             options: [
               { label: "工作台", value: "dashboard" },
               { label: "客户列表", value: "customers" },
+              { label: "园区列表", value: "parks" },
+              { label: "建筑列表", value: "buildings" },
               { label: "企业列表", value: "companies" },
               { label: "车辆列表", value: "vehicles" },
               { label: "报警查询", value: "alarm-queries" },
