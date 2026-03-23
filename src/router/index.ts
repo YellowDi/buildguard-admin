@@ -191,10 +191,25 @@ const router = createRouter({
         },
         {
           path: "work-orders",
-          name: "work-orders",
+          redirect: { name: "inspection-work-orders" },
+        },
+        {
+          path: "work-orders/inspection",
+          name: "inspection-work-orders",
           component: () => import("@/views/list/WorkOrdersListView.vue"),
+          props: { kind: "inspection" },
           meta: {
-            title: "工单",
+            title: "检修工单",
+            loading: "table",
+          } satisfies RouteMetaConfig,
+        },
+        {
+          path: "work-orders/repair",
+          name: "repair-work-orders",
+          component: () => import("@/views/list/WorkOrdersListView.vue"),
+          props: { kind: "repair" },
+          meta: {
+            title: "维修工单",
             loading: "table",
           } satisfies RouteMetaConfig,
         },

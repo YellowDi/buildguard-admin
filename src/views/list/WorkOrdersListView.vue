@@ -22,9 +22,12 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination"
 
+type WorkOrderPageKind = "inspection" | "repair"
+
 type WorkOrderRecord = {
   id: string
   uuid: string
+  orderKind: WorkOrderPageKind | "unknown"
   orderNo: string
   planName: string
   packageName: string
@@ -42,6 +45,10 @@ type WorkOrderRecord = {
   updatedAt: string
 }
 
+const props = defineProps<{
+  kind: WorkOrderPageKind
+}>()
+
 const workOrders = ref<WorkOrderRecord[]>([])
 const loading = ref(false)
 const errorMessage = ref("")
@@ -51,16 +58,24 @@ const total = ref(0)
 const route = useRoute()
 const showInitialLoading = computed(() => loading.value && !workOrders.value.length && !errorMessage.value)
 let latestRequestId = 0
+const pageTitle = computed(() => props.kind === "inspection" ? "检修工单" : "维修工单")
+const pageEmptyStateTitle = computed(() => `暂无${pageTitle.value}数据`)
+const pageEmptyStateDescription = computed(() => props.kind === "inspection"
+  ? "当前接口暂未返回可识别的检修工单。"
+  : "当前接口暂未返回可识别的维修工单。")
+const pageSortStorageKey = computed(() => props.kind === "inspection"
+  ? "inspection-work-orders-sort-preferences"
+  : "repair-work-orders-sort-preferences")
 
 const schema: TablePageSchema<WorkOrderRecord> = {
-  title: "工单",
+  title: pageTitle.value,
   rowKey: "uuid",
   data: [],
   showIndex: true,
   stickyHeader: true,
   emptyState: {
-    title: "暂无工单数据",
-    description: "当前接口暂未返回可展示的工单列表。",
+    title: pageEmptyStateTitle.value,
+    description: pageEmptyStateDescription.value,
     icon: "ri-file-list-3-line",
   },
   columns: [
@@ -208,7 +223,7 @@ const schema: TablePageSchema<WorkOrderRecord> = {
     },
   ],
   sort: {
-    storageKey: "work-orders-sort-preferences",
+    storageKey: pageSortStorageKey.value,
     initialField: "updatedAt",
     initialDirection: "desc",
   },
@@ -272,10 +287,12 @@ async function loadWorkOrders() {
       return
     }
 
-    total.value = result.total
-    workOrders.value = result.list.map((item, index) => normalizeWorkOrderRecord(item, index))
+    workOrders.value = result.list
+      .map((item, index) => normalizeWorkOrderRecord(item, index))
+      .filter(row => row.orderKind === props.kind)
+    total.value = workOrders.value.length
 
-    const maxPage = Math.max(1, Math.ceil((result.total || 0) / pageSize.value))
+    const maxPage = Math.max(1, Math.ceil(total.value / pageSize.value))
 
     if (pageNum.value > maxPage) {
       pageNum.value = maxPage
@@ -305,13 +322,23 @@ function normalizeWorkOrderRecord(item: WorkOrderListItem, index: number): WorkO
   const statusValue = toNumber(item.Status)
   const score = toNumber(item.Score)
   const resultValue = toNumber(item.Result)
+  const orderNo = toText(item.OrderNo, `WO-${fallbackId}`)
+  const planName = toText(item.PlanName, "-")
+  const packageName = toText(item.PackageName, "-")
+  const remark = toText(item.Remark, "-")
 
   return {
     id: uuid || fallbackId,
     uuid: uuid || fallbackId,
-    orderNo: toText(item.OrderNo, `WO-${fallbackId}`),
-    planName: toText(item.PlanName, "-"),
-    packageName: toText(item.PackageName, "-"),
+    orderKind: resolveWorkOrderKind({
+      orderNo,
+      planName,
+      packageName,
+      remark,
+    }),
+    orderNo,
+    planName,
+    packageName,
     customerName: toText(item.CustomerName, "-"),
     deadline: toText(item.Deadline, "-"),
     executor: toText(item.Executor, "-"),
@@ -321,10 +348,31 @@ function normalizeWorkOrderRecord(item: WorkOrderListItem, index: number): WorkO
     scoreLabel: formatScoreLabel(score),
     resultValue,
     resultLabel: formatResultLabel(resultValue),
-    remark: toText(item.Remark, "-"),
+    remark,
     createdAt: toText(item.CreatedAt, "-"),
     updatedAt: toText(item.UpdatedAt, "-"),
   }
+}
+
+function resolveWorkOrderKind(payload: {
+  orderNo: string
+  planName: string
+  packageName: string
+  remark: string
+}): WorkOrderPageKind | "unknown" {
+  const inspectionKeywords = ["检修", "巡检", "点检", "保养", "检查"]
+  const repairKeywords = ["维修", "修复", "抢修", "故障", "异常"]
+  const text = [payload.orderNo, payload.planName, payload.packageName, payload.remark].join(" ")
+
+  if (inspectionKeywords.some(keyword => text.includes(keyword))) {
+    return "inspection"
+  }
+
+  if (repairKeywords.some(keyword => text.includes(keyword))) {
+    return "repair"
+  }
+
+  return "unknown"
 }
 
 function formatStatusLabel(value: number | null) {
@@ -385,7 +433,7 @@ function toNumber(value: unknown) {
     <div v-if="errorMessage" class="px-4 pb-3 pt-3">
       <Alert variant="destructive">
         <i class="ri-error-warning-line" />
-        <AlertTitle>工单接口加载失败</AlertTitle>
+        <AlertTitle>{{ pageTitle }}接口加载失败</AlertTitle>
         <AlertDescription class="flex flex-wrap items-center gap-3">
           <span>{{ errorMessage }}</span>
           <Button size="sm" variant="outline" @click="loadWorkOrders">
