@@ -60,13 +60,12 @@ const hasExpandedContent = computed(() => Boolean(slots["expanded-content"]))
       type="single"
       collapsible
       class="w-full"
-      :default-value="`${schema.items.find(item => item.defaultOpen)?.key ?? schema.items[0]?.key ?? ''}`"
     >
       <AccordionItem
-        v-for="item in schema.items"
+        v-for="(item, index) in schema.items"
         :key="`${schema.key}-${item.key}`"
         :value="`${item.key}`"
-        :class="item === schema.items[schema.items.length - 1] ? 'border-b-0' : ''"
+        class="border-b-0"
       >
         <div class="detail-section-inset flex items-center gap-3">
           <AccordionTrigger class="min-w-0 flex-1 py-4 text-left hover:no-underline">
@@ -92,6 +91,13 @@ const hasExpandedContent = computed(() => Boolean(slots["expanded-content"]))
             />
           </div>
         </AccordionContent>
+
+        <div
+          v-if="index < schema.items.length - 1"
+          class="detail-section-inset"
+        >
+          <div class="w-full border-b border-dashed border-border/80" />
+        </div>
       </AccordionItem>
     </Accordion>
 

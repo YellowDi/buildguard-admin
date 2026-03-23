@@ -8,6 +8,7 @@ import DetailRelationModule from "@/components/detail/DetailRelationModule.vue"
 import type { DetailFieldSection, DetailRelationModuleSchema } from "@/components/detail/types"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
+import { Separator } from "@/components/ui/separator"
 import { detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
 import DetailLayout from "@/layouts/DetailLayout.vue"
 import { handleApiError } from "@/lib/api-errors"
@@ -32,6 +33,15 @@ type ParkBuildingGroup = {
   buildingModule: DetailRelationModuleSchema<BuildingRow>
   parkUuid: string
   customerUuid: string
+}
+
+type MaintenanceRecordRow = {
+  id: string
+  status: "pending" | "processing" | "completed"
+  location: string
+  item: string
+  principal: string
+  updatedAt: string
 }
 
 const route = useRoute()
@@ -97,6 +107,50 @@ const parkBuildingAccordion = computed(() => ({
   emptyText: "暂无园区和建筑数据。",
   items: parkBuildingGroups.value,
 }))
+
+const maintenanceModule = computed<DetailRelationModuleSchema<MaintenanceRecordRow>>(() => {
+  const current = customer.value
+
+  if (!current) {
+    return {
+      key: "maintenance-records",
+      title: "检修维护记录",
+      rowKey: "id",
+      columns: [
+        { key: "location", label: "位置" },
+        { key: "item", label: "检修项" },
+        { key: "principal", label: "负责人" },
+        { key: "updatedAt", label: "更新时间" },
+        { key: "actions", label: "", slot: "maintenance-action-cell", cellClass: "flex justify-end" },
+      ],
+      groups: [],
+      mobileMinWidth: "44rem",
+      columnTemplateMobile: "minmax(10rem,1.15fr) minmax(9rem,1fr) minmax(7rem,0.8fr) minmax(8rem,0.85fr) 2.5rem",
+      columnTemplateDesktop: "minmax(10rem,1.15fr) minmax(9rem,1fr) minmax(7rem,0.8fr) minmax(8rem,0.85fr) 2.5rem",
+      columnGapMobile: "0.75rem",
+      columnGapDesktop: "1rem",
+    }
+  }
+
+  return {
+    key: "maintenance-records",
+    title: "检修维护记录",
+    rowKey: "id",
+    columns: [
+      { key: "location", label: "位置", slot: "maintenance-status-cell" },
+      { key: "item", label: "检修项" },
+      { key: "principal", label: "负责人" },
+      { key: "updatedAt", label: "更新时间" },
+      { key: "actions", label: "", slot: "maintenance-action-cell", cellClass: "flex justify-end" },
+    ],
+    groups: buildMaintenanceGroups(current),
+    mobileMinWidth: "44rem",
+    columnTemplateMobile: "minmax(10rem,1.15fr) minmax(9rem,1fr) minmax(7rem,0.8fr) minmax(8rem,0.85fr) 2.5rem",
+    columnTemplateDesktop: "minmax(10rem,1.15fr) minmax(9rem,1fr) minmax(7rem,0.8fr) minmax(8rem,0.85fr) 2.5rem",
+    columnGapMobile: "0.75rem",
+    columnGapDesktop: "1rem",
+  }
+})
 
 watch(customer, (current) => {
   detailBreadcrumbTitle.value = current?.CorpName?.trim() || null
@@ -319,6 +373,61 @@ function createContactFieldRow(person: CustomerDetailPerson, index: number) {
   }
 }
 
+function buildMaintenanceGroups(current: CustomerDetailResult) {
+  const records: MaintenanceRecordRow[] = [
+    {
+      id: "pending-1",
+      status: "pending",
+      location: `${toDisplayText(current.CorpName, "客户")} / 1 号楼`,
+      item: "消防泵房月检",
+      principal: "王工",
+      updatedAt: "2026-03-20 14:30",
+    },
+    {
+      id: "processing-1",
+      status: "processing",
+      location: `${toDisplayText(current.CorpName, "客户")} / 2 号楼`,
+      item: "配电室温感排查",
+      principal: "刘洋",
+      updatedAt: "2026-03-21 09:45",
+    },
+    {
+      id: "completed-1",
+      status: "completed",
+      location: `${toDisplayText(current.CorpName, "客户")} / 5 号楼`,
+      item: "电梯机房巡检",
+      principal: "陈峰",
+      updatedAt: "2026-03-22 16:10",
+    },
+    {
+      id: "completed-2",
+      status: "completed",
+      location: `${toDisplayText(current.CorpName, "客户")} / 地下车库`,
+      item: "排烟系统复检",
+      principal: "赵敏",
+      updatedAt: "2026-03-23 11:20",
+    },
+  ]
+
+  return [
+    {
+      key: "pending",
+      title: "待处理",
+      rows: records.filter(record => record.status === "pending"),
+    },
+    {
+      key: "processing",
+      title: "处理中",
+      rows: records.filter(record => record.status === "processing"),
+    },
+    {
+      key: "completed",
+      title: "已完成",
+      rows: records.filter(record => record.status === "completed"),
+    },
+  ].filter(group => group.rows.length)
+}
+
 function normalizeBuildingRow(building: BuildingListItem, park: ParkListItem, index: number): BuildingRow {
   const parkUuid = toDisplayText(park.Uuid, "park")
 
@@ -494,11 +603,11 @@ function toDisplayText(value: unknown, fallback = "未填写") {
                     <template #building-action-cell="{ row }">
                       <Button
                         variant="ghost"
-                        size="sm"
-                        class="h-8 rounded-md"
+                        size="icon-sm"
+                        class="h-7 w-7 rounded-md text-muted-foreground hover:text-foreground"
                         @click="goToBuildingDetail(getRowUuid(row), getRowParkUuid(row))"
                       >
-                        查看详情
+                        <i class="ri-more-line text-[18px]" />
                       </Button>
                     </template>
                   </DetailRelationModule>
@@ -513,6 +622,32 @@ function toDisplayText(value: unknown, fallback = "未填写") {
           >
             暂无园区和建筑数据。
           </div>
+
+          <Separator class="my-5 bg-border/80" />
+
+          <DetailRelationModule :schema="maintenanceModule">
+            <template #maintenance-status-cell="{ row }">
+              <div class="flex min-w-0 items-center gap-2 text-foreground">
+                <i
+                  :class="[
+                    'text-[18px]',
+                    row.status === 'pending'
+                      ? 'ri-time-fill text-[#F59E0B]'
+                      : row.status === 'processing'
+                        ? 'ri-loader-4-line text-[#2563EB]'
+                        : 'ri-checkbox-circle-fill text-[#22C55E]',
+                  ]"
+                />
+                <span class="truncate">{{ row.location }}</span>
+              </div>
+            </template>
+
+            <template #maintenance-action-cell>
+              <Button variant="ghost" size="icon-sm" class="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground">
+                <i class="ri-more-line text-[18px]" />
+              </Button>
+            </template>
+          </DetailRelationModule>
         </div>
       </template>
     </template>
