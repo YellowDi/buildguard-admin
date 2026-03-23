@@ -11,9 +11,11 @@ const props = withDefaults(defineProps<{
   sections: DetailFieldSection[]
   labelWidthMobile?: string
   labelWidthDesktop?: string
+  compact?: boolean
 }>(), {
   labelWidthMobile: "6.5rem",
   labelWidthDesktop: "180px",
+  compact: false,
 })
 
 const sectionStyle = computed(() => ({
@@ -30,8 +32,8 @@ function displayValue(value: string | number | null | undefined) {
 <template>
   <div class="detail-field-sections" :style="sectionStyle">
     <template v-for="(section, sectionIndex) in sections" :key="section.key">
-      <section :class="cn('detail-field-section', sectionIndex > 0 && 'detail-field-section--after-separator')">
-        <div class="detail-section-heading-row detail-section-inset">
+      <section :class="cn('detail-field-section', !props.compact && sectionIndex > 0 && 'detail-field-section--after-separator', props.compact && '!pb-0 !pt-0')">
+        <div v-if="section.title" class="detail-section-heading-row detail-section-inset">
           <h2 class="detail-field-section__heading">{{ section.title }}</h2>
         </div>
         <div>
@@ -48,7 +50,7 @@ function displayValue(value: string | number | null | undefined) {
         </div>
       </section>
 
-      <Separator v-if="sectionIndex < sections.length - 1" class="bg-border/80" />
+      <Separator v-if="!props.compact && sectionIndex < sections.length - 1" class="bg-border/80" />
     </template>
   </div>
 </template>

@@ -1,7 +1,7 @@
-import { createHttpError, readResponseBody } from "@/lib/api-errors"
+import { ApiError, createHttpError, readResponseBody } from "@/lib/api-errors"
 import { API_PATHS, buildApiUrl } from "@/lib/api"
 
-type ParksListEnvelope = {
+type BuildingsListEnvelope = {
   Total?: number
   List?: unknown
   data?: unknown
@@ -9,10 +9,11 @@ type ParksListEnvelope = {
   rows?: unknown
 }
 
-export type ParkListItem = {
+export type BuildingListItem = {
   Uuid?: string
   Id?: number
-  CustomerUuid?: string
+  ParkUuid?: string
+  ParkName?: string
   Name?: string
   BuiltTime?: string
   OperationTime?: string
@@ -27,50 +28,50 @@ export type ParkListItem = {
   [property: string]: unknown
 }
 
-export type ParksListResult = {
-  list: ParkListItem[]
+export type BuildingsListResult = {
+  list: BuildingListItem[]
   total: number
 }
 
-export type ListParksPayload = {
-  CustomerUuid?: string
+export type ListBuildingsPayload = {
+  ParkUuid?: string
   PageNum?: number
   PageSize?: number
   [property: string]: unknown
 }
 
-const PARKS_API_URL = buildApiUrl(API_PATHS.parksList)
-const PARKS_LOAD_ERROR_MESSAGE = "园区列表加载失败，请稍后重试。"
+const BUILDINGS_API_URL = buildApiUrl(API_PATHS.buildingsList)
+const BUILDINGS_LOAD_ERROR_MESSAGE = "建筑列表加载失败，请稍后重试。"
 
-export async function fetchParks(payload: ListParksPayload = {}): Promise<ParksListResult> {
+export async function fetchBuildings(payload: ListBuildingsPayload = {}): Promise<BuildingsListResult> {
   const normalizedPayload = {
-    CustomerUuid: getOptionalString(payload.CustomerUuid),
+    ParkUuid: getRequiredString(payload.ParkUuid, "ParkUuid"),
     PageNum: getOptionalNumber(payload.PageNum, "PageNum"),
     PageSize: getOptionalNumber(payload.PageSize, "PageSize"),
   }
 
-  const response = await fetch(PARKS_API_URL, {
+  const response = await fetch(BUILDINGS_API_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify(normalizedPayload),
   })
-  const responsePayload = await readResponseBody(response) as ParksListEnvelope | unknown[]
+  const responsePayload = await readResponseBody(response) as BuildingsListEnvelope | unknown[]
 
   if (!response.ok) {
-    throw createHttpError(response, responsePayload, PARKS_LOAD_ERROR_MESSAGE)
+    throw createHttpError(response, responsePayload, BUILDINGS_LOAD_ERROR_MESSAGE)
   }
 
   const list = extractList(responsePayload)
 
   return {
-    list: list.map(item => normalizeParkListItem(item)),
+    list: list.map(item => normalizeBuildingListItem(item)),
     total: extractTotal(responsePayload, list.length),
   }
 }
 
-function extractList(payload: ParksListEnvelope | unknown[]) {
+function extractList(payload: BuildingsListEnvelope | unknown[]) {
   if (Array.isArray(payload)) {
     return payload
   }
@@ -80,7 +81,7 @@ function extractList(payload: ParksListEnvelope | unknown[]) {
   }
 
   if (payload.data && typeof payload.data === "object") {
-    const nested = payload.data as ParksListEnvelope
+    const nested = payload.data as BuildingsListEnvelope
 
     if (Array.isArray(nested.List)) {
       return nested.List
@@ -106,7 +107,7 @@ function extractList(payload: ParksListEnvelope | unknown[]) {
   return []
 }
 
-function extractTotal(payload: ParksListEnvelope | unknown[], fallback: number) {
+function extractTotal(payload: BuildingsListEnvelope | unknown[], fallback: number) {
   if (Array.isArray(payload)) {
     return payload.length
   }
@@ -116,7 +117,7 @@ function extractTotal(payload: ParksListEnvelope | unknown[], fallback: number) 
   }
 
   if (payload.data && typeof payload.data === "object") {
-    const nested = payload.data as ParksListEnvelope
+    const nested = payload.data as BuildingsListEnvelope
 
     if (typeof nested.Total === "number") {
       return nested.Total
@@ -126,39 +127,36 @@ function extractTotal(payload: ParksListEnvelope | unknown[], fallback: number) 
   return fallback
 }
 
-function normalizeParkListItem(value: unknown): ParkListItem {
+function normalizeBuildingListItem(value: unknown): BuildingListItem {
   if (value && typeof value === "object") {
-    return value as ParkListItem
+    return value as BuildingListItem
   }
 
   return {}
 }
 
-function getOptionalNumber(value: unknown, fieldName: string) {
+function getOptionalNumber(value: unknown, field: string) {
   if (value === undefined || value === null || value === "") {
     return undefined
   }
 
-  if (typeof value !== "number" || !Number.isFinite(value)) {
-    throw new TypeError(`${fieldName} must be a finite number.`)
+  const parsed = Number(value)
+
+  if (Number.isFinite(parsed)) {
+    return parsed
   }
 
-  return value
+  throw new ApiError(`请求参数校验失败：${field} 必须是有效数字。`)
 }
 
-function getOptionalString(value: unknown) {
-  if (value === undefined || value === null) {
-    return undefined
-  }
-
-  if (typeof value === "string") {
-    const normalized = value.trim()
-    return normalized || undefined
+function getRequiredString(value: unknown, field: string) {
+  if (typeof value === "string" && value.trim()) {
+    return value.trim()
   }
 
   if (typeof value === "number" && Number.isFinite(value)) {
     return String(value)
   }
 
-  throw new TypeError("String field must be a string or number.")
+  throw new ApiError(`请求参数校验失败：${field} 不能为空。`)
 }

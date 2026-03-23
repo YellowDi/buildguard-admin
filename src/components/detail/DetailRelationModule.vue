@@ -91,6 +91,11 @@ function hasNamedSlot(name?: string) {
             <div class="detail-group-divider-row detail-section-inset flex items-center gap-3">
               <div class="shrink-0 text-[14px] font-medium text-muted-foreground">{{ group.title }}</div>
               <div class="h-px flex-1 bg-border/80" />
+              <slot
+                v-if="hasNamedSlot('group-actions')"
+                name="group-actions"
+                :group="group"
+              />
             </div>
 
             <div

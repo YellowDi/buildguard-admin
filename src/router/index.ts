@@ -117,6 +117,34 @@ const router = createRouter({
           } satisfies RouteMetaConfig,
         },
         {
+          path: "parks/:id",
+          name: "park-detail",
+          component: () => import("@/views/detail/ParkDetailView.vue"),
+          meta: {
+            title: "园区详情",
+            loading: "detail",
+            useDetailBreadcrumbTitle: true,
+            breadcrumb: [
+              { title: "园区", to: "parks" },
+              { title: "详情" },
+            ] satisfies BreadcrumbMetaItem[],
+          } satisfies RouteMetaConfig,
+        },
+        {
+          path: "buildings/:id",
+          name: "building-detail",
+          component: () => import("@/views/detail/BuildingDetailView.vue"),
+          meta: {
+            title: "建筑详情",
+            loading: "detail",
+            useDetailBreadcrumbTitle: true,
+            breadcrumb: [
+              { title: "园区", to: "parks" },
+              { title: "建筑详情" },
+            ] satisfies BreadcrumbMetaItem[],
+          } satisfies RouteMetaConfig,
+        },
+        {
           path: "companies/:id",
           name: "company-detail",
           component: () => import("@/views/detail/CompanyDetailView.vue"),

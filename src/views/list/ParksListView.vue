@@ -32,9 +32,6 @@ type ParkRecord = {
   buildingArea: string
   contactPerson: string
   contactPhone: string
-  latitude: string
-  longitude: string
-  coordinate: string
   address: string
   createdAt: string
   updatedAt: string
@@ -138,16 +135,6 @@ const schema: TablePageSchema<ParkRecord> = {
       sort: true,
     },
     {
-      key: "coordinate",
-      label: "经纬度",
-      filterType: "text",
-      filter: {
-        type: "text",
-        placeholder: "输入经纬度",
-      },
-      sort: true,
-    },
-    {
       key: "updatedAt",
       label: "更新时间",
       filterType: "time",
@@ -199,7 +186,6 @@ function buildPageFilterText(row: ParkRecord) {
     row.buildingArea,
     row.builtTime,
     row.operationTime,
-    row.coordinate,
     row.customerUuid,
     row.createdAt,
     row.updatedAt,
@@ -255,8 +241,6 @@ function normalizeParkRecord(item: ParkListItem, index: number): ParkRecord {
   const name = toText(item.Name, "未命名园区")
   const contactPerson = toText(item.ContactPerson, "未填写")
   const contactPhone = toText(item.ContactPhone, "-")
-  const latitude = toText(item.Latitude, "-")
-  const longitude = toText(item.Longitude, "-")
 
   return {
     id: uuid || fallbackId,
@@ -268,9 +252,6 @@ function normalizeParkRecord(item: ParkListItem, index: number): ParkRecord {
     buildingArea: toText(item.BuildingArea, "-"),
     contactPerson,
     contactPhone,
-    latitude,
-    longitude,
-    coordinate: `${latitude} / ${longitude}`,
     address: toText(item.Address, "-"),
     createdAt: toText(item.CreatedAt, "-"),
     updatedAt: toText(item.UpdatedAt, "-"),
