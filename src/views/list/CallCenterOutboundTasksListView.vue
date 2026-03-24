@@ -19,6 +19,7 @@ const outboundTasks: OutboundTaskRecord[] = []
 
 const schema: TablePageSchema<OutboundTaskRecord> = {
   title: "外呼任务",
+  description: "所有外呼任务列表",
   rowKey: "id",
   data: outboundTasks,
   showIndex: true,

@@ -40,6 +40,7 @@ const router = useRouter()
 // 这就是以后新建表格页时最主要的工作区，原则上不需要理解 table-page 层内部实现。
 const schema: TablePageSchema<PractitionerRecord> = {
   title: "从业人员",
+  description: "所有企业从业人员列表",
   rowKey: "id",
   data: practitioners,
   primaryActionLabel: "添加从业人员",

@@ -538,6 +538,7 @@ function getDaysUntil(dateString: string) {
        多表格页也不要自己桥接每种筛选事件，而是把当前 activePage 交给统一页面壳。 -->
   <TabbedTablePage
     title="车辆"
+    description="所有企业车辆列表"
     :tabs="tabs"
     :active-page="activePage"
     @tab-click="handleTopLevelTabClick"

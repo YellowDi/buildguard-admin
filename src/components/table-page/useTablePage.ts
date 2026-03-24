@@ -34,6 +34,7 @@ type NormalizedFilter<Row> = TablePageFilterDefinition<Row> & {
 
 export type TablePageDefinition<Row> = {
   title: string
+  description?: string
   rowKey: TablePageRowKey<Row>
   rows: MaybeRows<Row>
   columns: TableColumn[]
@@ -119,6 +120,7 @@ export function createTablePageDefinition<Row>(schema: TablePageSchema<Row>): Ta
 
   return {
     title: schema.title,
+    description: schema.description,
     rowKey: schema.rowKey,
     rows: schema.data,
     columns: schema.columns,
@@ -458,6 +460,7 @@ export function useTablePage<Row>(input: TablePageSchema<Row> | TablePageDefinit
 
   return {
     title: definition.title,
+    description: definition.description,
     summary: definition.summary,
     columns: definition.columns,
     rowActions: definition.rowActions,

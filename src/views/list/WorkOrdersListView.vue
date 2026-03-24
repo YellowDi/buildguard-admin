@@ -68,6 +68,7 @@ const pageSortStorageKey = computed(() => props.kind === "inspection"
 
 const schema: TablePageSchema<WorkOrderRecord> = {
   title: pageTitle.value,
+  description: props.kind === "inspection" ? "所有客户检修工单列表" : "所有客户维修工单列表",
   rowKey: "uuid",
   data: [],
   showIndex: true,

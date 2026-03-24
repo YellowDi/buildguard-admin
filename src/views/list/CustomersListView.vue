@@ -42,6 +42,7 @@ let latestRequestId = 0
 
 const schema: TablePageSchema<CustomerRecord> = {
   title: "客户",
+  description: "所有客户资料列表",
   rowKey: "id",
   data: [],
   showIndex: true,

@@ -51,6 +51,7 @@ let latestRequestId = 0
 
 const schema: TablePageSchema<BuildingRecord> = {
   title: "建筑",
+  description: "所有客户建筑列表",
   rowKey: "uuid",
   data: [],
   showIndex: true,

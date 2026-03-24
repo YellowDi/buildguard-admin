@@ -21,7 +21,7 @@ const emit = defineEmits<{
 <template>
   <Page
     :title="page.title"
-    :count="page.visibleRows.value.length"
+    :description="page.description"
     :tabs="page.tabs.value"
     :fields="page.fields.value"
     :available-filters="page.availableFilterKeys.value"

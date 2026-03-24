@@ -52,6 +52,7 @@ const companies = (companiesData as RawCompanyRecord[]).map((company) => {
 // 这就是以后新建表格页时最主要的工作区，原则上不需要理解 table-page 层内部实现。
 const schema: TablePageSchema<CompanyRecord> = {
   title: "企业",
+  description: "所有企业档案列表",
   rowKey: "id",
   data: companies,
   primaryActionLabel: "添加企业",

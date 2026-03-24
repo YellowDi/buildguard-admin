@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, type PropType } from "vue"
+import type { PropType } from "vue"
 
 import Page from "@/components/table-page/TablePageShell.vue"
 import type { HeaderTab } from "@/components/table-page/types"
@@ -9,6 +9,10 @@ const props = defineProps({
   title: {
     type: String,
     required: true,
+  },
+  description: {
+    type: String,
+    default: "",
   },
   tabs: {
     type: Array as PropType<HeaderTab[]>,
@@ -27,13 +31,12 @@ const emit = defineEmits<{
   "primary-action": []
 }>()
 
-const activeCount = computed(() => props.activePage.visibleRows.value.length)
 </script>
 
 <template>
   <Page
     :title="title"
-    :count="activeCount"
+    :description="description"
     :tabs="tabs"
     :fields="activePage.fields.value"
     :available-filters="activePage.availableFilterKeys.value"

@@ -240,6 +240,7 @@ export type TablePageColumn<Row> = TableColumn & {
 
 export type TablePageSchema<Row> = {
   title: string
+  description?: string
   rowKey: TablePageRowKey<Row>
   data: Row[]
   columns: Array<TablePageColumn<Row>>

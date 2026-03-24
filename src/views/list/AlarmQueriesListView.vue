@@ -24,6 +24,7 @@ const alarmQueries = alarmQueriesData as AlarmQueryRecord[]
 
 const schema: TablePageSchema<AlarmQueryRecord> = {
   title: "报警查询",
+  description: "所有报警事件查询列表",
   rowKey: "id",
   data: alarmQueries,
   showIndex: true,

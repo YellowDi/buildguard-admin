@@ -28,7 +28,7 @@ import { handleApiError } from "@/lib/api-errors"
 
 const props = defineProps<{
   title: string
-  count: number
+  description?: string
   tabs: HeaderTab[]
   fields: HeaderField[]
   availableFilters: string[]
@@ -163,7 +163,7 @@ async function handleExportConfirm(payload: { scope: TableExportScope; format: T
         <Header
           class="min-w-0 w-full"
           :title="props.title"
-          :count="props.count"
+          :description="props.description"
           :tabs="props.tabs"
           :fields="props.fields"
           :available-filters="props.availableFilters"

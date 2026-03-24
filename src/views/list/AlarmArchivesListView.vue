@@ -25,6 +25,7 @@ const alarmArchives = alarmArchivesData as AlarmArchiveRecord[]
 
 const schema: TablePageSchema<AlarmArchiveRecord> = {
   title: "历史归档",
+  description: "所有报警历史归档列表",
   rowKey: "id",
   data: alarmArchives,
   showIndex: true,

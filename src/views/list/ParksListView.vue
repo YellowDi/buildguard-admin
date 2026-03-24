@@ -49,6 +49,7 @@ let latestRequestId = 0
 
 const schema: TablePageSchema<ParkRecord> = {
   title: "园区",
+  description: "所有客户园区列表",
   rowKey: "uuid",
   data: [],
   showIndex: true,

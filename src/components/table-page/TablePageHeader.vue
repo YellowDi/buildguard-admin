@@ -21,7 +21,7 @@ import type {
 
 const props = withDefaults(defineProps<{
   title: string
-  count: number
+  description?: string
   tabs: HeaderTab[]
   fields: HeaderField[]
   availableFilters?: string[]
@@ -211,10 +211,10 @@ function handleClearAllFilters() {
   <div class="flex min-w-0 w-full flex-col">
     <div class="px-4 sm:px-8">
       <div class="flex min-w-0 flex-col border-b border-border">
-        <div class="flex min-w-0 flex-wrap items-end justify-between gap-x-4 gap-y-3">
-          <div class="flex min-w-0 flex-wrap items-end gap-x-2 gap-y-1">
-            <h1 class="min-w-0 text-[40px] font-semibold text-foreground sm:text-[48px]">{{ title }}</h1>
-            <span class="pb-0 text-[18px] font-normal text-muted-foreground sm:pb-1 sm:text-[20px]">{{ count }}</span>
+        <div class="flex min-w-0 flex-wrap items-end justify-between gap-x-4 gap-y-3 pb-2">
+          <div class="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
+            <h1 class="min-w-0 text-[40px] leading-none font-semibold text-foreground sm:text-[48px]">{{ title }}</h1>
+            <span v-if="description" class="text-[18px] leading-none font-normal text-muted-foreground sm:text-[20px]">{{ description }}</span>
           </div>
 
           <div
