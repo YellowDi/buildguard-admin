@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
+import SettingsInspectionItemsTable from "@/components/settings/SettingsInspectionItemsTable.vue"
 import SettingsMembersTable from "@/components/settings/SettingsMembersTable.vue"
 import SettingsSection from "@/components/settings/SettingsSection.vue"
 import type {
@@ -69,6 +70,7 @@ function getBooleanValue(key: keyof SettingsState) {
       </header>
 
       <SettingsMembersTable v-if="props.category.key === 'members'" />
+      <SettingsInspectionItemsTable v-else-if="props.category.key === 'inspection-items'" />
 
       <div v-else class="space-y-0">
         <template

@@ -13,6 +13,11 @@ export const API_PATHS = {
   memberStatusUpdate: "/bqi/user/status/update",
   memberUpdate: "/bqi/user/update",
   memberDelete: "/bqi/user/del",
+  inspectionItemsList: "/bqi/inspection/list",
+  inspectionItemCreate: "/bqi/inspection/new",
+  inspectionItemDetail: "/bqi/inspection/detail",
+  inspectionItemUpdate: "/bqi/inspection/update",
+  inspectionItemDelete: "/bqi/inspection/del",
 } as const
 
 export function getApiBaseUrl() {

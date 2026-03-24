@@ -285,6 +285,16 @@ const categories: SettingsCategory[] = [
     ],
   },
   {
+    key: "inspection-items",
+    group: "feature",
+    label: "检测项",
+    description: "维护巡检检测项、分类、检测内容和判定标准。",
+    icon: "ri-file-list-3-line",
+    pageTitle: "检测项",
+    pageDescription: "维护巡检检测项、分类、检测内容和判定标准，新增和编辑均在当前浮窗内完成。",
+    sections: [],
+  },
+  {
     key: "notifications",
     group: "feature",
     label: "通知",
