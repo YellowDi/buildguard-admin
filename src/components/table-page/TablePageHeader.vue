@@ -77,6 +77,7 @@ const activeFilterFields = computed(() => props.fields.filter(field => field.kin
 const inactiveFilterFields = computed(() => props.fields.filter(field => field.kind !== "sort" && !field.accent))
 const visibleFilterKeys = computed(() => props.fields.filter((field) => field.kind !== "sort").map((field) => field.key))
 const addableFilters = computed(() => props.availableFilters.filter((key) => !visibleFilterKeys.value.includes(key)))
+const hasTabs = computed(() => props.tabs.length > 0)
 
 function getTextFilter(key: string) {
   return props.textFilters[key]
@@ -209,83 +210,139 @@ function handleClearAllFilters() {
 <template>
   <div class="flex min-w-0 w-full flex-col">
     <div class="px-4 sm:px-8">
-      <div class="flex min-w-0 flex-wrap items-end gap-x-2 gap-y-1">
-        <h1 class="min-w-0 text-[40px] font-semibold text-foreground sm:text-[48px]">{{ title }}</h1>
-        <span class="pb-0 text-[18px] font-normal text-muted-foreground sm:pb-1 sm:text-[20px]">{{ count }}</span>
-      </div>
-    </div>
+      <div class="flex min-w-0 flex-col border-b border-border">
+        <div class="flex min-w-0 flex-wrap items-end justify-between gap-x-4 gap-y-3">
+          <div class="flex min-w-0 flex-wrap items-end gap-x-2 gap-y-1">
+            <h1 class="min-w-0 text-[40px] font-semibold text-foreground sm:text-[48px]">{{ title }}</h1>
+            <span class="pb-0 text-[18px] font-normal text-muted-foreground sm:pb-1 sm:text-[20px]">{{ count }}</span>
+          </div>
 
-    <div class="px-4 sm:px-8">
-      <div class="flex min-w-0 flex-wrap items-end gap-x-6 gap-y-3 border-b border-border">
-        <nav class="flex min-w-0 flex-[999_1_24rem] flex-wrap items-center text-[14px]">
-          <button
-            v-for="tab in tabs"
-            :key="tab.label"
-            type="button"
-            :aria-pressed="tab.active"
-            :class="[
-              'group relative px-3 pb-[11px] text-muted-foreground transition-colors hover:text-foreground',
-              tab.active ? 'font-semibold text-foreground' : '',
-            ]"
-            @click="emit('tab-click', tab)"
+          <div
+            v-if="!hasTabs"
+            class="flex min-w-0 flex-wrap items-center justify-end gap-1 pb-2 text-muted-foreground sm:flex-nowrap"
           >
-            <span class="relative isolate inline-block">
-              <span class="pointer-events-none absolute -inset-x-2 -inset-y-1 rounded-md transition-colors group-hover:bg-surface-tertiary" />
-              <span class="relative z-10">{{ tab.label }}</span>
-            </span>
-            <span
-              v-if="tab.active"
-              class="absolute inset-x-0 bottom-0 h-0.5 bg-foreground"
-            />
-          </button>
-        </nav>
-
-        <div class="flex min-w-0 flex-[1_1_100%] flex-wrap items-center justify-end gap-1 pb-2 text-muted-foreground sm:flex-[0_0_auto] sm:flex-nowrap">
-          <button
-            type="button"
-            :class="[
-              ghostIconButtonClass,
-              showControls ? ghostIconButtonActiveClass : '',
-            ]"
-            @click="emit('toggle-controls')"
-          >
-            <i :class="['ri-filter-3-line text-[17px]', showControls ? 'text-link' : '']" />
-          </button>
-          <div class="relative" data-list-popover>
             <button
               type="button"
               :class="[
                 ghostIconButtonClass,
-                customSortEnabled ? ghostIconButtonActiveClass : '',
+                showControls ? ghostIconButtonActiveClass : '',
               ]"
-              @click="handleToolbarAddSort"
+              @click="emit('toggle-controls')"
             >
-              <i :class="['ri-sort-asc text-[17px]', customSortEnabled ? 'text-link' : '']" />
+              <i :class="['ri-filter-3-line text-[17px]', showControls ? 'text-link' : '']" />
             </button>
+            <div class="relative" data-list-popover>
+              <button
+                type="button"
+                :class="[
+                  ghostIconButtonClass,
+                  customSortEnabled ? ghostIconButtonActiveClass : '',
+                ]"
+                @click="handleToolbarAddSort"
+              >
+                <i :class="['ri-sort-asc text-[17px]', customSortEnabled ? 'text-link' : '']" />
+              </button>
+            </div>
+            <button
+              type="button"
+              :class="ghostIconButtonClass"
+            >
+              <i class="ri-more-line text-base" />
+            </button>
+            <Button
+              variant="outline"
+              class="h-8 gap-1 px-3 text-[14px]"
+              @click="emit('export-action')"
+            >
+              <i class="ri-download-line text-base" />
+              导出
+            </Button>
+            <Button
+              v-if="primaryActionLabel"
+              variant="default"
+              class="h-8 gap-1 px-3 text-[14px]"
+              @click="emit('primary-action')"
+            >
+              <i class="ri-add-line text-base" />
+              {{ primaryActionLabel }}
+            </Button>
           </div>
-          <button
-            type="button"
-            :class="ghostIconButtonClass"
-          >
-            <i class="ri-more-line text-base" />
-          </button>
-          <Button
-            variant="outline"
-            class="h-8 gap-1 px-3 text-[14px]"
-            @click="emit('export-action')"
-          >
-            <i class="ri-download-line text-base" />
-            导出
-          </Button>
-          <Button
-            v-if="primaryActionLabel"
-            variant="default"
-            class="h-8 gap-1 px-3 text-[14px]"
-            @click="emit('primary-action')"
-          >
-            <i class="ri-add-line text-base" />
-            {{ primaryActionLabel }}
-          </Button>
+        </div>
+
+        <div
+          v-if="hasTabs"
+          class="flex min-w-0 flex-wrap items-end gap-x-6 gap-y-3 text-muted-foreground"
+        >
+          <nav class="flex min-w-0 flex-[999_1_24rem] flex-wrap items-center text-[14px]">
+            <button
+              v-for="tab in tabs"
+              :key="tab.label"
+              type="button"
+              :aria-pressed="tab.active"
+              :class="[
+                'group relative px-3 pb-[11px] text-muted-foreground transition-colors hover:text-foreground',
+                tab.active ? 'font-semibold text-foreground' : '',
+              ]"
+              @click="emit('tab-click', tab)"
+            >
+              <span class="relative isolate inline-block">
+                <span class="pointer-events-none absolute -inset-x-2 -inset-y-1 rounded-md transition-colors group-hover:bg-surface-tertiary" />
+                <span class="relative z-10">{{ tab.label }}</span>
+              </span>
+              <span
+                v-if="tab.active"
+                class="absolute inset-x-0 bottom-0 h-0.5 bg-foreground"
+              />
+            </button>
+          </nav>
+
+          <div class="flex min-w-0 flex-[1_1_100%] flex-wrap items-center justify-end gap-1 pb-2 text-muted-foreground sm:flex-[0_0_auto] sm:flex-nowrap">
+            <button
+              type="button"
+              :class="[
+                ghostIconButtonClass,
+                showControls ? ghostIconButtonActiveClass : '',
+              ]"
+              @click="emit('toggle-controls')"
+            >
+              <i :class="['ri-filter-3-line text-[17px]', showControls ? 'text-link' : '']" />
+            </button>
+            <div class="relative" data-list-popover>
+              <button
+                type="button"
+                :class="[
+                  ghostIconButtonClass,
+                  customSortEnabled ? ghostIconButtonActiveClass : '',
+                ]"
+                @click="handleToolbarAddSort"
+              >
+                <i :class="['ri-sort-asc text-[17px]', customSortEnabled ? 'text-link' : '']" />
+              </button>
+            </div>
+            <button
+              type="button"
+              :class="ghostIconButtonClass"
+            >
+              <i class="ri-more-line text-base" />
+            </button>
+            <Button
+              variant="outline"
+              class="h-8 gap-1 px-3 text-[14px]"
+              @click="emit('export-action')"
+            >
+              <i class="ri-download-line text-base" />
+              导出
+            </Button>
+            <Button
+              v-if="primaryActionLabel"
+              variant="default"
+              class="h-8 gap-1 px-3 text-[14px]"
+              @click="emit('primary-action')"
+            >
+              <i class="ri-add-line text-base" />
+              {{ primaryActionLabel }}
+            </Button>
+          </div>
         </div>
       </div>
     </div>
