@@ -27,7 +27,6 @@ type WorkOrderPageKind = "inspection" | "repair"
 type WorkOrderRecord = {
   id: string
   uuid: string
-  orderKind: WorkOrderPageKind | "unknown"
   orderNo: string
   planName: string
   packageName: string
@@ -61,8 +60,8 @@ let latestRequestId = 0
 const pageTitle = computed(() => props.kind === "inspection" ? "检修工单" : "维修工单")
 const pageEmptyStateTitle = computed(() => `暂无${pageTitle.value}数据`)
 const pageEmptyStateDescription = computed(() => props.kind === "inspection"
-  ? "当前接口暂未返回可识别的检修工单。"
-  : "当前接口暂未返回可识别的维修工单。")
+  ? "当前接口暂未返回可展示的检修工单。"
+  : "维修工单接口暂未接入，当前无可展示数据。")
 const pageSortStorageKey = computed(() => props.kind === "inspection"
   ? "inspection-work-orders-sort-preferences"
   : "repair-work-orders-sort-preferences")
@@ -274,6 +273,14 @@ function buildPageFilterText(row: WorkOrderRecord) {
 async function loadWorkOrders() {
   const requestId = ++latestRequestId
 
+  if (props.kind === "repair") {
+    workOrders.value = []
+    total.value = 0
+    errorMessage.value = ""
+    loading.value = false
+    return
+  }
+
   loading.value = true
   errorMessage.value = ""
 
@@ -287,12 +294,10 @@ async function loadWorkOrders() {
       return
     }
 
-    workOrders.value = result.list
-      .map((item, index) => normalizeWorkOrderRecord(item, index))
-      .filter(row => row.orderKind === props.kind)
-    total.value = workOrders.value.length
+    total.value = result.total
+    workOrders.value = result.list.map((item, index) => normalizeWorkOrderRecord(item, index))
 
-    const maxPage = Math.max(1, Math.ceil(total.value / pageSize.value))
+    const maxPage = Math.max(1, Math.ceil((result.total || 0) / pageSize.value))
 
     if (pageNum.value > maxPage) {
       pageNum.value = maxPage
@@ -330,12 +335,6 @@ function normalizeWorkOrderRecord(item: WorkOrderListItem, index: number): WorkO
   return {
     id: uuid || fallbackId,
     uuid: uuid || fallbackId,
-    orderKind: resolveWorkOrderKind({
-      orderNo,
-      planName,
-      packageName,
-      remark,
-    }),
     orderNo,
     planName,
     packageName,
@@ -343,7 +342,7 @@ function normalizeWorkOrderRecord(item: WorkOrderListItem, index: number): WorkO
     deadline: toText(item.Deadline, "-"),
     executor: toText(item.Executor, "-"),
     statusValue,
-    statusLabel: formatStatusLabel(statusValue),
+    statusLabel: formatStatusLabel(props.kind, statusValue),
     score,
     scoreLabel: formatScoreLabel(score),
     resultValue,
@@ -354,30 +353,17 @@ function normalizeWorkOrderRecord(item: WorkOrderListItem, index: number): WorkO
   }
 }
 
-function resolveWorkOrderKind(payload: {
-  orderNo: string
-  planName: string
-  packageName: string
-  remark: string
-}): WorkOrderPageKind | "unknown" {
-  const inspectionKeywords = ["检修", "巡检", "点检", "保养", "检查"]
-  const repairKeywords = ["维修", "修复", "抢修", "故障", "异常"]
-  const text = [payload.orderNo, payload.planName, payload.packageName, payload.remark].join(" ")
-
-  if (inspectionKeywords.some(keyword => text.includes(keyword))) {
-    return "inspection"
-  }
-
-  if (repairKeywords.some(keyword => text.includes(keyword))) {
-    return "repair"
-  }
-
-  return "unknown"
-}
-
-function formatStatusLabel(value: number | null) {
+function formatStatusLabel(kind: WorkOrderPageKind, value: number | null) {
   if (value === null) {
     return "未知状态"
+  }
+
+  if (kind === "inspection") {
+    if (value === 1) return "待指派"
+    if (value === 2) return "待开始"
+    if (value === 3) return "进行中"
+    if (value === 4) return "报告生成中"
+    if (value === 5) return "已结单"
   }
 
   if (value === 0) return "待处理"
