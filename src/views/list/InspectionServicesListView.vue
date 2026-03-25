@@ -391,18 +391,11 @@ function toText(value: unknown, fallback = "") {
                   <div class="text-[11px] font-medium text-background/72">
                     建筑名称
                   </div>
-                  <div class="flex flex-wrap gap-1.5">
-                    <span
-                      v-for="buildName in getBuildNamesByPark(row, parkName)"
-                      :key="`${row.uuid}-${parkName}-${buildName}`"
-                      class="inline-flex h-5 items-center rounded-full bg-background/10 px-2 text-[12px] text-background"
-                    >
-                      {{ buildName }}
-                    </span>
-                    <span
-                      v-if="!getBuildNamesByPark(row, parkName).length"
-                      class="text-[12px] text-background/72"
-                    >
+                  <div class="text-[12px] leading-5 text-background">
+                    <template v-if="getBuildNamesByPark(row, parkName).length">
+                      {{ getBuildNamesByPark(row, parkName).join("、") }}
+                    </template>
+                    <span v-else class="text-background/72">
                       暂无建筑
                     </span>
                   </div>
