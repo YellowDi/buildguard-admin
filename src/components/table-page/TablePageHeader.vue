@@ -212,14 +212,14 @@ function handleClearAllFilters() {
     <div class="px-4 sm:px-8">
       <div class="flex min-w-0 flex-col border-b border-border">
         <div class="flex min-w-0 flex-wrap items-end justify-between gap-x-4 gap-y-3 pb-2">
-          <div class="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1">
+          <div :class="['flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1', hasTabs ? '' : 'pb-2']">
             <h1 class="min-w-0 text-[40px] leading-none font-semibold text-foreground sm:text-[48px]">{{ title }}</h1>
             <span v-if="description" class="text-[18px] leading-none font-normal text-muted-foreground sm:text-[20px]">{{ description }}</span>
           </div>
 
           <div
             v-if="!hasTabs"
-            class="flex min-w-0 flex-wrap items-center justify-end gap-1 pb-2 text-muted-foreground sm:flex-nowrap"
+            class="flex min-w-0 flex-wrap items-center justify-end gap-1 text-muted-foreground sm:flex-nowrap"
           >
             <button
               type="button"

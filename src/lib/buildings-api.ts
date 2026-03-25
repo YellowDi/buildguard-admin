@@ -18,7 +18,9 @@ export type BuildingListItem = {
   BuiltTime?: string
   OperationTime?: string
   BuildingArea?: string
+  BuildArea?: string
   ContactPerson?: string
+  Contact?: string
   ContactPhone?: string
   Latitude?: string
   Longitude?: string
@@ -129,10 +131,30 @@ function extractTotal(payload: BuildingsListEnvelope | unknown[], fallback: numb
 
 function normalizeBuildingListItem(value: unknown): BuildingListItem {
   if (value && typeof value === "object") {
-    return value as BuildingListItem
+    const item = value as BuildingListItem
+
+    return {
+      ...item,
+      BuildingArea: getFirstNonEmptyText(item.BuildingArea, item.BuildArea),
+      ContactPerson: getFirstNonEmptyText(item.ContactPerson, item.Contact),
+    }
   }
 
   return {}
+}
+
+function getFirstNonEmptyText(...values: unknown[]) {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim()) {
+      return value.trim()
+    }
+
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return String(value)
+    }
+  }
+
+  return undefined
 }
 
 function getOptionalNumber(value: unknown, field: string) {
