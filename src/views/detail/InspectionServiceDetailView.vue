@@ -639,7 +639,7 @@ function buildContactValue(name: string, phone?: string): DetailContactValue {
 
   <section
     v-else-if="detail && activeTab === 'work-orders'"
-    class="mx-auto flex min-h-0 w-full min-w-0 flex-1 flex-col px-0 sm:px-4 xl:px-8"
+    class="detail-layout mx-auto flex min-h-0 w-full max-w-[1440px] min-w-0 flex-1 flex-col px-0 sm:px-4 xl:px-8"
   >
     <div class="sticky top-0 z-10 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80 sm:-mx-4">
       <div class="px-4 py-5">
@@ -683,7 +683,9 @@ function buildContactValue(name: string, phone?: string): DetailContactValue {
         </div>
 
         <div v-else-if="workOrders.length" class="flex min-h-0 flex-1 flex-col">
-          <TablePage :page="workOrdersPage" class="-mt-3" />
+          <div class="sm:-mx-4 xl:-mx-8">
+            <TablePage :page="workOrdersPage" class="-mt-3" />
+          </div>
 
           <div class="mt-auto flex items-center justify-end gap-3 px-4 pt-4 sm:px-0">
             <span class="text-sm text-muted-foreground">
