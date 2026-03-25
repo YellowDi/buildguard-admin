@@ -207,6 +207,13 @@ const schema: TablePageSchema<InspectionServiceRecord> = {
     initialField: "UpdatedAt",
     initialDirection: "desc",
   },
+  tabs: {
+    mode: "enum",
+    all: { label: "全部", value: "all" },
+    field: "ServiceStatus",
+    options: ["待签署", "已签署", "进行中", "已结单"],
+    order: ["待签署", "已签署", "进行中", "已结单"],
+  },
 }
 
 const page = useTablePage({
