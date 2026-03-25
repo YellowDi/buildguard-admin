@@ -31,6 +31,7 @@ const emit = defineEmits<{
 
 const slots = useSlots()
 const hasSecondary = computed(() => Boolean(slots.secondary) && props.secondaryVisible)
+const hasHeaderBottom = computed(() => Boolean(slots.headerBottom))
 </script>
 
 <template>
@@ -48,6 +49,10 @@ const hasSecondary = computed(() => Boolean(slots.secondary) && props.secondaryV
               <slot name="actions" />
             </template>
           </SectionHeader>
+
+          <div v-if="hasHeaderBottom" class="mt-4">
+            <slot name="headerBottom" />
+          </div>
         </div>
       </div>
 

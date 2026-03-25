@@ -650,6 +650,17 @@ function buildContactValue(name: string, phone?: string): DetailContactValue {
             </Button>
           </template>
         </SectionHeader>
+
+        <div class="mt-4">
+          <TopTabSwitch
+            :tabs="detailTabs"
+            :model-value="activeTab"
+            :collapse-inactive="false"
+            tone="default"
+            aria-label="检测服务详情页面切换"
+            @update:model-value="activeTab = $event as InspectionServiceDetailTab"
+          />
+        </div>
       </div>
     </div>
 
@@ -660,17 +671,6 @@ function buildContactValue(name: string, phone?: string): DetailContactValue {
       </Alert>
 
       <div class="flex min-h-0 flex-1 flex-col gap-5">
-        <div class="px-4 sm:px-0">
-          <TopTabSwitch
-            :tabs="detailTabs"
-            :model-value="activeTab"
-            :collapse-inactive="false"
-            tone="default"
-            aria-label="检测服务详情页面切换"
-            @update:model-value="activeTab = $event as InspectionServiceDetailTab"
-          />
-        </div>
-
         <div v-if="workOrdersErrorMessage" class="px-4 sm:px-0">
           <Alert variant="destructive">
             <AlertTitle>工单列表加载失败</AlertTitle>
@@ -730,6 +730,17 @@ function buildContactValue(name: string, phone?: string): DetailContactValue {
       </Button>
     </template>
 
+    <template #headerBottom>
+      <TopTabSwitch
+        :tabs="detailTabs"
+        :model-value="activeTab"
+        :collapse-inactive="false"
+        tone="default"
+        aria-label="检测服务详情页面切换"
+        @update:model-value="activeTab = $event as InspectionServiceDetailTab"
+      />
+    </template>
+
     <template #primary>
       <Alert v-if="errorMessage" variant="destructive" class="mb-5">
         <AlertTitle>检测服务详情加载失败</AlertTitle>
@@ -737,15 +748,6 @@ function buildContactValue(name: string, phone?: string): DetailContactValue {
       </Alert>
 
       <div v-if="detail" class="space-y-5">
-        <TopTabSwitch
-          :tabs="detailTabs"
-          :model-value="activeTab"
-          :collapse-inactive="false"
-          tone="default"
-          aria-label="检测服务详情页面切换"
-          @update:model-value="activeTab = $event as InspectionServiceDetailTab"
-        />
-
         <DetailFieldSections v-if="activeTab === 'overview'" :sections="fieldSections" />
 
         <section v-else-if="activeTab === 'plans'" class="space-y-3">
