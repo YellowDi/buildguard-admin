@@ -1,5 +1,5 @@
 import { ApiError, createHttpError, readResponseBody } from "@/lib/api-errors"
-import { API_PATHS, buildApiUrl } from "@/lib/api"
+import { API_PATHS, buildApiHeaders, buildApiUrl } from "@/lib/api"
 
 type CustomerListEnvelope = {
   Total?: number
@@ -92,9 +92,9 @@ export async function fetchCustomers(payload: ListCustomersPayload = {}): Promis
 
   const response = await fetch(CUSTOMERS_API_URL, {
     method: "POST",
-    headers: {
+    headers: buildApiHeaders({
       "Content-Type": "application/json",
-    },
+    }),
     body: JSON.stringify(normalizedPayload),
   })
   const responsePayload = await readResponseBody(response) as CustomerListEnvelope | unknown[]
@@ -125,9 +125,9 @@ export async function createCustomer(payload: CustomerCreatePayload): Promise<Cu
 
   const response = await fetch(CUSTOMER_CREATE_API_URL, {
     method: "POST",
-    headers: {
+    headers: buildApiHeaders({
       "Content-Type": "application/json",
-    },
+    }),
     body: JSON.stringify(normalizedPayload),
   })
   const responseBody = await readResponseBody(response)
@@ -147,6 +147,7 @@ export async function fetchCustomerDetail(payload: CustomerDetailPayload): Promi
 
   const response = await fetch(url.toString(), {
     method: "GET",
+    headers: buildApiHeaders(),
   })
   const responseBody = await readResponseBody(response)
 

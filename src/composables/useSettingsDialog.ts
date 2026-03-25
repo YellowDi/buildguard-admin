@@ -35,6 +35,22 @@ const state = reactive<SettingsState>({
   sessionTimeout: "30",
 })
 
+watch(
+  () => [currentUser.name, currentUser.email] as const,
+  ([nextName, nextEmail], previousValues) => {
+    const [previousName = "", previousEmail = ""] = previousValues ?? []
+
+    if (state.accountName === previousName) {
+      state.accountName = nextName
+    }
+
+    if (state.accountEmail === previousEmail) {
+      state.accountEmail = nextEmail
+    }
+  },
+  { immediate: true },
+)
+
 watch(themeMode, (value) => {
   if (state.themeMode !== value) {
     state.themeMode = value
@@ -47,7 +63,7 @@ watch(() => state.themeMode, (value) => {
   }
 })
 
-const categories: SettingsCategory[] = [
+const categories = computed<SettingsCategory[]>(() => [
   {
     key: "me",
     group: "account",
@@ -417,14 +433,14 @@ const categories: SettingsCategory[] = [
       },
     ],
   },
-]
+])
 
 const isOpen = ref(false)
 const activeKey = ref<SettingsCategoryKey>("me")
 const settingsLoaded = ref(false)
 
 const activeCategory = computed(
-  () => categories.find(category => category.key === activeKey.value) ?? categories[0],
+  () => categories.value.find(category => category.key === activeKey.value) ?? categories.value[0],
 )
 
 async function ensureSettingsLoaded() {

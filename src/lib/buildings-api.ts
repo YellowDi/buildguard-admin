@@ -1,5 +1,5 @@
 import { ApiError, createHttpError, readResponseBody } from "@/lib/api-errors"
-import { API_PATHS, buildApiUrl } from "@/lib/api"
+import { API_PATHS, buildApiHeaders, buildApiUrl } from "@/lib/api"
 
 type BuildingsListEnvelope = {
   Total?: number
@@ -54,9 +54,9 @@ export async function fetchBuildings(payload: ListBuildingsPayload = {}): Promis
 
   const response = await fetch(BUILDINGS_API_URL, {
     method: "POST",
-    headers: {
+    headers: buildApiHeaders({
       "Content-Type": "application/json",
-    },
+    }),
     body: JSON.stringify(normalizedPayload),
   })
   const responsePayload = await readResponseBody(response) as BuildingsListEnvelope | unknown[]

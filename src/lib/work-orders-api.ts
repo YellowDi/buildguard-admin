@@ -1,5 +1,5 @@
 import { createHttpError, readResponseBody } from "@/lib/api-errors"
-import { API_PATHS, buildApiUrl } from "@/lib/api"
+import { API_PATHS, buildApiHeaders, buildApiUrl } from "@/lib/api"
 
 type WorkOrdersListEnvelope = {
   Total?: number
@@ -51,9 +51,9 @@ export async function fetchWorkOrders(payload: ListWorkOrdersPayload = {}): Prom
 
   const response = await fetch(WORK_ORDERS_API_URL, {
     method: "POST",
-    headers: {
+    headers: buildApiHeaders({
       "Content-Type": "application/json",
-    },
+    }),
     body: JSON.stringify(normalizedPayload),
   })
   const responsePayload = await readResponseBody(response) as WorkOrdersListEnvelope | unknown[]

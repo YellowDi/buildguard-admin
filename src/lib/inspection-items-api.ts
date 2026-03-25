@@ -1,5 +1,5 @@
 import { ApiError, createHttpError, readResponseBody } from "@/lib/api-errors"
-import { API_PATHS, buildApiUrl } from "@/lib/api"
+import { API_PATHS, buildApiHeaders, buildApiUrl } from "@/lib/api"
 
 type InspectionItemsListEnvelope = {
   Total?: number
@@ -88,9 +88,9 @@ export async function fetchInspectionItems(
 
   const response = await fetch(INSPECTION_ITEMS_API_URL, {
     method: "POST",
-    headers: {
+    headers: buildApiHeaders({
       "Content-Type": "application/json",
-    },
+    }),
     body: JSON.stringify(normalizedPayload),
   })
   const responsePayload = await readResponseBody(response) as InspectionItemsListEnvelope | unknown[]
@@ -110,9 +110,9 @@ export async function fetchInspectionItems(
 export async function createInspectionItem(payload: CreateInspectionItemPayload) {
   const response = await fetch(INSPECTION_ITEM_CREATE_API_URL, {
     method: "POST",
-    headers: {
+    headers: buildApiHeaders({
       "Content-Type": "application/json",
-    },
+    }),
     body: JSON.stringify(normalizeWritePayload(payload)),
   })
   const responseBody = await readResponseBody(response)
@@ -132,6 +132,7 @@ export async function getInspectionItemDetail(
 
   const response = await fetch(url.toString(), {
     method: "GET",
+    headers: buildApiHeaders(),
   })
   const responseBody = await readResponseBody(response)
 
@@ -145,9 +146,9 @@ export async function getInspectionItemDetail(
 export async function updateInspectionItem(payload: UpdateInspectionItemPayload) {
   const response = await fetch(INSPECTION_ITEM_UPDATE_API_URL, {
     method: "POST",
-    headers: {
+    headers: buildApiHeaders({
       "Content-Type": "application/json",
-    },
+    }),
     body: JSON.stringify({
       Uuid: getRequiredString(payload.Uuid, "Uuid"),
       ...normalizeWritePayload(payload),
@@ -166,6 +167,7 @@ export async function deleteInspectionItem(payload: DeleteInspectionItemPayload)
 
   const response = await fetch(url.toString(), {
     method: "GET",
+    headers: buildApiHeaders(),
   })
   const responseBody = await readResponseBody(response)
 

@@ -1,5 +1,5 @@
 import { ApiError, createHttpError, readResponseBody } from "@/lib/api-errors"
-import { API_PATHS, buildApiUrl } from "@/lib/api"
+import { API_PATHS, buildApiHeaders, buildApiUrl } from "@/lib/api"
 
 type MembersListEnvelope = {
   Total?: number
@@ -112,9 +112,9 @@ export async function fetchMembers(payload: ListMembersPayload = {}): Promise<Me
 
   const response = await fetch(MEMBERS_API_URL, {
     method: "POST",
-    headers: {
+    headers: buildApiHeaders({
       "Content-Type": "application/json",
-    },
+    }),
     body: JSON.stringify(normalizedPayload),
   })
   const responsePayload = await readResponseBody(response) as MembersListEnvelope | unknown[]
@@ -142,9 +142,9 @@ export async function createMember(payload: CreateMemberPayload) {
 
   const response = await fetch(MEMBER_CREATE_API_URL, {
     method: "POST",
-    headers: {
+    headers: buildApiHeaders({
       "Content-Type": "application/json",
-    },
+    }),
     body: JSON.stringify(normalizedPayload),
   })
   const responseBody = await readResponseBody(response)
@@ -168,6 +168,7 @@ export async function getMemberDetail(payload: MemberDetailPayload): Promise<Mem
 
   const response = await fetch(url.toString(), {
     method: "GET",
+    headers: buildApiHeaders(),
   })
   const responseBody = await readResponseBody(response)
 
@@ -191,9 +192,9 @@ export async function updateMember(payload: UpdateMemberPayload) {
 
   const response = await fetch(MEMBER_UPDATE_API_URL, {
     method: "POST",
-    headers: {
+    headers: buildApiHeaders({
       "Content-Type": "application/json",
-    },
+    }),
     body: JSON.stringify(normalizedPayload),
   })
   const responseBody = await readResponseBody(response)
@@ -211,9 +212,9 @@ export async function updateMemberStatus(payload: UpdateMemberStatusPayload) {
 
   const response = await fetch(MEMBER_STATUS_UPDATE_API_URL, {
     method: "POST",
-    headers: {
+    headers: buildApiHeaders({
       "Content-Type": "application/json",
-    },
+    }),
     body: JSON.stringify(normalizedPayload),
   })
   const responseBody = await readResponseBody(response)
@@ -237,6 +238,7 @@ export async function deleteMember(payload: DeleteMemberPayload) {
 
   const response = await fetch(url.toString(), {
     method: "GET",
+    headers: buildApiHeaders(),
   })
   const responseBody = await readResponseBody(response)
 

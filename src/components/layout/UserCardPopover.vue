@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from "vue"
+import { computed, ref, watch } from "vue"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
@@ -18,10 +18,38 @@ import { cn } from "@/lib/utils"
 const { state } = useSidebar()
 const { themeMode, themeOptions } = useAppTheme()
 const { openSettingsDialog } = useSettingsDialog()
-const { currentUser: user } = useCurrentUser()
+const { currentUser: user, error, hasLoaded, isLoading } = useCurrentUser()
 
-const userInitial = user.name.charAt(0).toUpperCase()
 const open = ref(false)
+const userInitial = computed(() => user.name.trim().charAt(0).toUpperCase() || "U")
+const userTriggerLabel = computed(() => {
+  if (isLoading.value && !hasLoaded.value) {
+    return "加载中..."
+  }
+
+  return user.name
+})
+const userDescription = computed(() => {
+  if (user.departmentName && user.position) {
+    return `${user.departmentName} · ${user.position}`
+  }
+
+  return user.departmentName || user.position || user.corpName || user.phone
+})
+const userContactLine = computed(() => {
+  return user.phone || user.corpName || userDescription.value || ""
+})
+const userStatusLine = computed(() => {
+  if (error.value) {
+    return "用户信息加载失败"
+  }
+
+  if (isLoading.value && !hasLoaded.value) {
+    return "正在同步账号信息..."
+  }
+
+  return userDescription.value || userContactLine.value || "暂无账号信息"
+})
 
 watch(state, (value) => {
   if (value === "collapsed" && open.value) {
@@ -58,7 +86,7 @@ function handleOpenSettings() {
               <span class="text-[10px] font-semibold">{{ userInitial }}</span>
             </AvatarFallback>
           </Avatar>
-          <span class="truncate text-sm font-semibold text-foreground">{{ user.name }}</span>
+          <span class="truncate text-sm font-semibold text-foreground">{{ userTriggerLabel }}</span>
         </div>
         <i class="ri-arrow-up-s-line shrink-0 text-base text-muted-foreground" />
       </button>
@@ -89,7 +117,10 @@ function handleOpenSettings() {
             </Avatar>
             <div class="min-w-0 flex-1">
               <span class="block truncate text-sm font-semibold text-foreground">{{ user.name }}</span>
-              <p class="truncate text-xs text-muted-foreground">{{ user.email }}</p>
+              <p class="truncate text-xs text-muted-foreground">{{ userStatusLine }}</p>
+              <p v-if="userContactLine && userContactLine !== userStatusLine" class="truncate text-xs text-muted-foreground">
+                {{ userContactLine }}
+              </p>
             </div>
           </div>
         </div>
