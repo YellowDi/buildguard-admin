@@ -376,7 +376,7 @@ function toText(value: unknown, fallback = "") {
                 >
                   <span>{{ parkName }}</span>
                   <span
-                    class="ml-1 inline-flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-foreground px-0.75 text-center text-[9px] font-semibold leading-none text-background"
+                    class="ml-1 inline-flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-background/80 px-0.75 text-center text-[9px] font-semibold leading-none text-foreground ring-1 ring-border/70"
                   >
                     {{ getParkBuildCount(row, index) }}
                   </span>

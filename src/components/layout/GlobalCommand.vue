@@ -187,6 +187,15 @@ const pageSearchItems: SearchItem[] = [
     to: "/inspection-services",
   },
   {
+    id: "page-inspection-plans",
+    label: "检测计划",
+    subtitle: "查看检测计划列表",
+    icon: "ri-calendar-check-line",
+    type: "页面",
+    value: "检测计划 查看检测计划列表 inspection plan plans",
+    to: "/inspection-plans",
+  },
+  {
     id: "page-vehicles",
     label: "车辆",
     subtitle: "查看车辆列表",
