@@ -5,10 +5,14 @@ import { useSlots } from "vue"
 import Page from "@/components/table-page/TablePageShell.vue"
 import type { TablePageController } from "@/components/table-page/useTablePage"
 
-defineProps({
+const props = defineProps({
   page: {
     type: Object as PropType<TablePageController<any>>,
     required: true,
+  },
+  showToolbarActions: {
+    type: Boolean,
+    default: true,
   },
 })
 
@@ -56,6 +60,7 @@ const slots = useSlots()
     :wrapper-class="page.wrapperClass"
     :table-class="page.tableClass"
     :empty-state="page.emptyState"
+    :show-toolbar-actions="props.showToolbarActions"
     @tab-click="page.handleTabClick"
     @add-filter="page.handleAddFilter"
     @replace-filter="page.handleReplaceFilter"

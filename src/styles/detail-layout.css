@@ -40,6 +40,8 @@
   display: flex;
   min-height: 56px;
   align-items: center;
+  padding-left: 0;
+  padding-right: 0;
 }
 
 .detail-field-section {
@@ -125,6 +127,11 @@
   .detail-section-inset {
     padding-left: 0.75rem;
     padding-right: 1.25rem;
+  }
+
+  .detail-section-heading-row {
+    padding-left: 0;
+    padding-right: 0;
   }
 
   .detail-field-row__label {

@@ -26,7 +26,7 @@ import type {
 } from "@/components/table-page/types"
 import { handleApiError } from "@/lib/api-errors"
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   title: string
   description?: string
   tabs: HeaderTab[]
@@ -61,7 +61,10 @@ const props = defineProps<{
   tableClass?: string
   sections?: TableSection[]
   emptyState?: TablePageEmptyState
-}>()
+  showToolbarActions?: boolean
+}>(), {
+  showToolbarActions: true,
+})
 
 const emit = defineEmits<{
   "tab-click": [tab: HeaderTab]
@@ -178,6 +181,7 @@ async function handleExportConfirm(payload: { scope: TableExportScope; format: T
           :tag-filter-options="props.tagFilterOptions"
           :date-filters="props.dateFilters"
           :date-filter-fields="props.dateFilterFields"
+          :show-toolbar-actions="props.showToolbarActions"
           @tab-click="emit('tab-click', $event)"
           @add-filter="emit('add-filter', $event)"
           @replace-filter="emit('replace-filter', $event)"

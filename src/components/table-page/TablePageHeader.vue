@@ -36,6 +36,7 @@ const props = withDefaults(defineProps<{
   dateFilters?: Record<string, DateFilterState>
   dateFilterFields?: string[]
   primaryActionLabel?: string
+  showToolbarActions?: boolean
 }>(), {
   availableFilters: () => [],
   textFilters: () => ({}),
@@ -46,6 +47,7 @@ const props = withDefaults(defineProps<{
   dateFilterFields: () => [],
   sortFieldOptions: () => [],
   primaryActionLabel: "",
+  showToolbarActions: true,
 })
 
 const emit = defineEmits<{
@@ -79,6 +81,7 @@ const visibleFilterKeys = computed(() => props.fields.filter((field) => field.ki
 const addableFilters = computed(() => props.availableFilters.filter((key) => !visibleFilterKeys.value.includes(key)))
 const hasTabs = computed(() => props.tabs.length > 0)
 const hasHeading = computed(() => Boolean(props.title || props.description))
+const hasTopSurface = computed(() => hasHeading.value || hasTabs.value || props.showToolbarActions)
 
 function getTextFilter(key: string) {
   return props.textFilters[key]
@@ -210,10 +213,10 @@ function handleClearAllFilters() {
 
 <template>
   <div class="flex min-w-0 w-full flex-col">
-    <div class="px-4 sm:px-8">
+    <div v-if="hasTopSurface" class="px-4 sm:px-8">
       <div class="flex min-w-0 flex-col border-b border-border">
         <div
-          v-if="hasHeading || !hasTabs"
+          v-if="hasHeading || (!hasTabs && props.showToolbarActions)"
           class="flex min-w-0 flex-wrap items-end justify-between gap-x-4 gap-y-3"
           :class="hasHeading ? 'pb-2' : 'pb-0'"
         >
@@ -226,7 +229,7 @@ function handleClearAllFilters() {
           </div>
 
           <div
-            v-if="!hasTabs"
+            v-if="!hasTabs && props.showToolbarActions"
             class="flex min-w-0 flex-wrap items-center justify-end gap-1 text-muted-foreground sm:flex-nowrap"
           >
             <button
@@ -304,7 +307,10 @@ function handleClearAllFilters() {
             </button>
           </nav>
 
-          <div class="flex min-w-0 flex-[1_1_100%] flex-wrap items-center justify-end gap-1 pb-2 text-muted-foreground sm:flex-[0_0_auto] sm:flex-nowrap">
+          <div
+            v-if="props.showToolbarActions"
+            class="flex min-w-0 flex-[1_1_100%] flex-wrap items-center justify-end gap-1 pb-2 text-muted-foreground sm:flex-[0_0_auto] sm:flex-nowrap"
+          >
             <button
               type="button"
               :class="[

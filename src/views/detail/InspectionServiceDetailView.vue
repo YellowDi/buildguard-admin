@@ -5,14 +5,22 @@ import { useRoute, useRouter } from "vue-router"
 import DetailFieldSections from "@/components/detail/DetailFieldSections.vue"
 import DetailRelationModule from "@/components/detail/DetailRelationModule.vue"
 import SectionHeader from "@/components/layout/SectionHeader.vue"
-import TopTabSwitch from "@/components/layout/TopTabSwitch.vue"
+import ExportTableDialog from "@/components/table-page/ExportTableDialog.vue"
 import type { DetailContactValue, DetailFieldSection, DetailRelationModuleSchema } from "@/components/detail/types"
 import DetailPageLoading from "@/components/loading/DetailPageLoading.vue"
 import TablePage from "@/components/table-page/TablePage.vue"
+import SortPopover, { type SortRule } from "@/components/table-page/TableSortPopover.vue"
 import { createTablePageDefinition, useTablePage } from "@/components/table-page/useTablePage"
 import type { TablePageSchema } from "@/components/table-page/types"
+import {
+  exportTableData,
+  SUPPORTED_TABLE_EXPORT_FORMATS,
+  type TableExportFormat,
+  type TableExportScope,
+} from "@/components/table-page/export-utils"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
 import DetailLayout from "@/layouts/DetailLayout.vue"
 import { handleApiError } from "@/lib/api-errors"
@@ -86,6 +94,9 @@ const workOrdersErrorMessage = ref("")
 const workOrdersPageNum = ref(1)
 const workOrdersPageSize = ref(10)
 const workOrdersTotal = ref(0)
+const workOrdersSortPopoverOpen = ref(false)
+const workOrdersExportDialogOpen = ref(false)
+const workOrdersExporting = ref(false)
 let latestRequestId = 0
 let latestWorkOrdersRequestId = 0
 
@@ -95,6 +106,14 @@ const detailTabs = computed(() => [
   { id: "plans", label: "检测计划" },
   { id: "work-orders", label: "工单列表" },
 ])
+const detailHeaderTabs = computed(() => detailTabs.value.map(tab => ({
+  ...tab,
+  active: activeTab.value === tab.id,
+})))
+const detailToolbarButtonClass =
+  "inline-flex size-8 items-center justify-center rounded-md bg-transparent text-muted-foreground transition-colors hover:bg-surface-tertiary hover:text-foreground active:bg-surface-secondary"
+const detailToolbarButtonActiveClass =
+  "bg-transparent text-link hover:bg-surface-tertiary active:bg-surface-secondary"
 
 const fieldSections = computed<DetailFieldSection[]>(() => {
   if (!detail.value) {
@@ -299,15 +318,14 @@ const workOrdersSchema: TablePageSchema<InspectionServiceWorkOrderRow> = {
     initialDirection: "desc",
   },
   tabs: {
-    mode: "enum",
-    all: { label: "全部", value: "all" },
-    field: "statusLabel",
+    mode: "none",
   },
 }
 const workOrdersPage = useTablePage({
   ...createTablePageDefinition(workOrdersSchema),
   rows: workOrders,
 })
+const workOrdersAvailableExportFormats = [...SUPPORTED_TABLE_EXPORT_FORMATS]
 
 watch(inspectionServiceUuid, (uuid) => {
   void loadInspectionServiceDetail(uuid)
@@ -624,6 +642,68 @@ function formatWorkOrderScore(score: number | null) {
   return String(score)
 }
 
+function handleWorkOrdersToolbarAddSort() {
+  const sortFieldOptions = workOrdersPage.sortFieldOptions.value
+  if (!sortFieldOptions.length) {
+    return
+  }
+
+  if (!workOrdersPage.showControls.value) {
+    workOrdersPage.showControls.value = true
+  }
+
+  if (!workOrdersPage.customSortEnabled.value || !workOrdersPage.sortRules.value.length) {
+    const fallbackField = sortFieldOptions[0]?.value ?? ""
+    const unusedField = sortFieldOptions.find((option) => !workOrdersPage.sortRules.value.some((rule) => rule.field === option.value))?.value
+      ?? fallbackField
+    const fieldMeta = sortFieldOptions.find(option => option.value === unusedField)
+
+    const nextRule: SortRule = {
+      id: `sort-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      field: unusedField,
+      direction: fieldMeta?.kind === "metric" ? "desc" : "asc",
+    }
+
+    workOrdersPage.customSortEnabled.value = true
+    workOrdersPage.sortRules.value = [nextRule]
+  }
+
+  workOrdersSortPopoverOpen.value = !workOrdersSortPopoverOpen.value
+}
+
+function handleWorkOrdersExportConfirm(payload: { scope: TableExportScope; format: TableExportFormat }) {
+  if (workOrdersExporting.value) {
+    return
+  }
+
+  const exportRows = payload.scope === "selected"
+    ? workOrdersPage.selectedRows.value
+    : workOrdersPage.filteredRows.value
+
+  if (!exportRows.length) {
+    return
+  }
+
+  workOrdersExporting.value = true
+
+  try {
+    exportTableData({
+      title: detail.value?.Name ? `${detail.value.Name}-工单列表` : "工单列表",
+      columns: workOrdersPage.columns,
+      rows: exportRows,
+      format: payload.format,
+    })
+    workOrdersExportDialogOpen.value = false
+  } catch (error) {
+    handleApiError(error, {
+      title: "导出失败",
+      fallback: "导出失败，请稍后重试。",
+    })
+  } finally {
+    workOrdersExporting.value = false
+  }
+}
+
 function buildContactValue(name: string, phone?: string): DetailContactValue {
   return {
     kind: "contact",
@@ -642,7 +722,7 @@ function buildContactValue(name: string, phone?: string): DetailContactValue {
     class="detail-layout mx-auto flex min-h-0 w-full max-w-[1440px] min-w-0 flex-1 flex-col px-0 sm:px-4 xl:px-8"
   >
     <div class="sticky top-0 z-10 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80 sm:-mx-4">
-      <div class="px-4 py-5">
+      <div class="px-4 pt-5">
         <SectionHeader :title="detail.Name" :subtitle="detail.CustomerName" :has-actions="true">
           <template #actions>
             <Button variant="outline" size="sm" class="border-border/80 bg-background font-medium text-foreground shadow-none" @click="goBack">
@@ -651,15 +731,85 @@ function buildContactValue(name: string, phone?: string): DetailContactValue {
           </template>
         </SectionHeader>
 
-        <div class="mt-4">
-          <TopTabSwitch
-            :tabs="detailTabs"
-            :model-value="activeTab"
-            :collapse-inactive="false"
-            tone="default"
-            aria-label="检测服务详情页面切换"
-            @update:model-value="activeTab = $event as InspectionServiceDetailTab"
-          />
+        <div class="mt-4 flex min-w-0 flex-wrap items-end gap-x-6 gap-y-3 border-b border-border text-muted-foreground">
+          <nav class="flex min-w-0 flex-[999_1_24rem] flex-wrap items-center text-[14px]" aria-label="检测服务详情页面切换">
+            <button
+              v-for="tab in detailHeaderTabs"
+              :key="tab.id"
+              type="button"
+              :aria-pressed="tab.active"
+              :class="[
+                'group relative px-3 pb-[11px] text-muted-foreground transition-colors hover:text-foreground',
+                tab.active ? 'font-semibold text-foreground' : '',
+              ]"
+              @click="activeTab = tab.id as InspectionServiceDetailTab"
+            >
+              <span class="relative isolate inline-block">
+                <span class="pointer-events-none absolute -inset-x-2 -inset-y-1 rounded-md transition-colors group-hover:bg-surface-tertiary" />
+                <span class="relative z-10">{{ tab.label }}</span>
+              </span>
+              <span
+                v-if="tab.active"
+                class="absolute inset-x-0 bottom-0 h-0.5 bg-foreground"
+              />
+            </button>
+          </nav>
+
+          <div class="flex min-w-0 flex-[1_1_100%] flex-wrap items-center justify-end gap-1 pb-2 text-muted-foreground sm:flex-[0_0_auto] sm:flex-nowrap">
+            <button
+              type="button"
+              :class="[
+                detailToolbarButtonClass,
+                workOrdersPage.showControls.value ? detailToolbarButtonActiveClass : '',
+              ]"
+              @click="workOrdersPage.showControls.value = !workOrdersPage.showControls.value"
+            >
+              <i :class="['ri-filter-3-line text-[17px]', workOrdersPage.showControls.value ? 'text-link' : '']" />
+            </button>
+
+            <Popover :open="workOrdersSortPopoverOpen" @update:open="workOrdersSortPopoverOpen = $event">
+              <PopoverTrigger as-child>
+                <button
+                  type="button"
+                  :class="[
+                    detailToolbarButtonClass,
+                    workOrdersPage.customSortEnabled.value ? detailToolbarButtonActiveClass : '',
+                  ]"
+                  @click="handleWorkOrdersToolbarAddSort"
+                >
+                  <i :class="['ri-sort-asc text-[17px]', workOrdersPage.customSortEnabled.value ? 'text-link' : '']" />
+                </button>
+              </PopoverTrigger>
+
+              <PopoverContent
+                align="end"
+                :side-offset="10"
+                class="w-auto border-0 bg-transparent p-0 shadow-none"
+              >
+                <SortPopover
+                  :enabled="workOrdersPage.customSortEnabled.value"
+                  :rules="workOrdersPage.sortRules.value"
+                  :field-options="workOrdersPage.sortFieldOptions.value"
+                  @close="workOrdersSortPopoverOpen = false"
+                  @set-enabled="workOrdersPage.customSortEnabled.value = $event"
+                  @update-rules="workOrdersPage.sortRules.value = $event"
+                />
+              </PopoverContent>
+            </Popover>
+
+            <button type="button" :class="detailToolbarButtonClass">
+              <i class="ri-more-line text-base" />
+            </button>
+
+            <Button
+              variant="outline"
+              class="h-8 gap-1 px-3 text-[14px]"
+              @click="workOrdersExportDialogOpen = true"
+            >
+              <i class="ri-download-line text-base" />
+              导出
+            </Button>
+          </div>
         </div>
       </div>
     </div>
@@ -683,9 +833,7 @@ function buildContactValue(name: string, phone?: string): DetailContactValue {
         </div>
 
         <div v-else-if="workOrders.length" class="flex min-h-0 flex-1 flex-col">
-          <div class="sm:-mx-4 xl:-mx-8">
-            <TablePage :page="workOrdersPage" class="-mt-3" />
-          </div>
+          <TablePage :page="workOrdersPage" :show-toolbar-actions="false" class="-mt-3 sm:-mx-4 xl:-mx-8" />
 
           <div class="mt-auto flex items-center justify-end gap-3 px-4 pt-4 sm:px-0">
             <span class="text-sm text-muted-foreground">
@@ -733,14 +881,56 @@ function buildContactValue(name: string, phone?: string): DetailContactValue {
     </template>
 
     <template #headerBottom>
-      <TopTabSwitch
-        :tabs="detailTabs"
-        :model-value="activeTab"
-        :collapse-inactive="false"
-        tone="default"
-        aria-label="检测服务详情页面切换"
-        @update:model-value="activeTab = $event as InspectionServiceDetailTab"
-      />
+      <div class="flex min-w-0 flex-wrap items-end gap-x-6 gap-y-3 border-b border-border text-muted-foreground">
+        <nav class="flex min-w-0 flex-[999_1_24rem] flex-wrap items-center text-[14px]" aria-label="检测服务详情页面切换">
+          <button
+            v-for="tab in detailHeaderTabs"
+            :key="tab.id"
+            type="button"
+            :aria-pressed="tab.active"
+            :class="[
+              'group relative px-3 pb-[11px] text-muted-foreground transition-colors hover:text-foreground',
+              tab.active ? 'font-semibold text-foreground' : '',
+            ]"
+            @click="activeTab = tab.id as InspectionServiceDetailTab"
+          >
+            <span class="relative isolate inline-block">
+              <span class="pointer-events-none absolute -inset-x-2 -inset-y-1 rounded-md transition-colors group-hover:bg-surface-tertiary" />
+              <span class="relative z-10">{{ tab.label }}</span>
+            </span>
+            <span
+              v-if="tab.active"
+              class="absolute inset-x-0 bottom-0 h-0.5 bg-foreground"
+            />
+          </button>
+        </nav>
+
+        <div
+          aria-hidden="true"
+          class="invisible pointer-events-none flex min-w-0 flex-[1_1_100%] flex-wrap items-center justify-end gap-1 pb-2 text-muted-foreground sm:flex-[0_0_auto] sm:flex-nowrap"
+        >
+          <button type="button" :class="detailToolbarButtonClass">
+            <i class="ri-filter-3-line text-[17px]" />
+          </button>
+
+          <button type="button" :class="detailToolbarButtonClass">
+            <i class="ri-sort-asc text-[17px]" />
+          </button>
+
+          <button type="button" :class="detailToolbarButtonClass">
+            <i class="ri-more-line text-base" />
+          </button>
+
+          <Button
+            variant="outline"
+            class="h-8 gap-1 px-3 text-[14px]"
+            tabindex="-1"
+          >
+            <i class="ri-download-line text-base" />
+            导出
+          </Button>
+        </div>
+      </div>
     </template>
 
     <template #primary>
@@ -775,4 +965,18 @@ function buildContactValue(name: string, phone?: string): DetailContactValue {
       </div>
     </template>
   </DetailLayout>
+
+  <ExportTableDialog
+    :open="workOrdersExportDialogOpen"
+    table-title="工单列表"
+    :selected-rows-count="workOrdersPage.selectedRowsCount.value"
+    :current-page-rows-count="workOrdersPage.currentPageRowsCount.value"
+    :filtered-rows-count="workOrdersPage.filteredRowsCount.value"
+    :total-rows-count="workOrdersPage.totalRowsCount.value"
+    :current-filters-summary="workOrdersPage.activeFilterSummary.value"
+    :is-exporting="workOrdersExporting"
+    :available-formats="workOrdersAvailableExportFormats"
+    @update:open="workOrdersExportDialogOpen = $event"
+    @confirm="handleWorkOrdersExportConfirm"
+  />
 </template>
