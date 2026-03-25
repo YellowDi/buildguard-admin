@@ -26,7 +26,7 @@ const emit = defineEmits<{
 }>()
 
 const COLLAPSED_TAB_WIDTH = 32
-const LABEL_ONLY_TAB_MIN_WIDTH = 72
+const LABEL_ONLY_TAB_MIN_WIDTH = 0
 
 const measureRefs = ref<Array<HTMLElement | null>>([])
 const measuredWidths = ref<number[]>([])
