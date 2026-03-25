@@ -79,6 +79,14 @@ export function useCurrentUser() {
   }
 }
 
+export function clearCurrentUser() {
+  hasLoaded.value = false
+  error.value = null
+  isLoading.value = false
+  pendingRequest = null
+  resetCurrentUser()
+}
+
 function applyCurrentUser(profile: CurrentUserInfoResult) {
   const employee = profile.EmployeeInfo
   const customer = profile.CustomerInfo

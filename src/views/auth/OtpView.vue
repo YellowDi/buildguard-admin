@@ -46,10 +46,10 @@ function handleSubmit() {
           <Card class="border-none bg-transparent shadow-none">
             <CardHeader class="px-0 text-center">
               <CardTitle class="text-2xl">
-                输入验证码
+                验证码登录未接入
               </CardTitle>
               <CardDescription>
-                验证码已发送至{{ phone || "你的手机号" }}
+                当前后台管理平台使用手机号和密码登录。{{ phone ? `你输入的手机号是 ${phone}。` : "" }}
               </CardDescription>
             </CardHeader>
             <CardContent class="px-0">
@@ -70,11 +70,13 @@ function handleSubmit() {
                   </div>
 
                   <Button type="submit" class="w-full">
-                    验证并登录
+                    暂不可用
                   </Button>
 
-                  <Button type="button" variant="outline" class="w-full">
-                    重新发送验证码
+                  <Button type="button" variant="outline" class="w-full" as-child>
+                    <RouterLink to="/login">
+                      返回密码登录
+                    </RouterLink>
                   </Button>
                 </div>
 

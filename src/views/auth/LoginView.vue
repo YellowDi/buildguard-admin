@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { reactive } from "vue"
+import { reactive, ref } from "vue"
 import { useRouter } from "vue-router"
+import { toast } from "vue-sonner"
 
 import loginVisual from "@/assets/auth-login-visual.svg"
 import BrandLogo from "@/components/layout/BrandLogo.vue"
@@ -13,20 +14,49 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import { clearCurrentUser, loadCurrentUser } from "@/composables/useCurrentUser"
+import { login } from "@/lib/auth-api"
+import { setAuthToken } from "@/lib/auth"
 
 const router = useRouter()
 
 const form = reactive({
-  phone: "",
+  account: "",
+  password: "",
 })
+const isSubmitting = ref(false)
 
-function handleSubmit() {
-  router.push({
-    name: "otp",
-    query: {
-      phone: form.phone,
-    },
-  })
+async function handleSubmit() {
+  if (isSubmitting.value) {
+    return
+  }
+
+  isSubmitting.value = true
+
+  try {
+    const { token } = await login({
+      Account: form.account,
+      Password: form.password,
+    })
+
+    setAuthToken(token)
+    clearCurrentUser()
+    await loadCurrentUser({ force: true })
+
+    const { redirect } = router.currentRoute.value.query
+
+    await router.replace(
+      typeof redirect === "string" && redirect.trim()
+        ? redirect
+        : { name: "dashboard" },
+    )
+  } catch (error) {
+    toast.error("登录失败", {
+      description: error instanceof Error ? error.message : "请检查手机号或稍后重试。",
+    })
+  } finally {
+    isSubmitting.value = false
+  }
 }
 </script>
 
@@ -48,43 +78,44 @@ function handleSubmit() {
           <Card class="border-none bg-transparent shadow-none">
             <CardHeader class="px-0 text-center">
               <CardTitle class="text-2xl">
-                手机号登录
+                后台登录
               </CardTitle>
               <CardDescription>
-                输入手机号以获取短信验证码
+                使用手机号或用户名加密码登录后台管理平台
               </CardDescription>
             </CardHeader>
             <CardContent class="px-0">
               <form class="grid gap-6" @submit.prevent="handleSubmit">
                 <div class="grid gap-6">
                   <div class="grid gap-2">
-                    <label class="text-sm font-medium" for="phone">手机号码</label>
+                    <label class="text-sm font-medium" for="account">账户</label>
                     <Input
-                      id="phone"
-                      v-model="form.phone"
-                      type="tel"
-                      inputmode="tel"
-                      placeholder="请输入手机号码"
-                      autocomplete="tel"
+                      id="account"
+                      v-model="form.account"
+                      type="text"
+                      inputmode="text"
+                      placeholder="请输入手机号或用户名"
+                      autocomplete="username"
                       required
                     />
                   </div>
 
-                  <Button type="submit" class="w-full">
-                    获取验证码
+                  <div class="grid gap-2">
+                    <label class="text-sm font-medium" for="password">密码</label>
+                    <Input
+                      id="password"
+                      v-model="form.password"
+                      type="password"
+                      placeholder="请输入密码"
+                      autocomplete="current-password"
+                      required
+                    />
+                  </div>
+
+                  <Button type="submit" class="w-full" :disabled="isSubmitting">
+                    {{ isSubmitting ? "登录中..." : "登录" }}
                   </Button>
 
-                  <Button type="button" variant="outline" class="w-full">
-                    <i class="ri-github-line text-base" />
-                    使用 GitHub 登录
-                  </Button>
-                </div>
-
-                <div class="text-center text-sm">
-                  还没有账户？
-                  <RouterLink to="/signup" class="underline underline-offset-4">
-                    立即注册
-                  </RouterLink>
                 </div>
               </form>
             </CardContent>

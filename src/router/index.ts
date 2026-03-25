@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from "vue-router"
 
 import { beginRouteLoading, endRouteLoading, type RouteLoadingKind } from "@/composables/useRouteLoadingState"
+import { isAuthenticated } from "@/lib/auth"
 import AppShellLayout from "@/layouts/AppShellLayout.vue"
 
 type BreadcrumbMetaItem = {
@@ -287,6 +288,26 @@ function resolveRouteLoadingKind(value: unknown): RouteLoadingKind {
 }
 
 router.beforeEach((to) => {
+  const isAuthRoute = to.name === "login" || to.name === "signup" || to.name === "otp"
+  const authenticated = isAuthenticated()
+
+  if (!authenticated && !isAuthRoute) {
+    return {
+      name: "login",
+      query: {
+        redirect: to.fullPath,
+      },
+    }
+  }
+
+  if (authenticated && isAuthRoute) {
+    const redirect = typeof to.query.redirect === "string" && to.query.redirect.trim()
+      ? to.query.redirect
+      : "/"
+
+    return redirect
+  }
+
   beginRouteLoading(resolveRouteLoadingKind(to.meta.loading))
 })
 

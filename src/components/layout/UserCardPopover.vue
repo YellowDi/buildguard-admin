@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue"
+import { useRouter } from "vue-router"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
@@ -11,10 +12,12 @@ import {
 import { useSidebar } from "@/components/ui/sidebar"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAppTheme } from "@/composables/useAppTheme"
-import { useCurrentUser } from "@/composables/useCurrentUser"
+import { clearCurrentUser, useCurrentUser } from "@/composables/useCurrentUser"
 import { useSettingsDialog } from "@/composables/useSettingsDialog"
+import { clearAuthToken } from "@/lib/auth"
 import { cn } from "@/lib/utils"
 
+const router = useRouter()
 const { state } = useSidebar()
 const { themeMode, themeOptions } = useAppTheme()
 const { openSettingsDialog } = useSettingsDialog()
@@ -58,7 +61,10 @@ watch(state, (value) => {
 })
 
 function handleLogout() {
-  // TODO: 实现登出逻辑
+  open.value = false
+  clearAuthToken()
+  clearCurrentUser()
+  void router.replace({ name: "login" })
 }
 
 function handleOpenSettings() {
