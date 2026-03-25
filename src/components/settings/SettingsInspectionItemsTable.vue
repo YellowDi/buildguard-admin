@@ -28,6 +28,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import TablePageTable from "@/components/table-page/TablePageTable.vue"
 import type { TableColumn, TablePageEmptyState } from "@/components/table-page/types"
@@ -151,6 +158,10 @@ const categoryTabs = computed(() => {
       })),
   ]
 })
+
+const categoryOptions = computed(() => categoryTabs.value
+  .filter(tab => tab.id !== "all")
+  .map(tab => tab.label))
 
 const categoryFilteredRows = computed(() => {
   if (activeCategoryTab.value === "all") {
@@ -579,7 +590,7 @@ function asInspectionItemRow(row: Record<string, unknown>) {
           </DialogDescription>
         </DialogHeader>
 
-        <form class="grid gap-4 py-2" @submit.prevent="submitCreate">
+        <form class="grid gap-4" @submit.prevent="submitCreate">
           <div class="grid gap-4 sm:grid-cols-2">
             <div class="grid gap-2">
               <label class="text-sm font-medium text-foreground" for="create-inspection-name">检测项名称</label>
@@ -588,7 +599,20 @@ function asInspectionItemRow(row: Record<string, unknown>) {
 
             <div class="grid gap-2">
               <label class="text-sm font-medium text-foreground" for="create-inspection-category">所属分类</label>
-              <Input id="create-inspection-category" v-model="createForm.categoryName" placeholder="例如：消防设施" />
+              <Select v-model="createForm.categoryName">
+                <SelectTrigger id="create-inspection-category" class="w-full">
+                  <SelectValue placeholder="选择所属分类" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem
+                    v-for="option in categoryOptions"
+                    :key="option"
+                    :value="option"
+                  >
+                    {{ option }}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
@@ -638,7 +662,7 @@ function asInspectionItemRow(row: Record<string, unknown>) {
           </p>
         </DialogHeader>
 
-        <form class="grid gap-4 py-2" @submit.prevent="submitEdit">
+        <form class="grid gap-4" @submit.prevent="submitEdit">
           <div class="grid gap-4 sm:grid-cols-2">
             <div class="grid gap-2">
               <label class="text-sm font-medium text-foreground" for="edit-inspection-name">检测项名称</label>
@@ -647,7 +671,20 @@ function asInspectionItemRow(row: Record<string, unknown>) {
 
             <div class="grid gap-2">
               <label class="text-sm font-medium text-foreground" for="edit-inspection-category">所属分类</label>
-              <Input id="edit-inspection-category" v-model="editForm.categoryName" :disabled="editDetailLoading" placeholder="例如：消防设施" />
+              <Select v-model="editForm.categoryName" :disabled="editDetailLoading">
+                <SelectTrigger id="edit-inspection-category" class="w-full">
+                  <SelectValue placeholder="选择所属分类" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem
+                    v-for="option in categoryOptions"
+                    :key="option"
+                    :value="option"
+                  >
+                    {{ option }}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 

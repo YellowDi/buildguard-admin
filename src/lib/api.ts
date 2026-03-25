@@ -1,3 +1,4 @@
+// Backend dev base URL: http://192.168.2.4:8000
 const DEFAULT_API_BASE_URL = "http://127.0.0.1:4523/m1/7931435-7683186-default"
 const DEFAULT_API_DEVICE = "background"
 const TOKEN_STORAGE_KEYS = ["token", "access_token", "auth_token", "Authorization", "authorization"] as const
