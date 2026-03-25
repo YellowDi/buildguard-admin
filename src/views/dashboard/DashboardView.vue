@@ -27,6 +27,9 @@ import {
 import alarmArchivesData from "@/mocks/alarm-archives.json"
 import alarmQueriesData from "@/mocks/alarm-queries.json"
 import companiesData from "@/mocks/companies.json"
+import customersData from "@/mocks/customers.json"
+import inspectionPlansData from "@/mocks/inspection-plans.json"
+import parksData from "@/mocks/parks.json"
 import usersData from "@/mocks/users.json"
 
 type TimeRange = "7d" | "3d" | "1d"
@@ -54,7 +57,22 @@ type AlarmArchiveRecord = {
   archiveStatus: string
 }
 
+type CustomerRecord = {
+  packageCode: string
+}
+
+type ParkRecord = {
+  buildingCount: number
+}
+
+type InspectionPlanRecord = {
+  status: string
+}
+
 const companyRecords = companiesData as CompanyRecord[]
+const customerRecords = customersData as CustomerRecord[]
+const inspectionPlanRecords = inspectionPlansData as InspectionPlanRecord[]
+const parkRecords = parksData as ParkRecord[]
 const userRecords = usersData as UserRecord[]
 const alarmQueryRecords = alarmQueriesData as AlarmQueryRecord[]
 const alarmArchiveRecords = alarmArchivesData as AlarmArchiveRecord[]
@@ -240,25 +258,35 @@ const districtEnterpriseChartConfig = {
 } satisfies ChartConfig
 
 const numberFormatter = new Intl.NumberFormat("zh-CN")
+const totalParkCount = parkRecords.length
+const totalBuildingCount = parkRecords.reduce((sum, item) => sum + item.buildingCount, 0)
+const signedContractCount = customerRecords.filter(item => item.packageCode).length
+const activeInspectionPlanCount = inspectionPlanRecords.filter(item => item.status === "进行中").length
 
 const statsCards = [
   {
-    title: "纳管企业",
-    value: `${numberFormatter.format(companyRecords.length)} 家`,
-    detail: "当前已接入运输企业台账",
-    highlight: `${companyRecords.filter(item => item.type.includes("旅客")).length} 家客运企业`,
+    title: "平台客户总数",
+    value: `${numberFormatter.format(customerRecords.length)} 家`,
+    detail: "当前平台已签约并接入的客户数量",
+    highlight: `${numberFormatter.format(customerRecords.length)} 家客户正常服务中`,
   },
   {
-    title: "在册车辆",
-    value: `${numberFormatter.format(companyRecords.reduce((sum, item) => sum + item.vehicles, 0))} 辆`,
-    detail: "企业名下客运与危货车辆总量",
-    highlight: `${numberFormatter.format(companyRecords.filter(item => item.type.includes("危")).reduce((sum, item) => sum + item.vehicles, 0))} 辆危货车辆`,
+    title: "空间覆盖",
+    value: `${numberFormatter.format(totalParkCount)} 个园区`,
+    detail: "当前平台已接入的园区与建筑空间范围",
+    highlight: `${numberFormatter.format(totalParkCount)} 个园区 / ${numberFormatter.format(totalBuildingCount)} 栋建筑`,
   },
   {
-    title: "待复核预警",
-    value: `${numberFormatter.format(alarmQueryRecords.filter(item => item.status === "待复核").length)} 条`,
-    detail: "当前仍需人工复核的报警事件",
-    highlight: `${alarmQueryRecords.filter(item => item.riskLevel === "高").length} 条高风险预警`,
+    title: "签约合同总数",
+    value: `${numberFormatter.format(signedContractCount)} 份`,
+    detail: "按已签约客户套餐统计合同总量",
+    highlight: `${numberFormatter.format(signedContractCount)} 份合同已完成签约归档`,
+  },
+  {
+    title: "检测计划（执行中）",
+    value: `${numberFormatter.format(activeInspectionPlanCount)} 个`,
+    detail: "当前状态为进行中的检测计划数量",
+    highlight: `${numberFormatter.format(inspectionPlanRecords.length)} 个检测计划已纳入排期`,
   },
 ] as const
 
@@ -289,7 +317,7 @@ function formatShortDate(date: number | Date, locale = "zh-CN") {
 
 <template>
   <div class="flex flex-col gap-4">
-    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+    <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <div
         v-for="stat in statsCards"
         :key="stat.title"
