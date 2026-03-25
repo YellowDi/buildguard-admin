@@ -4,7 +4,7 @@ import { useRoute, useRouter } from "vue-router"
 
 import DetailFieldSections from "@/components/detail/DetailFieldSections.vue"
 import DetailRelationModule from "@/components/detail/DetailRelationModule.vue"
-import type { DetailFieldSection, DetailRelationModuleSchema } from "@/components/detail/types"
+import type { DetailContactValue, DetailFieldSection, DetailRelationModuleSchema } from "@/components/detail/types"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
@@ -46,7 +46,7 @@ const fieldSections = computed<DetailFieldSection[]>(() => {
         { key: "built-time", label: "建成时间", value: toText(current.BuiltTime, "-") },
         { key: "operation-time", label: "投运时间", value: toText(current.OperationTime, "-") },
         { key: "building-area", label: "建筑面积", value: toText(current.BuildingArea, "-") },
-        { key: "contact", label: "联系人", value: `${toText(current.ContactPerson, "未填写")} ${toText(current.ContactPhone, "-")}` },
+        { key: "contact", label: "联系人", value: buildContactValue(toText(current.ContactPerson, "未填写"), toText(current.ContactPhone, "-")) },
         { key: "address", label: "地址", value: toText(current.Address, "-"), truncate: false, valueClass: "leading-6" },
       ],
     },
@@ -163,6 +163,14 @@ function toOptionalText(value: unknown) {
   }
 
   return null
+}
+
+function buildContactValue(name: string | null, phone?: string | null): DetailContactValue {
+  return {
+    kind: "contact",
+    name: name ?? "未填写",
+    phone,
+  }
 }
 </script>
 

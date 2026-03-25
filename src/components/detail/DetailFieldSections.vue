@@ -2,7 +2,7 @@
 import { computed } from "vue"
 
 import { Separator } from "@/components/ui/separator"
-import type { DetailFieldSection } from "@/components/detail/types"
+import type { DetailContactValue, DetailFieldSection, DetailFieldValue } from "@/components/detail/types"
 import { cn } from "@/lib/utils"
 
 // 左侧“普通字段详情”模块。
@@ -23,9 +23,13 @@ const sectionStyle = computed(() => ({
   "--detail-field-label-desktop": props.labelWidthDesktop,
 }))
 
-function displayValue(value: string | number | null | undefined) {
+function displayValue(value: DetailFieldValue) {
   if (value === null || value === undefined || value === "") return "—"
   return `${value}`
+}
+
+function isContactValue(value: DetailFieldValue): value is DetailContactValue {
+  return Boolean(value && typeof value === "object" && "kind" in value && value.kind === "contact")
 }
 </script>
 
@@ -44,7 +48,13 @@ function displayValue(value: string | number | null | undefined) {
           >
             <div class="detail-field-row__label">{{ row.label }}</div>
             <div :class="cn('detail-field-row__value', row.truncate !== false && 'truncate', row.valueClass)">
-              {{ displayValue(row.value) }}
+              <template v-if="isContactValue(row.value)">
+                <span>{{ row.value.name || "未填写" }}</span>
+                <span v-if="row.value.phone" class="ml-2 text-muted-foreground">{{ row.value.phone }}</span>
+              </template>
+              <template v-else>
+                {{ displayValue(row.value) }}
+              </template>
             </div>
           </div>
         </div>

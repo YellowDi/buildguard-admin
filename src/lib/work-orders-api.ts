@@ -35,6 +35,7 @@ export type WorkOrdersListResult = {
 }
 
 export type ListWorkOrdersPayload = {
+  PackageName?: string
   PageNum?: number
   PageSize?: number
   [property: string]: unknown
@@ -45,6 +46,7 @@ const WORK_ORDERS_LOAD_ERROR_MESSAGE = "工单列表加载失败，请稍后重�
 
 export async function fetchWorkOrders(payload: ListWorkOrdersPayload = {}): Promise<WorkOrdersListResult> {
   const normalizedPayload = {
+    PackageName: getOptionalString(payload.PackageName),
     PageNum: getOptionalNumber(payload.PageNum, "PageNum"),
     PageSize: getOptionalNumber(payload.PageSize, "PageSize"),
   }
@@ -144,4 +146,21 @@ function getOptionalNumber(value: unknown, fieldName: string) {
   }
 
   return value
+}
+
+function getOptionalString(value: unknown) {
+  if (value === undefined || value === null) {
+    return undefined
+  }
+
+  if (typeof value === "string") {
+    const normalized = value.trim()
+    return normalized || undefined
+  }
+
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return String(value)
+  }
+
+  throw new TypeError("String field must be a string or number.")
 }

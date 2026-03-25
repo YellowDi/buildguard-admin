@@ -44,6 +44,11 @@ export type InspectionServicesListResult = {
   total: number
 }
 
+export type InspectionServiceDetailPayload = {
+  Uuid?: string
+  [property: string]: unknown
+}
+
 export type ListInspectionServicesPayload = {
   Name?: string
   CustomerUuid?: string
@@ -54,7 +59,9 @@ export type ListInspectionServicesPayload = {
 }
 
 const INSPECTION_SERVICES_API_URL = buildApiUrl(API_PATHS.inspectionServicesList)
+const INSPECTION_SERVICE_DETAIL_API_URL = buildApiUrl(API_PATHS.inspectionServiceDetail)
 const INSPECTION_SERVICES_LOAD_ERROR_MESSAGE = "检测服务列表加载失败，请稍后重试。"
+const INSPECTION_SERVICE_DETAIL_ERROR_MESSAGE = "检测服务详情加载失败，请稍后重试。"
 
 export async function fetchInspectionServices(
   payload: ListInspectionServicesPayload = {},
@@ -86,6 +93,27 @@ export async function fetchInspectionServices(
     list: list.map(item => normalizeInspectionServiceListItem(item)),
     total: extractTotal(responsePayload, list.length),
   }
+}
+
+export async function fetchInspectionServiceDetail(
+  payload: InspectionServiceDetailPayload,
+): Promise<InspectionServiceListItem> {
+  const url = new URL(INSPECTION_SERVICE_DETAIL_API_URL)
+  const uuid = getRequiredString(payload.Uuid, "Uuid")
+
+  url.searchParams.set("Uuid", uuid)
+
+  const response = await fetch(url.toString(), {
+    method: "GET",
+    headers: buildApiHeaders(),
+  })
+  const responseBody = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responseBody, INSPECTION_SERVICE_DETAIL_ERROR_MESSAGE)
+  }
+
+  return normalizeInspectionServiceListItem(extractDetailRecord(responseBody))
 }
 
 function extractList(payload: InspectionServicesListEnvelope | unknown[]) {
@@ -159,6 +187,20 @@ function normalizeInspectionServiceListItem(value: unknown): InspectionServiceLi
   }
 }
 
+function extractDetailRecord(value: unknown) {
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>
+
+    if (record.data && typeof record.data === "object") {
+      return record.data
+    }
+
+    return record
+  }
+
+  return {}
+}
+
 function getOptionalNumber(value: unknown, fieldName: string) {
   if (value === undefined || value === null || value === "") {
     return undefined
@@ -186,4 +228,14 @@ function getOptionalString(value: unknown) {
   }
 
   throw new TypeError("String field must be a string or number.")
+}
+
+function getRequiredString(value: unknown, fieldName: string) {
+  const normalized = getOptionalString(value)
+
+  if (!normalized) {
+    throw new TypeError(`${fieldName} is required.`)
+  }
+
+  return normalized
 }

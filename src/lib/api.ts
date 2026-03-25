@@ -20,6 +20,7 @@ export const API_PATHS = {
   currentUserInfo: "/bqi/user/info",
   inspectionItemsList: "/bqi/inspection/list",
   inspectionServicesList: "/bqi/inspection/service/list",
+  inspectionServiceDetail: "/bqi/inspection/service/detail",
   inspectionItemCreate: "/bqi/inspection/new",
   inspectionItemDetail: "/bqi/inspection/detail",
   inspectionItemUpdate: "/bqi/inspection/update",

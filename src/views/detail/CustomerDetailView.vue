@@ -5,7 +5,7 @@ import { useRoute, useRouter } from "vue-router"
 import DetailAccordionModule from "@/components/detail/DetailAccordionModule.vue"
 import DetailFieldSections from "@/components/detail/DetailFieldSections.vue"
 import DetailRelationModule from "@/components/detail/DetailRelationModule.vue"
-import type { DetailFieldSection, DetailRelationModuleSchema } from "@/components/detail/types"
+import type { DetailContactValue, DetailFieldSection, DetailRelationModuleSchema } from "@/components/detail/types"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
@@ -369,7 +369,15 @@ function createContactFieldRow(person: CustomerDetailPerson, index: number) {
   return {
     key: `contact-${index + 1}`,
     label: resolveContactRole(person.IsMain, index),
-    value: `${name} ${phone}`,
+    value: buildContactValue(name, phone),
+  }
+}
+
+function buildContactValue(name: string, phone?: string): DetailContactValue {
+  return {
+    kind: "contact",
+    name,
+    phone,
   }
 }
 

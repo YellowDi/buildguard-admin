@@ -4,7 +4,7 @@ import { useRoute, useRouter } from "vue-router"
 
 import DetailFieldSections from "@/components/detail/DetailFieldSections.vue"
 import DetailRelationModule from "@/components/detail/DetailRelationModule.vue"
-import type { DetailFieldSection, DetailRelationModuleSchema } from "@/components/detail/types"
+import type { DetailContactValue, DetailFieldSection, DetailRelationModuleSchema } from "@/components/detail/types"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
@@ -142,7 +142,7 @@ const fieldSections = computed<DetailFieldSection[]>(() => {
       key: "contacts",
       title: "企业联系人",
       rows: [
-        { key: "legal-contact", label: "法人", value: `${c.legalPerson} ${c.phone}` },
+        { key: "legal-contact", label: "法人", value: buildContactValue(c.legalPerson, c.phone) },
       ],
     },
   ]
@@ -243,6 +243,14 @@ const employeeModule = computed<DetailRelationModuleSchema<EmployeeRelationRow>>
   ],
   groups: employeeGroups.value,
 }))
+
+function buildContactValue(name: string, phone?: string): DetailContactValue {
+  return {
+    kind: "contact",
+    name,
+    phone,
+  }
+}
 
 function goBack() {
   router.push({ name: "companies" })

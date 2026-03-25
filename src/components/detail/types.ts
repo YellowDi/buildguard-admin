@@ -1,6 +1,12 @@
 // 详情页 schema 类型。
 // 约定页面层只负责把 JSON / 接口结果转成这些结构，组件层不直接感知数据来源。
-export type DetailFieldValue = string | number | null | undefined
+export type DetailContactValue = {
+  kind: "contact"
+  name: string
+  phone?: string | null
+}
+
+export type DetailFieldValue = string | number | DetailContactValue | null | undefined
 
 export type DetailFieldRow = {
   key: string

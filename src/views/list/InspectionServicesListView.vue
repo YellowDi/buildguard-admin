@@ -35,6 +35,9 @@ type InspectionServiceRecord = {
   Name: string
   Level: string
   CustomerName: string
+  ExpireAt: string
+  ServiceStatus: string
+  InspectionQuota: string
   ParkName: string
   BuildName: string
   ParkNames: string[]
@@ -116,12 +119,43 @@ const schema: TablePageSchema<InspectionServiceRecord> = {
     },
     {
       key: "CustomerName",
-      label: "所属客户",
+      label: "客户名称",
       filterType: "text",
       filter: {
         type: "text",
         placeholder: "输入客户名称",
         defaultVisible: true,
+      },
+      sort: true,
+    },
+    {
+      key: "ExpireAt",
+      label: "到期时间",
+      filterType: "time",
+      format: "numeric",
+      filter: {
+        type: "date",
+      },
+      sort: true,
+    },
+    {
+      key: "ServiceStatus",
+      label: "服务状态",
+      filterType: "text",
+      slot: "cell-ServiceStatus",
+      filter: {
+        type: "text",
+        placeholder: "输入服务状态",
+      },
+      sort: true,
+    },
+    {
+      key: "InspectionQuota",
+      label: "套餐总检测次数/剩余次数",
+      filterType: "text",
+      filter: {
+        type: "text",
+        placeholder: "输入检测次数",
       },
       sort: true,
     },
@@ -195,6 +229,9 @@ function buildPageFilterText(row: InspectionServiceRecord) {
     row.Name,
     row.Level,
     row.CustomerName,
+    row.ExpireAt,
+    row.ServiceStatus,
+    row.InspectionQuota,
     row.ParkName,
     row.BuildName,
     row.CreatedAt,
@@ -264,6 +301,12 @@ function normalizeInspectionServiceRecord(item: InspectionServiceListItem, index
     Name: toText(item.Name, "未命名服务"),
     Level: toText(item.Level, "未分级"),
     CustomerName: toText(item.CustomerName, "未绑定客户"),
+    ExpireAt: getFirstText(item, ["ExpireAt", "ExpiredAt", "EndAt", "ServiceEndAt", "PackageExpireAt", "DueAt"], "-"),
+    ServiceStatus: getFirstText(item, ["ServiceStatusLabel", "ServiceStatus", "StatusLabel", "StatusName", "Status"], "-"),
+    InspectionQuota: formatInspectionQuota(
+      getFirstText(item, ["TotalInspectionCount", "InspectionTotalCount", "PackageTotalInspectionCount", "TotalCount"]),
+      getFirstText(item, ["RemainInspectionCount", "RemainingInspectionCount", "PackageRemainInspectionCount", "RemainCount"]),
+    ),
     ParkName: parkNames.length ? parkNames.join("、") : "-",
     BuildName: buildNames.length ? buildNames.join("、") : "-",
     ParkNames: parkNames.length ? parkNames : ["-"],
@@ -297,6 +340,30 @@ function uniqueText(values: string[]) {
   return Array.from(new Set(values.map(value => value.trim()).filter(Boolean)))
 }
 
+function getFirstText(
+  record: Record<string, unknown>,
+  keys: string[],
+  fallback = "",
+) {
+  for (const key of keys) {
+    const value = toText(record[key])
+
+    if (value) {
+      return value
+    }
+  }
+
+  return fallback
+}
+
+function formatInspectionQuota(total: string, remaining: string) {
+  if (!total && !remaining) {
+    return "- / -"
+  }
+
+  return `${total || "-"} / ${remaining || "-"}`
+}
+
 function getParkBuildCount(row: unknown, index: number) {
   if (!row || typeof row !== "object" || !("ParkBuildCounts" in row) || !Array.isArray(row.ParkBuildCounts)) {
     return 0
@@ -325,6 +392,14 @@ function getBuildNamesByPark(row: unknown, parkName: string) {
   )
 }
 
+function getRowServiceStatus(row: unknown) {
+  if (!row || typeof row !== "object" || !("ServiceStatus" in row)) {
+    return "-"
+  }
+
+  return toText(row.ServiceStatus, "-")
+}
+
 function countUniqueBuildsByPark(builds: NonNullable<InspectionServiceListItem["Builds"]>, parkName: string) {
   return uniqueText(
     builds
@@ -332,6 +407,21 @@ function countUniqueBuildsByPark(builds: NonNullable<InspectionServiceListItem["
       .map(build => toText(build.BuildName))
       .filter(Boolean),
   ).length
+}
+
+const serviceStatusMap = {
+  待签署: { tone: "gray", icon: "clock" },
+  已签署: { tone: "blue", icon: "check" },
+  进行中: { tone: "orange", icon: "clock" },
+  已结单: { tone: "green", icon: "check" },
+} as const
+
+function getServiceStatusTone(status: string) {
+  return serviceStatusMap[status as keyof typeof serviceStatusMap]?.tone ?? "gray"
+}
+
+function getServiceStatusIcon(status: string) {
+  return serviceStatusMap[status as keyof typeof serviceStatusMap]?.icon ?? "minus"
 }
 
 function toText(value: unknown, fallback = "") {
@@ -366,6 +456,25 @@ function toText(value: unknown, fallback = "") {
 
     <TooltipProvider>
       <TablePage :page="page">
+        <template #cell-ServiceStatus="{ row }">
+          <span
+            :class="[
+              'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
+              getRowServiceStatus(row) === '待签署'
+                ? 'bg-slate-100 text-slate-700'
+                : getRowServiceStatus(row) === '已签署'
+                  ? 'bg-blue-100 text-blue-700'
+                  : getRowServiceStatus(row) === '进行中'
+                    ? 'bg-orange-100 text-orange-700'
+                    : getRowServiceStatus(row) === '已结单'
+                      ? 'bg-green-100 text-green-700'
+                      : 'bg-muted text-muted-foreground',
+            ]"
+          >
+            {{ getRowServiceStatus(row) }}
+          </span>
+        </template>
+
         <template #cell-ParkName="{ row }">
           <div class="flex flex-nowrap gap-1.5 overflow-x-auto whitespace-nowrap">
             <Tooltip v-for="(parkName, index) in row.ParkNames" :key="`${row.uuid}-park-${index}`">

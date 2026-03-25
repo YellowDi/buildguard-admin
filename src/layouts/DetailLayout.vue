@@ -14,11 +14,15 @@ const props = withDefaults(defineProps<{
   empty?: boolean
   emptyText?: string
   backLabel?: string
+  secondaryVisible?: boolean
+  fullWidth?: boolean
 }>(), {
   subtitle: "",
   empty: false,
   emptyText: "未找到相关信息",
   backLabel: "返回列表",
+  secondaryVisible: true,
+  fullWidth: false,
 })
 
 const emit = defineEmits<{
@@ -26,11 +30,16 @@ const emit = defineEmits<{
 }>()
 
 const slots = useSlots()
-const hasSecondary = computed(() => Boolean(slots.secondary))
+const hasSecondary = computed(() => Boolean(slots.secondary) && props.secondaryVisible)
 </script>
 
 <template>
-  <section class="detail-layout mx-auto flex w-full max-w-[1440px] min-w-0 flex-1 flex-col px-0 pb-8 sm:px-4 sm:pb-10 xl:px-8">
+  <section
+    :class="[
+      'detail-layout mx-auto flex w-full min-w-0 flex-1 flex-col px-0 pb-8 sm:px-4 sm:pb-10 xl:px-8',
+      props.fullWidth ? 'max-w-none' : 'max-w-[1440px]',
+    ]"
+  >
     <template v-if="!props.empty">
       <div class="sticky top-0 z-10 -mx-0 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80 sm:-mx-4">
         <div class="px-4 py-5">
@@ -63,7 +72,7 @@ const hasSecondary = computed(() => Boolean(slots.secondary))
     </template>
 
     <template v-else>
-      <div class="mx-auto w-full max-w-[1440px] min-w-0">
+      <div :class="['mx-auto w-full min-w-0', props.fullWidth ? 'max-w-none' : 'max-w-[1440px]']">
         <div class="flex flex-1 items-center justify-center py-16 text-muted-foreground">
           <slot name="empty">
             <p>{{ props.emptyText }}</p>
