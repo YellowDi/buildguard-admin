@@ -3,7 +3,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 </script>
 
 <template>
-  <section class="detail-layout mx-auto flex w-full max-w-[1440px] min-w-0 flex-1 flex-col px-0 pb-8 sm:px-4 sm:pb-10 xl:px-8">
+  <section class="detail-layout mx-auto flex w-full max-w-[1440px] min-w-0 flex-1 flex-col px-0 sm:px-4 xl:px-8">
     <div class="sticky top-0 z-10 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80 sm:-mx-4">
       <div class="px-4 py-5">
         <div class="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
@@ -16,7 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton"
       </div>
     </div>
 
-    <div class="grid min-h-0 flex-1 grid-cols-1 gap-8 px-0 py-5 xl:grid-cols-[minmax(0,1.2fr)_minmax(20rem,0.8fr)]">
+    <div class="grid min-h-0 flex-1 grid-cols-1 gap-8 px-0 xl:grid-cols-[minmax(0,1.2fr)_minmax(20rem,0.8fr)]">
       <div class="min-w-0">
         <div
           v-for="section in 2"

@@ -4,7 +4,6 @@ import { useRoute, useRouter } from "vue-router"
 
 import DetailFieldSections from "@/components/detail/DetailFieldSections.vue"
 import DetailRelationModule from "@/components/detail/DetailRelationModule.vue"
-import SectionHeader from "@/components/layout/SectionHeader.vue"
 import TopTabSwitch from "@/components/layout/TopTabSwitch.vue"
 import type { DetailContactValue, DetailFieldSection, DetailRelationModuleSchema } from "@/components/detail/types"
 import DetailPageLoading from "@/components/loading/DetailPageLoading.vue"
@@ -637,84 +636,6 @@ function buildContactValue(name: string, phone?: string): DetailContactValue {
 <template>
   <DetailPageLoading v-if="loading && !detail" />
 
-  <section
-    v-else-if="detail && activeTab === 'work-orders'"
-    class="mx-auto flex min-h-0 w-full min-w-0 flex-1 flex-col px-0 sm:px-4 xl:px-8"
-  >
-    <div class="sticky top-0 z-10 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80 sm:-mx-4">
-      <div class="px-4 py-5">
-        <SectionHeader :title="detail.Name" :subtitle="detail.CustomerName" :has-actions="true">
-          <template #actions>
-            <Button variant="outline" size="sm" class="border-border/80 bg-background font-medium text-foreground shadow-none" @click="goBack">
-              返回
-            </Button>
-          </template>
-        </SectionHeader>
-
-        <div class="mt-4">
-          <TopTabSwitch
-            :tabs="detailTabs"
-            :model-value="activeTab"
-            :collapse-inactive="false"
-            tone="default"
-            aria-label="检测服务详情页面切换"
-            @update:model-value="activeTab = $event as InspectionServiceDetailTab"
-          />
-        </div>
-      </div>
-    </div>
-
-    <div class="flex min-h-0 flex-1 flex-col py-5">
-      <Alert v-if="errorMessage" variant="destructive" class="mx-4 mb-5 sm:mx-0">
-        <AlertTitle>检测服务详情加载失败</AlertTitle>
-        <AlertDescription>{{ errorMessage }}</AlertDescription>
-      </Alert>
-
-      <div class="flex min-h-0 flex-1 flex-col gap-5">
-        <div v-if="workOrdersErrorMessage" class="px-4 sm:px-0">
-          <Alert variant="destructive">
-            <AlertTitle>工单列表加载失败</AlertTitle>
-            <AlertDescription>{{ workOrdersErrorMessage }}</AlertDescription>
-          </Alert>
-        </div>
-
-        <div v-if="workOrdersLoading" class="px-4 py-5 text-sm text-muted-foreground sm:px-0">
-          正在加载当前检测服务下的工单列表。
-        </div>
-
-        <div v-else-if="workOrders.length" class="flex min-h-0 flex-1 flex-col">
-          <TablePage :page="workOrdersPage" />
-
-          <div class="mt-auto flex items-center justify-end gap-3 px-4 pt-4 sm:px-0">
-            <span class="text-sm text-muted-foreground">
-              第 {{ workOrdersPageNum }} / {{ workOrdersTotalPages }} 页，共 {{ workOrdersTotal }} 条
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              :disabled="workOrdersLoading || workOrdersPageNum <= 1"
-              @click="workOrdersPageNum -= 1"
-            >
-              上一页
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              :disabled="workOrdersLoading || workOrdersPageNum >= workOrdersTotalPages"
-              @click="workOrdersPageNum += 1"
-            >
-              下一页
-            </Button>
-          </div>
-        </div>
-
-        <div v-else class="px-4 py-6 text-sm text-muted-foreground sm:px-0">
-          当前服务下暂无工单数据。
-        </div>
-      </div>
-    </div>
-  </section>
-
   <DetailLayout
     v-else
     :title="detail?.Name || '检测服务详情'"
@@ -722,6 +643,7 @@ function buildContactValue(name: string, phone?: string): DetailContactValue {
     :empty="!detail"
     empty-text="未找到该检测服务信息"
     :secondary-visible="activeTab === 'overview'"
+    :full-width="activeTab === 'work-orders'"
     @back="goBack"
   >
     <template #actions>
@@ -747,7 +669,10 @@ function buildContactValue(name: string, phone?: string): DetailContactValue {
         <AlertDescription>{{ errorMessage }}</AlertDescription>
       </Alert>
 
-      <div v-if="detail" class="space-y-5">
+      <div
+        v-if="detail"
+        :class="activeTab === 'work-orders' ? 'flex min-h-0 flex-1 flex-col' : 'space-y-5'"
+      >
         <DetailFieldSections v-if="activeTab === 'overview'" :sections="fieldSections" />
 
         <section v-else-if="activeTab === 'plans'" class="space-y-3">
@@ -762,6 +687,49 @@ function buildContactValue(name: string, phone?: string): DetailContactValue {
           <p class="text-sm leading-6 text-muted-foreground">
             建议后续在这里承载计划表格或计划详情模块，而不是继续把所有内容堆在基础信息页。
           </p>
+        </section>
+
+        <section v-else class="flex min-h-0 flex-1 flex-col">
+          <div v-if="workOrdersErrorMessage" class="px-4 sm:px-0">
+            <Alert variant="destructive">
+              <AlertTitle>工单列表加载失败</AlertTitle>
+              <AlertDescription>{{ workOrdersErrorMessage }}</AlertDescription>
+            </Alert>
+          </div>
+
+          <div v-if="workOrdersLoading" class="px-4 py-5 text-sm text-muted-foreground sm:px-0">
+            正在加载当前检测服务下的工单列表。
+          </div>
+
+          <div v-else-if="workOrders.length" class="flex min-h-0 flex-1 flex-col">
+            <TablePage :page="workOrdersPage" />
+
+            <div class="mt-auto flex items-center justify-end gap-3 px-4 pt-4 sm:px-0">
+              <span class="text-sm text-muted-foreground">
+                第 {{ workOrdersPageNum }} / {{ workOrdersTotalPages }} 页，共 {{ workOrdersTotal }} 条
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                :disabled="workOrdersLoading || workOrdersPageNum <= 1"
+                @click="workOrdersPageNum -= 1"
+              >
+                上一页
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                :disabled="workOrdersLoading || workOrdersPageNum >= workOrdersTotalPages"
+                @click="workOrdersPageNum += 1"
+              >
+                下一页
+              </Button>
+            </div>
+          </div>
+
+          <div v-else class="px-4 py-6 text-sm text-muted-foreground sm:px-0">
+            当前服务下暂无工单数据。
+          </div>
         </section>
 
       </div>

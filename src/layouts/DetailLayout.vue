@@ -37,7 +37,7 @@ const hasHeaderBottom = computed(() => Boolean(slots.headerBottom))
 <template>
   <section
     :class="[
-      'detail-layout mx-auto flex w-full min-w-0 flex-1 flex-col px-0 pb-8 sm:px-4 sm:pb-10 xl:px-8',
+      'detail-layout mx-auto flex w-full min-w-0 flex-1 flex-col px-0 sm:px-4 xl:px-8',
       props.fullWidth ? 'max-w-none' : 'max-w-[1440px]',
     ]"
   >
@@ -56,7 +56,7 @@ const hasHeaderBottom = computed(() => Boolean(slots.headerBottom))
         </div>
       </div>
 
-      <div class="detail-layout__content grid min-h-0 flex-1 grid-cols-1 gap-0 px-0 py-5">
+      <div class="detail-layout__content grid min-h-0 flex-1 grid-cols-1 gap-0 px-0">
         <div class="detail-layout__primary min-w-0 pr-0">
           <slot name="primary" />
         </div>
