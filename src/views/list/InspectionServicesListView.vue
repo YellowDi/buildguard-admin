@@ -13,6 +13,12 @@ import { useRouteTableSearch } from "@/composables/useRouteTableSearch"
 import { handleApiError } from "@/lib/api-errors"
 import { fetchInspectionServices, type InspectionServiceListItem } from "@/lib/inspection-services-api"
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip"
+import {
   Pagination,
   PaginationContent,
   PaginationEllipsis,
@@ -32,6 +38,7 @@ type InspectionServiceRecord = {
   ParkName: string
   BuildName: string
   ParkNames: string[]
+  ParkBuildCounts: number[]
   BuildNames: string[]
   CreatedAt: string
   UpdatedAt: string
@@ -41,6 +48,7 @@ type InspectionServiceRecord = {
     managerPhone: string
     templateName: string
     remark: string
+    builds: NonNullable<InspectionServiceListItem["Builds"]>
   }
 }
 
@@ -121,22 +129,11 @@ const schema: TablePageSchema<InspectionServiceRecord> = {
       key: "ParkName",
       label: "园区名称",
       filterType: "text",
+      width: "fill",
       slot: "cell-ParkName",
       filter: {
         type: "text",
         placeholder: "输入园区名称",
-      },
-      sort: true,
-    },
-    {
-      key: "BuildName",
-      label: "建筑名称",
-      filterType: "text",
-      width: "fill",
-      slot: "cell-BuildName",
-      filter: {
-        type: "text",
-        placeholder: "输入建筑名称",
       },
       sort: true,
     },
@@ -258,6 +255,7 @@ function normalizeInspectionServiceRecord(item: InspectionServiceListItem, index
   const fallbackId = toText(item.Id, `${pageNum.value}-${index + 1}`)
   const builds = Array.isArray(item.Builds) ? item.Builds : []
   const parkNames = uniqueText(builds.map(build => toText(build.ParkName)).filter(Boolean))
+  const parkBuildCounts = parkNames.map(parkName => countUniqueBuildsByPark(builds, parkName))
   const buildNames = uniqueText(builds.map(build => toText(build.BuildName)).filter(Boolean))
 
   return {
@@ -269,6 +267,7 @@ function normalizeInspectionServiceRecord(item: InspectionServiceListItem, index
     ParkName: parkNames.length ? parkNames.join("、") : "-",
     BuildName: buildNames.length ? buildNames.join("、") : "-",
     ParkNames: parkNames.length ? parkNames : ["-"],
+    ParkBuildCounts: parkNames.length ? parkBuildCounts : [0],
     BuildNames: buildNames.length ? buildNames : ["-"],
     CreatedAt: toText(item.CreatedAt, "-"),
     UpdatedAt: toText(item.UpdatedAt, "-"),
@@ -278,6 +277,7 @@ function normalizeInspectionServiceRecord(item: InspectionServiceListItem, index
       managerPhone: toText(item.ManagerPhone, "-"),
       templateName: toText(item.TemplateName, "未配置模板"),
       remark: toText(item.Remark, ""),
+      builds,
     },
   }
 }
@@ -295,6 +295,43 @@ function cacheInspectionServiceDetail(row: InspectionServiceRecord) {
 
 function uniqueText(values: string[]) {
   return Array.from(new Set(values.map(value => value.trim()).filter(Boolean)))
+}
+
+function getParkBuildCount(row: unknown, index: number) {
+  if (!row || typeof row !== "object" || !("ParkBuildCounts" in row) || !Array.isArray(row.ParkBuildCounts)) {
+    return 0
+  }
+
+  const value = row.ParkBuildCounts[index]
+  return typeof value === "number" && Number.isFinite(value) ? value : 0
+}
+
+function getBuildNamesByPark(row: unknown, parkName: string) {
+  if (!row || typeof row !== "object" || !("raw" in row) || !row.raw || typeof row.raw !== "object" || !("builds" in row.raw)) {
+    return [] as string[]
+  }
+
+  const builds = (row.raw as { builds?: unknown }).builds
+
+  if (!Array.isArray(builds)) {
+    return []
+  }
+
+  return uniqueText(
+    builds
+      .filter((build) => build && typeof build === "object" && toText((build as { ParkName?: unknown }).ParkName) === parkName)
+      .map(build => toText((build as { BuildName?: unknown }).BuildName))
+      .filter(Boolean),
+  )
+}
+
+function countUniqueBuildsByPark(builds: NonNullable<InspectionServiceListItem["Builds"]>, parkName: string) {
+  return uniqueText(
+    builds
+      .filter(build => toText(build.ParkName) === parkName)
+      .map(build => toText(build.BuildName))
+      .filter(Boolean),
+  ).length
 }
 
 function toText(value: unknown, fallback = "") {
@@ -327,33 +364,55 @@ function toText(value: unknown, fallback = "") {
       </Alert>
     </div>
 
-    <TablePage :page="page">
-      <template #cell-ParkName="{ row }">
-        <div class="flex flex-nowrap gap-1.5 overflow-x-auto whitespace-nowrap">
-          <Badge
-            v-for="(parkName, index) in row.ParkNames"
-            :key="`${row.uuid}-park-${index}`"
-            variant="secondary"
-            class="h-5 shrink-0 whitespace-nowrap rounded-full px-2 py-0 text-[12px] font-normal leading-[18px]"
-          >
-            {{ parkName }}
-          </Badge>
-        </div>
-      </template>
-
-      <template #cell-BuildName="{ row }">
-        <div class="flex flex-nowrap gap-1.5 overflow-x-auto whitespace-nowrap">
-          <Badge
-            v-for="(buildName, index) in row.BuildNames"
-            :key="`${row.uuid}-build-${index}`"
-            variant="secondary"
-            class="h-5 shrink-0 whitespace-nowrap rounded-full px-2 py-0 text-[12px] font-normal leading-[18px]"
-          >
-            {{ buildName }}
-          </Badge>
-        </div>
-      </template>
-    </TablePage>
+    <TooltipProvider>
+      <TablePage :page="page">
+        <template #cell-ParkName="{ row }">
+          <div class="flex flex-nowrap gap-1.5 overflow-x-auto whitespace-nowrap">
+            <Tooltip v-for="(parkName, index) in row.ParkNames" :key="`${row.uuid}-park-${index}`">
+              <TooltipTrigger as-child>
+                <Badge
+                  variant="secondary"
+                  class="inline-flex h-5 shrink-0 cursor-default items-center whitespace-nowrap rounded-full pl-2 pr-0.5 text-[12px] font-normal leading-[18px]"
+                >
+                  <span>{{ parkName }}</span>
+                  <span
+                    class="ml-1 inline-flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-foreground px-0.75 text-center text-[9px] font-semibold leading-none text-background"
+                  >
+                    {{ getParkBuildCount(row, index) }}
+                  </span>
+                </Badge>
+              </TooltipTrigger>
+              <TooltipContent
+                side="top"
+                align="start"
+                class="max-w-[320px] rounded-xl px-3 py-2"
+              >
+                <div class="space-y-1">
+                  <div class="text-[11px] font-medium text-background/72">
+                    建筑名称
+                  </div>
+                  <div class="flex flex-wrap gap-1.5">
+                    <span
+                      v-for="buildName in getBuildNamesByPark(row, parkName)"
+                      :key="`${row.uuid}-${parkName}-${buildName}`"
+                      class="inline-flex h-5 items-center rounded-full bg-background/10 px-2 text-[12px] text-background"
+                    >
+                      {{ buildName }}
+                    </span>
+                    <span
+                      v-if="!getBuildNamesByPark(row, parkName).length"
+                      class="text-[12px] text-background/72"
+                    >
+                      暂无建筑
+                    </span>
+                  </div>
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          </div>
+        </template>
+      </TablePage>
+    </TooltipProvider>
 
     <div class="-mx-4 pt-3">
       <div class="flex w-full justify-end px-4">
