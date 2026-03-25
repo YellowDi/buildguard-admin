@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { PropType } from "vue"
+import { useSlots } from "vue"
 
 import Page from "@/components/table-page/TablePageShell.vue"
 import type { TablePageController } from "@/components/table-page/useTablePage"
@@ -16,6 +17,8 @@ const emit = defineEmits<{
   "export-action": []
   "primary-action": []
 }>()
+
+const slots = useSlots()
 </script>
 
 <template>
@@ -68,5 +71,13 @@ const emit = defineEmits<{
     @update:selected-row-keys="page.selectedRowKeys.value = $event; emit('update:selected-row-keys', $event)"
     @export-action="emit('export-action')"
     @primary-action="emit('primary-action')"
-  />
+  >
+    <template
+      v-for="(_, name) in slots"
+      :key="name"
+      #[name]="slotProps"
+    >
+      <slot :name="name" v-bind="slotProps" />
+    </template>
+  </Page>
 </template>

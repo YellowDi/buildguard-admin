@@ -84,6 +84,11 @@ const businessItems = reactive<AppSidebarNavItem[]>([
     ],
   },
   {
+    label: "检测服务",
+    icon: "ri-shield-check-line",
+    path: "/inspection-services",
+  },
+  {
     kind: "separator",
     label: "以下为 Demo 案例",
   },
@@ -182,7 +187,7 @@ function handleTopTabUpdate(tabId: string) {
 }
 
 function isBusinessRoute(path: string) {
-  return ["/", "/customers", "/companies", "/parks", "/buildings", "/vehicles", "/work-orders", "/users", "/call-center-tasks", "/alarm-queries", "/alarm-archives"].some(
+  return ["/", "/customers", "/companies", "/parks", "/buildings", "/inspection-services", "/vehicles", "/work-orders", "/users", "/call-center-tasks", "/alarm-queries", "/alarm-archives"].some(
     prefix => path === prefix || path.startsWith(`${prefix}/`),
   )
 }
