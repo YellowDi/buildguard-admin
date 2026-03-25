@@ -266,25 +266,29 @@ const activeInspectionPlanCount = inspectionPlanRecords.filter(item => item.stat
 const statsCards = [
   {
     title: "平台客户总数",
-    value: `${numberFormatter.format(customerRecords.length)} 家`,
+    value: numberFormatter.format(customerRecords.length),
+    unit: "家",
     detail: "当前平台已签约并接入的客户数量",
     highlight: `${numberFormatter.format(customerRecords.length)} 家客户正常服务中`,
   },
   {
     title: "空间覆盖",
-    value: `${numberFormatter.format(totalParkCount)} 个园区`,
+    value: numberFormatter.format(totalParkCount),
+    unit: "个园区",
     detail: "当前平台已接入的园区与建筑空间范围",
     highlight: `${numberFormatter.format(totalParkCount)} 个园区 / ${numberFormatter.format(totalBuildingCount)} 栋建筑`,
   },
   {
     title: "签约合同总数",
-    value: `${numberFormatter.format(signedContractCount)} 份`,
+    value: numberFormatter.format(signedContractCount),
+    unit: "份",
     detail: "按已签约客户套餐统计合同总量",
     highlight: `${numberFormatter.format(signedContractCount)} 份合同已完成签约归档`,
   },
   {
     title: "检测计划（执行中）",
-    value: `${numberFormatter.format(activeInspectionPlanCount)} 个`,
+    value: numberFormatter.format(activeInspectionPlanCount),
+    unit: "个",
     detail: "当前状态为进行中的检测计划数量",
     highlight: `${numberFormatter.format(inspectionPlanRecords.length)} 个检测计划已纳入排期`,
   },
@@ -334,6 +338,9 @@ function formatShortDate(date: number | Date, locale = "zh-CN") {
             <div class="space-y-1.5">
               <div class="text-[1.75rem] font-semibold tracking-tight text-foreground sm:text-[1.875rem]">
                 {{ stat.value }}
+                <span class="ml-1 text-[1rem] font-medium text-muted-foreground sm:text-[1.125rem]">
+                  {{ stat.unit }}
+                </span>
               </div>
               <div class="text-sm text-muted-foreground">
                 {{ stat.detail }}
