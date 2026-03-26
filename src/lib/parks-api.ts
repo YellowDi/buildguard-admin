@@ -32,6 +32,25 @@ export type ParksListResult = {
   total: number
 }
 
+export type ParkDetailPayload = {
+  Uuid?: string
+}
+
+export type ParkDetailResult = {
+  Uuid?: string
+  Id?: number
+  CustomerUuid?: string
+  Name?: string
+  CorpName?: string
+  BuildArea?: string
+  BuildingArea?: string
+  Contact?: string
+  ContactPerson?: string
+  ContactPhone?: string
+  Address?: string
+  [property: string]: unknown
+}
+
 export type ListParksPayload = {
   CustomerUuid?: string
   PageNum?: number
@@ -40,7 +59,9 @@ export type ListParksPayload = {
 }
 
 const PARKS_API_URL = buildApiUrl(API_PATHS.parksList)
+const PARK_DETAIL_API_URL = buildApiUrl(API_PATHS.parkDetail)
 const PARKS_LOAD_ERROR_MESSAGE = "园区列表加载失败，请稍后重试。"
+const PARK_DETAIL_LOAD_ERROR_MESSAGE = "园区详情加载失败，请稍后重试。"
 
 export async function fetchParks(payload: ListParksPayload = {}): Promise<ParksListResult> {
   const normalizedPayload = {
@@ -68,6 +89,29 @@ export async function fetchParks(payload: ListParksPayload = {}): Promise<ParksL
     list: list.map(item => normalizeParkListItem(item)),
     total: extractTotal(responsePayload, list.length),
   }
+}
+
+export async function fetchParkDetail(payload: ParkDetailPayload): Promise<ParkDetailResult> {
+  const url = new URL(PARK_DETAIL_API_URL)
+  const uuid = getOptionalString(payload.Uuid)
+
+  if (!uuid) {
+    throw new TypeError("Uuid is required.")
+  }
+
+  url.searchParams.set("Uuid", uuid)
+
+  const response = await fetch(url.toString(), {
+    method: "GET",
+    headers: buildApiHeaders(),
+  })
+  const responsePayload = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responsePayload, PARK_DETAIL_LOAD_ERROR_MESSAGE)
+  }
+
+  return normalizeParkDetail(extractDetailRecord(responsePayload))
 }
 
 function extractList(payload: ParksListEnvelope | unknown[]) {
@@ -132,6 +176,28 @@ function normalizeParkListItem(value: unknown): ParkListItem {
   }
 
   return {}
+}
+
+function extractDetailRecord(value: unknown) {
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>
+
+    if (record.data && typeof record.data === "object") {
+      return record.data as ParkDetailResult
+    }
+
+    return record as ParkDetailResult
+  }
+
+  return {}
+}
+
+function normalizeParkDetail(value: ParkDetailResult) {
+  return {
+    ...value,
+    BuildingArea: getOptionalString(value.BuildingArea) || getOptionalString(value.BuildArea),
+    ContactPerson: getOptionalString(value.ContactPerson) || getOptionalString(value.Contact),
+  }
 }
 
 function getOptionalNumber(value: unknown, fieldName: string) {
