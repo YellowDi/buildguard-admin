@@ -1,5 +1,5 @@
-// Temporary API base URL: http://192.168.2.4:8000
-const DEFAULT_API_BASE_URL = "http://127.0.0.1:4523/m1/7931435-7683186-default"
+// Previous mock API base URL: http://127.0.0.1:4523/m1/7931435-7683186-default
+const DEFAULT_API_BASE_URL = "http://192.168.2.4:8000"
 const DEFAULT_API_DEVICE = "background"
 const TOKEN_STORAGE_KEYS = ["token", "access_token", "auth_token", "Authorization", "authorization"] as const
 const DEVICE_STORAGE_KEYS = ["X-Device", "x-device", "device", "device_id"] as const
@@ -30,7 +30,18 @@ export const API_PATHS = {
 } as const
 
 export function getApiBaseUrl() {
-  return (import.meta.env.VITE_API_BASE_URL ?? DEFAULT_API_BASE_URL).trim()
+  const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim()
+
+  if (configuredBaseUrl) {
+    return configuredBaseUrl
+  }
+
+  // In Vite dev, prefer same-origin requests and let the dev server proxy `/bqi`.
+  if (import.meta.env.DEV) {
+    return ""
+  }
+
+  return DEFAULT_API_BASE_URL
 }
 
 export function buildApiUrl(path: string) {
@@ -64,6 +75,14 @@ export function buildApiHeaders(headers: HeadersInit = {}) {
 
     resolvedHeaders.set(authHeaderName, authHeaderValue)
   }
+
+  return resolvedHeaders
+}
+
+export function buildApiHeadersWithoutAuth(headers: HeadersInit = {}) {
+  const resolvedHeaders = new Headers(headers)
+
+  resolvedHeaders.set("X-Device", getApiDevice())
 
   return resolvedHeaders
 }

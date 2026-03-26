@@ -1,5 +1,6 @@
 import { createHttpError, readResponseBody } from "@/lib/api-errors"
-import { buildApiHeaders, buildApiUrl } from "@/lib/api"
+import { buildApiHeadersWithoutAuth, buildApiUrl } from "@/lib/api"
+import { isMd5Hash, md5 } from "@/lib/md5"
 
 export type LoginPayload = {
   Account: string
@@ -9,9 +10,17 @@ export type LoginPayload = {
 type LoginResponse = {
   Token?: string
   token?: string
+  access_token?: string
+  accessToken?: string
+  Authorization?: string
+  authorization?: string
   data?: {
     Token?: string
     token?: string
+    access_token?: string
+    accessToken?: string
+    Authorization?: string
+    authorization?: string
   }
 }
 
@@ -19,14 +28,16 @@ const LOGIN_API_URL = buildApiUrl("/bqi/public/login")
 const LOGIN_ERROR_MESSAGE = "登录失败，请稍后重试。"
 
 export async function login(payload: LoginPayload) {
+  const normalizedPassword = payload.Password.trim()
+
   const response = await fetch(LOGIN_API_URL, {
     method: "POST",
-    headers: buildApiHeaders({
+    headers: buildApiHeadersWithoutAuth({
       "Content-Type": "application/json",
     }),
     body: JSON.stringify({
       Account: payload.Account.trim(),
-      Password: payload.Password,
+      Password: isMd5Hash(normalizedPassword) ? normalizedPassword.toLowerCase() : md5(normalizedPassword),
     }),
   })
   const responseBody = await readResponseBody(response)
@@ -53,14 +64,7 @@ function extractToken(payload: unknown) {
     return ""
   }
 
-  const topLevelToken = readTokenField(record)
-
-  if (topLevelToken) {
-    return topLevelToken
-  }
-
-  const nestedToken = readTokenField(asRecord(record.data))
-  return nestedToken ?? ""
+  return findToken(record)
 }
 
 function readTokenField(value: Record<string, unknown> | null) {
@@ -68,15 +72,59 @@ function readTokenField(value: Record<string, unknown> | null) {
     return ""
   }
 
-  for (const key of ["Token", "token"]) {
-    const token = value[key]
+  for (const key of ["Token", "token", "access_token", "accessToken", "Authorization", "authorization"]) {
+    const resolvedToken = normalizeTokenValue(value[key])
 
-    if (typeof token === "string" && token.trim()) {
-      return token.trim()
+    if (resolvedToken) {
+      return resolvedToken
     }
   }
 
   return ""
+}
+
+function findToken(value: unknown, depth = 0): string {
+  if (depth > 4) {
+    return ""
+  }
+
+  const record = asRecord(value)
+
+  if (!record) {
+    return ""
+  }
+
+  const directToken = readTokenField(record)
+
+  if (directToken) {
+    return directToken
+  }
+
+  for (const key of ["data", "result", "payload"]) {
+    const nestedToken = findToken(record[key], depth + 1)
+
+    if (nestedToken) {
+      return nestedToken
+    }
+  }
+
+  return ""
+}
+
+function normalizeTokenValue(value: unknown) {
+  if (typeof value !== "string") {
+    return ""
+  }
+
+  const normalized = value.trim()
+
+  if (!normalized) {
+    return ""
+  }
+
+  return normalized.startsWith("Bearer ")
+    ? normalized.slice("Bearer ".length).trim()
+    : normalized
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {
