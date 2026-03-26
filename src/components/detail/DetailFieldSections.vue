@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue"
 
+import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import type { DetailContactValue, DetailFieldSection, DetailFieldValue } from "@/components/detail/types"
 import { cn } from "@/lib/utils"
@@ -23,8 +24,16 @@ const sectionStyle = computed(() => ({
   "--detail-field-label-desktop": props.labelWidthDesktop,
 }))
 
+function isEmptyLikeValue(value: DetailFieldValue) {
+  if (value === null || value === undefined) return true
+  if (typeof value !== "string") return false
+
+  const normalized = value.trim()
+  return normalized === "" || normalized === "-" || normalized === "—" || normalized === "未填写"
+}
+
 function displayValue(value: DetailFieldValue) {
-  if (value === null || value === undefined || value === "") return "—"
+  if (isEmptyLikeValue(value)) return "无数据"
   return `${value}`
 }
 
@@ -47,10 +56,28 @@ function isContactValue(value: DetailFieldValue): value is DetailContactValue {
             class="detail-field-row group"
           >
             <div class="detail-field-row__label">{{ row.label }}</div>
-            <div :class="cn('detail-field-row__value', row.truncate !== false && 'truncate', row.valueClass)">
+            <div :class="cn('detail-field-row__value', row.truncate !== false && 'truncate', !row.action && isEmptyLikeValue(row.value) && 'detail-field-row__value--empty', row.valueClass)">
               <template v-if="isContactValue(row.value)">
-                <span>{{ row.value.name || "未填写" }}</span>
-                <span v-if="row.value.phone" class="ml-2 text-muted-foreground">{{ row.value.phone }}</span>
+                <span :class="cn(isEmptyLikeValue(row.value.name) && 'detail-field-row__value--empty')">{{ displayValue(row.value.name) }}</span>
+                <span v-if="row.value.phone && !isEmptyLikeValue(row.value.phone)" class="ml-2 text-muted-foreground">{{ row.value.phone }}</span>
+              </template>
+              <template v-else-if="row.imageUrl">
+                <img
+                  :src="row.imageUrl"
+                  :alt="row.label"
+                  class="max-h-56 w-auto max-w-full rounded-md border border-border object-contain"
+                >
+              </template>
+              <template v-else-if="row.action">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  type="button"
+                  class="detail-field-row__action h-7 min-h-0 rounded-md px-2.5 text-xs leading-5"
+                  @click="row.action.onClick"
+                >
+                  {{ row.action.label }}
+                </Button>
               </template>
               <template v-else>
                 {{ displayValue(row.value) }}

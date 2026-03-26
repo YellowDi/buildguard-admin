@@ -50,8 +50,16 @@ function getCellValue(column: DetailRelationColumn<RelationRow>, row: RelationRo
 
 function getCellText(column: DetailRelationColumn<RelationRow>, row: RelationRow) {
   const value = getCellValue(column, row)
-  if (value === null || value === undefined || value === "") return "—"
+  if (isEmptyLikeValue(value)) return "无数据"
   return `${value}`
+}
+
+function isEmptyLikeValue(value: unknown) {
+  if (value === null || value === undefined) return true
+  if (typeof value !== "string") return false
+
+  const normalized = value.trim()
+  return normalized === "" || normalized === "-" || normalized === "—" || normalized === "未填写"
 }
 
 function hasNamedSlot(name?: string) {
@@ -106,7 +114,7 @@ function hasNamedSlot(name?: string) {
               <div
                 v-for="column in schema.columns"
                 :key="`${group.key}-${getRowKey(row, rowIndex)}-${column.key}`"
-                :class="cn('min-w-0 text-foreground', column.cellClass)"
+                :class="cn('min-w-0 text-foreground', isEmptyLikeValue(getCellValue(column, row)) && 'detail-relation-cell--empty', column.cellClass)"
               >
                 <slot
                   v-if="column.slot"

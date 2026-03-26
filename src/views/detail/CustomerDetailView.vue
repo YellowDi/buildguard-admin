@@ -27,6 +27,7 @@ import DetailLayout from "@/layouts/DetailLayout.vue"
 import { handleApiError } from "@/lib/api-errors"
 import { fetchBuildings, type BuildingListItem } from "@/lib/buildings-api"
 import { deleteCustomer, fetchCustomerDetail, type CustomerDetailPerson, type CustomerDetailResult } from "@/lib/customers-api"
+import customersData from "@/mocks/customers.json"
 import { fetchParkDetail, fetchParks, type ParkDetailResult, type ParkListItem } from "@/lib/parks-api"
 
 type BuildingRow = {
@@ -55,6 +56,16 @@ type MaintenanceRecordRow = {
   item: string
   principal: string
   updatedAt: string
+}
+
+type CustomerPackageMockRecord = {
+  name: string
+  packageName: string
+  packageCode: string
+  remainingDays: number
+  remainingFunds: number
+  inspectionTimes: number
+  inspectionCycle: string
 }
 
 const route = useRoute()
@@ -98,16 +109,9 @@ const fieldSections = computed<DetailFieldSection[]>(() => {
       rows: [
         { key: "corp-name", label: "企业名称", value: toDisplayText(current.CorpName) },
         { key: "business", label: "所属行业", value: toDisplayText(current.Business) },
-        { key: "level", label: "客户等级", value: formatLevel(current.Level) },
+        { key: "business-license", label: "营业执照照片", value: current.UsciFile ? null : "—", imageUrl: current.UsciFile || null, truncate: false },
+        { key: "usci", label: "信用代码", value: toDisplayText(current.Usci) },
         { key: "address", label: "详细地址", value: toDisplayText(current.Address), truncate: false, valueClass: "leading-6" },
-      ],
-    },
-    {
-      key: "qualification-info",
-      title: "资质与开票",
-      rows: [
-        { key: "usci", label: "统一社会信用代码", value: toDisplayText(current.Usci) },
-        { key: "usci-file", label: "信用代码附件", value: toDisplayText(current.UsciFile), truncate: false, valueClass: "leading-6" },
         { key: "invoice", label: "开票资料", value: toDisplayText(current.Invoice), truncate: false, valueClass: "leading-6" },
       ],
     },
@@ -115,6 +119,11 @@ const fieldSections = computed<DetailFieldSection[]>(() => {
       key: "contacts",
       title: "客户联系人",
       rows: buildContactFieldRows(current.People),
+    },
+    {
+      key: "package-info",
+      title: "套餐信息",
+      rows: buildPackageFieldRows(current),
     },
   ]
 })
@@ -232,6 +241,10 @@ function goToCreatePark() {
     params: { id: customerUuid.value },
     query: { customerName: toDisplayText(customer.value?.CorpName, "当前客户") },
   })
+}
+
+function handleContractDownload() {
+  toast.info("合同下载接口暂未接入")
 }
 
 async function handleDeleteCustomer() {
@@ -517,6 +530,73 @@ function buildContactValue(name: string, phone?: string): DetailContactValue {
   }
 }
 
+function buildPackageFieldRows(detail: CustomerDetailResult) {
+  const packageRecord = getCustomerPackageMockRecord(detail)
+
+  return [
+    { key: "balance", label: "资金余额", value: formatFunds(packageRecord?.remainingFunds ?? null) },
+    { key: "current-package", label: "当前购买套餐信息", value: formatPackageInfo(packageRecord?.packageName ?? "-", packageRecord?.packageCode ?? "") },
+    { key: "expire-at", label: "到期时间", value: formatExpireDate(packageRecord?.remainingDays ?? null) },
+    { key: "contract-download", label: "合同下载", value: null, action: { label: "下载合同", onClick: handleContractDownload } },
+    { key: "remaining-service", label: "剩余服务", value: formatRemainingService(packageRecord), truncate: false, valueClass: "leading-6" },
+  ]
+}
+
+function getCustomerPackageMockRecord(detail: CustomerDetailResult): CustomerPackageMockRecord | null {
+  const customerName = typeof detail.CorpName === "string" ? detail.CorpName.trim() : ""
+
+  if (!customerName) {
+    return null
+  }
+
+  const record = (customersData as CustomerPackageMockRecord[]).find(item => item.name.trim() === customerName)
+  return record ?? null
+}
+
+function formatPackageInfo(packageName: string, packageCode: string) {
+  if (!packageName || packageName === "-") {
+    return "—"
+  }
+
+  return packageCode ? `${packageName} (${packageCode})` : packageName
+}
+
+function formatFunds(value: number | null) {
+  if (value === null) {
+    return "—"
+  }
+
+  return `${value} 万`
+}
+
+function formatExpireDate(remainingDays: number | null) {
+  if (remainingDays === null) {
+    return "—"
+  }
+
+  if (remainingDays < 0) {
+    return "已过期"
+  }
+
+  const expireDate = new Date()
+  expireDate.setHours(0, 0, 0, 0)
+  expireDate.setDate(expireDate.getDate() + remainingDays)
+
+  const year = expireDate.getFullYear()
+  const month = String(expireDate.getMonth() + 1).padStart(2, "0")
+  const day = String(expireDate.getDate()).padStart(2, "0")
+
+  return `${year}-${month}-${day}`
+}
+
+function formatRemainingService(record: CustomerPackageMockRecord | null) {
+  if (!record) {
+    return "—"
+  }
+
+  return `${record.inspectionTimes} 次巡检，${record.inspectionCycle}`
+}
+
 function buildMaintenanceGroups(current: CustomerDetailResult) {
   const records: MaintenanceRecordRow[] = [
     {
@@ -642,10 +722,6 @@ function buildParkBuildingModule(park: ParkListItem, buildings: BuildingListItem
     columnGapMobile: "0.75rem",
     columnGapDesktop: "1rem",
   }
-}
-
-function formatLevel(level: unknown) {
-  return typeof level === "number" && Number.isFinite(level) ? `等级 ${level}` : "未评级"
 }
 
 function toDisplayText(value: unknown, fallback = "未填写") {

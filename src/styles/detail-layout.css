@@ -90,6 +90,14 @@
   color: var(--foreground);
 }
 
+.detail-field-row__value--empty {
+  color: var(--muted-foreground);
+}
+
+.detail-field-row__action {
+  vertical-align: middle;
+}
+
 .detail-relation-frame {
   width: max-content;
   min-width: var(--detail-relation-min-width, 100%);
@@ -102,6 +110,10 @@
 
 .detail-relation-row {
   min-height: 44px;
+}
+
+.detail-relation-cell--empty {
+  color: var(--muted-foreground);
 }
 
 @container detail-layout (min-width: 68rem) {

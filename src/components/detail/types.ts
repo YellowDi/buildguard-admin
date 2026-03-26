@@ -8,10 +8,17 @@ export type DetailContactValue = {
 
 export type DetailFieldValue = string | number | DetailContactValue | null | undefined
 
+export type DetailFieldAction = {
+  label: string
+  onClick: () => void
+}
+
 export type DetailFieldRow = {
   key: string
   label: string
   value: DetailFieldValue
+  imageUrl?: string | null
+  action?: DetailFieldAction
   truncate?: boolean
   valueClass?: string
 }
