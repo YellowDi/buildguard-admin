@@ -1,5 +1,7 @@
 import { toast } from "vue-sonner"
 
+import { notifyAuthExpired } from "@/lib/auth"
+
 type ApiErrorMeta = {
   status?: number
   code?: string
@@ -76,9 +78,20 @@ export function assertApiSuccess(payload: unknown, fallback = "请求失败，�
     return
   }
 
+  const code = extractScalar(payload, CODE_KEYS)
+  const message = extractMessage(payload) ?? fallback
+
+  if (isAuthExpired(record, code, message)) {
+    notifyAuthExpired()
+    throw new ApiError(message, {
+      code: code ?? undefined,
+      requestId: extractScalar(payload, REQUEST_ID_KEYS) ?? undefined,
+    })
+  }
+
   if (record.success === false) {
-    throw new ApiError(extractMessage(payload) ?? fallback, {
-      code: extractScalar(payload, CODE_KEYS) ?? undefined,
+    throw new ApiError(message, {
+      code: code ?? undefined,
       requestId: extractScalar(payload, REQUEST_ID_KEYS) ?? undefined,
     })
   }
@@ -87,7 +100,7 @@ export function assertApiSuccess(payload: unknown, fallback = "请求失败，�
   const numericCode = typeof rawCode === "string" ? Number(rawCode.trim()) : rawCode
 
   if (typeof numericCode === "number" && Number.isFinite(numericCode) && numericCode !== 0 && numericCode !== 200) {
-    throw new ApiError(extractMessage(payload) ?? fallback, {
+    throw new ApiError(message, {
       code: String(numericCode),
       requestId: extractScalar(payload, REQUEST_ID_KEYS) ?? undefined,
     })
@@ -185,4 +198,16 @@ function asRecord(value: unknown): Record<string, unknown> | null {
 
 function normalizeMessage(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : null
+}
+
+function isAuthExpired(record: Record<string, unknown>, code: string | null, message: string) {
+  if (code === "1001" || code === "401") {
+    return true
+  }
+
+  if (record.success === false && /(鉴权|身份信息|未登录|登录失效|token)/i.test(message)) {
+    return true
+  }
+
+  return false
 }

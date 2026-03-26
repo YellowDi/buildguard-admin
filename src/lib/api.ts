@@ -57,19 +57,19 @@ export function getApiDevice() {
 }
 
 export function getApiToken() {
-  return import.meta.env.VITE_API_TOKEN?.trim() || readStorageValue(TOKEN_STORAGE_KEYS)
+  return normalizeAuthToken(import.meta.env.VITE_API_TOKEN?.trim() || readStorageValue(TOKEN_STORAGE_KEYS))
 }
 
 export function buildApiHeaders(headers: HeadersInit = {}) {
   const resolvedHeaders = new Headers(headers)
   const token = getApiToken()
   const authHeaderName = (import.meta.env.VITE_API_TOKEN_HEADER ?? "Authorization").trim()
-  const authTokenPrefix = import.meta.env.VITE_API_TOKEN_PREFIX?.trim() ?? "Bearer"
+  const authTokenPrefix = import.meta.env.VITE_API_TOKEN_PREFIX?.trim() ?? ""
 
   resolvedHeaders.set("X-Device", getApiDevice())
 
   if (token) {
-    const authHeaderValue = authTokenPrefix && !token.startsWith(`${authTokenPrefix} `)
+    const authHeaderValue = authTokenPrefix
       ? `${authTokenPrefix} ${token}`
       : token
 
@@ -103,4 +103,8 @@ function readStorageValue(keys: readonly string[]) {
   }
 
   return ""
+}
+
+function normalizeAuthToken(value: string) {
+  return value.replace(/^Bearer\s+/i, "").trim()
 }
