@@ -68,7 +68,7 @@ const hasExpandedContent = computed(() => Boolean(slots["expanded-content"]))
         class="border-b-0"
       >
         <div class="detail-section-inset flex items-center gap-3">
-          <AccordionTrigger class="min-w-0 flex-1 py-4 text-left hover:no-underline">
+          <AccordionTrigger class="min-w-0 flex-1 justify-start py-4 text-left hover:no-underline [&>svg]:order-first [&>svg]:mr-2 [&>svg]:ml-0">
             <div class="min-w-0 pr-3">
               <div class="flex min-w-0 items-center gap-2 text-[14px]">
                 <div class="truncate font-medium text-foreground">{{ item.title }}</div>
