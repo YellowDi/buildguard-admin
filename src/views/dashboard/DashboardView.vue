@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue"
+import { computed, onMounted, ref } from "vue"
 import { useRouter } from "vue-router"
 import { VisAxis, VisDonut, VisDonutSelectors, VisLine, VisSingleContainer, VisStackedBar, VisXYContainer } from "@unovis/vue"
 
@@ -132,9 +132,6 @@ const activeBuildingRiskTab = ref<BuildingRiskTab>("high-risk")
 const buildingRankingItems = ref<BuildingRankingItem[]>([])
 const buildingRankingLoading = ref(false)
 const buildingRankingError = ref("")
-const leftDashboardSectionRef = ref<HTMLElement | null>(null)
-const buildingRankingColumnHeight = ref<number | null>(null)
-let leftDashboardSectionObserver: ResizeObserver | null = null
 
 const filteredWorkOrderHistory = computed(() => {
   const monthCount = timeRange.value === "6m" ? 6 : timeRange.value === "1m" ? 1 : 12
@@ -284,35 +281,23 @@ const buildingRiskTabs = [
 const buildingRankedGroups = computed(() => ({
   "high-risk": buildingRankingItems.value
     .filter(item => item.riskTab === "high-risk")
-    .sort((a, b) => a.score - b.score),
+    .sort((a, b) => a.score - b.score)
+    .slice(0, 10),
   rectification: buildingRankingItems.value
     .filter(item => item.riskTab === "rectification")
-    .sort((a, b) => a.score - b.score),
+    .sort((a, b) => a.score - b.score)
+    .slice(0, 10),
   excellent: buildingRankingItems.value
     .filter(item => item.riskTab === "excellent")
-    .sort((a, b) => b.score - a.score),
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 10),
 }))
 
 const activeBuildingList = computed(() => buildingRankedGroups.value[activeBuildingRiskTab.value] ?? [])
-const buildingRankingColumnStyle = computed(() => {
-  if (!buildingRankingColumnHeight.value) {
-    return undefined
-  }
-
-  return {
-    height: `${buildingRankingColumnHeight.value}px`,
-  }
-})
 
 onMounted(() => {
-  setupLeftDashboardSectionObserver()
   void loadWorkOrderHistory()
   void loadBuildingRanking()
-})
-
-onBeforeUnmount(() => {
-  leftDashboardSectionObserver?.disconnect()
-  leftDashboardSectionObserver = null
 })
 
 function formatShortDate(date: number | Date, locale = "zh-CN") {
@@ -338,33 +323,6 @@ function formatWorkOrderHistoryTooltipValue(key: string, value: unknown, payload
   }
 
   return typeof value === "number" ? numberFormatter.format(value) : String(value ?? "-")
-}
-
-async function setupLeftDashboardSectionObserver() {
-  await nextTick()
-
-  const element = leftDashboardSectionRef.value
-  if (!element || typeof ResizeObserver === "undefined") {
-    return
-  }
-
-  updateBuildingRankingColumnHeight()
-
-  leftDashboardSectionObserver = new ResizeObserver(() => {
-    updateBuildingRankingColumnHeight()
-  })
-
-  leftDashboardSectionObserver.observe(element)
-}
-
-function updateBuildingRankingColumnHeight() {
-  const leftElement = leftDashboardSectionRef.value
-  if (!leftElement) {
-    buildingRankingColumnHeight.value = null
-    return
-  }
-
-  buildingRankingColumnHeight.value = Math.ceil(leftElement.getBoundingClientRect().height)
 }
 
 async function loadBuildingRanking() {
@@ -792,7 +750,7 @@ function hashText(value: string) {
     </div>
 
     <div class="grid items-stretch gap-4 xl:grid-cols-10">
-      <div ref="leftDashboardSectionRef" class="flex min-w-0 flex-col gap-4 xl:col-span-7">
+      <div class="flex min-w-0 flex-col gap-4 xl:col-span-7">
         <div :class="dashboardTrendShellClass">
           <CardHeader class="flex flex-col gap-2 px-0 sm:min-h-8 sm:flex-row sm:items-center sm:justify-between sm:pl-2 sm:pr-0">
             <div class="flex flex-wrap items-center gap-3">
@@ -1063,7 +1021,7 @@ function hashText(value: string) {
         </div>
       </div>
 
-      <div :class="`${chartShellClass} h-full min-h-0 overflow-hidden xl:col-span-3`" :style="buildingRankingColumnStyle">
+      <div class="group flex min-w-0 w-full self-start flex-col gap-2 rounded-xl p-0 transition-colors hover:bg-surface-tertiary sm:p-2 xl:col-span-3">
         <CardHeader class="flex flex-col gap-3 px-0 sm:min-h-8 sm:flex-row sm:items-center sm:justify-between sm:pl-2 sm:pr-0">
           <div class="flex items-center gap-3">
             <CardTitle :class="chartTitleClass">
@@ -1085,11 +1043,11 @@ function hashText(value: string) {
           </div>
         </CardHeader>
 
-        <div class="flex min-h-0 flex-1">
-          <Card :class="`${chartCardClass} h-full min-h-0 w-full`">
-            <CardContent class="flex h-full min-h-0 flex-col p-0">
-              <div class="flex min-h-0 flex-1 flex-col overflow-hidden">
-                <div v-if="buildingRankingError" class="flex h-full min-h-0 flex-col items-center justify-center gap-3 text-center">
+        <div>
+          <Card :class="`${chartCardClass} w-full`">
+            <CardContent class="flex flex-col p-0">
+              <div class="flex flex-col">
+                <div v-if="buildingRankingError" class="flex min-h-[220px] flex-col items-center justify-center gap-3 text-center">
                   <div class="text-sm text-destructive">
                     {{ buildingRankingError }}
                   </div>
@@ -1098,11 +1056,11 @@ function hashText(value: string) {
                   </Button>
                 </div>
 
-                <div v-else-if="buildingRankingLoading" class="flex h-full min-h-0 items-center justify-center text-sm text-muted-foreground">
+                <div v-else-if="buildingRankingLoading" class="flex min-h-[220px] items-center justify-center text-sm text-muted-foreground">
                   正在加载建筑排行
                 </div>
 
-                <div v-else-if="activeBuildingList.length" class="flex-1 min-h-0 overflow-y-auto">
+                <div v-else-if="activeBuildingList.length">
                   <button
                     v-for="(building, index) in activeBuildingList"
                     :key="building.id"
@@ -1141,7 +1099,7 @@ function hashText(value: string) {
                   </button>
                 </div>
 
-                <div v-else class="flex h-full min-h-0 items-center justify-center text-sm text-muted-foreground">
+                <div v-else class="flex min-h-[220px] items-center justify-center text-sm text-muted-foreground">
                   当前暂无可展示的建筑
                 </div>
               </div>
