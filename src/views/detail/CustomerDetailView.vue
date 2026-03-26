@@ -4,6 +4,7 @@ import { useRoute, useRouter } from "vue-router"
 import { toast } from "vue-sonner"
 
 import DetailAccordionModule from "@/components/detail/DetailAccordionModule.vue"
+import DetailTabActionsGroup from "@/components/detail/DetailTabActionsGroup.vue"
 import DetailFieldSections from "@/components/detail/DetailFieldSections.vue"
 import DetailRelationModule from "@/components/detail/DetailRelationModule.vue"
 import type { DetailContactValue, DetailFieldSection, DetailRelationModuleSchema } from "@/components/detail/types"
@@ -118,6 +119,12 @@ type CustomerPackageMockRecord = {
 }
 
 type CustomerDetailTab = "basic-info" | "building-assets" | "work-orders" | "monitoring" | "sub-accounts"
+type CustomerDetailTabActions = {
+  deleteCustomer: boolean
+  addPark: boolean
+  editCustomer: boolean
+  back: boolean
+}
 
 const route = useRoute()
 const router = useRouter()
@@ -163,6 +170,39 @@ const detailHeaderTabs = computed(() => detailTabs.value.map(tab => ({
   active: activeTab.value === tab.id,
 })))
 const isFullWidthTableTab = computed(() => activeTab.value === "building-assets" || activeTab.value === "work-orders")
+const detailTabActionsByTab: Record<CustomerDetailTab, CustomerDetailTabActions> = {
+  "basic-info": {
+    deleteCustomer: true,
+    addPark: true,
+    editCustomer: true,
+    back: true,
+  },
+  "building-assets": {
+    deleteCustomer: false,
+    addPark: true,
+    editCustomer: false,
+    back: true,
+  },
+  "work-orders": {
+    deleteCustomer: false,
+    addPark: false,
+    editCustomer: false,
+    back: true,
+  },
+  monitoring: {
+    deleteCustomer: false,
+    addPark: false,
+    editCustomer: true,
+    back: true,
+  },
+  "sub-accounts": {
+    deleteCustomer: false,
+    addPark: false,
+    editCustomer: true,
+    back: true,
+  },
+}
+const activeDetailTabActions = computed(() => detailTabActionsByTab[activeTab.value])
 const detailToolbarButtonClass =
   "inline-flex size-8 items-center justify-center rounded-md bg-transparent text-muted-foreground transition-colors hover:bg-surface-tertiary hover:text-foreground active:bg-surface-secondary"
 const detailToolbarButtonActiveClass =
@@ -1474,124 +1514,126 @@ function toDisplayText(value: unknown, fallback = "未填写") {
     @back="goBack"
     @tab-click="activeTab = $event as CustomerDetailTab"
   >
-    <template #headerActions>
-      <div class="flex items-center gap-2">
-        <AlertDialog>
-          <AlertDialogTrigger as-child>
-            <Button
-              variant="outline"
-              size="sm"
-              class="border-destructive/30 bg-background font-medium text-destructive shadow-none hover:bg-destructive/5 hover:text-destructive"
-            >
-              删除用户
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>确认删除当前用户？</AlertDialogTitle>
-              <AlertDialogDescription>
-                删除后将无法恢复，该操作会移除当前客户资料。
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel :disabled="deleteSubmitting">
-                取消
-              </AlertDialogCancel>
-              <AlertDialogAction
-                :disabled="deleteSubmitting"
-                class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                @click="handleDeleteCustomer"
-              >
-                {{ deleteSubmitting ? "删除中..." : "确认删除" }}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-        <Button
-          variant="outline"
-          size="sm"
-          class="border-border/80 bg-background font-medium text-foreground shadow-none"
-          @click="goToCreatePark"
-        >
-          添加园区
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          class="border-border/80 bg-background font-medium text-foreground shadow-none"
-          @click="goToCustomerEdit"
-        >
-          修改客户信息
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          class="border-border/80 bg-background font-medium text-foreground shadow-none"
-          @click="goBack"
-        >
-          返回客户列表
-        </Button>
-      </div>
-    </template>
-
     <template #tabActions>
-      <div v-if="isFullWidthTableTab" class="flex min-w-[188px] items-center justify-end gap-2">
-        <button
-          type="button"
-          :class="[
-            detailToolbarButtonClass,
-            activeTablePage?.showControls.value ? detailToolbarButtonActiveClass : '',
-          ]"
-          @click="activeTablePage && (activeTablePage.showControls.value = !activeTablePage.showControls.value)"
-        >
-          <i :class="['ri-filter-3-line text-[17px]', activeTablePage?.showControls.value ? 'text-link' : '']" />
-        </button>
-
-        <Popover :open="activeTableSortPopoverOpen" @update:open="activeTableSortPopoverOpen = $event">
-          <PopoverTrigger as-child>
-            <button
-              type="button"
-              :class="[
-                detailToolbarButtonClass,
-                activeTablePage?.customSortEnabled.value ? detailToolbarButtonActiveClass : '',
-              ]"
-              @click="handleActiveTableToolbarAddSort"
-            >
-              <i :class="['ri-sort-asc text-[17px]', activeTablePage?.customSortEnabled.value ? 'text-link' : '']" />
-            </button>
-          </PopoverTrigger>
-
-          <PopoverContent
-            align="end"
-            :side-offset="10"
-            class="w-auto border-0 bg-transparent p-0 shadow-none"
+      <DetailTabActionsGroup>
+        <template #leading v-if="isFullWidthTableTab">
+          <button
+            type="button"
+            :class="[
+              detailToolbarButtonClass,
+              activeTablePage?.showControls.value ? detailToolbarButtonActiveClass : '',
+            ]"
+            @click="activeTablePage && (activeTablePage.showControls.value = !activeTablePage.showControls.value)"
           >
-            <SortPopover
-              :enabled="activeTablePage?.customSortEnabled.value ?? false"
-              :rules="activeTablePage?.sortRules.value ?? []"
-              :field-options="activeTablePage?.sortFieldOptions.value ?? []"
-              @close="activeTableSortPopoverOpen = false"
-              @set-enabled="activeTablePage && (activeTablePage.customSortEnabled.value = $event)"
-              @update-rules="activeTablePage && (activeTablePage.sortRules.value = $event)"
-            />
-          </PopoverContent>
-        </Popover>
+            <i :class="['ri-filter-3-line text-[17px]', activeTablePage?.showControls.value ? 'text-link' : '']" />
+          </button>
 
-        <button type="button" :class="detailToolbarButtonClass">
-          <i class="ri-more-line text-base" />
-        </button>
+          <Popover :open="activeTableSortPopoverOpen" @update:open="activeTableSortPopoverOpen = $event">
+            <PopoverTrigger as-child>
+              <button
+                type="button"
+                :class="[
+                  detailToolbarButtonClass,
+                  activeTablePage?.customSortEnabled.value ? detailToolbarButtonActiveClass : '',
+                ]"
+                @click="handleActiveTableToolbarAddSort"
+              >
+                <i :class="['ri-sort-asc text-[17px]', activeTablePage?.customSortEnabled.value ? 'text-link' : '']" />
+              </button>
+            </PopoverTrigger>
 
-        <Button
-          variant="outline"
-          class="h-8 gap-1 px-3 text-[14px]"
-          @click="activeTableExportDialogOpen = true"
-        >
-          <i class="ri-download-line text-base" />
-          导出
-        </Button>
-      </div>
+            <PopoverContent
+              align="end"
+              :side-offset="10"
+              class="w-auto border-0 bg-transparent p-0 shadow-none"
+            >
+              <SortPopover
+                :enabled="activeTablePage?.customSortEnabled.value ?? false"
+                :rules="activeTablePage?.sortRules.value ?? []"
+                :field-options="activeTablePage?.sortFieldOptions.value ?? []"
+                @close="activeTableSortPopoverOpen = false"
+                @set-enabled="activeTablePage && (activeTablePage.customSortEnabled.value = $event)"
+                @update-rules="activeTablePage && (activeTablePage.sortRules.value = $event)"
+              />
+            </PopoverContent>
+          </Popover>
 
-      <div v-else aria-hidden="true" class="h-8 w-[188px] shrink-0 opacity-0" />
+          <button type="button" :class="detailToolbarButtonClass">
+            <i class="ri-more-line text-base" />
+          </button>
+
+          <Button
+            variant="outline"
+            class="h-8 gap-1 px-3 text-[14px]"
+            @click="activeTableExportDialogOpen = true"
+          >
+            <i class="ri-download-line text-base" />
+            导出
+          </Button>
+        </template>
+
+        <template #trailing>
+          <AlertDialog v-if="activeDetailTabActions.deleteCustomer">
+            <AlertDialogTrigger as-child>
+              <Button
+                variant="outline"
+                size="sm"
+                class="border-destructive/30 bg-background font-medium text-destructive shadow-none hover:bg-destructive/5 hover:text-destructive"
+              >
+                删除用户
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>确认删除当前用户？</AlertDialogTitle>
+                <AlertDialogDescription>
+                  删除后将无法恢复，该操作会移除当前客户资料。
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel :disabled="deleteSubmitting">
+                  取消
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  :disabled="deleteSubmitting"
+                  class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  @click="handleDeleteCustomer"
+                >
+                  {{ deleteSubmitting ? "删除中..." : "确认删除" }}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+
+          <Button
+            v-if="activeDetailTabActions.addPark"
+            variant="outline"
+            size="sm"
+            class="border-border/80 bg-background font-medium text-foreground shadow-none"
+            @click="goToCreatePark"
+          >
+            添加园区
+          </Button>
+          <Button
+            v-if="activeDetailTabActions.editCustomer"
+            variant="outline"
+            size="sm"
+            class="border-border/80 bg-background font-medium text-foreground shadow-none"
+            @click="goToCustomerEdit"
+          >
+            修改客户信息
+          </Button>
+          <Button
+            v-if="activeDetailTabActions.back"
+            variant="outline"
+            size="sm"
+            class="border-border/80 bg-background font-medium text-foreground shadow-none"
+            @click="goBack"
+          >
+            返回客户列表
+          </Button>
+        </template>
+      </DetailTabActionsGroup>
     </template>
 
     <template #primary>
