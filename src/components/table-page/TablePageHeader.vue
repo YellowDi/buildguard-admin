@@ -8,7 +8,20 @@ import NumberFilterPopover from "@/components/table-page/TableNumberFilterPopove
 import SortPopover from "@/components/table-page/TableSortPopover.vue"
 import TagFilterPopover from "@/components/table-page/TableTagFilterPopover.vue"
 import TextFilterPopover from "@/components/table-page/TableTextFilterPopover.vue"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import type { SortFieldOption, SortRule } from "@/components/table-page/TableSortPopover.vue"
 import type {
   DateFilterState,
@@ -82,6 +95,7 @@ const addableFilters = computed(() => props.availableFilters.filter((key) => !vi
 const hasTabs = computed(() => props.tabs.length > 0)
 const hasHeading = computed(() => Boolean(props.title || props.description))
 const hasTopSurface = computed(() => hasHeading.value || hasTabs.value || props.showToolbarActions)
+const activeTabLabel = computed(() => props.tabs.find(tab => tab.active)?.label ?? props.tabs[0]?.label ?? "")
 
 function getTextFilter(key: string) {
   return props.textFilters[key]
@@ -209,6 +223,39 @@ function handleClearAllFilters() {
   emit("clear-all-filters")
   closePopover()
 }
+
+function handleMobileTabSelect(value: string) {
+  const targetTab = props.tabs.find(tab => tab.label === value)
+  if (targetTab) {
+    emit("tab-click", targetTab)
+  }
+}
+
+function handleMobileToolbarActionSelect(action: "filters" | "sort" | "export" | "primary") {
+  if (action === "filters") {
+    emit("toggle-controls")
+    return
+  }
+
+  if (action === "sort") {
+    if (props.customSortEnabled) {
+      emit("set-custom-sort-enabled", false)
+      return
+    }
+
+    handleToolbarAddSort()
+    return
+  }
+
+  if (action === "export") {
+    emit("export-action")
+    return
+  }
+
+  if (action === "primary") {
+    emit("primary-action")
+  }
+}
 </script>
 
 <template>
@@ -230,132 +277,217 @@ function handleClearAllFilters() {
 
           <div
             v-if="!hasTabs && props.showToolbarActions"
-            class="flex min-w-0 flex-wrap items-center justify-end gap-1 text-muted-foreground sm:flex-nowrap"
+            class="min-w-0"
           >
-            <button
-              type="button"
-              :class="[
-                ghostIconButtonClass,
-                showControls ? ghostIconButtonActiveClass : '',
-              ]"
-              @click="emit('toggle-controls')"
-            >
-              <i :class="['ri-filter-3-line text-[17px]', showControls ? 'text-link' : '']" />
-            </button>
-            <div class="relative" data-list-popover>
+            <DropdownMenu>
+              <DropdownMenuTrigger as-child>
+                <Button variant="outline" class="h-9 gap-1 px-3 text-[14px] sm:hidden">
+                  <i class="ri-more-2-line text-base" />
+                  操作
+                </Button>
+              </DropdownMenuTrigger>
+
+              <DropdownMenuContent align="end" class="w-52 rounded-xl p-1.5 sm:hidden">
+                <DropdownMenuItem class="rounded-lg px-2.5 py-2" @select="handleMobileToolbarActionSelect('filters')">
+                  <i class="ri-filter-3-line mr-2 text-base text-muted-foreground" />
+                  {{ showControls ? "隐藏筛选" : "显示筛选" }}
+                </DropdownMenuItem>
+                <DropdownMenuItem class="rounded-lg px-2.5 py-2" @select="handleMobileToolbarActionSelect('sort')">
+                  <i class="ri-sort-asc mr-2 text-base text-muted-foreground" />
+                  {{ customSortEnabled ? "关闭排序" : "启用排序" }}
+                </DropdownMenuItem>
+                <DropdownMenuItem class="rounded-lg px-2.5 py-2" @select="handleMobileToolbarActionSelect('export')">
+                  <i class="ri-download-line mr-2 text-base text-muted-foreground" />
+                  导出
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  v-if="primaryActionLabel"
+                  class="rounded-lg px-2.5 py-2"
+                  @select="handleMobileToolbarActionSelect('primary')"
+                >
+                  <i class="ri-add-line mr-2 text-base text-muted-foreground" />
+                  {{ primaryActionLabel }}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <div class="hidden min-w-0 flex-wrap items-center justify-end gap-1 text-muted-foreground sm:flex sm:flex-nowrap">
               <button
                 type="button"
                 :class="[
                   ghostIconButtonClass,
-                  customSortEnabled ? ghostIconButtonActiveClass : '',
+                  showControls ? ghostIconButtonActiveClass : '',
                 ]"
-                @click="handleToolbarAddSort"
+                @click="emit('toggle-controls')"
               >
-                <i :class="['ri-sort-asc text-[17px]', customSortEnabled ? 'text-link' : '']" />
+                <i :class="['ri-filter-3-line text-[17px]', showControls ? 'text-link' : '']" />
               </button>
+              <div class="relative" data-list-popover>
+                <button
+                  type="button"
+                  :class="[
+                    ghostIconButtonClass,
+                    customSortEnabled ? ghostIconButtonActiveClass : '',
+                  ]"
+                  @click="handleToolbarAddSort"
+                >
+                  <i :class="['ri-sort-asc text-[17px]', customSortEnabled ? 'text-link' : '']" />
+                </button>
+              </div>
+              <button
+                type="button"
+                :class="ghostIconButtonClass"
+              >
+                <i class="ri-more-line text-base" />
+              </button>
+              <Button
+                variant="outline"
+                class="h-8 gap-1 px-3 text-[14px]"
+                @click="emit('export-action')"
+              >
+                <i class="ri-download-line text-base" />
+                导出
+              </Button>
+              <Button
+                v-if="primaryActionLabel"
+                variant="default"
+                class="h-8 gap-1 px-3 text-[14px]"
+                @click="emit('primary-action')"
+              >
+                <i class="ri-add-line text-base" />
+                {{ primaryActionLabel }}
+              </Button>
             </div>
-            <button
-              type="button"
-              :class="ghostIconButtonClass"
-            >
-              <i class="ri-more-line text-base" />
-            </button>
-            <Button
-              variant="outline"
-              class="h-8 gap-1 px-3 text-[14px]"
-              @click="emit('export-action')"
-            >
-              <i class="ri-download-line text-base" />
-              导出
-            </Button>
-            <Button
-              v-if="primaryActionLabel"
-              variant="default"
-              class="h-8 gap-1 px-3 text-[14px]"
-              @click="emit('primary-action')"
-            >
-              <i class="ri-add-line text-base" />
-              {{ primaryActionLabel }}
-            </Button>
           </div>
         </div>
 
         <div
           v-if="hasTabs"
-          class="flex min-w-0 flex-wrap items-end gap-x-6 gap-y-3 text-muted-foreground"
+          class="text-muted-foreground"
         >
-          <nav class="flex min-w-0 flex-[999_1_24rem] flex-wrap items-center text-[14px]">
-            <button
-              v-for="tab in tabs"
-              :key="tab.label"
-              type="button"
-              :aria-pressed="tab.active"
-              :class="[
-                'group relative px-3 pb-[11px] text-muted-foreground transition-colors hover:text-foreground',
-                tab.active ? 'font-semibold text-foreground' : '',
-              ]"
-              @click="emit('tab-click', tab)"
-            >
-              <span class="relative isolate inline-block">
-                <span class="pointer-events-none absolute -inset-x-2 -inset-y-1 rounded-md transition-colors group-hover:bg-surface-tertiary" />
-                <span class="relative z-10">{{ tab.label }}</span>
-              </span>
-              <span
-                v-if="tab.active"
-                class="absolute inset-x-0 bottom-0 h-0.5 bg-foreground"
-              />
-            </button>
-          </nav>
+          <div class="flex items-center gap-2 pb-2 sm:hidden">
+            <Select :model-value="activeTabLabel" @update:model-value="handleMobileTabSelect">
+              <SelectTrigger class="h-9 min-w-0 flex-1 rounded-md bg-background text-[14px]">
+                <SelectValue placeholder="选择分页" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem
+                  v-for="tab in tabs"
+                  :key="tab.label"
+                  :value="tab.label"
+                >
+                  {{ tab.label }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
 
-          <div
-            v-if="props.showToolbarActions"
-            class="flex min-w-0 flex-[1_1_100%] flex-wrap items-center justify-end gap-1 pb-2 text-muted-foreground sm:flex-[0_0_auto] sm:flex-nowrap"
-          >
-            <button
-              type="button"
-              :class="[
-                ghostIconButtonClass,
-                showControls ? ghostIconButtonActiveClass : '',
-              ]"
-              @click="emit('toggle-controls')"
+            <DropdownMenu v-if="props.showToolbarActions">
+              <DropdownMenuTrigger as-child>
+                <Button variant="outline" class="h-9 gap-1 px-3 text-[14px]">
+                  <i class="ri-more-2-line text-base" />
+                  操作
+                </Button>
+              </DropdownMenuTrigger>
+
+              <DropdownMenuContent align="end" class="w-52 rounded-xl p-1.5 sm:hidden">
+                <DropdownMenuItem class="rounded-lg px-2.5 py-2" @select="handleMobileToolbarActionSelect('filters')">
+                  <i class="ri-filter-3-line mr-2 text-base text-muted-foreground" />
+                  {{ showControls ? "隐藏筛选" : "显示筛选" }}
+                </DropdownMenuItem>
+                <DropdownMenuItem class="rounded-lg px-2.5 py-2" @select="handleMobileToolbarActionSelect('sort')">
+                  <i class="ri-sort-asc mr-2 text-base text-muted-foreground" />
+                  {{ customSortEnabled ? "关闭排序" : "启用排序" }}
+                </DropdownMenuItem>
+                <DropdownMenuItem class="rounded-lg px-2.5 py-2" @select="handleMobileToolbarActionSelect('export')">
+                  <i class="ri-download-line mr-2 text-base text-muted-foreground" />
+                  导出
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  v-if="primaryActionLabel"
+                  class="rounded-lg px-2.5 py-2"
+                  @select="handleMobileToolbarActionSelect('primary')"
+                >
+                  <i class="ri-add-line mr-2 text-base text-muted-foreground" />
+                  {{ primaryActionLabel }}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
+          <div class="hidden min-w-0 flex-wrap items-end gap-x-6 gap-y-3 sm:flex">
+            <nav class="flex min-w-0 flex-[999_1_24rem] flex-wrap items-center text-[14px]">
+              <button
+                v-for="tab in tabs"
+                :key="tab.label"
+                type="button"
+                :aria-pressed="tab.active"
+                :class="[
+                  'group relative px-3 pb-[11px] text-muted-foreground transition-colors hover:text-foreground',
+                  tab.active ? 'font-semibold text-foreground' : '',
+                ]"
+                @click="emit('tab-click', tab)"
+              >
+                <span class="relative isolate inline-block">
+                  <span class="pointer-events-none absolute -inset-x-2 -inset-y-1 rounded-md transition-colors group-hover:bg-surface-tertiary" />
+                  <span class="relative z-10">{{ tab.label }}</span>
+                </span>
+                <span
+                  v-if="tab.active"
+                  class="absolute inset-x-0 bottom-0 h-0.5 bg-foreground"
+                />
+              </button>
+            </nav>
+
+            <div
+              v-if="props.showToolbarActions"
+              class="flex min-w-0 flex-[0_0_auto] items-center justify-end gap-1 pb-2 text-muted-foreground"
             >
-              <i :class="['ri-filter-3-line text-[17px]', showControls ? 'text-link' : '']" />
-            </button>
-            <div class="relative" data-list-popover>
               <button
                 type="button"
                 :class="[
                   ghostIconButtonClass,
-                  customSortEnabled ? ghostIconButtonActiveClass : '',
+                  showControls ? ghostIconButtonActiveClass : '',
                 ]"
-                @click="handleToolbarAddSort"
+                @click="emit('toggle-controls')"
               >
-                <i :class="['ri-sort-asc text-[17px]', customSortEnabled ? 'text-link' : '']" />
+                <i :class="['ri-filter-3-line text-[17px]', showControls ? 'text-link' : '']" />
               </button>
+              <div class="relative" data-list-popover>
+                <button
+                  type="button"
+                  :class="[
+                    ghostIconButtonClass,
+                    customSortEnabled ? ghostIconButtonActiveClass : '',
+                  ]"
+                  @click="handleToolbarAddSort"
+                >
+                  <i :class="['ri-sort-asc text-[17px]', customSortEnabled ? 'text-link' : '']" />
+                </button>
+              </div>
+              <button
+                type="button"
+                :class="ghostIconButtonClass"
+              >
+                <i class="ri-more-line text-base" />
+              </button>
+              <Button
+                variant="outline"
+                class="h-8 gap-1 px-3 text-[14px]"
+                @click="emit('export-action')"
+              >
+                <i class="ri-download-line text-base" />
+                导出
+              </Button>
+              <Button
+                v-if="primaryActionLabel"
+                variant="default"
+                class="h-8 gap-1 px-3 text-[14px]"
+                @click="emit('primary-action')"
+              >
+                <i class="ri-add-line text-base" />
+                {{ primaryActionLabel }}
+              </Button>
             </div>
-            <button
-              type="button"
-              :class="ghostIconButtonClass"
-            >
-              <i class="ri-more-line text-base" />
-            </button>
-            <Button
-              variant="outline"
-              class="h-8 gap-1 px-3 text-[14px]"
-              @click="emit('export-action')"
-            >
-              <i class="ri-download-line text-base" />
-              导出
-            </Button>
-            <Button
-              v-if="primaryActionLabel"
-              variant="default"
-              class="h-8 gap-1 px-3 text-[14px]"
-              @click="emit('primary-action')"
-            >
-              <i class="ri-add-line text-base" />
-              {{ primaryActionLabel }}
-            </Button>
           </div>
         </div>
       </div>
