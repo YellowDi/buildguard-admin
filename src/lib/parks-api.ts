@@ -1,4 +1,4 @@
-import { createHttpError, readResponseBody } from "@/lib/api-errors"
+import { assertApiSuccess, createHttpError, readResponseBody } from "@/lib/api-errors"
 import { API_PATHS, buildApiHeaders, buildApiUrl } from "@/lib/api"
 
 type ParksListEnvelope = {
@@ -83,6 +83,8 @@ export async function fetchParks(payload: ListParksPayload = {}): Promise<ParksL
     throw createHttpError(response, responsePayload, PARKS_LOAD_ERROR_MESSAGE)
   }
 
+  assertApiSuccess(responsePayload, PARKS_LOAD_ERROR_MESSAGE)
+
   const list = extractList(responsePayload)
 
   return {
@@ -110,6 +112,8 @@ export async function fetchParkDetail(payload: ParkDetailPayload): Promise<ParkD
   if (!response.ok) {
     throw createHttpError(response, responsePayload, PARK_DETAIL_LOAD_ERROR_MESSAGE)
   }
+
+  assertApiSuccess(responsePayload, PARK_DETAIL_LOAD_ERROR_MESSAGE)
 
   return normalizeParkDetail(extractDetailRecord(responsePayload))
 }

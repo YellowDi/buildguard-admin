@@ -1,4 +1,4 @@
-import { ApiError, createHttpError, readResponseBody } from "@/lib/api-errors"
+import { ApiError, assertApiSuccess, createHttpError, readResponseBody } from "@/lib/api-errors"
 import { API_PATHS, buildApiHeaders, buildApiUrl } from "@/lib/api"
 
 type BuildingsListEnvelope = {
@@ -64,6 +64,8 @@ export async function fetchBuildings(payload: ListBuildingsPayload = {}): Promis
   if (!response.ok) {
     throw createHttpError(response, responsePayload, BUILDINGS_LOAD_ERROR_MESSAGE)
   }
+
+  assertApiSuccess(responsePayload, BUILDINGS_LOAD_ERROR_MESSAGE)
 
   const list = extractList(responsePayload)
 

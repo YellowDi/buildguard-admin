@@ -1,4 +1,4 @@
-import { ApiError, createHttpError, readResponseBody } from "@/lib/api-errors"
+import { ApiError, assertApiSuccess, createHttpError, readResponseBody } from "@/lib/api-errors"
 import { API_PATHS, buildApiHeaders, buildApiUrl } from "@/lib/api"
 
 type CustomerListEnvelope = {
@@ -103,6 +103,8 @@ export async function fetchCustomers(payload: ListCustomersPayload = {}): Promis
     throw createHttpError(response, responsePayload, CUSTOMERS_LOAD_ERROR_MESSAGE)
   }
 
+  assertApiSuccess(responsePayload, CUSTOMERS_LOAD_ERROR_MESSAGE)
+
   const list = extractList(responsePayload)
 
   return {
@@ -136,6 +138,8 @@ export async function createCustomer(payload: CustomerCreatePayload): Promise<Cu
     throw createHttpError(response, responseBody, CUSTOMER_CREATE_ERROR_MESSAGE)
   }
 
+  assertApiSuccess(responseBody, CUSTOMER_CREATE_ERROR_MESSAGE)
+
   return extractCreateResult(responseBody)
 }
 
@@ -154,6 +158,8 @@ export async function fetchCustomerDetail(payload: CustomerDetailPayload): Promi
   if (!response.ok) {
     throw createHttpError(response, responseBody, CUSTOMER_DETAIL_ERROR_MESSAGE)
   }
+
+  assertApiSuccess(responseBody, CUSTOMER_DETAIL_ERROR_MESSAGE)
 
   return extractDetailRecord(responseBody)
 }

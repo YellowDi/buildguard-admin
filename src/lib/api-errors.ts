@@ -69,6 +69,31 @@ export function createHttpError(
   })
 }
 
+export function assertApiSuccess(payload: unknown, fallback = "请求失败，请稍后重试。") {
+  const record = asRecord(payload)
+
+  if (!record) {
+    return
+  }
+
+  if (record.success === false) {
+    throw new ApiError(extractMessage(payload) ?? fallback, {
+      code: extractScalar(payload, CODE_KEYS) ?? undefined,
+      requestId: extractScalar(payload, REQUEST_ID_KEYS) ?? undefined,
+    })
+  }
+
+  const rawCode = record.code ?? record.Code
+  const numericCode = typeof rawCode === "string" ? Number(rawCode.trim()) : rawCode
+
+  if (typeof numericCode === "number" && Number.isFinite(numericCode) && numericCode !== 0 && numericCode !== 200) {
+    throw new ApiError(extractMessage(payload) ?? fallback, {
+      code: String(numericCode),
+      requestId: extractScalar(payload, REQUEST_ID_KEYS) ?? undefined,
+    })
+  }
+}
+
 export async function readResponseBody(response: Response) {
   const contentType = response.headers.get("content-type") ?? ""
 

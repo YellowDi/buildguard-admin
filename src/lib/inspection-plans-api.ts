@@ -1,4 +1,4 @@
-import { createHttpError, readResponseBody } from "@/lib/api-errors"
+import { assertApiSuccess, createHttpError, readResponseBody } from "@/lib/api-errors"
 import { API_PATHS, buildApiHeaders, buildApiUrl } from "@/lib/api"
 
 type InspectionPlansEnvelope = {
@@ -58,6 +58,8 @@ export async function fetchInspectionPlans(
   if (!response.ok) {
     throw createHttpError(response, responsePayload, INSPECTION_PLANS_LOAD_ERROR_MESSAGE)
   }
+
+  assertApiSuccess(responsePayload, INSPECTION_PLANS_LOAD_ERROR_MESSAGE)
 
   const list = extractList(responsePayload)
 
