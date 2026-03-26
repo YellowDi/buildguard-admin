@@ -767,11 +767,16 @@ function getInspectionServiceWorkOrders() {
   >
     <div class="sticky top-0 z-10 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80 sm:-mx-4">
       <div class="px-4 pt-5">
-        <SectionHeader :title="detail.Name" :subtitle="detail.CustomerName" :has-actions="true">
-          <template #actions>
-            <Button variant="outline" size="sm" class="border-border/80 bg-background font-medium text-foreground shadow-none" @click="goBack">
-              返回
-            </Button>
+        <SectionHeader :title="detail.Name" :subtitle="detail.CustomerName">
+          <template #leading>
+            <button
+              type="button"
+              class="inline-flex size-8 items-center justify-center rounded-md text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+              aria-label="返回"
+              @click="goBack"
+            >
+              <i class="ri-arrow-left-line text-[18px]" />
+            </button>
           </template>
         </SectionHeader>
 
@@ -921,12 +926,6 @@ function getInspectionServiceWorkOrders() {
     @back="goBack"
     @tab-click="activeTab = $event as InspectionServiceDetailTab"
   >
-    <template #actions>
-      <Button variant="outline" size="sm" class="border-border/80 bg-background font-medium text-foreground shadow-none" @click="goBack">
-        返回
-      </Button>
-    </template>
-
     <template #primary>
       <Alert v-if="errorMessage" variant="destructive" class="mb-5">
         <AlertTitle>检测服务详情加载失败</AlertTitle>

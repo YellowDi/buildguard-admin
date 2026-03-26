@@ -61,6 +61,16 @@ const hasHeaderBottom = computed(() => Boolean(slots.headerBottom))
       <div class="sticky top-0 z-10 -mx-0 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80 sm:-mx-4">
         <div :class="['px-4 pt-5', hasTabs || hasHeaderBottom ? '' : 'pb-5']">
           <SectionHeader :title="props.title" :subtitle="props.subtitle" :has-actions="hasHeaderActions">
+            <template #leading>
+              <button
+                type="button"
+                class="inline-flex size-8 items-center justify-center rounded-md text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                :aria-label="props.backLabel"
+                @click="emit('back')"
+              >
+                <i class="ri-arrow-left-line text-[18px]" />
+              </button>
+            </template>
             <template #actions>
               <slot v-if="$slots.headerActions" name="headerActions" />
               <slot v-else name="actions" />

@@ -175,31 +175,31 @@ const detailTabActionsByTab: Record<CustomerDetailTab, CustomerDetailTabActions>
     deleteCustomer: true,
     addPark: true,
     editCustomer: true,
-    back: true,
+    back: false,
   },
   "building-assets": {
     deleteCustomer: false,
     addPark: true,
     editCustomer: false,
-    back: true,
+    back: false,
   },
   "work-orders": {
     deleteCustomer: false,
     addPark: false,
     editCustomer: false,
-    back: true,
+    back: false,
   },
   monitoring: {
     deleteCustomer: false,
     addPark: false,
     editCustomer: true,
-    back: true,
+    back: false,
   },
   "sub-accounts": {
     deleteCustomer: false,
     addPark: false,
     editCustomer: true,
-    back: true,
+    back: false,
   },
 }
 const activeDetailTabActions = computed(() => detailTabActionsByTab[activeTab.value])

@@ -205,12 +205,6 @@ function buildContactValue(name: string | null, phone?: string | null): DetailCo
     empty-text="未找到该园区信息"
     @back="goBack"
   >
-    <template #actions>
-      <Button variant="outline" size="sm" class="border-border/80 bg-background font-medium text-foreground shadow-none" @click="goBack">
-        返回
-      </Button>
-    </template>
-
     <template #primary>
       <Alert v-if="errorMessage" variant="destructive" class="mb-5">
         <AlertTitle>园区详情接口加载失败</AlertTitle>
