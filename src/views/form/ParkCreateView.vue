@@ -3,6 +3,7 @@ import { computed, nextTick, onMounted, onUnmounted, reactive, ref } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { toast } from "vue-sonner"
 
+import FormDatePicker from "@/components/form/FormDatePicker.vue"
 import FormFieldSection from "@/components/form/FormFieldSection.vue"
 import FormHeader from "@/components/form/FormHeader.vue"
 import FormQuickNav from "@/components/form/FormQuickNav.vue"
@@ -410,25 +411,31 @@ onUnmounted(() => {
           </FormFieldSection>
 
           <FormFieldSection
-            id="section-time"
-            quick-nav-label="时间信息"
-            label="时间信息"
-            align="start"
+            id="section-built-time"
+            quick-nav-label="建成时间"
+            label="建成时间"
+            label-for="park-built-time"
           >
-            <div class="grid gap-3 sm:grid-cols-2">
-              <Input
-                v-model="form.builtTime"
-                type="date"
-                class="w-full"
-                @focus="handleFocus('section-time')"
-              />
-              <Input
-                v-model="form.operationTime"
-                type="date"
-                class="w-full"
-                @focus="handleFocus('section-time')"
-              />
-            </div>
+            <FormDatePicker
+              id="park-built-time"
+              v-model="form.builtTime"
+              placeholder="请选择建成时间"
+              @focus="handleFocus('section-built-time')"
+            />
+          </FormFieldSection>
+
+          <FormFieldSection
+            id="section-operation-time"
+            quick-nav-label="投入运营时间"
+            label="投入运营时间"
+            label-for="park-operation-time"
+          >
+            <FormDatePicker
+              id="park-operation-time"
+              v-model="form.operationTime"
+              placeholder="请选择投入运营时间"
+              @focus="handleFocus('section-operation-time')"
+            />
           </FormFieldSection>
 
           <FormFieldSection
