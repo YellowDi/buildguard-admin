@@ -242,45 +242,6 @@ const personnelRoleChartConfig = {
   },
 } satisfies ChartConfig
 
-const districtEnterpriseData = Object.values(
-  companyRecords.reduce<Record<string, { district: string, index: number, passenger: number, dangerous: number }>>((acc, item) => {
-    acc[item.district] ??= {
-      district: item.district,
-      index: 0,
-      passenger: 0,
-      dangerous: 0,
-    }
-
-    if (item.type.includes("旅客")) {
-      acc[item.district].passenger += 1
-    }
-    else {
-      acc[item.district].dangerous += 1
-    }
-
-    return acc
-  }, {}),
-)
-  .sort((a, b) => (b.passenger + b.dangerous) - (a.passenger + a.dangerous))
-  .slice(0, 6)
-  .map((item, index) => ({
-    ...item,
-    index: index + 1,
-  }))
-
-type DistrictEnterpriseDatum = (typeof districtEnterpriseData)[number]
-
-const districtEnterpriseChartConfig = {
-  passenger: {
-    label: "客运企业",
-    color: "var(--chart-1)",
-  },
-  dangerous: {
-    label: "危货企业",
-    color: "var(--chart-2)",
-  },
-} satisfies ChartConfig
-
 const numberFormatter = new Intl.NumberFormat("zh-CN")
 const totalParkCount = parkRecords.length
 const totalBuildingCount = parkRecords.reduce((sum, item) => sum + item.buildingCount, 0)
@@ -354,14 +315,6 @@ const activeBuildingList = computed(() => buildingRankedGroups.value[activeBuild
 onMounted(() => {
   void loadBuildingRanking()
 })
-
-function getAxisLabel<T extends { index: number } & Record<K, string>, K extends string>(
-  items: readonly T[],
-  value: number,
-  key: K,
-) {
-  return items.find(item => item.index === Math.round(value))?.[key] ?? ""
-}
 
 function formatShortDate(date: number | Date, locale = "zh-CN") {
   return new Date(date).toLocaleDateString(locale, {
@@ -600,98 +553,197 @@ function hashText(value: string) {
       </div>
     </div>
 
-    <div class="grid gap-4 xl:grid-cols-10">
-      <div :class="`${dashboardTrendShellClass} xl:col-span-7`">
-        <CardHeader class="flex flex-col gap-2 px-0 sm:min-h-8 sm:flex-row sm:items-center sm:justify-between sm:pl-2 sm:pr-0">
-          <CardTitle :class="chartTitleClass">
-            企业车辆规模趋势
-          </CardTitle>
+    <div class="grid items-stretch gap-4 xl:grid-cols-10">
+      <div class="flex min-w-0 flex-col gap-4 xl:col-span-7">
+        <div :class="dashboardTrendShellClass">
+          <CardHeader class="flex flex-col gap-2 px-0 sm:min-h-8 sm:flex-row sm:items-center sm:justify-between sm:pl-2 sm:pr-0">
+            <CardTitle :class="chartTitleClass">
+              企业车辆规模趋势
+            </CardTitle>
 
-          <Select v-model="timeRange">
-            <SelectTrigger
-              class="flex h-8 w-full rounded-lg sm:ml-auto sm:w-[132px]"
-              aria-label="选择时间范围"
-            >
-              <SelectValue placeholder="最近 7 天" />
-            </SelectTrigger>
+            <Select v-model="timeRange">
+              <SelectTrigger
+                class="flex h-8 w-full rounded-lg sm:ml-auto sm:w-[132px]"
+                aria-label="选择时间范围"
+              >
+                <SelectValue placeholder="最近 7 天" />
+              </SelectTrigger>
 
-            <SelectContent class="rounded-xl">
-              <SelectItem value="7d" class="rounded-lg">
-                最近 7 天
-              </SelectItem>
-              <SelectItem value="3d" class="rounded-lg">
-                最近 3 天
-              </SelectItem>
-              <SelectItem value="1d" class="rounded-lg">
-                最近 1 天
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        </CardHeader>
+              <SelectContent class="rounded-xl">
+                <SelectItem value="7d" class="rounded-lg">
+                  最近 7 天
+                </SelectItem>
+                <SelectItem value="3d" class="rounded-lg">
+                  最近 3 天
+                </SelectItem>
+                <SelectItem value="1d" class="rounded-lg">
+                  最近 1 天
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </CardHeader>
 
-        <Card :class="dashboardTrendCardClass">
-          <CardContent :class="dashboardTrendContentClass">
-            <ChartContainer
-              :config="companyChartConfig"
-              :class="chartContainerClass"
-              :cursor="false"
-            >
-              <div :class="chartMainBodyClass">
-                <VisXYContainer
-                  :data="filteredCompanyTrendData"
-                  :svg-defs="svgDefs"
-                  :margin="{ left: -32 }"
-                  :y-domain="[0, companyTrendMax]"
+          <Card :class="dashboardTrendCardClass">
+            <CardContent :class="dashboardTrendContentClass">
+              <ChartContainer
+                :config="companyChartConfig"
+                :class="chartContainerClass"
+                :cursor="false"
+              >
+                <div :class="chartMainBodyClass">
+                  <VisXYContainer
+                    :data="filteredCompanyTrendData"
+                    :svg-defs="svgDefs"
+                    :margin="{ left: -32 }"
+                    :y-domain="[0, companyTrendMax]"
+                  >
+                    <VisArea
+                      :x="(d: CompanyTrendDatum) => d.date"
+                      :y="[(d: CompanyTrendDatum) => d.passenger, (d: CompanyTrendDatum) => d.dangerous]"
+                      :color="(_d: CompanyTrendDatum, i: number) => ['url(#fillPassenger)', 'url(#fillDangerous)'][i]"
+                      :opacity="0.6"
+                    />
+
+                    <VisLine
+                      :x="(d: CompanyTrendDatum) => d.date"
+                      :y="[(d: CompanyTrendDatum) => d.passenger, (d: CompanyTrendDatum) => d.passenger + d.dangerous]"
+                      :color="(_d: CompanyTrendDatum, i: number) => [companyChartConfig.passenger.color, companyChartConfig.dangerous.color][i]"
+                      :line-width="1"
+                    />
+
+                    <VisAxis
+                      type="x"
+                      :x="(d: CompanyTrendDatum) => d.date"
+                      :tick-line="false"
+                      :domain-line="false"
+                      :grid-line="false"
+                      :num-ticks="6"
+                      :tick-format="(d: number) => formatShortDate(d)"
+                    />
+
+                    <VisAxis
+                      type="y"
+                      :num-ticks="4"
+                      :tick-line="false"
+                      :domain-line="false"
+                    />
+
+                    <ChartTooltip />
+
+                    <ChartCrosshair
+                      :template="componentToString(companyChartConfig, ChartTooltipContent, {
+                        labelFormatter: (d) => formatShortDate(d),
+                      })"
+                      :color="(_d: CompanyTrendDatum, i: number) => [companyChartConfig.passenger.color, companyChartConfig.dangerous.color][i % 2]"
+                    />
+                  </VisXYContainer>
+                </div>
+
+                <ChartLegendContent />
+              </ChartContainer>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div class="grid gap-4 md:grid-cols-2">
+          <div :class="chartShellClass">
+            <CardHeader :class="chartHeaderClass">
+              <CardTitle :class="chartTitleClass">
+                报警处置趋势
+              </CardTitle>
+            </CardHeader>
+
+            <Card :class="`${chartCardClass} flex-1`">
+              <CardContent :class="chartContentClass">
+                <ChartContainer :config="alarmStatusChartConfig" :class="chartContainerClass">
+                  <div :class="chartBodyClass">
+                    <VisXYContainer
+                      :data="alarmStatusTrendData"
+                      :padding="{ top: 10, bottom: 10, left: 10, right: 10 }"
+                      :y-domain="[0, alarmTrendMax]"
+                    >
+                      <VisStackedBar
+                        :x="(d: AlarmTrendDatum) => d.date"
+                        :y="[(d: AlarmTrendDatum) => d.pending, (d: AlarmTrendDatum) => d.archived]"
+                        :color="[alarmStatusChartConfig.pending.color, alarmStatusChartConfig.archived.color]"
+                        :rounded-corners="4"
+                        :bar-padding="0.1"
+                      />
+
+                      <VisAxis
+                        type="x"
+                        :x="(d: AlarmTrendDatum) => d.date"
+                        :tick-line="false"
+                        :domain-line="false"
+                        :grid-line="false"
+                        :num-ticks="4"
+                        :tick-format="(d: number) => formatShortDate(d)"
+                        :tick-values="alarmStatusTrendData.map(d => d.date)"
+                      />
+
+                      <VisAxis
+                        type="y"
+                        :tick-line="false"
+                        :domain-line="false"
+                        :num-ticks="4"
+                      />
+
+                      <ChartTooltip />
+
+                      <ChartCrosshair
+                        :template="componentToString(alarmStatusChartConfig, ChartTooltipContent, {
+                          labelFormatter: d => formatShortDate(d),
+                        })"
+                        color="#0000"
+                      />
+                    </VisXYContainer>
+                  </div>
+
+                  <ChartLegendContent />
+                </ChartContainer>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div :class="chartShellClass">
+            <CardHeader :class="chartHeaderClass">
+              <CardTitle :class="chartTitleClass">
+                从业人员角色分布
+              </CardTitle>
+            </CardHeader>
+
+            <Card :class="`${chartCardClass} flex-1`">
+              <CardContent :class="chartContentClass">
+                <ChartContainer
+                  :config="personnelRoleChartConfig"
+                  class="mx-auto flex min-w-0 w-full items-center justify-start"
                 >
-                  <VisArea
-                    :x="(d: CompanyTrendDatum) => d.date"
-                    :y="[(d: CompanyTrendDatum) => d.passenger, (d: CompanyTrendDatum) => d.dangerous]"
-                    :color="(_d: CompanyTrendDatum, i: number) => ['url(#fillPassenger)', 'url(#fillDangerous)'][i]"
-                    :opacity="0.6"
-                  />
-
-                  <VisLine
-                    :x="(d: CompanyTrendDatum) => d.date"
-                    :y="[(d: CompanyTrendDatum) => d.passenger, (d: CompanyTrendDatum) => d.passenger + d.dangerous]"
-                    :color="(_d: CompanyTrendDatum, i: number) => [companyChartConfig.passenger.color, companyChartConfig.dangerous.color][i]"
-                    :line-width="1"
-                  />
-
-                  <VisAxis
-                    type="x"
-                    :x="(d: CompanyTrendDatum) => d.date"
-                    :tick-line="false"
-                    :domain-line="false"
-                    :grid-line="false"
-                    :num-ticks="6"
-                    :tick-format="(d: number) => formatShortDate(d)"
-                  />
-
-                  <VisAxis
-                    type="y"
-                    :num-ticks="4"
-                    :tick-line="false"
-                    :domain-line="false"
-                  />
-
-                  <ChartTooltip />
-
-                  <ChartCrosshair
-                    :template="componentToString(companyChartConfig, ChartTooltipContent, {
-                      labelFormatter: (d) => formatShortDate(d),
-                    })"
-                    :color="(_d: CompanyTrendDatum, i: number) => [companyChartConfig.passenger.color, companyChartConfig.dangerous.color][i % 2]"
-                  />
-                </VisXYContainer>
-              </div>
-
-              <ChartLegendContent />
-            </ChartContainer>
-          </CardContent>
-        </Card>
+                  <div :class="chartBodyClass">
+                    <VisSingleContainer
+                      :data="personnelRoleData"
+                      class="h-full w-full"
+                      :margin="{ top: 30, bottom: 30 }"
+                    >
+                      <VisDonut
+                        :value="(d: PersonnelRoleDatum) => d.count"
+                        :color="(d: PersonnelRoleDatum) => personnelRoleChartConfig[d.role as keyof typeof personnelRoleChartConfig].color"
+                        :arc-width="30"
+                      />
+                      <ChartTooltip
+                        :triggers="{
+                          [VisDonutSelectors.segment]: componentToString(personnelRoleChartConfig, ChartTooltipContent, { hideLabel: true })!,
+                        }"
+                      />
+                    </VisSingleContainer>
+                  </div>
+                </ChartContainer>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
       </div>
 
-      <div :class="`${chartShellClass} xl:col-span-3`">
+      <div :class="`${chartShellClass} h-full min-h-0 xl:col-span-3`">
         <CardHeader class="flex flex-col gap-3 px-0 sm:min-h-8 sm:flex-row sm:items-center sm:justify-between sm:pl-2 sm:pr-0">
           <div class="flex items-center gap-3">
             <CardTitle :class="chartTitleClass">
@@ -713,8 +765,8 @@ function hashText(value: string) {
           </div>
         </CardHeader>
 
-        <Card :class="`${chartCardClass} min-h-[332px]`">
-          <CardContent class="flex h-full flex-col p-3">
+        <Card :class="`${chartCardClass} h-full min-h-[332px]`">
+          <CardContent class="flex h-full min-h-0 flex-col p-3">
             <div v-if="buildingRankingError" class="flex flex-1 flex-col items-center justify-center gap-3 text-center">
               <div class="text-sm text-destructive">
                 {{ buildingRankingError }}
@@ -728,7 +780,7 @@ function hashText(value: string) {
               正在加载建筑排行
             </div>
 
-            <div v-else-if="activeBuildingList.length" class="flex flex-col gap-1.5">
+            <div v-else-if="activeBuildingList.length" class="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto pr-1">
               <button
                 v-for="(building, index) in activeBuildingList"
                 :key="building.id"
@@ -772,152 +824,5 @@ function hashText(value: string) {
       </div>
     </div>
 
-    <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-      <div :class="chartShellClass">
-        <CardHeader :class="chartHeaderClass">
-          <CardTitle :class="chartTitleClass">
-            报警处置趋势
-          </CardTitle>
-        </CardHeader>
-
-        <Card :class="`${chartCardClass} flex-1`">
-          <CardContent :class="chartContentClass">
-            <ChartContainer :config="alarmStatusChartConfig" :class="chartContainerClass">
-              <div :class="chartBodyClass">
-                <VisXYContainer
-                  :data="alarmStatusTrendData"
-                  :padding="{ top: 10, bottom: 10, left: 10, right: 10 }"
-                  :y-domain="[0, alarmTrendMax]"
-                >
-                  <VisStackedBar
-                    :x="(d: AlarmTrendDatum) => d.date"
-                    :y="[(d: AlarmTrendDatum) => d.pending, (d: AlarmTrendDatum) => d.archived]"
-                    :color="[alarmStatusChartConfig.pending.color, alarmStatusChartConfig.archived.color]"
-                    :rounded-corners="4"
-                    :bar-padding="0.1"
-                  />
-
-                  <VisAxis
-                    type="x"
-                    :x="(d: AlarmTrendDatum) => d.date"
-                    :tick-line="false"
-                    :domain-line="false"
-                    :grid-line="false"
-                    :num-ticks="4"
-                    :tick-format="(d: number) => formatShortDate(d)"
-                    :tick-values="alarmStatusTrendData.map(d => d.date)"
-                  />
-
-                  <VisAxis
-                    type="y"
-                    :tick-line="false"
-                    :domain-line="false"
-                    :num-ticks="4"
-                  />
-
-                  <ChartTooltip />
-
-                  <ChartCrosshair
-                    :template="componentToString(alarmStatusChartConfig, ChartTooltipContent, {
-                      labelFormatter: d => formatShortDate(d),
-                    })"
-                    color="#0000"
-                  />
-                </VisXYContainer>
-              </div>
-
-              <ChartLegendContent />
-            </ChartContainer>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div :class="chartShellClass">
-        <CardHeader :class="chartHeaderClass">
-          <CardTitle :class="chartTitleClass">
-            从业人员角色分布
-          </CardTitle>
-        </CardHeader>
-
-        <Card :class="`${chartCardClass} flex-1`">
-          <CardContent :class="chartContentClass">
-            <ChartContainer
-              :config="personnelRoleChartConfig"
-              class="mx-auto flex min-w-0 w-full items-center justify-start"
-            >
-              <div :class="chartBodyClass">
-                <VisSingleContainer
-                  :data="personnelRoleData"
-                  class="h-full w-full"
-                  :margin="{ top: 30, bottom: 30 }"
-                >
-                  <VisDonut
-                    :value="(d: PersonnelRoleDatum) => d.count"
-                    :color="(d: PersonnelRoleDatum) => personnelRoleChartConfig[d.role as keyof typeof personnelRoleChartConfig].color"
-                    :arc-width="30"
-                  />
-                  <ChartTooltip
-                    :triggers="{
-                      [VisDonutSelectors.segment]: componentToString(personnelRoleChartConfig, ChartTooltipContent, { hideLabel: true })!,
-                    }"
-                  />
-                </VisSingleContainer>
-              </div>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div :class="chartShellClass">
-        <CardHeader :class="chartHeaderClass">
-          <CardTitle :class="chartTitleClass">
-            重点区域企业分布
-          </CardTitle>
-        </CardHeader>
-
-        <Card :class="`${chartCardClass} flex-1`">
-          <CardContent :class="chartContentClass">
-            <ChartContainer
-              :config="districtEnterpriseChartConfig"
-              :class="chartContainerClass"
-            >
-              <div :class="chartBodyClass">
-                <VisXYContainer
-                  :data="districtEnterpriseData"
-                  :margin="{ left: 8, right: 8, top: 8, bottom: 0 }"
-                >
-                  <VisGroupedBar
-                    :x="(d: DistrictEnterpriseDatum) => d.index"
-                    :y="[(d: DistrictEnterpriseDatum) => d.passenger, (d: DistrictEnterpriseDatum) => d.dangerous]"
-                    :color="(_d: DistrictEnterpriseDatum, i: number) => [districtEnterpriseChartConfig.passenger.color, districtEnterpriseChartConfig.dangerous.color][i]"
-                    :group-padding="0.2"
-                    :bar-padding="0.15"
-                    :rounded-corners="4"
-                  />
-
-                  <VisAxis
-                    type="x"
-                    :tick-line="false"
-                    :domain-line="false"
-                    :grid-line="false"
-                    :num-ticks="6"
-                    :tick-format="(value: number) => getAxisLabel(districtEnterpriseData, value, 'district')"
-                  />
-
-                  <VisAxis
-                    type="y"
-                    :tick-line="false"
-                    :domain-line="false"
-                    :num-ticks="4"
-                  />
-                </VisXYContainer>
-              </div>
-
-              <ChartLegendContent />
-            </ChartContainer>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
   </div>
 </template>
