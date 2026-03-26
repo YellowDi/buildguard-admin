@@ -130,7 +130,7 @@ const fieldSections = computed<DetailFieldSection[]>(() => {
 
 const parkBuildingAccordion = computed(() => ({
   key: "customer-buildings",
-  title: "园区 / 建筑列表",
+  title: "园区 / 建筑列表概览",
   count: parkBuildingGroups.value.length,
   emptyText: "暂无园区和建筑数据。",
   items: parkBuildingGroups.value,
@@ -142,7 +142,7 @@ const maintenanceModule = computed<DetailRelationModuleSchema<MaintenanceRecordR
   if (!current) {
     return {
       key: "maintenance-records",
-      title: "检修维护记录",
+      title: "检修维护记录概览",
       rowKey: "id",
       columns: [
         { key: "location", label: "位置" },
@@ -162,7 +162,7 @@ const maintenanceModule = computed<DetailRelationModuleSchema<MaintenanceRecordR
 
   return {
     key: "maintenance-records",
-    title: "检修维护记录",
+    title: "检修维护记录概览",
     rowKey: "id",
     columns: [
       { key: "location", label: "位置", slot: "maintenance-status-cell" },
@@ -694,9 +694,9 @@ function buildParkFieldSections(park: ParkListItem): DetailFieldSection[] {
       key: "park-fields",
       title: "",
       rows: [
+        { key: "built-time", label: "建成时间", value: toDisplayText(park.BuiltTime, "-") },
+        { key: "operation-time", label: "投入运营时间", value: toDisplayText(park.OperationTime, "-") },
         { key: "address", label: "地址", value: toDisplayText(park.Address, "-"), truncate: false, valueClass: "leading-6" },
-        { key: "created-at", label: "创建时间", value: toDisplayText(park.CreatedAt, "-") },
-        { key: "updated-at", label: "更新时间", value: toDisplayText(park.UpdatedAt, "-") },
       ],
     },
   ]
