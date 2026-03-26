@@ -20,11 +20,19 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
+import ExportTableDialog from "@/components/table-page/ExportTableDialog.vue"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
-import SectionHeader from "@/components/layout/SectionHeader.vue"
 import TablePage from "@/components/table-page/TablePage.vue"
+import SortPopover, { type SortRule } from "@/components/table-page/TableSortPopover.vue"
 import { createTablePageDefinition, useTablePage } from "@/components/table-page/useTablePage"
 import type { TablePageSchema } from "@/components/table-page/types"
+import {
+  exportTableData,
+  SUPPORTED_TABLE_EXPORT_FORMATS,
+  type TableExportFormat,
+  type TableExportScope,
+} from "@/components/table-page/export-utils"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
 import DetailLayout from "@/layouts/DetailLayout.vue"
 import { handleApiError } from "@/lib/api-errors"
@@ -155,11 +163,21 @@ const detailHeaderTabs = computed(() => detailTabs.value.map(tab => ({
   active: activeTab.value === tab.id,
 })))
 const isFullWidthTableTab = computed(() => activeTab.value === "building-assets" || activeTab.value === "work-orders")
+const detailToolbarButtonClass =
+  "inline-flex size-8 items-center justify-center rounded-md bg-transparent text-muted-foreground transition-colors hover:bg-surface-tertiary hover:text-foreground active:bg-surface-secondary"
+const detailToolbarButtonActiveClass =
+  "bg-transparent text-link hover:bg-surface-tertiary active:bg-surface-secondary"
 const pagedWorkOrders = computed(() => {
   const start = (workOrdersPageNum.value - 1) * workOrdersPageSize.value
   const end = start + workOrdersPageSize.value
   return workOrders.value.slice(start, end)
 })
+const activeTablePage = computed(() => activeTab.value === "building-assets" ? buildingAssetsPage : activeTab.value === "work-orders" ? workOrdersPage : null)
+const activeTableTitle = computed(() => activeTab.value === "building-assets" ? "建筑资产" : "工单列表")
+const activeTableSortPopoverOpen = ref(false)
+const activeTableExportDialogOpen = ref(false)
+const activeTableExporting = ref(false)
+const activeTableAvailableExportFormats = [...SUPPORTED_TABLE_EXPORT_FORMATS]
 
 const fieldSections = computed<DetailFieldSection[]>(() => {
   const current = customer.value
@@ -550,9 +568,7 @@ const workOrdersSchema: TablePageSchema<CustomerWorkOrderRow> = {
     initialDirection: "desc",
   },
   tabs: {
-    mode: "enum",
-    all: { label: "全部", value: "all" },
-    field: "statusLabel",
+    mode: "none",
   },
 }
 
@@ -642,6 +658,77 @@ function goToCreatePark() {
 
 function handleContractDownload() {
   toast.info("合同下载接口暂未接入")
+}
+
+function handleActiveTableToolbarAddSort() {
+  const page = activeTablePage.value
+
+  if (!page) {
+    return
+  }
+
+  const sortFieldOptions = page.sortFieldOptions.value
+
+  if (!sortFieldOptions.length) {
+    return
+  }
+
+  if (!page.showControls.value) {
+    page.showControls.value = true
+  }
+
+  if (!page.customSortEnabled.value || !page.sortRules.value.length) {
+    const fallbackField = sortFieldOptions[0]?.value ?? ""
+    const unusedField = sortFieldOptions.find((option) => !page.sortRules.value.some((rule) => rule.field === option.value))?.value
+      ?? fallbackField
+    const fieldMeta = sortFieldOptions.find(option => option.value === unusedField)
+
+    const nextRule: SortRule = {
+      id: `sort-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      field: unusedField,
+      direction: fieldMeta?.kind === "metric" ? "desc" : "asc",
+    }
+
+    page.customSortEnabled.value = true
+    page.sortRules.value = [nextRule]
+  }
+
+  activeTableSortPopoverOpen.value = !activeTableSortPopoverOpen.value
+}
+
+function handleActiveTableExportConfirm(payload: { scope: TableExportScope; format: TableExportFormat }) {
+  const page = activeTablePage.value
+
+  if (!page || activeTableExporting.value) {
+    return
+  }
+
+  const exportRows = payload.scope === "selected"
+    ? page.selectedRows.value
+    : page.filteredRows.value
+
+  if (!exportRows.length) {
+    return
+  }
+
+  activeTableExporting.value = true
+
+  try {
+    exportTableData({
+      title: pageTitle.value ? `${pageTitle.value}-${activeTableTitle.value}` : activeTableTitle.value,
+      columns: page.columns,
+      rows: exportRows,
+      format: payload.format,
+    })
+    activeTableExportDialogOpen.value = false
+  } catch (error) {
+    handleApiError(error, {
+      title: "导出失败",
+      fallback: "导出失败，请稍后重试。",
+    })
+  } finally {
+    activeTableExporting.value = false
+  }
 }
 
 async function handleDeleteCustomer() {
@@ -1375,114 +1462,155 @@ function toDisplayText(value: unknown, fallback = "未填写") {
 </script>
 
 <template>
-  <section
-    v-if="customer && isFullWidthTableTab"
-    class="detail-layout mx-auto flex min-h-0 w-full max-w-[1440px] min-w-0 flex-1 flex-col px-0 sm:px-4 xl:px-8"
+  <DetailLayout
+    :title="pageTitle"
+    :subtitle="pageSubtitle"
+    :empty="isEmpty"
+    empty-text="未找到该客户信息"
+    :full-width="isFullWidthTableTab"
+    :secondary-visible="activeTab === 'basic-info'"
+    :tabs="detailHeaderTabs"
+    tabs-aria-label="客户详情页面切换"
+    @back="goBack"
+    @tab-click="activeTab = $event as CustomerDetailTab"
   >
-    <div class="sticky top-0 z-10 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80 sm:-mx-4">
-      <div class="px-4 pt-5">
-        <SectionHeader :title="pageTitle" :subtitle="pageSubtitle" />
-
-        <div class="mt-4 flex min-w-0 flex-wrap items-end gap-x-6 gap-y-3 border-b border-border text-muted-foreground">
-          <nav class="flex min-w-0 flex-[999_1_24rem] flex-wrap items-center text-[14px]" aria-label="客户详情页面切换">
-            <button
-              v-for="tab in detailHeaderTabs"
-              :key="tab.id"
-              type="button"
-              :aria-pressed="tab.active"
-              :class="[
-                'group relative px-3 pb-[11px] text-muted-foreground transition-colors hover:text-foreground',
-                tab.active ? 'font-semibold text-foreground' : '',
-              ]"
-              @click="activeTab = tab.id as CustomerDetailTab"
-            >
-              <span class="relative isolate inline-block">
-                <span class="pointer-events-none absolute -inset-x-2 -inset-y-1 rounded-md transition-colors group-hover:bg-surface-tertiary" />
-                <span class="relative z-10">{{ tab.label }}</span>
-              </span>
-              <span
-                v-if="tab.active"
-                class="absolute inset-x-0 bottom-0 h-0.5 bg-foreground"
-              />
-            </button>
-          </nav>
-
-          <div class="flex min-w-0 flex-[1_1_100%] flex-wrap items-center justify-end gap-2 pb-2 sm:flex-[0_0_auto] sm:flex-nowrap">
-            <AlertDialog>
-              <AlertDialogTrigger as-child>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  class="border-destructive/30 bg-background font-medium text-destructive shadow-none hover:bg-destructive/5 hover:text-destructive"
-                >
-                  删除用户
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>确认删除当前用户？</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    删除后将无法恢复，该操作会移除当前客户资料。
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel :disabled="deleteSubmitting">
-                    取消
-                  </AlertDialogCancel>
-                  <AlertDialogAction
-                    :disabled="deleteSubmitting"
-                    class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                    @click="handleDeleteCustomer"
-                  >
-                    {{ deleteSubmitting ? "删除中..." : "确认删除" }}
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+    <template #headerActions>
+      <div class="flex items-center gap-2">
+        <AlertDialog>
+          <AlertDialogTrigger as-child>
             <Button
               variant="outline"
               size="sm"
-              class="border-border/80 bg-background font-medium text-foreground shadow-none"
-              @click="goToCreatePark"
+              class="border-destructive/30 bg-background font-medium text-destructive shadow-none hover:bg-destructive/5 hover:text-destructive"
             >
-              添加园区
+              删除用户
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              class="border-border/80 bg-background font-medium text-foreground shadow-none"
-              @click="goToCustomerEdit"
-            >
-              修改客户信息
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              class="border-border/80 bg-background font-medium text-foreground shadow-none"
-              @click="goBack"
-            >
-              返回客户列表
-            </Button>
-          </div>
-        </div>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>确认删除当前用户？</AlertDialogTitle>
+              <AlertDialogDescription>
+                删除后将无法恢复，该操作会移除当前客户资料。
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel :disabled="deleteSubmitting">
+                取消
+              </AlertDialogCancel>
+              <AlertDialogAction
+                :disabled="deleteSubmitting"
+                class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                @click="handleDeleteCustomer"
+              >
+                {{ deleteSubmitting ? "删除中..." : "确认删除" }}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+        <Button
+          variant="outline"
+          size="sm"
+          class="border-border/80 bg-background font-medium text-foreground shadow-none"
+          @click="goToCreatePark"
+        >
+          添加园区
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          class="border-border/80 bg-background font-medium text-foreground shadow-none"
+          @click="goToCustomerEdit"
+        >
+          修改客户信息
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          class="border-border/80 bg-background font-medium text-foreground shadow-none"
+          @click="goBack"
+        >
+          返回客户列表
+        </Button>
       </div>
-    </div>
+    </template>
 
-    <div class="flex min-h-0 flex-1 flex-col">
-      <Alert v-if="errorMessage" variant="destructive" class="mx-4 mb-5 sm:mx-0">
+    <template #tabActions>
+      <div v-if="isFullWidthTableTab" class="flex min-w-[188px] items-center justify-end gap-2">
+        <button
+          type="button"
+          :class="[
+            detailToolbarButtonClass,
+            activeTablePage?.showControls.value ? detailToolbarButtonActiveClass : '',
+          ]"
+          @click="activeTablePage && (activeTablePage.showControls.value = !activeTablePage.showControls.value)"
+        >
+          <i :class="['ri-filter-3-line text-[17px]', activeTablePage?.showControls.value ? 'text-link' : '']" />
+        </button>
+
+        <Popover :open="activeTableSortPopoverOpen" @update:open="activeTableSortPopoverOpen = $event">
+          <PopoverTrigger as-child>
+            <button
+              type="button"
+              :class="[
+                detailToolbarButtonClass,
+                activeTablePage?.customSortEnabled.value ? detailToolbarButtonActiveClass : '',
+              ]"
+              @click="handleActiveTableToolbarAddSort"
+            >
+              <i :class="['ri-sort-asc text-[17px]', activeTablePage?.customSortEnabled.value ? 'text-link' : '']" />
+            </button>
+          </PopoverTrigger>
+
+          <PopoverContent
+            align="end"
+            :side-offset="10"
+            class="w-auto border-0 bg-transparent p-0 shadow-none"
+          >
+            <SortPopover
+              :enabled="activeTablePage?.customSortEnabled.value ?? false"
+              :rules="activeTablePage?.sortRules.value ?? []"
+              :field-options="activeTablePage?.sortFieldOptions.value ?? []"
+              @close="activeTableSortPopoverOpen = false"
+              @set-enabled="activeTablePage && (activeTablePage.customSortEnabled.value = $event)"
+              @update-rules="activeTablePage && (activeTablePage.sortRules.value = $event)"
+            />
+          </PopoverContent>
+        </Popover>
+
+        <button type="button" :class="detailToolbarButtonClass">
+          <i class="ri-more-line text-base" />
+        </button>
+
+        <Button
+          variant="outline"
+          class="h-8 gap-1 px-3 text-[14px]"
+          @click="activeTableExportDialogOpen = true"
+        >
+          <i class="ri-download-line text-base" />
+          导出
+        </Button>
+      </div>
+
+      <div v-else aria-hidden="true" class="h-8 w-[188px] shrink-0 opacity-0" />
+    </template>
+
+    <template #primary>
+      <Alert v-if="errorMessage" variant="destructive" class="mb-5">
         <AlertTitle>客户详情接口加载失败</AlertTitle>
         <AlertDescription>{{ errorMessage }}</AlertDescription>
       </Alert>
 
-      <div class="flex min-h-0 flex-1 flex-col gap-5">
-        <div v-if="activeTab === 'building-assets'" class="flex min-h-0 flex-1 flex-col">
-          <TablePage :page="buildingAssetsPage" class="-mt-3 sm:-mx-4 xl:-mx-8" />
+      <div v-if="loading" class="rounded-lg border border-border/70 px-4 py-5 text-sm text-muted-foreground">
+        正在获取客户详情数据。
+      </div>
+
+      <template v-else-if="customer">
+        <div v-if="activeTab === 'building-assets'" class="flex min-h-0 flex-1 flex-col pb-5">
+          <TablePage :page="buildingAssetsPage" :show-toolbar-actions="false" class="-mt-3 sm:-mx-4 xl:-mx-8" />
         </div>
 
-        <template v-else-if="activeTab === 'work-orders'">
-          <div class="flex min-h-0 flex-1 flex-col">
-            <TablePage :page="workOrdersPage" class="-mt-3 sm:-mx-4 xl:-mx-8" />
-          </div>
+        <div v-else-if="activeTab === 'work-orders'" class="flex min-h-0 flex-1 flex-col pb-5">
+          <TablePage :page="workOrdersPage" :show-toolbar-actions="false" class="-mt-3 sm:-mx-4 xl:-mx-8" />
 
           <div class="mt-auto flex items-center justify-end gap-3 px-4 pt-4 sm:px-0">
             <span class="text-sm text-muted-foreground">
@@ -1505,93 +1633,9 @@ function toDisplayText(value: unknown, fallback = "未填写") {
               下一页
             </Button>
           </div>
-        </template>
-      </div>
-    </div>
-  </section>
+        </div>
 
-  <DetailLayout
-    v-else
-    :title="pageTitle"
-    :subtitle="pageSubtitle"
-    :empty="isEmpty"
-    empty-text="未找到该客户信息"
-    :secondary-visible="activeTab === 'basic-info'"
-    :tabs="detailHeaderTabs"
-    tabs-aria-label="客户详情页面切换"
-    @back="goBack"
-    @tab-click="activeTab = $event as CustomerDetailTab"
-  >
-    <template #actions>
-      <AlertDialog>
-        <AlertDialogTrigger as-child>
-          <Button
-            variant="outline"
-            size="sm"
-            class="border-destructive/30 bg-background font-medium text-destructive shadow-none hover:bg-destructive/5 hover:text-destructive"
-          >
-            删除用户
-          </Button>
-        </AlertDialogTrigger>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>确认删除当前用户？</AlertDialogTitle>
-            <AlertDialogDescription>
-              删除后将无法恢复，该操作会移除当前客户资料。
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel :disabled="deleteSubmitting">
-              取消
-            </AlertDialogCancel>
-            <AlertDialogAction
-              :disabled="deleteSubmitting"
-              class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              @click="handleDeleteCustomer"
-            >
-              {{ deleteSubmitting ? "删除中..." : "确认删除" }}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-      <Button
-        variant="outline"
-        size="sm"
-        class="border-border/80 bg-background font-medium text-foreground shadow-none"
-        @click="goToCreatePark"
-      >
-        添加园区
-      </Button>
-      <Button
-        variant="outline"
-        size="sm"
-        class="border-border/80 bg-background font-medium text-foreground shadow-none"
-        @click="goToCustomerEdit"
-      >
-        修改客户信息
-      </Button>
-      <Button
-        variant="outline"
-        size="sm"
-        class="border-border/80 bg-background font-medium text-foreground shadow-none"
-        @click="goBack"
-      >
-        返回客户列表
-      </Button>
-    </template>
-
-    <template #primary>
-      <Alert v-if="errorMessage" variant="destructive" class="mb-5">
-        <AlertTitle>客户详情接口加载失败</AlertTitle>
-        <AlertDescription>{{ errorMessage }}</AlertDescription>
-      </Alert>
-
-      <div v-if="loading" class="rounded-lg border border-border/70 px-4 py-5 text-sm text-muted-foreground">
-        正在获取客户详情数据。
-      </div>
-
-      <template v-else-if="customer">
-        <div class="space-y-5 pb-5">
+        <div v-else class="space-y-5 pb-5">
           <DetailFieldSections v-if="activeTab === 'basic-info'" :sections="fieldSections" />
 
           <section v-else-if="activeTab === 'monitoring'" class="space-y-3">
@@ -1761,4 +1805,18 @@ function toDisplayText(value: unknown, fallback = "未填写") {
       </div>
     </SheetContent>
   </Sheet>
+
+  <ExportTableDialog
+    :open="activeTableExportDialogOpen"
+    :table-title="activeTableTitle"
+    :selected-rows-count="activeTablePage?.selectedRowsCount.value ?? 0"
+    :current-page-rows-count="activeTablePage?.currentPageRowsCount.value ?? 0"
+    :filtered-rows-count="activeTablePage?.filteredRowsCount.value ?? 0"
+    :total-rows-count="activeTablePage?.totalRowsCount.value ?? 0"
+    :current-filters-summary="activeTablePage?.activeFilterSummary.value ?? []"
+    :is-exporting="activeTableExporting"
+    :available-formats="activeTableAvailableExportFormats"
+    @update:open="activeTableExportDialogOpen = $event"
+    @confirm="handleActiveTableExportConfirm"
+  />
 </template>

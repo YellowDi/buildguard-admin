@@ -44,7 +44,8 @@ const emit = defineEmits<{
 const slots = useSlots()
 const hasTabs = computed(() => props.tabs.length > 0)
 const hasSecondary = computed(() => Boolean(slots.secondary) && props.secondaryVisible)
-const hasTabActions = computed(() => hasTabs.value && Boolean(slots.actions))
+const hasHeaderActions = computed(() => Boolean(slots.headerActions) || (!hasTabs.value && Boolean(slots.actions)))
+const hasTabActions = computed(() => hasTabs.value && (Boolean(slots.tabActions) || Boolean(slots.actions)))
 const hasHeaderBottom = computed(() => Boolean(slots.headerBottom))
 </script>
 
@@ -52,15 +53,17 @@ const hasHeaderBottom = computed(() => Boolean(slots.headerBottom))
   <section
     :class="[
       'detail-layout mx-auto flex w-full min-w-0 flex-1 flex-col px-0 sm:px-4 xl:px-8',
+      props.fullWidth ? 'detail-layout--full-width' : '',
       props.fullWidth ? 'max-w-none' : 'max-w-[1440px]',
     ]"
   >
     <template v-if="!props.empty">
       <div class="sticky top-0 z-10 -mx-0 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80 sm:-mx-4">
-        <div class="px-4 py-5">
-          <SectionHeader :title="props.title" :subtitle="props.subtitle" :has-actions="!hasTabs && Boolean($slots.actions)">
+        <div :class="['px-4 pt-5', hasTabs || hasHeaderBottom ? '' : 'pb-5']">
+          <SectionHeader :title="props.title" :subtitle="props.subtitle" :has-actions="hasHeaderActions">
             <template #actions>
-              <slot name="actions" />
+              <slot v-if="$slots.headerActions" name="headerActions" />
+              <slot v-else name="actions" />
             </template>
           </SectionHeader>
 
@@ -93,7 +96,8 @@ const hasHeaderBottom = computed(() => Boolean(slots.headerBottom))
               v-if="hasTabActions"
               class="flex min-w-0 flex-[1_1_100%] flex-wrap items-center justify-end gap-2 pb-2 sm:flex-[0_0_auto] sm:flex-nowrap"
             >
-              <slot name="actions" />
+              <slot v-if="$slots.tabActions" name="tabActions" />
+              <slot v-else name="actions" />
             </div>
           </div>
 

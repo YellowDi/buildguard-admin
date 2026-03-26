@@ -131,6 +131,19 @@
     padding-top: 0;
     padding-left: 1rem;
   }
+
+  .detail-layout--full-width .detail-layout__content {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .detail-layout--full-width .detail-layout__primary {
+    padding-right: 0;
+  }
+
+  .detail-layout--full-width .detail-layout__divider,
+  .detail-layout--full-width .detail-layout__secondary {
+    display: none;
+  }
 }
 
 @media (min-width: 640px) {
