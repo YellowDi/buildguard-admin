@@ -32,7 +32,7 @@ const hasActions = computed(() => props.hasActions ?? Boolean(slots.actions))
 <template>
   <div
     :class="cn(
-      'flex flex-col gap-5 md:flex-row md:items-start md:justify-between',
+      'flex flex-col gap-3 md:flex-row md:items-start md:justify-between md:gap-5',
       props.layoutClass,
     )"
   >

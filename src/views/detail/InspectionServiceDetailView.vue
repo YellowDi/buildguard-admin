@@ -20,7 +20,20 @@ import {
 } from "@/components/table-page/export-utils"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
 import DetailLayout from "@/layouts/DetailLayout.vue"
 import inspectionServiceWorkOrdersData from "@/mocks/inspection-service-work-orders.json"
@@ -131,6 +144,7 @@ const detailHeaderTabs = computed(() => detailTabs.value.map(tab => ({
   ...tab,
   active: activeTab.value === tab.id,
 })))
+const activeDetailTabId = computed(() => detailHeaderTabs.value.find(tab => tab.active)?.id ?? detailHeaderTabs.value[0]?.id ?? "")
 const detailToolbarButtonClass =
   "inline-flex size-8 items-center justify-center rounded-md bg-transparent text-muted-foreground transition-colors hover:bg-surface-tertiary hover:text-foreground active:bg-surface-secondary"
 const detailToolbarButtonActiveClass =
@@ -711,6 +725,45 @@ function handleWorkOrdersToolbarAddSort() {
   workOrdersSortPopoverOpen.value = !workOrdersSortPopoverOpen.value
 }
 
+function handleWorkOrdersMobileActionSelect(key: string) {
+  switch (key) {
+    case "toggle-filters":
+      workOrdersPage.showControls.value = !workOrdersPage.showControls.value
+      return
+    case "toggle-sort":
+      if (workOrdersPage.customSortEnabled.value) {
+        workOrdersPage.customSortEnabled.value = false
+        return
+      }
+
+      const sortFieldOptions = workOrdersPage.sortFieldOptions.value
+      if (!sortFieldOptions.length) {
+        return
+      }
+
+      if (!workOrdersPage.showControls.value) {
+        workOrdersPage.showControls.value = true
+      }
+
+      if (!workOrdersPage.sortRules.value.length) {
+        const fallbackField = sortFieldOptions[0]?.value ?? ""
+        const fieldMeta = sortFieldOptions.find(option => option.value === fallbackField)
+
+        workOrdersPage.sortRules.value = [{
+          id: `sort-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          field: fallbackField,
+          direction: fieldMeta?.kind === "metric" ? "desc" : "asc",
+        }]
+      }
+
+      workOrdersPage.customSortEnabled.value = true
+      return
+    case "export":
+      workOrdersExportDialogOpen.value = true
+      return
+  }
+}
+
 function handleWorkOrdersExportConfirm(payload: { scope: TableExportScope; format: TableExportFormat }) {
   if (workOrdersExporting.value) {
     return
@@ -766,7 +819,7 @@ function getInspectionServiceWorkOrders() {
     class="detail-layout mx-auto flex min-h-0 w-full max-w-[1440px] min-w-0 flex-1 flex-col px-0 sm:px-4 xl:px-8"
   >
     <div class="sticky top-0 z-10 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80 sm:-mx-4">
-      <div class="px-4 pt-5">
+      <div class="px-1 pt-4 sm:px-4 sm:pt-5">
         <SectionHeader :title="detail.Name" :subtitle="detail.CustomerName">
           <template #leading>
             <button
@@ -780,8 +833,50 @@ function getInspectionServiceWorkOrders() {
           </template>
         </SectionHeader>
 
-        <div class="mt-4 flex min-w-0 flex-wrap items-end gap-x-6 gap-y-3 border-b border-border text-muted-foreground">
-          <nav class="flex min-w-0 flex-[999_1_24rem] flex-wrap items-center text-[14px]" aria-label="检测服务详情页面切换">
+        <div class="mt-4 border-b border-border text-muted-foreground">
+          <div class="flex items-center gap-2 pb-2 sm:hidden">
+            <Select :model-value="activeDetailTabId" @update:model-value="activeTab = $event as InspectionServiceDetailTab">
+              <SelectTrigger class="h-9 min-w-0 flex-1 rounded-md bg-background text-[14px]">
+                <SelectValue placeholder="选择分页" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem
+                  v-for="tab in detailHeaderTabs"
+                  :key="tab.id"
+                  :value="tab.id"
+                >
+                  {{ tab.label }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger as-child>
+                <Button variant="outline" size="sm" class="h-9 gap-1 px-3 text-[14px]">
+                  <i class="ri-more-2-line text-base" />
+                  操作
+                </Button>
+              </DropdownMenuTrigger>
+
+              <DropdownMenuContent align="end" class="w-52 rounded-xl p-1.5 sm:hidden">
+                <DropdownMenuItem class="rounded-lg px-2.5 py-2" @select="handleWorkOrdersMobileActionSelect('toggle-filters')">
+                  <i class="ri-filter-3-line mr-2 text-base text-muted-foreground" />
+                  {{ workOrdersPage.showControls.value ? "隐藏筛选" : "显示筛选" }}
+                </DropdownMenuItem>
+                <DropdownMenuItem class="rounded-lg px-2.5 py-2" @select="handleWorkOrdersMobileActionSelect('toggle-sort')">
+                  <i class="ri-sort-asc mr-2 text-base text-muted-foreground" />
+                  {{ workOrdersPage.customSortEnabled.value ? "关闭排序" : "启用排序" }}
+                </DropdownMenuItem>
+                <DropdownMenuItem class="rounded-lg px-2.5 py-2" @select="handleWorkOrdersMobileActionSelect('export')">
+                  <i class="ri-download-line mr-2 text-base text-muted-foreground" />
+                  导出
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
+          <div class="hidden min-w-0 flex-row flex-wrap items-end gap-x-6 gap-y-3 sm:flex">
+            <nav class="flex min-w-0 flex-[999_1_24rem] flex-wrap items-center text-[14px]" aria-label="检测服务详情页面切换">
             <button
               v-for="tab in detailHeaderTabs"
               :key="tab.id"
@@ -802,9 +897,9 @@ function getInspectionServiceWorkOrders() {
                 class="absolute inset-x-0 bottom-0 h-0.5 bg-foreground"
               />
             </button>
-          </nav>
+            </nav>
 
-          <div class="flex min-w-0 flex-[1_1_100%] flex-wrap items-center justify-end gap-1 pb-2 text-muted-foreground sm:flex-[0_0_auto] sm:flex-nowrap">
+            <div class="flex min-w-0 w-auto flex-[0_0_auto] items-center justify-end gap-1 pb-2 text-muted-foreground">
             <button
               type="button"
               :class="[
@@ -858,6 +953,7 @@ function getInspectionServiceWorkOrders() {
               <i class="ri-download-line text-base" />
               导出
             </Button>
+            </div>
           </div>
         </div>
       </div>

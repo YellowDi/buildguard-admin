@@ -3,6 +3,13 @@ import { computed, useSlots } from "vue"
 
 import SectionHeader from "@/components/layout/SectionHeader.vue"
 import { Button } from "@/components/ui/button"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
 
 // 详情页页面骨架。
@@ -47,6 +54,13 @@ const hasSecondary = computed(() => Boolean(slots.secondary) && props.secondaryV
 const hasHeaderActions = computed(() => Boolean(slots.headerActions) || (!hasTabs.value && Boolean(slots.actions)))
 const hasTabActions = computed(() => hasTabs.value && (Boolean(slots.tabActions) || Boolean(slots.actions)))
 const hasHeaderBottom = computed(() => Boolean(slots.headerBottom))
+const activeTabId = computed(() => props.tabs.find(tab => tab.active)?.id ?? props.tabs[0]?.id ?? "")
+
+function handleTabSelect(value: string) {
+  if (value) {
+    emit("tabClick", value)
+  }
+}
 </script>
 
 <template>
@@ -59,7 +73,7 @@ const hasHeaderBottom = computed(() => Boolean(slots.headerBottom))
   >
     <template v-if="!props.empty">
       <div class="sticky top-0 z-10 -mx-0 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80 sm:-mx-4">
-        <div :class="['px-4 pt-5', hasTabs || hasHeaderBottom ? '' : 'pb-5']">
+        <div :class="['px-1 pt-4 sm:px-4 sm:pt-5', hasTabs || hasHeaderBottom ? '' : 'pb-4 sm:pb-5']">
           <SectionHeader :title="props.title" :subtitle="props.subtitle" :has-actions="hasHeaderActions">
             <template #leading>
               <button
@@ -77,8 +91,32 @@ const hasHeaderBottom = computed(() => Boolean(slots.headerBottom))
             </template>
           </SectionHeader>
 
-          <div v-if="hasTabs" class="mt-4 flex min-w-0 flex-wrap items-end gap-x-6 gap-y-3 border-b border-border text-muted-foreground">
-            <nav class="flex min-w-0 flex-[999_1_24rem] flex-wrap items-center text-[14px]" :aria-label="props.tabsAriaLabel">
+          <div v-if="hasTabs" class="mt-4 border-b border-border text-muted-foreground">
+            <div class="flex items-center gap-2 pb-2 sm:hidden">
+              <Select :model-value="activeTabId" @update:model-value="handleTabSelect">
+                <SelectTrigger class="h-9 min-w-0 flex-1 rounded-md bg-background text-[14px]">
+                  <SelectValue placeholder="选择分页" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem
+                    v-for="tab in props.tabs"
+                    :key="tab.id"
+                    :value="tab.id"
+                    :disabled="tab.disabled"
+                  >
+                    {{ tab.label }}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+
+              <div v-if="hasTabActions" class="shrink-0">
+                <slot v-if="$slots.tabActions" name="tabActions" />
+                <slot v-else name="actions" />
+              </div>
+            </div>
+
+            <div class="hidden min-w-0 flex-row flex-wrap items-end gap-x-6 gap-y-3 sm:flex">
+              <nav class="flex min-w-0 flex-[999_1_24rem] flex-wrap items-center text-[14px]" :aria-label="props.tabsAriaLabel">
               <button
                 v-for="tab in props.tabs"
                 :key="tab.id"
@@ -100,14 +138,15 @@ const hasHeaderBottom = computed(() => Boolean(slots.headerBottom))
                   class="absolute inset-x-0 bottom-0 h-0.5 bg-foreground"
                 />
               </button>
-            </nav>
+              </nav>
 
-            <div
-              v-if="hasTabActions"
-              class="flex min-w-0 flex-[1_1_100%] flex-wrap items-center justify-end gap-2 pb-2 sm:flex-[0_0_auto] sm:flex-nowrap"
-            >
-              <slot v-if="$slots.tabActions" name="tabActions" />
-              <slot v-else name="actions" />
+              <div
+                v-if="hasTabActions"
+                class="flex min-w-0 w-auto flex-[0_0_auto] items-center justify-end pb-2"
+              >
+                <slot v-if="$slots.tabActions" name="tabActions" />
+                <slot v-else name="actions" />
+              </div>
             </div>
           </div>
 

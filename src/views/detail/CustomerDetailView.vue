@@ -18,7 +18,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import ExportTableDialog from "@/components/table-page/ExportTableDialog.vue"
@@ -137,6 +136,7 @@ const loading = ref(false)
 const errorMessage = ref("")
 const activeTab = ref<CustomerDetailTab>("basic-info")
 const deleteSubmitting = ref(false)
+const deleteConfirmOpen = ref(false)
 const relationsLoading = ref(false)
 const relationErrorMessage = ref("")
 const parkBuildingGroups = ref<ParkBuildingGroup[]>([])
@@ -221,6 +221,63 @@ const detailTabActionsByTab: Record<CustomerDetailTab, CustomerDetailTabActions>
   },
 }
 const activeDetailTabActions = computed(() => detailTabActionsByTab[activeTab.value])
+const activeDetailMobileActionItems = computed(() => {
+  const items: Array<{
+    key: string
+    label: string
+    iconClass?: string
+    destructive?: boolean
+  }> = []
+
+  if (isFullWidthTableTab.value) {
+    items.push({
+      key: "toggle-filters",
+      label: activeTablePage.value?.showControls.value ? "隐藏筛选" : "显示筛选",
+      iconClass: "ri-filter-3-line",
+    })
+    items.push({
+      key: "toggle-sort",
+      label: activeTablePage.value?.customSortEnabled.value ? "关闭排序" : "启用排序",
+      iconClass: "ri-sort-asc",
+    })
+    items.push({
+      key: "export",
+      label: "导出",
+      iconClass: "ri-download-line",
+    })
+  }
+
+  if (activeDetailTabActions.value.deleteCustomer) {
+    items.push({
+      key: "delete-customer",
+      label: "删除用户",
+      iconClass: "ri-delete-bin-line",
+      destructive: true,
+    })
+  }
+
+  if (activeDetailTabActions.value.addPark) {
+    items.push({ key: "add-park", label: "添加园区", iconClass: "ri-add-line" })
+  }
+
+  if (activeDetailTabActions.value.addBuilding) {
+    items.push({ key: "add-building", label: "添加建筑", iconClass: "ri-building-line" })
+  }
+
+  if (activeDetailTabActions.value.addMonitoring) {
+    items.push({ key: "add-monitoring", label: "添加监控", iconClass: "ri-radar-line" })
+  }
+
+  if (activeDetailTabActions.value.addSubAccount) {
+    items.push({ key: "add-sub-account", label: "添加子账号", iconClass: "ri-user-add-line" })
+  }
+
+  if (activeDetailTabActions.value.editCustomer) {
+    items.push({ key: "edit-customer", label: "修改客户信息", iconClass: "ri-edit-line" })
+  }
+
+  return items
+})
 const detailToolbarButtonClass =
   "inline-flex size-8 items-center justify-center rounded-md bg-transparent text-muted-foreground transition-colors hover:bg-surface-tertiary hover:text-foreground active:bg-surface-secondary"
 const detailToolbarButtonActiveClass =
@@ -730,13 +787,12 @@ function handleContractDownload() {
   toast.info("合同下载接口暂未接入")
 }
 
-function handleActiveTableToolbarAddSort() {
-  const page = activeTablePage.value
-
-  if (!page) {
-    return
-  }
-
+function ensurePageSortRule(page: {
+  showControls: { value: boolean }
+  customSortEnabled: { value: boolean }
+  sortRules: { value: SortRule[] }
+  sortFieldOptions: { value: Array<{ value: string; kind?: string }> }
+}) {
   const sortFieldOptions = page.sortFieldOptions.value
 
   if (!sortFieldOptions.length) {
@@ -762,8 +818,59 @@ function handleActiveTableToolbarAddSort() {
     page.customSortEnabled.value = true
     page.sortRules.value = [nextRule]
   }
+}
+
+function handleActiveTableToolbarAddSort() {
+  const page = activeTablePage.value
+
+  if (!page) {
+    return
+  }
+
+  ensurePageSortRule(page)
 
   activeTableSortPopoverOpen.value = !activeTableSortPopoverOpen.value
+}
+
+function handleMobileTabActionSelect(key: string) {
+  switch (key) {
+    case "toggle-filters":
+      if (activeTablePage.value) {
+        activeTablePage.value.showControls.value = !activeTablePage.value.showControls.value
+      }
+      return
+    case "toggle-sort":
+      if (activeTablePage.value?.customSortEnabled.value) {
+        activeTablePage.value.customSortEnabled.value = false
+        return
+      }
+
+      if (activeTablePage.value) {
+        ensurePageSortRule(activeTablePage.value)
+      }
+      return
+    case "export":
+      activeTableExportDialogOpen.value = true
+      return
+    case "delete-customer":
+      deleteConfirmOpen.value = true
+      return
+    case "add-park":
+      goToCreatePark()
+      return
+    case "add-building":
+      handleAddBuilding()
+      return
+    case "add-monitoring":
+      handleAddMonitoring()
+      return
+    case "add-sub-account":
+      handleAddSubAccount()
+      return
+    case "edit-customer":
+      goToCustomerEdit()
+      return
+  }
 }
 
 function handleActiveTableExportConfirm(payload: { scope: TableExportScope; format: TableExportFormat }) {
@@ -1545,7 +1652,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
     @tab-click="activeTab = $event as CustomerDetailTab"
   >
     <template #tabActions>
-      <DetailTabActionsGroup>
+      <DetailTabActionsGroup :mobile-items="activeDetailMobileActionItems" @select="handleMobileTabActionSelect">
         <template #leading>
           <template v-if="isFullWidthTableTab">
             <button
@@ -1605,17 +1712,16 @@ function toDisplayText(value: unknown, fallback = "未填写") {
         </template>
 
         <template #trailing>
-          <AlertDialog v-if="activeDetailTabActions.deleteCustomer">
-            <AlertDialogTrigger as-child>
-              <Button
-                variant="outline"
-                size="sm"
-                class="h-8 gap-1 border-destructive/30 bg-background px-3 text-[14px] font-medium text-destructive shadow-none hover:bg-destructive/5 hover:text-destructive"
-              >
-                <i class="ri-delete-bin-line text-base" />
-                删除用户
-              </Button>
-            </AlertDialogTrigger>
+          <AlertDialog v-if="activeDetailTabActions.deleteCustomer" :open="deleteConfirmOpen" @update:open="deleteConfirmOpen = $event">
+            <Button
+              variant="outline"
+              size="sm"
+              class="h-8 gap-1 border-destructive/30 bg-background px-3 text-[14px] font-medium text-destructive shadow-none hover:bg-destructive/5 hover:text-destructive"
+              @click="deleteConfirmOpen = true"
+            >
+              <i class="ri-delete-bin-line text-base" />
+              删除用户
+            </Button>
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>确认删除当前用户？</AlertDialogTitle>
