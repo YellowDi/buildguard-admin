@@ -24,7 +24,7 @@ export const API_PATHS = {
   memberDelete: "/bqi/user/del",
   menusList: "/bqi/sys/menu/list",
   menuCreate: "/bqi/sys/menu/new",
-  systemButtonsDetail: "/bqi/sys/button/detail",
+  systemButtonsList: "/bqi/sys/button/list",
   systemApisList: "/bqi/sys/api/list",
   systemApisImport: "/bqi/sys/api/import",
   currentUserInfo: "/bqi/user/info",

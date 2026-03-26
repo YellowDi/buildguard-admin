@@ -19,6 +19,13 @@ const MESSAGE_KEYS = ["message", "msg", "error", "detail", "title", "reason"] as
 const NESTED_KEYS = ["data", "error"] as const
 const CODE_KEYS = ["code", "errorCode", "error_code"] as const
 const REQUEST_ID_KEYS = ["requestId", "request_id", "traceId", "trace_id"] as const
+const REQUEST_ID_HEADER_KEYS = [
+  "x-request-id",
+  "x-trace-id",
+  "trace-id",
+  "x-b3-traceid",
+  "x-amzn-trace-id",
+] as const
 
 export class ApiError extends Error {
   status?: number
@@ -35,7 +42,15 @@ export class ApiError extends Error {
 }
 
 export function getApiErrorMessage(error: unknown, fallback = "操作失败，请稍后重试。") {
-  if (error instanceof ApiError || error instanceof Error) {
+  if (error instanceof ApiError) {
+    const baseMessage = normalizeMessage(error.message) ?? fallback
+    const requestId = normalizeMessage(error.requestId)
+    return requestId && !baseMessage.includes(requestId)
+      ? `${baseMessage}（requestId: ${requestId}）`
+      : baseMessage
+  }
+
+  if (error instanceof Error) {
     return normalizeMessage(error.message) ?? fallback
   }
 
@@ -56,18 +71,20 @@ export function handleApiError(error: unknown, options: HandleApiErrorOptions = 
 }
 
 export function createHttpError(
-  response: Pick<Response, "status" | "statusText">,
+  response: Pick<Response, "status" | "statusText" | "headers">,
   payload?: unknown,
   fallback = "请求失败，请稍后重试。",
 ) {
   const payloadMessage = extractMessage(payload)
   const status = Number.isFinite(response.status) ? response.status : undefined
   const statusSuffix = status ? `（${status}）` : ""
+  const requestId = extractScalar(payload, REQUEST_ID_KEYS)
+    ?? extractHeaderValue(response.headers, REQUEST_ID_HEADER_KEYS)
 
   return new ApiError(payloadMessage ?? `${fallback}${statusSuffix}`, {
     status,
     code: extractScalar(payload, CODE_KEYS) ?? undefined,
-    requestId: extractScalar(payload, REQUEST_ID_KEYS) ?? undefined,
+    requestId: requestId ?? undefined,
   })
 }
 
@@ -198,6 +215,20 @@ function asRecord(value: unknown): Record<string, unknown> | null {
 
 function normalizeMessage(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : null
+}
+
+function extractHeaderValue(
+  headers: Pick<Headers, "get">,
+  keys: readonly string[],
+) {
+  for (const key of keys) {
+    const value = normalizeMessage(headers.get(key))
+    if (value) {
+      return value
+    }
+  }
+
+  return null
 }
 
 function isAuthExpired(record: Record<string, unknown>, code: string | null, message: string) {

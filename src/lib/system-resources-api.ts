@@ -18,7 +18,16 @@ export type SystemResourceListResult = {
   total: number
 }
 
-const SYSTEM_BUTTONS_API_URL = buildApiUrl(API_PATHS.systemButtonsDetail)
+export type ListSystemApisPayload = {
+  Path?: string
+  Method?: string
+  Name?: string
+  PageNum?: number
+  PageSize?: number
+  [property: string]: unknown
+}
+
+const SYSTEM_BUTTONS_API_URL = buildApiUrl(API_PATHS.systemButtonsList)
 const SYSTEM_APIS_API_URL = buildApiUrl(API_PATHS.systemApisList)
 const SYSTEM_APIS_IMPORT_API_URL = buildApiUrl(API_PATHS.systemApisImport)
 const BUTTONS_LOAD_ERROR_MESSAGE = "按钮列表加载失败，请稍后重试。"
@@ -48,9 +57,24 @@ export async function fetchSystemButtons(): Promise<SystemResourceListResult> {
 }
 
 export async function fetchSystemApis(): Promise<SystemResourceListResult> {
+  return fetchSystemApisWithPayload()
+}
+
+export async function fetchSystemApisWithPayload(payload: ListSystemApisPayload = {}): Promise<SystemResourceListResult> {
+  const normalizedPayload = {
+    Path: typeof payload.Path === "string" ? payload.Path.trim() : "",
+    Method: typeof payload.Method === "string" ? payload.Method.trim() : "",
+    Name: typeof payload.Name === "string" ? payload.Name.trim() : "",
+    PageNum: Number.isFinite(Number(payload.PageNum)) ? Number(payload.PageNum) : 0,
+    PageSize: Number.isFinite(Number(payload.PageSize)) ? Number(payload.PageSize) : 0,
+  }
+
   const response = await fetch(SYSTEM_APIS_API_URL, {
-    method: "GET",
-    headers: buildApiHeaders(),
+    method: "POST",
+    headers: buildApiHeaders({
+      "Content-Type": "application/json",
+    }),
+    body: JSON.stringify(normalizedPayload),
   })
   const responsePayload = await readResponseBody(response) as ResourceEnvelope | unknown[]
 

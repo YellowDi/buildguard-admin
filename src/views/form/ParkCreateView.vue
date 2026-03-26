@@ -10,16 +10,8 @@ import FormQuickNav from "@/components/form/FormQuickNav.vue"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { handleApiError } from "@/lib/api-errors"
-import { fetchCustomerDetail, fetchCustomers, type CustomerListItem } from "@/lib/customers-api"
 import { createPark, fetchParkDetail, updatePark } from "@/lib/parks-api"
 
 type QuickNavItem = {
@@ -38,11 +30,6 @@ type ParkFormState = {
   latitude: string
   longitude: string
   address: string
-}
-
-type CustomerOption = {
-  uuid: string
-  name: string
 }
 
 function createEmptyForm(): ParkFormState {
@@ -65,9 +52,7 @@ const route = useRoute()
 const form = reactive<ParkFormState>(createEmptyForm())
 const initialFormState = ref<ParkFormState>(createEmptyForm())
 const submitting = ref(false)
-const loadingCustomers = ref(false)
 const customerLoadError = ref("")
-const customerOptions = ref<CustomerOption[]>([])
 const customerName = ref("")
 const anchorItems = ref<QuickNavItem[]>([])
 const activeNavId = ref("")
@@ -84,6 +69,8 @@ const routeCustomerUuid = computed(() => {
   return typeof route.params.id === "string" ? route.params.id.trim() : ""
 })
 const parkUuid = computed(() => isEditMode.value && typeof route.params.id === "string" ? route.params.id.trim() : "")
+const queryCustomerUuid = computed(() => typeof route.query.customerUuid === "string" ? route.query.customerUuid.trim() : "")
+const queryCustomerName = computed(() => typeof route.query.customerName === "string" ? route.query.customerName.trim() : "")
 const pageTitle = computed(() => isEditMode.value ? "编辑园区" : "添加园区")
 const submitButtonLabel = computed(() => {
   if (submitting.value) {
@@ -143,7 +130,7 @@ function scrollToSection(id: string) {
 
 async function handleSubmit() {
   if (!normalizeText(form.customerUuid)) {
-    toast.error("请选择所属客户")
+    toast.error("所属客户信息缺失")
     return
   }
 
@@ -182,17 +169,6 @@ async function handleSubmit() {
           : "园区信息已提交到接口。",
     })
 
-    const targetParkUuid = normalizeText(result.Uuid) || parkUuid.value
-
-    if (targetParkUuid) {
-      await router.push({
-        name: "park-detail",
-        params: { id: targetParkUuid },
-        query: { customerUuid: normalizeText(form.customerUuid) },
-      })
-      return
-    }
-
     await router.push({
       name: "customer-detail",
       params: { id: normalizeText(form.customerUuid) },
@@ -221,38 +197,16 @@ async function loadCustomerOptions() {
 
   if (routeCustomerUuid.value) {
     form.customerUuid = routeCustomerUuid.value
+    customerName.value = queryCustomerName.value || "当前客户"
     initialFormState.value = {
       ...createEmptyForm(),
       customerUuid: routeCustomerUuid.value,
     }
 
-    try {
-      const detail = await fetchCustomerDetail({ Uuid: routeCustomerUuid.value })
-      customerName.value = normalizeText(detail.CorpName) || "当前客户"
-    } catch (error) {
-      customerLoadError.value = handleApiError(error, {
-        mode: "silent",
-        fallback: "客户资料加载失败，请稍后重试。",
-      })
-    }
-
     return
   }
 
-  loadingCustomers.value = true
-
-  try {
-    customerOptions.value = await fetchAllCustomers()
-    initialFormState.value = createEmptyForm()
-  } catch (error) {
-    customerOptions.value = []
-    customerLoadError.value = handleApiError(error, {
-      mode: "silent",
-      fallback: "客户列表加载失败，请稍后重试。",
-    })
-  } finally {
-    loadingCustomers.value = false
-  }
+  customerLoadError.value = "所属客户信息缺失，无法创建园区。"
 }
 
 async function loadParkFormDetail() {
@@ -263,12 +217,10 @@ async function loadParkFormDetail() {
     return
   }
 
-  loadingCustomers.value = true
-
   try {
     const detail = await fetchParkDetail({ Uuid: uuid })
     const nextForm = {
-      customerUuid: normalizeText(detail.CustomerUuid),
+      customerUuid: normalizeText(detail.CustomerUuid) || queryCustomerUuid.value,
       name: normalizeText(detail.Name),
       builtTime: normalizeText(detail.BuiltTime),
       operationTime: normalizeText(detail.OperationTime),
@@ -282,12 +234,7 @@ async function loadParkFormDetail() {
 
     Object.assign(form, nextForm)
     initialFormState.value = { ...nextForm }
-    customerName.value = normalizeText(detail.CorpName)
-
-    if (!customerName.value && nextForm.customerUuid) {
-      const customerDetail = await fetchCustomerDetail({ Uuid: nextForm.customerUuid })
-      customerName.value = normalizeText(customerDetail.CorpName) || "当前客户"
-    }
+    customerName.value = queryCustomerName.value || normalizeText(detail.CorpName) || "当前客户"
   } catch (error) {
     Object.assign(form, createEmptyForm())
     initialFormState.value = createEmptyForm()
@@ -295,69 +242,7 @@ async function loadParkFormDetail() {
       mode: "silent",
       fallback: "园区资料加载失败，请稍后重试。",
     })
-  } finally {
-    loadingCustomers.value = false
   }
-}
-
-async function fetchAllCustomers() {
-  const allItems: CustomerListItem[] = []
-  const pageSize = 200
-  let currentPage = 1
-  let totalCount = 0
-
-  while (currentPage <= 20) {
-    const result = await fetchCustomers({
-      PageNum: currentPage,
-      PageSize: pageSize,
-    })
-
-    if (currentPage === 1) {
-      totalCount = result.total
-    }
-
-    allItems.push(...result.list)
-
-    if (!result.list.length || (totalCount > 0 && allItems.length >= totalCount)) {
-      break
-    }
-
-    currentPage += 1
-  }
-
-  return allItems
-    .map(item => ({
-      uuid: getCustomerUuid(item),
-      name: getCustomerName(item),
-    }))
-    .filter(item => item.uuid && item.name)
-    .sort((left, right) => left.name.localeCompare(right.name, "zh-CN"))
-}
-
-function getCustomerUuid(item: CustomerListItem) {
-  return getFirstText(item, ["Uuid", "uuid", "CustomerUuid"], "")
-}
-
-function getCustomerName(item: CustomerListItem) {
-  return getFirstText(item, ["CorpName"], "")
-}
-
-function getFirstText(value: unknown, keys: string[], fallback = "") {
-  if (!value || typeof value !== "object") {
-    return fallback
-  }
-
-  const record = value as Record<string, unknown>
-
-  for (const key of keys) {
-    const text = normalizeText(record[key])
-
-    if (text) {
-      return text
-    }
-  }
-
-  return fallback
 }
 
 function normalizeText(value: unknown) {
@@ -380,11 +265,11 @@ function getOptionalText(value: unknown) {
 function resetLocalStateForRoute() {
   customerName.value = ""
   customerLoadError.value = ""
-  customerOptions.value = []
   Object.assign(form, createEmptyForm())
 
   if (routeCustomerUuid.value) {
     form.customerUuid = routeCustomerUuid.value
+    customerName.value = queryCustomerName.value || "当前客户"
     initialFormState.value = {
       ...createEmptyForm(),
       customerUuid: routeCustomerUuid.value,
@@ -463,7 +348,7 @@ watch(
     />
 
     <Alert v-if="customerLoadError" variant="destructive">
-      <AlertTitle>客户列表加载失败</AlertTitle>
+      <AlertTitle>{{ isEditMode ? "园区信息加载失败" : "所属客户信息缺失" }}</AlertTitle>
       <AlertDescription class="flex flex-wrap items-center gap-3">
         <span>{{ customerLoadError }}</span>
         <Button size="sm" variant="outline" @click="loadCustomerOptions">
@@ -481,27 +366,13 @@ watch(
             label="所属客户"
             label-for="park-customer"
           >
-            <template v-if="routeCustomerUuid || isEditMode">
-              <Input
-                id="park-customer"
-                :model-value="customerName || '正在加载客户资料'"
-                disabled
-                class="w-full"
-                @focus="handleFocus('section-customer')"
-              />
-            </template>
-            <template v-else>
-              <Select v-model="form.customerUuid" :disabled="loadingCustomers">
-                <SelectTrigger id="park-customer" class="w-full" @focus="handleFocus('section-customer')">
-                  <SelectValue :placeholder="loadingCustomers ? '正在加载客户列表' : '请选择所属客户'" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem v-for="customer in customerOptions" :key="customer.uuid" :value="customer.uuid">
-                    {{ customer.name }}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </template>
+            <Input
+              id="park-customer"
+              :model-value="customerName || '当前客户'"
+              disabled
+              class="w-full"
+              @focus="handleFocus('section-customer')"
+            />
           </FormFieldSection>
 
           <FormFieldSection

@@ -20,13 +20,14 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { Separator } from "@/components/ui/separator"
 import { detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
 import DetailLayout from "@/layouts/DetailLayout.vue"
 import { handleApiError } from "@/lib/api-errors"
 import { fetchBuildings, type BuildingListItem } from "@/lib/buildings-api"
 import { deleteCustomer, fetchCustomerDetail, type CustomerDetailPerson, type CustomerDetailResult } from "@/lib/customers-api"
-import { fetchParks, type ParkListItem } from "@/lib/parks-api"
+import { fetchParkDetail, fetchParks, type ParkDetailResult, type ParkListItem } from "@/lib/parks-api"
 
 type BuildingRow = {
   key: string
@@ -66,8 +67,13 @@ const deleteSubmitting = ref(false)
 const relationsLoading = ref(false)
 const relationErrorMessage = ref("")
 const parkBuildingGroups = ref<ParkBuildingGroup[]>([])
+const parkDetailSheetOpen = ref(false)
+const parkDetailLoading = ref(false)
+const parkDetailErrorMessage = ref("")
+const activeParkDetail = ref<ParkDetailResult | null>(null)
 let latestRequestId = 0
 let latestRelationsRequestId = 0
+let latestParkDetailRequestId = 0
 
 const customerUuid = computed(() => {
   const value = route.params.id
@@ -165,6 +171,29 @@ const maintenanceModule = computed<DetailRelationModuleSchema<MaintenanceRecordR
   }
 })
 
+const parkDetailSheetSections = computed<DetailFieldSection[]>(() => {
+  const current = activeParkDetail.value
+
+  if (!current) {
+    return []
+  }
+
+  return [
+    {
+      key: "park-sheet-fields",
+      title: "园区信息",
+      rows: [
+        { key: "name", label: "园区名称", value: toDisplayText(current.Name, "未命名园区") },
+        { key: "built-time", label: "建成时间", value: toDisplayText(current.BuiltTime, "-") },
+        { key: "operation-time", label: "投运时间", value: toDisplayText(current.OperationTime, "-") },
+        { key: "building-area", label: "建筑面积", value: toDisplayText(current.BuildArea, "-") },
+        { key: "contact", label: "联系人", value: buildContactValue(toDisplayText(current.Contact, "未填写"), toDisplayText(current.ContactPhone, "-")) },
+        { key: "address", label: "地址", value: toDisplayText(current.Address, "-"), truncate: false, valueClass: "leading-6" },
+      ],
+    },
+  ]
+})
+
 watch(customer, (current) => {
   detailBreadcrumbTitle.value = current?.CorpName?.trim() || null
 })
@@ -201,6 +230,7 @@ function goToCreatePark() {
   router.push({
     name: "customer-park-create",
     params: { id: customerUuid.value },
+    query: { customerName: toDisplayText(customer.value?.CorpName, "当前客户") },
   })
 }
 
@@ -225,16 +255,39 @@ async function handleDeleteCustomer() {
   }
 }
 
-function goToParkDetail(parkUuid: string, currentCustomerUuid: string) {
-  if (!parkUuid || !currentCustomerUuid) {
+async function goToParkDetail(parkUuid: string) {
+  if (!parkUuid) {
     return
   }
 
-  router.push({
-    name: "park-detail",
-    params: { id: parkUuid },
-    query: { customerUuid: currentCustomerUuid },
-  })
+  const requestId = ++latestParkDetailRequestId
+  parkDetailSheetOpen.value = true
+  parkDetailLoading.value = true
+  parkDetailErrorMessage.value = ""
+  activeParkDetail.value = null
+
+  try {
+    const detail = await fetchParkDetail({ Uuid: parkUuid })
+
+    if (requestId !== latestParkDetailRequestId) {
+      return
+    }
+
+    activeParkDetail.value = detail
+  } catch (error) {
+    if (requestId !== latestParkDetailRequestId) {
+      return
+    }
+
+    parkDetailErrorMessage.value = handleApiError(error, {
+      mode: "silent",
+      fallback: "园区详情加载失败，请稍后重试。",
+    })
+  } finally {
+    if (requestId === latestParkDetailRequestId) {
+      parkDetailLoading.value = false
+    }
+  }
 }
 
 function goToParkEdit(parkUuid: string, currentCustomerUuid: string) {
@@ -245,8 +298,23 @@ function goToParkEdit(parkUuid: string, currentCustomerUuid: string) {
   router.push({
     name: "park-edit",
     params: { id: parkUuid },
-    query: currentCustomerUuid ? { customerUuid: currentCustomerUuid } : undefined,
+    query: currentCustomerUuid
+      ? {
+          customerUuid: currentCustomerUuid,
+          customerName: toDisplayText(customer.value?.CorpName, "当前客户"),
+        }
+      : undefined,
   })
+}
+
+function handleParkDetailSheetOpenChange(open: boolean) {
+  parkDetailSheetOpen.value = open
+
+  if (!open) {
+    parkDetailLoading.value = false
+    parkDetailErrorMessage.value = ""
+    activeParkDetail.value = null
+  }
 }
 
 function getGroupParkUuid(group: unknown) {
@@ -707,7 +775,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
                     variant="outline"
                     size="sm"
                     class="h-8 rounded-md"
-                    @click="goToParkDetail(getGroupParkUuid(item), getGroupCustomerUuid(item))"
+                    @click="goToParkDetail(getGroupParkUuid(item))"
                   >
                     查看详情
                   </Button>
@@ -787,4 +855,29 @@ function toDisplayText(value: unknown, fallback = "未填写") {
       </template>
     </template>
   </DetailLayout>
+
+  <Sheet :open="parkDetailSheetOpen" @update:open="handleParkDetailSheetOpenChange">
+    <SheetContent side="right" class="w-full overflow-y-auto sm:max-w-xl">
+      <SheetHeader>
+        <SheetTitle>{{ toDisplayText(activeParkDetail?.Name, "园区详情") }}</SheetTitle>
+        <SheetDescription>查看园区基础信息。</SheetDescription>
+      </SheetHeader>
+
+      <div class="mt-6">
+        <Alert v-if="parkDetailErrorMessage" variant="destructive" class="mb-4">
+          <AlertTitle>园区详情接口加载失败</AlertTitle>
+          <AlertDescription>{{ parkDetailErrorMessage }}</AlertDescription>
+        </Alert>
+
+        <div
+          v-if="parkDetailLoading"
+          class="rounded-lg border border-border/70 px-4 py-5 text-sm text-muted-foreground"
+        >
+          正在获取园区详情数据。
+        </div>
+
+        <DetailFieldSections v-else-if="activeParkDetail" :sections="parkDetailSheetSections" />
+      </div>
+    </SheetContent>
+  </Sheet>
 </template>
