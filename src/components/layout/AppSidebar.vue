@@ -94,6 +94,11 @@ const businessItems = reactive<AppSidebarNavItem[]>([
     path: "/inspection-plans",
   },
   {
+    label: "设置",
+    icon: "ri-settings-3-line",
+    action: "open-settings",
+  },
+  {
     kind: "separator",
     label: "以下为 Demo 案例",
   },
@@ -130,11 +135,6 @@ const businessItems = reactive<AppSidebarNavItem[]>([
         path: "/call-center-tasks",
       },
     ],
-  },
-  {
-    label: "设置",
-    icon: "ri-settings-3-line",
-    action: "open-settings",
   },
 ])
 

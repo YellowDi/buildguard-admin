@@ -2,7 +2,15 @@ import type { ThemeMode } from "@/composables/useAppTheme"
 
 export type SettingsCategoryGroupKey = "account" | "workspace" | "feature" | "admin"
 
-export type SettingsCategoryKey = "me" | "preferences" | "general" | "members" | "inspection-items" | "notifications" | "security"
+export type SettingsCategoryKey =
+  | "me"
+  | "preferences"
+  | "general"
+  | "members"
+  | "inspection-items"
+  | "inspection-categories"
+  | "notifications"
+  | "security"
 
 export type SettingsActionKey =
   | "save-profile"

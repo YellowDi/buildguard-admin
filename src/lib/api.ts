@@ -20,6 +20,7 @@ export const API_PATHS = {
   memberDelete: "/bqi/user/del",
   currentUserInfo: "/bqi/user/info",
   inspectionItemsList: "/bqi/inspection/list",
+  inspectionCategoriesList: "/bqi/sys/category/list",
   inspectionPlansList: "/bqi/inspection/plan/list",
   inspectionServicesList: "/bqi/inspection/service/list",
   inspectionServiceDetail: "/bqi/inspection/service/detail",

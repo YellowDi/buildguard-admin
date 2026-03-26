@@ -311,6 +311,16 @@ const categories = computed<SettingsCategory[]>(() => [
     sections: [],
   },
   {
+    key: "inspection-categories",
+    group: "feature",
+    label: "检测项分类",
+    description: "维护检测项分类基础数据。",
+    icon: "ri-table-line",
+    pageTitle: "检测项分类",
+    pageDescription: "查看并检索检测项分类列表，数据来自分类接口。",
+    sections: [],
+  },
+  {
     key: "notifications",
     group: "feature",
     label: "通知",
