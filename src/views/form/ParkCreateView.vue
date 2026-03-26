@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, reactive, ref } from "vue"
+import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { toast } from "vue-sonner"
 
@@ -20,7 +20,7 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { handleApiError } from "@/lib/api-errors"
 import { fetchCustomerDetail, fetchCustomers, type CustomerListItem } from "@/lib/customers-api"
-import { createPark } from "@/lib/parks-api"
+import { createPark, fetchParkDetail, updatePark } from "@/lib/parks-api"
 
 type QuickNavItem = {
   id: string
@@ -63,6 +63,7 @@ function createEmptyForm(): ParkFormState {
 const router = useRouter()
 const route = useRoute()
 const form = reactive<ParkFormState>(createEmptyForm())
+const initialFormState = ref<ParkFormState>(createEmptyForm())
 const submitting = ref(false)
 const loadingCustomers = ref(false)
 const customerLoadError = ref("")
@@ -74,7 +75,28 @@ const formSectionsRef = ref<HTMLElement | null>(null)
 const STICKY_HEADER_OFFSET = 112
 let observer: IntersectionObserver | null = null
 let observerActive = false
-const customerUuid = computed(() => typeof route.params.id === "string" ? route.params.id.trim() : "")
+const isEditMode = computed(() => route.name === "park-edit")
+const routeCustomerUuid = computed(() => {
+  if (isEditMode.value) {
+    return ""
+  }
+
+  return typeof route.params.id === "string" ? route.params.id.trim() : ""
+})
+const parkUuid = computed(() => isEditMode.value && typeof route.params.id === "string" ? route.params.id.trim() : "")
+const pageTitle = computed(() => isEditMode.value ? "编辑园区" : "添加园区")
+const submitButtonLabel = computed(() => {
+  if (submitting.value) {
+    return isEditMode.value ? "保存中..." : "提交中..."
+  }
+
+  return isEditMode.value ? "保存园区" : "添加园区"
+})
+const resetDialogDescription = computed(() =>
+  isEditMode.value
+    ? "当前已修改的园区信息将恢复为最近一次加载的内容，此操作不可撤销。"
+    : "当前已填写的园区信息都会被清空，此操作不可撤销。",
+)
 
 const canSubmit = computed(() =>
   Boolean(normalizeText(form.customerUuid) && normalizeText(form.name) && !submitting.value),
@@ -133,7 +155,7 @@ async function handleSubmit() {
   submitting.value = true
 
   try {
-    const result = await createPark({
+    const payload = {
       CustomerUuid: normalizeText(form.customerUuid),
       Name: normalizeText(form.name),
       BuiltTime: getOptionalText(form.builtTime),
@@ -144,16 +166,28 @@ async function handleSubmit() {
       Latitude: getOptionalText(form.latitude),
       Longitude: getOptionalText(form.longitude),
       Address: getOptionalText(form.address),
+    }
+    const result = isEditMode.value
+      ? await updatePark({
+          Uuid: parkUuid.value,
+          ...payload,
+        })
+      : await createPark(payload)
+
+    toast.success(isEditMode.value ? "园区信息已更新" : "园区已创建", {
+      description: result.Uuid
+        ? `园区 UUID：${result.Uuid}`
+        : isEditMode.value
+          ? "园区信息已更新。"
+          : "园区信息已提交到接口。",
     })
 
-    toast.success("园区已创建", {
-      description: result.Uuid ? `园区 UUID：${result.Uuid}` : "园区信息已提交到接口。",
-    })
+    const targetParkUuid = normalizeText(result.Uuid) || parkUuid.value
 
-    if (result.Uuid) {
+    if (targetParkUuid) {
       await router.push({
         name: "park-detail",
-        params: { id: result.Uuid },
+        params: { id: targetParkUuid },
         query: { customerUuid: normalizeText(form.customerUuid) },
       })
       return
@@ -165,8 +199,8 @@ async function handleSubmit() {
     })
   } catch (error) {
     handleApiError(error, {
-      title: "园区创建失败",
-      fallback: "园区创建失败，请稍后重试。",
+      title: isEditMode.value ? "园区更新失败" : "园区创建失败",
+      fallback: isEditMode.value ? "园区更新失败，请稍后重试。" : "园区创建失败，请稍后重试。",
     })
   } finally {
     submitting.value = false
@@ -174,18 +208,26 @@ async function handleSubmit() {
 }
 
 function handleReset() {
-  Object.assign(form, {
-    ...createEmptyForm(),
-    customerUuid: customerUuid.value,
-  })
+  Object.assign(form, initialFormState.value)
 }
 
 async function loadCustomerOptions() {
-  if (customerUuid.value) {
-    form.customerUuid = customerUuid.value
+  customerLoadError.value = ""
+
+  if (isEditMode.value) {
+    await loadParkFormDetail()
+    return
+  }
+
+  if (routeCustomerUuid.value) {
+    form.customerUuid = routeCustomerUuid.value
+    initialFormState.value = {
+      ...createEmptyForm(),
+      customerUuid: routeCustomerUuid.value,
+    }
 
     try {
-      const detail = await fetchCustomerDetail({ Uuid: customerUuid.value })
+      const detail = await fetchCustomerDetail({ Uuid: routeCustomerUuid.value })
       customerName.value = normalizeText(detail.CorpName) || "当前客户"
     } catch (error) {
       customerLoadError.value = handleApiError(error, {
@@ -198,15 +240,60 @@ async function loadCustomerOptions() {
   }
 
   loadingCustomers.value = true
-  customerLoadError.value = ""
 
   try {
     customerOptions.value = await fetchAllCustomers()
+    initialFormState.value = createEmptyForm()
   } catch (error) {
     customerOptions.value = []
     customerLoadError.value = handleApiError(error, {
       mode: "silent",
       fallback: "客户列表加载失败，请稍后重试。",
+    })
+  } finally {
+    loadingCustomers.value = false
+  }
+}
+
+async function loadParkFormDetail() {
+  const uuid = parkUuid.value
+
+  if (!uuid) {
+    customerLoadError.value = "园区 Uuid 缺失，无法加载编辑表单。"
+    return
+  }
+
+  loadingCustomers.value = true
+
+  try {
+    const detail = await fetchParkDetail({ Uuid: uuid })
+    const nextForm = {
+      customerUuid: normalizeText(detail.CustomerUuid),
+      name: normalizeText(detail.Name),
+      builtTime: normalizeText(detail.BuiltTime),
+      operationTime: normalizeText(detail.OperationTime),
+      buildArea: normalizeText(detail.BuildArea),
+      contact: normalizeText(detail.Contact),
+      contactPhone: normalizeText(detail.ContactPhone),
+      latitude: normalizeText(detail.Latitude),
+      longitude: normalizeText(detail.Longitude),
+      address: normalizeText(detail.Address),
+    }
+
+    Object.assign(form, nextForm)
+    initialFormState.value = { ...nextForm }
+    customerName.value = normalizeText(detail.CorpName)
+
+    if (!customerName.value && nextForm.customerUuid) {
+      const customerDetail = await fetchCustomerDetail({ Uuid: nextForm.customerUuid })
+      customerName.value = normalizeText(customerDetail.CorpName) || "当前客户"
+    }
+  } catch (error) {
+    Object.assign(form, createEmptyForm())
+    initialFormState.value = createEmptyForm()
+    customerLoadError.value = handleApiError(error, {
+      mode: "silent",
+      fallback: "园区资料加载失败，请稍后重试。",
     })
   } finally {
     loadingCustomers.value = false
@@ -290,11 +377,26 @@ function getOptionalText(value: unknown) {
   return normalized || undefined
 }
 
-onMounted(() => {
-  if (customerUuid.value) {
-    form.customerUuid = customerUuid.value
+function resetLocalStateForRoute() {
+  customerName.value = ""
+  customerLoadError.value = ""
+  customerOptions.value = []
+  Object.assign(form, createEmptyForm())
+
+  if (routeCustomerUuid.value) {
+    form.customerUuid = routeCustomerUuid.value
+    initialFormState.value = {
+      ...createEmptyForm(),
+      customerUuid: routeCustomerUuid.value,
+    }
+    return
   }
 
+  initialFormState.value = createEmptyForm()
+}
+
+onMounted(() => {
+  resetLocalStateForRoute()
   void loadCustomerOptions()
 
   nextTick(() => {
@@ -339,15 +441,23 @@ onMounted(() => {
 onUnmounted(() => {
   observer?.disconnect()
 })
+
+watch(
+  () => [route.name, route.params.id] as const,
+  () => {
+    resetLocalStateForRoute()
+    void loadCustomerOptions()
+  },
+)
 </script>
 
 <template>
   <section class="mx-auto flex w-full max-w-4xl min-w-0 flex-col gap-6 pb-8">
     <FormHeader
-      title="添加园区"
-      :primary-action="{ label: submitting ? '提交中...' : '添加园区', icon: 'ri-add-line', disabled: !canSubmit }"
+      :title="pageTitle"
+      :primary-action="{ label: submitButtonLabel, icon: isEditMode ? 'ri-save-line' : 'ri-add-line', disabled: !canSubmit }"
       :secondary-actions="[{ key: 'reset', label: '重置表单' }]"
-      :reset-dialog="{ description: '当前已填写的园区信息都会被清空，此操作不可撤销。' }"
+      :reset-dialog="{ description: resetDialogDescription }"
       @reset="handleReset"
       @submit="handleSubmit"
     />
@@ -371,7 +481,7 @@ onUnmounted(() => {
             label="所属客户"
             label-for="park-customer"
           >
-            <template v-if="customerUuid">
+            <template v-if="routeCustomerUuid || isEditMode">
               <Input
                 id="park-customer"
                 :model-value="customerName || '正在加载客户资料'"

@@ -12,6 +12,7 @@ export const API_PATHS = {
   customerDelete: "/bqi/customer/del",
   parksList: "/bqi/park/list",
   parkCreate: "/bqi/park/new",
+  parkUpdate: "/bqi/park/update",
   parkDetail: "/bqi/park/detail",
   buildingsList: "/bqi/build/list",
   workOrdersList: "/bqi/work-order/list",

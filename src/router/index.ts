@@ -136,6 +136,20 @@ const router = createRouter({
           } satisfies RouteMetaConfig,
         },
         {
+          path: "parks/:id/edit",
+          name: "park-edit",
+          component: () => import("@/views/form/ParkCreateView.vue"),
+          meta: {
+            title: "编辑园区",
+            loading: "form",
+            breadcrumb: [
+              { title: "客户", to: "customers" },
+              { title: "客户详情" },
+              { title: "编辑园区" },
+            ] satisfies BreadcrumbMetaItem[],
+          } satisfies RouteMetaConfig,
+        },
+        {
           path: "inspection-services",
           name: "inspection-services",
           component: () => import("@/views/list/InspectionServicesListView.vue"),

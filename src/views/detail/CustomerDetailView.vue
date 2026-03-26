@@ -237,6 +237,18 @@ function goToParkDetail(parkUuid: string, currentCustomerUuid: string) {
   })
 }
 
+function goToParkEdit(parkUuid: string, currentCustomerUuid: string) {
+  if (!parkUuid) {
+    return
+  }
+
+  router.push({
+    name: "park-edit",
+    params: { id: parkUuid },
+    query: currentCustomerUuid ? { customerUuid: currentCustomerUuid } : undefined,
+  })
+}
+
 function getGroupParkUuid(group: unknown) {
   if (group && typeof group === "object" && "parkUuid" in group) {
     const value = (group as { parkUuid?: unknown }).parkUuid
@@ -682,14 +694,24 @@ function toDisplayText(value: unknown, fallback = "未填写") {
           <template v-else-if="parkBuildingGroups.length">
             <DetailAccordionModule :schema="parkBuildingAccordion">
               <template #item-actions="{ item }">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  class="h-8 rounded-md"
-                  @click="goToParkDetail(getGroupParkUuid(item), getGroupCustomerUuid(item))"
-                >
-                  查看详情
-                </Button>
+                <div class="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    class="h-8 rounded-md"
+                    @click="goToParkEdit(getGroupParkUuid(item), getGroupCustomerUuid(item))"
+                  >
+                    编辑园区
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    class="h-8 rounded-md"
+                    @click="goToParkDetail(getGroupParkUuid(item), getGroupCustomerUuid(item))"
+                  >
+                    查看详情
+                  </Button>
+                </div>
               </template>
 
               <template #expanded-content="{ item }">
