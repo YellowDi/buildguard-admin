@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue"
 import { useRouter } from "vue-router"
-import { VisArea, VisAxis, VisDonut, VisDonutSelectors, VisGroupedBar, VisLine, VisSingleContainer, VisStackedBar, VisXYContainer } from "@unovis/vue"
+import { VisAxis, VisDonut, VisDonutSelectors, VisLine, VisSingleContainer, VisStackedBar, VisXYContainer } from "@unovis/vue"
 
 import TopTabSwitch from "@/components/layout/TopTabSwitch.vue"
 import type { ChartConfig } from "@/components/ui/chart"
@@ -28,23 +28,16 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { fetchBuildings, type BuildingListItem } from "@/lib/buildings-api"
+import { fetchWorkOrders, type WorkOrderListItem } from "@/lib/work-orders-api"
 import { handleApiError } from "@/lib/api-errors"
 import alarmArchivesData from "@/mocks/alarm-archives.json"
 import alarmQueriesData from "@/mocks/alarm-queries.json"
-import companiesData from "@/mocks/companies.json"
 import customersData from "@/mocks/customers.json"
 import inspectionPlansData from "@/mocks/inspection-plans.json"
 import parksData from "@/mocks/parks.json"
 import usersData from "@/mocks/users.json"
 
-type TimeRange = "7d" | "3d" | "1d"
-
-type CompanyRecord = {
-  type: string
-  district: string
-  vehicles: number
-  lastUpdated: string
-}
+type TimeRange = "12m" | "6m" | "1m"
 
 type UserRecord = {
   role: string
@@ -88,7 +81,6 @@ type BuildingRankingItem = {
   riskLabel: string
 }
 
-const companyRecords = companiesData as CompanyRecord[]
 const customerRecords = customersData as CustomerRecord[]
 const inspectionPlanRecords = inspectionPlansData as InspectionPlanRecord[]
 const parkRecords = parksData as ParkRecord[]
@@ -97,52 +89,45 @@ const alarmQueryRecords = alarmQueriesData as AlarmQueryRecord[]
 const alarmArchiveRecords = alarmArchivesData as AlarmArchiveRecord[]
 const router = useRouter()
 
-const companyTrendData = Object.values(
-  companyRecords.reduce<Record<string, { date: Date, passenger: number, dangerous: number }>>((acc, item) => {
-    const dateKey = item.lastUpdated.slice(0, 10)
+type WorkOrderHistoryDatum = {
+  date: Date
+  monthKey: string
+  total: number
+  completionRate: number
+  completionRateScaled: number
+}
 
-    acc[dateKey] ??= {
-      date: new Date(`${dateKey}T00:00:00`),
-      passenger: 0,
-      dangerous: 0,
-    }
+type WorkOrderSummary = {
+  total: number
+  pendingAssign: number
+  pendingExecute: number
+  executing: number
+  completed: number
+}
 
-    if (item.type.includes("旅客")) {
-      acc[dateKey].passenger += item.vehicles
-    }
-    else {
-      acc[dateKey].dangerous += item.vehicles
-    }
+const workOrderHistoryItems = ref<WorkOrderHistoryDatum[]>([])
+const workOrderHistoryLoading = ref(false)
+const workOrderHistoryError = ref("")
+const workOrderSummary = ref<WorkOrderSummary>({
+  total: 0,
+  pendingAssign: 0,
+  pendingExecute: 0,
+  executing: 0,
+  completed: 0,
+})
 
-    return acc
-  }, {}),
-).sort((a, b) => a.date.getTime() - b.date.getTime())
-
-type CompanyTrendDatum = (typeof companyTrendData)[number]
-
-const companyChartConfig = {
-  passenger: {
-    label: "客运车辆",
+const workOrderHistoryChartConfig = {
+  total: {
+    label: "工单总量",
     color: "var(--chart-2)",
   },
-  dangerous: {
-    label: "危货车辆",
+  completionRateScaled: {
+    label: "完成率 (%)",
     color: "var(--chart-1)",
   },
 } satisfies ChartConfig
 
-const svgDefs = `
-  <linearGradient id="fillDangerous" x1="0" y1="0" x2="0" y2="1">
-    <stop offset="5%" stop-color="var(--color-dangerous)" stop-opacity="0.8" />
-    <stop offset="95%" stop-color="var(--color-dangerous)" stop-opacity="0.1" />
-  </linearGradient>
-  <linearGradient id="fillPassenger" x1="0" y1="0" x2="0" y2="1">
-    <stop offset="5%" stop-color="var(--color-passenger)" stop-opacity="0.8" />
-    <stop offset="95%" stop-color="var(--color-passenger)" stop-opacity="0.1" />
-  </linearGradient>
-`
-
-const timeRange = ref<TimeRange>("7d")
+const timeRange = ref<TimeRange>("12m")
 const activeBuildingRiskTab = ref<BuildingRiskTab>("high-risk")
 const buildingRankingItems = ref<BuildingRankingItem[]>([])
 const buildingRankingLoading = ref(false)
@@ -151,19 +136,14 @@ const leftDashboardSectionRef = ref<HTMLElement | null>(null)
 const buildingRankingColumnHeight = ref<number | null>(null)
 let leftDashboardSectionObserver: ResizeObserver | null = null
 
-const filteredCompanyTrendData = computed(() => {
-  const referenceDate = companyTrendData[companyTrendData.length - 1]?.date ?? new Date("2026-03-07T00:00:00")
-  const days = timeRange.value === "3d" ? 3 : timeRange.value === "1d" ? 1 : 7
-  const startDate = new Date(referenceDate)
-
-  startDate.setDate(startDate.getDate() - (days - 1))
-
-  return companyTrendData.filter(item => item.date >= startDate)
+const filteredWorkOrderHistory = computed(() => {
+  const monthCount = timeRange.value === "6m" ? 6 : timeRange.value === "1m" ? 1 : 12
+  return workOrderHistoryItems.value.slice(-monthCount)
 })
 
-const companyTrendMax = computed(() => {
-  const max = Math.max(...filteredCompanyTrendData.value.map(item => item.passenger + item.dangerous), 0)
-  return Math.max(500, Math.ceil(max / 500) * 500)
+const workOrderHistoryMax = computed(() => {
+  const max = Math.max(...filteredWorkOrderHistory.value.map(item => item.total), 0)
+  return Math.max(10, Math.ceil(max / 10) * 10)
 })
 
 const alarmStatusTrendData = Object.values(
@@ -326,6 +306,7 @@ const buildingRankingColumnStyle = computed(() => {
 
 onMounted(() => {
   setupLeftDashboardSectionObserver()
+  void loadWorkOrderHistory()
   void loadBuildingRanking()
 })
 
@@ -339,6 +320,24 @@ function formatShortDate(date: number | Date, locale = "zh-CN") {
     month: "numeric",
     day: "numeric",
   })
+}
+
+function formatMonthLabel(date: number | Date, locale = "zh-CN") {
+  return new Date(date).toLocaleDateString(locale, {
+    month: "numeric",
+  })
+}
+
+function formatCompletionRate(value: number) {
+  return `${Math.round(value)}%`
+}
+
+function formatWorkOrderHistoryTooltipValue(key: string, value: unknown, payload: Record<string, unknown>) {
+  if (key === "completionRateScaled") {
+    return formatCompletionRate(toFiniteNumber(payload.completionRate) ?? 0)
+  }
+
+  return typeof value === "number" ? numberFormatter.format(value) : String(value ?? "-")
 }
 
 async function setupLeftDashboardSectionObserver() {
@@ -386,6 +385,32 @@ async function loadBuildingRanking() {
   }
 }
 
+async function loadWorkOrderHistory() {
+  workOrderHistoryLoading.value = true
+  workOrderHistoryError.value = ""
+
+  try {
+    const workOrders = await fetchAllWorkOrders()
+    workOrderHistoryItems.value = buildWorkOrderHistory(workOrders)
+    workOrderSummary.value = buildWorkOrderSummary(workOrders)
+  } catch (error) {
+    workOrderHistoryItems.value = []
+    workOrderSummary.value = {
+      total: 0,
+      pendingAssign: 0,
+      pendingExecute: 0,
+      executing: 0,
+      completed: 0,
+    }
+    workOrderHistoryError.value = handleApiError(error, {
+      mode: "silent",
+      fallback: "历史趋势加载失败，请稍后重试。",
+    })
+  } finally {
+    workOrderHistoryLoading.value = false
+  }
+}
+
 async function fetchAllBuildings() {
   const pageSize = 200
   const allItems: BuildingListItem[] = []
@@ -412,6 +437,174 @@ async function fetchAllBuildings() {
   }
 
   return allItems
+}
+
+async function fetchAllWorkOrders() {
+  const pageSize = 200
+  const allItems: WorkOrderListItem[] = []
+  let pageNum = 1
+  let total = 0
+
+  while (pageNum <= 20) {
+    const result = await fetchWorkOrders({
+      PageNum: pageNum,
+      PageSize: pageSize,
+    })
+
+    if (pageNum === 1) {
+      total = result.total
+    }
+
+    allItems.push(...result.list)
+
+    if (!result.list.length || (total > 0 && allItems.length >= total)) {
+      break
+    }
+
+    pageNum += 1
+  }
+
+  return allItems
+}
+
+function buildWorkOrderHistory(items: WorkOrderListItem[]) {
+  const monthBuckets = new Map<string, { date: Date, total: number, completed: number }>()
+  const referenceDate = resolveLatestWorkOrderDate(items) ?? new Date()
+
+  for (let offset = 11; offset >= 0; offset -= 1) {
+    const monthDate = new Date(referenceDate.getFullYear(), referenceDate.getMonth() - offset, 1)
+    const monthKey = toMonthKey(monthDate)
+
+    monthBuckets.set(monthKey, {
+      date: monthDate,
+      total: 0,
+      completed: 0,
+    })
+  }
+
+  for (const item of items) {
+    const sourceDate = resolveWorkOrderDate(item)
+    if (!sourceDate) {
+      continue
+    }
+
+    const monthKey = toMonthKey(sourceDate)
+    const bucket = monthBuckets.get(monthKey)
+
+    if (!bucket) {
+      continue
+    }
+
+    bucket.total += 1
+
+    if (isCompletedWorkOrder(item)) {
+      bucket.completed += 1
+    }
+  }
+
+  const maxTotal = Math.max(...Array.from(monthBuckets.values(), bucket => bucket.total), 0)
+
+  return Array.from(monthBuckets.entries()).map(([monthKey, bucket]) => {
+    const completionRate = bucket.total > 0 ? Math.round((bucket.completed / bucket.total) * 100) : 0
+
+    return {
+      date: bucket.date,
+      monthKey,
+      total: bucket.total,
+      completionRate,
+      completionRateScaled: Math.round((completionRate / 100) * maxTotal),
+    }
+  })
+}
+
+function buildWorkOrderSummary(items: WorkOrderListItem[]): WorkOrderSummary {
+  return items.reduce<WorkOrderSummary>((summary, item) => {
+    summary.total += 1
+
+    switch (resolveWorkOrderStage(item)) {
+      case "pending-assign":
+        summary.pendingAssign += 1
+        break
+      case "pending-execute":
+        summary.pendingExecute += 1
+        break
+      case "executing":
+        summary.executing += 1
+        break
+      case "completed":
+        summary.completed += 1
+        break
+      default:
+        break
+    }
+
+    return summary
+  }, {
+    total: 0,
+    pendingAssign: 0,
+    pendingExecute: 0,
+    executing: 0,
+    completed: 0,
+  })
+}
+
+function resolveLatestWorkOrderDate(items: WorkOrderListItem[]) {
+  const sortedDates = items
+    .map(item => resolveWorkOrderDate(item))
+    .filter((value): value is Date => value instanceof Date)
+    .sort((a, b) => a.getTime() - b.getTime())
+
+  return sortedDates[sortedDates.length - 1] ?? null
+}
+
+function resolveWorkOrderDate(item: WorkOrderListItem) {
+  const candidates = [item.CreatedAt, item.UpdatedAt, item.Deadline]
+
+  for (const candidate of candidates) {
+    if (typeof candidate !== "string" || !candidate.trim()) {
+      continue
+    }
+
+    const parsed = new Date(candidate)
+    if (!Number.isNaN(parsed.getTime())) {
+      return parsed
+    }
+  }
+
+  return null
+}
+
+function isCompletedWorkOrder(item: WorkOrderListItem) {
+  return resolveWorkOrderStage(item) === "completed"
+}
+
+function resolveWorkOrderStage(item: WorkOrderListItem) {
+  const status = toFiniteNumber(item.Status)
+  const result = toFiniteNumber(item.Result)
+
+  if (status === 5 || (status === null && result === 1)) {
+    return "completed"
+  }
+
+  if (status === 1 || status === 0) {
+    return "pending-assign"
+  }
+
+  if (status === 2) {
+    return "pending-execute"
+  }
+
+  if (status === 3 || status === 4) {
+    return "executing"
+  }
+
+  return "pending-execute"
+}
+
+function toMonthKey(date: Date) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  return `${year}-${month}`
 }
 
 function normalizeBuildingRankingItem(item: BuildingListItem, index: number): BuildingRankingItem {
@@ -602,27 +795,47 @@ function hashText(value: string) {
       <div ref="leftDashboardSectionRef" class="flex min-w-0 flex-col gap-4 xl:col-span-7">
         <div :class="dashboardTrendShellClass">
           <CardHeader class="flex flex-col gap-2 px-0 sm:min-h-8 sm:flex-row sm:items-center sm:justify-between sm:pl-2 sm:pr-0">
-            <CardTitle :class="chartTitleClass">
-              企业车辆规模趋势
-            </CardTitle>
+            <div class="flex flex-wrap items-center gap-3">
+              <CardTitle :class="chartTitleClass">
+                历史数据趋势
+              </CardTitle>
+
+              <div class="flex items-center gap-3 text-xs text-muted-foreground">
+                <div class="flex items-center gap-1.5">
+                  <span
+                    class="h-2.5 w-2.5 rounded-sm"
+                    :style="{ backgroundColor: workOrderHistoryChartConfig.total.color }"
+                  />
+                  <span>{{ workOrderHistoryChartConfig.total.label }}</span>
+                </div>
+
+                <div class="flex items-center gap-1.5">
+                  <span
+                    class="h-0.5 w-4 rounded-full"
+                    :style="{ backgroundColor: workOrderHistoryChartConfig.completionRateScaled.color }"
+                  />
+                  <span>{{ workOrderHistoryChartConfig.completionRateScaled.label }}</span>
+                </div>
+              </div>
+            </div>
 
             <Select v-model="timeRange">
               <SelectTrigger
                 class="flex h-8 w-full rounded-lg sm:ml-auto sm:w-[132px]"
                 aria-label="选择时间范围"
               >
-                <SelectValue placeholder="最近 7 天" />
+                <SelectValue placeholder="过去 12 个月" />
               </SelectTrigger>
 
               <SelectContent class="rounded-xl">
-                <SelectItem value="7d" class="rounded-lg">
-                  最近 7 天
+                <SelectItem value="12m" class="rounded-lg">
+                  过去 12 个月
                 </SelectItem>
-                <SelectItem value="3d" class="rounded-lg">
-                  最近 3 天
+                <SelectItem value="6m" class="rounded-lg">
+                  过去 6 个月
                 </SelectItem>
-                <SelectItem value="1d" class="rounded-lg">
-                  最近 1 天
+                <SelectItem value="1m" class="rounded-lg">
+                  过去 1 个月
                 </SelectItem>
               </SelectContent>
             </Select>
@@ -630,61 +843,123 @@ function hashText(value: string) {
 
           <Card :class="dashboardTrendCardClass">
             <CardContent :class="dashboardTrendContentClass">
+              <div v-if="workOrderHistoryError" class="flex h-[250px] items-center justify-center text-sm text-destructive">
+                {{ workOrderHistoryError }}
+              </div>
+
+              <div v-else-if="workOrderHistoryLoading" class="flex h-[250px] items-center justify-center text-sm text-muted-foreground">
+                正在加载历史趋势
+              </div>
+
               <ChartContainer
-                :config="companyChartConfig"
+                v-else
+                :config="workOrderHistoryChartConfig"
                 :class="chartContainerClass"
                 :cursor="false"
               >
-                <div :class="chartMainBodyClass">
-                  <VisXYContainer
-                    :data="filteredCompanyTrendData"
-                    :svg-defs="svgDefs"
-                    :margin="{ left: -32 }"
-                    :y-domain="[0, companyTrendMax]"
-                  >
-                    <VisArea
-                      :x="(d: CompanyTrendDatum) => d.date"
-                      :y="[(d: CompanyTrendDatum) => d.passenger, (d: CompanyTrendDatum) => d.dangerous]"
-                      :color="(_d: CompanyTrendDatum, i: number) => ['url(#fillPassenger)', 'url(#fillDangerous)'][i]"
-                      :opacity="0.6"
-                    />
-
-                    <VisLine
-                      :x="(d: CompanyTrendDatum) => d.date"
-                      :y="[(d: CompanyTrendDatum) => d.passenger, (d: CompanyTrendDatum) => d.passenger + d.dangerous]"
-                      :color="(_d: CompanyTrendDatum, i: number) => [companyChartConfig.passenger.color, companyChartConfig.dangerous.color][i]"
-                      :line-width="1"
-                    />
-
-                    <VisAxis
-                      type="x"
-                      :x="(d: CompanyTrendDatum) => d.date"
-                      :tick-line="false"
-                      :domain-line="false"
-                      :grid-line="false"
-                      :num-ticks="6"
-                      :tick-format="(d: number) => formatShortDate(d)"
-                    />
-
-                    <VisAxis
-                      type="y"
-                      :num-ticks="4"
-                      :tick-line="false"
-                      :domain-line="false"
-                    />
-
-                    <ChartTooltip />
-
-                    <ChartCrosshair
-                      :template="componentToString(companyChartConfig, ChartTooltipContent, {
-                        labelFormatter: (d) => formatShortDate(d),
-                      })"
-                      :color="(_d: CompanyTrendDatum, i: number) => [companyChartConfig.passenger.color, companyChartConfig.dangerous.color][i % 2]"
-                    />
-                  </VisXYContainer>
+                <div class="mb-3 grid gap-2 sm:grid-cols-5">
+                  <div class="rounded-lg border border-border/60 bg-card px-3 py-2 transition-colors hover:bg-muted/60">
+                    <div class="text-[11px] text-muted-foreground">
+                      历史工单总数
+                    </div>
+                    <div class="mt-1 text-lg font-semibold tracking-tight text-foreground">
+                      {{ numberFormatter.format(workOrderSummary.total) }}
+                    </div>
+                  </div>
+                  <div class="rounded-lg border border-border/60 bg-card px-3 py-2 transition-colors hover:bg-muted/60">
+                    <div class="text-[11px] text-muted-foreground">
+                      待指派
+                    </div>
+                    <div class="mt-1 text-lg font-semibold tracking-tight text-foreground">
+                      {{ numberFormatter.format(workOrderSummary.pendingAssign) }}
+                    </div>
+                  </div>
+                  <div class="rounded-lg border border-border/60 bg-card px-3 py-2 transition-colors hover:bg-muted/60">
+                    <div class="text-[11px] text-muted-foreground">
+                      待执行
+                    </div>
+                    <div class="mt-1 text-lg font-semibold tracking-tight text-foreground">
+                      {{ numberFormatter.format(workOrderSummary.pendingExecute) }}
+                    </div>
+                  </div>
+                  <div class="rounded-lg border border-border/60 bg-card px-3 py-2 transition-colors hover:bg-muted/60">
+                    <div class="text-[11px] text-muted-foreground">
+                      执行中
+                    </div>
+                    <div class="mt-1 text-lg font-semibold tracking-tight text-foreground">
+                      {{ numberFormatter.format(workOrderSummary.executing) }}
+                    </div>
+                  </div>
+                  <div class="rounded-lg border border-border/60 bg-card px-3 py-2 transition-colors hover:bg-muted/60">
+                    <div class="text-[11px] text-muted-foreground">
+                      已完成
+                    </div>
+                    <div class="mt-1 text-lg font-semibold tracking-tight text-foreground">
+                      {{ numberFormatter.format(workOrderSummary.completed) }}
+                    </div>
+                  </div>
                 </div>
 
-                <ChartLegendContent />
+                <div :class="chartMainBodyClass">
+                  <div class="relative h-full">
+                    <VisXYContainer
+                      :data="filteredWorkOrderHistory"
+                      :margin="{ left: -20, right: 32, top: 8 }"
+                      :y-domain="[0, workOrderHistoryMax]"
+                    >
+                      <VisStackedBar
+                        :x="(d: WorkOrderHistoryDatum) => d.date"
+                        :y="[(d: WorkOrderHistoryDatum) => d.total]"
+                        :color="[workOrderHistoryChartConfig.total.color]"
+                        :rounded-corners="4"
+                        :bar-padding="0.35"
+                      />
+
+                      <VisLine
+                        :x="(d: WorkOrderHistoryDatum) => d.date"
+                        :y="(d: WorkOrderHistoryDatum) => d.completionRateScaled"
+                        :color="workOrderHistoryChartConfig.completionRateScaled.color"
+                        :line-width="2"
+                      />
+
+                      <VisAxis
+                        type="x"
+                        :x="(d: WorkOrderHistoryDatum) => d.date"
+                        :tick-line="false"
+                        :domain-line="false"
+                        :grid-line="false"
+                        :num-ticks="timeRange === '12m' ? 12 : timeRange === '6m' ? 6 : 1"
+                        :tick-format="(d: number) => formatMonthLabel(d)"
+                      />
+
+                      <VisAxis
+                        type="y"
+                        :num-ticks="4"
+                        :tick-line="false"
+                        :domain-line="false"
+                      />
+
+                      <ChartTooltip />
+
+                      <ChartCrosshair
+                        :template="componentToString(workOrderHistoryChartConfig, ChartTooltipContent, {
+                          labelFormatter: (d) => formatMonthLabel(d),
+                          valueFormatter: formatWorkOrderHistoryTooltipValue,
+                        })"
+                        :color="(_d: WorkOrderHistoryDatum, i: number) => [workOrderHistoryChartConfig.total.color, workOrderHistoryChartConfig.completionRateScaled.color][i % 2]"
+                      />
+
+                    </VisXYContainer>
+
+                    <div class="pointer-events-none absolute inset-y-0 right-0 flex flex-col justify-between pb-8 pt-2 text-[10px] text-muted-foreground">
+                      <span>100%</span>
+                      <span>75%</span>
+                      <span>50%</span>
+                      <span>25%</span>
+                      <span>0%</span>
+                    </div>
+                  </div>
+                </div>
               </ChartContainer>
             </CardContent>
           </Card>
@@ -812,7 +1087,7 @@ function hashText(value: string) {
 
         <div class="flex min-h-0 flex-1">
           <Card :class="`${chartCardClass} h-full min-h-0 w-full`">
-            <CardContent class="flex h-full min-h-0 flex-col p-3">
+            <CardContent class="flex h-full min-h-0 flex-col p-0">
               <div class="flex min-h-0 flex-1 flex-col overflow-hidden">
                 <div v-if="buildingRankingError" class="flex h-full min-h-0 flex-col items-center justify-center gap-3 text-center">
                   <div class="text-sm text-destructive">
@@ -832,10 +1107,10 @@ function hashText(value: string) {
                     v-for="(building, index) in activeBuildingList"
                     :key="building.id"
                     type="button"
-                    class="flex w-full items-center gap-2.5 border-b border-dashed border-border/70 px-1 py-2 text-left transition-colors last:border-b-0 hover:bg-accent/20"
+                    class="group flex w-full items-center gap-2.5 border-b border-dashed border-border/70 pl-1 pr-3 py-2 text-left transition-[background-color,border-color] duration-150 last:border-b-0 hover:bg-muted/60"
                     @click="goToBuildingDetail(building)"
                   >
-                    <div class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-foreground">
+                    <div class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-foreground transition-colors group-hover:bg-background">
                       {{ index + 1 }}
                     </div>
 
