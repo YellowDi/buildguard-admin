@@ -1,5 +1,5 @@
 import { createHttpError, readResponseBody } from "@/lib/api-errors"
-import { API_PATHS, buildApiHeaders, buildApiUrl } from "@/lib/api"
+import { API_PATHS, buildApiHeaders, buildApiRequestUrl, buildApiUrl } from "@/lib/api"
 
 type InspectionServicesListEnvelope = {
   Total?: number
@@ -98,7 +98,7 @@ export async function fetchInspectionServices(
 export async function fetchInspectionServiceDetail(
   payload: InspectionServiceDetailPayload,
 ): Promise<InspectionServiceListItem> {
-  const url = new URL(INSPECTION_SERVICE_DETAIL_API_URL)
+  const url = buildApiRequestUrl(API_PATHS.inspectionServiceDetail)
   const uuid = getRequiredString(payload.Uuid, "Uuid")
 
   url.searchParams.set("Uuid", uuid)

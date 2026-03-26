@@ -100,6 +100,19 @@ const router = createRouter({
           } satisfies RouteMetaConfig,
         },
         {
+          path: "customers/:id/edit",
+          name: "customer-edit",
+          component: () => import("@/views/form/CustomerCreateView.vue"),
+          meta: {
+            title: "修改客户信息",
+            loading: "form",
+            breadcrumb: [
+              { title: "客户", to: "customers" },
+              { title: "修改客户信息" },
+            ] satisfies BreadcrumbMetaItem[],
+          } satisfies RouteMetaConfig,
+        },
+        {
           path: "companies",
           name: "companies",
           component: () => import("@/views/list/CompaniesListView.vue"),
@@ -115,6 +128,19 @@ const router = createRouter({
           meta: {
             title: "园区",
             loading: "table",
+          } satisfies RouteMetaConfig,
+        },
+        {
+          path: "parks/create",
+          name: "park-create",
+          component: () => import("@/views/form/ParkCreateView.vue"),
+          meta: {
+            title: "添加园区",
+            loading: "form",
+            breadcrumb: [
+              { title: "园区", to: "parks" },
+              { title: "添加园区" },
+            ] satisfies BreadcrumbMetaItem[],
           } satisfies RouteMetaConfig,
         },
         {

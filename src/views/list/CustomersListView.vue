@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
+import { toast } from "vue-sonner"
 
 import TablePage from "@/components/table-page/TablePage.vue"
 import TablePageLoading from "@/components/loading/TablePageLoading.vue"
@@ -32,7 +33,9 @@ type CustomerRecord = {
   business: string
   level: number | null
   levelLabel: string
+  principalName: string
   principalPhone: string
+  principalDisplay: string
   packageInfo: string
   packageName: string
   packageCode: string
@@ -77,7 +80,14 @@ const schema: TablePageSchema<CustomerRecord> = {
     {
       key: "view-detail",
       label: "查看详情",
-      onClick: row => router.push({ name: "customer-detail", params: { id: row.detailId } }),
+      onClick: (row) => {
+        if (!row.detailId) {
+          toast.error("当前客户缺少 Uuid，无法打开详情")
+          return
+        }
+
+        void router.push({ name: "customer-detail", params: { id: row.detailId } })
+      },
     },
   ],
   columns: [
@@ -96,16 +106,24 @@ const schema: TablePageSchema<CustomerRecord> = {
       sort: true,
     },
     {
-      key: "principalPhone",
-      label: "主要责任人手机号",
-      filterType: "contact",
+      key: "principalDisplay",
+      label: "责任人",
+      cellRenderer: {
+        kind: "dual-inline",
+        primaryKey: "principalName",
+        secondaryKey: "principalPhone",
+      },
       filter: {
         type: "text",
-        label: "责任人手机号",
-        placeholder: "输入手机号",
+        label: "责任人",
+        placeholder: "输入责任人或手机号",
         defaultVisible: true,
+        value: row => row.principalDisplay,
       },
-      sort: true,
+      sort: {
+        label: "责任人",
+        value: row => row.principalName === "-" ? row.principalPhone : row.principalName,
+      },
     },
     {
       key: "levelLabel",
@@ -134,14 +152,14 @@ const schema: TablePageSchema<CustomerRecord> = {
     },
     {
       key: "packageInfo",
-      label: "套餐信息",
+      label: "服务信息",
       filterType: "text",
       width: "fill",
       slot: "cell-packageInfo",
       filter: {
         type: "text",
-        label: "套餐信息",
-        placeholder: "输入套餐名称或编码",
+        label: "服务信息",
+        placeholder: "输入服务名称或编码",
       },
       sort: true,
     },
@@ -292,7 +310,7 @@ watch([pageNum, pageSize], ([nextPageNum, nextPageSize], [previousPageNum, previ
 function buildPageFilterText(row: CustomerRecord) {
   return [
     row.customerName,
-    row.principalPhone,
+    row.principalDisplay,
     row.levelLabel,
     row.business,
     row.packageInfo,
@@ -360,6 +378,8 @@ async function buildCustomerRecords(list: CustomerListItem[]) {
     fetchAllBuildings(),
     fetchAllInspectionPlans(),
   ])
+  const customerUuidByCustomerId = buildCustomerUuidByCustomerId(parks)
+  const customerUuidByCustomerName = buildCustomerUuidByCustomerName(list, inspectionPlans)
   const customerParks = parks.filter(park => customerIds.includes(getParkCustomerId(park)))
   const customerParkDetails = await fetchParkDetails(customerParks)
   const parkDetailMap = new Map(customerParkDetails.map(detail => [toText(detail.Uuid), detail]))
@@ -371,6 +391,8 @@ async function buildCustomerRecords(list: CustomerListItem[]) {
     item,
     index,
     parksByCustomerId,
+    customerUuidByCustomerId,
+    customerUuidByCustomerName,
     parkDetailMap,
     buildingCountByParkUuid,
     plansByCustomerId,
@@ -379,30 +401,27 @@ async function buildCustomerRecords(list: CustomerListItem[]) {
 
 function resolveCustomerDetailId(
   item: CustomerListItem,
-  index: number,
   customerName: string,
-  principalPhone: string,
+  customerUuidByCustomerId?: Map<string, string>,
+  customerUuidByCustomerName?: Map<string, string>,
 ) {
-  const candidates = [
-    item.Uuid,
-    item.uuid,
-    item.Id,
-    item.id,
-    item.CustomerId,
-    item.customerId,
-  ]
+  const directUuid = getCustomerUuid(item)
 
-  for (const candidate of candidates) {
-    if (typeof candidate === "number" && Number.isFinite(candidate)) {
-      return String(candidate)
-    }
-
-    if (typeof candidate === "string" && candidate.trim()) {
-      return candidate.trim()
-    }
+  if (directUuid) {
+    return directUuid
   }
 
-  return `${pageNum.value}-${index + 1}-${principalPhone}-${customerName}`
+  const customerId = getCustomerId(item)
+
+  if (customerId && customerUuidByCustomerId?.has(customerId)) {
+    return customerUuidByCustomerId.get(customerId) ?? ""
+  }
+
+  if (customerName && customerUuidByCustomerName?.has(customerName)) {
+    return customerUuidByCustomerName.get(customerName) ?? ""
+  }
+
+  return ""
 }
 
 function formatLevelLabel(level: number | null) {
@@ -417,6 +436,8 @@ function normalizeCustomerRecord(
   item: CustomerListItem,
   index: number,
   parksByCustomerId: Map<string, ParkListItem[]>,
+  customerUuidByCustomerId: Map<string, string>,
+  customerUuidByCustomerName: Map<string, string>,
   parkDetailMap: Map<string, ParkDetailResult>,
   buildingCountByParkUuid: Map<string, number>,
   plansByCustomerId: Map<string, InspectionPlanListItem[]>,
@@ -425,9 +446,10 @@ function normalizeCustomerRecord(
   const customerPlans = plansByCustomerId.get(customerId) ?? []
   const customerParks = parksByCustomerId.get(customerId) ?? []
   const customerName = resolveCustomerName(item, customerPlans, customerParks, parkDetailMap)
+  const principalName = toText(item.PrincipalName, "-")
   const principalPhone = toText(item.PrincipalPhone, "-")
-  const packageName = getPrimaryPackageName(customerPlans)
-  const packageCode = getPrimaryPackageCode(customerPlans)
+  const packageName = getPrimaryPackageName(item, customerPlans)
+  const packageCode = getPrimaryPackageCode(item, customerPlans)
   const remainingDays = getRemainingDays(customerPlans)
   const inspectionTimesValue = customerPlans.length || null
   const inspectionCycle = getInspectionCycle(customerPlans)
@@ -437,12 +459,14 @@ function normalizeCustomerRecord(
 
   return {
     id: `${pageNum.value}-${index + 1}-${principalPhone}-${customerName}`,
-    detailId: resolveCustomerDetailId(item, index, customerName, principalPhone),
+    detailId: resolveCustomerDetailId(item, customerName, customerUuidByCustomerId, customerUuidByCustomerName),
     customerName,
     business: getFirstText(item, ["Business", "Industry", "IndustryName"], "未填写"),
     level: getLevelValue(item),
     levelLabel: formatLevelLabel(getLevelValue(item)),
+    principalName,
     principalPhone,
+    principalDisplay: [principalName, principalPhone].filter(value => value && value !== "-").join(" "),
     packageInfo: formatPackageInfo(packageName, packageCode),
     packageName,
     packageCode,
@@ -644,6 +668,54 @@ async function fetchParkDetails(parks: ParkListItem[]) {
   return results.filter((item): item is ParkDetailResult => item !== null)
 }
 
+function buildCustomerUuidByCustomerId(parks: ParkListItem[]) {
+  const map = new Map<string, string>()
+
+  for (const park of parks) {
+    const customerId = getFirstText(park, ["CustomerId"], "")
+    const customerUuid = getFirstText(park, ["CustomerUuid"], "")
+
+    if (!customerId || !customerUuid || map.has(customerId)) {
+      continue
+    }
+
+    map.set(customerId, customerUuid)
+  }
+
+  return map
+}
+
+function buildCustomerUuidByCustomerName(
+  customers: CustomerListItem[],
+  inspectionPlans: InspectionPlanListItem[],
+) {
+  const map = new Map<string, string>()
+
+  for (const customer of customers) {
+    const customerName = getDirectCustomerName(customer)
+    const customerUuid = getCustomerUuid(customer)
+
+    if (!customerName || !customerUuid || map.has(customerName)) {
+      continue
+    }
+
+    map.set(customerName, customerUuid)
+  }
+
+  for (const plan of inspectionPlans) {
+    const customerName = toText(plan.CorpName)
+    const customerUuid = toText(plan.CustomerUuid)
+
+    if (!customerName || !customerUuid || map.has(customerName)) {
+      continue
+    }
+
+    map.set(customerName, customerUuid)
+  }
+
+  return map
+}
+
 function groupParksByCustomerId(parks: ParkListItem[]) {
   const map = new Map<string, ParkListItem[]>()
 
@@ -701,6 +773,14 @@ function getCustomerId(item: CustomerListItem) {
   return numericId === null ? "" : String(numericId)
 }
 
+function getCustomerUuid(item: CustomerListItem) {
+  return getFirstText(item, ["Uuid", "uuid", "CustomerUuid"], "")
+}
+
+function getDirectCustomerName(item: CustomerListItem) {
+  return getFirstText(item, ["CorpName", "CustomerName", "Name", "CompanyName"], "")
+}
+
 function getParkCustomerId(park: ParkListItem) {
   return getFirstText(park, ["CustomerUuid", "CustomerId"], "")
 }
@@ -741,7 +821,17 @@ function resolveCustomerName(
   return "未命名客户"
 }
 
-function getPrimaryPackageName(plans: InspectionPlanListItem[]) {
+function getPrimaryPackageName(item: CustomerListItem, plans: InspectionPlanListItem[]) {
+  const listServices = uniqueText(
+    (Array.isArray(item.Services) ? item.Services : [])
+      .map(service => toText(service?.Name))
+      .filter(Boolean),
+  )
+
+  if (listServices.length) {
+    return listServices.join("、")
+  }
+
   const serviceNames = uniqueText(plans.map(plan => toText(plan.ServiceName)).filter(Boolean))
 
   if (!serviceNames.length) {
@@ -751,7 +841,17 @@ function getPrimaryPackageName(plans: InspectionPlanListItem[]) {
   return serviceNames.join("、")
 }
 
-function getPrimaryPackageCode(plans: InspectionPlanListItem[]) {
+function getPrimaryPackageCode(item: CustomerListItem, plans: InspectionPlanListItem[]) {
+  const listServiceCodes = uniqueText(
+    (Array.isArray(item.Services) ? item.Services : [])
+      .map(service => toText(service?.Uuid, toText(service?.Id)))
+      .filter(Boolean),
+  )
+
+  if (listServiceCodes.length) {
+    return listServiceCodes.join("、")
+  }
+
   const serviceCodes = uniqueText(
     plans.map(plan => getFirstText(plan, ["ServiceUuid", "ContractCode", "Code"], "")).filter(Boolean),
   )

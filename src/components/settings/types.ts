@@ -7,6 +7,7 @@ export type SettingsCategoryKey =
   | "preferences"
   | "general"
   | "members"
+  | "system"
   | "inspection-items"
   | "inspection-categories"
   | "notifications"

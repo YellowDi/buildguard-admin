@@ -1,5 +1,5 @@
 import { ApiError, createHttpError, readResponseBody } from "@/lib/api-errors"
-import { API_PATHS, buildApiHeaders, buildApiUrl } from "@/lib/api"
+import { API_PATHS, buildApiHeaders, buildApiRequestUrl, buildApiUrl } from "@/lib/api"
 
 type InspectionItemsListEnvelope = {
   Total?: number
@@ -127,7 +127,7 @@ export async function createInspectionItem(payload: CreateInspectionItemPayload)
 export async function getInspectionItemDetail(
   payload: InspectionItemDetailPayload,
 ): Promise<InspectionItemRecord> {
-  const url = new URL(INSPECTION_ITEM_DETAIL_API_URL)
+  const url = buildApiRequestUrl(API_PATHS.inspectionItemDetail)
   url.searchParams.set("Uuid", getRequiredString(payload.Uuid, "Uuid"))
 
   const response = await fetch(url.toString(), {
@@ -162,7 +162,7 @@ export async function updateInspectionItem(payload: UpdateInspectionItemPayload)
 }
 
 export async function deleteInspectionItem(payload: DeleteInspectionItemPayload) {
-  const url = new URL(INSPECTION_ITEM_DELETE_API_URL)
+  const url = buildApiRequestUrl(API_PATHS.inspectionItemDelete)
   url.searchParams.set("Uuid", getRequiredString(payload.Uuid, "Uuid"))
 
   const response = await fetch(url.toString(), {

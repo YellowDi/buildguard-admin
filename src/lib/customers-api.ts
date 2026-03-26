@@ -1,5 +1,5 @@
 import { ApiError, assertApiSuccess, createHttpError, readResponseBody } from "@/lib/api-errors"
-import { API_PATHS, buildApiHeaders, buildApiUrl } from "@/lib/api"
+import { API_PATHS, buildApiHeaders, buildApiRequestUrl, buildApiUrl } from "@/lib/api"
 
 type CustomerListEnvelope = {
   Total?: number
@@ -10,10 +10,19 @@ type CustomerListEnvelope = {
 }
 
 export type CustomerListItem = {
+  Id?: number
+  Uuid?: string
+  CorpName?: string
   Business?: string
   Level?: number
   PrincipalName?: string
   PrincipalPhone?: string
+  Services?: Array<{
+    Id?: number
+    Uuid?: string
+    Name?: string
+    [property: string]: unknown
+  }>
   [property: string]: unknown
 }
 
@@ -66,9 +75,26 @@ export type CustomerCreatePayload = {
   [property: string]: unknown
 }
 
+export type CustomerUpdatePayload = {
+  People: CustomerPrincipalPayload[]
+  Business: string
+  Usci: string
+  UsciFile: string
+  CorpName: string
+  Address: string
+  Invoice: string
+  Level: number
+  Uuid?: string
+}
+
 export type CustomerCreateResult = {
   Id?: number
   Uuid?: string
+}
+
+export type CustomerDeletePayload = {
+  Uuid?: string
+  [property: string]: unknown
 }
 
 export type ListCustomersPayload = {
@@ -80,9 +106,13 @@ export type ListCustomersPayload = {
 const CUSTOMERS_API_URL = buildApiUrl(API_PATHS.customersList)
 const CUSTOMER_CREATE_API_URL = buildApiUrl(API_PATHS.customerCreate)
 const CUSTOMER_DETAIL_API_URL = buildApiUrl(API_PATHS.customerDetail)
+const CUSTOMER_UPDATE_API_URL = buildApiUrl(API_PATHS.customerUpdate)
+const CUSTOMER_DELETE_API_URL = buildApiUrl(API_PATHS.customerDelete)
 const CUSTOMERS_LOAD_ERROR_MESSAGE = "客户列表加载失败，请稍后重试。"
 const CUSTOMER_CREATE_ERROR_MESSAGE = "客户创建失败，请稍后重试。"
 const CUSTOMER_DETAIL_ERROR_MESSAGE = "客户详情加载失败，请稍后重试。"
+const CUSTOMER_UPDATE_ERROR_MESSAGE = "客户信息更新失败，请稍后重试。"
+const CUSTOMER_DELETE_ERROR_MESSAGE = "客户删除失败，请稍后重试。"
 
 export async function fetchCustomers(payload: ListCustomersPayload = {}): Promise<CustomerListResult> {
   const normalizedPayload = {
@@ -143,8 +173,39 @@ export async function createCustomer(payload: CustomerCreatePayload): Promise<Cu
   return extractCreateResult(responseBody)
 }
 
+export async function updateCustomer(payload: CustomerUpdatePayload): Promise<CustomerCreateResult> {
+  const normalizedPayload = {
+    Uuid: getRequiredString(payload.Uuid, "Uuid"),
+    People: getRequiredPrincipals(payload.People),
+    Business: getUpdateString(payload.Business),
+    Usci: getUpdateString(payload.Usci),
+    UsciFile: getUpdateString(payload.UsciFile),
+    CorpName: getUpdateString(payload.CorpName),
+    Address: getUpdateString(payload.Address),
+    Invoice: getUpdateString(payload.Invoice),
+    Level: getRequiredNumber(payload.Level, "Level"),
+  }
+
+  const response = await fetch(CUSTOMER_UPDATE_API_URL, {
+    method: "POST",
+    headers: buildApiHeaders({
+      "Content-Type": "application/json",
+    }),
+    body: JSON.stringify(normalizedPayload),
+  })
+  const responseBody = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responseBody, CUSTOMER_UPDATE_ERROR_MESSAGE)
+  }
+
+  assertApiSuccess(responseBody, CUSTOMER_UPDATE_ERROR_MESSAGE)
+
+  return extractCreateResult(responseBody)
+}
+
 export async function fetchCustomerDetail(payload: CustomerDetailPayload): Promise<CustomerDetailResult> {
-  const url = new URL(CUSTOMER_DETAIL_API_URL)
+  const url = buildApiRequestUrl(API_PATHS.customerDetail)
   const uuid = getRequiredString(payload.Uuid, "Uuid")
 
   url.searchParams.set("Uuid", uuid)
@@ -162,6 +223,25 @@ export async function fetchCustomerDetail(payload: CustomerDetailPayload): Promi
   assertApiSuccess(responseBody, CUSTOMER_DETAIL_ERROR_MESSAGE)
 
   return extractDetailRecord(responseBody)
+}
+
+export async function deleteCustomer(payload: CustomerDeletePayload) {
+  const url = buildApiRequestUrl(API_PATHS.customerDelete)
+  const uuid = getRequiredString(payload.Uuid, "Uuid")
+
+  url.searchParams.set("Uuid", uuid)
+
+  const response = await fetch(url.toString(), {
+    method: "GET",
+    headers: buildApiHeaders(),
+  })
+  const responseBody = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responseBody, CUSTOMER_DELETE_ERROR_MESSAGE)
+  }
+
+  assertApiSuccess(responseBody, CUSTOMER_DELETE_ERROR_MESSAGE)
 }
 
 function extractList(payload: CustomerListEnvelope | unknown[]) {
@@ -266,6 +346,10 @@ function getOptionalString(value: unknown) {
     return normalized || undefined
   }
 
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return String(value)
+  }
+
   throw new ApiError("请求参数校验失败：字符串参数格式不正确。")
 }
 
@@ -315,4 +399,29 @@ function getOptionalPrincipals(value: unknown) {
       IsMain: getOptionalNumber(record.IsMain, "People.IsMain"),
     }
   })
+}
+
+function getRequiredPrincipals(value: unknown) {
+  const normalized = getOptionalPrincipals(value)
+
+  if (normalized?.length) {
+    return normalized
+  }
+
+  throw new ApiError("请求参数校验失败：People 不能为空。")
+}
+
+function getUpdateString(value: unknown) {
+  const normalized = getOptionalString(value)
+  return normalized ?? ""
+}
+
+function getRequiredNumber(value: unknown, field: string) {
+  const normalized = getOptionalNumber(value, field)
+
+  if (typeof normalized === "number" && Number.isFinite(normalized)) {
+    return normalized
+  }
+
+  throw new ApiError(`请求参数校验失败：${field} 不能为空。`)
 }

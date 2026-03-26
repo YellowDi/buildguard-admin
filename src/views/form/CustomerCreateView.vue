@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, onUnmounted, reactive, ref } from "vue"
-import { useRouter } from "vue-router"
+import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from "vue"
+import { useRoute, useRouter } from "vue-router"
 import { toast } from "vue-sonner"
 
 import FormFieldSection from "@/components/form/FormFieldSection.vue"
@@ -11,7 +11,7 @@ import { FieldDescription, FieldGroup, FieldLegend, FieldSet } from "@/component
 import { Input } from "@/components/ui/input"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Textarea } from "@/components/ui/textarea"
-import { createCustomer } from "@/lib/customers-api"
+import { createCustomer, fetchCustomerDetail, updateCustomer, type CustomerDetailResult } from "@/lib/customers-api"
 import { handleApiError } from "@/lib/api-errors"
 
 type CustomerFormState = {
@@ -36,6 +36,13 @@ type QuickNavItem = {
   label: string
 }
 
+type CustomerFormSnapshot = {
+  form: CustomerFormState
+  principals: PrincipalFormState[]
+  mainPrincipalId: number
+  businessLicenseFileName: string
+}
+
 function createPrincipal(id: number, isMain = false): PrincipalFormState {
   return {
     id,
@@ -45,35 +52,67 @@ function createPrincipal(id: number, isMain = false): PrincipalFormState {
   }
 }
 
+function createEmptySnapshot(): CustomerFormSnapshot {
+  return {
+    form: {
+      corpName: "",
+      business: "",
+      level: "",
+      usci: "",
+      usciFile: "",
+      address: "",
+      invoice: "",
+    },
+    principals: [createPrincipal(1, true)],
+    mainPrincipalId: 1,
+    businessLicenseFileName: "",
+  }
+}
+
 const router = useRouter()
-const form = reactive<CustomerFormState>({
-  corpName: "",
-  business: "",
-  level: "",
-  usci: "",
-  usciFile: "",
-  address: "",
-  invoice: "",
-})
-const principals = ref<PrincipalFormState[]>([createPrincipal(1, true)])
-const mainPrincipalId = ref(1)
+const route = useRoute()
+const form = reactive<CustomerFormState>(createEmptySnapshot().form)
+const principals = ref<PrincipalFormState[]>(createEmptySnapshot().principals)
+const mainPrincipalId = ref(createEmptySnapshot().mainPrincipalId)
 const submitting = ref(false)
+const loadingDetail = ref(false)
+const loadErrorMessage = ref("")
 const anchorItems = ref<QuickNavItem[]>([])
 const activeNavId = ref("")
 const formSectionsRef = ref<HTMLElement | null>(null)
 const businessLicenseInput = ref<HTMLInputElement | null>(null)
 const businessLicenseFileName = ref("")
+const initialSnapshot = ref<CustomerFormSnapshot>(createEmptySnapshot())
 const STICKY_HEADER_OFFSET = 112
 let nextPrincipalId = 2
 let observer: IntersectionObserver | null = null
 let observerActive = false
 
+const editCustomerUuid = computed(() => typeof route.params.id === "string" ? route.params.id.trim() : "")
+const isEditMode = computed(() => route.name === "customer-edit" && Boolean(editCustomerUuid.value))
+const pageTitle = computed(() => isEditMode.value ? "修改客户信息" : "添加客户")
 const hasValidPrincipal = computed(() =>
-  principals.value.some(principal => principal.name.trim() && principal.phone.trim()),
+  principals.value.some(principal => normalizeText(principal.name) && normalizeText(principal.phone)),
 )
 const canSubmit = computed(() =>
-  Boolean(form.corpName.trim() && hasValidPrincipal.value && !submitting.value),
+  Boolean(normalizeText(form.corpName) && hasValidPrincipal.value && !submitting.value && !loadingDetail.value),
 )
+const primaryActionLabel = computed(() => {
+  if (loadingDetail.value) {
+    return "加载中..."
+  }
+
+  if (submitting.value) {
+    return isEditMode.value ? "保存中..." : "提交中..."
+  }
+
+  return isEditMode.value ? "保存修改" : "添加客户"
+})
+const resetDialogDescription = computed(() => (
+  isEditMode.value
+    ? "当前已修改的客户信息和责任人内容都会恢复为最近一次加载的资料。"
+    : "当前已填写的客户信息和责任人内容都会被清空，此操作不可撤销。"
+))
 
 function handleFocus(sectionId: string) {
   activeNavId.value = sectionId
@@ -177,15 +216,19 @@ function triggerBusinessLicenseSelect() {
 }
 
 async function handleSubmit() {
-  if (!form.corpName.trim()) {
+  if (loadingDetail.value) {
+    return
+  }
+
+  if (!normalizeText(form.corpName)) {
     toast.error("请填写公司名称")
     return
   }
 
   const people = principals.value
     .map(principal => ({
-      Name: principal.name.trim(),
-      Phone: principal.phone.trim(),
+      Name: normalizeText(principal.name),
+      Phone: normalizeText(principal.phone),
       IsMain: principal.id === mainPrincipalId.value ? 1 : 0,
     }))
     .filter(principal => principal.Name || principal.Phone)
@@ -202,7 +245,7 @@ async function handleSubmit() {
   submitting.value = true
 
   try {
-    const result = await createCustomer({
+    const payload = {
       People: people,
       Business: getOptionalText(form.business),
       Usci: getOptionalText(form.usci),
@@ -211,16 +254,54 @@ async function handleSubmit() {
       Address: getOptionalText(form.address),
       Invoice: getOptionalText(form.invoice),
       Level: getOptionalInteger(form.level),
-    })
+    }
+
+    if (isEditMode.value) {
+      const result = await updateCustomer({
+        Uuid: editCustomerUuid.value,
+        People: people,
+        Business: normalizeText(form.business),
+        Usci: normalizeText(form.usci),
+        UsciFile: normalizeText(form.usciFile),
+        CorpName: normalizeText(form.corpName),
+        Address: normalizeText(form.address),
+        Invoice: normalizeText(form.invoice),
+        Level: getRequiredInteger(form.level),
+      })
+
+      const refreshedCustomer = await fetchCustomerDetail({ Uuid: editCustomerUuid.value })
+
+      if (!didCustomerUpdatePersist(refreshedCustomer, payload, people)) {
+        throw new Error("客户资料提交成功，但刷新后未发现更新结果。请核对 /bqi/customer/update 的字段要求。")
+      }
+
+      toast.success("客户信息已更新", {
+        description: editCustomerUuid.value ? `客户 UUID：${editCustomerUuid.value}` : "客户资料已更新。",
+      })
+
+      await router.push({
+        name: "customer-detail",
+        params: { id: result.Uuid || editCustomerUuid.value },
+      })
+      return
+    }
+
+    const result = await createCustomer(payload)
 
     toast.success("客户已创建", {
       description: result.Uuid ? `客户 UUID：${result.Uuid}` : "客户信息已提交到接口。",
     })
-    router.push({ name: "customers" })
+
+    if (result.Uuid) {
+      await router.push({ name: "customer-detail", params: { id: result.Uuid } })
+      return
+    }
+
+    await router.push({ name: "customers" })
   } catch (error) {
     handleApiError(error, {
-      title: "客户创建失败",
-      fallback: "客户创建失败，请稍后重试。",
+      title: isEditMode.value ? "客户信息更新失败" : "客户创建失败",
+      fallback: isEditMode.value ? "客户信息更新失败，请稍后重试。" : "客户创建失败，请稍后重试。",
     })
   } finally {
     submitting.value = false
@@ -228,20 +309,7 @@ async function handleSubmit() {
 }
 
 function handleReset() {
-  Object.assign(form, {
-    corpName: "",
-    business: "",
-    level: "",
-    usci: "",
-    usciFile: "",
-    address: "",
-    invoice: "",
-  })
-
-  principals.value = [createPrincipal(1, true)]
-  mainPrincipalId.value = 1
-  businessLicenseFileName.value = ""
-  nextPrincipalId = 2
+  applySnapshot(initialSnapshot.value)
 }
 
 function syncMainPrincipalFlags() {
@@ -250,13 +318,25 @@ function syncMainPrincipalFlags() {
   })
 }
 
-function getOptionalText(value: string) {
-  const normalized = value.trim()
+function normalizeText(value: unknown) {
+  if (typeof value === "string") {
+    return value.trim()
+  }
+
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return String(value)
+  }
+
+  return ""
+}
+
+function getOptionalText(value: unknown) {
+  const normalized = normalizeText(value)
   return normalized || undefined
 }
 
-function getOptionalInteger(value: string) {
-  const normalized = value.trim()
+function getOptionalInteger(value: unknown) {
+  const normalized = normalizeText(value)
 
   if (!normalized) {
     return undefined
@@ -264,6 +344,16 @@ function getOptionalInteger(value: string) {
 
   const parsed = Number(normalized)
   return Number.isFinite(parsed) ? parsed : undefined
+}
+
+function getRequiredInteger(value: unknown) {
+  const parsed = getOptionalInteger(value)
+
+  if (typeof parsed === "number" && Number.isFinite(parsed)) {
+    return parsed
+  }
+
+  return 0
 }
 
 function readFileAsDataUrl(file: File) {
@@ -283,6 +373,18 @@ function readFileAsDataUrl(file: File) {
     reader.readAsDataURL(file)
   })
 }
+
+watch(editCustomerUuid, (uuid) => {
+  if (!isEditMode.value) {
+    const snapshot = createEmptySnapshot()
+    initialSnapshot.value = snapshot
+    applySnapshot(snapshot)
+    loadErrorMessage.value = ""
+    return
+  }
+
+  void loadCustomerForEdit(uuid)
+}, { immediate: true })
 
 onMounted(() => {
   nextTick(() => {
@@ -325,18 +427,142 @@ onMounted(() => {
 onUnmounted(() => {
   observer?.disconnect()
 })
+
+function applySnapshot(snapshot: CustomerFormSnapshot) {
+  Object.assign(form, snapshot.form)
+  principals.value = snapshot.principals.map(principal => ({ ...principal }))
+  mainPrincipalId.value = snapshot.mainPrincipalId
+  businessLicenseFileName.value = snapshot.businessLicenseFileName
+  nextPrincipalId = Math.max(1, ...principals.value.map(principal => principal.id)) + 1
+  syncMainPrincipalFlags()
+}
+
+async function loadCustomerForEdit(uuid: string) {
+  if (!uuid) {
+    loadErrorMessage.value = "客户 Uuid 缺失，无法加载编辑资料。"
+    return
+  }
+
+  loadingDetail.value = true
+  loadErrorMessage.value = ""
+
+  try {
+    const detail = await fetchCustomerDetail({ Uuid: uuid })
+    const snapshot = buildSnapshotFromDetail(detail)
+
+    initialSnapshot.value = snapshot
+    applySnapshot(snapshot)
+  } catch (error) {
+    loadErrorMessage.value = handleApiError(error, {
+      mode: "silent",
+      fallback: "客户资料加载失败，请稍后重试。",
+    })
+  } finally {
+    loadingDetail.value = false
+  }
+}
+
+function buildSnapshotFromDetail(detail: CustomerDetailResult): CustomerFormSnapshot {
+  const principalsSnapshot = buildPrincipalsFromDetail(detail)
+  const mainId = principalsSnapshot.find(principal => principal.isMain)?.id ?? principalsSnapshot[0]?.id ?? 1
+
+  return {
+    form: {
+      corpName: normalizeText(detail.CorpName),
+      business: normalizeText(detail.Business),
+      level: normalizeText(detail.Level),
+      usci: normalizeText(detail.Usci),
+      usciFile: normalizeText(detail.UsciFile),
+      address: normalizeText(detail.Address),
+      invoice: normalizeText(detail.Invoice),
+    },
+    principals: principalsSnapshot,
+    mainPrincipalId: mainId,
+    businessLicenseFileName: "",
+  }
+}
+
+function buildPrincipalsFromDetail(detail: CustomerDetailResult) {
+  if (!Array.isArray(detail.People) || !detail.People.length) {
+    return [createPrincipal(1, true)]
+  }
+
+  return detail.People.map((person, index) => ({
+    id: index + 1,
+    name: normalizeText(person.Name),
+    phone: normalizeText(person.Phone),
+    isMain: Number(person.IsMain) === 1,
+  }))
+}
+
+function didCustomerUpdatePersist(
+  detail: CustomerDetailResult,
+  payload: {
+    CorpName?: string
+    Business?: string
+    Usci?: string
+    UsciFile?: string
+    Address?: string
+    Invoice?: string
+    Level?: number
+  },
+  people: Array<{ Name: string; Phone: string; IsMain: number }>,
+) {
+  const expectedPeople = normalizePeopleForCompare(people)
+  const actualPeople = normalizePeopleForCompare(
+    (detail.People ?? []).map(person => ({
+      Name: normalizeText(person.Name),
+      Phone: normalizeText(person.Phone),
+      IsMain: Number(person.IsMain) === 1 ? 1 : 0,
+    })),
+  )
+
+  return normalizeText(detail.CorpName) === normalizeText(payload.CorpName)
+    && normalizeText(detail.Business) === normalizeText(payload.Business)
+    && normalizeText(detail.Usci) === normalizeText(payload.Usci)
+    && normalizeText(detail.UsciFile) === normalizeText(payload.UsciFile)
+    && normalizeText(detail.Address) === normalizeText(payload.Address)
+    && normalizeText(detail.Invoice) === normalizeText(payload.Invoice)
+    && normalizeText(detail.Level) === normalizeText(payload.Level)
+    && JSON.stringify(actualPeople) === JSON.stringify(expectedPeople)
+}
+
+function normalizePeopleForCompare(people: Array<{ Name: string; Phone: string; IsMain: number }>) {
+  return people
+    .map(person => ({
+      Name: normalizeText(person.Name),
+      Phone: normalizeText(person.Phone),
+      IsMain: Number(person.IsMain) === 1 ? 1 : 0,
+    }))
+    .filter(person => person.Name || person.Phone)
+    .sort((left, right) => (
+      `${left.IsMain}-${left.Name}-${left.Phone}`.localeCompare(`${right.IsMain}-${right.Name}-${right.Phone}`, "zh-CN")
+    ))
+}
 </script>
 
 <template>
   <section class="mx-auto flex w-full max-w-4xl min-w-0 flex-col gap-6 pb-8">
     <FormHeader
-      title="添加客户"
-      :primary-action="{ label: submitting ? '提交中...' : '添加客户', icon: 'ri-add-line', disabled: !canSubmit }"
+      :title="pageTitle"
+      :primary-action="{ label: primaryActionLabel, icon: isEditMode ? 'ri-save-line' : 'ri-add-line', disabled: !canSubmit }"
       :secondary-actions="[{ key: 'reset', label: '重置表单' }]"
-      :reset-dialog="{ description: '当前已填写的客户信息和责任人内容都会被清空，此操作不可撤销。' }"
+      :reset-dialog="{ description: resetDialogDescription }"
       @reset="handleReset"
       @submit="handleSubmit"
     />
+
+    <Alert v-if="loadErrorMessage" variant="destructive">
+      <AlertTitle>客户资料加载失败</AlertTitle>
+      <AlertDescription>{{ loadErrorMessage }}</AlertDescription>
+    </Alert>
+
+    <div
+      v-if="loadingDetail"
+      class="rounded-lg border border-border/70 px-4 py-5 text-sm text-muted-foreground"
+    >
+      正在获取客户资料。
+    </div>
 
     <div class="grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1fr)_220px] xl:grid-cols-[minmax(0,1fr)_250px]">
       <form class="min-w-0 space-y-0" @submit.prevent="handleSubmit">

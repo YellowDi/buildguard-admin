@@ -1,5 +1,5 @@
 import { assertApiSuccess, createHttpError, readResponseBody } from "@/lib/api-errors"
-import { API_PATHS, buildApiHeaders, buildApiUrl } from "@/lib/api"
+import { API_PATHS, buildApiHeaders, buildApiRequestUrl, buildApiUrl } from "@/lib/api"
 
 type ParksListEnvelope = {
   Total?: number
@@ -16,8 +16,8 @@ export type ParkListItem = {
   Name?: string
   BuiltTime?: string
   OperationTime?: string
-  BuildingArea?: string
-  ContactPerson?: string
+  BuildArea?: string
+  Contact?: string
   ContactPhone?: string
   Latitude?: string
   Longitude?: string
@@ -32,6 +32,25 @@ export type ParksListResult = {
   total: number
 }
 
+export type ParkCreatePayload = {
+  CustomerUuid: string
+  Name: string
+  BuiltTime?: string
+  OperationTime?: string
+  BuildArea?: string
+  Contact?: string
+  ContactPhone?: string
+  Latitude?: string
+  Longitude?: string
+  Address?: string
+}
+
+export type ParkCreateResult = {
+  Uuid?: string
+  Id?: number
+  [property: string]: unknown
+}
+
 export type ParkDetailPayload = {
   Uuid?: string
 }
@@ -41,13 +60,17 @@ export type ParkDetailResult = {
   Id?: number
   CustomerUuid?: string
   Name?: string
+  BuiltTime?: string
+  OperationTime?: string
   CorpName?: string
   BuildArea?: string
-  BuildingArea?: string
   Contact?: string
-  ContactPerson?: string
   ContactPhone?: string
+  Latitude?: string
+  Longitude?: string
   Address?: string
+  CreatedAt?: string
+  UpdatedAt?: string
   [property: string]: unknown
 }
 
@@ -59,8 +82,10 @@ export type ListParksPayload = {
 }
 
 const PARKS_API_URL = buildApiUrl(API_PATHS.parksList)
+const PARK_CREATE_API_URL = buildApiUrl(API_PATHS.parkCreate)
 const PARK_DETAIL_API_URL = buildApiUrl(API_PATHS.parkDetail)
 const PARKS_LOAD_ERROR_MESSAGE = "园区列表加载失败，请稍后重试。"
+const PARK_CREATE_ERROR_MESSAGE = "园区创建失败，请稍后重试。"
 const PARK_DETAIL_LOAD_ERROR_MESSAGE = "园区详情加载失败，请稍后重试。"
 
 export async function fetchParks(payload: ListParksPayload = {}): Promise<ParksListResult> {
@@ -93,8 +118,40 @@ export async function fetchParks(payload: ListParksPayload = {}): Promise<ParksL
   }
 }
 
+export async function createPark(payload: ParkCreatePayload): Promise<ParkCreateResult> {
+  const normalizedPayload = {
+    CustomerUuid: getRequiredString(payload.CustomerUuid, "CustomerUuid"),
+    Name: getRequiredString(payload.Name, "Name"),
+    BuiltTime: getOptionalString(payload.BuiltTime),
+    OperationTime: getOptionalString(payload.OperationTime),
+    BuildArea: getOptionalString(payload.BuildArea),
+    Contact: getOptionalString(payload.Contact),
+    ContactPhone: getOptionalString(payload.ContactPhone),
+    Latitude: getOptionalString(payload.Latitude),
+    Longitude: getOptionalString(payload.Longitude),
+    Address: getOptionalString(payload.Address),
+  }
+
+  const response = await fetch(PARK_CREATE_API_URL, {
+    method: "POST",
+    headers: buildApiHeaders({
+      "Content-Type": "application/json",
+    }),
+    body: JSON.stringify(normalizedPayload),
+  })
+  const responsePayload = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responsePayload, PARK_CREATE_ERROR_MESSAGE)
+  }
+
+  assertApiSuccess(responsePayload, PARK_CREATE_ERROR_MESSAGE)
+
+  return extractCreateResult(responsePayload)
+}
+
 export async function fetchParkDetail(payload: ParkDetailPayload): Promise<ParkDetailResult> {
-  const url = new URL(PARK_DETAIL_API_URL)
+  const url = buildApiRequestUrl(API_PATHS.parkDetail)
   const uuid = getOptionalString(payload.Uuid)
 
   if (!uuid) {
@@ -182,6 +239,20 @@ function normalizeParkListItem(value: unknown): ParkListItem {
   return {}
 }
 
+function extractCreateResult(value: unknown): ParkCreateResult {
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>
+
+    if (record.data && typeof record.data === "object") {
+      return record.data as ParkCreateResult
+    }
+
+    return record as ParkCreateResult
+  }
+
+  return {}
+}
+
 function extractDetailRecord(value: unknown) {
   if (value && typeof value === "object") {
     const record = value as Record<string, unknown>
@@ -197,11 +268,7 @@ function extractDetailRecord(value: unknown) {
 }
 
 function normalizeParkDetail(value: ParkDetailResult) {
-  return {
-    ...value,
-    BuildingArea: getOptionalString(value.BuildingArea) || getOptionalString(value.BuildArea),
-    ContactPerson: getOptionalString(value.ContactPerson) || getOptionalString(value.Contact),
-  }
+  return value
 }
 
 function getOptionalNumber(value: unknown, fieldName: string) {
@@ -231,4 +298,14 @@ function getOptionalString(value: unknown) {
   }
 
   throw new TypeError("String field must be a string or number.")
+}
+
+function getRequiredString(value: unknown, field: string) {
+  const normalized = getOptionalString(value)
+
+  if (normalized) {
+    return normalized
+  }
+
+  throw new TypeError(`${field} is required.`)
 }

@@ -1,19 +1,31 @@
 <script setup lang="ts">
 import { computed, onUnmounted, ref, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
+import { toast } from "vue-sonner"
 
 import DetailAccordionModule from "@/components/detail/DetailAccordionModule.vue"
 import DetailFieldSections from "@/components/detail/DetailFieldSections.vue"
 import DetailRelationModule from "@/components/detail/DetailRelationModule.vue"
 import type { DetailContactValue, DetailFieldSection, DetailRelationModuleSchema } from "@/components/detail/types"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
 import DetailLayout from "@/layouts/DetailLayout.vue"
 import { handleApiError } from "@/lib/api-errors"
 import { fetchBuildings, type BuildingListItem } from "@/lib/buildings-api"
-import { fetchCustomerDetail, type CustomerDetailPerson, type CustomerDetailResult } from "@/lib/customers-api"
+import { deleteCustomer, fetchCustomerDetail, type CustomerDetailPerson, type CustomerDetailResult } from "@/lib/customers-api"
 import { fetchParks, type ParkListItem } from "@/lib/parks-api"
 
 type BuildingRow = {
@@ -50,6 +62,7 @@ const router = useRouter()
 const customer = ref<CustomerDetailResult | null>(null)
 const loading = ref(false)
 const errorMessage = ref("")
+const deleteSubmitting = ref(false)
 const relationsLoading = ref(false)
 const relationErrorMessage = ref("")
 const parkBuildingGroups = ref<ParkBuildingGroup[]>([])
@@ -167,6 +180,38 @@ onUnmounted(() => {
 
 function goBack() {
   router.push({ name: "customers" })
+}
+
+function goToCustomerEdit() {
+  if (!customerUuid.value) {
+    return
+  }
+
+  router.push({
+    name: "customer-edit",
+    params: { id: customerUuid.value },
+  })
+}
+
+async function handleDeleteCustomer() {
+  if (!customerUuid.value || deleteSubmitting.value) {
+    return
+  }
+
+  deleteSubmitting.value = true
+
+  try {
+    await deleteCustomer({ Uuid: customerUuid.value })
+    toast.success("客户已删除")
+    await router.push({ name: "customers" })
+  } catch (error) {
+    handleApiError(error, {
+      title: "客户删除失败",
+      fallback: "客户删除失败，请稍后重试。",
+    })
+  } finally {
+    deleteSubmitting.value = false
+  }
 }
 
 function goToParkDetail(parkUuid: string, customerUuid: string) {
@@ -534,14 +579,55 @@ function toDisplayText(value: unknown, fallback = "未填写") {
     @back="goBack"
   >
     <template #actions>
-      <Button
-        variant="outline"
-        size="sm"
-        class="border-border/80 bg-background font-medium text-foreground shadow-none"
-        @click="goBack"
-      >
-        返回客户列表
-      </Button>
+      <div class="flex items-center gap-1">
+        <AlertDialog>
+          <AlertDialogTrigger as-child>
+            <Button
+              variant="outline"
+              size="sm"
+              class="border-destructive/30 bg-background font-medium text-destructive shadow-none hover:bg-destructive/5 hover:text-destructive"
+            >
+              删除用户
+            </Button>
+          </AlertDialogTrigger>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>确认删除当前用户？</AlertDialogTitle>
+              <AlertDialogDescription>
+                删除后将无法恢复，该操作会移除当前客户资料。
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel :disabled="deleteSubmitting">
+                取消
+              </AlertDialogCancel>
+              <AlertDialogAction
+                :disabled="deleteSubmitting"
+                class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                @click="handleDeleteCustomer"
+              >
+                {{ deleteSubmitting ? "删除中..." : "确认删除" }}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+        <Button
+          variant="outline"
+          size="sm"
+          class="border-border/80 bg-background font-medium text-foreground shadow-none"
+          @click="goToCustomerEdit"
+        >
+          修改客户信息
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          class="border-border/80 bg-background font-medium text-foreground shadow-none"
+          @click="goBack"
+        >
+          返回客户列表
+        </Button>
+      </div>
     </template>
 
     <template #primary>

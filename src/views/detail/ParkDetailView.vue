@@ -11,7 +11,7 @@ import { detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
 import DetailLayout from "@/layouts/DetailLayout.vue"
 import { handleApiError } from "@/lib/api-errors"
 import { fetchBuildings, type BuildingListItem } from "@/lib/buildings-api"
-import { fetchParks, type ParkListItem } from "@/lib/parks-api"
+import { fetchParkDetail, type ParkDetailResult } from "@/lib/parks-api"
 
 type BuildingRow = {
   id: string
@@ -22,14 +22,13 @@ type BuildingRow = {
 const route = useRoute()
 const router = useRouter()
 
-const park = ref<ParkListItem | null>(null)
+const park = ref<ParkDetailResult | null>(null)
 const buildings = ref<BuildingRow[]>([])
 const loading = ref(false)
 const errorMessage = ref("")
 let latestRequestId = 0
 
 const parkUuid = computed(() => typeof route.params.id === "string" ? route.params.id.trim() : "")
-const customerUuid = computed(() => typeof route.query.customerUuid === "string" ? route.query.customerUuid.trim() : "")
 
 const fieldSections = computed<DetailFieldSection[]>(() => {
   const current = park.value
@@ -45,8 +44,8 @@ const fieldSections = computed<DetailFieldSection[]>(() => {
         { key: "name", label: "园区名称", value: toText(current.Name, "未命名园区") },
         { key: "built-time", label: "建成时间", value: toText(current.BuiltTime, "-") },
         { key: "operation-time", label: "投运时间", value: toText(current.OperationTime, "-") },
-        { key: "building-area", label: "建筑面积", value: toText(current.BuildingArea, "-") },
-        { key: "contact", label: "联系人", value: buildContactValue(toText(current.ContactPerson, "未填写"), toText(current.ContactPhone, "-")) },
+        { key: "building-area", label: "建筑面积", value: toText(current.BuildArea, "-") },
+        { key: "contact", label: "联系人", value: buildContactValue(toText(current.Contact, "未填写"), toText(current.ContactPhone, "-")) },
         { key: "address", label: "地址", value: toText(current.Address, "-"), truncate: false, valueClass: "leading-6" },
       ],
     },
@@ -78,8 +77,8 @@ watch(park, (current) => {
   detailBreadcrumbTitle.value = toOptionalText(current?.Name)
 })
 
-watch([parkUuid, customerUuid], ([nextParkUuid, nextCustomerUuid]) => {
-  void loadParkDetail(nextParkUuid, nextCustomerUuid)
+watch(parkUuid, (nextParkUuid) => {
+  void loadParkDetail(nextParkUuid)
 }, { immediate: true })
 
 onUnmounted(() => {
@@ -90,10 +89,10 @@ function goBack() {
   router.back()
 }
 
-async function loadParkDetail(nextParkUuid: string, nextCustomerUuid: string) {
+async function loadParkDetail(nextParkUuid: string) {
   const requestId = ++latestRequestId
 
-  if (!nextParkUuid || !nextCustomerUuid) {
+  if (!nextParkUuid) {
     park.value = null
     buildings.value = []
     errorMessage.value = "园区详情参数缺失，无法加载详情。"
@@ -104,20 +103,16 @@ async function loadParkDetail(nextParkUuid: string, nextCustomerUuid: string) {
   errorMessage.value = ""
 
   try {
-    const parksResult = await fetchParks({ CustomerUuid: nextCustomerUuid })
-    const currentPark = parksResult.list.find(item => toText(item.Uuid, "") === nextParkUuid) ?? null
-
-    if (!currentPark) {
-      throw new Error("未找到该园区信息。")
-    }
-
-    const buildingsResult = await fetchBuildings({ ParkUuid: nextParkUuid })
+    const [parkResult, buildingsResult] = await Promise.all([
+      fetchParkDetail({ Uuid: nextParkUuid }),
+      fetchBuildings({ ParkUuid: nextParkUuid }),
+    ])
 
     if (requestId !== latestRequestId) {
       return
     }
 
-    park.value = currentPark
+    park.value = parkResult
     buildings.value = buildingsResult.list.map((item, index) => ({
       id: toText(item.Uuid, `${nextParkUuid}-${index + 1}`) || `${nextParkUuid}-${index + 1}`,
       name: toText(item.Name, "未命名建筑") || "未命名建筑",

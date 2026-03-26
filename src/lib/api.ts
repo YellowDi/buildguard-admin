@@ -8,7 +8,10 @@ export const API_PATHS = {
   customersList: "/bqi/customer/list",
   customerCreate: "/bqi/customer/new",
   customerDetail: "/bqi/customer/detail",
+  customerUpdate: "/bqi/customer/update",
+  customerDelete: "/bqi/customer/del",
   parksList: "/bqi/park/list",
+  parkCreate: "/bqi/park/new",
   parkDetail: "/bqi/park/detail",
   buildingsList: "/bqi/build/list",
   workOrdersList: "/bqi/work-order/list",
@@ -18,6 +21,11 @@ export const API_PATHS = {
   memberStatusUpdate: "/bqi/user/status/update",
   memberUpdate: "/bqi/user/update",
   memberDelete: "/bqi/user/del",
+  menusList: "/bqi/sys/menu/list",
+  menuCreate: "/bqi/sys/menu/new",
+  systemButtonsDetail: "/bqi/sys/button/detail",
+  systemApisList: "/bqi/sys/api/list",
+  systemApisImport: "/bqi/sys/api/import",
   currentUserInfo: "/bqi/user/info",
   inspectionItemsList: "/bqi/inspection/list",
   inspectionCategoriesList: "/bqi/sys/category/list",
@@ -49,6 +57,21 @@ export function buildApiUrl(path: string) {
   const baseUrl = getApiBaseUrl().replace(/\/+$/, "")
   const normalizedPath = path.startsWith("/") ? path : `/${path}`
   return `${baseUrl}${normalizedPath}`
+}
+
+export function buildApiRequestUrl(path: string) {
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`
+  const baseUrl = getApiBaseUrl().replace(/\/+$/, "")
+
+  if (baseUrl) {
+    return new URL(normalizedPath, `${baseUrl}/`)
+  }
+
+  if (typeof window !== "undefined" && window.location?.origin) {
+    return new URL(normalizedPath, window.location.origin)
+  }
+
+  return new URL(normalizedPath, `${DEFAULT_API_BASE_URL}/`)
 }
 
 export function getApiDevice() {

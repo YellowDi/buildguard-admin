@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue"
-import { useRoute } from "vue-router"
+import { useRoute, useRouter } from "vue-router"
+import { toast } from "vue-sonner"
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -24,6 +25,7 @@ import {
 
 type ParkRecord = {
   id: string
+  detailId: string
   uuid: string
   customerUuid: string
   name: string
@@ -44,6 +46,7 @@ const pageNum = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
 const route = useRoute()
+const router = useRouter()
 const showInitialLoading = computed(() => loading.value && !parks.value.length && !errorMessage.value)
 let latestRequestId = 0
 
@@ -52,8 +55,23 @@ const schema: TablePageSchema<ParkRecord> = {
   description: "所有客户园区列表",
   rowKey: "uuid",
   data: [],
+  primaryActionLabel: "添加园区",
   showIndex: true,
   stickyHeader: true,
+  rowActions: [
+    {
+      key: "view-detail",
+      label: "查看详情",
+      onClick: (row) => {
+        if (!row.detailId) {
+          toast.error("当前园区缺少 Uuid，无法打开详情")
+          return
+        }
+
+        void router.push({ name: "park-detail", params: { id: row.detailId } })
+      },
+    },
+  ],
   emptyState: {
     title: "暂无园区数据",
     description: "当前接口暂未返回可展示的园区列表。",
@@ -193,6 +211,10 @@ function buildPageFilterText(row: ParkRecord) {
   ].join(" ")
 }
 
+function handleCreatePark() {
+  void router.push({ name: "park-create" })
+}
+
 async function loadParks() {
   const requestId = ++latestRequestId
 
@@ -200,24 +222,25 @@ async function loadParks() {
   errorMessage.value = ""
 
   try {
-    const result = await fetchParks({
-      PageNum: pageNum.value,
-      PageSize: pageSize.value,
-    })
+    const allItems = await fetchAllParks()
 
     if (requestId !== latestRequestId) {
       return
     }
 
-    total.value = result.total
-    parks.value = result.list.map((item, index) => normalizeParkRecord(item, index))
+    total.value = allItems.length
 
-    const maxPage = Math.max(1, Math.ceil((result.total || 0) / pageSize.value))
+    const maxPage = Math.max(1, Math.ceil((allItems.length || 0) / pageSize.value))
 
     if (pageNum.value > maxPage) {
       pageNum.value = maxPage
       return
     }
+
+    const startIndex = (pageNum.value - 1) * pageSize.value
+    const pageItems = allItems.slice(startIndex, startIndex + pageSize.value)
+
+    parks.value = pageItems.map((item, index) => normalizeParkRecord(item, startIndex + index))
   } catch (error) {
     if (requestId !== latestRequestId) {
       return
@@ -236,21 +259,50 @@ async function loadParks() {
   }
 }
 
+async function fetchAllParks() {
+  const fetchPageSize = 200
+  const allItems: ParkListItem[] = []
+  let currentPage = 1
+  let totalCount = 0
+
+  while (currentPage <= 20) {
+    const result = await fetchParks({
+      PageNum: currentPage,
+      PageSize: fetchPageSize,
+    })
+
+    if (currentPage === 1) {
+      totalCount = result.total
+    }
+
+    allItems.push(...result.list)
+
+    if (!result.list.length || (totalCount > 0 && allItems.length >= totalCount)) {
+      break
+    }
+
+    currentPage += 1
+  }
+
+  return allItems
+}
+
 function normalizeParkRecord(item: ParkListItem, index: number): ParkRecord {
-  const uuid = toText(item.Uuid)
+  const detailId = toText(item.Uuid)
   const fallbackId = toText(item.Id, `${pageNum.value}-${index + 1}`)
   const name = toText(item.Name, "未命名园区")
-  const contactPerson = toText(item.ContactPerson, "未填写")
+  const contactPerson = toText(item.Contact, "未填写")
   const contactPhone = toText(item.ContactPhone, "-")
 
   return {
-    id: uuid || fallbackId,
-    uuid: uuid || fallbackId,
+    id: detailId || fallbackId,
+    detailId,
+    uuid: detailId || fallbackId,
     customerUuid: toText(item.CustomerUuid, "-"),
     name,
     builtTime: toText(item.BuiltTime, "-"),
     operationTime: toText(item.OperationTime, "-"),
-    buildingArea: toText(item.BuildingArea, "-"),
+    buildingArea: toText(item.BuildArea, "-"),
     contactPerson,
     contactPhone,
     address: toText(item.Address, "-"),
@@ -289,7 +341,7 @@ function toText(value: unknown, fallback = "") {
       </Alert>
     </div>
 
-    <TablePage :page="page" />
+    <TablePage :page="page" @primary-action="handleCreatePark" />
 
     <div class="-mx-4 pt-3">
       <div class="flex w-full justify-end px-4">

@@ -23,6 +23,7 @@ import {
 import { Switch } from "@/components/ui/switch"
 import SettingsInspectionCategoriesTable from "@/components/settings/SettingsInspectionCategoriesTable.vue"
 import SettingsInspectionItemsTable from "@/components/settings/SettingsInspectionItemsTable.vue"
+import SettingsMenusTable from "@/components/settings/SettingsMenusTable.vue"
 import SettingsMembersTable from "@/components/settings/SettingsMembersTable.vue"
 import SettingsSection from "@/components/settings/SettingsSection.vue"
 import type {
@@ -71,6 +72,7 @@ function getBooleanValue(key: keyof SettingsState) {
       </header>
 
       <SettingsMembersTable v-if="props.category.key === 'members'" />
+      <SettingsMenusTable v-else-if="props.category.key === 'system'" />
       <SettingsInspectionItemsTable v-else-if="props.category.key === 'inspection-items'" />
       <SettingsInspectionCategoriesTable v-else-if="props.category.key === 'inspection-categories'" />
 

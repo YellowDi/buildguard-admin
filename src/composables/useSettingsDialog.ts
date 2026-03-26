@@ -373,6 +373,16 @@ const categories = computed<SettingsCategory[]>(() => [
     ],
   },
   {
+    key: "system",
+    group: "admin",
+    label: "系统",
+    description: "集中查看系统菜单、按钮权限和 API 资源。",
+    icon: "ri-apps-2-line",
+    pageTitle: "系统",
+    pageDescription: "通过胶囊标签切换系统资源表，统一管理菜单、按钮和 API 配置。",
+    sections: [],
+  },
+  {
     key: "security",
     group: "admin",
     label: "安全",
