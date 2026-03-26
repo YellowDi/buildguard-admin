@@ -1,32 +1,19 @@
 <script setup lang="ts">
+import { computed, onMounted, ref } from "vue"
 import { useRoute, useRouter } from "vue-router"
 
+import TablePageLoading from "@/components/loading/TablePageLoading.vue"
 import TablePage from "@/components/table-page/TablePage.vue"
 import { practitionerStatusMap } from "@/components/table-page/statusPresets"
-import { useTablePage } from "@/components/table-page/useTablePage"
+import { createTablePageDefinition, useTablePage } from "@/components/table-page/useTablePage"
 import type { TablePageSchema } from "@/components/table-page/types"
 import { useRouteTableSearch } from "@/composables/useRouteTableSearch"
-import usersData from "@/mocks/users.json"
-
-// 1. 先定义“表格每一行”的数据结构。
-// 新建同类页面时，优先把这里改成接口返回或本地 mock 的真实行类型。
-type PractitionerRecord = {
-  id: number
-  name: string
-  phone: string
-  company: string
-  role: string
-  district: string
-  certificateLevel: string
-  experienceYears: number
-  joinedAt: string
-  status: string
-  note: string
-}
-
-// 2. 准备列表数据。
-// 当前示例直接读取本地 JSON；未来接接口时，只要最终得到同结构的数组即可。
-const practitioners = usersData as PractitionerRecord[]
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { handleApiError } from "@/lib/api-errors"
+import { listPractitioners, type PractitionerRecord } from "@/lib/practitioners-data"
+const practitioners = ref<PractitionerRecord[]>([])
+const loading = ref(false)
+const errorMessage = ref("")
 const router = useRouter()
 
 // 3. 用一个 schema 描述整张通用表格页。
@@ -42,7 +29,7 @@ const schema: TablePageSchema<PractitionerRecord> = {
   title: "从业人员",
   description: "所有企业从业人员列表",
   rowKey: "id",
-  data: practitioners,
+  data: [],
   primaryActionLabel: "添加从业人员",
   showIndex: true,
   stickyHeader: true,
@@ -211,13 +198,37 @@ const schema: TablePageSchema<PractitionerRecord> = {
 
 // 4. 把 schema 交给通用表格页控制器。
 // 它会统一产出页面渲染所需的 tabs、filters、rows、sort state 等响应式状态。
-const page = useTablePage(schema)
+const page = useTablePage({
+  ...createTablePageDefinition(schema),
+  rows: practitioners,
+})
 const route = useRoute()
+const showInitialLoading = computed(() => loading.value && !practitioners.value.length && !errorMessage.value)
 
 useRouteTableSearch(page, route)
+onMounted(() => {
+  void loadPractitioners()
+})
 
 function handleCreatePractitioner() {
   router.push({ name: "user-create" })
+}
+
+async function loadPractitioners() {
+  loading.value = true
+  errorMessage.value = ""
+
+  try {
+    practitioners.value = await listPractitioners()
+  } catch (error) {
+    practitioners.value = []
+    errorMessage.value = handleApiError(error, {
+      mode: "silent",
+      fallback: "从业人员列表加载失败，请稍后重试。",
+    })
+  } finally {
+    loading.value = false
+  }
 }
 
 function buildPageFilterText(row: PractitionerRecord) {
@@ -237,8 +248,13 @@ function buildPageFilterText(row: PractitionerRecord) {
 </script>
 
 <template>
-  <!-- 5. 页面模板层保持极薄。
-       以后新建同类页面时，理想状态就是：
-       定义行类型 -> 准备数据 -> 写 schema -> 渲染 TablePage。 -->
-  <TablePage :page="page" @primary-action="handleCreatePractitioner" />
+  <div class="space-y-4">
+    <Alert v-if="errorMessage" variant="destructive">
+      <AlertTitle>从业人员加载失败</AlertTitle>
+      <AlertDescription>{{ errorMessage }}</AlertDescription>
+    </Alert>
+
+    <TablePageLoading v-if="showInitialLoading" />
+    <TablePage v-else :page="page" @primary-action="handleCreatePractitioner" />
+  </div>
 </template>

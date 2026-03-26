@@ -1,33 +1,26 @@
 <script setup lang="ts">
+import { computed, onMounted, ref } from "vue"
 import { useRoute } from "vue-router"
 
+import TablePageLoading from "@/components/loading/TablePageLoading.vue"
 import TablePage from "@/components/table-page/TablePage.vue"
 import { processStatusMap } from "@/components/table-page/statusPresets"
-import { useTablePage } from "@/components/table-page/useTablePage"
+import { createTablePageDefinition, useTablePage } from "@/components/table-page/useTablePage"
 import type { TablePageSchema } from "@/components/table-page/types"
 import { useRouteTableSearch } from "@/composables/useRouteTableSearch"
-import inspectionPlansData from "@/mocks/inspection-plans.json"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { handleApiError } from "@/lib/api-errors"
+import { listInspectionPlanRecords, type InspectionPlanRecord } from "@/lib/inspection-plan-records"
 
-type InspectionPlanRecord = {
-  id: string
-  planName: string
-  serviceName: string
-  customerName: string
-  inspectionScope: string
-  cycle: string
-  owner: string
-  nextExecutionAt: string
-  status: string
-  note: string
-}
-
-const inspectionPlans = inspectionPlansData as InspectionPlanRecord[]
+const inspectionPlans = ref<InspectionPlanRecord[]>([])
+const loading = ref(false)
+const errorMessage = ref("")
 
 const schema: TablePageSchema<InspectionPlanRecord> = {
   title: "检测计划",
-  description: "检测计划静态列表，当前暂未接入接口。",
+  description: "检测计划列表",
   rowKey: "id",
-  data: inspectionPlans,
+  data: [],
   showIndex: true,
   stickyHeader: true,
   rowActions: [
@@ -166,10 +159,34 @@ const schema: TablePageSchema<InspectionPlanRecord> = {
   },
 }
 
-const page = useTablePage(schema)
+const page = useTablePage({
+  ...createTablePageDefinition(schema),
+  rows: inspectionPlans,
+})
 const route = useRoute()
+const showInitialLoading = computed(() => loading.value && !inspectionPlans.value.length && !errorMessage.value)
 
 useRouteTableSearch(page, route)
+onMounted(() => {
+  void loadInspectionPlans()
+})
+
+async function loadInspectionPlans() {
+  loading.value = true
+  errorMessage.value = ""
+
+  try {
+    inspectionPlans.value = await listInspectionPlanRecords()
+  } catch (error) {
+    inspectionPlans.value = []
+    errorMessage.value = handleApiError(error, {
+      mode: "silent",
+      fallback: "检测计划列表加载失败，请稍后重试。",
+    })
+  } finally {
+    loading.value = false
+  }
+}
 
 function extractDatePart(value: string) {
   const [datePart] = value.split(" ")
@@ -193,5 +210,13 @@ function buildPageFilterText(row: InspectionPlanRecord) {
 </script>
 
 <template>
-  <TablePage :page="page" />
+  <div class="space-y-4">
+    <Alert v-if="errorMessage" variant="destructive">
+      <AlertTitle>检测计划加载失败</AlertTitle>
+      <AlertDescription>{{ errorMessage }}</AlertDescription>
+    </Alert>
+
+    <TablePageLoading v-if="showInitialLoading" />
+    <TablePage v-else :page="page" />
+  </div>
 </template>
