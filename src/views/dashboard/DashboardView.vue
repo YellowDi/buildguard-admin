@@ -1125,13 +1125,16 @@ function hashText(value: string) {
                           </div>
                         </div>
 
-                        <div class="shrink-0 text-right leading-none">
-                          <div class="text-base font-semibold tracking-tight text-foreground">
-                            {{ building.score }}
+                        <div class="flex shrink-0 items-center gap-1.5">
+                          <div class="text-right leading-none">
+                            <div class="text-base font-semibold tracking-tight text-foreground">
+                              {{ building.score }}
+                            </div>
+                            <div class="mt-0.5 text-[10px] text-muted-foreground">
+                              {{ building.riskLabel }}
+                            </div>
                           </div>
-                          <div class="mt-0.5 text-[10px] text-muted-foreground">
-                            {{ building.riskLabel }}
-                          </div>
+                          <i class="ri-arrow-right-s-line shrink-0 text-[16px] text-muted-foreground transition-colors group-hover:text-foreground" />
                         </div>
                       </div>
                     </div>
