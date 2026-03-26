@@ -2,6 +2,7 @@
 import { DateFormatter, getLocalTimeZone, parseDate } from "@internationalized/date"
 import { Calendar as CalendarIcon } from "lucide-vue-next"
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref } from "vue"
+import { useRouter } from "vue-router"
 
 import FormFieldSection from "@/components/form/FormFieldSection.vue"
 import FormHeader from "@/components/form/FormHeader.vue"
@@ -57,6 +58,7 @@ const DISTRICT_OPTIONS = [
 ]
 const CERTIFICATE_LEVEL_OPTIONS = ["A 类", "B 类", "C 类"]
 const STATUS_OPTIONS = ["在岗", "待审核", "离岗"]
+const router = useRouter()
 
 const form = reactive<PractitionerFormState>({
   name: "",
@@ -109,6 +111,10 @@ const experienceYearsValue = computed({
 
 function handleFocus(sectionId: string) {
   activeNavId.value = sectionId
+}
+
+function goBack() {
+  router.back()
 }
 
 function syncAnchorItems() {
@@ -207,6 +213,7 @@ onUnmounted(() => {
       :primary-action="{ label: '添加', icon: 'ri-add-line', disabled: !canSubmit }"
       :secondary-actions="[{ key: 'reset', label: '重置表单' }]"
       :reset-dialog="{ description: '当前已填写的从业人员信息都会被清空，此操作不可撤销。' }"
+      @back="goBack"
       @reset="handleReset"
       @submit="handleSubmit"
     />

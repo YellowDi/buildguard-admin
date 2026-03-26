@@ -44,6 +44,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
+  back: []
   submit: []
   reset: []
   action: [key: string]
@@ -84,6 +85,16 @@ function emitReset() {
         layout-class="gap-4 md:gap-5"
         actions-class="w-full min-w-0 gap-2 overflow-x-auto overflow-y-hidden whitespace-nowrap md:w-auto"
       >
+        <template #leading>
+          <button
+            type="button"
+            class="inline-flex size-8 items-center justify-center rounded-md text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+            aria-label="返回"
+            @click="emit('back')"
+          >
+            <i class="ri-arrow-left-line text-[18px]" />
+          </button>
+        </template>
         <template #actions>
           <template v-if="hasActions">
             <Button

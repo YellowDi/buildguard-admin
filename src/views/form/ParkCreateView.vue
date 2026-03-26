@@ -93,6 +93,10 @@ function handleFocus(sectionId: string) {
   activeNavId.value = sectionId
 }
 
+function goBack() {
+  router.back()
+}
+
 function syncAnchorItems() {
   const sectionElements = formSectionsRef.value?.querySelectorAll<HTMLElement>("[data-quick-nav-label][id]") ?? []
   anchorItems.value = Array.from(sectionElements).map(section => ({
@@ -343,6 +347,7 @@ watch(
       :primary-action="{ label: submitButtonLabel, icon: isEditMode ? 'ri-save-line' : 'ri-add-line', disabled: !canSubmit }"
       :secondary-actions="[{ key: 'reset', label: '重置表单' }]"
       :reset-dialog="{ description: resetDialogDescription }"
+      @back="goBack"
       @reset="handleReset"
       @submit="handleSubmit"
     />

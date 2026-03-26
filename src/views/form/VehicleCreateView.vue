@@ -2,6 +2,7 @@
 import { DateFormatter, getLocalTimeZone, parseDate } from "@internationalized/date"
 import { Calendar as CalendarIcon } from "lucide-vue-next"
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref } from "vue"
+import { useRouter } from "vue-router"
 
 import FormFieldSection from "@/components/form/FormFieldSection.vue"
 import FormHeader from "@/components/form/FormHeader.vue"
@@ -49,6 +50,7 @@ const DISTRICT_OPTIONS = [
   "余姚市", "奉化区", "象山县", "江北区", "镇海区",
 ]
 const STATUS_OPTIONS = ["运营中", "待复核", "停运"]
+const router = useRouter()
 
 const today = new Date().toISOString().slice(0, 10)
 const nextMonth = new Date()
@@ -103,6 +105,10 @@ const annualCheckAtValue = computed({
 
 function handleFocus(sectionId: string) {
   activeNavId.value = sectionId
+}
+
+function goBack() {
+  router.back()
 }
 
 function syncAnchorItems() {
@@ -201,6 +207,7 @@ onUnmounted(() => {
       :primary-action="{ label: '添加', icon: 'ri-add-line', disabled: !canSubmit }"
       :secondary-actions="[{ key: 'reset', label: '重置表单' }]"
       :reset-dialog="{ description: '当前已填写的车辆信息都会被清空，此操作不可撤销。' }"
+      @back="goBack"
       @reset="handleReset"
       @submit="handleSubmit"
     />

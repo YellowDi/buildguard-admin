@@ -94,6 +94,10 @@ function handleFocus(sectionId: string) {
   activeNavId.value = sectionId
 }
 
+function goBack() {
+  router.back()
+}
+
 const STICKY_HEADER_OFFSET = 112 // 吸顶标题栏高度，用于 scroll-margin
 
 function syncAnchorItems() {
@@ -215,6 +219,7 @@ onUnmounted(() => {
       :primary-action="{ label: '添加', icon: 'ri-add-line', disabled: !canSubmit }"
       :secondary-actions="[{ key: 'reset', label: '重置表单' }]"
       :reset-dialog="{ description: '当前已填写的企业信息和联系人内容都会被清空，此操作不可撤销。' }"
+      @back="goBack"
       @reset="handleReset"
       @submit="handleSubmit"
     />

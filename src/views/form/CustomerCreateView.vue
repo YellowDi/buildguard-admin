@@ -118,6 +118,10 @@ function handleFocus(sectionId: string) {
   activeNavId.value = sectionId
 }
 
+function goBack() {
+  router.back()
+}
+
 function syncAnchorItems() {
   const sectionElements = formSectionsRef.value?.querySelectorAll<HTMLElement>("[data-quick-nav-label][id]") ?? []
   anchorItems.value = Array.from(sectionElements).map(section => ({
@@ -548,6 +552,7 @@ function normalizePeopleForCompare(people: Array<{ Name: string; Phone: string; 
       :primary-action="{ label: primaryActionLabel, icon: isEditMode ? 'ri-save-line' : 'ri-add-line', disabled: !canSubmit }"
       :secondary-actions="[{ key: 'reset', label: '重置表单' }]"
       :reset-dialog="{ description: resetDialogDescription }"
+      @back="goBack"
       @reset="handleReset"
       @submit="handleSubmit"
     />
