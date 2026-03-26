@@ -122,6 +122,9 @@ type CustomerDetailTab = "basic-info" | "building-assets" | "work-orders" | "mon
 type CustomerDetailTabActions = {
   deleteCustomer: boolean
   addPark: boolean
+  addBuilding: boolean
+  addMonitoring: boolean
+  addSubAccount: boolean
   editCustomer: boolean
   back: boolean
 }
@@ -173,32 +176,47 @@ const isFullWidthTableTab = computed(() => activeTab.value === "building-assets"
 const detailTabActionsByTab: Record<CustomerDetailTab, CustomerDetailTabActions> = {
   "basic-info": {
     deleteCustomer: true,
-    addPark: true,
+    addPark: false,
+    addBuilding: false,
+    addMonitoring: false,
+    addSubAccount: false,
     editCustomer: true,
     back: false,
   },
   "building-assets": {
     deleteCustomer: false,
     addPark: true,
+    addBuilding: true,
+    addMonitoring: false,
+    addSubAccount: false,
     editCustomer: false,
     back: false,
   },
   "work-orders": {
     deleteCustomer: false,
     addPark: false,
+    addBuilding: false,
+    addMonitoring: false,
+    addSubAccount: false,
     editCustomer: false,
     back: false,
   },
   monitoring: {
     deleteCustomer: false,
     addPark: false,
-    editCustomer: true,
+    addBuilding: false,
+    addMonitoring: true,
+    addSubAccount: false,
+    editCustomer: false,
     back: false,
   },
   "sub-accounts": {
     deleteCustomer: false,
     addPark: false,
-    editCustomer: true,
+    addBuilding: false,
+    addMonitoring: false,
+    addSubAccount: true,
+    editCustomer: false,
     back: false,
   },
 }
@@ -694,6 +712,18 @@ function goToCreatePark() {
     params: { id: customerUuid.value },
     query: { customerName: toDisplayText(customer.value?.CorpName, "当前客户") },
   })
+}
+
+function handleAddBuilding() {
+  toast.info("添加建筑页面暂未接入")
+}
+
+function handleAddMonitoring() {
+  toast.info("添加监控页面暂未接入")
+}
+
+function handleAddSubAccount() {
+  toast.info("添加子账号页面暂未接入")
 }
 
 function handleContractDownload() {
@@ -1516,60 +1546,62 @@ function toDisplayText(value: unknown, fallback = "未填写") {
   >
     <template #tabActions>
       <DetailTabActionsGroup>
-        <template #leading v-if="isFullWidthTableTab">
-          <button
-            type="button"
-            :class="[
-              detailToolbarButtonClass,
-              activeTablePage?.showControls.value ? detailToolbarButtonActiveClass : '',
-            ]"
-            @click="activeTablePage && (activeTablePage.showControls.value = !activeTablePage.showControls.value)"
-          >
-            <i :class="['ri-filter-3-line text-[17px]', activeTablePage?.showControls.value ? 'text-link' : '']" />
-          </button>
-
-          <Popover :open="activeTableSortPopoverOpen" @update:open="activeTableSortPopoverOpen = $event">
-            <PopoverTrigger as-child>
-              <button
-                type="button"
-                :class="[
-                  detailToolbarButtonClass,
-                  activeTablePage?.customSortEnabled.value ? detailToolbarButtonActiveClass : '',
-                ]"
-                @click="handleActiveTableToolbarAddSort"
-              >
-                <i :class="['ri-sort-asc text-[17px]', activeTablePage?.customSortEnabled.value ? 'text-link' : '']" />
-              </button>
-            </PopoverTrigger>
-
-            <PopoverContent
-              align="end"
-              :side-offset="10"
-              class="w-auto border-0 bg-transparent p-0 shadow-none"
+        <template #leading>
+          <template v-if="isFullWidthTableTab">
+            <button
+              type="button"
+              :class="[
+                detailToolbarButtonClass,
+                activeTablePage?.showControls.value ? detailToolbarButtonActiveClass : '',
+              ]"
+              @click="activeTablePage && (activeTablePage.showControls.value = !activeTablePage.showControls.value)"
             >
-              <SortPopover
-                :enabled="activeTablePage?.customSortEnabled.value ?? false"
-                :rules="activeTablePage?.sortRules.value ?? []"
-                :field-options="activeTablePage?.sortFieldOptions.value ?? []"
-                @close="activeTableSortPopoverOpen = false"
-                @set-enabled="activeTablePage && (activeTablePage.customSortEnabled.value = $event)"
-                @update-rules="activeTablePage && (activeTablePage.sortRules.value = $event)"
-              />
-            </PopoverContent>
-          </Popover>
+              <i :class="['ri-filter-3-line text-[17px]', activeTablePage?.showControls.value ? 'text-link' : '']" />
+            </button>
 
-          <button type="button" :class="detailToolbarButtonClass">
-            <i class="ri-more-line text-base" />
-          </button>
+            <Popover :open="activeTableSortPopoverOpen" @update:open="activeTableSortPopoverOpen = $event">
+              <PopoverTrigger as-child>
+                <button
+                  type="button"
+                  :class="[
+                    detailToolbarButtonClass,
+                    activeTablePage?.customSortEnabled.value ? detailToolbarButtonActiveClass : '',
+                  ]"
+                  @click="handleActiveTableToolbarAddSort"
+                >
+                  <i :class="['ri-sort-asc text-[17px]', activeTablePage?.customSortEnabled.value ? 'text-link' : '']" />
+                </button>
+              </PopoverTrigger>
 
-          <Button
-            variant="outline"
-            class="h-8 gap-1 px-3 text-[14px]"
-            @click="activeTableExportDialogOpen = true"
-          >
-            <i class="ri-download-line text-base" />
-            导出
-          </Button>
+              <PopoverContent
+                align="end"
+                :side-offset="10"
+                class="w-auto border-0 bg-transparent p-0 shadow-none"
+              >
+                <SortPopover
+                  :enabled="activeTablePage?.customSortEnabled.value ?? false"
+                  :rules="activeTablePage?.sortRules.value ?? []"
+                  :field-options="activeTablePage?.sortFieldOptions.value ?? []"
+                  @close="activeTableSortPopoverOpen = false"
+                  @set-enabled="activeTablePage && (activeTablePage.customSortEnabled.value = $event)"
+                  @update-rules="activeTablePage && (activeTablePage.sortRules.value = $event)"
+                />
+              </PopoverContent>
+            </Popover>
+
+            <button type="button" :class="detailToolbarButtonClass">
+              <i class="ri-more-line text-base" />
+            </button>
+
+            <Button
+              variant="outline"
+              class="h-8 gap-1 px-3 text-[14px]"
+              @click="activeTableExportDialogOpen = true"
+            >
+              <i class="ri-download-line text-base" />
+              导出
+            </Button>
+          </template>
         </template>
 
         <template #trailing>
@@ -1578,8 +1610,9 @@ function toDisplayText(value: unknown, fallback = "未填写") {
               <Button
                 variant="outline"
                 size="sm"
-                class="border-destructive/30 bg-background font-medium text-destructive shadow-none hover:bg-destructive/5 hover:text-destructive"
+                class="h-8 gap-1 border-destructive/30 bg-background px-3 text-[14px] font-medium text-destructive shadow-none hover:bg-destructive/5 hover:text-destructive"
               >
+                <i class="ri-delete-bin-line text-base" />
                 删除用户
               </Button>
             </AlertDialogTrigger>
@@ -1609,27 +1642,60 @@ function toDisplayText(value: unknown, fallback = "未填写") {
             v-if="activeDetailTabActions.addPark"
             variant="outline"
             size="sm"
-            class="border-border/80 bg-background font-medium text-foreground shadow-none"
+            class="h-8 gap-1 border-border/80 bg-background px-3 text-[14px] font-medium text-foreground shadow-none"
             @click="goToCreatePark"
           >
+            <i class="ri-add-line text-base" />
             添加园区
+          </Button>
+          <Button
+            v-if="activeDetailTabActions.addBuilding"
+            variant="outline"
+            size="sm"
+            class="h-8 gap-1 border-border/80 bg-background px-3 text-[14px] font-medium text-foreground shadow-none"
+            @click="handleAddBuilding"
+          >
+            <i class="ri-building-line text-base" />
+            添加建筑
+          </Button>
+          <Button
+            v-if="activeDetailTabActions.addMonitoring"
+            variant="outline"
+            size="sm"
+            class="h-8 gap-1 border-border/80 bg-background px-3 text-[14px] font-medium text-foreground shadow-none"
+            @click="handleAddMonitoring"
+          >
+            <i class="ri-radar-line text-base" />
+            添加监控
+          </Button>
+          <Button
+            v-if="activeDetailTabActions.addSubAccount"
+            variant="outline"
+            size="sm"
+            class="h-8 gap-1 border-border/80 bg-background px-3 text-[14px] font-medium text-foreground shadow-none"
+            @click="handleAddSubAccount"
+          >
+            <i class="ri-user-add-line text-base" />
+            添加子账号
           </Button>
           <Button
             v-if="activeDetailTabActions.editCustomer"
             variant="outline"
             size="sm"
-            class="border-border/80 bg-background font-medium text-foreground shadow-none"
+            class="h-8 gap-1 border-border/80 bg-background px-3 text-[14px] font-medium text-foreground shadow-none"
             @click="goToCustomerEdit"
           >
+            <i class="ri-edit-line text-base" />
             修改客户信息
           </Button>
           <Button
             v-if="activeDetailTabActions.back"
             variant="outline"
             size="sm"
-            class="border-border/80 bg-background font-medium text-foreground shadow-none"
+            class="h-8 gap-1 border-border/80 bg-background px-3 text-[14px] font-medium text-foreground shadow-none"
             @click="goBack"
           >
+            <i class="ri-arrow-left-line text-base" />
             返回客户列表
           </Button>
         </template>
