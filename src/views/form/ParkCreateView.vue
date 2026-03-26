@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, reactive, ref } from "vue"
-import { useRouter } from "vue-router"
+import { useRoute, useRouter } from "vue-router"
 import { toast } from "vue-sonner"
 
 import FormFieldSection from "@/components/form/FormFieldSection.vue"
@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { handleApiError } from "@/lib/api-errors"
-import { fetchCustomers, type CustomerListItem } from "@/lib/customers-api"
+import { fetchCustomerDetail, fetchCustomers, type CustomerListItem } from "@/lib/customers-api"
 import { createPark } from "@/lib/parks-api"
 
 type QuickNavItem = {
@@ -60,20 +60,23 @@ function createEmptyForm(): ParkFormState {
 }
 
 const router = useRouter()
+const route = useRoute()
 const form = reactive<ParkFormState>(createEmptyForm())
 const submitting = ref(false)
 const loadingCustomers = ref(false)
 const customerLoadError = ref("")
 const customerOptions = ref<CustomerOption[]>([])
+const customerName = ref("")
 const anchorItems = ref<QuickNavItem[]>([])
 const activeNavId = ref("")
 const formSectionsRef = ref<HTMLElement | null>(null)
 const STICKY_HEADER_OFFSET = 112
 let observer: IntersectionObserver | null = null
 let observerActive = false
+const customerUuid = computed(() => typeof route.params.id === "string" ? route.params.id.trim() : "")
 
 const canSubmit = computed(() =>
-  Boolean(normalizeText(form.customerUuid) && normalizeText(form.name) && !submitting.value && !loadingCustomers.value),
+  Boolean(normalizeText(form.customerUuid) && normalizeText(form.name) && !submitting.value),
 )
 
 function handleFocus(sectionId: string) {
@@ -150,11 +153,15 @@ async function handleSubmit() {
       await router.push({
         name: "park-detail",
         params: { id: result.Uuid },
+        query: { customerUuid: normalizeText(form.customerUuid) },
       })
       return
     }
 
-    await router.push({ name: "parks" })
+    await router.push({
+      name: "customer-detail",
+      params: { id: normalizeText(form.customerUuid) },
+    })
   } catch (error) {
     handleApiError(error, {
       title: "园区创建失败",
@@ -166,10 +173,29 @@ async function handleSubmit() {
 }
 
 function handleReset() {
-  Object.assign(form, createEmptyForm())
+  Object.assign(form, {
+    ...createEmptyForm(),
+    customerUuid: customerUuid.value,
+  })
 }
 
 async function loadCustomerOptions() {
+  if (customerUuid.value) {
+    form.customerUuid = customerUuid.value
+
+    try {
+      const detail = await fetchCustomerDetail({ Uuid: customerUuid.value })
+      customerName.value = normalizeText(detail.CorpName) || "当前客户"
+    } catch (error) {
+      customerLoadError.value = handleApiError(error, {
+        mode: "silent",
+        fallback: "客户资料加载失败，请稍后重试。",
+      })
+    }
+
+    return
+  }
+
   loadingCustomers.value = true
   customerLoadError.value = ""
 
@@ -264,6 +290,10 @@ function getOptionalText(value: unknown) {
 }
 
 onMounted(() => {
+  if (customerUuid.value) {
+    form.customerUuid = customerUuid.value
+  }
+
   void loadCustomerOptions()
 
   nextTick(() => {
@@ -340,16 +370,27 @@ onUnmounted(() => {
             label="所属客户"
             label-for="park-customer"
           >
-            <Select v-model="form.customerUuid" :disabled="loadingCustomers">
-              <SelectTrigger id="park-customer" class="w-full" @focus="handleFocus('section-customer')">
-                <SelectValue :placeholder="loadingCustomers ? '正在加载客户列表' : '请选择所属客户'" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem v-for="customer in customerOptions" :key="customer.uuid" :value="customer.uuid">
-                  {{ customer.name }}
-                </SelectItem>
-              </SelectContent>
-            </Select>
+            <template v-if="customerUuid">
+              <Input
+                id="park-customer"
+                :model-value="customerName || '正在加载客户资料'"
+                disabled
+                class="w-full"
+                @focus="handleFocus('section-customer')"
+              />
+            </template>
+            <template v-else>
+              <Select v-model="form.customerUuid" :disabled="loadingCustomers">
+                <SelectTrigger id="park-customer" class="w-full" @focus="handleFocus('section-customer')">
+                  <SelectValue :placeholder="loadingCustomers ? '正在加载客户列表' : '请选择所属客户'" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem v-for="customer in customerOptions" :key="customer.uuid" :value="customer.uuid">
+                    {{ customer.name }}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </template>
           </FormFieldSection>
 
           <FormFieldSection

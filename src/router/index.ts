@@ -122,34 +122,17 @@ const router = createRouter({
           } satisfies RouteMetaConfig,
         },
         {
-          path: "parks",
-          name: "parks",
-          component: () => import("@/views/list/ParksListView.vue"),
-          meta: {
-            title: "园区",
-            loading: "table",
-          } satisfies RouteMetaConfig,
-        },
-        {
-          path: "parks/create",
-          name: "park-create",
+          path: "customers/:id/parks/create",
+          name: "customer-park-create",
           component: () => import("@/views/form/ParkCreateView.vue"),
           meta: {
             title: "添加园区",
             loading: "form",
             breadcrumb: [
-              { title: "园区", to: "parks" },
+              { title: "客户", to: "customers" },
+              { title: "客户详情" },
               { title: "添加园区" },
             ] satisfies BreadcrumbMetaItem[],
-          } satisfies RouteMetaConfig,
-        },
-        {
-          path: "buildings",
-          name: "buildings",
-          component: () => import("@/views/list/BuildingsListView.vue"),
-          meta: {
-            title: "建筑",
-            loading: "table",
           } satisfies RouteMetaConfig,
         },
         {
@@ -193,8 +176,9 @@ const router = createRouter({
             loading: "detail",
             useDetailBreadcrumbTitle: true,
             breadcrumb: [
-              { title: "园区", to: "parks" },
-              { title: "详情" },
+              { title: "客户", to: "customers" },
+              { title: "客户详情" },
+              { title: "园区详情" },
             ] satisfies BreadcrumbMetaItem[],
           } satisfies RouteMetaConfig,
         },
@@ -207,7 +191,8 @@ const router = createRouter({
             loading: "detail",
             useDetailBreadcrumbTitle: true,
             breadcrumb: [
-              { title: "建筑", to: "buildings" },
+              { title: "客户", to: "customers" },
+              { title: "客户详情" },
               { title: "建筑详情" },
             ] satisfies BreadcrumbMetaItem[],
           } satisfies RouteMetaConfig,

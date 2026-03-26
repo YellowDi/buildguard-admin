@@ -29,6 +29,10 @@ const errorMessage = ref("")
 let latestRequestId = 0
 
 const parkUuid = computed(() => typeof route.params.id === "string" ? route.params.id.trim() : "")
+const customerUuid = computed(() => {
+  const queryValue = typeof route.query.customerUuid === "string" ? route.query.customerUuid.trim() : ""
+  return queryValue || toText(park.value?.CustomerUuid, "")
+})
 
 const fieldSections = computed<DetailFieldSection[]>(() => {
   const current = park.value
@@ -60,6 +64,7 @@ const buildingModule = computed<DetailRelationModuleSchema<BuildingRow>>(() => (
   columns: [
     { key: "name", label: "名称", cellClass: "truncate" },
     { key: "address", label: "地址", cellClass: "truncate text-muted-foreground" },
+    { key: "actions", label: "", slot: "building-action-cell", cellClass: "flex justify-end" },
   ],
   groups: [
     {
@@ -86,7 +91,30 @@ onUnmounted(() => {
 })
 
 function goBack() {
-  router.back()
+  if (customerUuid.value) {
+    void router.push({
+      name: "customer-detail",
+      params: { id: customerUuid.value },
+    })
+    return
+  }
+
+  void router.push({ name: "customers" })
+}
+
+function goToBuildingDetail(buildingId: string) {
+  if (!buildingId || !parkUuid.value) {
+    return
+  }
+
+  void router.push({
+    name: "building-detail",
+    params: { id: buildingId },
+    query: {
+      parkUuid: parkUuid.value,
+      customerUuid: customerUuid.value,
+    },
+  })
 }
 
 async function loadParkDetail(nextParkUuid: string) {
@@ -198,7 +226,18 @@ function buildContactValue(name: string | null, phone?: string | null): DetailCo
 
     <template #secondary>
       <div v-if="!loading && park" class="pb-5">
-        <DetailRelationModule :schema="buildingModule" />
+        <DetailRelationModule :schema="buildingModule">
+          <template #building-action-cell="{ row }">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              class="h-7 w-7 rounded-md text-muted-foreground hover:text-foreground"
+              @click="goToBuildingDetail(row.id)"
+            >
+              <i class="ri-more-line text-[18px]" />
+            </Button>
+          </template>
+        </DetailRelationModule>
       </div>
     </template>
   </DetailLayout>

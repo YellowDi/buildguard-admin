@@ -21,6 +21,7 @@ let latestRequestId = 0
 
 const buildingUuid = computed(() => typeof route.params.id === "string" ? route.params.id.trim() : "")
 const parkUuid = computed(() => typeof route.query.parkUuid === "string" ? route.query.parkUuid.trim() : "")
+const customerUuid = computed(() => typeof route.query.customerUuid === "string" ? route.query.customerUuid.trim() : "")
 
 const fieldSections = computed<DetailFieldSection[]>(() => {
   const current = building.value
@@ -58,7 +59,24 @@ onUnmounted(() => {
 })
 
 function goBack() {
-  router.back()
+  if (parkUuid.value) {
+    void router.push({
+      name: "park-detail",
+      params: { id: parkUuid.value },
+      query: customerUuid.value ? { customerUuid: customerUuid.value } : undefined,
+    })
+    return
+  }
+
+  if (customerUuid.value) {
+    void router.push({
+      name: "customer-detail",
+      params: { id: customerUuid.value },
+    })
+    return
+  }
+
+  void router.push({ name: "customers" })
 }
 
 async function loadBuildingDetail(nextBuildingUuid: string, nextParkUuid: string) {

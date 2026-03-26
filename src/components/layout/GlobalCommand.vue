@@ -169,15 +169,6 @@ const pageSearchItems: SearchItem[] = [
     to: "/companies",
   },
   {
-    id: "page-buildings",
-    label: "建筑",
-    subtitle: "查看建筑列表",
-    icon: "ri-building-line",
-    type: "页面",
-    value: "建筑 查看建筑列表 building buildings",
-    to: "/buildings",
-  },
-  {
     id: "page-inspection-services",
     label: "检测服务",
     subtitle: "查看检测服务列表",

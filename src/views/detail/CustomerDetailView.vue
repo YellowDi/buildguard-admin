@@ -193,6 +193,17 @@ function goToCustomerEdit() {
   })
 }
 
+function goToCreatePark() {
+  if (!customerUuid.value) {
+    return
+  }
+
+  router.push({
+    name: "customer-park-create",
+    params: { id: customerUuid.value },
+  })
+}
+
 async function handleDeleteCustomer() {
   if (!customerUuid.value || deleteSubmitting.value) {
     return
@@ -214,15 +225,15 @@ async function handleDeleteCustomer() {
   }
 }
 
-function goToParkDetail(parkUuid: string, customerUuid: string) {
-  if (!parkUuid || !customerUuid) {
+function goToParkDetail(parkUuid: string, currentCustomerUuid: string) {
+  if (!parkUuid || !currentCustomerUuid) {
     return
   }
 
   router.push({
     name: "park-detail",
     params: { id: parkUuid },
-    query: { customerUuid },
+    query: { customerUuid: currentCustomerUuid },
   })
 }
 
@@ -281,14 +292,14 @@ function getRowParkUuid(row: unknown) {
 }
 
 function goToBuildingDetail(buildingUuid: string, parkUuid: string) {
-  if (!buildingUuid || !parkUuid) {
+  if (!buildingUuid || !parkUuid || !customerUuid.value) {
     return
   }
 
   router.push({
     name: "building-detail",
     params: { id: buildingUuid },
-    query: { parkUuid },
+    query: { parkUuid, customerUuid: customerUuid.value },
   })
 }
 
@@ -611,6 +622,14 @@ function toDisplayText(value: unknown, fallback = "未填写") {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+        <Button
+          variant="outline"
+          size="sm"
+          class="border-border/80 bg-background font-medium text-foreground shadow-none"
+          @click="goToCreatePark"
+        >
+          添加园区
+        </Button>
         <Button
           variant="outline"
           size="sm"
