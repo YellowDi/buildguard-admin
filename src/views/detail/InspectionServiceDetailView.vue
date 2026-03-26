@@ -23,9 +23,9 @@ import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
 import DetailLayout from "@/layouts/DetailLayout.vue"
+import inspectionServiceWorkOrdersData from "@/mocks/inspection-service-work-orders.json"
 import { handleApiError } from "@/lib/api-errors"
 import { fetchInspectionServiceDetail, type InspectionServiceListItem } from "@/lib/inspection-services-api"
-import { fetchWorkOrders, type WorkOrderListItem } from "@/lib/work-orders-api"
 
 type InspectionServiceDetailTab = "overview" | "plans" | "work-orders"
 type InspectionServiceBuildRecord = {
@@ -42,6 +42,10 @@ type InspectionServiceDetailRecord = {
   Name: string
   Level: string
   CustomerName: string
+  ServiceStatus: string
+  ExpireAt: string
+  InspectionTotal: string
+  InspectionRemaining: string
   ParkName: string
   BuildName: string
   CreatedAt: string
@@ -80,6 +84,23 @@ type InspectionServiceWorkOrderRow = {
   remark: string
   createdAt: string
   updatedAt: string
+}
+
+type InspectionServiceWorkOrderItem = {
+  Uuid?: string
+  Id?: number
+  OrderNo?: string
+  PlanName?: string
+  PackageName?: string
+  CustomerName?: string
+  Deadline?: string
+  Executor?: string
+  Status?: number
+  Score?: number
+  Result?: number
+  Remark?: string
+  CreatedAt?: string
+  UpdatedAt?: string
 }
 
 const route = useRoute()
@@ -126,11 +147,11 @@ const fieldSections = computed<DetailFieldSection[]>(() => {
       title: "服务信息",
       rows: [
         { key: "name", label: "服务名称", value: detail.value.Name },
-        { key: "status", label: "服务状态", value: "-" },
-        { key: "expire-at", label: "到期时间", value: "-" },
+        { key: "status", label: "服务状态", value: detail.value.ServiceStatus },
+        { key: "expire-at", label: "到期时间", value: detail.value.ExpireAt },
         { key: "customer-name", label: "客户名称", value: detail.value.CustomerName },
-        { key: "inspection-total", label: "套餐总检测次数", value: "-" },
-        { key: "inspection-remaining", label: "剩余次数", value: "-" },
+        { key: "inspection-total", label: "套餐总检测次数", value: detail.value.InspectionTotal },
+        { key: "inspection-remaining", label: "剩余次数", value: detail.value.InspectionRemaining },
         { key: "created-at", label: "创建时间", value: detail.value.CreatedAt },
         { key: "updated-at", label: "更新时间", value: detail.value.UpdatedAt },
         { key: "remark", label: "备注", value: toText(detail.value.raw?.remark, "-"), truncate: false, valueClass: "leading-6" },
@@ -421,18 +442,17 @@ async function loadWorkOrders() {
     workOrdersLoading.value = true
     workOrdersErrorMessage.value = ""
 
-    const result = await fetchWorkOrders({
-      PackageName: packageName,
-      PageNum: workOrdersPageNum.value,
-      PageSize: workOrdersPageSize.value,
-    })
+    const allItems = getInspectionServiceWorkOrders()
+      .filter(item => toText(item.PackageName) === packageName)
+    const start = Math.max(workOrdersPageNum.value - 1, 0) * Math.max(workOrdersPageSize.value, 1)
+    const end = start + Math.max(workOrdersPageSize.value, 1)
 
     if (requestId !== latestWorkOrdersRequestId) {
       return
     }
 
-    workOrders.value = result.list.map((item, index) => normalizeWorkOrderRow(item, index))
-    workOrdersTotal.value = result.total
+    workOrders.value = allItems.slice(start, end).map((item, index) => normalizeWorkOrderRow(item, index))
+    workOrdersTotal.value = allItems.length
   } catch (error) {
     if (requestId !== latestWorkOrdersRequestId) {
       return
@@ -487,6 +507,10 @@ function normalizeInspectionServiceDetail(item: InspectionServiceListItem): Insp
     Name: toText(item.Name, "未命名服务"),
     Level: toText(item.Level, "未分级"),
     CustomerName: toText(item.CustomerName, "未绑定客户"),
+    ServiceStatus: getFirstText(item, ["ServiceStatusLabel", "ServiceStatus", "StatusLabel", "StatusName", "Status"], "-"),
+    ExpireAt: getFirstText(item, ["ExpireAt", "ExpiredAt", "EndAt", "ServiceEndAt", "PackageExpireAt", "DueAt"], "-"),
+    InspectionTotal: getFirstText(item, ["TotalInspectionCount", "InspectionTotalCount", "PackageTotalInspectionCount", "TotalCount"], "-"),
+    InspectionRemaining: getFirstText(item, ["RemainInspectionCount", "RemainingInspectionCount", "PackageRemainInspectionCount", "RemainCount"], "-"),
     ParkName: parkNames.length ? parkNames.join("、") : "-",
     BuildName: buildNames.length ? buildNames.join("、") : "-",
     CreatedAt: toText(item.CreatedAt, "-"),
@@ -523,6 +547,22 @@ function formatBuilds(builds?: InspectionServiceBuildRecord[]) {
   }).join("；")
 }
 
+function getFirstText(
+  record: Record<string, unknown>,
+  keys: string[],
+  fallback = "",
+) {
+  for (const key of keys) {
+    const value = toText(record[key])
+
+    if (value) {
+      return value
+    }
+  }
+
+  return fallback
+}
+
 function buildParkGroups(builds?: InspectionServiceBuildRecord[]) {
   if (!Array.isArray(builds) || !builds.length) {
     return []
@@ -549,7 +589,7 @@ function buildParkGroups(builds?: InspectionServiceBuildRecord[]) {
   }))
 }
 
-function normalizeWorkOrderRow(item: WorkOrderListItem, index: number): InspectionServiceWorkOrderRow {
+function normalizeWorkOrderRow(item: InspectionServiceWorkOrderItem, index: number): InspectionServiceWorkOrderRow {
   const uuid = toText(item.Uuid, toText(item.Id, `${workOrdersPageNum.value}-${index + 1}`))
   const fallbackId = toText(item.Id, `${workOrdersPageNum.value}-${index + 1}`)
   const statusValue = toNumber(item.Status)
@@ -710,6 +750,10 @@ function buildContactValue(name: string, phone?: string): DetailContactValue {
     name,
     phone,
   }
+}
+
+function getInspectionServiceWorkOrders() {
+  return inspectionServiceWorkOrdersData as InspectionServiceWorkOrderItem[]
 }
 
 </script>

@@ -1,0 +1,246 @@
+[
+  {
+    "Uuid": "inspection-service-001",
+    "Id": 1,
+    "Name": "消防安全检测",
+    "CustomerUuid": "customer-ningbo-hongda",
+    "CustomerName": "宁波宏达物流有限公司",
+    "Level": "A级",
+    "ManagerName": "王工",
+    "ManagerPhone": "138-0574-1101",
+    "TemplateId": 101,
+    "TemplateUuid": "inspection-template-fire-monthly",
+    "TemplateName": "消防设施月检模板",
+    "ExpireAt": "2026-12-31 23:59",
+    "ServiceStatus": "进行中",
+    "TotalInspectionCount": 24,
+    "RemainInspectionCount": 9,
+    "Remark": "覆盖仓库、综合楼和消防泵房，重大隐患需 24 小时内复核。",
+    "CreatedAt": "2026-01-06 09:00",
+    "UpdatedAt": "2026-03-26 16:30",
+    "Builds": [
+      {
+        "BuildUuid": "build-ningbo-hongda-01",
+        "BuildId": 10101,
+        "BuildName": "1号仓库",
+        "ParkUuid": "park-ningbo-hongda-main",
+        "ParkId": 501,
+        "ParkName": "北仑主园区"
+      },
+      {
+        "BuildUuid": "build-ningbo-hongda-02",
+        "BuildId": 10102,
+        "BuildName": "2号仓库",
+        "ParkUuid": "park-ningbo-hongda-main",
+        "ParkId": 501,
+        "ParkName": "北仑主园区"
+      },
+      {
+        "BuildUuid": "build-ningbo-hongda-03",
+        "BuildId": 10103,
+        "BuildName": "综合楼",
+        "ParkUuid": "park-ningbo-hongda-office",
+        "ParkId": 502,
+        "ParkName": "综合办公区"
+      }
+    ]
+  },
+  {
+    "Uuid": "inspection-service-002",
+    "Id": 2,
+    "Name": "防雷防静电检测",
+    "CustomerUuid": "customer-beilun-shengan",
+    "CustomerName": "北仑盛安危运有限公司",
+    "Level": "S级",
+    "ManagerName": "陈颖",
+    "ManagerPhone": "139-0574-2218",
+    "TemplateId": 102,
+    "TemplateUuid": "inspection-template-lightning-quarterly",
+    "TemplateName": "防雷季度检测模板",
+    "ExpireAt": "2026-11-20 18:00",
+    "ServiceStatus": "已签署",
+    "TotalInspectionCount": 12,
+    "RemainInspectionCount": 12,
+    "Remark": "优先保障甲类库区和装卸台接地系统完整性。",
+    "CreatedAt": "2026-02-01 10:15",
+    "UpdatedAt": "2026-03-20 09:40",
+    "Builds": [
+      {
+        "BuildUuid": "build-shengan-01",
+        "BuildId": 10201,
+        "BuildName": "甲类库区",
+        "ParkUuid": "park-shengan-main",
+        "ParkId": 503,
+        "ParkName": "危化作业园"
+      },
+      {
+        "BuildUuid": "build-shengan-02",
+        "BuildId": 10202,
+        "BuildName": "装卸台",
+        "ParkUuid": "park-shengan-main",
+        "ParkId": 503,
+        "ParkName": "危化作业园"
+      }
+    ]
+  },
+  {
+    "Uuid": "inspection-service-003",
+    "Id": 3,
+    "Name": "车辆设备检测",
+    "CustomerUuid": "customer-yuyao-antai",
+    "CustomerName": "余姚安泰危货运输有限公司",
+    "Level": "A级",
+    "ManagerName": "刘洋",
+    "ManagerPhone": "137-0584-3091",
+    "TemplateId": 103,
+    "TemplateUuid": "inspection-template-vehicle-annual",
+    "TemplateName": "危运车辆专项模板",
+    "ExpireAt": "2026-10-15 17:30",
+    "ServiceStatus": "待签署",
+    "TotalInspectionCount": 12,
+    "RemainInspectionCount": 12,
+    "Remark": "年度专项，覆盖 12 台危运车辆罐体、阀门和安全附件。",
+    "CreatedAt": "2026-03-03 14:00",
+    "UpdatedAt": "2026-03-24 11:05",
+    "Builds": [
+      {
+        "BuildUuid": "build-antai-01",
+        "BuildId": 10301,
+        "BuildName": "车辆维保车间",
+        "ParkUuid": "park-antai-main",
+        "ParkId": 504,
+        "ParkName": "运输保障基地"
+      },
+      {
+        "BuildUuid": "build-antai-02",
+        "BuildId": 10302,
+        "BuildName": "停车区",
+        "ParkUuid": "park-antai-main",
+        "ParkId": 504,
+        "ParkName": "运输保障基地"
+      }
+    ]
+  },
+  {
+    "Uuid": "inspection-service-004",
+    "Id": 4,
+    "Name": "电气安全检测",
+    "CustomerUuid": "customer-cixi-lianyun",
+    "CustomerName": "慈溪联运仓储有限公司",
+    "Level": "B级",
+    "ManagerName": "赵洁",
+    "ManagerPhone": "136-0574-4806",
+    "TemplateId": 104,
+    "TemplateUuid": "inspection-template-electrical-halfyear",
+    "TemplateName": "电气隐患复检模板",
+    "ExpireAt": "2026-09-30 23:59",
+    "ServiceStatus": "进行中",
+    "TotalInspectionCount": 8,
+    "RemainInspectionCount": 3,
+    "Remark": "重点复核配电房和充电区，异常项需二次闭环。",
+    "CreatedAt": "2025-12-18 08:20",
+    "UpdatedAt": "2026-03-22 18:10",
+    "Builds": [
+      {
+        "BuildUuid": "build-lianyun-01",
+        "BuildId": 10401,
+        "BuildName": "配电房",
+        "ParkUuid": "park-lianyun-main",
+        "ParkId": 505,
+        "ParkName": "慈溪仓储园"
+      },
+      {
+        "BuildUuid": "build-lianyun-02",
+        "BuildId": 10402,
+        "BuildName": "充电区",
+        "ParkUuid": "park-lianyun-main",
+        "ParkId": 505,
+        "ParkName": "慈溪仓储园"
+      },
+      {
+        "BuildUuid": "build-lianyun-03",
+        "BuildId": 10403,
+        "BuildName": "办公楼",
+        "ParkUuid": "park-lianyun-office",
+        "ParkId": 506,
+        "ParkName": "行政办公区"
+      }
+    ]
+  },
+  {
+    "Uuid": "inspection-service-005",
+    "Id": 5,
+    "Name": "综合安全检测",
+    "CustomerUuid": "customer-zhenhai-pengcheng",
+    "CustomerName": "镇海鹏程危运有限公司",
+    "Level": "S级",
+    "ManagerName": "孙博",
+    "ManagerPhone": "135-0574-6682",
+    "TemplateId": 105,
+    "TemplateUuid": "inspection-template-comprehensive-annual",
+    "TemplateName": "年度综合检测模板",
+    "ExpireAt": "2026-08-18 18:00",
+    "ServiceStatus": "已结单",
+    "TotalInspectionCount": 6,
+    "RemainInspectionCount": 0,
+    "Remark": "年度首轮已完成，当前进入归档和复盘阶段。",
+    "CreatedAt": "2025-11-28 13:30",
+    "UpdatedAt": "2026-03-18 15:50",
+    "Builds": [
+      {
+        "BuildUuid": "build-pengcheng-01",
+        "BuildId": 10501,
+        "BuildName": "园区一期",
+        "ParkUuid": "park-pengcheng-main",
+        "ParkId": 507,
+        "ParkName": "镇海作业园"
+      },
+      {
+        "BuildUuid": "build-pengcheng-02",
+        "BuildId": 10502,
+        "BuildName": "园区二期",
+        "ParkUuid": "park-pengcheng-main",
+        "ParkId": 507,
+        "ParkName": "镇海作业园"
+      }
+    ]
+  },
+  {
+    "Uuid": "inspection-service-006",
+    "Id": 6,
+    "Name": "消防安全检测",
+    "CustomerUuid": "customer-jiaxing-haiyan",
+    "CustomerName": "嘉兴海盐产业新城建设管理中心",
+    "Level": "B级",
+    "ManagerName": "周敏",
+    "ManagerPhone": "138-0573-1176",
+    "TemplateId": 101,
+    "TemplateUuid": "inspection-template-fire-monthly",
+    "TemplateName": "消防设施月检模板",
+    "ExpireAt": "2026-07-31 23:59",
+    "ServiceStatus": "进行中",
+    "TotalInspectionCount": 18,
+    "RemainInspectionCount": 7,
+    "Remark": "按季度输出园区消防风险台账和整改跟踪清单。",
+    "CreatedAt": "2026-01-12 11:40",
+    "UpdatedAt": "2026-03-25 10:25",
+    "Builds": [
+      {
+        "BuildUuid": "build-haiyan-01",
+        "BuildId": 10601,
+        "BuildName": "创新中心",
+        "ParkUuid": "park-haiyan-east",
+        "ParkId": 508,
+        "ParkName": "东区园区"
+      },
+      {
+        "BuildUuid": "build-haiyan-02",
+        "BuildId": 10602,
+        "BuildName": "展示中心",
+        "ParkUuid": "park-haiyan-west",
+        "ParkId": 509,
+        "ParkName": "西区园区"
+      }
+    ]
+  }
+]
