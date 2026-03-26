@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue"
+import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue"
 import { useRouter } from "vue-router"
 import { VisArea, VisAxis, VisDonut, VisDonutSelectors, VisGroupedBar, VisLine, VisSingleContainer, VisStackedBar, VisXYContainer } from "@unovis/vue"
 
@@ -147,6 +147,11 @@ const activeBuildingRiskTab = ref<BuildingRiskTab>("high-risk")
 const buildingRankingItems = ref<BuildingRankingItem[]>([])
 const buildingRankingLoading = ref(false)
 const buildingRankingError = ref("")
+const leftDashboardSectionRef = ref<HTMLElement | null>(null)
+const buildingRankingHeaderRef = ref<HTMLElement | null>(null)
+const buildingRankingColumnHeight = ref<number | null>(null)
+const buildingRankingBodyHeight = ref<number | null>(null)
+let leftDashboardSectionObserver: ResizeObserver | null = null
 
 const filteredCompanyTrendData = computed(() => {
   const referenceDate = companyTrendData[companyTrendData.length - 1]?.date ?? new Date("2026-03-07T00:00:00")
@@ -311,9 +316,34 @@ const buildingRankedGroups = computed(() => ({
 }))
 
 const activeBuildingList = computed(() => buildingRankedGroups.value[activeBuildingRiskTab.value] ?? [])
+const buildingRankingColumnStyle = computed(() => {
+  if (!buildingRankingColumnHeight.value) {
+    return undefined
+  }
+
+  return {
+    height: `${buildingRankingColumnHeight.value}px`,
+  }
+})
+const buildingRankingBodyStyle = computed(() => {
+  if (!buildingRankingBodyHeight.value) {
+    return undefined
+  }
+
+  return {
+    height: `${buildingRankingBodyHeight.value}px`,
+    maxHeight: `${buildingRankingBodyHeight.value}px`,
+  }
+})
 
 onMounted(() => {
+  setupLeftDashboardSectionObserver()
   void loadBuildingRanking()
+})
+
+onBeforeUnmount(() => {
+  leftDashboardSectionObserver?.disconnect()
+  leftDashboardSectionObserver = null
 })
 
 function formatShortDate(date: number | Date, locale = "zh-CN") {
@@ -321,6 +351,39 @@ function formatShortDate(date: number | Date, locale = "zh-CN") {
     month: "numeric",
     day: "numeric",
   })
+}
+
+async function setupLeftDashboardSectionObserver() {
+  await nextTick()
+
+  const element = leftDashboardSectionRef.value
+  if (!element || typeof ResizeObserver === "undefined") {
+    return
+  }
+
+  updateBuildingRankingColumnHeight()
+
+  leftDashboardSectionObserver = new ResizeObserver(() => {
+    updateBuildingRankingColumnHeight()
+  })
+
+  leftDashboardSectionObserver.observe(element)
+}
+
+function updateBuildingRankingColumnHeight() {
+  const leftElement = leftDashboardSectionRef.value
+  if (!leftElement) {
+    buildingRankingColumnHeight.value = null
+    buildingRankingBodyHeight.value = null
+    return
+  }
+
+  const totalHeight = Math.ceil(leftElement.getBoundingClientRect().height)
+  const headerHeight = Math.ceil(buildingRankingHeaderRef.value?.getBoundingClientRect().height ?? 0)
+  const bodyHeight = Math.max(totalHeight - headerHeight - 8, 220)
+
+  buildingRankingColumnHeight.value = totalHeight
+  buildingRankingBodyHeight.value = bodyHeight
 }
 
 async function loadBuildingRanking() {
@@ -554,7 +617,7 @@ function hashText(value: string) {
     </div>
 
     <div class="grid items-stretch gap-4 xl:grid-cols-10">
-      <div class="flex min-w-0 flex-col gap-4 xl:col-span-7">
+      <div ref="leftDashboardSectionRef" class="flex min-w-0 flex-col gap-4 xl:col-span-7">
         <div :class="dashboardTrendShellClass">
           <CardHeader class="flex flex-col gap-2 px-0 sm:min-h-8 sm:flex-row sm:items-center sm:justify-between sm:pl-2 sm:pr-0">
             <CardTitle :class="chartTitleClass">
@@ -743,8 +806,11 @@ function hashText(value: string) {
         </div>
       </div>
 
-      <div :class="`${chartShellClass} h-full min-h-0 xl:col-span-3`">
-        <CardHeader class="flex flex-col gap-3 px-0 sm:min-h-8 sm:flex-row sm:items-center sm:justify-between sm:pl-2 sm:pr-0">
+      <div :class="`${chartShellClass} h-full min-h-0 overflow-hidden xl:col-span-3`" :style="buildingRankingColumnStyle">
+        <CardHeader
+          ref="buildingRankingHeaderRef"
+          class="flex flex-col gap-3 px-0 sm:min-h-8 sm:flex-row sm:items-center sm:justify-between sm:pl-2 sm:pr-0"
+        >
           <div class="flex items-center gap-3">
             <CardTitle :class="chartTitleClass">
               风险排行
@@ -765,62 +831,64 @@ function hashText(value: string) {
           </div>
         </CardHeader>
 
-        <Card :class="`${chartCardClass} h-full min-h-[332px]`">
-          <CardContent class="flex h-full min-h-0 flex-col p-3">
-            <div v-if="buildingRankingError" class="flex flex-1 flex-col items-center justify-center gap-3 text-center">
-              <div class="text-sm text-destructive">
-                {{ buildingRankingError }}
-              </div>
-              <Button size="sm" variant="outline" @click="loadBuildingRanking">
-                重试
-              </Button>
-            </div>
-
-            <div v-else-if="buildingRankingLoading" class="flex flex-1 items-center justify-center text-sm text-muted-foreground">
-              正在加载建筑排行
-            </div>
-
-            <div v-else-if="activeBuildingList.length" class="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto pr-1">
-              <button
-                v-for="(building, index) in activeBuildingList"
-                :key="building.id"
-                type="button"
-                class="flex items-center gap-2.5 rounded-lg border border-border/70 bg-card px-2.5 py-2 text-left transition-colors hover:border-primary/35 hover:bg-accent/35"
-                @click="goToBuildingDetail(building)"
-              >
-                <div class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-foreground">
-                  {{ index + 1 }}
+        <div class="flex min-h-0 flex-1" :style="buildingRankingBodyStyle">
+          <Card :class="`${chartCardClass} h-full min-h-0 w-full`" :style="buildingRankingBodyStyle">
+            <CardContent class="flex h-full min-h-0 flex-col p-3">
+              <div v-if="buildingRankingError" class="flex flex-1 flex-col items-center justify-center gap-3 text-center">
+                <div class="text-sm text-destructive">
+                  {{ buildingRankingError }}
                 </div>
+                <Button size="sm" variant="outline" @click="loadBuildingRanking">
+                  重试
+                </Button>
+              </div>
 
-                <div class="min-w-0 flex-1">
-                  <div class="flex items-center justify-between gap-2">
-                    <div class="min-w-0">
-                      <div class="truncate text-[13px] font-semibold leading-5 text-foreground">
-                        {{ building.name }}
-                      </div>
-                      <div class="truncate text-[11px] leading-4 text-muted-foreground">
-                        {{ building.customerName }} · {{ building.parkName }}
-                      </div>
-                    </div>
+              <div v-else-if="buildingRankingLoading" class="flex flex-1 items-center justify-center text-sm text-muted-foreground">
+                正在加载建筑排行
+              </div>
 
-                    <div class="shrink-0 text-right leading-none">
-                      <div class="text-base font-semibold tracking-tight text-foreground">
-                        {{ building.score }}
+              <div v-else-if="activeBuildingList.length" class="flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto pr-1">
+                <button
+                  v-for="(building, index) in activeBuildingList"
+                  :key="building.id"
+                  type="button"
+                  class="flex items-center gap-2.5 rounded-lg border border-border/70 bg-card px-2.5 py-2 text-left transition-colors hover:border-primary/35 hover:bg-accent/35"
+                  @click="goToBuildingDetail(building)"
+                >
+                  <div class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-foreground">
+                    {{ index + 1 }}
+                  </div>
+
+                  <div class="min-w-0 flex-1">
+                    <div class="flex items-center justify-between gap-2">
+                      <div class="min-w-0">
+                        <div class="truncate text-[13px] font-semibold leading-5 text-foreground">
+                          {{ building.name }}
+                        </div>
+                        <div class="truncate text-[11px] leading-4 text-muted-foreground">
+                          {{ building.customerName }} · {{ building.parkName }}
+                        </div>
                       </div>
-                      <div class="mt-0.5 text-[10px] text-muted-foreground">
-                        {{ building.riskLabel }}
+
+                      <div class="shrink-0 text-right leading-none">
+                        <div class="text-base font-semibold tracking-tight text-foreground">
+                          {{ building.score }}
+                        </div>
+                        <div class="mt-0.5 text-[10px] text-muted-foreground">
+                          {{ building.riskLabel }}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              </button>
-            </div>
+                </button>
+              </div>
 
-            <div v-else class="flex flex-1 items-center justify-center text-sm text-muted-foreground">
-              当前暂无可展示的建筑
-            </div>
-          </CardContent>
-        </Card>
+              <div v-else class="flex flex-1 items-center justify-center text-sm text-muted-foreground">
+                当前暂无可展示的建筑
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
 
