@@ -758,91 +758,67 @@ function toDisplayText(value: unknown, fallback = "未填写") {
     :empty="isEmpty"
     empty-text="未找到该客户信息"
     :secondary-visible="activeTab === 'basic-info'"
+    :tabs="detailHeaderTabs"
+    tabs-aria-label="客户详情页面切换"
     @back="goBack"
+    @tab-click="activeTab = $event as CustomerDetailTab"
   >
-    <template #headerBottom>
-      <div class="flex min-w-0 flex-wrap items-end gap-x-6 gap-y-3 border-b border-border text-muted-foreground">
-        <nav class="flex min-w-0 flex-[999_1_24rem] flex-wrap items-center text-[14px]" aria-label="客户详情页面切换">
-          <button
-            v-for="tab in detailHeaderTabs"
-            :key="tab.id"
-            type="button"
-            :aria-pressed="tab.active"
-            :class="[
-              'group relative px-3 pb-[11px] text-muted-foreground transition-colors hover:text-foreground',
-              tab.active ? 'font-semibold text-foreground' : '',
-            ]"
-            @click="activeTab = tab.id as CustomerDetailTab"
-          >
-            <span class="relative isolate inline-block">
-              <span class="pointer-events-none absolute -inset-x-2 -inset-y-1 rounded-md transition-colors group-hover:bg-surface-tertiary" />
-              <span class="relative z-10">{{ tab.label }}</span>
-            </span>
-            <span
-              v-if="tab.active"
-              class="absolute inset-x-0 bottom-0 h-0.5 bg-foreground"
-            />
-          </button>
-        </nav>
-
-        <div class="flex min-w-0 flex-[1_1_100%] flex-wrap items-center justify-end gap-2 pb-2 sm:flex-[0_0_auto] sm:flex-nowrap">
-          <AlertDialog>
-            <AlertDialogTrigger as-child>
-              <Button
-                variant="outline"
-                size="sm"
-                class="border-destructive/30 bg-background font-medium text-destructive shadow-none hover:bg-destructive/5 hover:text-destructive"
-              >
-                删除用户
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>确认删除当前用户？</AlertDialogTitle>
-                <AlertDialogDescription>
-                  删除后将无法恢复，该操作会移除当前客户资料。
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel :disabled="deleteSubmitting">
-                  取消
-                </AlertDialogCancel>
-                <AlertDialogAction
-                  :disabled="deleteSubmitting"
-                  class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                  @click="handleDeleteCustomer"
-                >
-                  {{ deleteSubmitting ? "删除中..." : "确认删除" }}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+    <template #actions>
+      <AlertDialog>
+        <AlertDialogTrigger as-child>
           <Button
             variant="outline"
             size="sm"
-            class="border-border/80 bg-background font-medium text-foreground shadow-none"
-            @click="goToCreatePark"
+            class="border-destructive/30 bg-background font-medium text-destructive shadow-none hover:bg-destructive/5 hover:text-destructive"
           >
-            添加园区
+            删除用户
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            class="border-border/80 bg-background font-medium text-foreground shadow-none"
-            @click="goToCustomerEdit"
-          >
-            修改客户信息
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            class="border-border/80 bg-background font-medium text-foreground shadow-none"
-            @click="goBack"
-          >
-            返回客户列表
-          </Button>
-        </div>
-      </div>
+        </AlertDialogTrigger>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认删除当前用户？</AlertDialogTitle>
+            <AlertDialogDescription>
+              删除后将无法恢复，该操作会移除当前客户资料。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel :disabled="deleteSubmitting">
+              取消
+            </AlertDialogCancel>
+            <AlertDialogAction
+              :disabled="deleteSubmitting"
+              class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              @click="handleDeleteCustomer"
+            >
+              {{ deleteSubmitting ? "删除中..." : "确认删除" }}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <Button
+        variant="outline"
+        size="sm"
+        class="border-border/80 bg-background font-medium text-foreground shadow-none"
+        @click="goToCreatePark"
+      >
+        添加园区
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        class="border-border/80 bg-background font-medium text-foreground shadow-none"
+        @click="goToCustomerEdit"
+      >
+        修改客户信息
+      </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        class="border-border/80 bg-background font-medium text-foreground shadow-none"
+        @click="goBack"
+      >
+        返回客户列表
+      </Button>
     </template>
 
     <template #primary>
