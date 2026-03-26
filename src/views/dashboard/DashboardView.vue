@@ -1102,7 +1102,7 @@ function hashText(value: string) {
                   正在加载建筑排行
                 </div>
 
-                <div v-else-if="activeBuildingList.length" class="flex-1 min-h-0 overflow-y-auto pr-1">
+                <div v-else-if="activeBuildingList.length" class="flex-1 min-h-0 overflow-y-auto">
                   <button
                     v-for="(building, index) in activeBuildingList"
                     :key="building.id"
