@@ -21,6 +21,10 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import SectionHeader from "@/components/layout/SectionHeader.vue"
+import TablePage from "@/components/table-page/TablePage.vue"
+import { createTablePageDefinition, useTablePage } from "@/components/table-page/useTablePage"
+import type { TablePageSchema } from "@/components/table-page/types"
 import { detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
 import DetailLayout from "@/layouts/DetailLayout.vue"
 import { handleApiError } from "@/lib/api-errors"
@@ -57,6 +61,44 @@ type MaintenanceRecordRow = {
   updatedAt: string
 }
 
+type CustomerBuildingAssetRow = {
+  id: string
+  uuid: string
+  parkUuid: string
+  customerUuid: string
+  parkName: string
+  buildingName: string
+  address: string
+  builtTime: string
+  operationTime: string
+  buildingArea: string
+  contactName: string
+  contactPhone: string
+  statusValue: number
+  statusLabel: string
+  updatedAt: string
+}
+
+type CustomerWorkOrderRow = {
+  id: string
+  uuid: string
+  orderNo: string
+  planName: string
+  packageName: string
+  customerName: string
+  deadline: string
+  executor: string
+  statusValue: number | null
+  statusLabel: string
+  score: number | null
+  scoreLabel: string
+  resultValue: number | null
+  resultLabel: string
+  remark: string
+  createdAt: string
+  updatedAt: string
+}
+
 type CustomerPackageMockRecord = {
   name: string
   packageName: string
@@ -80,6 +122,11 @@ const deleteSubmitting = ref(false)
 const relationsLoading = ref(false)
 const relationErrorMessage = ref("")
 const parkBuildingGroups = ref<ParkBuildingGroup[]>([])
+const buildingAssets = ref<CustomerBuildingAssetRow[]>([])
+const workOrders = ref<CustomerWorkOrderRow[]>([])
+const workOrdersPageNum = ref(1)
+const workOrdersPageSize = ref(10)
+const workOrdersTotal = ref(0)
 const parkDetailSheetOpen = ref(false)
 const parkDetailLoading = ref(false)
 const parkDetailErrorMessage = ref("")
@@ -107,6 +154,12 @@ const detailHeaderTabs = computed(() => detailTabs.value.map(tab => ({
   ...tab,
   active: activeTab.value === tab.id,
 })))
+const isFullWidthTableTab = computed(() => activeTab.value === "building-assets" || activeTab.value === "work-orders")
+const pagedWorkOrders = computed(() => {
+  const start = (workOrdersPageNum.value - 1) * workOrdersPageSize.value
+  const end = start + workOrdersPageSize.value
+  return workOrders.value.slice(start, end)
+})
 
 const fieldSections = computed<DetailFieldSection[]>(() => {
   const current = customer.value
@@ -193,6 +246,326 @@ const maintenanceModule = computed<DetailRelationModuleSchema<MaintenanceRecordR
   }
 })
 
+const buildingAssetsSchema: TablePageSchema<CustomerBuildingAssetRow> = {
+  title: "",
+  description: "",
+  rowKey: "id",
+  data: [],
+  showIndex: true,
+  stickyHeader: true,
+  wrapperClass: "rounded-none border-0 shadow-none",
+  emptyState: {
+    title: "暂无建筑资产数据",
+    description: "当前客户下暂无可展示的园区和建筑资产。",
+    icon: "ri-building-2-line",
+  },
+  rowActions: [
+    {
+      key: "view-building",
+      label: "查看建筑详情",
+      onClick: () => {
+        toast.info("建筑资产详情接口暂未接入")
+      },
+    },
+    {
+      key: "view-park",
+      label: "查看园区详情",
+      onClick: () => {
+        toast.info("园区详情接口暂未接入")
+      },
+    },
+    {
+      key: "edit-park",
+      label: "编辑园区",
+      onClick: () => {
+        toast.info("园区编辑接口暂未接入")
+      },
+    },
+  ],
+  columns: [
+    {
+      key: "buildingName",
+      label: "建筑名称",
+      filterType: "text",
+      emphasis: "strong",
+      tone: "primary",
+      filter: {
+        type: "text",
+        placeholder: "输入建筑名称",
+        defaultVisible: true,
+      },
+      sort: true,
+    },
+    {
+      key: "parkName",
+      label: "所属园区",
+      filterType: "text",
+      filter: {
+        type: "text",
+        placeholder: "输入园区名称",
+        defaultVisible: true,
+      },
+      sort: true,
+    },
+    {
+      key: "address",
+      label: "地址",
+      filterType: "text",
+      width: "fill",
+      variant: "note",
+      format: "note",
+      tone: "muted",
+      cellRenderer: { kind: "note" },
+      filter: {
+        type: "text",
+        placeholder: "输入地址",
+      },
+      sort: true,
+    },
+    {
+      key: "contactName",
+      label: "联系人",
+      filterType: "contact",
+      variant: "contact",
+      cellRenderer: {
+        kind: "dual-stack",
+        primaryKey: "contactName",
+        secondaryKey: "contactPhone",
+      },
+      filter: {
+        type: "text",
+        placeholder: "输入联系人或电话",
+        value: row => `${row.contactName} ${row.contactPhone}`,
+      },
+      sort: {
+        label: "联系人",
+        value: row => row.contactName,
+      },
+    },
+    {
+      key: "buildingArea",
+      label: "建筑面积",
+      filterType: "text",
+      filter: {
+        type: "text",
+        placeholder: "输入建筑面积",
+      },
+      sort: true,
+    },
+    {
+      key: "statusLabel",
+      label: "状态",
+      filterType: "tag",
+      filter: {
+        type: "tag",
+        defaultVisible: true,
+      },
+      sort: {
+        label: "状态",
+        kind: "metric",
+        value: row => row.statusValue,
+      },
+    },
+    {
+      key: "updatedAt",
+      label: "更新时间",
+      filterType: "time",
+      format: "numeric",
+      filter: {
+        type: "date",
+        value: row => extractDatePart(row.updatedAt),
+      },
+      sort: true,
+    },
+  ],
+  filters: [
+    {
+      key: "在页面中",
+      label: "在页面中",
+      type: "text",
+      fixed: true,
+      placeholder: "输入页面内筛选条件",
+      value: row => buildBuildingAssetsFilterText(row),
+    },
+  ],
+  sort: {
+    storageKey: "customer-detail-building-assets-sort-preferences",
+    initialField: "updatedAt",
+    initialDirection: "desc",
+  },
+  tabs: {
+    mode: "none",
+  },
+}
+
+const workOrdersSchema: TablePageSchema<CustomerWorkOrderRow> = {
+  title: "",
+  description: "",
+  rowKey: "uuid",
+  data: [],
+  showIndex: true,
+  stickyHeader: true,
+  wrapperClass: "rounded-none border-0 shadow-none",
+  emptyState: {
+    title: "暂无工单数据",
+    description: "当前客户下暂无可展示的工单。",
+    icon: "ri-file-list-3-line",
+  },
+  columns: [
+    {
+      key: "orderNo",
+      label: "工单编号",
+      filterType: "text",
+      emphasis: "strong",
+      tone: "primary",
+      filter: {
+        type: "text",
+        placeholder: "输入工单编号",
+        defaultVisible: true,
+      },
+      sort: true,
+    },
+    {
+      key: "planName",
+      label: "计划名称",
+      filterType: "text",
+      filter: {
+        type: "text",
+        placeholder: "输入计划名称",
+        defaultVisible: true,
+      },
+      sort: true,
+    },
+    {
+      key: "packageName",
+      label: "套餐名称",
+      filterType: "text",
+      filter: {
+        type: "text",
+        placeholder: "输入套餐名称",
+      },
+      sort: true,
+    },
+    {
+      key: "deadline",
+      label: "截止时间",
+      filterType: "time",
+      format: "numeric",
+      filter: {
+        type: "date",
+        defaultVisible: true,
+        value: row => extractDatePart(row.deadline),
+      },
+      sort: true,
+    },
+    {
+      key: "executor",
+      label: "执行人",
+      filterType: "text",
+      filter: {
+        type: "text",
+        placeholder: "输入执行人",
+      },
+      sort: true,
+    },
+    {
+      key: "statusLabel",
+      label: "状态",
+      filterType: "tag",
+      filter: {
+        type: "tag",
+        defaultVisible: true,
+      },
+      sort: {
+        label: "状态",
+        kind: "metric",
+        value: row => row.statusValue ?? -1,
+      },
+    },
+    {
+      key: "scoreLabel",
+      label: "评分",
+      filterType: "number",
+      format: "numeric",
+      filter: {
+        type: "number",
+        defaultVisible: true,
+        value: row => row.score ?? -1,
+      },
+      sort: {
+        label: "评分",
+        kind: "metric",
+        value: row => row.score ?? -1,
+      },
+    },
+    {
+      key: "resultLabel",
+      label: "结果",
+      filterType: "tag",
+      filter: {
+        type: "tag",
+        defaultVisible: true,
+      },
+      sort: {
+        label: "结果",
+        kind: "metric",
+        value: row => row.resultValue ?? -1,
+      },
+    },
+    {
+      key: "updatedAt",
+      label: "更新时间",
+      filterType: "time",
+      format: "numeric",
+      filter: {
+        type: "date",
+        value: row => extractDatePart(row.updatedAt),
+      },
+      sort: true,
+    },
+    {
+      key: "remark",
+      label: "备注",
+      filterType: "none",
+      variant: "note",
+      format: "note",
+      tone: "muted",
+      width: "fill",
+      cellRenderer: { kind: "note" },
+    },
+  ],
+  filters: [
+    {
+      key: "在页面中",
+      label: "在页面中",
+      type: "text",
+      fixed: true,
+      placeholder: "输入页面内筛选条件",
+      value: row => buildWorkOrdersFilterText(row),
+    },
+  ],
+  sort: {
+    storageKey: "customer-detail-work-orders-sort-preferences",
+    initialField: "updatedAt",
+    initialDirection: "desc",
+  },
+  tabs: {
+    mode: "enum",
+    all: { label: "全部", value: "all" },
+    field: "statusLabel",
+  },
+}
+
+const buildingAssetsPage = useTablePage({
+  ...createTablePageDefinition(buildingAssetsSchema),
+  rows: buildingAssets,
+})
+
+const workOrdersPage = useTablePage({
+  ...createTablePageDefinition(workOrdersSchema),
+  rows: pagedWorkOrders,
+})
+
 const parkDetailSheetSections = computed<DetailFieldSection[]>(() => {
   const current = activeParkDetail.value
 
@@ -218,13 +591,23 @@ const parkDetailSheetSections = computed<DetailFieldSection[]>(() => {
 
 watch(customer, (current) => {
   detailBreadcrumbTitle.value = current?.CorpName?.trim() || null
+  buildingAssets.value = current ? buildMockBuildingAssets(current) : []
+  workOrders.value = current ? buildMockWorkOrders(current) : []
+  workOrdersTotal.value = workOrders.value.length
 })
 
 watch(customerUuid, (uuid) => {
   activeTab.value = "basic-info"
+  workOrders.value = []
+  workOrdersTotal.value = 0
+  workOrdersPageNum.value = 1
   void loadCustomerDetail(uuid)
   void loadParkBuildings(uuid)
 }, { immediate: true })
+
+watch(workOrdersPageSize, () => {
+  workOrdersPageNum.value = 1
+})
 
 onUnmounted(() => {
   detailBreadcrumbTitle.value = null
@@ -666,6 +1049,246 @@ function buildMaintenanceGroups(current: CustomerDetailResult) {
   ].filter(group => group.rows.length)
 }
 
+function extractDatePart(value: string) {
+  const [datePart] = value.split(" ")
+  return datePart ?? ""
+}
+
+function buildBuildingAssetsFilterText(row: CustomerBuildingAssetRow) {
+  return [
+    row.buildingName,
+    row.parkName,
+    row.address,
+    row.builtTime,
+    row.operationTime,
+    row.buildingArea,
+    row.contactName,
+    row.contactPhone,
+    row.statusLabel,
+    row.updatedAt,
+  ].join(" ")
+}
+
+function buildWorkOrdersFilterText(row: CustomerWorkOrderRow) {
+  return [
+    row.orderNo,
+    row.planName,
+    row.packageName,
+    row.customerName,
+    row.deadline,
+    row.executor,
+    row.statusLabel,
+    row.scoreLabel,
+    row.resultLabel,
+    row.remark,
+    row.createdAt,
+    row.updatedAt,
+  ].join(" ")
+}
+
+function formatWorkOrderStatus(status: number | null) {
+  if (status === null) {
+    return "未知状态"
+  }
+
+  switch (status) {
+    case 1:
+      return "待指派"
+    case 2:
+      return "待开始"
+    case 3:
+      return "进行中"
+    case 4:
+      return "报告生成中"
+    case 5:
+      return "已结单"
+    default:
+      return `状态 ${status}`
+  }
+}
+
+function formatWorkOrderResult(result: number | null) {
+  if (result === null) {
+    return "未反馈"
+  }
+
+  switch (result) {
+    case 0:
+      return "未反馈"
+    case 1:
+      return "正常"
+    case 2:
+      return "异常"
+    case 3:
+      return "已驳回"
+    default:
+      return `结果 ${result}`
+  }
+}
+
+function formatWorkOrderScore(score: number | null) {
+  if (score === null) {
+    return "-"
+  }
+
+  return String(score)
+}
+
+function buildMockBuildingAssets(current: CustomerDetailResult): CustomerBuildingAssetRow[] {
+  const customerName = toDisplayText(current.CorpName, "当前客户")
+  const customerId = customerUuid.value || "customer"
+  const address = toDisplayText(current.Address, `${customerName} 园区`)
+
+  return [
+    {
+      id: `${customerId}-asset-1`,
+      uuid: `${customerId}-asset-1`,
+      parkUuid: `${customerId}-park-a`,
+      customerUuid: customerId,
+      parkName: "东区园区",
+      buildingName: "1 号楼",
+      address: `${address} / 东区园区 1 号楼`,
+      builtTime: "2019-03-18",
+      operationTime: "2019-06-01",
+      buildingArea: "12800 m2",
+      contactName: "王工",
+      contactPhone: "138-0000-1001",
+      statusValue: 1,
+      statusLabel: "一切正常",
+      updatedAt: "2026-03-24 09:30",
+    },
+    {
+      id: `${customerId}-asset-2`,
+      uuid: `${customerId}-asset-2`,
+      parkUuid: `${customerId}-park-a`,
+      customerUuid: customerId,
+      parkName: "东区园区",
+      buildingName: "2 号楼",
+      address: `${address} / 东区园区 2 号楼`,
+      builtTime: "2020-05-12",
+      operationTime: "2020-09-20",
+      buildingArea: "9300 m2",
+      contactName: "李敏",
+      contactPhone: "138-0000-1002",
+      statusValue: 2,
+      statusLabel: "需重点关注",
+      updatedAt: "2026-03-25 14:10",
+    },
+    {
+      id: `${customerId}-asset-3`,
+      uuid: `${customerId}-asset-3`,
+      parkUuid: `${customerId}-park-b`,
+      customerUuid: customerId,
+      parkName: "西区园区",
+      buildingName: "综合楼",
+      address: `${address} / 西区园区 综合楼`,
+      builtTime: "2018-11-08",
+      operationTime: "2019-01-15",
+      buildingArea: "15600 m2",
+      contactName: "赵峰",
+      contactPhone: "138-0000-1003",
+      statusValue: 3,
+      statusLabel: "存在风险",
+      updatedAt: "2026-03-26 11:45",
+    },
+    {
+      id: `${customerId}-asset-4`,
+      uuid: `${customerId}-asset-4`,
+      parkUuid: `${customerId}-park-b`,
+      customerUuid: customerId,
+      parkName: "西区园区",
+      buildingName: "地下车库",
+      address: `${address} / 西区园区 地下车库`,
+      builtTime: "2018-11-08",
+      operationTime: "2019-01-15",
+      buildingArea: "8400 m2",
+      contactName: "陈杰",
+      contactPhone: "138-0000-1004",
+      statusValue: 1,
+      statusLabel: "一切正常",
+      updatedAt: "2026-03-23 18:20",
+    },
+  ]
+}
+
+function buildMockWorkOrders(current: CustomerDetailResult): CustomerWorkOrderRow[] {
+  const customerName = toDisplayText(current.CorpName, "当前客户")
+  const packageInfo = getCustomerPackageMockRecord(current)
+  const packageName = packageInfo?.packageName ?? "消防巡检标准套餐"
+  const customerId = customerUuid.value || "customer"
+
+  return [
+    createMockWorkOrder(customerId, 1, customerName, packageName, "消防泵房月检", "王工", 1, 82, 1, "待客户安排进场时间。", "2026-03-19 10:20"),
+    createMockWorkOrder(customerId, 2, customerName, packageName, "配电室温感排查", "刘洋", 2, 88, 1, "已完成首轮排查，等待复核。", "2026-03-20 15:40"),
+    createMockWorkOrder(customerId, 3, customerName, packageName, "电梯机房巡检", "陈峰", 3, 91, 1, "运行中发现轻微异响，持续观察。", "2026-03-21 09:15"),
+    createMockWorkOrder(customerId, 4, customerName, packageName, "排烟系统复检", "赵敏", 5, 95, 1, "复检通过。", "2026-03-22 11:05"),
+    createMockWorkOrder(customerId, 5, customerName, packageName, "应急照明抽检", "李凯", 4, 79, 2, "报告生成中，存在局部异常。", "2026-03-23 16:50"),
+    createMockWorkOrder(customerId, 6, customerName, packageName, "消防栓水压测试", "孙涛", 5, 97, 1, "数据正常，已结单。", "2026-03-24 08:30"),
+    createMockWorkOrder(customerId, 7, customerName, packageName, "疏散指示灯巡检", "王工", 2, 84, 1, "等待夜间联调。", "2026-03-24 17:40"),
+    createMockWorkOrder(customerId, 8, customerName, packageName, "喷淋系统抽检", "刘洋", 3, 86, 2, "局部点位需二次确认。", "2026-03-25 13:10"),
+    createMockWorkOrder(customerId, 9, customerName, packageName, "防火门闭门器检查", "陈峰", 1, null, 0, "待派单。", "2026-03-25 19:25"),
+    createMockWorkOrder(customerId, 10, customerName, packageName, "联动控制柜核验", "赵敏", 4, 90, 1, "等待报告归档。", "2026-03-26 09:00"),
+    createMockWorkOrder(customerId, 11, customerName, packageName, "末端试水装置检查", "李凯", 5, 93, 1, "已完成。", "2026-03-26 15:35"),
+    createMockWorkOrder(customerId, 12, customerName, packageName, "火灾报警主机巡检", "孙涛", 3, 87, 2, "告警日志需继续排查。", "2026-03-27 10:55"),
+  ]
+}
+
+function createMockWorkOrder(
+  customerId: string,
+  index: number,
+  customerName: string,
+  packageName: string,
+  planName: string,
+  executor: string,
+  statusValue: number | null,
+  score: number | null,
+  resultValue: number | null,
+  remark: string,
+  updatedAt: string,
+): CustomerWorkOrderRow {
+  const orderNo = `WO-${customerId.slice(0, 6).toUpperCase()}-${String(index).padStart(4, "0")}`
+  const createdAt = shiftDateTime(updatedAt, -2)
+  const deadline = shiftDateTime(updatedAt, 3)
+
+  return {
+    id: `${customerId}-work-order-${index}`,
+    uuid: `${customerId}-work-order-${index}`,
+    orderNo,
+    planName,
+    packageName,
+    customerName,
+    deadline,
+    executor,
+    statusValue,
+    statusLabel: formatWorkOrderStatus(statusValue),
+    score,
+    scoreLabel: formatWorkOrderScore(score),
+    resultValue,
+    resultLabel: formatWorkOrderResult(resultValue),
+    remark,
+    createdAt,
+    updatedAt,
+  }
+}
+
+function shiftDateTime(value: string, offsetDays: number) {
+  const date = new Date(value.replace(" ", "T"))
+
+  if (Number.isNaN(date.getTime())) {
+    return value
+  }
+
+  date.setDate(date.getDate() + offsetDays)
+
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  const day = String(date.getDate()).padStart(2, "0")
+  const hours = String(date.getHours()).padStart(2, "0")
+  const minutes = String(date.getMinutes()).padStart(2, "0")
+
+  return `${year}-${month}-${day} ${hours}:${minutes}`
+}
+
 function normalizeBuildingRow(building: BuildingListItem, park: ParkListItem, index: number): BuildingRow {
   const parkUuid = toDisplayText(park.Uuid, "park")
 
@@ -752,7 +1375,143 @@ function toDisplayText(value: unknown, fallback = "未填写") {
 </script>
 
 <template>
+  <section
+    v-if="customer && isFullWidthTableTab"
+    class="detail-layout mx-auto flex min-h-0 w-full max-w-[1440px] min-w-0 flex-1 flex-col px-0 sm:px-4 xl:px-8"
+  >
+    <div class="sticky top-0 z-10 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80 sm:-mx-4">
+      <div class="px-4 pt-5">
+        <SectionHeader :title="pageTitle" :subtitle="pageSubtitle" />
+
+        <div class="mt-4 flex min-w-0 flex-wrap items-end gap-x-6 gap-y-3 border-b border-border text-muted-foreground">
+          <nav class="flex min-w-0 flex-[999_1_24rem] flex-wrap items-center text-[14px]" aria-label="客户详情页面切换">
+            <button
+              v-for="tab in detailHeaderTabs"
+              :key="tab.id"
+              type="button"
+              :aria-pressed="tab.active"
+              :class="[
+                'group relative px-3 pb-[11px] text-muted-foreground transition-colors hover:text-foreground',
+                tab.active ? 'font-semibold text-foreground' : '',
+              ]"
+              @click="activeTab = tab.id as CustomerDetailTab"
+            >
+              <span class="relative isolate inline-block">
+                <span class="pointer-events-none absolute -inset-x-2 -inset-y-1 rounded-md transition-colors group-hover:bg-surface-tertiary" />
+                <span class="relative z-10">{{ tab.label }}</span>
+              </span>
+              <span
+                v-if="tab.active"
+                class="absolute inset-x-0 bottom-0 h-0.5 bg-foreground"
+              />
+            </button>
+          </nav>
+
+          <div class="flex min-w-0 flex-[1_1_100%] flex-wrap items-center justify-end gap-2 pb-2 sm:flex-[0_0_auto] sm:flex-nowrap">
+            <AlertDialog>
+              <AlertDialogTrigger as-child>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  class="border-destructive/30 bg-background font-medium text-destructive shadow-none hover:bg-destructive/5 hover:text-destructive"
+                >
+                  删除用户
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>确认删除当前用户？</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    删除后将无法恢复，该操作会移除当前客户资料。
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel :disabled="deleteSubmitting">
+                    取消
+                  </AlertDialogCancel>
+                  <AlertDialogAction
+                    :disabled="deleteSubmitting"
+                    class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    @click="handleDeleteCustomer"
+                  >
+                    {{ deleteSubmitting ? "删除中..." : "确认删除" }}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+            <Button
+              variant="outline"
+              size="sm"
+              class="border-border/80 bg-background font-medium text-foreground shadow-none"
+              @click="goToCreatePark"
+            >
+              添加园区
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              class="border-border/80 bg-background font-medium text-foreground shadow-none"
+              @click="goToCustomerEdit"
+            >
+              修改客户信息
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              class="border-border/80 bg-background font-medium text-foreground shadow-none"
+              @click="goBack"
+            >
+              返回客户列表
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex min-h-0 flex-1 flex-col">
+      <Alert v-if="errorMessage" variant="destructive" class="mx-4 mb-5 sm:mx-0">
+        <AlertTitle>客户详情接口加载失败</AlertTitle>
+        <AlertDescription>{{ errorMessage }}</AlertDescription>
+      </Alert>
+
+      <div class="flex min-h-0 flex-1 flex-col gap-5">
+        <div v-if="activeTab === 'building-assets'" class="flex min-h-0 flex-1 flex-col">
+          <TablePage :page="buildingAssetsPage" class="-mt-3 sm:-mx-4 xl:-mx-8" />
+        </div>
+
+        <template v-else-if="activeTab === 'work-orders'">
+          <div class="flex min-h-0 flex-1 flex-col">
+            <TablePage :page="workOrdersPage" class="-mt-3 sm:-mx-4 xl:-mx-8" />
+          </div>
+
+          <div class="mt-auto flex items-center justify-end gap-3 px-4 pt-4 sm:px-0">
+            <span class="text-sm text-muted-foreground">
+              第 {{ workOrdersPageNum }} / {{ Math.max(1, Math.ceil(workOrdersTotal / workOrdersPageSize)) }} 页，共 {{ workOrdersTotal }} 条
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              :disabled="workOrdersPageNum <= 1"
+              @click="workOrdersPageNum -= 1"
+            >
+              上一页
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              :disabled="workOrdersPageNum >= Math.max(1, Math.ceil(workOrdersTotal / workOrdersPageSize))"
+              @click="workOrdersPageNum += 1"
+            >
+              下一页
+            </Button>
+          </div>
+        </template>
+      </div>
+    </div>
+  </section>
+
   <DetailLayout
+    v-else
     :title="pageTitle"
     :subtitle="pageSubtitle"
     :empty="isEmpty"
@@ -834,111 +1593,6 @@ function toDisplayText(value: unknown, fallback = "未填写") {
       <template v-else-if="customer">
         <div class="space-y-5 pb-5">
           <DetailFieldSections v-if="activeTab === 'basic-info'" :sections="fieldSections" />
-
-          <template v-else-if="activeTab === 'building-assets'">
-            <Alert v-if="relationErrorMessage" variant="destructive">
-              <AlertTitle>园区/建筑接口加载失败</AlertTitle>
-              <AlertDescription>{{ relationErrorMessage }}</AlertDescription>
-            </Alert>
-
-            <div
-              v-if="relationsLoading"
-              class="rounded-lg border border-border/70 px-4 py-5 text-sm text-muted-foreground"
-            >
-              正在获取园区和建筑列表数据。
-            </div>
-
-            <template v-else-if="parkBuildingGroups.length">
-              <DetailAccordionModule :schema="parkBuildingAccordion">
-                <template #item-actions="{ item }">
-                  <div class="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      class="h-8 rounded-md"
-                      @click="goToParkEdit(getGroupParkUuid(item), getGroupCustomerUuid(item))"
-                    >
-                      编辑园区
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      class="h-8 rounded-md"
-                      @click="goToParkDetail(getGroupParkUuid(item))"
-                    >
-                      查看详情
-                    </Button>
-                  </div>
-                </template>
-
-                <template #expanded-content="{ item }">
-                  <DetailFieldSections :sections="getItemDetails(item)" compact />
-
-                  <div v-if="getItemBuildingModule(item)">
-                    <DetailRelationModule :schema="getItemBuildingModule(item)!">
-                      <template #building-status-cell="{ row }">
-                        <div class="flex min-w-0 items-center gap-2 text-foreground">
-                          <i
-                            :class="[
-                              'text-[18px]',
-                              row.status === '存在风险'
-                                ? 'ri-close-circle-fill text-[#EF4444]'
-                                : row.status === '需重点关注'
-                                  ? 'ri-time-fill text-[#F97316]'
-                                  : 'ri-checkbox-circle-fill text-[#22C55E]',
-                            ]"
-                          />
-                          <span class="truncate">{{ row.name }}</span>
-                        </div>
-                      </template>
-
-                      <template #building-action-cell="{ row }">
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          class="h-7 w-7 rounded-md text-muted-foreground hover:text-foreground"
-                          @click="goToBuildingDetail(getRowUuid(row), getRowParkUuid(row))"
-                        >
-                          <i class="ri-more-line text-[18px]" />
-                        </Button>
-                      </template>
-                    </DetailRelationModule>
-                  </div>
-                </template>
-              </DetailAccordionModule>
-            </template>
-
-            <div
-              v-else
-              class="rounded-lg border border-border/70 px-4 py-5 text-sm text-muted-foreground"
-            >
-              暂无园区和建筑数据。
-            </div>
-          </template>
-
-          <DetailRelationModule v-else-if="activeTab === 'work-orders'" :schema="maintenanceModule">
-            <template #maintenance-status-cell="{ row }">
-              <div class="flex min-w-0 items-center gap-2 text-foreground">
-                <i
-                  :class="[
-                    'text-[18px]',
-                    row.status === 'pending'
-                      ? 'ri-time-fill text-[#F59E0B]'
-                      : row.status === 'processing'
-                        ? 'ri-loader-4-line text-[#2563EB]'
-                        : 'ri-checkbox-circle-fill text-[#22C55E]',
-                  ]"
-                />
-                <span class="truncate">{{ row.location }}</span>
-              </div>
-            </template>
-
-            <template #maintenance-action-cell>
-              <Button variant="ghost" size="icon-sm" class="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground">
-                <i class="ri-more-line text-[18px]" />
-              </Button>
-            </template>
-          </DetailRelationModule>
 
           <section v-else-if="activeTab === 'monitoring'" class="space-y-3">
             <div class="rounded-xl border border-border/70 bg-muted/20 px-4 py-3">
