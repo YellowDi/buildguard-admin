@@ -76,7 +76,7 @@ function hasNamedSlot(name?: string) {
       <div class="detail-table-frame detail-relation-frame">
         <div class="detail-table-heading-row detail-table-grid detail-relation-grid detail-section-inset items-center">
           <div class="flex min-w-0 items-center gap-2">
-            <span class="shrink-0 whitespace-nowrap text-[15px] font-semibold leading-none text-foreground">{{ schema.title }}</span>
+            <h2 class="detail-field-section__heading shrink-0 whitespace-nowrap">{{ schema.title }}</h2>
             <Badge
               variant="secondary"
               class="min-w-6 justify-center rounded-md px-1.5 py-0.5 text-[12px] font-medium leading-none"

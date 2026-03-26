@@ -46,7 +46,7 @@ const hasExpandedContent = computed(() => Boolean(slots["expanded-content"]))
 <template>
   <section class="detail-accordion-module min-w-0">
     <div class="detail-section-heading-row detail-section-inset flex items-center gap-2 pb-3">
-      <h2 class="text-[15px] font-semibold leading-none text-foreground">{{ schema.title }}</h2>
+      <h2 class="detail-field-section__heading">{{ schema.title }}</h2>
       <Badge
         variant="secondary"
         class="min-w-6 justify-center rounded-md px-1.5 py-0.5 text-[12px] font-medium leading-none"
