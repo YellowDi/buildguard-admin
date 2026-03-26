@@ -21,7 +21,6 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
-import { Separator } from "@/components/ui/separator"
 import { detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
 import DetailLayout from "@/layouts/DetailLayout.vue"
 import { handleApiError } from "@/lib/api-errors"
@@ -68,12 +67,15 @@ type CustomerPackageMockRecord = {
   inspectionCycle: string
 }
 
+type CustomerDetailTab = "basic-info" | "building-assets" | "work-orders" | "monitoring" | "sub-accounts"
+
 const route = useRoute()
 const router = useRouter()
 
 const customer = ref<CustomerDetailResult | null>(null)
 const loading = ref(false)
 const errorMessage = ref("")
+const activeTab = ref<CustomerDetailTab>("basic-info")
 const deleteSubmitting = ref(false)
 const relationsLoading = ref(false)
 const relationErrorMessage = ref("")
@@ -94,6 +96,17 @@ const customerUuid = computed(() => {
 const pageTitle = computed(() => customer.value?.CorpName?.trim() || "客户详情")
 const pageSubtitle = computed(() => customer.value?.Business?.trim() || "")
 const isEmpty = computed(() => !loading.value && !customer.value)
+const detailTabs = computed(() => [
+  { id: "basic-info", label: "基本信息" },
+  { id: "building-assets", label: "建筑资产" },
+  { id: "work-orders", label: "工单列表" },
+  { id: "monitoring", label: "监控" },
+  { id: "sub-accounts", label: "子账号" },
+])
+const detailHeaderTabs = computed(() => detailTabs.value.map(tab => ({
+  ...tab,
+  active: activeTab.value === tab.id,
+})))
 
 const fieldSections = computed<DetailFieldSection[]>(() => {
   const current = customer.value
@@ -208,6 +221,7 @@ watch(customer, (current) => {
 })
 
 watch(customerUuid, (uuid) => {
+  activeTab.value = "basic-info"
   void loadCustomerDetail(uuid)
   void loadParkBuildings(uuid)
 }, { immediate: true })
@@ -743,65 +757,91 @@ function toDisplayText(value: unknown, fallback = "未填写") {
     :subtitle="pageSubtitle"
     :empty="isEmpty"
     empty-text="未找到该客户信息"
+    :secondary-visible="activeTab === 'basic-info'"
     @back="goBack"
   >
-    <template #actions>
-      <div class="flex items-center gap-1">
-        <AlertDialog>
-          <AlertDialogTrigger as-child>
-            <Button
-              variant="outline"
-              size="sm"
-              class="border-destructive/30 bg-background font-medium text-destructive shadow-none hover:bg-destructive/5 hover:text-destructive"
-            >
-              删除用户
-            </Button>
-          </AlertDialogTrigger>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>确认删除当前用户？</AlertDialogTitle>
-              <AlertDialogDescription>
-                删除后将无法恢复，该操作会移除当前客户资料。
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel :disabled="deleteSubmitting">
-                取消
-              </AlertDialogCancel>
-              <AlertDialogAction
-                :disabled="deleteSubmitting"
-                class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                @click="handleDeleteCustomer"
+    <template #headerBottom>
+      <div class="flex min-w-0 flex-wrap items-end gap-x-6 gap-y-3 border-b border-border text-muted-foreground">
+        <nav class="flex min-w-0 flex-[999_1_24rem] flex-wrap items-center text-[14px]" aria-label="客户详情页面切换">
+          <button
+            v-for="tab in detailHeaderTabs"
+            :key="tab.id"
+            type="button"
+            :aria-pressed="tab.active"
+            :class="[
+              'group relative px-3 pb-[11px] text-muted-foreground transition-colors hover:text-foreground',
+              tab.active ? 'font-semibold text-foreground' : '',
+            ]"
+            @click="activeTab = tab.id as CustomerDetailTab"
+          >
+            <span class="relative isolate inline-block">
+              <span class="pointer-events-none absolute -inset-x-2 -inset-y-1 rounded-md transition-colors group-hover:bg-surface-tertiary" />
+              <span class="relative z-10">{{ tab.label }}</span>
+            </span>
+            <span
+              v-if="tab.active"
+              class="absolute inset-x-0 bottom-0 h-0.5 bg-foreground"
+            />
+          </button>
+        </nav>
+
+        <div class="flex min-w-0 flex-[1_1_100%] flex-wrap items-center justify-end gap-2 pb-2 sm:flex-[0_0_auto] sm:flex-nowrap">
+          <AlertDialog>
+            <AlertDialogTrigger as-child>
+              <Button
+                variant="outline"
+                size="sm"
+                class="border-destructive/30 bg-background font-medium text-destructive shadow-none hover:bg-destructive/5 hover:text-destructive"
               >
-                {{ deleteSubmitting ? "删除中..." : "确认删除" }}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-        <Button
-          variant="outline"
-          size="sm"
-          class="border-border/80 bg-background font-medium text-foreground shadow-none"
-          @click="goToCreatePark"
-        >
-          添加园区
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          class="border-border/80 bg-background font-medium text-foreground shadow-none"
-          @click="goToCustomerEdit"
-        >
-          修改客户信息
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          class="border-border/80 bg-background font-medium text-foreground shadow-none"
-          @click="goBack"
-        >
-          返回客户列表
-        </Button>
+                删除用户
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>确认删除当前用户？</AlertDialogTitle>
+                <AlertDialogDescription>
+                  删除后将无法恢复，该操作会移除当前客户资料。
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel :disabled="deleteSubmitting">
+                  取消
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  :disabled="deleteSubmitting"
+                  class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  @click="handleDeleteCustomer"
+                >
+                  {{ deleteSubmitting ? "删除中..." : "确认删除" }}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+          <Button
+            variant="outline"
+            size="sm"
+            class="border-border/80 bg-background font-medium text-foreground shadow-none"
+            @click="goToCreatePark"
+          >
+            添加园区
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            class="border-border/80 bg-background font-medium text-foreground shadow-none"
+            @click="goToCustomerEdit"
+          >
+            修改客户信息
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            class="border-border/80 bg-background font-medium text-foreground shadow-none"
+            @click="goBack"
+          >
+            返回客户列表
+          </Button>
+        </div>
       </div>
     </template>
 
@@ -816,12 +856,147 @@ function toDisplayText(value: unknown, fallback = "未填写") {
       </div>
 
       <template v-else-if="customer">
-        <DetailFieldSections :sections="fieldSections" />
+        <div class="space-y-5 pb-5">
+          <DetailFieldSections v-if="activeTab === 'basic-info'" :sections="fieldSections" />
+
+          <template v-else-if="activeTab === 'building-assets'">
+            <Alert v-if="relationErrorMessage" variant="destructive">
+              <AlertTitle>园区/建筑接口加载失败</AlertTitle>
+              <AlertDescription>{{ relationErrorMessage }}</AlertDescription>
+            </Alert>
+
+            <div
+              v-if="relationsLoading"
+              class="rounded-lg border border-border/70 px-4 py-5 text-sm text-muted-foreground"
+            >
+              正在获取园区和建筑列表数据。
+            </div>
+
+            <template v-else-if="parkBuildingGroups.length">
+              <DetailAccordionModule :schema="parkBuildingAccordion">
+                <template #item-actions="{ item }">
+                  <div class="flex items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      class="h-8 rounded-md"
+                      @click="goToParkEdit(getGroupParkUuid(item), getGroupCustomerUuid(item))"
+                    >
+                      编辑园区
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      class="h-8 rounded-md"
+                      @click="goToParkDetail(getGroupParkUuid(item))"
+                    >
+                      查看详情
+                    </Button>
+                  </div>
+                </template>
+
+                <template #expanded-content="{ item }">
+                  <DetailFieldSections :sections="getItemDetails(item)" compact />
+
+                  <div v-if="getItemBuildingModule(item)">
+                    <DetailRelationModule :schema="getItemBuildingModule(item)!">
+                      <template #building-status-cell="{ row }">
+                        <div class="flex min-w-0 items-center gap-2 text-foreground">
+                          <i
+                            :class="[
+                              'text-[18px]',
+                              row.status === '存在风险'
+                                ? 'ri-close-circle-fill text-[#EF4444]'
+                                : row.status === '需重点关注'
+                                  ? 'ri-time-fill text-[#F97316]'
+                                  : 'ri-checkbox-circle-fill text-[#22C55E]',
+                            ]"
+                          />
+                          <span class="truncate">{{ row.name }}</span>
+                        </div>
+                      </template>
+
+                      <template #building-action-cell="{ row }">
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          class="h-7 w-7 rounded-md text-muted-foreground hover:text-foreground"
+                          @click="goToBuildingDetail(getRowUuid(row), getRowParkUuid(row))"
+                        >
+                          <i class="ri-more-line text-[18px]" />
+                        </Button>
+                      </template>
+                    </DetailRelationModule>
+                  </div>
+                </template>
+              </DetailAccordionModule>
+            </template>
+
+            <div
+              v-else
+              class="rounded-lg border border-border/70 px-4 py-5 text-sm text-muted-foreground"
+            >
+              暂无园区和建筑数据。
+            </div>
+          </template>
+
+          <DetailRelationModule v-else-if="activeTab === 'work-orders'" :schema="maintenanceModule">
+            <template #maintenance-status-cell="{ row }">
+              <div class="flex min-w-0 items-center gap-2 text-foreground">
+                <i
+                  :class="[
+                    'text-[18px]',
+                    row.status === 'pending'
+                      ? 'ri-time-fill text-[#F59E0B]'
+                      : row.status === 'processing'
+                        ? 'ri-loader-4-line text-[#2563EB]'
+                        : 'ri-checkbox-circle-fill text-[#22C55E]',
+                  ]"
+                />
+                <span class="truncate">{{ row.location }}</span>
+              </div>
+            </template>
+
+            <template #maintenance-action-cell>
+              <Button variant="ghost" size="icon-sm" class="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground">
+                <i class="ri-more-line text-[18px]" />
+              </Button>
+            </template>
+          </DetailRelationModule>
+
+          <section v-else-if="activeTab === 'monitoring'" class="space-y-3">
+            <div class="rounded-xl border border-border/70 bg-muted/20 px-4 py-3">
+              <div class="text-sm font-medium text-foreground">
+                监控模块待接入
+              </div>
+              <div class="mt-1 text-xs text-muted-foreground">
+                当前已预留客户监控页签，后续可接设备在线状态、告警汇总、监控画面和巡检联动信息。
+              </div>
+            </div>
+            <p class="text-sm leading-6 text-muted-foreground">
+              建议后续把实时监控和告警数据聚合在此处，避免继续堆叠到客户基本资料页。
+            </p>
+          </section>
+
+          <section v-else-if="activeTab === 'sub-accounts'" class="space-y-3">
+            <div class="rounded-xl border border-border/70 bg-muted/20 px-4 py-3">
+              <div class="text-sm font-medium text-foreground">
+                子账号模块待接入
+              </div>
+              <div class="mt-1 text-xs text-muted-foreground">
+                当前已预留客户子账号页签，后续可接成员列表、角色权限、启停状态和登录信息。
+              </div>
+            </div>
+            <p class="text-sm leading-6 text-muted-foreground">
+              仓库已有成员接口封装，但当前客户详情页缺少明确的客户维度绑定参数，先保留独立页签结构，避免误接错误数据。
+            </p>
+          </section>
+        </div>
       </template>
     </template>
 
     <template #secondary>
-      <template v-if="!loading && customer">
+      <template v-if="!loading && customer && activeTab === 'basic-info'">
         <div class="pb-5">
           <Alert v-if="relationErrorMessage" variant="destructive" class="mb-5">
             <AlertTitle>园区/建筑接口加载失败</AlertTitle>
@@ -902,7 +1077,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
             暂无园区和建筑数据。
           </div>
 
-          <Separator class="my-5 bg-border/80" />
+          <div class="my-5 h-px bg-border/80" />
 
           <DetailRelationModule :schema="maintenanceModule">
             <template #maintenance-status-cell="{ row }">
