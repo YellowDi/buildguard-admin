@@ -78,6 +78,7 @@ const stickyTableWidth = ref(0)
 const stickyScrollLeft = ref(0)
 const stickyColumnWidths = ref<number[]>([])
 const actionColumnWidth = ref(0)
+const actionRailRightInset = ref(0)
 const actionHeaderHeight = ref(41)
 const rowMetrics = ref<ActionRowMetric[]>([])
 const hoveredRowKey = ref<RowSelectionKey | null>(null)
@@ -111,6 +112,7 @@ const actionRailVisible = computed(() => (
   && rowMetrics.value.length > 0
 ))
 const actionHeaderRailVisible = computed(() => hasRowActions.value && actionColumnWidth.value > 0)
+const actionRailBoundaryMaskVisible = computed(() => hasRowActions.value && actionRailRightInset.value > 0)
 const isAtHorizontalEnd = computed(() => {
   if (!tableWrapperRef.value) {
     return false
@@ -119,30 +121,20 @@ const isAtHorizontalEnd = computed(() => {
   const maxScrollLeft = tableWrapperRef.value.scrollWidth - tableWrapperRef.value.clientWidth
   return maxScrollLeft <= 0 || stickyScrollLeft.value >= maxScrollLeft - 1
 })
-const actionRailTrailingSpace = computed(() => {
-  if (!horizontalOverflow.value) {
-    return 32
-  }
-
-  if (!tableWrapperRef.value) {
-    return 0
-  }
-
-  const releaseDistance = 64
-  const maxScrollLeft = tableWrapperRef.value.scrollWidth - tableWrapperRef.value.clientWidth
-  const remainingScroll = Math.max(0, maxScrollLeft - stickyScrollLeft.value)
-  const progress = Math.max(0, Math.min(1, (releaseDistance - remainingScroll) / releaseDistance))
-
-  return Math.round(progress * 32)
-})
+const actionRailTrailingSpace = computed(() => 0)
 const actionRailWidth = computed(() => actionColumnWidth.value + actionRailTrailingSpace.value)
 const actionRailHostStyle = computed(() => ({
   width: `${actionRailWidth.value}px`,
+  right: `${actionRailRightInset.value}px`,
 }))
 const actionHeaderRailStyle = computed(() => ({
   width: `${actionRailWidth.value}px`,
   height: `${actionHeaderHeight.value}px`,
   top: "0px",
+  right: `${actionRailRightInset.value}px`,
+}))
+const actionRailBoundaryMaskStyle = computed(() => ({
+  width: `${actionRailRightInset.value}px`,
 }))
 const stickyViewportStyle = computed(() => ({
   left: `${stickyHeaderLeft.value}px`,
@@ -402,6 +394,18 @@ function getActionRailSurfaceStyle() {
   }
 }
 
+function getActionColumnStyle() {
+  if (actionColumnWidth.value <= 0) {
+    return undefined
+  }
+
+  return {
+    width: `${actionColumnWidth.value}px`,
+    minWidth: `${actionColumnWidth.value}px`,
+    maxWidth: `${actionColumnWidth.value}px`,
+  }
+}
+
 function getActionRailSpacerStyle() {
   return {
     width: `${actionRailTrailingSpace.value}px`,
@@ -570,6 +574,7 @@ function clearStickyState() {
 
 function clearActionRailState() {
   actionColumnWidth.value = 0
+  actionRailRightInset.value = 0
   actionHeaderHeight.value = 41
   rowMetrics.value = []
 }
@@ -699,17 +704,30 @@ function syncActionRailState() {
     return
   }
 
+  const detailPrimary = tableShellRef.value.closest(".detail-layout__primary")
+  const shellRect = tableShellRef.value.getBoundingClientRect()
+  actionRailRightInset.value = detailPrimary instanceof HTMLElement
+    ? Math.max(0, Math.round(shellRect.right - detailPrimary.getBoundingClientRect().right))
+    : 0
+
   const bodyRows = Array.from(tableRef.value.querySelectorAll("tbody > tr"))
+  const actionSizerWidths = Array.from(tableRef.value.querySelectorAll("[data-table-action-sizer]")).map((element) => {
+    if (!(element instanceof HTMLElement)) {
+      return 0
+    }
+
+    return Math.ceil(Math.max(element.getBoundingClientRect().width, element.scrollWidth))
+  })
+  const measuredActionWidth = Math.max(72, ...actionSizerWidths)
   actionHeaderHeight.value = Math.round(actionHeaderCell.getBoundingClientRect().height) || 41
 
   if (!bodyRows.length) {
-    actionColumnWidth.value = Math.ceil(actionHeaderCell.getBoundingClientRect().width)
+    actionColumnWidth.value = measuredActionWidth
     rowMetrics.value = []
     return
   }
 
-  const shellRect = tableShellRef.value.getBoundingClientRect()
-  actionColumnWidth.value = Math.ceil(actionHeaderCell.getBoundingClientRect().width)
+  actionColumnWidth.value = measuredActionWidth
   rowMetrics.value = bodyRows.map((row, index) => {
     const rowElement = row as HTMLElement
     const rowRect = rowElement.getBoundingClientRect()
@@ -890,6 +908,12 @@ onBeforeUnmount(() => {
 <template>
   <div ref="tableShellRef" :class="wrapperClassName">
     <div
+      v-if="actionRailBoundaryMaskVisible"
+      class="pointer-events-none absolute inset-y-0 right-0 z-[24] bg-background"
+      :style="actionRailBoundaryMaskStyle"
+    />
+
+    <div
       v-if="actionHeaderRailVisible"
       :class="tableTheme.actionHeaderRailHost"
       :style="actionHeaderRailStyle"
@@ -949,7 +973,7 @@ onBeforeUnmount(() => {
             <th
               v-if="hasRowActions"
               :class="[tableTheme.actionHeader, tableTheme.actionHeaderSticky]"
-              :style="getStickyCellStyle(stickyColumnWidths.length - 2)"
+              :style="getActionColumnStyle() ?? getStickyCellStyle(stickyColumnWidths.length - 2)"
             />
             <th
               :class="tableTheme.endSpacerHeader"
@@ -1038,6 +1062,7 @@ onBeforeUnmount(() => {
           <th
             v-if="hasRowActions"
             :class="tableTheme.actionHeader"
+            :style="getActionColumnStyle()"
           />
           <th :class="tableTheme.endSpacerHeader" />
         </tr>
@@ -1187,8 +1212,9 @@ onBeforeUnmount(() => {
           <td
             v-if="hasRowActions"
             :class="getActionCellClass(row, index)"
+            :style="getActionColumnStyle()"
           >
-            <div aria-hidden="true" :class="tableTheme.actionSizer">
+            <div aria-hidden="true" :class="tableTheme.actionSizer" data-table-action-sizer>
               <Button
                 v-for="action in rowActions"
                 :key="`sizer-${action.key}`"
