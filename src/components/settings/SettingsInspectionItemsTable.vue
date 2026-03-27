@@ -7,7 +7,6 @@ import {
   AlertDescription,
   AlertTitle,
 } from "@/components/ui/alert"
-import TopTabSwitch from "@/components/layout/TopTabSwitch.vue"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -51,6 +50,20 @@ import {
 } from "@/lib/inspection-items-api"
 import { cn } from "@/lib/utils"
 
+const props = withDefaults(defineProps<{
+  hideCreateButton?: boolean
+  hideToolbar?: boolean
+  searchQuery?: string
+}>(), {
+  hideCreateButton: false,
+  hideToolbar: false,
+  searchQuery: undefined,
+})
+
+const emit = defineEmits<{
+  countChange: [count: number]
+}>()
+
 type InspectionItemRow = {
   id: number
   uuid: string
@@ -93,7 +106,6 @@ const loading = ref(false)
 const errorMessage = ref("")
 const searchExpanded = ref(false)
 const searchQuery = ref("")
-const activeCategoryTab = ref("all")
 const createDialogOpen = ref(false)
 const editDialogOpen = ref(false)
 const editingItemId = ref<number | null>(null)
@@ -143,45 +155,15 @@ const columns: TableColumn[] = [
   },
 ]
 
-const categoryTabs = computed(() => {
-  const grouped = new Map<string, number>()
-
-  for (const row of rows.value) {
-    const key = row.categoryName || "未分类"
-    grouped.set(key, (grouped.get(key) ?? 0) + 1)
-  }
-
-  return [
-    {
-      id: "all",
-      label: "全部",
-      badge: rows.value.length,
-    },
-    ...Array.from(grouped.entries())
-      .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0], "zh-Hans-CN"))
-      .map(([categoryName, count]) => ({
-        id: categoryName,
-        label: categoryName,
-        badge: count,
-      })),
-  ]
-})
-
 const categoryOptions = computed(() => inspectionCategories.value
   .filter(category => category.name && category.uuid)
   .sort((left, right) => left.name.localeCompare(right.name, "zh-Hans-CN")))
 
-const categoryFilteredRows = computed(() => {
-  if (activeCategoryTab.value === "all") {
-    return rows.value
-  }
-
-  return rows.value.filter(row => row.categoryName === activeCategoryTab.value)
-})
+const effectiveSearchQuery = computed(() => props.searchQuery ?? searchQuery.value)
 
 const filteredRows = computed(() => {
-  const query = searchQuery.value.trim().toLowerCase()
-  const scopedRows = categoryFilteredRows.value
+  const query = effectiveSearchQuery.value.trim().toLowerCase()
+  const scopedRows = rows.value
 
   if (!query) {
     return scopedRows
@@ -204,19 +186,11 @@ const tableEmptyState = computed<TablePageEmptyState>(() => {
     }
   }
 
-  if (searchQuery.value.trim()) {
+  if (effectiveSearchQuery.value.trim()) {
     return {
       title: "没有匹配的检测项",
-      description: "换个关键词试试，或切换其他分类胶囊。",
+      description: "换个关键词试试。",
       icon: "ri-search-line",
-    }
-  }
-
-  if (activeCategoryTab.value !== "all") {
-    return {
-      title: "当前分类下还没有检测项",
-      description: "切换其他分类，或在当前分类下新增检测项。",
-      icon: "ri-file-list-3-line",
     }
   }
 
@@ -241,7 +215,7 @@ async function loadInspectionItems() {
   try {
     const result = await fetchInspectionItems()
     rows.value = result.list.map((item, index) => normalizeInspectionItem(item, index))
-    ensureActiveCategoryTab()
+    emit("countChange", rows.value.length)
   } catch (error) {
     errorMessage.value = handleApiError(error, {
       title: "检测项接口加载失败",
@@ -296,14 +270,6 @@ async function refreshInspectionItemsPage() {
   ])
 }
 
-function ensureActiveCategoryTab() {
-  if (categoryTabs.value.some(tab => tab.id === activeCategoryTab.value)) {
-    return
-  }
-
-  activeCategoryTab.value = "all"
-}
-
 function openCreateDialog() {
   createForm.value = createInspectionItemForm()
   createDialogOpen.value = true
@@ -337,7 +303,7 @@ async function submitCreate() {
     }, rows.value.length)
 
     rows.value = [nextRow, ...rows.value]
-    activeCategoryTab.value = nextRow.categoryName || "all"
+    emit("countChange", rows.value.length)
     createDialogOpen.value = false
     toast.success("检测项已创建", {
       description: `${nextRow.name} 已加入当前列表。`,
@@ -419,7 +385,6 @@ async function submitEdit() {
       updatedAt: formatTimestamp(new Date().toISOString().slice(0, 19).replace("T", " ")),
     })
 
-    activeCategoryTab.value = currentRow.categoryName || "all"
     closeEditDialog()
     toast.success("检测项已更新", {
       description: `${currentRow.name} 的内容已保存。`,
@@ -453,7 +418,7 @@ async function confirmDeleteEditingItem() {
       Uuid: currentRow.uuid,
     })
     rows.value = rows.value.filter(row => row.id !== currentRow.id)
-    ensureActiveCategoryTab()
+    emit("countChange", rows.value.length)
     deleteConfirmOpen.value = false
     closeEditDialog()
     toast.success("检测项已删除", {
@@ -584,21 +549,17 @@ function formatTimestamp(value: string) {
 function asInspectionItemRow(row: Record<string, unknown>) {
   return row as InspectionItemRow
 }
+
+defineExpose({
+  openCreateDialog,
+  refreshData: refreshInspectionItemsPage,
+})
 </script>
 
 <template>
   <section class="space-y-5">
-    <div class="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-      <TopTabSwitch
-        :tabs="categoryTabs"
-        :model-value="activeCategoryTab"
-        :collapse-inactive="false"
-        tone="default"
-        aria-label="检测项分类切换"
-        @update:model-value="activeCategoryTab = $event"
-      />
-
-      <div class="flex flex-wrap items-center justify-end gap-2">
+    <div v-if="!props.hideToolbar" class="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+      <div class="flex items-center justify-end gap-2 overflow-x-auto">
         <div
           :class="
             cn(
@@ -617,7 +578,7 @@ function asInspectionItemRow(row: Record<string, unknown>) {
           <Input
             v-if="searchExpanded"
             v-model="searchQuery"
-            :placeholder="activeCategoryTab === 'all' ? '搜索检测项、分类、内容' : `搜索${activeCategoryTab}下的检测项`"
+            placeholder="搜索检测项、分类、内容"
             class="h-8 border-0 bg-transparent px-2 text-sm shadow-none focus-visible:border-transparent focus-visible:ring-0"
           />
         </div>
@@ -627,9 +588,9 @@ function asInspectionItemRow(row: Record<string, unknown>) {
           <span>刷新列表</span>
         </Button>
 
-        <Button class="h-8 gap-1 rounded-md px-3 text-[14px]" @click="openCreateDialog">
+        <Button v-if="!props.hideCreateButton" class="h-8 gap-1 rounded-md px-3 text-[14px]" @click="openCreateDialog">
           <i class="ri-add-line text-base" />
-          <span>新增检测项</span>
+          <span>添加检测项</span>
         </Button>
       </div>
     </div>

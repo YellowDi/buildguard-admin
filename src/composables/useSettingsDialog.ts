@@ -305,17 +305,7 @@ const categories = computed<SettingsCategory[]>(() => [
     description: "维护巡检检测项、分类、检测内容和判定标准。",
     icon: "ri-file-list-3-line",
     pageTitle: "检测项",
-    pageDescription: "维护巡检检测项、分类、检测内容和判定标准，新增和编辑均在当前浮窗内完成。",
-    sections: [],
-  },
-  {
-    key: "inspection-categories",
-    group: "feature",
-    label: "检测项分类",
-    description: "维护检测项分类基础数据。",
-    icon: "ri-table-line",
-    pageTitle: "检测项分类",
-    pageDescription: "查看并检索检测项分类列表，数据来自分类接口。",
+    pageDescription: "通过页签切换检测项、分类和模板，统一维护巡检基础数据。",
     sections: [],
   },
   {

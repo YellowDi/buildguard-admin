@@ -7,7 +7,6 @@ import {
   AlertDescription,
   AlertTitle,
 } from "@/components/ui/alert"
-import TopTabSwitch from "@/components/layout/TopTabSwitch.vue"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -39,6 +38,20 @@ import {
   updateInspectionCategory,
 } from "@/lib/inspection-categories-api"
 import { cn } from "@/lib/utils"
+
+const props = withDefaults(defineProps<{
+  hideCreateButton?: boolean
+  hideToolbar?: boolean
+  searchQuery?: string
+}>(), {
+  hideCreateButton: false,
+  hideToolbar: false,
+  searchQuery: undefined,
+})
+
+const emit = defineEmits<{
+  countChange: [count: number]
+}>()
 
 type InspectionCategoryRow = {
   id: number
@@ -111,16 +124,10 @@ const columns: TableColumn[] = [
   },
 ]
 
-const categoryTabs = computed(() => [
-  {
-    id: "all",
-    label: "全部",
-    badge: rows.value.length,
-  },
-])
+const effectiveSearchQuery = computed(() => props.searchQuery ?? searchQuery.value)
 
 const filteredRows = computed(() => {
-  const query = searchQuery.value.trim().toLowerCase()
+  const query = effectiveSearchQuery.value.trim().toLowerCase()
 
   if (!query) {
     return rows.value
@@ -143,7 +150,7 @@ const tableEmptyState = computed<TablePageEmptyState>(() => {
     }
   }
 
-  if (searchQuery.value.trim()) {
+  if (effectiveSearchQuery.value.trim()) {
     return {
       title: "没有匹配的分类",
       description: "换个关键词试试。",
@@ -169,6 +176,7 @@ async function loadInspectionCategories() {
   try {
     const result = await fetchInspectionCategories()
     rows.value = result.list.map((item, index) => normalizeInspectionCategory(item, index))
+    emit("countChange", rows.value.length)
   } catch (error) {
     errorMessage.value = handleApiError(error, {
       title: "检测项分类接口加载失败",
@@ -230,6 +238,7 @@ async function submitCreate() {
     }, rows.value.length)
 
     rows.value = [nextRow, ...rows.value]
+    emit("countChange", rows.value.length)
     createDialogOpen.value = false
     createForm.value = createInspectionCategoryForm()
     toast.success("检测项分类已创建", {
@@ -290,6 +299,7 @@ async function confirmDeleteEditingCategory() {
     })
 
     rows.value = rows.value.filter(row => row.id !== currentRow.id)
+    emit("countChange", rows.value.length)
     deleteConfirmOpen.value = false
     closeEditDialog()
     toast.success("检测项分类已删除", {
@@ -339,20 +349,17 @@ function toOptionalNumber(value: unknown) {
   const parsed = Number(value)
   return Number.isFinite(parsed) ? parsed : undefined
 }
+
+defineExpose({
+  openCreateDialog,
+  refreshData: loadInspectionCategories,
+})
 </script>
 
 <template>
   <section class="space-y-5">
-    <div class="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-      <TopTabSwitch
-        :tabs="categoryTabs"
-        model-value="all"
-        :collapse-inactive="false"
-        tone="default"
-        aria-label="检测项分类切换"
-      />
-
-      <div class="flex flex-wrap items-center justify-end gap-2">
+    <div v-if="!props.hideToolbar" class="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+      <div class="flex items-center justify-end gap-2 overflow-x-auto">
         <div
           :class="
             cn(
@@ -387,9 +394,9 @@ function toOptionalNumber(value: unknown) {
           <span>刷新列表</span>
         </Button>
 
-        <Button class="h-8 gap-1 rounded-md px-3 text-[14px]" @click="openCreateDialog">
+        <Button v-if="!props.hideCreateButton" class="h-8 gap-1 rounded-md px-3 text-[14px]" @click="openCreateDialog">
           <i class="ri-add-line text-base" />
-          <span>添加检测项分类</span>
+          <span>添加分类</span>
         </Button>
       </div>
     </div>
