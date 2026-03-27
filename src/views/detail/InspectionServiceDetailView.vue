@@ -35,6 +35,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
+import { useDetailRouteTab } from "@/composables/useDetailRouteTab"
 import DetailLayout from "@/layouts/DetailLayout.vue"
 import inspectionServiceWorkOrdersData from "@/mocks/inspection-service-work-orders.json"
 import { handleApiError } from "@/lib/api-errors"
@@ -118,10 +119,10 @@ type InspectionServiceWorkOrderItem = {
 
 const route = useRoute()
 const router = useRouter()
+const inspectionServiceDetailTabIds = ["overview", "plans", "work-orders"] as const
 const detail = ref<InspectionServiceDetailRecord | null>(null)
 const loading = ref(false)
 const errorMessage = ref("")
-const activeTab = ref<InspectionServiceDetailTab>("overview")
 const workOrders = ref<InspectionServiceWorkOrderRow[]>([])
 const workOrdersLoading = ref(false)
 const workOrdersErrorMessage = ref("")
@@ -135,6 +136,12 @@ let latestRequestId = 0
 let latestWorkOrdersRequestId = 0
 
 const inspectionServiceUuid = computed(() => typeof route.params.id === "string" ? route.params.id.trim() : "")
+const { activeTab, setActiveTab } = useDetailRouteTab<InspectionServiceDetailTab>({
+  route,
+  router,
+  tabs: inspectionServiceDetailTabIds,
+  defaultTab: "overview",
+})
 const detailTabs = computed(() => [
   { id: "overview", label: "基础信息" },
   { id: "plans", label: "检测计划" },
@@ -418,7 +425,6 @@ async function loadInspectionServiceDetail(uuid: string) {
     }
 
     detail.value = normalizeInspectionServiceDetail(response)
-    activeTab.value = "overview"
     errorMessage.value = ""
   } catch (error) {
     if (requestId !== latestRequestId) {
@@ -835,7 +841,7 @@ function getInspectionServiceWorkOrders() {
 
         <div class="mt-4 border-b border-border text-muted-foreground">
           <div class="flex items-center gap-2 pb-2 sm:hidden">
-            <Select :model-value="activeDetailTabId" @update:model-value="activeTab = $event as InspectionServiceDetailTab">
+            <Select :model-value="activeDetailTabId" @update:model-value="setActiveTab($event as InspectionServiceDetailTab)">
               <SelectTrigger class="h-9 min-w-0 flex-1 rounded-md bg-background text-[14px]">
                 <SelectValue placeholder="选择分页" />
               </SelectTrigger>
@@ -886,7 +892,7 @@ function getInspectionServiceWorkOrders() {
                 'group relative px-3 pb-[11px] text-muted-foreground transition-colors hover:text-foreground',
                 tab.active ? 'font-semibold text-foreground' : '',
               ]"
-              @click="activeTab = tab.id as InspectionServiceDetailTab"
+              @click="setActiveTab(tab.id as InspectionServiceDetailTab)"
             >
               <span class="relative isolate inline-block">
                 <span class="pointer-events-none absolute -inset-x-2 -inset-y-1 rounded-md transition-colors group-hover:bg-surface-tertiary" />
@@ -1020,7 +1026,7 @@ function getInspectionServiceWorkOrders() {
     :tabs="detailHeaderTabs"
     tabs-aria-label="检测服务详情页面切换"
     @back="goBack"
-    @tab-click="activeTab = $event as InspectionServiceDetailTab"
+    @tab-click="setActiveTab($event as InspectionServiceDetailTab)"
   >
     <template #primary>
       <Alert v-if="errorMessage" variant="destructive" class="mb-5">

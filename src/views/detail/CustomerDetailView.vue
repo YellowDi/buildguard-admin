@@ -34,6 +34,7 @@ import {
 } from "@/components/table-page/export-utils"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
+import { useDetailRouteTab } from "@/composables/useDetailRouteTab"
 import DetailLayout from "@/layouts/DetailLayout.vue"
 import { handleApiError } from "@/lib/api-errors"
 import { fetchBuildings, type BuildingListItem } from "@/lib/buildings-api"
@@ -130,11 +131,11 @@ type CustomerDetailTabActions = {
 
 const route = useRoute()
 const router = useRouter()
+const customerDetailTabIds = ["basic-info", "building-assets", "work-orders", "monitoring", "sub-accounts"] as const
 
 const customer = ref<CustomerDetailResult | null>(null)
 const loading = ref(false)
 const errorMessage = ref("")
-const activeTab = ref<CustomerDetailTab>("basic-info")
 const deleteSubmitting = ref(false)
 const deleteConfirmOpen = ref(false)
 const relationsLoading = ref(false)
@@ -160,16 +161,11 @@ const customerUuid = computed(() => {
   const value = route.params.id
   return typeof value === "string" ? value.trim() : ""
 })
-const requestedTab = computed<CustomerDetailTab | null>(() => {
-  const value = typeof route.query.tab === "string" ? route.query.tab.trim() : ""
-
-  return value === "basic-info"
-    || value === "building-assets"
-    || value === "work-orders"
-    || value === "monitoring"
-    || value === "sub-accounts"
-    ? value
-    : null
+const { activeTab, setActiveTab } = useDetailRouteTab<CustomerDetailTab>({
+  route,
+  router,
+  tabs: customerDetailTabIds,
+  defaultTab: "basic-info",
 })
 
 const pageTitle = computed(() => customer.value?.CorpName?.trim() || "客户详情")
@@ -741,7 +737,6 @@ watch(customer, (current) => {
 })
 
 watch(customerUuid, (uuid) => {
-  activeTab.value = requestedTab.value ?? "basic-info"
   buildingAssets.value = []
   buildingAssetsErrorMessage.value = ""
   workOrders.value = []
@@ -751,12 +746,6 @@ watch(customerUuid, (uuid) => {
   void loadBuildingAssets(uuid)
   void loadParkBuildings(uuid)
 }, { immediate: true })
-
-watch(requestedTab, (tab) => {
-  if (tab) {
-    activeTab.value = tab
-  }
-})
 
 watch(workOrdersPageSize, () => {
   workOrdersPageNum.value = 1
@@ -1692,7 +1681,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
     :tabs="detailHeaderTabs"
     tabs-aria-label="客户详情页面切换"
     @back="goBack"
-    @tab-click="activeTab = $event as CustomerDetailTab"
+    @tab-click="setActiveTab($event as CustomerDetailTab)"
   >
     <template #tabActions>
       <DetailTabActionsGroup :mobile-items="activeDetailMobileActionItems" @select="handleMobileTabActionSelect">
