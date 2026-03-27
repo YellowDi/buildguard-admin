@@ -1,6 +1,6 @@
 import inspectionServicesMockData from "@/mocks/inspection-services.json"
 
-import { createHttpError, readResponseBody } from "@/lib/api-errors"
+import { assertApiSuccess, createHttpError, readResponseBody } from "@/lib/api-errors"
 import { API_PATHS, buildApiHeaders, buildApiRequestUrl, buildApiUrl } from "@/lib/api"
 
 type InspectionServicesListEnvelope = {
@@ -46,6 +46,23 @@ export type InspectionServicesListResult = {
   total: number
 }
 
+export type InspectionServiceCreatePayload = {
+  Name: string
+  CustomerUuid: string
+  Level: string
+  ManagerName: string
+  ManagerPhone: string
+  TemplateUuid: string
+  BuildUuids: string[]
+  Remark?: string
+}
+
+export type InspectionServiceCreateResult = {
+  Id?: number
+  Uuid?: string
+  [property: string]: unknown
+}
+
 export type InspectionServiceDetailPayload = {
   Uuid?: string
   [property: string]: unknown
@@ -61,14 +78,17 @@ export type ListInspectionServicesPayload = {
 }
 
 const INSPECTION_SERVICES_API_URL = buildApiUrl(API_PATHS.inspectionServicesList)
+const INSPECTION_SERVICE_CREATE_API_URL = buildApiUrl(API_PATHS.inspectionServiceCreate)
 const INSPECTION_SERVICES_LOAD_ERROR_MESSAGE = "检测服务列表加载失败，请稍后重试。"
+const INSPECTION_SERVICE_CREATE_ERROR_MESSAGE = "检测服务创建失败，请稍后重试。"
 const INSPECTION_SERVICE_DETAIL_ERROR_MESSAGE = "检测服务详情加载失败，请稍后重试。"
-const USE_INSPECTION_SERVICES_MOCK = true
+const USE_INSPECTION_SERVICES_LIST_MOCK = false
+const USE_INSPECTION_SERVICE_DETAIL_MOCK = true
 
 export async function fetchInspectionServices(
   payload: ListInspectionServicesPayload = {},
 ): Promise<InspectionServicesListResult> {
-  if (USE_INSPECTION_SERVICES_MOCK) {
+  if (USE_INSPECTION_SERVICES_LIST_MOCK) {
     return listMockInspectionServices(payload)
   }
 
@@ -93,6 +113,8 @@ export async function fetchInspectionServices(
     throw createHttpError(response, responsePayload, INSPECTION_SERVICES_LOAD_ERROR_MESSAGE)
   }
 
+  assertApiSuccess(responsePayload, INSPECTION_SERVICES_LOAD_ERROR_MESSAGE)
+
   const list = extractList(responsePayload)
 
   return {
@@ -101,10 +123,42 @@ export async function fetchInspectionServices(
   }
 }
 
+export async function createInspectionService(
+  payload: InspectionServiceCreatePayload,
+): Promise<InspectionServiceCreateResult> {
+  const normalizedPayload = {
+    Name: getRequiredString(payload.Name, "Name"),
+    CustomerUuid: getRequiredString(payload.CustomerUuid, "CustomerUuid"),
+    Level: getRequiredString(payload.Level, "Level"),
+    ManagerName: getRequiredString(payload.ManagerName, "ManagerName"),
+    ManagerPhone: getRequiredString(payload.ManagerPhone, "ManagerPhone"),
+    TemplateUuid: getRequiredString(payload.TemplateUuid, "TemplateUuid"),
+    BuildUuids: getRequiredStringArray(payload.BuildUuids, "BuildUuids"),
+    Remark: getOptionalString(payload.Remark),
+  }
+
+  const response = await fetch(INSPECTION_SERVICE_CREATE_API_URL, {
+    method: "POST",
+    headers: buildApiHeaders({
+      "Content-Type": "application/json",
+    }),
+    body: JSON.stringify(normalizedPayload),
+  })
+  const responseBody = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responseBody, INSPECTION_SERVICE_CREATE_ERROR_MESSAGE)
+  }
+
+  assertApiSuccess(responseBody, INSPECTION_SERVICE_CREATE_ERROR_MESSAGE)
+
+  return extractCreateResult(responseBody)
+}
+
 export async function fetchInspectionServiceDetail(
   payload: InspectionServiceDetailPayload,
 ): Promise<InspectionServiceListItem> {
-  if (USE_INSPECTION_SERVICES_MOCK) {
+  if (USE_INSPECTION_SERVICE_DETAIL_MOCK) {
     return getMockInspectionServiceDetail(payload)
   }
 
@@ -122,6 +176,8 @@ export async function fetchInspectionServiceDetail(
   if (!response.ok) {
     throw createHttpError(response, responseBody, INSPECTION_SERVICE_DETAIL_ERROR_MESSAGE)
   }
+
+  assertApiSuccess(responseBody, INSPECTION_SERVICE_DETAIL_ERROR_MESSAGE)
 
   return normalizeInspectionServiceListItem(extractDetailRecord(responseBody))
 }
@@ -258,6 +314,20 @@ function extractDetailRecord(value: unknown) {
   return {}
 }
 
+function extractCreateResult(value: unknown) {
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>
+
+    if (record.data && typeof record.data === "object") {
+      return record.data as InspectionServiceCreateResult
+    }
+
+    return record as InspectionServiceCreateResult
+  }
+
+  return {}
+}
+
 function getOptionalNumber(value: unknown, fieldName: string) {
   if (value === undefined || value === null || value === "") {
     return undefined
@@ -292,6 +362,22 @@ function getRequiredString(value: unknown, fieldName: string) {
 
   if (!normalized) {
     throw new TypeError(`${fieldName} is required.`)
+  }
+
+  return normalized
+}
+
+function getRequiredStringArray(value: unknown, fieldName: string) {
+  if (!Array.isArray(value)) {
+    throw new TypeError(`${fieldName} must be an array.`)
+  }
+
+  const normalized = value
+    .map(item => getOptionalString(item))
+    .filter((item): item is string => Boolean(item))
+
+  if (!normalized.length) {
+    throw new TypeError(`${fieldName} must contain at least one item.`)
   }
 
   return normalized

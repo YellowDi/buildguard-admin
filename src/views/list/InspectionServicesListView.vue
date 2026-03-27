@@ -71,6 +71,7 @@ let latestRequestId = 0
 const schema: TablePageSchema<InspectionServiceRecord> = {
   title: "检测服务",
   description: "所有客户检测服务列表",
+  primaryActionLabel: "添加检测服务",
   rowKey: "uuid",
   data: [],
   showIndex: true,
@@ -230,6 +231,10 @@ watch([pageNum, pageSize], ([nextPageNum, nextPageSize], [previousPageNum, previ
 
   void loadInspectionServices()
 }, { immediate: true })
+
+function handleCreateInspectionService() {
+  void router.push({ name: "inspection-service-create" })
+}
 
 function buildPageFilterText(row: InspectionServiceRecord) {
   return [
@@ -462,7 +467,7 @@ function toText(value: unknown, fallback = "") {
     </div>
 
     <TooltipProvider>
-      <TablePage :page="page">
+      <TablePage :page="page" @primary-action="handleCreateInspectionService">
         <template #cell-ServiceStatus="{ row }">
           <span
             :class="[
