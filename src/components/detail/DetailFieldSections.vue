@@ -55,7 +55,10 @@ function isContactValue(value: DetailFieldValue): value is DetailContactValue {
           <div
             v-for="row in section.rows"
             :key="row.key"
-            class="detail-field-row group"
+            :class="cn(
+              'detail-field-row group',
+              (row.imageUrl || (row.truncate === false && !row.action)) && 'detail-field-row--top-aligned',
+            )"
           >
             <div class="detail-field-row__label">{{ row.label }}</div>
             <div :class="cn('detail-field-row__value', row.truncate !== false && 'truncate', !row.action && isEmptyLikeValue(row.value) && 'detail-field-row__value--empty', row.valueClass)">
@@ -67,7 +70,7 @@ function isContactValue(value: DetailFieldValue): value is DetailContactValue {
                 <img
                   :src="row.imageUrl"
                   :alt="row.label"
-                  class="max-h-56 w-auto max-w-full rounded-md border border-border object-contain"
+                  class="detail-field-row__image max-h-56 w-auto max-w-full rounded-md border border-border object-contain"
                 >
               </template>
               <template v-else-if="row.action">

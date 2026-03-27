@@ -69,6 +69,10 @@
   transition: background-color 150ms ease, color 150ms ease;
 }
 
+.detail-field-row--top-aligned {
+  align-items: start;
+}
+
 .detail-field-row:hover {
   background: var(--surface-hover-strong);
 }
@@ -95,6 +99,17 @@
 .detail-field-row__value {
   padding-right: 0.5rem;
   color: var(--foreground);
+  min-width: 0;
+}
+
+.detail-field-row--top-aligned .detail-field-row__label,
+.detail-field-row--top-aligned .detail-field-row__value {
+  padding-top: 0.125rem;
+}
+
+.detail-field-row__image {
+  display: block;
+  margin-top: 0;
 }
 
 .detail-field-row__value--empty {
