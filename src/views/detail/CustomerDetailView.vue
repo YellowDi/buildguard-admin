@@ -43,7 +43,7 @@ import { fetchBuildings, type BuildingListItem } from "@/lib/buildings-api"
 import { readCustomerSubAccountLocalRecords } from "@/lib/customer-sub-accounts-api"
 import { deleteCustomer, fetchCustomerDetail, type CustomerDetailPerson, type CustomerDetailResult } from "@/lib/customers-api"
 import customersData from "@/mocks/customers.json"
-import { fetchParkDetail, fetchParks, type ParkDetailResult, type ParkListItem } from "@/lib/parks-api"
+import { deletePark, fetchParkDetail, fetchParks, type ParkDetailResult, type ParkListItem } from "@/lib/parks-api"
 
 type BuildingRow = {
   key: string
@@ -172,6 +172,8 @@ const workOrdersTotal = ref(0)
 const parkDetailSheetOpen = ref(false)
 const parkDetailLoading = ref(false)
 const parkDetailErrorMessage = ref("")
+const parkDeleteConfirmOpen = ref(false)
+const parkDeleteSubmitting = ref(false)
 const activeParkDetail = ref<ParkDetailResult | null>(null)
 const buildingDetailSheetOpen = ref(false)
 const activeBuildingUuid = ref("")
@@ -1286,7 +1288,49 @@ function handleParkDetailSheetOpenChange(open: boolean) {
   if (!open) {
     parkDetailLoading.value = false
     parkDetailErrorMessage.value = ""
+    parkDeleteConfirmOpen.value = false
+    parkDeleteSubmitting.value = false
     activeParkDetail.value = null
+  }
+}
+
+function promptDeletePark() {
+  if (!activeParkDetail.value?.Uuid || parkDeleteSubmitting.value) {
+    return
+  }
+
+  parkDeleteConfirmOpen.value = true
+}
+
+async function confirmDeletePark() {
+  const parkUuid = activeParkDetail.value?.Uuid
+
+  if (!parkUuid || parkDeleteSubmitting.value) {
+    return
+  }
+
+  parkDeleteSubmitting.value = true
+
+  try {
+    await deletePark({ Uuid: parkUuid })
+    parkDeleteConfirmOpen.value = false
+    parkDetailSheetOpen.value = false
+    parkDetailLoading.value = false
+    parkDetailErrorMessage.value = ""
+    activeParkDetail.value = null
+    toast.success("园区已删除")
+
+    if (customerUuid.value) {
+      void loadBuildingAssets(customerUuid.value)
+      void loadParkBuildings(customerUuid.value)
+    }
+  } catch (error) {
+    handleApiError(error, {
+      title: "园区删除失败",
+      fallback: "园区删除失败，请稍后重试。",
+    })
+  } finally {
+    parkDeleteSubmitting.value = false
   }
 }
 
@@ -2422,15 +2466,26 @@ function toDisplayText(value: unknown, fallback = "未填写") {
                 <span class="sr-only">打开完整园区详情页</span>
               </button>
             </div>
-            <Button
-              v-if="activeParkDetail?.Uuid"
-              variant="outline"
-              size="sm"
-              class="h-8 rounded-md"
-              @click="goToParkEdit(activeParkDetail.Uuid, activeParkDetail.CustomerUuid || customer?.Uuid || '')"
-            >
-              编辑园区
-            </Button>
+            <div v-if="activeParkDetail?.Uuid" class="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                class="h-8 rounded-md border-destructive/40 text-destructive hover:border-destructive/60 hover:bg-destructive/5 hover:text-destructive"
+                :disabled="parkDeleteSubmitting"
+                @click="promptDeletePark"
+              >
+                {{ parkDeleteSubmitting ? "删除中..." : "删除园区" }}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                class="h-8 rounded-md"
+                :disabled="parkDeleteSubmitting"
+                @click="goToParkEdit(activeParkDetail.Uuid, activeParkDetail.CustomerUuid || customer?.Uuid || '')"
+              >
+                编辑园区
+              </Button>
+            </div>
           </div>
         </template>
         <SheetTitle>{{ toDisplayText(activeParkDetail?.Name, "园区详情") }}</SheetTitle>
@@ -2453,6 +2508,29 @@ function toDisplayText(value: unknown, fallback = "未填写") {
       </div>
     </SheetContent>
   </Sheet>
+
+  <AlertDialog :open="parkDeleteConfirmOpen" @update:open="parkDeleteConfirmOpen = $event">
+    <AlertDialogContent>
+      <AlertDialogHeader>
+        <AlertDialogTitle>确认删除园区？</AlertDialogTitle>
+        <AlertDialogDescription>
+          将删除“{{ toDisplayText(activeParkDetail?.Name, "当前园区") }}”，该操作不可撤销，确认后将立即提交删除请求。
+        </AlertDialogDescription>
+      </AlertDialogHeader>
+      <AlertDialogFooter>
+        <AlertDialogCancel :disabled="parkDeleteSubmitting">
+          取消
+        </AlertDialogCancel>
+        <AlertDialogAction
+          class="bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:bg-destructive/60 dark:focus-visible:ring-destructive/40"
+          :disabled="parkDeleteSubmitting"
+          @click="confirmDeletePark"
+        >
+          {{ parkDeleteSubmitting ? "删除中..." : "确认删除" }}
+        </AlertDialogAction>
+      </AlertDialogFooter>
+    </AlertDialogContent>
+  </AlertDialog>
 
   <BuildingDetailSheet
     :open="buildingDetailSheetOpen"

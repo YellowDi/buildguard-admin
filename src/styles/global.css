@@ -239,6 +239,12 @@
   .sheet-panel-right {
     transform-origin: right center;
     will-change: transform, opacity;
+    box-shadow:
+      0 53px 32px 0 rgb(0 0 0 / 0.02),
+      0 6px 13px 0 rgb(0 0 0 / 0.04),
+      0 1px 3px 0 rgb(143 143 143 / 0.2),
+      0 0 0 1px #eaeaea,
+      inset 0 -2.4px 0 0 rgb(61 61 61 / 0.04);
   }
 
   .sheet-panel-right[data-state="open"] {

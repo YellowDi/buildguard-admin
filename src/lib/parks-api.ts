@@ -59,6 +59,11 @@ export type ParkDetailPayload = {
   Uuid?: string
 }
 
+export type ParkDeletePayload = {
+  Uuid?: string
+  [property: string]: unknown
+}
+
 export type ParkDetailResult = {
   Uuid?: string
   Id?: number
@@ -89,10 +94,12 @@ const PARKS_API_URL = buildApiUrl(API_PATHS.parksList)
 const PARK_CREATE_API_URL = buildApiUrl(API_PATHS.parkCreate)
 const PARK_UPDATE_API_URL = buildApiUrl(API_PATHS.parkUpdate)
 const PARK_DETAIL_API_URL = buildApiUrl(API_PATHS.parkDetail)
+const PARK_DELETE_API_URL = API_PATHS.parkDelete
 const PARKS_LOAD_ERROR_MESSAGE = "园区列表加载失败，请稍后重试。"
 const PARK_CREATE_ERROR_MESSAGE = "园区创建失败，请稍后重试。"
 const PARK_UPDATE_ERROR_MESSAGE = "园区信息更新失败，请稍后重试。"
 const PARK_DETAIL_LOAD_ERROR_MESSAGE = "园区详情加载失败，请稍后重试。"
+const PARK_DELETE_ERROR_MESSAGE = "园区删除失败，请稍后重试。"
 
 export async function fetchParks(payload: ListParksPayload = {}): Promise<ParksListResult> {
   const normalizedPayload = {
@@ -212,6 +219,25 @@ export async function fetchParkDetail(payload: ParkDetailPayload): Promise<ParkD
   assertApiSuccess(responsePayload, PARK_DETAIL_LOAD_ERROR_MESSAGE)
 
   return normalizeParkDetail(extractDetailRecord(responsePayload))
+}
+
+export async function deletePark(payload: ParkDeletePayload) {
+  const url = buildApiRequestUrl(PARK_DELETE_API_URL)
+  const uuid = getRequiredString(payload.Uuid, "Uuid")
+
+  url.searchParams.set("Uuid", uuid)
+
+  const response = await fetch(url.toString(), {
+    method: "GET",
+    headers: buildApiHeaders(),
+  })
+  const responsePayload = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responsePayload, PARK_DELETE_ERROR_MESSAGE)
+  }
+
+  assertApiSuccess(responsePayload, PARK_DELETE_ERROR_MESSAGE)
 }
 
 function extractList(payload: ParksListEnvelope | unknown[]) {
