@@ -1159,15 +1159,6 @@ function getGroupParkUuid(group: unknown) {
   return ""
 }
 
-function getGroupCustomerUuid(group: unknown) {
-  if (group && typeof group === "object" && "customerUuid" in group) {
-    const value = (group as { customerUuid?: unknown }).customerUuid
-    return typeof value === "string" ? value : ""
-  }
-
-  return ""
-}
-
 function getItemDetails(item: unknown): DetailFieldSection[] {
   if (item && typeof item === "object" && "details" in item) {
     const value = (item as { details?: unknown }).details
@@ -2119,14 +2110,6 @@ function toDisplayText(value: unknown, fallback = "未填写") {
                     variant="outline"
                     size="sm"
                     class="h-8 rounded-md"
-                    @click="goToParkEdit(getGroupParkUuid(item), getGroupCustomerUuid(item))"
-                  >
-                    编辑园区
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    class="h-8 rounded-md"
                     @click="goToParkDetail(getGroupParkUuid(item))"
                   >
                     查看详情
@@ -2213,6 +2196,16 @@ function toDisplayText(value: unknown, fallback = "未填写") {
       <SheetHeader>
         <SheetTitle>{{ toDisplayText(activeParkDetail?.Name, "园区详情") }}</SheetTitle>
         <SheetDescription>查看园区基础信息。</SheetDescription>
+        <div v-if="activeParkDetail?.Uuid" class="pt-2">
+          <Button
+            variant="outline"
+            size="sm"
+            class="h-8 rounded-md"
+            @click="goToParkEdit(activeParkDetail.Uuid, activeParkDetail.CustomerUuid || customer?.Uuid || '')"
+          >
+            编辑园区
+          </Button>
+        </div>
       </SheetHeader>
 
       <div class="mt-6">
