@@ -49,6 +49,34 @@ export type CreateWorkOrderResult = {
   [property: string]: unknown
 }
 
+export type RepairWorkOrderListItem = {
+  Id?: number
+  Uuid?: string
+  OrderNo?: string
+  CustomerUuid?: string
+  CorpName?: string
+  CustomerName?: string
+  ParkUuid?: string
+  ParkName?: string
+  UserUuid?: string
+  UserName?: string
+  Important?: number
+  ReportType?: number
+  Content?: string
+  Title?: string
+  Status?: number
+  CreatedAt?: string
+  AfterRepairFile?: string
+  BeforeRepairFile?: string
+  RepairContent?: string
+  [property: string]: unknown
+}
+
+export type RepairWorkOrdersListResult = {
+  list: RepairWorkOrderListItem[]
+  total: number
+}
+
 export type ListWorkOrdersPayload = {
   OrderNo?: string
   PlanUuid?: string
@@ -64,6 +92,7 @@ export type ListWorkOrdersPayload = {
 }
 
 const WORK_ORDERS_API_URL = buildApiUrl(API_PATHS.workOrdersList)
+const REPAIR_WORK_ORDERS_API_URL = buildApiUrl(API_PATHS.workOrderReportList)
 const WORK_ORDER_CREATE_API_URL = buildApiUrl(API_PATHS.workOrderCreate)
 const WORK_ORDERS_LOAD_ERROR_MESSAGE = "工单列表加载失败，请稍后重试。"
 const WORK_ORDER_CREATE_ERROR_MESSAGE = "工单创建失败，请稍后重试。"
@@ -131,6 +160,38 @@ export async function createWorkOrder(payload: CreateWorkOrderPayload): Promise<
   assertApiSuccess(responseBody, WORK_ORDER_CREATE_ERROR_MESSAGE)
 
   return extractCreateResult(responseBody)
+}
+
+export async function fetchRepairWorkOrders(payload: ListWorkOrdersPayload = {}): Promise<RepairWorkOrdersListResult> {
+  const normalizedPayload = {
+    OrderNo: getOptionalString(payload.OrderNo) ?? "",
+    CustomerUuid: getOptionalString(payload.CustomerUuid) ?? "",
+    Status: getOptionalNumber(payload.Status, "Status") ?? 0,
+    PageNum: getOptionalNumber(payload.PageNum, "PageNum") ?? 1,
+    PageSize: getOptionalNumber(payload.PageSize, "PageSize") ?? 10,
+  }
+
+  const response = await fetch(REPAIR_WORK_ORDERS_API_URL, {
+    method: "POST",
+    headers: buildApiHeaders({
+      "Content-Type": "application/json",
+    }),
+    body: JSON.stringify(normalizedPayload),
+  })
+  const responsePayload = await readResponseBody(response) as WorkOrdersListEnvelope | unknown[]
+
+  if (!response.ok) {
+    throw createHttpError(response, responsePayload, WORK_ORDERS_LOAD_ERROR_MESSAGE)
+  }
+
+  assertApiSuccess(responsePayload, WORK_ORDERS_LOAD_ERROR_MESSAGE)
+
+  const list = extractList(responsePayload)
+
+  return {
+    list: list.map(item => normalizeRepairWorkOrderListItem(item)),
+    total: extractTotal(responsePayload, list.length),
+  }
 }
 
 function extractList(payload: WorkOrdersListEnvelope | unknown[]) {
@@ -214,6 +275,37 @@ function normalizeWorkOrderListItem(value: unknown): WorkOrderListItem {
     Remark: getFirstText(record, ["Remark", "remark", "Note", "note", "Description", "description"]),
     CreatedAt: getFirstText(record, ["CreatedAt", "createdAt", "CreateTime", "createTime"]),
     UpdatedAt: getFirstText(record, ["UpdatedAt", "updatedAt", "UpdateTime", "updateTime"]),
+  }
+}
+
+function normalizeRepairWorkOrderListItem(value: unknown): RepairWorkOrderListItem {
+  if (!value || typeof value !== "object") {
+    return {}
+  }
+
+  const record = value as Record<string, unknown>
+
+  return {
+    ...record,
+    Id: getFirstNumber(record, ["Id", "id"]),
+    Uuid: getFirstText(record, ["Uuid", "uuid"]),
+    OrderNo: getFirstText(record, ["OrderNo", "orderNo"]),
+    CustomerUuid: getFirstText(record, ["CustomerUuid", "customerUuid"]),
+    CorpName: getFirstText(record, ["CorpName", "corpName"]),
+    CustomerName: getFirstText(record, ["CustomerName", "customerName", "CorpName", "corpName"]),
+    ParkUuid: getFirstText(record, ["ParkUuid", "parkUuid"]),
+    ParkName: getFirstText(record, ["ParkName", "parkName"]),
+    UserUuid: getFirstText(record, ["UserUuid", "userUuid"]),
+    UserName: getFirstText(record, ["UserName", "userName"]),
+    Important: getFirstNumber(record, ["Important", "important"]),
+    ReportType: getFirstNumber(record, ["ReportType", "reportType"]),
+    Content: getFirstText(record, ["Content", "content"]),
+    Title: getFirstText(record, ["Title", "title"]),
+    Status: getFirstNumber(record, ["Status", "status"]),
+    CreatedAt: getFirstText(record, ["CreatedAt", "createdAt", "CreateTime", "createTime"]),
+    AfterRepairFile: getFirstText(record, ["AfterRepairFile", "afterRepairFile"]),
+    BeforeRepairFile: getFirstText(record, ["BeforeRepairFile", "beforeRepairFile"]),
+    RepairContent: getFirstText(record, ["RepairContent", "repairContent"]),
   }
 }
 

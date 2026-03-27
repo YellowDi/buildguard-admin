@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from "vue"
+import { useRoute } from "vue-router"
 
 import AppHeader from "@/components/layout/AppHeader.vue"
 import AppSidebar from "@/components/layout/AppSidebar.vue"
@@ -10,6 +11,7 @@ import { SidebarProvider } from "@/components/ui/sidebar"
 
 const mobileSidebarOpen = ref(false)
 const { isRouteLoading, loadingKind } = useRouteLoadingState()
+const route = useRoute()
 
 const showContentFallback = computed(() =>
   isRouteLoading.value && loadingKind.value !== "auth",
@@ -52,7 +54,7 @@ function closeMobileSidebar() {
             v-if="showContentFallback"
             :kind="loadingKind"
           />
-          <component :is="Component" v-else />
+          <component :is="Component" :key="route.name ?? route.fullPath" v-else />
         </RouterView>
       </main>
     </div>

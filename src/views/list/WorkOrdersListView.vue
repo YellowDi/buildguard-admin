@@ -10,7 +10,12 @@ import { createTablePageDefinition, useTablePage } from "@/components/table-page
 import type { TablePageSchema } from "@/components/table-page/types"
 import { useRouteTableSearch } from "@/composables/useRouteTableSearch"
 import { handleApiError } from "@/lib/api-errors"
-import { fetchWorkOrders, type WorkOrderListItem } from "@/lib/work-orders-api"
+import {
+  fetchRepairWorkOrders,
+  fetchWorkOrders,
+  type RepairWorkOrderListItem,
+  type WorkOrderListItem,
+} from "@/lib/work-orders-api"
 import {
   Pagination,
   PaginationContent,
@@ -61,10 +66,18 @@ const pageTitle = computed(() => props.kind === "inspection" ? "检修工单" : 
 const pageEmptyStateTitle = computed(() => `暂无${pageTitle.value}数据`)
 const pageEmptyStateDescription = computed(() => props.kind === "inspection"
   ? "当前接口暂未返回可展示的检修工单。"
-  : "维修工单接口暂未接入，当前无可展示数据。")
+  : "当前接口暂未返回可展示的维修工单。")
 const pageSortStorageKey = computed(() => props.kind === "inspection"
   ? "inspection-work-orders-sort-preferences"
   : "repair-work-orders-sort-preferences")
+
+const planColumnLabel = props.kind === "inspection" ? "计划名称" : "报修标题"
+const packageColumnLabel = props.kind === "inspection" ? "套餐名称" : "园区名称"
+const deadlineColumnLabel = props.kind === "inspection" ? "截止时间" : "创建时间"
+const executorColumnLabel = props.kind === "inspection" ? "执行人" : "报修人"
+const scoreColumnLabel = props.kind === "inspection" ? "评分" : "紧急程度"
+const resultColumnLabel = props.kind === "inspection" ? "结果" : "报修类型"
+const updatedAtColumnLabel = props.kind === "inspection" ? "更新时间" : "创建时间"
 
 const schema: TablePageSchema<WorkOrderRecord> = {
   title: pageTitle.value,
@@ -94,22 +107,22 @@ const schema: TablePageSchema<WorkOrderRecord> = {
     },
     {
       key: "planName",
-      label: "计划名称",
+      label: planColumnLabel,
       filterType: "text",
       filter: {
         type: "text",
-        placeholder: "输入计划名称",
+        placeholder: props.kind === "inspection" ? "输入计划名称" : "输入报修标题",
         defaultVisible: true,
       },
       sort: true,
     },
     {
       key: "packageName",
-      label: "套餐名称",
+      label: packageColumnLabel,
       filterType: "text",
       filter: {
         type: "text",
-        placeholder: "输入套餐名称",
+        placeholder: props.kind === "inspection" ? "输入套餐名称" : "输入园区名称",
       },
       sort: true,
     },
@@ -126,7 +139,7 @@ const schema: TablePageSchema<WorkOrderRecord> = {
     },
     {
       key: "deadline",
-      label: "截止时间",
+      label: deadlineColumnLabel,
       filterType: "time",
       format: "numeric",
       filter: {
@@ -138,11 +151,11 @@ const schema: TablePageSchema<WorkOrderRecord> = {
     },
     {
       key: "executor",
-      label: "执行人",
+      label: executorColumnLabel,
       filterType: "text",
       filter: {
         type: "text",
-        placeholder: "输入执行人",
+        placeholder: props.kind === "inspection" ? "输入执行人" : "输入报修人",
       },
       sort: true,
     },
@@ -162,7 +175,7 @@ const schema: TablePageSchema<WorkOrderRecord> = {
     },
     {
       key: "scoreLabel",
-      label: "评分",
+      label: scoreColumnLabel,
       filterType: "number",
       format: "numeric",
       filter: {
@@ -178,7 +191,7 @@ const schema: TablePageSchema<WorkOrderRecord> = {
     },
     {
       key: "resultLabel",
-      label: "结果",
+      label: resultColumnLabel,
       filterType: "tag",
       filter: {
         type: "tag",
@@ -192,7 +205,7 @@ const schema: TablePageSchema<WorkOrderRecord> = {
     },
     {
       key: "updatedAt",
-      label: "更新时间",
+      label: updatedAtColumnLabel,
       filterType: "time",
       format: "numeric",
       filter: {
@@ -274,22 +287,19 @@ function buildPageFilterText(row: WorkOrderRecord) {
 async function loadWorkOrders() {
   const requestId = ++latestRequestId
 
-  if (props.kind === "repair") {
-    workOrders.value = []
-    total.value = 0
-    errorMessage.value = ""
-    loading.value = false
-    return
-  }
-
   loading.value = true
   errorMessage.value = ""
 
   try {
-    const result = await fetchWorkOrders({
-      PageNum: pageNum.value,
-      PageSize: pageSize.value,
-    })
+    const result = props.kind === "inspection"
+      ? await fetchWorkOrders({
+          PageNum: pageNum.value,
+          PageSize: pageSize.value,
+        })
+      : await fetchRepairWorkOrders({
+          PageNum: pageNum.value,
+          PageSize: pageSize.value,
+        })
 
     if (requestId !== latestRequestId) {
       return
@@ -322,7 +332,15 @@ async function loadWorkOrders() {
   }
 }
 
-function normalizeWorkOrderRecord(item: WorkOrderListItem, index: number): WorkOrderRecord {
+function normalizeWorkOrderRecord(item: WorkOrderListItem | RepairWorkOrderListItem, index: number): WorkOrderRecord {
+  if (props.kind === "repair") {
+    return normalizeRepairWorkOrderRecord(item as RepairWorkOrderListItem, index)
+  }
+
+  return normalizeInspectionWorkOrderRecord(item as WorkOrderListItem, index)
+}
+
+function normalizeInspectionWorkOrderRecord(item: WorkOrderListItem, index: number): WorkOrderRecord {
   const uuid = toText(item.Uuid)
   const fallbackId = toText(item.Id, `${pageNum.value}-${index + 1}`)
   const statusValue = toNumber(item.Status)
@@ -345,12 +363,41 @@ function normalizeWorkOrderRecord(item: WorkOrderListItem, index: number): WorkO
     statusValue,
     statusLabel: formatStatusLabel(props.kind, statusValue),
     score,
-    scoreLabel: formatScoreLabel(score),
+    scoreLabel: formatScoreLabel(score, props.kind),
     resultValue,
-    resultLabel: formatResultLabel(resultValue),
+    resultLabel: formatResultLabel(resultValue, props.kind),
     remark,
     createdAt: toText(item.CreatedAt, "-"),
     updatedAt: toText(item.UpdatedAt, "-"),
+  }
+}
+
+function normalizeRepairWorkOrderRecord(item: RepairWorkOrderListItem, index: number): WorkOrderRecord {
+  const uuid = toText(item.Uuid)
+  const fallbackId = toText(item.Id, `${pageNum.value}-${index + 1}`)
+  const statusValue = toNumber(item.Status)
+  const importantValue = toNumber(item.Important)
+  const reportTypeValue = toNumber(item.ReportType)
+  const createdAt = toText(item.CreatedAt, "-")
+
+  return {
+    id: uuid || fallbackId,
+    uuid: uuid || fallbackId,
+    orderNo: toText(item.OrderNo, `RP-${fallbackId}`),
+    planName: toText(item.Title, "-"),
+    packageName: toText(item.ParkName, "-"),
+    customerName: toText(item.CustomerName || item.CorpName, "-"),
+    deadline: createdAt,
+    executor: toText(item.UserName, "-"),
+    statusValue,
+    statusLabel: formatStatusLabel(props.kind, statusValue),
+    score: importantValue,
+    scoreLabel: formatScoreLabel(importantValue, props.kind),
+    resultValue: reportTypeValue,
+    resultLabel: formatResultLabel(reportTypeValue, props.kind),
+    remark: toText(item.RepairContent || item.Content, "-"),
+    createdAt,
+    updatedAt: createdAt,
   }
 }
 
@@ -375,9 +422,14 @@ function formatStatusLabel(kind: WorkOrderPageKind, value: number | null) {
   return `状态 ${value}`
 }
 
-function formatResultLabel(value: number | null) {
+function formatResultLabel(value: number | null, kind: WorkOrderPageKind) {
   if (value === null) {
-    return "未反馈"
+    return kind === "inspection" ? "未反馈" : "-"
+  }
+
+  if (kind === "repair") {
+    if (value === 0) return "类型 0"
+    return `类型 ${value}`
   }
 
   if (value === 0) return "未反馈"
@@ -388,9 +440,15 @@ function formatResultLabel(value: number | null) {
   return `结果 ${value}`
 }
 
-function formatScoreLabel(value: number | null) {
+function formatScoreLabel(value: number | null, kind: WorkOrderPageKind) {
   if (value === null) {
     return "-"
+  }
+
+  if (kind === "repair") {
+    if (value === 0) return "普通"
+    if (value === 1) return "紧急"
+    return `等级 ${value}`
   }
 
   return String(value)
