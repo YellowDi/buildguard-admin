@@ -331,6 +331,19 @@ const router = createRouter({
           } satisfies RouteMetaConfig,
         },
         {
+          path: "work-orders/inspection/create",
+          name: "inspection-work-order-create",
+          component: () => import("@/views/form/WorkOrderCreateView.vue"),
+          meta: {
+            title: "添加工单",
+            loading: "form",
+            breadcrumb: [
+              { title: "工单", to: "inspection-work-orders" },
+              { title: "添加工单" },
+            ] satisfies BreadcrumbMetaItem[],
+          } satisfies RouteMetaConfig,
+        },
+        {
           path: "work-orders/repair",
           name: "repair-work-orders",
           component: () => import("@/views/list/WorkOrdersListView.vue"),

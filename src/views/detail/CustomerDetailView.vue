@@ -595,8 +595,8 @@ const workOrdersSchema: TablePageSchema<CustomerWorkOrderRow> = {
       key: "orderNo",
       label: "工单编号",
       filterType: "text",
-      emphasis: "strong",
-      tone: "primary",
+      emphasis: "default",
+      tone: "muted",
       filter: {
         type: "text",
         placeholder: "输入工单编号",

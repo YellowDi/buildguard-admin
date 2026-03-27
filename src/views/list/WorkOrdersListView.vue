@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue"
-import { useRoute } from "vue-router"
+import { useRoute, useRouter } from "vue-router"
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -70,6 +70,8 @@ const pageEmptyStateDescription = computed(() => props.kind === "inspection"
 const pageSortStorageKey = computed(() => props.kind === "inspection"
   ? "inspection-work-orders-sort-preferences"
   : "repair-work-orders-sort-preferences")
+const primaryActionLabel = props.kind === "inspection" ? "添加工单" : ""
+const router = useRouter()
 
 const planColumnLabel = props.kind === "inspection" ? "计划名称" : "报修标题"
 const packageColumnLabel = props.kind === "inspection" ? "套餐名称" : "园区名称"
@@ -84,6 +86,7 @@ const schema: TablePageSchema<WorkOrderRecord> = {
   description: props.kind === "inspection" ? "所有客户检修工单列表" : "所有客户维修工单列表",
   rowKey: "uuid",
   data: [],
+  primaryActionLabel,
   showIndex: true,
   stickyHeader: true,
   emptyState: {
@@ -96,8 +99,8 @@ const schema: TablePageSchema<WorkOrderRecord> = {
       key: "orderNo",
       label: "工单编号",
       filterType: "text",
-      emphasis: "strong",
-      tone: "primary",
+      emphasis: props.kind === "inspection" ? "default" : "strong",
+      tone: props.kind === "inspection" ? "muted" : "primary",
       filter: {
         type: "text",
         placeholder: "输入工单编号",
@@ -469,6 +472,14 @@ function toText(value: unknown, fallback = "") {
 function toNumber(value: unknown) {
   return typeof value === "number" && Number.isFinite(value) ? value : null
 }
+
+function handlePrimaryAction() {
+  if (props.kind !== "inspection") {
+    return
+  }
+
+  router.push({ name: "inspection-work-order-create" })
+}
 </script>
 
 <template>
@@ -488,7 +499,7 @@ function toNumber(value: unknown) {
       </Alert>
     </div>
 
-    <TablePage :page="page" />
+    <TablePage :page="page" @primary-action="handlePrimaryAction" />
 
     <div class="-mx-4 pt-3">
       <div class="flex w-full justify-end px-4">

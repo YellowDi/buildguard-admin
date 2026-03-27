@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { handleApiError } from "@/lib/api-errors"
+import { fetchCustomers, type CustomerListItem } from "@/lib/customers-api"
 import { fetchCustomerDetail } from "@/lib/customers-api"
 import { fetchInspectionPlans, type InspectionPlanListItem } from "@/lib/inspection-plans-api"
 import { createWorkOrder } from "@/lib/work-orders-api"
@@ -38,6 +39,11 @@ type WorkOrderFormState = {
 }
 
 type PlanOption = {
+  uuid: string
+  name: string
+}
+
+type CustomerOption = {
   uuid: string
   name: string
 }
@@ -68,7 +74,9 @@ const initialFormState = ref<WorkOrderFormState>(createEmptyForm())
 const customerName = ref("")
 const loadError = ref("")
 const submitting = ref(false)
+const customerLoading = ref(false)
 const planLoading = ref(false)
+const customerOptions = ref<CustomerOption[]>([])
 const planOptions = ref<PlanOption[]>([])
 const anchorItems = ref<QuickNavItem[]>([])
 const activeNavId = ref("")
@@ -76,6 +84,7 @@ const formSectionsRef = ref<HTMLElement | null>(null)
 const STICKY_HEADER_OFFSET = 112
 let observer: IntersectionObserver | null = null
 let observerActive = false
+let suppressCustomerWatch = false
 
 const routeCustomerUuid = computed(() => typeof route.params.id === "string" ? route.params.id.trim() : "")
 const queryCustomerName = computed(() => typeof route.query.customerName === "string" ? route.query.customerName.trim() : "")
@@ -196,23 +205,36 @@ function handleReset() {
 
 async function loadFormContext() {
   loadError.value = ""
+  customerOptions.value = []
   planOptions.value = []
 
-  if (!routeCustomerUuid.value) {
-    loadError.value = "所属客户信息缺失，无法创建工单。"
-    return
-  }
+  try {
+    if (routeCustomerUuid.value) {
+      await loadFixedCustomerContext(routeCustomerUuid.value)
+      return
+    }
 
+    await loadSelectableCustomerContext()
+  } catch (error) {
+    customerName.value = queryCustomerName.value || "当前客户"
+    loadError.value = handleApiError(error, {
+      mode: "silent",
+      fallback: "工单表单初始化失败，请稍后重试。",
+    })
+  }
+}
+
+async function loadFixedCustomerContext(customerUuid: string) {
   planLoading.value = true
 
   try {
     const [customerDetail, plans] = await Promise.all([
-      fetchCustomerDetail({ Uuid: routeCustomerUuid.value }),
-      fetchAllInspectionPlans(routeCustomerUuid.value),
+      fetchCustomerDetail({ Uuid: customerUuid }),
+      fetchAllInspectionPlans(customerUuid),
     ])
 
     customerName.value = normalizeText(customerDetail.CorpName) || queryCustomerName.value || "当前客户"
-    form.customerUuid = routeCustomerUuid.value
+    form.customerUuid = customerUuid
     planOptions.value = plans.map(mapPlanOption)
 
     if (!normalizeText(form.planUuid) && planOptions.value.length) {
@@ -221,15 +243,65 @@ async function loadFormContext() {
 
     initialFormState.value = {
       ...createEmptyForm(),
-      customerUuid: routeCustomerUuid.value,
+      customerUuid: customerUuid,
       planUuid: form.planUuid,
     }
-  } catch (error) {
-    customerName.value = queryCustomerName.value || "当前客户"
-    loadError.value = handleApiError(error, {
-      mode: "silent",
-      fallback: "工单表单初始化失败，请稍后重试。",
-    })
+  } finally {
+    planLoading.value = false
+  }
+}
+
+async function loadSelectableCustomerContext() {
+  customerLoading.value = true
+
+  try {
+    const customers = await fetchAllCustomers()
+    customerOptions.value = customers.map(mapCustomerOption)
+
+    if (!customerOptions.value.length) {
+      throw new Error("当前没有可用客户，无法创建工单。")
+    }
+
+    const nextCustomerUuid = normalizeText(form.customerUuid) || customerOptions.value[0]?.uuid || ""
+    const matchedCustomer = customerOptions.value.find(item => item.uuid === nextCustomerUuid) ?? customerOptions.value[0]
+
+    suppressCustomerWatch = true
+    form.customerUuid = matchedCustomer?.uuid ?? ""
+    customerName.value = matchedCustomer?.name ?? "当前客户"
+    form.planUuid = ""
+    suppressCustomerWatch = false
+
+    await loadPlansForCustomer(form.customerUuid)
+
+    initialFormState.value = {
+      ...createEmptyForm(),
+      customerUuid: form.customerUuid,
+      planUuid: form.planUuid,
+    }
+  } finally {
+    customerLoading.value = false
+  }
+}
+
+async function loadPlansForCustomer(customerUuid: string) {
+  const normalizedCustomerUuid = normalizeText(customerUuid)
+
+  planOptions.value = []
+  form.planUuid = ""
+
+  if (!normalizedCustomerUuid) {
+    return
+  }
+
+  planLoading.value = true
+
+  try {
+    const plans = await fetchAllInspectionPlans(normalizedCustomerUuid)
+    planOptions.value = plans.map(mapPlanOption)
+
+    if (planOptions.value.length) {
+      form.planUuid = planOptions.value[0]?.uuid ?? ""
+    }
   } finally {
     planLoading.value = false
   }
@@ -265,7 +337,50 @@ async function fetchAllInspectionPlans(customerUuid: string) {
   return dedupePlans(allItems)
 }
 
+async function fetchAllCustomers() {
+  const pageSize = 200
+  const allItems: CustomerListItem[] = []
+  let pageNum = 1
+  let total = 0
+
+  while (pageNum <= 20) {
+    const result = await fetchCustomers({
+      PageNum: pageNum,
+      PageSize: pageSize,
+    })
+
+    if (pageNum === 1) {
+      total = result.total
+    }
+
+    allItems.push(...result.list)
+
+    if (!result.list.length || (total > 0 && pageNum * pageSize >= total)) {
+      break
+    }
+
+    pageNum += 1
+  }
+
+  return dedupeCustomers(allItems)
+}
+
 function dedupePlans(items: InspectionPlanListItem[]) {
+  const seen = new Set<string>()
+
+  return items.filter((item) => {
+    const uuid = normalizeText(item.Uuid)
+
+    if (!uuid || seen.has(uuid)) {
+      return false
+    }
+
+    seen.add(uuid)
+    return true
+  })
+}
+
+function dedupeCustomers(items: CustomerListItem[]) {
   const seen = new Set<string>()
 
   return items.filter((item) => {
@@ -284,6 +399,13 @@ function mapPlanOption(item: InspectionPlanListItem): PlanOption {
   return {
     uuid: normalizeText(item.Uuid),
     name: normalizeText(item.ServiceName) || `检测计划 ${normalizeText(item.Id) || "-"}`,
+  }
+}
+
+function mapCustomerOption(item: CustomerListItem): CustomerOption {
+  return {
+    uuid: normalizeText(item.Uuid),
+    name: normalizeText(item.CorpName) || normalizeText(item.CustomerName) || `客户 ${normalizeText(item.Id) || "-"}`,
   }
 }
 
@@ -377,6 +499,19 @@ watch(
     void loadFormContext()
   },
 )
+
+watch(
+  () => form.customerUuid,
+  (nextCustomerUuid, previousCustomerUuid) => {
+    if (routeCustomerUuid.value || suppressCustomerWatch || nextCustomerUuid === previousCustomerUuid) {
+      return
+    }
+
+    const matchedCustomer = customerOptions.value.find(item => item.uuid === normalizeText(nextCustomerUuid))
+    customerName.value = matchedCustomer?.name ?? "当前客户"
+    void loadPlansForCustomer(nextCustomerUuid)
+  },
+)
 </script>
 
 <template>
@@ -411,12 +546,23 @@ watch(
             label-for="work-order-customer"
           >
             <Input
+              v-if="routeCustomerUuid"
               id="work-order-customer"
               :model-value="customerName || '当前客户'"
               disabled
               class="w-full"
               @focus="handleFocus('section-customer')"
             />
+            <Select v-else v-model="form.customerUuid" :disabled="customerLoading || submitting">
+              <SelectTrigger id="work-order-customer" class="w-full" @focus="handleFocus('section-customer')">
+                <SelectValue :placeholder="customerLoading ? '正在加载客户...' : '请选择所属客户'" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem v-for="customer in customerOptions" :key="customer.uuid" :value="customer.uuid">
+                  {{ customer.name }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
           </FormFieldSection>
 
           <FormFieldSection
