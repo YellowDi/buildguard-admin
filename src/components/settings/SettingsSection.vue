@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import SettingsPageHeader from "@/components/settings/SettingsPageHeader.vue"
 import { Separator } from "@/components/ui/separator"
 
 defineProps<{
@@ -12,14 +13,12 @@ defineProps<{
 <template>
   <section :class="showHeader === false ? '' : 'space-y-4'">
     <template v-if="showHeader !== false">
-      <div class="space-y-1">
-        <h3 class="text-[1.375rem] font-semibold tracking-tight">{{ title }}</h3>
-        <p
-          :class="tone === 'danger' ? 'text-sm leading-6 text-destructive/80' : 'text-sm leading-6 text-muted-foreground'"
-        >
-          {{ description }}
-        </p>
-      </div>
+      <SettingsPageHeader
+        variant="section"
+        :title="title"
+        :description="description"
+        :tone="tone"
+      />
       <Separator class="bg-border/80" />
     </template>
     <slot />

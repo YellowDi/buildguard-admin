@@ -24,6 +24,7 @@ import { Switch } from "@/components/ui/switch"
 import SettingsInspectionHub from "@/components/settings/SettingsInspectionHub.vue"
 import SettingsMenusTable from "@/components/settings/SettingsMenusTable.vue"
 import SettingsMembersTable from "@/components/settings/SettingsMembersTable.vue"
+import SettingsPageHeader from "@/components/settings/SettingsPageHeader.vue"
 import SettingsSection from "@/components/settings/SettingsSection.vue"
 import type {
   SettingsActionKey,
@@ -61,14 +62,10 @@ function getBooleanValue(key: keyof SettingsState) {
 <template>
   <div class="min-h-0 flex-1 overflow-y-auto px-3 py-4 sm:p-4">
     <div class="mx-auto flex w-full max-w-[720px] flex-col gap-6">
-      <header class="flex flex-col gap-1.5">
-        <div class="min-w-0">
-          <h2 class="text-[1.625rem] font-semibold tracking-tight">{{ props.category.pageTitle ?? props.category.label }}</h2>
-          <p class="mt-1 max-w-2xl text-sm leading-6 text-muted-foreground">
-            {{ props.category.pageDescription ?? props.category.description }}
-          </p>
-        </div>
-      </header>
+      <SettingsPageHeader
+        :title="props.category.pageTitle ?? props.category.label"
+        :description="props.category.pageDescription ?? props.category.description"
+      />
 
       <SettingsMembersTable v-if="props.category.key === 'members'" />
       <SettingsMenusTable v-else-if="props.category.key === 'system'" />
