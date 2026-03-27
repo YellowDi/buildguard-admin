@@ -13,6 +13,7 @@ export type InspectionCategoryRecord = {
   Uuid?: string
   Id?: number
   Name?: string
+  Total?: number
   [property: string]: unknown
 }
 
@@ -21,8 +22,30 @@ export type InspectionCategoriesListResult = {
   total: number
 }
 
+export type CreateInspectionCategoryPayload = {
+  Name: string
+  [property: string]: unknown
+}
+
+export type UpdateInspectionCategoryPayload = {
+  Uuid: string
+  Name: string
+  [property: string]: unknown
+}
+
+export type DeleteInspectionCategoryPayload = {
+  Uuid: string
+  [property: string]: unknown
+}
+
 const INSPECTION_CATEGORIES_API_URL = buildApiUrl(API_PATHS.inspectionCategoriesList)
+const INSPECTION_CATEGORY_CREATE_API_URL = buildApiUrl(API_PATHS.inspectionCategoryCreate)
+const INSPECTION_CATEGORY_UPDATE_API_URL = buildApiUrl(API_PATHS.inspectionCategoryUpdate)
+const INSPECTION_CATEGORY_DELETE_API_URL = buildApiUrl(API_PATHS.inspectionCategoryDelete)
 const INSPECTION_CATEGORIES_LOAD_ERROR_MESSAGE = "检测项分类列表加载失败，请稍后重试。"
+const INSPECTION_CATEGORY_CREATE_ERROR_MESSAGE = "检测项分类创建失败，请稍后重试。"
+const INSPECTION_CATEGORY_UPDATE_ERROR_MESSAGE = "检测项分类更新失败，请稍后重试。"
+const INSPECTION_CATEGORY_DELETE_ERROR_MESSAGE = "检测项分类删除失败，请稍后重试。"
 
 export async function fetchInspectionCategories(): Promise<InspectionCategoriesListResult> {
   const response = await fetch(INSPECTION_CATEGORIES_API_URL, {
@@ -44,6 +67,64 @@ export async function fetchInspectionCategories(): Promise<InspectionCategoriesL
     list,
     total: extractTotal(responsePayload, list.length),
   }
+}
+
+export async function createInspectionCategory(payload: CreateInspectionCategoryPayload) {
+  const response = await fetch(INSPECTION_CATEGORY_CREATE_API_URL, {
+    method: "POST",
+    headers: buildApiHeaders({
+      "Content-Type": "application/json",
+    }),
+    body: JSON.stringify({
+      Name: getRequiredString(payload.Name, "Name"),
+    }),
+  })
+  const responseBody = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responseBody, INSPECTION_CATEGORY_CREATE_ERROR_MESSAGE)
+  }
+
+  return extractDetailRecord(responseBody)
+}
+
+export async function updateInspectionCategory(payload: UpdateInspectionCategoryPayload) {
+  const response = await fetch(INSPECTION_CATEGORY_UPDATE_API_URL, {
+    method: "POST",
+    headers: buildApiHeaders({
+      "Content-Type": "application/json",
+    }),
+    body: JSON.stringify({
+      Uuid: getRequiredString(payload.Uuid, "Uuid"),
+      Name: getRequiredString(payload.Name, "Name"),
+    }),
+  })
+  const responseBody = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responseBody, INSPECTION_CATEGORY_UPDATE_ERROR_MESSAGE)
+  }
+
+  return extractDetailRecord(responseBody)
+}
+
+export async function deleteInspectionCategory(payload: DeleteInspectionCategoryPayload) {
+  const response = await fetch(INSPECTION_CATEGORY_DELETE_API_URL, {
+    method: "POST",
+    headers: buildApiHeaders({
+      "Content-Type": "application/json",
+    }),
+    body: JSON.stringify({
+      Uuid: getRequiredString(payload.Uuid, "Uuid"),
+    }),
+  })
+  const responseBody = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responseBody, INSPECTION_CATEGORY_DELETE_ERROR_MESSAGE)
+  }
+
+  return extractDetailRecord(responseBody)
 }
 
 function extractList(payload: InspectionCategoriesListEnvelope | unknown[]) {
@@ -104,4 +185,26 @@ function extractTotal(payload: InspectionCategoriesListEnvelope | unknown[], fal
   }
 
   return fallback
+}
+
+function extractDetailRecord(payload: unknown) {
+  if (payload && typeof payload === "object" && !Array.isArray(payload)) {
+    const envelope = payload as Record<string, unknown>
+
+    if (envelope.data && typeof envelope.data === "object" && !Array.isArray(envelope.data)) {
+      return envelope.data as InspectionCategoryRecord
+    }
+
+    return envelope as InspectionCategoryRecord
+  }
+
+  return {} as InspectionCategoryRecord
+}
+
+function getRequiredString(value: unknown, fieldName: string) {
+  if (typeof value === "string" && value.trim()) {
+    return value.trim()
+  }
+
+  throw new TypeError(`${fieldName} is required`)
 }

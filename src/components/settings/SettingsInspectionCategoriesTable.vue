@@ -1,35 +1,76 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue"
+import { toast } from "vue-sonner"
 
 import {
   Alert,
   AlertDescription,
   AlertTitle,
 } from "@/components/ui/alert"
+import TopTabSwitch from "@/components/layout/TopTabSwitch.vue"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import TablePageTable from "@/components/table-page/TablePageTable.vue"
 import type { TableColumn, TablePageEmptyState } from "@/components/table-page/types"
 import { handleApiError } from "@/lib/api-errors"
 import {
+  createInspectionCategory,
+  deleteInspectionCategory,
   fetchInspectionCategories,
   type InspectionCategoryRecord,
+  updateInspectionCategory,
 } from "@/lib/inspection-categories-api"
+import { cn } from "@/lib/utils"
 
 type InspectionCategoryRow = {
   id: number
   uuid: string
   name: string
+  total: number
+}
+
+type InspectionCategoryForm = {
+  name: string
 }
 
 const INSPECTION_CATEGORIES_LOAD_ERROR_MESSAGE = "检测项分类列表加载失败，请稍后重试。"
+const toolbarIconButtonClass =
+  "top-tab-switch-icon-button flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:text-foreground"
 const compactTableClass =
-  "text-[13px] [&_thead_th]:px-2.5 [&_thead_th]:py-1.5 [&_tbody_td]:px-2.5 [&_tbody_td]:py-2 [&_tbody_td]:align-middle [&_tbody_td]:!border-l-0"
+  "text-[13px] [&_thead_th]:px-2.5 [&_thead_th]:py-1.5 [&_tbody_td]:px-2.5 [&_tbody_td]:py-2 [&_tbody_td]:align-middle [&_tbody_td]:!border-l-0 [&_thead_th:last-child]:w-0 [&_thead_th:last-child]:min-w-0 [&_thead_th:last-child]:p-0 [&_tbody_td:last-child]:w-0 [&_tbody_td:last-child]:min-w-0 [&_tbody_td:last-child]:p-0 [&_tbody_tr:hover]:bg-transparent [&_tbody_tr:hover_td]:bg-transparent"
 
 const rows = ref<InspectionCategoryRow[]>([])
 const loading = ref(false)
 const errorMessage = ref("")
+const searchExpanded = ref(false)
 const searchQuery = ref("")
+const createDialogOpen = ref(false)
+const editDialogOpen = ref(false)
+const createSubmitting = ref(false)
+const editSubmitting = ref(false)
+const deleteSubmitting = ref(false)
+const deleteConfirmOpen = ref(false)
+const editingCategoryId = ref<number | null>(null)
+const createForm = ref(createInspectionCategoryForm())
+const editForm = ref(createInspectionCategoryForm())
 
 const columns: TableColumn[] = [
   {
@@ -48,13 +89,35 @@ const columns: TableColumn[] = [
     width: "fill",
   },
   {
+    key: "total",
+    label: "检测项数量",
+    filterType: "number",
+    tone: "muted",
+  },
+  {
     key: "uuid",
     label: "Uuid",
     filterType: "text",
     tone: "muted",
     cellClass: "font-mono text-[12px] text-muted-foreground",
   },
+  {
+    key: "actions",
+    label: "",
+    filterType: "none",
+    slot: "cell-actions",
+    headerClass: "w-[6.5rem]",
+    cellClass: "w-[6.5rem] text-right",
+  },
 ]
+
+const categoryTabs = computed(() => [
+  {
+    id: "all",
+    label: "全部",
+    badge: rows.value.length,
+  },
+])
 
 const filteredRows = computed(() => {
   const query = searchQuery.value.trim().toLowerCase()
@@ -66,6 +129,7 @@ const filteredRows = computed(() => {
   return rows.value.filter(row => [
     String(row.id),
     row.name,
+    String(row.total),
     row.uuid,
   ].some(field => field.toLowerCase().includes(query)))
 })
@@ -116,6 +180,131 @@ async function loadInspectionCategories() {
   }
 }
 
+function toggleSearch() {
+  if (searchExpanded.value && searchQuery.value) {
+    searchQuery.value = ""
+    return
+  }
+
+  searchExpanded.value = !searchExpanded.value
+}
+
+function openCreateDialog() {
+  createForm.value = createInspectionCategoryForm()
+  createDialogOpen.value = true
+}
+
+function openEditDialog(row: InspectionCategoryRow) {
+  editingCategoryId.value = row.id
+  editForm.value = {
+    name: row.name,
+  }
+  editDialogOpen.value = true
+}
+
+function closeEditDialog() {
+  editDialogOpen.value = false
+  editingCategoryId.value = null
+  editForm.value = createInspectionCategoryForm()
+}
+
+function promptDeleteEditingCategory() {
+  deleteConfirmOpen.value = true
+}
+
+async function submitCreate() {
+  createSubmitting.value = true
+
+  try {
+    const response = await createInspectionCategory({
+      Name: createForm.value.name.trim(),
+    })
+
+    const nextId = Number.isFinite(Number(response.Id)) ? Number(response.Id) : createLocalId()
+    const nextRow = normalizeInspectionCategory({
+      ...response,
+      Id: nextId,
+      Name: createForm.value.name.trim(),
+      Total: Number.isFinite(Number(response.Total)) ? Number(response.Total) : 0,
+      Uuid: toText(response.Uuid, `category-${nextId}`),
+    }, rows.value.length)
+
+    rows.value = [nextRow, ...rows.value]
+    createDialogOpen.value = false
+    createForm.value = createInspectionCategoryForm()
+    toast.success("检测项分类已创建", {
+      description: `${nextRow.name} 已加入当前列表。`,
+    })
+  } catch (error) {
+    handleApiError(error, {
+      title: "检测项分类创建失败",
+      fallback: "检测项分类创建失败，请稍后重试。",
+    })
+  } finally {
+    createSubmitting.value = false
+  }
+}
+
+async function submitEdit() {
+  const currentRow = rows.value.find(row => row.id === editingCategoryId.value)
+
+  if (!currentRow) {
+    return
+  }
+
+  editSubmitting.value = true
+
+  try {
+    await updateInspectionCategory({
+      Uuid: currentRow.uuid,
+      Name: editForm.value.name.trim(),
+    })
+
+    currentRow.name = editForm.value.name.trim()
+    closeEditDialog()
+    toast.success("检测项分类已更新", {
+      description: `${currentRow.name} 的名称已保存。`,
+    })
+  } catch (error) {
+    handleApiError(error, {
+      title: "检测项分类更新失败",
+      fallback: "检测项分类更新失败，请稍后重试。",
+    })
+  } finally {
+    editSubmitting.value = false
+  }
+}
+
+async function confirmDeleteEditingCategory() {
+  const currentRow = rows.value.find(row => row.id === editingCategoryId.value)
+
+  if (!currentRow || deleteSubmitting.value) {
+    return
+  }
+
+  deleteSubmitting.value = true
+
+  try {
+    await deleteInspectionCategory({
+      Uuid: currentRow.uuid,
+    })
+
+    rows.value = rows.value.filter(row => row.id !== currentRow.id)
+    deleteConfirmOpen.value = false
+    closeEditDialog()
+    toast.success("检测项分类已删除", {
+      description: `${currentRow.name} 已从当前列表移除。`,
+    })
+  } catch (error) {
+    handleApiError(error, {
+      title: "检测项分类删除失败",
+      fallback: "检测项分类删除失败，请稍后重试。",
+    })
+  } finally {
+    deleteSubmitting.value = false
+  }
+}
+
 function normalizeInspectionCategory(item: InspectionCategoryRecord, index: number): InspectionCategoryRow {
   const id = Number.isFinite(Number(item.Id)) ? Number(item.Id) : index + 1
 
@@ -123,35 +312,84 @@ function normalizeInspectionCategory(item: InspectionCategoryRecord, index: numb
     id,
     uuid: toText(item.Uuid, `category-${id}`),
     name: toText(item.Name, `分类 ${id}`),
+    total: toOptionalNumber(item.Total) ?? 0,
   }
 }
 
 function toText(value: unknown, fallback = "") {
   return typeof value === "string" && value.trim() ? value.trim() : fallback
 }
+
+function createInspectionCategoryForm(): InspectionCategoryForm {
+  return {
+    name: "",
+  }
+}
+
+function createLocalId() {
+  const maxId = rows.value.reduce((max, row) => Math.max(max, row.id), 0)
+  return maxId + 1
+}
+
+function asInspectionCategoryRow(row: Record<string, unknown>) {
+  return row as InspectionCategoryRow
+}
+
+function toOptionalNumber(value: unknown) {
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : undefined
+}
 </script>
 
 <template>
-  <section class="space-y-4">
-    <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-      <div class="text-sm text-muted-foreground">
-        共 {{ rows.length }} 个分类
-      </div>
+  <section class="space-y-5">
+    <div class="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+      <TopTabSwitch
+        :tabs="categoryTabs"
+        model-value="all"
+        :collapse-inactive="false"
+        tone="default"
+        aria-label="检测项分类切换"
+      />
 
-      <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
-        <Input
-          v-model="searchQuery"
-          placeholder="搜索分类名称、ID 或 Uuid"
-          class="h-9 w-full min-w-[240px] bg-background sm:w-[280px]"
-        />
+      <div class="flex flex-wrap items-center justify-end gap-2">
+        <div
+          :class="
+            cn(
+              'flex h-8 items-center overflow-hidden rounded-full border border-input bg-background transition-[width,padding] duration-200 ease-out',
+              searchExpanded ? 'w-[260px] px-1.5' : 'w-8 justify-center border-transparent px-0',
+            )
+          "
+        >
+          <button
+            type="button"
+            :class="toolbarIconButtonClass"
+            @click="toggleSearch"
+          >
+            <i :class="searchExpanded ? 'ri-close-line text-[17px]' : 'ri-search-line text-[17px]'" />
+          </button>
+          <Input
+            v-if="searchExpanded"
+            v-model="searchQuery"
+            placeholder="搜索分类名称、ID 或 Uuid"
+            class="h-8 border-0 bg-transparent px-2 text-sm shadow-none focus-visible:border-transparent focus-visible:ring-0"
+          />
+        </div>
+
         <Button
-          variant="outline"
-          class="h-9"
+          variant="ghost"
+          size="sm"
+          class="h-8 rounded-md px-3"
           :disabled="loading"
           @click="loadInspectionCategories"
         >
-          <i :class="loading ? 'ri-loader-4-line animate-spin' : 'ri-refresh-line'" />
-          刷新
+          <i :class="loading ? 'ri-loader-4-line animate-spin text-sm' : 'ri-refresh-line text-sm'" />
+          <span>刷新列表</span>
+        </Button>
+
+        <Button class="h-8 gap-1 rounded-md px-3 text-[14px]" @click="openCreateDialog">
+          <i class="ri-add-line text-base" />
+          <span>添加检测项分类</span>
         </Button>
       </div>
     </div>
@@ -172,6 +410,115 @@ function toText(value: unknown, fallback = "") {
       :rows="filteredRows"
       :table-class="compactTableClass"
       :empty-state="tableEmptyState"
-    />
+    >
+      <template #cell-actions="{ row: rawRow }">
+        <Button
+          variant="outline"
+          size="sm"
+          class="ml-auto h-8 gap-1 rounded-md px-2.5 text-[13px]"
+          @click="openEditDialog(asInspectionCategoryRow(rawRow))"
+        >
+          <i class="ri-edit-line text-base" />
+          <span>编辑</span>
+        </Button>
+      </template>
+    </TablePageTable>
+
+    <Dialog :open="createDialogOpen" @update:open="createDialogOpen = $event">
+      <DialogContent class="sm:max-w-[520px]">
+        <DialogHeader>
+          <DialogTitle>添加检测项分类</DialogTitle>
+          <DialogDescription>
+            新增一个检测项分类，便于后续统一归类和筛选检测项。
+          </DialogDescription>
+        </DialogHeader>
+
+        <form class="grid gap-4" @submit.prevent="submitCreate">
+          <div class="grid gap-2">
+            <label class="text-sm font-medium text-foreground" for="create-inspection-category-name">分类名称</label>
+            <Input
+              id="create-inspection-category-name"
+              v-model="createForm.name"
+              placeholder="例如：消防设施"
+            />
+          </div>
+
+          <DialogFooter>
+            <Button type="button" variant="outline" :disabled="createSubmitting" @click="createDialogOpen = false">
+              取消
+            </Button>
+            <Button type="submit" :disabled="createSubmitting || !createForm.name.trim()">
+              <i v-if="createSubmitting" class="ri-loader-4-line animate-spin text-base" />
+              <span>{{ createSubmitting ? "保存中" : "保存分类" }}</span>
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+
+    <Dialog :open="editDialogOpen" @update:open="$event ? (editDialogOpen = true) : closeEditDialog()">
+      <DialogContent class="sm:max-w-[520px]">
+        <DialogHeader>
+          <DialogTitle>修改检测项分类</DialogTitle>
+          <DialogDescription>
+            更新当前分类名称，调整后会同步应用到分类列表中。
+          </DialogDescription>
+        </DialogHeader>
+
+        <form class="grid gap-4" @submit.prevent="submitEdit">
+          <div class="grid gap-2">
+            <label class="text-sm font-medium text-foreground" for="edit-inspection-category-name">分类名称</label>
+            <Input
+              id="edit-inspection-category-name"
+              v-model="editForm.name"
+              placeholder="例如：消防设施"
+            />
+          </div>
+
+          <DialogFooter class="flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <Button
+              type="button"
+              variant="destructive"
+              class="w-full sm:w-auto"
+              :disabled="editSubmitting || deleteSubmitting"
+              @click="promptDeleteEditingCategory"
+            >
+              <i class="ri-delete-bin-line text-base" />
+              <span>删除分类</span>
+            </Button>
+
+            <div class="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row">
+              <Button type="button" variant="outline" :disabled="editSubmitting || deleteSubmitting" @click="closeEditDialog">
+                取消
+              </Button>
+              <Button type="submit" :disabled="editSubmitting || deleteSubmitting || !editForm.name.trim()">
+                <i v-if="editSubmitting" class="ri-loader-4-line animate-spin text-base" />
+                <span>{{ editSubmitting ? "保存中" : "保存修改" }}</span>
+              </Button>
+            </div>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+
+    <AlertDialog :open="deleteConfirmOpen" @update:open="deleteConfirmOpen = $event">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>删除检测项分类？</AlertDialogTitle>
+          <AlertDialogDescription>
+            删除后将无法恢复。请先确认该分类下的检测项是否已经完成调整。
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel :disabled="deleteSubmitting">
+            取消
+          </AlertDialogCancel>
+          <AlertDialogAction :disabled="deleteSubmitting" @click="confirmDeleteEditingCategory">
+            <i v-if="deleteSubmitting" class="ri-loader-4-line animate-spin text-base" />
+            <span>{{ deleteSubmitting ? "删除中" : "确认删除" }}</span>
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   </section>
 </template>
