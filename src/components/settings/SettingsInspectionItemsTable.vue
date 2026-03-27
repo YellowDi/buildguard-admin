@@ -34,7 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Switch } from "@/components/ui/switch"
+import { Checkbox } from "@/components/ui/checkbox"
 import TablePageTable from "@/components/table-page/TablePageTable.vue"
 import type { TableColumn, TablePageEmptyState } from "@/components/table-page/types"
 import { Textarea } from "@/components/ui/textarea"
@@ -74,7 +74,9 @@ type InspectionItemRow = {
   content: string
   standard: string
   isForcePhoto: boolean
+  isForcePhotoLabel: string
   isMeasureRecord: boolean
+  isMeasureRecordLabel: string
   createdAt: string
   updatedAt: string
 }
@@ -131,6 +133,18 @@ const columns: TableColumn[] = [
   {
     key: "categoryName",
     label: "所属分类",
+    filterType: "tag",
+    tone: "muted",
+  },
+  {
+    key: "isForcePhotoLabel",
+    label: "强制拍照",
+    filterType: "tag",
+    tone: "muted",
+  },
+  {
+    key: "isMeasureRecordLabel",
+    label: "记录实测值",
     filterType: "tag",
     tone: "muted",
   },
@@ -389,7 +403,9 @@ async function submitEdit() {
       content: nextPayload.Content ?? "",
       standard: nextPayload.Standard ?? "",
       isForcePhoto: nextPayload.IsForcePhoto === 1,
+      isForcePhotoLabel: formatBooleanLabel(nextPayload.IsForcePhoto === 1),
       isMeasureRecord: nextPayload.IsMeasureRecord === 1,
+      isMeasureRecordLabel: formatBooleanLabel(nextPayload.IsMeasureRecord === 1),
       updatedAt: formatTimestamp(new Date().toISOString().slice(0, 19).replace("T", " ")),
     })
 
@@ -463,8 +479,8 @@ function buildInspectionItemPayload(form: InspectionItemForm, currentRow?: Inspe
     CategoryName: categoryName,
     Content: form.content.trim(),
     Standard: form.standard.trim(),
-    IsForcePhoto: form.isForcePhoto ? 1 : 0,
-    IsMeasureRecord: form.isMeasureRecord ? 1 : 0,
+    IsForcePhoto: form.isForcePhoto ? 1 : 2,
+    IsMeasureRecord: form.isMeasureRecord ? 1 : 2,
   }
 }
 
@@ -475,6 +491,8 @@ function normalizeInspectionItem(
 ): InspectionItemRow {
   const id = Number.isFinite(Number(item.Id)) ? Number(item.Id) : index + 1
   const uuid = toText(item.Uuid, `inspection-item-${id}`)
+  const isForcePhoto = resolveFlag(item.IsForcePhoto, fallbackRow?.isForcePhoto ?? false)
+  const isMeasureRecord = resolveFlag(item.IsMeasureRecord, fallbackRow?.isMeasureRecord ?? false)
 
   return {
     id,
@@ -485,8 +503,10 @@ function normalizeInspectionItem(
     categoryName: toText(item.CategoryName, fallbackRow?.categoryName || "未分类"),
     content: toText(item.Content, fallbackRow?.content || "-"),
     standard: toText(item.Standard, fallbackRow?.standard || "-"),
-    isForcePhoto: typeof item.IsForcePhoto === "undefined" ? (fallbackRow?.isForcePhoto ?? false) : toFlag(item.IsForcePhoto),
-    isMeasureRecord: typeof item.IsMeasureRecord === "undefined" ? (fallbackRow?.isMeasureRecord ?? false) : toFlag(item.IsMeasureRecord),
+    isForcePhoto,
+    isForcePhotoLabel: formatBooleanLabel(isForcePhoto),
+    isMeasureRecord,
+    isMeasureRecordLabel: formatBooleanLabel(isMeasureRecord),
     createdAt: formatTimestamp(toText(item.CreatedAt, fallbackRow?.createdAt || "")),
     updatedAt: formatTimestamp(toText(item.UpdatedAt, fallbackRow?.updatedAt || "")),
   }
@@ -555,9 +575,50 @@ function toOptionalNumber(value: unknown) {
   return Number.isFinite(parsed) ? parsed : undefined
 }
 
-function toFlag(value: unknown) {
+function resolveFlag(value: unknown, fallback: boolean) {
+  if (value === undefined || value === null || value === "") {
+    return fallback
+  }
+
+  if (typeof value === "boolean") {
+    return value
+  }
+
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase()
+
+    if (!normalized) {
+      return fallback
+    }
+
+    if (normalized === "1" || normalized === "true" || normalized === "yes" || normalized === "是") {
+      return true
+    }
+
+    if (normalized === "2" || normalized === "0" || normalized === "false" || normalized === "no" || normalized === "否") {
+      return false
+    }
+  }
+
   const parsed = Number(value)
-  return Number.isFinite(parsed) ? parsed > 0 : false
+
+  if (!Number.isFinite(parsed)) {
+    return fallback
+  }
+
+  if (parsed === 1) {
+    return true
+  }
+
+  if (parsed === 0 || parsed === 2) {
+    return false
+  }
+
+  return fallback
+}
+
+function formatBooleanLabel(value: boolean) {
+  return value ? "是" : "否"
 }
 
 function formatTimestamp(value: string) {
@@ -691,14 +752,20 @@ defineExpose({
           </div>
 
           <div class="grid gap-4 sm:grid-cols-2">
-            <label class="flex items-center justify-between rounded-lg border border-border/70 px-3 py-2.5">
+            <label class="flex items-center gap-3 rounded-lg border border-border/70 px-3 py-2.5">
+              <Checkbox
+                :model-value="createForm.isForcePhoto"
+                @update:model-value="createForm.isForcePhoto = Boolean($event)"
+              />
               <span class="text-sm font-medium text-foreground">是否强制拍照</span>
-              <Switch v-model:checked="createForm.isForcePhoto" />
             </label>
 
-            <label class="flex items-center justify-between rounded-lg border border-border/70 px-3 py-2.5">
+            <label class="flex items-center gap-3 rounded-lg border border-border/70 px-3 py-2.5">
+              <Checkbox
+                :model-value="createForm.isMeasureRecord"
+                @update:model-value="createForm.isMeasureRecord = Boolean($event)"
+              />
               <span class="text-sm font-medium text-foreground">是否记录实测值</span>
-              <Switch v-model:checked="createForm.isMeasureRecord" />
             </label>
           </div>
 
@@ -763,14 +830,22 @@ defineExpose({
           </div>
 
           <div class="grid gap-4 sm:grid-cols-2">
-            <label class="flex items-center justify-between rounded-lg border border-border/70 px-3 py-2.5">
+            <label class="flex items-center gap-3 rounded-lg border border-border/70 px-3 py-2.5">
+              <Checkbox
+                :model-value="editForm.isForcePhoto"
+                :disabled="editDetailLoading"
+                @update:model-value="editForm.isForcePhoto = Boolean($event)"
+              />
               <span class="text-sm font-medium text-foreground">是否强制拍照</span>
-              <Switch v-model:checked="editForm.isForcePhoto" :disabled="editDetailLoading" />
             </label>
 
-            <label class="flex items-center justify-between rounded-lg border border-border/70 px-3 py-2.5">
+            <label class="flex items-center gap-3 rounded-lg border border-border/70 px-3 py-2.5">
+              <Checkbox
+                :model-value="editForm.isMeasureRecord"
+                :disabled="editDetailLoading"
+                @update:model-value="editForm.isMeasureRecord = Boolean($event)"
+              />
               <span class="text-sm font-medium text-foreground">是否记录实测值</span>
-              <Switch v-model:checked="editForm.isMeasureRecord" :disabled="editDetailLoading" />
             </label>
           </div>
 

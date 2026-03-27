@@ -306,7 +306,7 @@ function getOptionalNumber(value: unknown, field: string) {
 
 function normalizeFlag(value: unknown, field: string) {
   const normalized = getOptionalNumber(value, field)
-  return normalized !== undefined && normalized > 0 ? 1 : 0
+  return normalized === 1 ? 1 : 2
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {
