@@ -20,6 +20,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
+import CustomerDetailContentLoading from "@/components/loading/CustomerDetailContentLoading.vue"
 import ExportTableDialog from "@/components/table-page/ExportTableDialog.vue"
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import TablePage from "@/components/table-page/TablePage.vue"
@@ -2029,25 +2030,21 @@ function toDisplayText(value: unknown, fallback = "未填写") {
         <AlertDescription>{{ errorMessage }}</AlertDescription>
       </Alert>
 
-      <div v-if="loading" class="rounded-lg border border-border/70 px-4 py-5 text-sm text-muted-foreground">
-        正在获取客户详情数据。
-      </div>
-
-      <template v-else-if="customer">
-        <div v-if="activeTab === 'building-assets'" class="flex min-h-0 flex-1 flex-col pb-5">
+      <template v-if="activeTab === 'building-assets'">
+        <div class="flex min-h-0 flex-1 flex-col pb-5">
           <Alert v-if="buildingAssetsErrorMessage" variant="destructive" class="mb-5">
             <AlertTitle>建筑资产接口加载失败</AlertTitle>
             <AlertDescription>{{ buildingAssetsErrorMessage }}</AlertDescription>
           </Alert>
 
-          <div v-if="buildingAssetsLoading" class="rounded-lg border border-border/70 px-4 py-5 text-sm text-muted-foreground">
-            正在获取建筑资产数据。
-          </div>
-
-          <TablePage v-else :page="buildingAssetsPage" :show-toolbar-actions="false" class="-mt-3 sm:-mx-4 xl:-mx-8" />
+          <CustomerDetailContentLoading v-if="loading || buildingAssetsLoading" variant="building-assets" />
+          <TablePage v-else-if="customer" :page="buildingAssetsPage" :show-toolbar-actions="false" class="-mt-3 sm:-mx-4 xl:-mx-8" />
         </div>
+      </template>
 
-        <div v-else-if="activeTab === 'work-orders'" class="flex min-h-0 flex-1 flex-col pb-5">
+      <template v-else-if="activeTab === 'work-orders'">
+        <CustomerDetailContentLoading v-if="loading" variant="work-orders" />
+        <div v-else-if="customer" class="flex min-h-0 flex-1 flex-col pb-5">
           <TablePage :page="workOrdersPage" :show-toolbar-actions="false" class="-mt-3 sm:-mx-4 xl:-mx-8" />
 
           <div class="mt-auto flex items-center justify-end gap-3 px-4 pt-4 sm:px-0">
@@ -2072,47 +2069,49 @@ function toDisplayText(value: unknown, fallback = "未填写") {
             </Button>
           </div>
         </div>
+      </template>
 
-        <div v-else class="space-y-5 pb-5">
-          <DetailFieldSections v-if="activeTab === 'basic-info'" :sections="fieldSections" />
-
-          <div v-else-if="activeTab === 'monitoring'" class="flex min-h-0 flex-1 flex-col pb-5">
-            <TablePage :page="monitoringPage" :show-toolbar-actions="false" class="-mt-3 sm:-mx-4 xl:-mx-8" />
-          </div>
-
-          <section v-else-if="activeTab === 'sub-accounts'" class="space-y-3">
-            <div class="rounded-xl border border-border/70 bg-muted/20 px-4 py-3">
-              <div class="text-sm font-medium text-foreground">
-                子账号模块待接入
-              </div>
-              <div class="mt-1 text-xs text-muted-foreground">
-                当前已预留客户子账号页签，后续可接成员列表、角色权限、启停状态和登录信息。
-              </div>
-            </div>
-            <p class="text-sm leading-6 text-muted-foreground">
-              仓库已有成员接口封装，但当前客户详情页缺少明确的客户维度绑定参数，先保留独立页签结构，避免误接错误数据。
-            </p>
-          </section>
+      <template v-else-if="activeTab === 'monitoring'">
+        <CustomerDetailContentLoading v-if="loading" variant="monitoring" />
+        <div v-else-if="customer" class="flex min-h-0 flex-1 flex-col pb-5">
+          <TablePage :page="monitoringPage" :show-toolbar-actions="false" class="-mt-3 sm:-mx-4 xl:-mx-8" />
         </div>
       </template>
+
+      <template v-else-if="activeTab === 'sub-accounts'">
+        <CustomerDetailContentLoading v-if="loading" variant="sub-accounts" />
+        <section v-else-if="customer" class="space-y-3 pb-5">
+          <div class="rounded-xl border border-border/70 bg-muted/20 px-4 py-3">
+            <div class="text-sm font-medium text-foreground">
+              子账号模块待接入
+            </div>
+            <div class="mt-1 text-xs text-muted-foreground">
+              当前已预留客户子账号页签，后续可接成员列表、角色权限、启停状态和登录信息。
+            </div>
+          </div>
+          <p class="text-sm leading-6 text-muted-foreground">
+            仓库已有成员接口封装，但当前客户详情页缺少明确的客户维度绑定参数，先保留独立页签结构，避免误接错误数据。
+          </p>
+        </section>
+      </template>
+
+      <div v-else class="space-y-5 pb-5">
+        <CustomerDetailContentLoading v-if="loading" variant="basic-info-primary" />
+        <DetailFieldSections v-else-if="customer" :sections="fieldSections" />
+      </div>
     </template>
 
     <template #secondary>
-      <template v-if="!loading && customer && activeTab === 'basic-info'">
+      <template v-if="activeTab === 'basic-info' && (loading || customer)">
         <div class="pb-5">
           <Alert v-if="relationErrorMessage" variant="destructive" class="mb-5">
             <AlertTitle>园区/建筑接口加载失败</AlertTitle>
             <AlertDescription>{{ relationErrorMessage }}</AlertDescription>
           </Alert>
 
-          <div
-            v-if="relationsLoading"
-            class="rounded-lg border border-border/70 px-4 py-5 text-sm text-muted-foreground"
-          >
-            正在获取园区和建筑列表数据。
-          </div>
+          <CustomerDetailContentLoading v-if="loading || relationsLoading" variant="basic-info-secondary" />
 
-          <template v-else-if="parkBuildingGroups.length">
+          <template v-else-if="customer && parkBuildingGroups.length">
             <DetailAccordionModule :schema="parkBuildingAccordion">
               <template #item-actions="{ item }">
                 <div class="flex items-center gap-2">
@@ -2173,15 +2172,15 @@ function toDisplayText(value: unknown, fallback = "未填写") {
           </template>
 
           <div
-            v-else
+            v-else-if="customer"
             class="rounded-lg border border-border/70 px-4 py-5 text-sm text-muted-foreground"
           >
             暂无园区和建筑数据。
           </div>
 
-          <div class="my-5 h-px bg-border/80" />
+          <div v-if="customer" class="my-5 h-px bg-border/80" />
 
-          <DetailRelationModule :schema="maintenanceModule">
+          <DetailRelationModule v-if="customer" :schema="maintenanceModule">
             <template #maintenance-status-cell="{ row }">
               <div class="flex min-w-0 items-center gap-2 text-foreground">
                 <i
