@@ -433,23 +433,9 @@ const buildingAssetsSchema: TablePageSchema<CustomerBuildingAssetRow> = {
   rowActions: [
     {
       key: "view-building",
-      label: "查看建筑详情",
+      label: "查看详情",
       onClick: () => {
         toast.info("建筑资产详情接口暂未接入")
-      },
-    },
-    {
-      key: "view-park",
-      label: "查看园区详情",
-      onClick: () => {
-        toast.info("园区详情接口暂未接入")
-      },
-    },
-    {
-      key: "edit-park",
-      label: "编辑园区",
-      onClick: () => {
-        toast.info("园区编辑接口暂未接入")
       },
     },
   ],
