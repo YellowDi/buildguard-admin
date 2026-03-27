@@ -30,6 +30,7 @@ export type InspectionPlansResult = {
 }
 
 export type ListInspectionPlansPayload = {
+  CustomerUuid?: string
   PageNum?: number
   PageSize?: number
   [property: string]: unknown
@@ -42,6 +43,7 @@ export async function fetchInspectionPlans(
   payload: ListInspectionPlansPayload = {},
 ): Promise<InspectionPlansResult> {
   const normalizedPayload = {
+    CustomerUuid: getOptionalString(payload.CustomerUuid),
     PageNum: getOptionalNumber(payload.PageNum, "PageNum"),
     PageSize: getOptionalNumber(payload.PageSize, "PageSize"),
   }
@@ -143,4 +145,21 @@ function getOptionalNumber(value: unknown, fieldName: string) {
   }
 
   return value
+}
+
+function getOptionalString(value: unknown) {
+  if (value === undefined || value === null) {
+    return undefined
+  }
+
+  if (typeof value === "string") {
+    const normalized = value.trim()
+    return normalized || undefined
+  }
+
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return String(value)
+  }
+
+  throw new TypeError("String field must be a string or number.")
 }

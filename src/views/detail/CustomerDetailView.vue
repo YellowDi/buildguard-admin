@@ -145,6 +145,7 @@ type CustomerDetailTabActions = {
   deleteCustomer: boolean
   addPark: boolean
   addBuilding: boolean
+  addWorkOrder: boolean
   addMonitoring: boolean
   addSubAccount: boolean
   editCustomer: boolean
@@ -217,6 +218,7 @@ const detailTabActionsByTab: Record<CustomerDetailTab, CustomerDetailTabActions>
     deleteCustomer: true,
     addPark: false,
     addBuilding: false,
+    addWorkOrder: false,
     addMonitoring: false,
     addSubAccount: false,
     editCustomer: true,
@@ -226,6 +228,7 @@ const detailTabActionsByTab: Record<CustomerDetailTab, CustomerDetailTabActions>
     deleteCustomer: false,
     addPark: true,
     addBuilding: true,
+    addWorkOrder: false,
     addMonitoring: false,
     addSubAccount: false,
     editCustomer: false,
@@ -235,6 +238,7 @@ const detailTabActionsByTab: Record<CustomerDetailTab, CustomerDetailTabActions>
     deleteCustomer: false,
     addPark: false,
     addBuilding: false,
+    addWorkOrder: true,
     addMonitoring: false,
     addSubAccount: false,
     editCustomer: false,
@@ -244,6 +248,7 @@ const detailTabActionsByTab: Record<CustomerDetailTab, CustomerDetailTabActions>
     deleteCustomer: false,
     addPark: false,
     addBuilding: false,
+    addWorkOrder: false,
     addMonitoring: true,
     addSubAccount: false,
     editCustomer: false,
@@ -253,6 +258,7 @@ const detailTabActionsByTab: Record<CustomerDetailTab, CustomerDetailTabActions>
     deleteCustomer: false,
     addPark: false,
     addBuilding: false,
+    addWorkOrder: false,
     addMonitoring: false,
     addSubAccount: true,
     editCustomer: false,
@@ -301,6 +307,10 @@ const activeDetailMobileActionItems = computed(() => {
 
   if (activeDetailTabActions.value.addBuilding) {
     items.push({ key: "add-building", label: "添加建筑", iconClass: "ri-building-line" })
+  }
+
+  if (activeDetailTabActions.value.addWorkOrder) {
+    items.push({ key: "add-work-order", label: "添加工单", iconClass: "ri-file-add-line" })
   }
 
   if (activeDetailTabActions.value.addMonitoring) {
@@ -1045,6 +1055,20 @@ function handleAddBuilding() {
   })
 }
 
+function handleAddWorkOrder() {
+  if (!customerUuid.value) {
+    return
+  }
+
+  router.push({
+    name: "customer-work-order-create",
+    params: { id: customerUuid.value },
+    query: {
+      customerName: toDisplayText(customer.value?.CorpName, "当前客户"),
+    },
+  })
+}
+
 function handleAddMonitoring() {
   toast.info("添加监控页面暂未接入")
 }
@@ -1152,6 +1176,9 @@ function handleMobileTabActionSelect(key: string) {
       return
     case "add-building":
       handleAddBuilding()
+      return
+    case "add-work-order":
+      handleAddWorkOrder()
       return
     case "add-monitoring":
       handleAddMonitoring()
@@ -2238,6 +2265,16 @@ function toDisplayText(value: unknown, fallback = "未填写") {
           >
             <i class="ri-building-line text-base" />
             添加建筑
+          </Button>
+          <Button
+            v-if="activeDetailTabActions.addWorkOrder"
+            variant="outline"
+            size="sm"
+            class="h-8 gap-1 border-border/80 bg-background px-3 text-[14px] font-medium text-foreground shadow-none"
+            @click="handleAddWorkOrder"
+          >
+            <i class="ri-file-add-line text-base" />
+            添加工单
           </Button>
           <Button
             v-if="activeDetailTabActions.addMonitoring"

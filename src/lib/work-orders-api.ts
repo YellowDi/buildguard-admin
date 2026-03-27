@@ -1,4 +1,4 @@
-import { createHttpError, readResponseBody } from "@/lib/api-errors"
+import { ApiError, assertApiSuccess, createHttpError, readResponseBody } from "@/lib/api-errors"
 import { API_PATHS, buildApiHeaders, buildApiUrl } from "@/lib/api"
 
 type WorkOrdersListEnvelope = {
@@ -34,23 +34,52 @@ export type WorkOrdersListResult = {
   total: number
 }
 
+export type CreateWorkOrderPayload = {
+  PlanUuid: string
+  PackageName: string
+  CustomerUuid: string
+  Deadline: string
+  Status: number
+  Remark?: string
+}
+
+export type CreateWorkOrderResult = {
+  Id?: number
+  Uuid?: string
+  [property: string]: unknown
+}
+
 export type ListWorkOrdersPayload = {
+  OrderNo?: string
+  PlanUuid?: string
   CustomerUuid?: string
   PackageName?: string
+  Deadline?: string
+  Executor?: string
+  Status?: number
+  Result?: number
   PageNum?: number
   PageSize?: number
   [property: string]: unknown
 }
 
 const WORK_ORDERS_API_URL = buildApiUrl(API_PATHS.workOrdersList)
+const WORK_ORDER_CREATE_API_URL = buildApiUrl(API_PATHS.workOrderCreate)
 const WORK_ORDERS_LOAD_ERROR_MESSAGE = "工单列表加载失败，请稍后重试。"
+const WORK_ORDER_CREATE_ERROR_MESSAGE = "工单创建失败，请稍后重试。"
 
 export async function fetchWorkOrders(payload: ListWorkOrdersPayload = {}): Promise<WorkOrdersListResult> {
   const normalizedPayload = {
-    CustomerUuid: getOptionalString(payload.CustomerUuid),
-    PackageName: getOptionalString(payload.PackageName),
-    PageNum: getOptionalNumber(payload.PageNum, "PageNum"),
-    PageSize: getOptionalNumber(payload.PageSize, "PageSize"),
+    OrderNo: getOptionalString(payload.OrderNo) ?? "",
+    PlanUuid: getOptionalString(payload.PlanUuid) ?? "",
+    PackageName: getOptionalString(payload.PackageName) ?? "",
+    CustomerUuid: getOptionalString(payload.CustomerUuid) ?? "",
+    Deadline: getOptionalString(payload.Deadline) ?? "",
+    Executor: getOptionalString(payload.Executor) ?? "",
+    Status: getOptionalNumber(payload.Status, "Status") ?? 0,
+    Result: getOptionalNumber(payload.Result, "Result") ?? 0,
+    PageNum: getOptionalNumber(payload.PageNum, "PageNum") ?? 1,
+    PageSize: getOptionalNumber(payload.PageSize, "PageSize") ?? 10,
   }
 
   const response = await fetch(WORK_ORDERS_API_URL, {
@@ -66,12 +95,42 @@ export async function fetchWorkOrders(payload: ListWorkOrdersPayload = {}): Prom
     throw createHttpError(response, responsePayload, WORK_ORDERS_LOAD_ERROR_MESSAGE)
   }
 
+  assertApiSuccess(responsePayload, WORK_ORDERS_LOAD_ERROR_MESSAGE)
+
   const list = extractList(responsePayload)
 
   return {
     list: list.map(item => normalizeWorkOrderListItem(item)),
     total: extractTotal(responsePayload, list.length),
   }
+}
+
+export async function createWorkOrder(payload: CreateWorkOrderPayload): Promise<CreateWorkOrderResult> {
+  const normalizedPayload = {
+    PlanUuid: getRequiredString(payload.PlanUuid, "PlanUuid"),
+    PackageName: getRequiredString(payload.PackageName, "PackageName"),
+    CustomerUuid: getRequiredString(payload.CustomerUuid, "CustomerUuid"),
+    Deadline: getRequiredString(payload.Deadline, "Deadline"),
+    Status: getRequiredNumber(payload.Status, "Status"),
+    Remark: getOptionalString(payload.Remark),
+  }
+
+  const response = await fetch(WORK_ORDER_CREATE_API_URL, {
+    method: "POST",
+    headers: buildApiHeaders({
+      "Content-Type": "application/json",
+    }),
+    body: JSON.stringify(normalizedPayload),
+  })
+  const responseBody = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responseBody, WORK_ORDER_CREATE_ERROR_MESSAGE)
+  }
+
+  assertApiSuccess(responseBody, WORK_ORDER_CREATE_ERROR_MESSAGE)
+
+  return extractCreateResult(responseBody)
 }
 
 function extractList(payload: WorkOrdersListEnvelope | unknown[]) {
@@ -131,11 +190,69 @@ function extractTotal(payload: WorkOrdersListEnvelope | unknown[], fallback: num
 }
 
 function normalizeWorkOrderListItem(value: unknown): WorkOrderListItem {
-  if (value && typeof value === "object") {
-    return value as WorkOrderListItem
+  if (!value || typeof value !== "object") {
+    return {}
   }
 
-  return {}
+  const record = value as Record<string, unknown>
+
+  return {
+    ...record,
+    Uuid: getFirstText(record, ["Uuid", "uuid", "WorkOrderUuid", "workOrderUuid", "OrderUuid", "orderUuid"]),
+    Id: getFirstNumber(record, ["Id", "id", "WorkOrderId", "workOrderId", "OrderId", "orderId"]),
+    OrderNo: getFirstText(record, ["OrderNo", "orderNo", "WorkOrderNo", "workOrderNo", "No", "no"]),
+    PlanUuid: getFirstText(record, ["PlanUuid", "planUuid"]),
+    PlanName: getFirstText(record, ["PlanName", "planName", "InspectionPlanName", "inspectionPlanName", "Name", "name"]),
+    PackageName: getFirstText(record, ["PackageName", "packageName", "ServiceName", "serviceName"]),
+    CustomerUuid: getFirstText(record, ["CustomerUuid", "customerUuid"]),
+    CustomerName: getFirstText(record, ["CustomerName", "customerName", "CorpName", "corpName", "CompanyName", "companyName"]),
+    Deadline: getFirstText(record, ["Deadline", "deadline", "ExpireAt", "expireAt", "DueAt", "dueAt"]),
+    Executor: getFirstText(record, ["Executor", "executor", "PrincipalName", "principalName", "Assignee", "assignee"]),
+    Status: getFirstNumber(record, ["Status", "status", "WorkOrderStatus", "workOrderStatus"]),
+    Score: getFirstNumber(record, ["Score", "score", "TotalScore", "totalScore"]),
+    Result: getFirstNumber(record, ["Result", "result", "WorkOrderResult", "workOrderResult"]),
+    Remark: getFirstText(record, ["Remark", "remark", "Note", "note", "Description", "description"]),
+    CreatedAt: getFirstText(record, ["CreatedAt", "createdAt", "CreateTime", "createTime"]),
+    UpdatedAt: getFirstText(record, ["UpdatedAt", "updatedAt", "UpdateTime", "updateTime"]),
+  }
+}
+
+function extractCreateResult(payload: unknown): CreateWorkOrderResult {
+  const record = asRecord(payload)
+
+  if (!record) {
+    return {}
+  }
+
+  const nestedRecord = asRecord(record.data)
+
+  if (nestedRecord) {
+    return nestedRecord as CreateWorkOrderResult
+  }
+
+  return record as CreateWorkOrderResult
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value !== null && typeof value === "object" ? value as Record<string, unknown> : null
+}
+
+function getRequiredString(value: unknown, fieldName: string) {
+  const normalized = getOptionalString(value)
+
+  if (!normalized) {
+    throw new ApiError(`请求参数校验失败：${fieldName} 不能为空。`)
+  }
+
+  return normalized
+}
+
+function getRequiredNumber(value: unknown, fieldName: string) {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    throw new ApiError(`请求参数校验失败：${fieldName} 必须是有效数字。`)
+  }
+
+  return value
 }
 
 function getOptionalNumber(value: unknown, fieldName: string) {
@@ -148,6 +265,44 @@ function getOptionalNumber(value: unknown, fieldName: string) {
   }
 
   return value
+}
+
+function getFirstText(record: Record<string, unknown>, keys: string[]) {
+  for (const key of keys) {
+    const value = record[key]
+
+    if (typeof value === "string") {
+      const normalized = value.trim()
+      if (normalized) {
+        return normalized
+      }
+    }
+
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return String(value)
+    }
+  }
+
+  return undefined
+}
+
+function getFirstNumber(record: Record<string, unknown>, keys: string[]) {
+  for (const key of keys) {
+    const value = record[key]
+
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return value
+    }
+
+    if (typeof value === "string" && value.trim()) {
+      const normalized = Number(value.trim())
+      if (Number.isFinite(normalized)) {
+        return normalized
+      }
+    }
+  }
+
+  return undefined
 }
 
 function getOptionalString(value: unknown) {
