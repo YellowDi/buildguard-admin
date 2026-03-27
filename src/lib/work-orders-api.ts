@@ -35,6 +35,7 @@ export type WorkOrdersListResult = {
 }
 
 export type ListWorkOrdersPayload = {
+  CustomerUuid?: string
   PackageName?: string
   PageNum?: number
   PageSize?: number
@@ -46,6 +47,7 @@ const WORK_ORDERS_LOAD_ERROR_MESSAGE = "工单列表加载失败，请稍后重�
 
 export async function fetchWorkOrders(payload: ListWorkOrdersPayload = {}): Promise<WorkOrdersListResult> {
   const normalizedPayload = {
+    CustomerUuid: getOptionalString(payload.CustomerUuid),
     PackageName: getOptionalString(payload.PackageName),
     PageNum: getOptionalNumber(payload.PageNum, "PageNum"),
     PageSize: getOptionalNumber(payload.PageSize, "PageSize"),

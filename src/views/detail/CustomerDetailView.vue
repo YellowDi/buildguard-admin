@@ -42,6 +42,7 @@ import { handleApiError } from "@/lib/api-errors"
 import { fetchBuildings, type BuildingListItem } from "@/lib/buildings-api"
 import { readCustomerSubAccountLocalRecords } from "@/lib/customer-sub-accounts-api"
 import { deleteCustomer, fetchCustomerDetail, type CustomerDetailPerson, type CustomerDetailResult } from "@/lib/customers-api"
+import { fetchWorkOrders, type WorkOrderListItem } from "@/lib/work-orders-api"
 import customersData from "@/mocks/customers.json"
 import { deletePark, fetchParkDetail, fetchParks, type ParkDetailResult, type ParkListItem } from "@/lib/parks-api"
 
@@ -166,6 +167,8 @@ const buildingAssets = ref<CustomerBuildingAssetRow[]>([])
 const buildingAssetsLoading = ref(false)
 const buildingAssetsErrorMessage = ref("")
 const workOrders = ref<CustomerWorkOrderRow[]>([])
+const workOrdersLoading = ref(false)
+const workOrdersErrorMessage = ref("")
 const workOrdersPageNum = ref(1)
 const workOrdersPageSize = ref(10)
 const workOrdersTotal = ref(0)
@@ -181,6 +184,7 @@ const activeBuildingParkUuid = ref("")
 let latestRequestId = 0
 let latestRelationsRequestId = 0
 let latestBuildingAssetsRequestId = 0
+let latestWorkOrdersRequestId = 0
 let latestParkDetailRequestId = 0
 
 const customerUuid = computed(() => {
@@ -317,11 +321,6 @@ const detailToolbarButtonClass =
   "inline-flex size-8 items-center justify-center rounded-md bg-transparent text-muted-foreground transition-colors hover:bg-surface-tertiary hover:text-foreground active:bg-surface-secondary"
 const detailToolbarButtonActiveClass =
   "bg-transparent text-link hover:bg-surface-tertiary active:bg-surface-secondary"
-const pagedWorkOrders = computed(() => {
-  const start = (workOrdersPageNum.value - 1) * workOrdersPageSize.value
-  const end = start + workOrdersPageSize.value
-  return workOrders.value.slice(start, end)
-})
 const activeTablePage = computed(() => (
   activeTab.value === "building-assets"
     ? buildingAssetsPage
@@ -936,7 +935,7 @@ const buildingAssetsPage = useTablePage({
 
 const workOrdersPage = useTablePage({
   ...createTablePageDefinition(workOrdersSchema),
-  rows: pagedWorkOrders,
+  rows: workOrders,
 })
 
 const monitoringPage = useTablePage({
@@ -972,25 +971,33 @@ const parkDetailSheetSections = computed<DetailFieldSection[]>(() => {
   ]
 })
 
-watch(customer, (current) => {
+watch(customer, current => {
   detailBreadcrumbTitle.value = current?.CorpName?.trim() || null
-  workOrders.value = current ? buildMockWorkOrders(current) : []
-  workOrdersTotal.value = workOrders.value.length
 })
 
 watch(customerUuid, (uuid) => {
   buildingAssets.value = []
   buildingAssetsErrorMessage.value = ""
   workOrders.value = []
+  workOrdersErrorMessage.value = ""
   workOrdersTotal.value = 0
   workOrdersPageNum.value = 1
   void loadCustomerDetail(uuid)
   void loadBuildingAssets(uuid)
+  void loadWorkOrders(uuid)
   void loadParkBuildings(uuid)
 }, { immediate: true })
 
 watch(workOrdersPageSize, () => {
   workOrdersPageNum.value = 1
+})
+
+watch([workOrdersPageNum, workOrdersPageSize], () => {
+  if (!customerUuid.value) {
+    return
+  }
+
+  void loadWorkOrders(customerUuid.value)
 })
 
 onUnmounted(() => {
@@ -1545,6 +1552,50 @@ async function loadBuildingAssets(uuid: string) {
   }
 }
 
+async function loadWorkOrders(uuid: string) {
+  const requestId = ++latestWorkOrdersRequestId
+
+  if (!uuid) {
+    workOrders.value = []
+    workOrdersTotal.value = 0
+    workOrdersErrorMessage.value = "客户 Uuid 缺失，无法加载工单列表。"
+    return
+  }
+
+  workOrdersLoading.value = true
+  workOrdersErrorMessage.value = ""
+
+  try {
+    const result = await fetchWorkOrders({
+      CustomerUuid: uuid,
+      PageNum: workOrdersPageNum.value,
+      PageSize: workOrdersPageSize.value,
+    })
+
+    if (requestId !== latestWorkOrdersRequestId) {
+      return
+    }
+
+    workOrders.value = result.list.map((item, index) => mapWorkOrderRow(item, index))
+    workOrdersTotal.value = result.total
+  } catch (error) {
+    if (requestId !== latestWorkOrdersRequestId) {
+      return
+    }
+
+    workOrders.value = []
+    workOrdersTotal.value = 0
+    workOrdersErrorMessage.value = handleApiError(error, {
+      mode: "silent",
+      fallback: "工单列表加载失败，请稍后重试。",
+    })
+  } finally {
+    if (requestId === latestWorkOrdersRequestId) {
+      workOrdersLoading.value = false
+    }
+  }
+}
+
 async function fetchAllBuildingAssets(uuid: string) {
   const pageSize = 200
   const allItems: BuildingListItem[] = []
@@ -1840,64 +1891,36 @@ function mapBuildingAssetRow(item: BuildingListItem, currentCustomerUuid: string
   }
 }
 
-function buildMockWorkOrders(current: CustomerDetailResult): CustomerWorkOrderRow[] {
-  const customerName = toDisplayText(current.CorpName, "当前客户")
-  const packageInfo = getCustomerPackageMockRecord(current)
-  const packageName = packageInfo?.packageName ?? "消防巡检标准套餐"
-  const customerId = customerUuid.value || "customer"
-
-  return [
-    createMockWorkOrder(customerId, 1, customerName, packageName, "消防泵房月检", "王工", 1, 82, 1, "待客户安排进场时间。", "2026-03-19 10:20"),
-    createMockWorkOrder(customerId, 2, customerName, packageName, "配电室温感排查", "刘洋", 2, 88, 1, "已完成首轮排查，等待复核。", "2026-03-20 15:40"),
-    createMockWorkOrder(customerId, 3, customerName, packageName, "电梯机房巡检", "陈峰", 3, 91, 1, "运行中发现轻微异响，持续观察。", "2026-03-21 09:15"),
-    createMockWorkOrder(customerId, 4, customerName, packageName, "排烟系统复检", "赵敏", 5, 95, 1, "复检通过。", "2026-03-22 11:05"),
-    createMockWorkOrder(customerId, 5, customerName, packageName, "应急照明抽检", "李凯", 4, 79, 2, "报告生成中，存在局部异常。", "2026-03-23 16:50"),
-    createMockWorkOrder(customerId, 6, customerName, packageName, "消防栓水压测试", "孙涛", 5, 97, 1, "数据正常，已结单。", "2026-03-24 08:30"),
-    createMockWorkOrder(customerId, 7, customerName, packageName, "疏散指示灯巡检", "王工", 2, 84, 1, "等待夜间联调。", "2026-03-24 17:40"),
-    createMockWorkOrder(customerId, 8, customerName, packageName, "喷淋系统抽检", "刘洋", 3, 86, 2, "局部点位需二次确认。", "2026-03-25 13:10"),
-    createMockWorkOrder(customerId, 9, customerName, packageName, "防火门闭门器检查", "陈峰", 1, null, 0, "待派单。", "2026-03-25 19:25"),
-    createMockWorkOrder(customerId, 10, customerName, packageName, "联动控制柜核验", "赵敏", 4, 90, 1, "等待报告归档。", "2026-03-26 09:00"),
-    createMockWorkOrder(customerId, 11, customerName, packageName, "末端试水装置检查", "李凯", 5, 93, 1, "已完成。", "2026-03-26 15:35"),
-    createMockWorkOrder(customerId, 12, customerName, packageName, "火灾报警主机巡检", "孙涛", 3, 87, 2, "告警日志需继续排查。", "2026-03-27 10:55"),
-  ]
-}
-
-function createMockWorkOrder(
-  customerId: string,
-  index: number,
-  customerName: string,
-  packageName: string,
-  planName: string,
-  executor: string,
-  statusValue: number | null,
-  score: number | null,
-  resultValue: number | null,
-  remark: string,
-  updatedAt: string,
-): CustomerWorkOrderRow {
-  const orderNo = `WO-${customerId.slice(0, 6).toUpperCase()}-${String(index).padStart(4, "0")}`
-  const createdAt = shiftDateTime(updatedAt, -2)
-  const deadline = shiftDateTime(updatedAt, 3)
+function mapWorkOrderRow(item: WorkOrderListItem, index: number): CustomerWorkOrderRow {
+  const uuid = toDisplayText(item.Uuid, toDisplayText(item.Id, `${workOrdersPageNum.value}-${index + 1}`))
+  const fallbackId = toDisplayText(item.Id, `${workOrdersPageNum.value}-${index + 1}`)
+  const statusValue = toNullableNumber(item.Status)
+  const score = toNullableNumber(item.Score)
+  const resultValue = toNullableNumber(item.Result)
 
   return {
-    id: `${customerId}-work-order-${index}`,
-    uuid: `${customerId}-work-order-${index}`,
-    orderNo,
-    planName,
-    packageName,
-    customerName,
-    deadline,
-    executor,
+    id: uuid || fallbackId,
+    uuid: uuid || fallbackId,
+    orderNo: toDisplayText(item.OrderNo, "-"),
+    planName: toDisplayText(item.PlanName, "-"),
+    packageName: toDisplayText(item.PackageName, "-"),
+    customerName: toDisplayText(item.CustomerName, toDisplayText(customer.value?.CorpName, "-")),
+    deadline: toDisplayText(item.Deadline, "-"),
+    executor: toDisplayText(item.Executor, "-"),
     statusValue,
     statusLabel: formatWorkOrderStatus(statusValue),
     score,
     scoreLabel: formatWorkOrderScore(score),
     resultValue,
     resultLabel: formatWorkOrderResult(resultValue),
-    remark,
-    createdAt,
-    updatedAt,
+    remark: toDisplayText(item.Remark, "-"),
+    createdAt: toDisplayText(item.CreatedAt, "-"),
+    updatedAt: toDisplayText(item.UpdatedAt, "-"),
   }
+}
+
+function toNullableNumber(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) ? value : null
 }
 
 function buildMockMonitoringRows(current: CustomerDetailResult): MonitoringRow[] {
@@ -2004,24 +2027,6 @@ function toPinyinAccountPrefix(value: string) {
     .replace(/^-+|-+$/g, "")
 
   return normalized || "subaccount"
-}
-
-function shiftDateTime(value: string, offsetDays: number) {
-  const date = new Date(value.replace(" ", "T"))
-
-  if (Number.isNaN(date.getTime())) {
-    return value
-  }
-
-  date.setDate(date.getDate() + offsetDays)
-
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, "0")
-  const day = String(date.getDate()).padStart(2, "0")
-  const hours = String(date.getHours()).padStart(2, "0")
-  const minutes = String(date.getMinutes()).padStart(2, "0")
-
-  return `${year}-${month}-${day} ${hours}:${minutes}`
 }
 
 function normalizeBuildingRow(building: BuildingListItem, park: ParkListItem, index: number): BuildingRow {
@@ -2297,8 +2302,13 @@ function toDisplayText(value: unknown, fallback = "未填写") {
       </template>
 
       <template v-else-if="activeTab === 'work-orders'">
-        <CustomerDetailContentLoading v-if="loading" variant="work-orders" />
+        <CustomerDetailContentLoading v-if="loading || workOrdersLoading" variant="work-orders" />
         <div v-else-if="customer" class="flex min-h-0 flex-1 flex-col pb-5">
+          <Alert v-if="workOrdersErrorMessage" variant="destructive" class="mb-5">
+            <AlertTitle>工单列表接口加载失败</AlertTitle>
+            <AlertDescription>{{ workOrdersErrorMessage }}</AlertDescription>
+          </Alert>
+
           <TablePage :page="workOrdersPage" :show-toolbar-actions="false" class="-mt-3 sm:-mx-4 xl:-mx-8" />
 
           <div class="mt-auto flex items-center justify-end gap-3 px-4 pt-4 sm:px-0">
