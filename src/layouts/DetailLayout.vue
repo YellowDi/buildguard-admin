@@ -51,6 +51,7 @@ const emit = defineEmits<{
 const slots = useSlots()
 const hasTabs = computed(() => props.tabs.length > 0)
 const hasSecondary = computed(() => Boolean(slots.secondary) && props.secondaryVisible)
+const useSingleColumn = computed(() => props.fullWidth || !hasSecondary.value)
 const hasHeaderActions = computed(() => Boolean(slots.headerActions) || (!hasTabs.value && Boolean(slots.actions)))
 const hasTabActions = computed(() => hasTabs.value && (Boolean(slots.tabActions) || Boolean(slots.actions)))
 const hasHeaderBottom = computed(() => Boolean(slots.headerBottom))
@@ -67,7 +68,7 @@ function handleTabSelect(value: unknown) {
   <section
     :class="[
       'detail-layout mx-auto flex w-full min-w-0 flex-1 flex-col px-0 sm:px-4 xl:px-8',
-      props.fullWidth ? 'detail-layout--full-width' : '',
+      useSingleColumn ? 'detail-layout--single-column' : '',
       props.fullWidth ? 'max-w-none' : 'max-w-[1440px]',
     ]"
   >

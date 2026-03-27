@@ -132,16 +132,16 @@
     padding-left: 1rem;
   }
 
-  .detail-layout--full-width .detail-layout__content {
+  .detail-layout--single-column .detail-layout__content {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .detail-layout--full-width .detail-layout__primary {
+  .detail-layout--single-column .detail-layout__primary {
     padding-right: 0;
   }
 
-  .detail-layout--full-width .detail-layout__divider,
-  .detail-layout--full-width .detail-layout__secondary {
+  .detail-layout--single-column .detail-layout__divider,
+  .detail-layout--single-column .detail-layout__secondary {
     display: none;
   }
 }

@@ -192,11 +192,6 @@ const detailHeaderTabs = computed(() => detailTabs.value.map(tab => ({
   ...tab,
   active: activeTab.value === tab.id,
 })))
-const isFullWidthTableTab = computed(() => (
-  activeTab.value === "building-assets"
-  || activeTab.value === "work-orders"
-  || activeTab.value === "monitoring"
-))
 const detailTabActionsByTab: Record<CustomerDetailTab, CustomerDetailTabActions> = {
   "basic-info": {
     deleteCustomer: true,
@@ -1865,7 +1860,6 @@ function toDisplayText(value: unknown, fallback = "未填写") {
     :subtitle="pageSubtitle"
     :empty="isEmpty"
     empty-text="未找到该客户信息"
-    :full-width="isFullWidthTableTab"
     :secondary-visible="activeTab === 'basic-info'"
     :tabs="detailHeaderTabs"
     tabs-aria-label="客户详情页面切换"
