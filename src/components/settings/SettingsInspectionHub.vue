@@ -104,55 +104,59 @@ async function refreshCurrentTab() {
 
 <template>
   <section class="space-y-5">
-    <div class="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-      <TopTabSwitch
-        :tabs="tabs"
-        :model-value="activeTab"
-        :collapse-inactive="false"
-        tone="default"
-        aria-label="检测项页签切换"
-        @update:model-value="activeTab = $event as InspectionHubTabKey"
-      />
+    <div class="overflow-x-auto">
+      <div class="flex min-w-max items-center justify-between gap-3">
+        <TopTabSwitch
+          :tabs="tabs"
+          :model-value="activeTab"
+          :collapse-inactive="false"
+          tone="default"
+          aria-label="检测项页签切换"
+          @update:model-value="activeTab = $event as InspectionHubTabKey"
+        />
 
-      <div class="flex items-center justify-end gap-2 overflow-x-auto">
         <div
-          :class="
-            cn(
-              'flex h-8 items-center overflow-hidden rounded-full border border-input bg-background transition-[width,padding] duration-200 ease-out',
-              searchExpanded ? 'w-[260px] px-1.5' : 'w-8 justify-center border-transparent px-0',
-            )
-          "
+          class="flex shrink-0 items-center justify-end gap-2"
         >
-          <button
-            type="button"
-            :class="toolbarIconButtonClass"
-            @click="toggleSearch"
+          <div
+            :class="
+              cn(
+                'flex h-8 items-center overflow-hidden rounded-full border border-input bg-background transition-[width,padding] duration-200 ease-out',
+                searchExpanded ? 'w-[220px] px-1.5' : 'w-8 justify-center border-transparent px-0',
+              )
+            "
           >
-            <i :class="searchExpanded ? 'ri-close-line text-[17px]' : 'ri-search-line text-[17px]'" />
-          </button>
-          <Input
-            v-if="searchExpanded"
-            v-model="currentSearchQuery"
-            :placeholder="currentSearchPlaceholder"
-            class="h-8 border-0 bg-transparent px-2 text-sm shadow-none focus-visible:border-transparent focus-visible:ring-0"
-          />
+            <button
+              type="button"
+              :class="toolbarIconButtonClass"
+              @click="toggleSearch"
+            >
+              <i :class="searchExpanded ? 'ri-close-line text-[17px]' : 'ri-search-line text-[17px]'" />
+            </button>
+            <Input
+              v-if="searchExpanded"
+              v-model="currentSearchQuery"
+              :placeholder="currentSearchPlaceholder"
+              class="h-8 border-0 bg-transparent px-2 text-sm shadow-none focus-visible:border-transparent focus-visible:ring-0"
+            />
+          </div>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            class="h-8 rounded-md px-3"
+            :disabled="refreshDisabled"
+            @click="refreshCurrentTab"
+          >
+            <i class="ri-refresh-line text-sm" />
+            <span>刷新列表</span>
+          </Button>
+
+          <Button v-if="showPrimaryAction" class="h-8 gap-1 rounded-md px-3 text-[14px]" @click="triggerPrimaryAction">
+            <i class="ri-add-line text-base" />
+            <span>{{ actionLabel }}</span>
+          </Button>
         </div>
-
-        <Button
-          variant="ghost"
-          size="sm"
-          class="h-8 rounded-md px-3"
-          :disabled="refreshDisabled"
-          @click="refreshCurrentTab"
-        >
-          <i class="ri-refresh-line text-sm" />
-          <span>刷新列表</span>
-        </Button>
-
-        <Button v-if="showPrimaryAction" class="h-8 gap-1 rounded-md px-3 text-[14px]" @click="triggerPrimaryAction">
-          <i class="ri-add-line text-base" />
-          <span>{{ actionLabel }}</span>
-        </Button>
       </div>
     </div>
 
