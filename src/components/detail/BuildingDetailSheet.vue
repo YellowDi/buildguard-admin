@@ -1,15 +1,26 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue"
 import { useRouter } from "vue-router"
+import { toast } from "vue-sonner"
 
 import { buildBuildingDetailSections, toText } from "@/components/detail/buildingDetailFields"
 import DetailFieldSections from "@/components/detail/DetailFieldSections.vue"
 import type { DetailFieldSection } from "@/components/detail/types"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import { handleApiError } from "@/lib/api-errors"
-import { fetchBuildings, type BuildingListItem } from "@/lib/buildings-api"
+import { deleteBuilding, fetchBuildings, type BuildingListItem } from "@/lib/buildings-api"
 
 const props = defineProps<{
   open: boolean
@@ -20,17 +31,22 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   "update:open": [value: boolean]
+  deleted: []
 }>()
 
 const router = useRouter()
 const building = ref<BuildingListItem | null>(null)
 const loading = ref(false)
 const errorMessage = ref("")
+const deleteConfirmOpen = ref(false)
+const deleteSubmitting = ref(false)
 let latestRequestId = 0
 
 const fieldSections = computed<DetailFieldSection[]>(() => {
   return buildBuildingDetailSections(building.value)
 })
+
+const deleteTargetName = computed(() => toText(building.value?.Name, "当前建筑"))
 
 watch(
   () => [props.open, props.buildingUuid, props.parkUuid] as const,
@@ -129,10 +145,42 @@ async function loadBuildingDetail(buildingUuid: string, parkUuid: string) {
   }
 }
 
+function promptDeleteBuilding() {
+  if (!props.buildingUuid || deleteSubmitting.value) {
+    return
+  }
+
+  deleteConfirmOpen.value = true
+}
+
+async function confirmDeleteBuilding() {
+  if (!props.buildingUuid || deleteSubmitting.value) {
+    return
+  }
+
+  deleteSubmitting.value = true
+
+  try {
+    await deleteBuilding({ Uuid: props.buildingUuid })
+    deleteConfirmOpen.value = false
+    toast.success("建筑已删除")
+    handleOpenChange(false)
+    emit("deleted")
+  } catch (error) {
+    handleApiError(error, {
+      fallback: "建筑删除失败，请稍后重试。",
+    })
+  } finally {
+    deleteSubmitting.value = false
+  }
+}
+
 function resetState() {
   loading.value = false
   errorMessage.value = ""
   building.value = null
+  deleteConfirmOpen.value = false
+  deleteSubmitting.value = false
 }
 
 </script>
@@ -159,14 +207,26 @@ function resetState() {
                 <span class="sr-only">打开完整建筑详情页</span>
               </button>
             </div>
-            <Button
-              variant="outline"
-              size="sm"
-              class="h-8 rounded-md"
-              @click="goToBuildingEdit"
-            >
-              编辑建筑信息
-            </Button>
+            <div class="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                class="h-8 rounded-md border-destructive/40 text-destructive hover:border-destructive/60 hover:bg-destructive/5 hover:text-destructive"
+                :disabled="deleteSubmitting"
+                @click="promptDeleteBuilding"
+              >
+                {{ deleteSubmitting ? "删除中..." : "删除建筑" }}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                class="h-8 rounded-md"
+                :disabled="deleteSubmitting"
+                @click="goToBuildingEdit"
+              >
+                编辑建筑信息
+              </Button>
+            </div>
           </div>
         </template>
         <SheetTitle>{{ toText(building?.Name, "建筑详情") }}</SheetTitle>
@@ -186,4 +246,27 @@ function resetState() {
       </div>
     </SheetContent>
   </Sheet>
+
+  <AlertDialog :open="deleteConfirmOpen" @update:open="deleteConfirmOpen = $event">
+    <AlertDialogContent>
+      <AlertDialogHeader>
+        <AlertDialogTitle>确认删除建筑？</AlertDialogTitle>
+        <AlertDialogDescription>
+          将删除“{{ deleteTargetName }}”，该操作不可撤销，确认后将立即提交删除请求。
+        </AlertDialogDescription>
+      </AlertDialogHeader>
+      <AlertDialogFooter>
+        <AlertDialogCancel :disabled="deleteSubmitting">
+          取消
+        </AlertDialogCancel>
+        <AlertDialogAction
+          class="bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60"
+          :disabled="deleteSubmitting"
+          @click="confirmDeleteBuilding"
+        >
+          {{ deleteSubmitting ? "删除中..." : "确认删除" }}
+        </AlertDialogAction>
+      </AlertDialogFooter>
+    </AlertDialogContent>
+  </AlertDialog>
 </template>

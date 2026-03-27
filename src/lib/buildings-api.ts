@@ -1,5 +1,5 @@
 import { ApiError, assertApiSuccess, createHttpError, readResponseBody } from "@/lib/api-errors"
-import { API_PATHS, buildApiHeaders, buildApiUrl } from "@/lib/api"
+import { API_PATHS, buildApiHeaders, buildApiRequestUrl, buildApiUrl } from "@/lib/api"
 
 type BuildingsListEnvelope = {
   Total?: number
@@ -58,6 +58,11 @@ export type BuildingCreateResult = {
   [property: string]: unknown
 }
 
+export type BuildingDeletePayload = {
+  Uuid?: string
+  [property: string]: unknown
+}
+
 export type ListBuildingsPayload = {
   ParkUuid?: string
   CustomerUuid?: string
@@ -69,9 +74,11 @@ export type ListBuildingsPayload = {
 const BUILDINGS_API_URL = buildApiUrl(API_PATHS.buildingsList)
 const BUILDING_CREATE_API_URL = buildApiUrl(API_PATHS.buildingCreate ?? "/bqi/build/new")
 const BUILDING_UPDATE_API_URL = buildApiUrl(API_PATHS.buildingUpdate ?? "/bqi/build/update")
+const BUILDING_DELETE_API_URL = API_PATHS.buildingDelete ?? "/bqi/build/del"
 const BUILDINGS_LOAD_ERROR_MESSAGE = "建筑列表加载失败，请稍后重试。"
 const BUILDING_CREATE_ERROR_MESSAGE = "建筑创建失败，请稍后重试。"
 const BUILDING_UPDATE_ERROR_MESSAGE = "建筑信息更新失败，请稍后重试。"
+const BUILDING_DELETE_ERROR_MESSAGE = "建筑删除失败，请稍后重试。"
 
 export async function fetchBuildings(payload: ListBuildingsPayload = {}): Promise<BuildingsListResult> {
   const normalizedPayload = {
@@ -167,6 +174,25 @@ export async function updateBuilding(payload: BuildingUpdatePayload): Promise<Bu
   assertApiSuccess(responsePayload, BUILDING_UPDATE_ERROR_MESSAGE)
 
   return extractCreateResult(responsePayload)
+}
+
+export async function deleteBuilding(payload: BuildingDeletePayload) {
+  const url = buildApiRequestUrl(BUILDING_DELETE_API_URL)
+  const uuid = getRequiredString(payload.Uuid, "Uuid")
+
+  url.searchParams.set("Uuid", uuid)
+
+  const response = await fetch(url.toString(), {
+    method: "GET",
+    headers: buildApiHeaders(),
+  })
+  const responsePayload = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responsePayload, BUILDING_DELETE_ERROR_MESSAGE)
+  }
+
+  assertApiSuccess(responsePayload, BUILDING_DELETE_ERROR_MESSAGE)
 }
 
 function extractList(payload: BuildingsListEnvelope | unknown[]) {

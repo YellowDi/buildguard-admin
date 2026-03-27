@@ -1358,6 +1358,15 @@ function handleBuildingDetailSheetOpenChange(open: boolean) {
   }
 }
 
+function handleBuildingDeleted() {
+  if (!customerUuid.value) {
+    return
+  }
+
+  void loadBuildingAssets(customerUuid.value)
+  void loadParkBuildings(customerUuid.value)
+}
+
 async function loadCustomerDetail(uuid: string) {
   const requestId = ++latestRequestId
 
@@ -2451,6 +2460,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
     :park-uuid="activeBuildingParkUuid"
     :customer-uuid="customerUuid"
     @update:open="handleBuildingDetailSheetOpenChange"
+    @deleted="handleBuildingDeleted"
   />
 
   <ExportTableDialog

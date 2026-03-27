@@ -67,11 +67,13 @@ function isContactValue(value: DetailFieldValue): value is DetailContactValue {
                 <span v-if="row.value.phone && !isEmptyLikeValue(row.value.phone)" class="ml-2 text-muted-foreground">{{ row.value.phone }}</span>
               </template>
               <template v-else-if="row.imageUrl">
-                <img
-                  :src="row.imageUrl"
-                  :alt="row.label"
-                  class="detail-field-row__image max-h-56 w-auto max-w-full rounded-md border border-border object-contain"
-                >
+                <div class="detail-field-row__image-frame">
+                  <img
+                    :src="row.imageUrl"
+                    :alt="row.label"
+                    class="detail-field-row__image object-contain"
+                  >
+                </div>
               </template>
               <template v-else-if="row.action">
                 <Button
