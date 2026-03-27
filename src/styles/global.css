@@ -195,6 +195,47 @@
 }
 
 @layer components {
+  .dialog-panel-float {
+    transform-origin: center center;
+    will-change: transform, opacity;
+  }
+
+  .dialog-panel-float[data-state="open"] {
+    animation: dialog-panel-float-in 360ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+
+  .dialog-panel-float[data-state="closed"] {
+    animation: dialog-panel-float-out 220ms cubic-bezier(0.4, 0, 0.7, 0.2) both;
+  }
+
+  @keyframes dialog-panel-float-in {
+    0% {
+      opacity: 0;
+      transform: translate3d(0, 20px, 0) scale(0.92);
+    }
+
+    50% {
+      opacity: 1;
+    }
+
+    100% {
+      opacity: 1;
+      transform: translate3d(0, 0, 0) scale(1);
+    }
+  }
+
+  @keyframes dialog-panel-float-out {
+    0% {
+      opacity: 1;
+      transform: translate3d(0, 0, 0) scale(1);
+    }
+
+    100% {
+      opacity: 0;
+      transform: translate3d(0, 20px, 0) scale(0.92);
+    }
+  }
+
   .sheet-panel-right {
     transform-origin: right center;
     will-change: transform, opacity;
@@ -314,6 +355,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .dialog-panel-float[data-state="open"],
+  .dialog-panel-float[data-state="closed"],
   .sheet-panel-right[data-state="open"],
   .sheet-panel-right[data-state="closed"] {
     animation: none;
