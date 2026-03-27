@@ -2392,7 +2392,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
   </DetailLayout>
 
   <Sheet :open="parkDetailSheetOpen" @update:open="handleParkDetailSheetOpenChange">
-    <SheetContent side="right" class="overflow-y-auto max-sm:w-[calc(100vw-1rem)] sm:max-w-xl">
+    <SheetContent side="right" class="overflow-hidden max-sm:w-[calc(100vw-1rem)] sm:max-w-xl">
       <SheetHeader>
         <template #actions>
           <div class="flex items-center justify-between gap-3">
@@ -2427,7 +2427,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
         <SheetTitle>{{ toDisplayText(activeParkDetail?.Name, "园区详情") }}</SheetTitle>
       </SheetHeader>
 
-      <div class="mt-6">
+      <div class="overflow-y-auto">
         <Alert v-if="parkDetailErrorMessage" variant="destructive" class="mb-4">
           <AlertTitle>园区详情接口加载失败</AlertTitle>
           <AlertDescription>{{ parkDetailErrorMessage }}</AlertDescription>

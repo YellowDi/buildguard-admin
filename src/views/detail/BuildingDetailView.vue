@@ -2,8 +2,9 @@
 import { computed, onUnmounted, ref, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
 
+import { buildBuildingDetailSections, toText } from "@/components/detail/buildingDetailFields"
 import DetailFieldSections from "@/components/detail/DetailFieldSections.vue"
-import type { DetailContactValue, DetailFieldSection } from "@/components/detail/types"
+import type { DetailFieldSection } from "@/components/detail/types"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
@@ -24,26 +25,7 @@ const parkUuid = computed(() => typeof route.query.parkUuid === "string" ? route
 const customerUuid = computed(() => typeof route.query.customerUuid === "string" ? route.query.customerUuid.trim() : "")
 
 const fieldSections = computed<DetailFieldSection[]>(() => {
-  const current = building.value
-  if (!current) {
-    return []
-  }
-
-  return [
-    {
-      key: "building-info",
-      title: "建筑基础信息",
-      rows: [
-        { key: "name", label: "建筑名称", value: toText(current.Name, "未命名建筑") },
-        { key: "park-name", label: "所属园区", value: toText(current.ParkName, "-") },
-        { key: "built-time", label: "建成时间", value: toText(current.BuiltTime, "-") },
-        { key: "operation-time", label: "投运时间", value: toText(current.OperationTime, "-") },
-        { key: "building-area", label: "建筑面积", value: toText(current.BuildingArea, "-") },
-        { key: "contact", label: "联系人", value: buildContactValue(toText(current.ContactPerson, "未填写"), toText(current.ContactPhone, "-")) },
-        { key: "address", label: "地址", value: toText(current.Address, "-"), truncate: false, valueClass: "leading-6" },
-      ],
-    },
-  ]
+  return buildBuildingDetailSections(building.value)
 })
 
 watch(building, (current) => {
@@ -121,18 +103,6 @@ async function loadBuildingDetail(nextBuildingUuid: string, nextParkUuid: string
   }
 }
 
-function toText(value: unknown, fallback: string | null = "") {
-  if (typeof value === "string" && value.trim()) {
-    return value.trim()
-  }
-
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return String(value)
-  }
-
-  return fallback
-}
-
 function toOptionalText(value: unknown) {
   if (typeof value === "string" && value.trim()) {
     return value.trim()
@@ -143,14 +113,6 @@ function toOptionalText(value: unknown) {
   }
 
   return null
-}
-
-function buildContactValue(name: string | null, phone?: string | null): DetailContactValue {
-  return {
-    kind: "contact",
-    name: name ?? "未填写",
-    phone,
-  }
 }
 </script>
 

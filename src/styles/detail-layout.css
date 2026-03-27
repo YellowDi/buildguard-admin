@@ -79,6 +79,15 @@
   transition: color 150ms ease;
 }
 
+.sheet-panel-right .detail-section-inset,
+.sheet-panel-right .detail-section-heading-row {
+  padding-left: 1rem;
+}
+
+.sheet-panel-right .detail-field-row__label {
+  padding-left: 1rem;
+}
+
 .detail-field-row:hover .detail-field-row__label {
   color: var(--foreground);
 }
@@ -157,8 +166,17 @@
     padding-right: 1.25rem;
   }
 
+  .sheet-panel-right .detail-section-inset,
+  .sheet-panel-right .detail-section-heading-row {
+    padding-left: 1rem;
+  }
+
   .detail-field-row__label {
     padding-left: 0.75rem;
+  }
+
+  .sheet-panel-right .detail-field-row__label {
+    padding-left: 1rem;
   }
 
   .detail-field-row {

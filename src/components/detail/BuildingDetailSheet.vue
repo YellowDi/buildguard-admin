@@ -2,8 +2,9 @@
 import { computed, ref, watch } from "vue"
 import { useRouter } from "vue-router"
 
+import { buildBuildingDetailSections, toText } from "@/components/detail/buildingDetailFields"
 import DetailFieldSections from "@/components/detail/DetailFieldSections.vue"
-import type { DetailContactValue, DetailFieldSection } from "@/components/detail/types"
+import type { DetailFieldSection } from "@/components/detail/types"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
@@ -28,27 +29,7 @@ const errorMessage = ref("")
 let latestRequestId = 0
 
 const fieldSections = computed<DetailFieldSection[]>(() => {
-  const current = building.value
-
-  if (!current) {
-    return []
-  }
-
-  return [
-    {
-      key: "building-info",
-      title: "建筑基础信息",
-      rows: [
-        { key: "name", label: "建筑名称", value: toText(current.Name, "未命名建筑") },
-        { key: "park-name", label: "所属园区", value: toText(current.ParkName, "-") },
-        { key: "built-time", label: "建成时间", value: toText(current.BuiltTime, "-") },
-        { key: "operation-time", label: "投运时间", value: toText(current.OperationTime, "-") },
-        { key: "building-area", label: "建筑面积", value: toText(current.BuildingArea, "-") },
-        { key: "contact", label: "联系人", value: buildContactValue(toText(current.ContactPerson, "未填写"), toText(current.ContactPhone, "-")) },
-        { key: "address", label: "地址", value: toText(current.Address, "-"), truncate: false, valueClass: "leading-6" },
-      ],
-    },
-  ]
+  return buildBuildingDetailSections(building.value)
 })
 
 watch(
@@ -154,30 +135,11 @@ function resetState() {
   building.value = null
 }
 
-function toText(value: unknown, fallback: string | null = "") {
-  if (typeof value === "string" && value.trim()) {
-    return value.trim()
-  }
-
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return String(value)
-  }
-
-  return fallback
-}
-
-function buildContactValue(name: string | null, phone?: string | null): DetailContactValue {
-  return {
-    kind: "contact",
-    name: name ?? "未填写",
-    phone,
-  }
-}
 </script>
 
 <template>
   <Sheet :open="open" @update:open="handleOpenChange">
-    <SheetContent side="right" class="overflow-y-auto max-sm:w-[calc(100vw-1rem)] sm:max-w-xl">
+    <SheetContent side="right" class="overflow-hidden max-sm:w-[calc(100vw-1rem)] sm:max-w-xl">
       <SheetHeader>
         <template #actions>
           <div class="flex items-center justify-between gap-3">
@@ -210,7 +172,7 @@ function buildContactValue(name: string | null, phone?: string | null): DetailCo
         <SheetTitle>{{ toText(building?.Name, "建筑详情") }}</SheetTitle>
       </SheetHeader>
 
-      <div class="mt-6">
+      <div class="overflow-y-auto">
         <Alert v-if="errorMessage" variant="destructive" class="mb-4">
           <AlertTitle>建筑详情接口加载失败</AlertTitle>
           <AlertDescription>{{ errorMessage }}</AlertDescription>

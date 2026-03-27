@@ -13,10 +13,12 @@ const props = withDefaults(defineProps<{
   labelWidthMobile?: string
   labelWidthDesktop?: string
   compact?: boolean
+  showSectionTitles?: boolean
 }>(), {
   labelWidthMobile: "6.5rem",
   labelWidthDesktop: "180px",
   compact: false,
+  showSectionTitles: true,
 })
 
 const sectionStyle = computed(() => ({
@@ -46,7 +48,7 @@ function isContactValue(value: DetailFieldValue): value is DetailContactValue {
   <div class="detail-field-sections" :style="sectionStyle">
     <template v-for="(section, sectionIndex) in sections" :key="section.key">
       <section :class="cn('detail-field-section', !props.compact && sectionIndex > 0 && 'detail-field-section--after-separator', props.compact && '!pb-0 !pt-0')">
-        <div v-if="section.title" class="detail-section-heading-row detail-section-inset">
+        <div v-if="props.showSectionTitles && section.title" class="detail-section-heading-row detail-section-inset">
           <h2 class="detail-field-section__heading">{{ section.title }}</h2>
         </div>
         <div>
