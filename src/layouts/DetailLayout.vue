@@ -56,8 +56,8 @@ const hasTabActions = computed(() => hasTabs.value && (Boolean(slots.tabActions)
 const hasHeaderBottom = computed(() => Boolean(slots.headerBottom))
 const activeTabId = computed(() => props.tabs.find(tab => tab.active)?.id ?? props.tabs[0]?.id ?? "")
 
-function handleTabSelect(value: string) {
-  if (value) {
+function handleTabSelect(value: unknown) {
+  if (typeof value === "string" && value) {
     emit("tabClick", value)
   }
 }

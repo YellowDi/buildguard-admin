@@ -15,6 +15,7 @@ export const API_PATHS = {
   parkUpdate: "/bqi/park/update",
   parkDetail: "/bqi/park/detail",
   buildingsList: "/bqi/build/list",
+  buildingCreate: "/bqi/build/new",
   workOrdersList: "/bqi/work-order/list",
   membersList: "/bqi/user/list",
   memberCreate: "/bqi/user/new",

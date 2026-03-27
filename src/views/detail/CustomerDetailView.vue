@@ -141,6 +141,8 @@ const relationsLoading = ref(false)
 const relationErrorMessage = ref("")
 const parkBuildingGroups = ref<ParkBuildingGroup[]>([])
 const buildingAssets = ref<CustomerBuildingAssetRow[]>([])
+const buildingAssetsLoading = ref(false)
+const buildingAssetsErrorMessage = ref("")
 const workOrders = ref<CustomerWorkOrderRow[]>([])
 const workOrdersPageNum = ref(1)
 const workOrdersPageSize = ref(10)
@@ -151,11 +153,23 @@ const parkDetailErrorMessage = ref("")
 const activeParkDetail = ref<ParkDetailResult | null>(null)
 let latestRequestId = 0
 let latestRelationsRequestId = 0
+let latestBuildingAssetsRequestId = 0
 let latestParkDetailRequestId = 0
 
 const customerUuid = computed(() => {
   const value = route.params.id
   return typeof value === "string" ? value.trim() : ""
+})
+const requestedTab = computed<CustomerDetailTab | null>(() => {
+  const value = typeof route.query.tab === "string" ? route.query.tab.trim() : ""
+
+  return value === "basic-info"
+    || value === "building-assets"
+    || value === "work-orders"
+    || value === "monitoring"
+    || value === "sub-accounts"
+    ? value
+    : null
 })
 
 const pageTitle = computed(() => customer.value?.CorpName?.trim() || "客户详情")
@@ -461,7 +475,7 @@ const buildingAssetsSchema: TablePageSchema<CustomerBuildingAssetRow> = {
       filterType: "contact",
       variant: "contact",
       cellRenderer: {
-        kind: "dual-stack",
+        kind: "dual-inline",
         primaryKey: "contactName",
         secondaryKey: "contactPhone",
       },
@@ -722,19 +736,27 @@ const parkDetailSheetSections = computed<DetailFieldSection[]>(() => {
 
 watch(customer, (current) => {
   detailBreadcrumbTitle.value = current?.CorpName?.trim() || null
-  buildingAssets.value = current ? buildMockBuildingAssets(current) : []
   workOrders.value = current ? buildMockWorkOrders(current) : []
   workOrdersTotal.value = workOrders.value.length
 })
 
 watch(customerUuid, (uuid) => {
-  activeTab.value = "basic-info"
+  activeTab.value = requestedTab.value ?? "basic-info"
+  buildingAssets.value = []
+  buildingAssetsErrorMessage.value = ""
   workOrders.value = []
   workOrdersTotal.value = 0
   workOrdersPageNum.value = 1
   void loadCustomerDetail(uuid)
+  void loadBuildingAssets(uuid)
   void loadParkBuildings(uuid)
 }, { immediate: true })
+
+watch(requestedTab, (tab) => {
+  if (tab) {
+    activeTab.value = tab
+  }
+})
 
 watch(workOrdersPageSize, () => {
   workOrdersPageNum.value = 1
@@ -772,7 +794,17 @@ function goToCreatePark() {
 }
 
 function handleAddBuilding() {
-  toast.info("添加建筑页面暂未接入")
+  if (!customerUuid.value) {
+    return
+  }
+
+  router.push({
+    name: "customer-building-create",
+    params: { id: customerUuid.value },
+    query: {
+      customerName: toDisplayText(customer.value?.CorpName, "当前客户"),
+    },
+  })
 }
 
 function handleAddMonitoring() {
@@ -880,7 +912,7 @@ function handleActiveTableExportConfirm(payload: { scope: TableExportScope; form
     return
   }
 
-  const exportRows = payload.scope === "selected"
+  const exportRows: Record<string, unknown>[] = payload.scope === "selected"
     ? page.selectedRows.value
     : page.filteredRows.value
 
@@ -1154,6 +1186,72 @@ async function loadParkBuildings(uuid: string) {
   }
 }
 
+async function loadBuildingAssets(uuid: string) {
+  const requestId = ++latestBuildingAssetsRequestId
+
+  if (!uuid) {
+    buildingAssets.value = []
+    buildingAssetsErrorMessage.value = "客户 Uuid 缺失，无法加载建筑资产。"
+    return
+  }
+
+  buildingAssetsLoading.value = true
+  buildingAssetsErrorMessage.value = ""
+
+  try {
+    const list = await fetchAllBuildingAssets(uuid)
+
+    if (requestId !== latestBuildingAssetsRequestId) {
+      return
+    }
+
+    buildingAssets.value = list.map(item => mapBuildingAssetRow(item, uuid))
+  } catch (error) {
+    if (requestId !== latestBuildingAssetsRequestId) {
+      return
+    }
+
+    buildingAssets.value = []
+    buildingAssetsErrorMessage.value = handleApiError(error, {
+      mode: "silent",
+      fallback: "建筑资产加载失败，请稍后重试。",
+    })
+  } finally {
+    if (requestId === latestBuildingAssetsRequestId) {
+      buildingAssetsLoading.value = false
+    }
+  }
+}
+
+async function fetchAllBuildingAssets(uuid: string) {
+  const pageSize = 200
+  const allItems: BuildingListItem[] = []
+  let pageNum = 1
+  let total = 0
+
+  while (pageNum <= 20) {
+    const result = await fetchBuildings({
+      CustomerUuid: uuid,
+      PageNum: pageNum,
+      PageSize: pageSize,
+    })
+
+    if (pageNum === 1) {
+      total = result.total
+    }
+
+    allItems.push(...result.list)
+
+    if (!result.list.length || (total > 0 && allItems.length >= total)) {
+      break
+    }
+
+    pageNum += 1
+  }
+
+  return allItems
+}
+
 function resolveContactRole(isMain: unknown, index: number) {
   if (Number(isMain) === 1) {
     return "主要责任人"
@@ -1398,81 +1496,26 @@ function formatWorkOrderScore(score: number | null) {
   return String(score)
 }
 
-function buildMockBuildingAssets(current: CustomerDetailResult): CustomerBuildingAssetRow[] {
-  const customerName = toDisplayText(current.CorpName, "当前客户")
-  const customerId = customerUuid.value || "customer"
-  const address = toDisplayText(current.Address, `${customerName} 园区`)
+function mapBuildingAssetRow(item: BuildingListItem, currentCustomerUuid: string): CustomerBuildingAssetRow {
+  const uuid = toDisplayText(item.Uuid, `building-${toDisplayText(item.Id, "unknown")}`)
 
-  return [
-    {
-      id: `${customerId}-asset-1`,
-      uuid: `${customerId}-asset-1`,
-      parkUuid: `${customerId}-park-a`,
-      customerUuid: customerId,
-      parkName: "东区园区",
-      buildingName: "1 号楼",
-      address: `${address} / 东区园区 1 号楼`,
-      builtTime: "2019-03-18",
-      operationTime: "2019-06-01",
-      buildingArea: "12800 m2",
-      contactName: "王工",
-      contactPhone: "138-0000-1001",
-      statusValue: 1,
-      statusLabel: "一切正常",
-      updatedAt: "2026-03-24 09:30",
-    },
-    {
-      id: `${customerId}-asset-2`,
-      uuid: `${customerId}-asset-2`,
-      parkUuid: `${customerId}-park-a`,
-      customerUuid: customerId,
-      parkName: "东区园区",
-      buildingName: "2 号楼",
-      address: `${address} / 东区园区 2 号楼`,
-      builtTime: "2020-05-12",
-      operationTime: "2020-09-20",
-      buildingArea: "9300 m2",
-      contactName: "李敏",
-      contactPhone: "138-0000-1002",
-      statusValue: 2,
-      statusLabel: "需重点关注",
-      updatedAt: "2026-03-25 14:10",
-    },
-    {
-      id: `${customerId}-asset-3`,
-      uuid: `${customerId}-asset-3`,
-      parkUuid: `${customerId}-park-b`,
-      customerUuid: customerId,
-      parkName: "西区园区",
-      buildingName: "综合楼",
-      address: `${address} / 西区园区 综合楼`,
-      builtTime: "2018-11-08",
-      operationTime: "2019-01-15",
-      buildingArea: "15600 m2",
-      contactName: "赵峰",
-      contactPhone: "138-0000-1003",
-      statusValue: 3,
-      statusLabel: "存在风险",
-      updatedAt: "2026-03-26 11:45",
-    },
-    {
-      id: `${customerId}-asset-4`,
-      uuid: `${customerId}-asset-4`,
-      parkUuid: `${customerId}-park-b`,
-      customerUuid: customerId,
-      parkName: "西区园区",
-      buildingName: "地下车库",
-      address: `${address} / 西区园区 地下车库`,
-      builtTime: "2018-11-08",
-      operationTime: "2019-01-15",
-      buildingArea: "8400 m2",
-      contactName: "陈杰",
-      contactPhone: "138-0000-1004",
-      statusValue: 1,
-      statusLabel: "一切正常",
-      updatedAt: "2026-03-23 18:20",
-    },
-  ]
+  return {
+    id: uuid,
+    uuid,
+    parkUuid: toDisplayText(item.ParkUuid, ""),
+    customerUuid: currentCustomerUuid,
+    parkName: toDisplayText(item.ParkName, "-"),
+    buildingName: toDisplayText(item.Name, "未命名建筑"),
+    address: toDisplayText(item.Address, "-"),
+    builtTime: toDisplayText(item.BuiltTime, "-"),
+    operationTime: toDisplayText(item.OperationTime, "-"),
+    buildingArea: toDisplayText(item.BuildingArea ?? item.BuildArea, "-"),
+    contactName: toDisplayText(item.ContactPerson ?? item.Contact, "-"),
+    contactPhone: toDisplayText(item.ContactPhone, "-"),
+    statusValue: 0,
+    statusLabel: "未设置",
+    updatedAt: toDisplayText(item.UpdatedAt, "-"),
+  }
 }
 
 function buildMockWorkOrders(current: CustomerDetailResult): CustomerWorkOrderRow[] {
@@ -1820,7 +1863,16 @@ function toDisplayText(value: unknown, fallback = "未填写") {
 
       <template v-else-if="customer">
         <div v-if="activeTab === 'building-assets'" class="flex min-h-0 flex-1 flex-col pb-5">
-          <TablePage :page="buildingAssetsPage" :show-toolbar-actions="false" class="-mt-3 sm:-mx-4 xl:-mx-8" />
+          <Alert v-if="buildingAssetsErrorMessage" variant="destructive" class="mb-5">
+            <AlertTitle>建筑资产接口加载失败</AlertTitle>
+            <AlertDescription>{{ buildingAssetsErrorMessage }}</AlertDescription>
+          </Alert>
+
+          <div v-if="buildingAssetsLoading" class="rounded-lg border border-border/70 px-4 py-5 text-sm text-muted-foreground">
+            正在获取建筑资产数据。
+          </div>
+
+          <TablePage v-else :page="buildingAssetsPage" :show-toolbar-actions="false" class="-mt-3 sm:-mx-4 xl:-mx-8" />
         </div>
 
         <div v-else-if="activeTab === 'work-orders'" class="flex min-h-0 flex-1 flex-col pb-5">

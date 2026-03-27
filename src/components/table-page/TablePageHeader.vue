@@ -224,7 +224,11 @@ function handleClearAllFilters() {
   closePopover()
 }
 
-function handleMobileTabSelect(value: string) {
+function handleMobileTabSelect(value: unknown) {
+  if (typeof value !== "string" || !value) {
+    return
+  }
+
   const targetTab = props.tabs.find(tab => tab.label === value)
   if (targetTab) {
     emit("tab-click", targetTab)

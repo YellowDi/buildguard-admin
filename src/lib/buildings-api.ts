@@ -35,19 +35,42 @@ export type BuildingsListResult = {
   total: number
 }
 
+export type BuildingCreatePayload = {
+  ParkUuid: string
+  Name: string
+  BuiltTime?: string
+  OperationTime?: string
+  BuildArea?: string
+  Contact?: string
+  ContactPhone?: string
+  Latitude?: string
+  Longitude?: string
+  Address?: string
+}
+
+export type BuildingCreateResult = {
+  Uuid?: string
+  Id?: number
+  [property: string]: unknown
+}
+
 export type ListBuildingsPayload = {
   ParkUuid?: string
+  CustomerUuid?: string
   PageNum?: number
   PageSize?: number
   [property: string]: unknown
 }
 
 const BUILDINGS_API_URL = buildApiUrl(API_PATHS.buildingsList)
+const BUILDING_CREATE_API_URL = buildApiUrl(API_PATHS.buildingCreate ?? "/bqi/build/new")
 const BUILDINGS_LOAD_ERROR_MESSAGE = "建筑列表加载失败，请稍后重试。"
+const BUILDING_CREATE_ERROR_MESSAGE = "建筑创建失败，请稍后重试。"
 
 export async function fetchBuildings(payload: ListBuildingsPayload = {}): Promise<BuildingsListResult> {
   const normalizedPayload = {
     ParkUuid: getOptionalString(payload.ParkUuid),
+    CustomerUuid: getOptionalString(payload.CustomerUuid),
     PageNum: getOptionalNumber(payload.PageNum, "PageNum"),
     PageSize: getOptionalNumber(payload.PageSize, "PageSize"),
   }
@@ -73,6 +96,38 @@ export async function fetchBuildings(payload: ListBuildingsPayload = {}): Promis
     list: list.map(item => normalizeBuildingListItem(item)),
     total: extractTotal(responsePayload, list.length),
   }
+}
+
+export async function createBuilding(payload: BuildingCreatePayload): Promise<BuildingCreateResult> {
+  const normalizedPayload = {
+    ParkUuid: getRequiredString(payload.ParkUuid, "ParkUuid"),
+    Name: getRequiredString(payload.Name, "Name"),
+    BuiltTime: getOptionalString(payload.BuiltTime),
+    OperationTime: getOptionalString(payload.OperationTime),
+    BuildArea: getOptionalString(payload.BuildArea),
+    Contact: getOptionalString(payload.Contact),
+    ContactPhone: getOptionalString(payload.ContactPhone),
+    Latitude: getOptionalString(payload.Latitude),
+    Longitude: getOptionalString(payload.Longitude),
+    Address: getOptionalString(payload.Address),
+  }
+
+  const response = await fetch(BUILDING_CREATE_API_URL, {
+    method: "POST",
+    headers: buildApiHeaders({
+      "Content-Type": "application/json",
+    }),
+    body: JSON.stringify(normalizedPayload),
+  })
+  const responsePayload = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responsePayload, BUILDING_CREATE_ERROR_MESSAGE)
+  }
+
+  assertApiSuccess(responsePayload, BUILDING_CREATE_ERROR_MESSAGE)
+
+  return extractCreateResult(responsePayload)
 }
 
 function extractList(payload: BuildingsListEnvelope | unknown[]) {
@@ -145,6 +200,20 @@ function normalizeBuildingListItem(value: unknown): BuildingListItem {
   return {}
 }
 
+function extractCreateResult(value: unknown): BuildingCreateResult {
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>
+
+    if (record.data && typeof record.data === "object") {
+      return record.data as BuildingCreateResult
+    }
+
+    return record as BuildingCreateResult
+  }
+
+  return {}
+}
+
 function getFirstNonEmptyText(...values: unknown[]) {
   for (const value of values) {
     if (typeof value === "string" && value.trim()) {
@@ -173,6 +242,18 @@ function getOptionalNumber(value: unknown, field: string) {
   throw new ApiError(`请求参数校验失败：${field} 必须是有效数字。`)
 }
 
+function getRequiredString(value: unknown, field: string) {
+  if (typeof value === "string" && value.trim()) {
+    return value.trim()
+  }
+
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return String(value)
+  }
+
+  throw new ApiError(`请求参数校验失败：${field} 为必填项。`)
+}
+
 function getOptionalString(value: unknown) {
   if (value === undefined || value === null || value === "") {
     return undefined
@@ -186,5 +267,5 @@ function getOptionalString(value: unknown) {
     return String(value)
   }
 
-  throw new ApiError("请求参数校验失败：ParkUuid 必须是有效字符串。")
+  throw new ApiError("请求参数校验失败：字段必须是有效字符串。")
 }

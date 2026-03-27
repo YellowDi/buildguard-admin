@@ -136,6 +136,20 @@ const router = createRouter({
           } satisfies RouteMetaConfig,
         },
         {
+          path: "customers/:id/buildings/create",
+          name: "customer-building-create",
+          component: () => import("@/views/form/BuildingCreateView.vue"),
+          meta: {
+            title: "添加建筑",
+            loading: "form",
+            breadcrumb: [
+              { title: "客户", to: "customers" },
+              { title: "客户详情" },
+              { title: "添加建筑" },
+            ] satisfies BreadcrumbMetaItem[],
+          } satisfies RouteMetaConfig,
+        },
+        {
           path: "parks/:id/edit",
           name: "park-edit",
           component: () => import("@/views/form/ParkCreateView.vue"),
