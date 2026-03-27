@@ -150,6 +150,34 @@ const router = createRouter({
           } satisfies RouteMetaConfig,
         },
         {
+          path: "customers/:id/sub-accounts/create",
+          name: "customer-sub-account-create",
+          component: () => import("@/views/form/CustomerSubAccountCreateView.vue"),
+          meta: {
+            title: "添加子账号",
+            loading: "form",
+            breadcrumb: [
+              { title: "客户", to: "customers" },
+              { title: "客户详情" },
+              { title: "添加子账号" },
+            ] satisfies BreadcrumbMetaItem[],
+          } satisfies RouteMetaConfig,
+        },
+        {
+          path: "buildings/:id/edit",
+          name: "building-edit",
+          component: () => import("@/views/form/BuildingCreateView.vue"),
+          meta: {
+            title: "编辑建筑",
+            loading: "form",
+            breadcrumb: [
+              { title: "客户", to: "customers" },
+              { title: "客户详情" },
+              { title: "编辑建筑" },
+            ] satisfies BreadcrumbMetaItem[],
+          } satisfies RouteMetaConfig,
+        },
+        {
           path: "parks/:id/edit",
           name: "park-edit",
           component: () => import("@/views/form/ParkCreateView.vue"),

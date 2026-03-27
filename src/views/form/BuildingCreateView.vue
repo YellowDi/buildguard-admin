@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { handleApiError } from "@/lib/api-errors"
-import { createBuilding } from "@/lib/buildings-api"
+import { createBuilding, fetchBuildings, updateBuilding } from "@/lib/buildings-api"
 import { fetchParks, type ParkListItem } from "@/lib/parks-api"
 
 type QuickNavItem = {
@@ -78,11 +78,23 @@ const STICKY_HEADER_OFFSET = 112
 let observer: IntersectionObserver | null = null
 let observerActive = false
 
-const customerUuid = computed(() => typeof route.params.id === "string" ? route.params.id.trim() : "")
+const isEditMode = computed(() => route.name === "building-edit")
+const buildingUuid = computed(() => isEditMode.value && typeof route.params.id === "string" ? route.params.id.trim() : "")
+const customerUuid = computed(() => (
+  isEditMode.value
+    ? typeof route.query.customerUuid === "string" ? route.query.customerUuid.trim() : ""
+    : typeof route.params.id === "string" ? route.params.id.trim() : ""
+))
 const queryCustomerName = computed(() => typeof route.query.customerName === "string" ? route.query.customerName.trim() : "")
 const queryParkUuid = computed(() => typeof route.query.parkUuid === "string" ? route.query.parkUuid.trim() : "")
-const pageTitle = computed(() => "添加建筑")
-const submitButtonLabel = computed(() => submitting.value ? "提交中..." : "添加建筑")
+const pageTitle = computed(() => isEditMode.value ? "编辑建筑" : "添加建筑")
+const submitButtonLabel = computed(() => {
+  if (submitting.value) {
+    return "提交中..."
+  }
+
+  return isEditMode.value ? "保存建筑" : "添加建筑"
+})
 const selectedParkName = computed(() => parkOptions.value.find(item => item.uuid === form.parkUuid)?.name ?? "")
 const canSubmit = computed(() =>
   Boolean(
@@ -156,7 +168,7 @@ async function handleSubmit() {
   submitting.value = true
 
   try {
-    const result = await createBuilding({
+    const payload = {
       ParkUuid: normalizeText(form.parkUuid),
       Name: normalizeText(form.name),
       BuiltTime: getOptionalText(form.builtTime),
@@ -167,12 +179,20 @@ async function handleSubmit() {
       Latitude: getOptionalText(form.latitude),
       Longitude: getOptionalText(form.longitude),
       Address: getOptionalText(form.address),
-    })
+    }
+    const result = isEditMode.value
+      ? await updateBuilding({
+          Uuid: normalizeText(buildingUuid.value),
+          ...payload,
+        })
+      : await createBuilding(payload)
 
-    toast.success("建筑已创建", {
-      description: result.Uuid
-        ? `建筑 UUID：${result.Uuid}`
-        : `已提交到接口，所属园区：${selectedParkName.value || "当前园区"}`,
+    toast.success(isEditMode.value ? "建筑信息已更新" : "建筑已创建", {
+      description: isEditMode.value
+        ? "建筑信息已保存。"
+        : result.Uuid
+          ? `建筑 UUID：${result.Uuid}`
+          : `已提交到接口，所属园区：${selectedParkName.value || "当前园区"}`,
     })
 
     await router.push({
@@ -199,7 +219,12 @@ async function loadFormOptions() {
   parkOptions.value = []
 
   if (!customerUuid.value) {
-    loadError.value = "所属客户信息缺失，无法创建建筑。"
+    loadError.value = isEditMode.value ? "所属客户信息缺失，无法编辑建筑。" : "所属客户信息缺失，无法创建建筑。"
+    return
+  }
+
+  if (isEditMode.value && !buildingUuid.value) {
+    loadError.value = "建筑 Uuid 缺失，无法加载编辑表单。"
     return
   }
 
@@ -216,7 +241,7 @@ async function loadFormOptions() {
     parkOptions.value = options
 
     if (!options.length) {
-      loadError.value = "当前客户下暂无园区，无法创建建筑。请先添加园区。"
+      loadError.value = isEditMode.value ? "当前客户下暂无园区，无法编辑建筑。" : "当前客户下暂无园区，无法创建建筑。请先添加园区。"
       initialFormState.value = {
         ...createEmptyForm(),
         customerUuid: customerUuid.value,
@@ -224,9 +249,37 @@ async function loadFormOptions() {
       return
     }
 
-    const preferredParkUuid = options.some(item => item.uuid === queryParkUuid.value)
+    let preferredParkUuid = options.some(item => item.uuid === queryParkUuid.value)
       ? queryParkUuid.value
       : options[0]?.uuid ?? ""
+
+    if (isEditMode.value) {
+      const detail = await fetchBuildingDetail(buildingUuid.value, preferredParkUuid)
+      const buildingParkUuid = normalizeText(detail.ParkUuid)
+
+      if (buildingParkUuid && options.some(item => item.uuid === buildingParkUuid)) {
+        preferredParkUuid = buildingParkUuid
+      }
+
+      const nextState = {
+        customerUuid: customerUuid.value,
+        parkUuid: preferredParkUuid,
+        name: normalizeText(detail.Name),
+        builtTime: normalizeText(detail.BuiltTime),
+        operationTime: normalizeText(detail.OperationTime),
+        buildArea: normalizeText(detail.BuildingArea ?? detail.BuildArea),
+        contact: normalizeText(detail.ContactPerson ?? detail.Contact),
+        contactPhone: normalizeText(detail.ContactPhone),
+        latitude: normalizeText(detail.Latitude),
+        longitude: normalizeText(detail.Longitude),
+        address: normalizeText(detail.Address),
+      }
+
+      Object.assign(form, nextState)
+      initialFormState.value = { ...nextState }
+      customerName.value = queryCustomerName.value || "当前客户"
+      return
+    }
 
     form.parkUuid = preferredParkUuid
     initialFormState.value = {
@@ -273,6 +326,17 @@ async function fetchAllParks(nextCustomerUuid: string) {
   }
 
   return allItems
+}
+
+async function fetchBuildingDetail(nextBuildingUuid: string, nextParkUuid: string) {
+  const result = await fetchBuildings({ ParkUuid: nextParkUuid })
+  const currentBuilding = result.list.find(item => normalizeText(item.Uuid) === nextBuildingUuid)
+
+  if (!currentBuilding) {
+    throw new Error("未找到该建筑信息。")
+  }
+
+  return currentBuilding
 }
 
 function mapParkOption(item: ParkListItem): ParkOption {
@@ -366,7 +430,7 @@ onUnmounted(() => {
 })
 
 watch(
-  () => [route.params.id, route.query.customerName, route.query.parkUuid] as const,
+  () => [route.name, route.params.id, route.query.customerName, route.query.parkUuid, route.query.customerUuid] as const,
   () => {
     resetLocalStateForRoute()
     void loadFormOptions()
@@ -378,9 +442,9 @@ watch(
   <section class="mx-auto flex w-full max-w-4xl min-w-0 flex-col gap-6 pb-8">
     <FormHeader
       :title="pageTitle"
-      :primary-action="{ label: submitButtonLabel, icon: 'ri-add-line', disabled: !canSubmit }"
+      :primary-action="{ label: submitButtonLabel, icon: isEditMode ? 'ri-save-line' : 'ri-add-line', disabled: !canSubmit }"
       :secondary-actions="[{ key: 'reset', label: '重置表单' }]"
-      :reset-dialog="{ description: '当前已填写的建筑信息都会被清空，此操作不可撤销。' }"
+      :reset-dialog="{ description: isEditMode ? '当前已修改的建筑信息将恢复为最近一次加载的内容，此操作不可撤销。' : '当前已填写的建筑信息都会被清空，此操作不可撤销。' }"
       @back="goBack"
       @reset="handleReset"
       @submit="handleSubmit"

@@ -48,6 +48,10 @@ export type BuildingCreatePayload = {
   Address?: string
 }
 
+export type BuildingUpdatePayload = BuildingCreatePayload & {
+  Uuid: string
+}
+
 export type BuildingCreateResult = {
   Uuid?: string
   Id?: number
@@ -64,8 +68,10 @@ export type ListBuildingsPayload = {
 
 const BUILDINGS_API_URL = buildApiUrl(API_PATHS.buildingsList)
 const BUILDING_CREATE_API_URL = buildApiUrl(API_PATHS.buildingCreate ?? "/bqi/build/new")
+const BUILDING_UPDATE_API_URL = buildApiUrl(API_PATHS.buildingUpdate ?? "/bqi/build/update")
 const BUILDINGS_LOAD_ERROR_MESSAGE = "建筑列表加载失败，请稍后重试。"
 const BUILDING_CREATE_ERROR_MESSAGE = "建筑创建失败，请稍后重试。"
+const BUILDING_UPDATE_ERROR_MESSAGE = "建筑信息更新失败，请稍后重试。"
 
 export async function fetchBuildings(payload: ListBuildingsPayload = {}): Promise<BuildingsListResult> {
   const normalizedPayload = {
@@ -126,6 +132,39 @@ export async function createBuilding(payload: BuildingCreatePayload): Promise<Bu
   }
 
   assertApiSuccess(responsePayload, BUILDING_CREATE_ERROR_MESSAGE)
+
+  return extractCreateResult(responsePayload)
+}
+
+export async function updateBuilding(payload: BuildingUpdatePayload): Promise<BuildingCreateResult> {
+  const normalizedPayload = {
+    Uuid: getRequiredString(payload.Uuid, "Uuid"),
+    ParkUuid: getRequiredString(payload.ParkUuid, "ParkUuid"),
+    Name: getRequiredString(payload.Name, "Name"),
+    BuiltTime: getOptionalString(payload.BuiltTime),
+    OperationTime: getOptionalString(payload.OperationTime),
+    BuildArea: getOptionalString(payload.BuildArea),
+    Contact: getOptionalString(payload.Contact),
+    ContactPhone: getOptionalString(payload.ContactPhone),
+    Latitude: getOptionalString(payload.Latitude),
+    Longitude: getOptionalString(payload.Longitude),
+    Address: getOptionalString(payload.Address),
+  }
+
+  const response = await fetch(BUILDING_UPDATE_API_URL, {
+    method: "POST",
+    headers: buildApiHeaders({
+      "Content-Type": "application/json",
+    }),
+    body: JSON.stringify(normalizedPayload),
+  })
+  const responsePayload = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responsePayload, BUILDING_UPDATE_ERROR_MESSAGE)
+  }
+
+  assertApiSuccess(responsePayload, BUILDING_UPDATE_ERROR_MESSAGE)
 
   return extractCreateResult(responsePayload)
 }

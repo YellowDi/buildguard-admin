@@ -2,6 +2,7 @@
 import { computed, onUnmounted, ref, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
 
+import BuildingDetailSheet from "@/components/detail/BuildingDetailSheet.vue"
 import DetailFieldSections from "@/components/detail/DetailFieldSections.vue"
 import DetailRelationModule from "@/components/detail/DetailRelationModule.vue"
 import type { DetailContactValue, DetailFieldSection, DetailRelationModuleSchema } from "@/components/detail/types"
@@ -26,6 +27,8 @@ const park = ref<ParkDetailResult | null>(null)
 const buildings = ref<BuildingRow[]>([])
 const loading = ref(false)
 const errorMessage = ref("")
+const buildingDetailSheetOpen = ref(false)
+const activeBuildingUuid = ref("")
 let latestRequestId = 0
 
 const parkUuid = computed(() => typeof route.params.id === "string" ? route.params.id.trim() : "")
@@ -107,14 +110,16 @@ function goToBuildingDetail(buildingId: string) {
     return
   }
 
-  void router.push({
-    name: "building-detail",
-    params: { id: buildingId },
-    query: {
-      parkUuid: parkUuid.value,
-      customerUuid: customerUuid.value,
-    },
-  })
+  activeBuildingUuid.value = buildingId
+  buildingDetailSheetOpen.value = true
+}
+
+function handleBuildingDetailSheetOpenChange(open: boolean) {
+  buildingDetailSheetOpen.value = open
+
+  if (!open) {
+    activeBuildingUuid.value = ""
+  }
 }
 
 async function loadParkDetail(nextParkUuid: string) {
@@ -235,4 +240,12 @@ function buildContactValue(name: string | null, phone?: string | null): DetailCo
       </div>
     </template>
   </DetailLayout>
+
+  <BuildingDetailSheet
+    :open="buildingDetailSheetOpen"
+    :building-uuid="activeBuildingUuid"
+    :park-uuid="parkUuid"
+    :customer-uuid="customerUuid || undefined"
+    @update:open="handleBuildingDetailSheetOpenChange"
+  />
 </template>

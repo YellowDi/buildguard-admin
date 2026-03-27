@@ -8,9 +8,14 @@ const props = defineProps<{ class?: HTMLAttributes["class"] }>()
 <template>
   <div
     :class="
-      cn('flex flex-col gap-y-2 text-center sm:text-left', props.class)
+      cn('flex flex-col gap-y-3', props.class)
     "
   >
-    <slot />
+    <div v-if="$slots.actions" class="w-full">
+      <slot name="actions" />
+    </div>
+    <div class="flex flex-col gap-y-2 text-left">
+      <slot />
+    </div>
   </div>
 </template>

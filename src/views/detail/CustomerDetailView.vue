@@ -3,6 +3,7 @@ import { computed, onUnmounted, ref, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { toast } from "vue-sonner"
 
+import BuildingDetailSheet from "@/components/detail/BuildingDetailSheet.vue"
 import DetailAccordionModule from "@/components/detail/DetailAccordionModule.vue"
 import DetailTabActionsGroup from "@/components/detail/DetailTabActionsGroup.vue"
 import DetailFieldSections from "@/components/detail/DetailFieldSections.vue"
@@ -22,7 +23,7 @@ import {
 import { Button } from "@/components/ui/button"
 import CustomerDetailContentLoading from "@/components/loading/CustomerDetailContentLoading.vue"
 import ExportTableDialog from "@/components/table-page/ExportTableDialog.vue"
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import TablePage from "@/components/table-page/TablePage.vue"
 import SortPopover, { type SortRule } from "@/components/table-page/TableSortPopover.vue"
 import { createTablePageDefinition, useTablePage } from "@/components/table-page/useTablePage"
@@ -39,6 +40,7 @@ import { useDetailRouteTab } from "@/composables/useDetailRouteTab"
 import DetailLayout from "@/layouts/DetailLayout.vue"
 import { handleApiError } from "@/lib/api-errors"
 import { fetchBuildings, type BuildingListItem } from "@/lib/buildings-api"
+import { readCustomerSubAccountLocalRecords } from "@/lib/customer-sub-accounts-api"
 import { deleteCustomer, fetchCustomerDetail, type CustomerDetailPerson, type CustomerDetailResult } from "@/lib/customers-api"
 import customersData from "@/mocks/customers.json"
 import { fetchParkDetail, fetchParks, type ParkDetailResult, type ParkListItem } from "@/lib/parks-api"
@@ -119,6 +121,14 @@ type MonitoringRow = {
   buildingName: string
 }
 
+type SubAccountRow = {
+  id: string
+  username: string
+  account: string
+  password: string
+  phone: string
+}
+
 type CustomerPackageMockRecord = {
   name: string
   packageName: string
@@ -163,6 +173,9 @@ const parkDetailSheetOpen = ref(false)
 const parkDetailLoading = ref(false)
 const parkDetailErrorMessage = ref("")
 const activeParkDetail = ref<ParkDetailResult | null>(null)
+const buildingDetailSheetOpen = ref(false)
+const activeBuildingUuid = ref("")
+const activeBuildingParkUuid = ref("")
 let latestRequestId = 0
 let latestRelationsRequestId = 0
 let latestBuildingAssetsRequestId = 0
@@ -314,14 +327,18 @@ const activeTablePage = computed(() => (
       ? workOrdersPage
       : activeTab.value === "monitoring"
         ? monitoringPage
-        : null
+        : activeTab.value === "sub-accounts"
+          ? subAccountsPage
+          : null
 ))
 const activeTableTitle = computed(() => (
   activeTab.value === "building-assets"
     ? "建筑资产"
     : activeTab.value === "work-orders"
       ? "工单列表"
-      : "监控"
+      : activeTab.value === "monitoring"
+        ? "监控"
+        : "子账号"
 ))
 const activeTableSortPopoverOpen = ref(false)
 const activeTableExportDialogOpen = ref(false)
@@ -430,9 +447,7 @@ const buildingAssetsSchema: TablePageSchema<CustomerBuildingAssetRow> = {
     {
       key: "view-building",
       label: "查看详情",
-      onClick: () => {
-        toast.info("建筑资产详情接口暂未接入")
-      },
+      onClick: row => handleBuildingAssetDetail(row as CustomerBuildingAssetRow),
     },
   ],
   columns: [
@@ -709,6 +724,8 @@ const workOrdersSchema: TablePageSchema<CustomerWorkOrderRow> = {
 
 const monitoringRows = computed<MonitoringRow[]>(() => customer.value ? buildMockMonitoringRows(customer.value) : [])
 
+const subAccountRows = computed<SubAccountRow[]>(() => customer.value ? buildMockSubAccounts(customer.value) : [])
+
 const monitoringSchema: TablePageSchema<MonitoringRow> = {
   title: "",
   description: "",
@@ -822,6 +839,94 @@ const monitoringSchema: TablePageSchema<MonitoringRow> = {
   },
 }
 
+const subAccountsSchema: TablePageSchema<SubAccountRow> = {
+  title: "",
+  description: "",
+  rowKey: "id",
+  data: [],
+  showIndex: true,
+  stickyHeader: true,
+  wrapperClass: "rounded-none border-0 shadow-none",
+  emptyState: {
+    title: "暂无子账号数据",
+    description: "当前客户下暂无可展示的子账号。",
+    icon: "ri-user-settings-line",
+  },
+  rowActions: [
+    {
+      key: "reset-password",
+      label: "重置密码",
+      onClick: row => handleResetSubAccountPassword(row as SubAccountRow),
+    },
+  ],
+  columns: [
+    {
+      key: "username",
+      label: "用户名",
+      filterType: "text",
+      emphasis: "strong",
+      tone: "primary",
+      filter: {
+        type: "text",
+        placeholder: "输入用户名",
+        defaultVisible: true,
+      },
+      sort: true,
+    },
+    {
+      key: "account",
+      label: "账号",
+      filterType: "text",
+      filter: {
+        type: "text",
+        placeholder: "输入账号",
+        defaultVisible: true,
+      },
+      sort: true,
+    },
+    {
+      key: "password",
+      label: "密码",
+      filterType: "text",
+      filter: {
+        type: "text",
+        placeholder: "输入密码",
+      },
+      sort: true,
+    },
+    {
+      key: "phone",
+      label: "手机号",
+      filterType: "text",
+      width: "fill",
+      filter: {
+        type: "text",
+        placeholder: "输入手机号",
+        defaultVisible: true,
+      },
+      sort: true,
+    },
+  ],
+  filters: [
+    {
+      key: "在页面中",
+      label: "在页面中",
+      type: "text",
+      fixed: true,
+      placeholder: "输入页面内筛选条件",
+      value: row => `${row.username} ${row.account} ${row.password} ${row.phone}`,
+    },
+  ],
+  sort: {
+    storageKey: "customer-detail-sub-accounts-sort-preferences",
+    initialField: "username",
+    initialDirection: "asc",
+  },
+  tabs: {
+    mode: "none",
+  },
+}
+
 const buildingAssetsPage = useTablePage({
   ...createTablePageDefinition(buildingAssetsSchema),
   rows: buildingAssets,
@@ -835,6 +940,11 @@ const workOrdersPage = useTablePage({
 const monitoringPage = useTablePage({
   ...createTablePageDefinition(monitoringSchema),
   rows: monitoringRows,
+})
+
+const subAccountsPage = useTablePage({
+  ...createTablePageDefinition(subAccountsSchema),
+  rows: subAccountRows,
 })
 
 const parkDetailSheetSections = computed<DetailFieldSection[]>(() => {
@@ -939,7 +1049,21 @@ function handleViewMonitoring(row: MonitoringRow) {
 }
 
 function handleAddSubAccount() {
-  toast.info("添加子账号页面暂未接入")
+  if (!customerUuid.value) {
+    return
+  }
+
+  router.push({
+    name: "customer-sub-account-create",
+    params: { id: customerUuid.value },
+    query: {
+      customerName: toDisplayText(customer.value?.CorpName, "当前客户"),
+    },
+  })
+}
+
+function handleResetSubAccountPassword(row: SubAccountRow) {
+  toast.info(`重置子账号「${row.username}」密码功能暂未接入`)
 }
 
 function handleContractDownload() {
@@ -1140,6 +1264,22 @@ function goToParkEdit(parkUuid: string, currentCustomerUuid: string) {
   })
 }
 
+function goToParkFullDetail(parkUuid: string, currentCustomerUuid: string) {
+  if (!parkUuid) {
+    return
+  }
+
+  parkDetailSheetOpen.value = false
+
+  void router.push({
+    name: "park-detail",
+    params: { id: parkUuid },
+    query: currentCustomerUuid
+      ? { customerUuid: currentCustomerUuid }
+      : undefined,
+  })
+}
+
 function handleParkDetailSheetOpenChange(open: boolean) {
   parkDetailSheetOpen.value = open
 
@@ -1196,15 +1336,26 @@ function getRowParkUuid(row: unknown) {
 }
 
 function goToBuildingDetail(buildingUuid: string, parkUuid: string) {
-  if (!buildingUuid || !parkUuid || !customerUuid.value) {
+  if (!buildingUuid || !parkUuid) {
     return
   }
 
-  router.push({
-    name: "building-detail",
-    params: { id: buildingUuid },
-    query: { parkUuid, customerUuid: customerUuid.value },
-  })
+  activeBuildingUuid.value = buildingUuid
+  activeBuildingParkUuid.value = parkUuid
+  buildingDetailSheetOpen.value = true
+}
+
+function handleBuildingAssetDetail(row: CustomerBuildingAssetRow) {
+  goToBuildingDetail(row.uuid, row.parkUuid)
+}
+
+function handleBuildingDetailSheetOpenChange(open: boolean) {
+  buildingDetailSheetOpen.value = open
+
+  if (!open) {
+    activeBuildingUuid.value = ""
+    activeBuildingParkUuid.value = ""
+  }
 }
 
 async function loadCustomerDetail(uuid: string) {
@@ -1743,6 +1894,65 @@ function buildMockMonitoringRows(current: CustomerDetailResult): MonitoringRow[]
   ]
 }
 
+function buildMockSubAccounts(current: CustomerDetailResult): SubAccountRow[] {
+  const customerName = toDisplayText(current.CorpName, "customer")
+  const customerCode = customerUuid.value.replace(/[^a-zA-Z0-9]/g, "").slice(0, 6).toLowerCase() || "cust"
+  const accountPrefix = toPinyinAccountPrefix(customerName)
+  const defaultRows = [
+    createMockSubAccount(customerCode, 1, "张晓晨", `${accountPrefix}_ops`, "Bg@2026!ops", "13800138001"),
+    createMockSubAccount(customerCode, 2, "李雨桐", `${accountPrefix}_maint`, "Bg@2026!mt", "13800138002"),
+    createMockSubAccount(customerCode, 3, "王志远", `${accountPrefix}_monitor`, "Bg@2026!mon", "13800138003"),
+  ]
+  const localRows = readCustomerSubAccountLocalRecords(customerUuid.value).map(record => ({
+    id: record.id,
+    username: record.username,
+    account: record.account,
+    password: record.password,
+    phone: record.phone,
+  }))
+
+  if (!localRows.length) {
+    return defaultRows
+  }
+
+  const mergedRows = [...localRows]
+
+  for (const row of defaultRows) {
+    if (!mergedRows.some(item => item.account === row.account)) {
+      mergedRows.push(row)
+    }
+  }
+
+  return mergedRows
+}
+
+function createMockSubAccount(
+  customerCode: string,
+  index: number,
+  username: string,
+  account: string,
+  password: string,
+  phone: string,
+): SubAccountRow {
+  return {
+    id: `${customerCode}-sub-account-${index}`,
+    username,
+    account,
+    password,
+    phone,
+  }
+}
+
+function toPinyinAccountPrefix(value: string) {
+  const normalized = value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+
+  return normalized || "subaccount"
+}
+
 function shiftDateTime(value: string, offsetDays: number) {
   const date = new Date(value.replace(" ", "T"))
 
@@ -2071,19 +2281,9 @@ function toDisplayText(value: unknown, fallback = "未填写") {
 
       <template v-else-if="activeTab === 'sub-accounts'">
         <CustomerDetailContentLoading v-if="loading" variant="sub-accounts" />
-        <section v-else-if="customer" class="space-y-3 pb-5">
-          <div class="rounded-xl border border-border/70 bg-muted/20 px-4 py-3">
-            <div class="text-sm font-medium text-foreground">
-              子账号模块待接入
-            </div>
-            <div class="mt-1 text-xs text-muted-foreground">
-              当前已预留客户子账号页签，后续可接成员列表、角色权限、启停状态和登录信息。
-            </div>
-          </div>
-          <p class="text-sm leading-6 text-muted-foreground">
-            仓库已有成员接口封装，但当前客户详情页缺少明确的客户维度绑定参数，先保留独立页签结构，避免误接错误数据。
-          </p>
-        </section>
+        <div v-else-if="customer" class="flex min-h-0 flex-1 flex-col pb-5">
+          <TablePage :page="subAccountsPage" :show-toolbar-actions="false" class="-mt-3 sm:-mx-4 xl:-mx-8" />
+        </div>
       </template>
 
       <div v-else class="space-y-5 pb-5">
@@ -2192,20 +2392,39 @@ function toDisplayText(value: unknown, fallback = "未填写") {
   </DetailLayout>
 
   <Sheet :open="parkDetailSheetOpen" @update:open="handleParkDetailSheetOpenChange">
-    <SheetContent side="right" class="w-full overflow-y-auto sm:max-w-xl">
+    <SheetContent side="right" class="overflow-y-auto max-sm:w-[calc(100vw-1rem)] sm:max-w-xl">
       <SheetHeader>
+        <template #actions>
+          <div class="flex items-center justify-between gap-3">
+            <div class="flex items-center gap-1">
+              <SheetClose
+                class="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none"
+              >
+                <i class="ri-arrow-right-double-line text-[16px]" />
+                <span class="sr-only">关闭园区详情</span>
+              </SheetClose>
+              <button
+                v-if="activeParkDetail?.Uuid"
+                type="button"
+                class="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none"
+                @click="goToParkFullDetail(activeParkDetail.Uuid, activeParkDetail.CustomerUuid || customer?.Uuid || '')"
+              >
+                <i class="ri-fullscreen-line text-[16px]" />
+                <span class="sr-only">打开完整园区详情页</span>
+              </button>
+            </div>
+            <Button
+              v-if="activeParkDetail?.Uuid"
+              variant="outline"
+              size="sm"
+              class="h-8 rounded-md"
+              @click="goToParkEdit(activeParkDetail.Uuid, activeParkDetail.CustomerUuid || customer?.Uuid || '')"
+            >
+              编辑园区
+            </Button>
+          </div>
+        </template>
         <SheetTitle>{{ toDisplayText(activeParkDetail?.Name, "园区详情") }}</SheetTitle>
-        <SheetDescription>查看园区基础信息。</SheetDescription>
-        <div v-if="activeParkDetail?.Uuid" class="pt-2">
-          <Button
-            variant="outline"
-            size="sm"
-            class="h-8 rounded-md"
-            @click="goToParkEdit(activeParkDetail.Uuid, activeParkDetail.CustomerUuid || customer?.Uuid || '')"
-          >
-            编辑园区
-          </Button>
-        </div>
       </SheetHeader>
 
       <div class="mt-6">
@@ -2225,6 +2444,14 @@ function toDisplayText(value: unknown, fallback = "未填写") {
       </div>
     </SheetContent>
   </Sheet>
+
+  <BuildingDetailSheet
+    :open="buildingDetailSheetOpen"
+    :building-uuid="activeBuildingUuid"
+    :park-uuid="activeBuildingParkUuid"
+    :customer-uuid="customerUuid"
+    @update:open="handleBuildingDetailSheetOpenChange"
+  />
 
   <ExportTableDialog
     :open="activeTableExportDialogOpen"
