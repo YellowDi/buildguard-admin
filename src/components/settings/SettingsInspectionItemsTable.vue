@@ -120,6 +120,10 @@ const createSubmitArmed = ref(false)
 const editSubmitArmed = ref(false)
 const createForm = ref(createInspectionItemForm())
 const editForm = ref(createInspectionItemForm())
+const editMeta = ref({
+  createdAt: "",
+  updatedAt: "",
+})
 
 const columns: TableColumn[] = [
   {
@@ -149,19 +153,6 @@ const columns: TableColumn[] = [
     tone: "muted",
   },
   {
-    key: "createdAt",
-    label: "创建时间",
-    filterType: "text",
-    tone: "muted",
-  },
-  {
-    key: "updatedAt",
-    label: "更新时间",
-    filterType: "text",
-    tone: "muted",
-    width: "fill",
-  },
-  {
     key: "actions",
     label: "",
     filterType: "none",
@@ -176,6 +167,19 @@ const categoryOptions = computed(() => inspectionCategories.value
   .sort((left, right) => left.name.localeCompare(right.name, "zh-Hans-CN")))
 
 const effectiveSearchQuery = computed(() => props.searchQuery ?? searchQuery.value)
+const editDialogDescription = computed(() => {
+  const parts: string[] = []
+
+  if (editMeta.value.createdAt && editMeta.value.createdAt !== "-") {
+    parts.push(`创建时间：${editMeta.value.createdAt}`)
+  }
+
+  if (editMeta.value.updatedAt && editMeta.value.updatedAt !== "-") {
+    parts.push(`更新时间：${editMeta.value.updatedAt}`)
+  }
+
+  return parts.join("  ·  ") || "正在读取检测项时间信息。"
+})
 
 const filteredRows = computed(() => {
   const query = effectiveSearchQuery.value.trim().toLowerCase()
@@ -298,6 +302,10 @@ function closeEditDialog() {
   editDetailLoading.value = false
   editSubmitArmed.value = false
   editForm.value = createInspectionItemForm()
+  editMeta.value = {
+    createdAt: "",
+    updatedAt: "",
+  }
 }
 
 async function submitCreate() {
@@ -346,6 +354,10 @@ async function openEditDialog(row: InspectionItemRow) {
   editDialogOpen.value = true
   editDetailLoading.value = true
   editForm.value = buildFormFromRow(row)
+  editMeta.value = {
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
+  }
 
   try {
     const detail = await getInspectionItemDetail({
@@ -359,6 +371,10 @@ async function openEditDialog(row: InspectionItemRow) {
 
     if (editingItemId.value === row.id) {
       editForm.value = buildFormFromRow(detailRow)
+      editMeta.value = {
+        createdAt: detailRow.createdAt,
+        updatedAt: detailRow.updatedAt,
+      }
     }
   } catch (error) {
     handleApiError(error, {
@@ -408,6 +424,10 @@ async function submitEdit() {
       isMeasureRecordLabel: formatBooleanLabel(nextPayload.IsMeasureRecord === 1),
       updatedAt: formatTimestamp(new Date().toISOString().slice(0, 19).replace("T", " ")),
     })
+    editMeta.value = {
+      createdAt: currentRow.createdAt,
+      updatedAt: currentRow.updatedAt,
+    }
 
     closeEditDialog()
     toast.success("检测项已更新", {
@@ -786,7 +806,7 @@ defineExpose({
         <DialogHeader>
           <DialogTitle>编辑检测项</DialogTitle>
           <DialogDescription>
-            修改后会调用检测项更新接口保存。
+            {{ editDialogDescription }}
           </DialogDescription>
           <p v-if="editDetailLoading" class="text-sm text-muted-foreground">
             正在同步检测项详情...
