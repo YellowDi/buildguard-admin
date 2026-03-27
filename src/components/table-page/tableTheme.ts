@@ -35,7 +35,7 @@ export const tableTheme = {
   actionHeader: "w-px whitespace-nowrap border-b border-border px-3 py-2 text-left font-normal text-muted-foreground transition-colors hover:bg-surface-tertiary",
   actionHeaderSticky: "bg-background bg-clip-padding",
   actionCell: "relative border-b border-border p-0 align-middle whitespace-nowrap",
-  actionSizer: "invisible h-0 overflow-hidden flex items-center justify-end gap-2 px-3 py-0",
+  actionSizer: "invisible ml-auto inline-flex h-0 w-max max-w-none overflow-hidden items-center justify-end gap-2 whitespace-nowrap px-3 py-0",
   actionRailHost: "pointer-events-none absolute inset-y-0 right-0 z-[25] will-change-transform",
   actionRail: "sticky right-0 ml-auto h-full",
   actionRailRow: "absolute right-0 flex overflow-hidden transition-colors",
