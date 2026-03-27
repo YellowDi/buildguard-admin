@@ -57,7 +57,6 @@ type InspectionCategoryRow = {
   id: number
   uuid: string
   name: string
-  total: number
 }
 
 type InspectionCategoryForm = {
@@ -104,12 +103,6 @@ const columns: TableColumn[] = [
     width: "fill",
   },
   {
-    key: "total",
-    label: "检测项数量",
-    filterType: "number",
-    tone: "muted",
-  },
-  {
     key: "uuid",
     label: "Uuid",
     filterType: "text",
@@ -138,7 +131,6 @@ const filteredRows = computed(() => {
   return rows.value.filter(row => [
     String(row.id),
     row.name,
-    String(row.total),
     row.uuid,
   ].some(field => field.toLowerCase().includes(query)))
 })
@@ -242,7 +234,6 @@ async function submitCreate() {
       ...response,
       Id: nextId,
       Name: createForm.value.name.trim(),
-      Total: Number.isFinite(Number(response.Total)) ? Number(response.Total) : 0,
       Uuid: toText(response.Uuid, `category-${nextId}`),
     }, rows.value.length)
 
@@ -346,7 +337,6 @@ function normalizeInspectionCategory(item: InspectionCategoryRecord, index: numb
     id,
     uuid: toText(item.Uuid, `category-${id}`),
     name: toText(item.Name, `分类 ${id}`),
-    total: toOptionalNumber(item.Total) ?? 0,
   }
 }
 
@@ -367,11 +357,6 @@ function createLocalId() {
 
 function asInspectionCategoryRow(row: Record<string, unknown>) {
   return row as InspectionCategoryRow
-}
-
-function toOptionalNumber(value: unknown) {
-  const parsed = Number(value)
-  return Number.isFinite(parsed) ? parsed : undefined
 }
 
 defineExpose({
