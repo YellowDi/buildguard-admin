@@ -40,6 +40,7 @@ import TablePageTable from "@/components/table-page/TablePageTable.vue"
 import type { TableColumn, TablePageEmptyState } from "@/components/table-page/types"
 import { Textarea } from "@/components/ui/textarea"
 import { handleApiError } from "@/lib/api-errors"
+import { fetchInspectionCategories } from "@/lib/inspection-categories-api"
 import {
   createInspectionItem,
   deleteInspectionItem,
@@ -67,11 +68,17 @@ type InspectionItemRow = {
 
 type InspectionItemForm = {
   name: string
-  categoryName: string
+  categoryUuid: string
   content: string
   standard: string
   isForcePhoto: boolean
   isMeasureRecord: boolean
+}
+
+type InspectionCategoryOption = {
+  id?: number
+  uuid: string
+  name: string
 }
 
 const INSPECTION_ITEMS_LOAD_ERROR_MESSAGE = "检测项列表加载失败，请稍后重试。"
@@ -81,6 +88,7 @@ const compactTableClass =
   "text-[13px] [&_thead_th]:px-2.5 [&_thead_th]:py-1.5 [&_tbody_td]:px-2.5 [&_tbody_td]:py-2 [&_tbody_td]:align-middle [&_tbody_td]:!border-l-0 [&_thead_th:last-child]:w-0 [&_thead_th:last-child]:min-w-0 [&_thead_th:last-child]:p-0 [&_tbody_td:last-child]:w-0 [&_tbody_td:last-child]:min-w-0 [&_tbody_td:last-child]:p-0 [&_tbody_tr:hover]:bg-transparent [&_tbody_tr:hover_td]:bg-transparent"
 
 const rows = ref<InspectionItemRow[]>([])
+const inspectionCategories = ref<InspectionCategoryOption[]>([])
 const loading = ref(false)
 const errorMessage = ref("")
 const searchExpanded = ref(false)
@@ -159,9 +167,9 @@ const categoryTabs = computed(() => {
   ]
 })
 
-const categoryOptions = computed(() => categoryTabs.value
-  .filter(tab => tab.id !== "all")
-  .map(tab => tab.label))
+const categoryOptions = computed(() => inspectionCategories.value
+  .filter(category => category.name && category.uuid)
+  .sort((left, right) => left.name.localeCompare(right.name, "zh-Hans-CN")))
 
 const categoryFilteredRows = computed(() => {
   if (activeCategoryTab.value === "all") {
@@ -220,7 +228,10 @@ const tableEmptyState = computed<TablePageEmptyState>(() => {
 })
 
 onMounted(() => {
-  void loadInspectionItems()
+  void Promise.all([
+    loadInspectionItems(),
+    loadInspectionCategoryOptions(),
+  ])
 })
 
 async function loadInspectionItems() {
@@ -242,6 +253,33 @@ async function loadInspectionItems() {
   }
 }
 
+async function loadInspectionCategoryOptions() {
+  try {
+    const result = await fetchInspectionCategories()
+    inspectionCategories.value = result.list
+      .map(normalizeInspectionCategoryOption)
+      .filter(category => category.name)
+      .sort((left, right) => left.name.localeCompare(right.name, "zh-Hans-CN"))
+
+    if (editDialogOpen.value && editingItemId.value !== null && !editForm.value.categoryUuid) {
+      const currentRow = rows.value.find(row => row.id === editingItemId.value)
+
+      if (currentRow) {
+        editForm.value = {
+          ...editForm.value,
+          categoryUuid: resolveInspectionCategoryUuid(currentRow),
+        }
+      }
+    }
+  } catch (error) {
+    handleApiError(error, {
+      title: "检测项分类加载失败",
+      fallback: "检测项分类加载失败，请稍后重试。",
+      mode: "silent",
+    })
+  }
+}
+
 function toggleSearch() {
   if (searchExpanded.value && searchQuery.value) {
     searchQuery.value = ""
@@ -249,6 +287,13 @@ function toggleSearch() {
   }
 
   searchExpanded.value = !searchExpanded.value
+}
+
+async function refreshInspectionItemsPage() {
+  await Promise.all([
+    loadInspectionItems(),
+    loadInspectionCategoryOptions(),
+  ])
 }
 
 function ensureActiveCategoryTab() {
@@ -317,7 +362,11 @@ async function openEditDialog(row: InspectionItemRow) {
     const detail = await getInspectionItemDetail({
       Uuid: row.uuid,
     })
-    const nextRow = normalizeInspectionItem(detail, rows.value.findIndex(item => item.id === row.id))
+    const nextRow = normalizeInspectionItem(
+      detail,
+      rows.value.findIndex(item => item.id === row.id),
+      row,
+    )
     const currentRow = rows.value.find(item => item.id === row.id)
 
     if (currentRow) {
@@ -360,6 +409,8 @@ async function submitEdit() {
     Object.assign(currentRow, {
       ...currentRow,
       name: nextPayload.Name,
+      categoryId: nextPayload.CategoryId,
+      categoryUuid: nextPayload.CategoryUuid ?? "",
       categoryName: nextPayload.CategoryName ?? "",
       content: nextPayload.Content ?? "",
       standard: nextPayload.Standard ?? "",
@@ -419,11 +470,14 @@ async function confirmDeleteEditingItem() {
 }
 
 function buildInspectionItemPayload(form: InspectionItemForm, currentRow?: InspectionItemRow) {
+  const selectedCategory = resolveInspectionCategory(form.categoryUuid)
+  const categoryName = selectedCategory?.name || undefined
+
   return {
     Name: form.name.trim(),
-    CategoryId: currentRow?.categoryId,
-    CategoryUuid: currentRow?.categoryUuid || undefined,
-    CategoryName: form.categoryName.trim() || undefined,
+    CategoryId: selectedCategory?.id ?? currentRow?.categoryId,
+    CategoryUuid: selectedCategory?.uuid || currentRow?.categoryUuid || undefined,
+    CategoryName: categoryName,
     Content: form.content.trim(),
     Standard: form.standard.trim(),
     IsForcePhoto: form.isForcePhoto ? 1 : 0,
@@ -431,30 +485,34 @@ function buildInspectionItemPayload(form: InspectionItemForm, currentRow?: Inspe
   }
 }
 
-function normalizeInspectionItem(item: InspectionItemRecord, index: number): InspectionItemRow {
+function normalizeInspectionItem(
+  item: InspectionItemRecord,
+  index: number,
+  fallbackRow?: InspectionItemRow,
+): InspectionItemRow {
   const id = Number.isFinite(Number(item.Id)) ? Number(item.Id) : index + 1
   const uuid = toText(item.Uuid, `inspection-item-${id}`)
 
   return {
     id,
     uuid,
-    name: toText(item.Name, `检测项 ${id}`),
-    categoryId: toOptionalNumber(item.CategoryId),
-    categoryUuid: toText(item.CategoryUuid),
-    categoryName: toText(item.CategoryName, "未分类"),
-    content: toText(item.Content, "-"),
-    standard: toText(item.Standard, "-"),
-    isForcePhoto: toFlag(item.IsForcePhoto),
-    isMeasureRecord: toFlag(item.IsMeasureRecord),
-    createdAt: formatTimestamp(toText(item.CreatedAt)),
-    updatedAt: formatTimestamp(toText(item.UpdatedAt)),
+    name: toText(item.Name, fallbackRow?.name || `检测项 ${id}`),
+    categoryId: toOptionalNumber(item.CategoryId) ?? fallbackRow?.categoryId,
+    categoryUuid: toText(item.CategoryUuid, fallbackRow?.categoryUuid || ""),
+    categoryName: toText(item.CategoryName, fallbackRow?.categoryName || "未分类"),
+    content: toText(item.Content, fallbackRow?.content || "-"),
+    standard: toText(item.Standard, fallbackRow?.standard || "-"),
+    isForcePhoto: typeof item.IsForcePhoto === "undefined" ? (fallbackRow?.isForcePhoto ?? false) : toFlag(item.IsForcePhoto),
+    isMeasureRecord: typeof item.IsMeasureRecord === "undefined" ? (fallbackRow?.isMeasureRecord ?? false) : toFlag(item.IsMeasureRecord),
+    createdAt: formatTimestamp(toText(item.CreatedAt, fallbackRow?.createdAt || "")),
+    updatedAt: formatTimestamp(toText(item.UpdatedAt, fallbackRow?.updatedAt || "")),
   }
 }
 
 function buildFormFromRow(row: InspectionItemRow): InspectionItemForm {
   return {
     name: row.name,
-    categoryName: row.categoryName === "未分类" ? "" : row.categoryName,
+    categoryUuid: resolveInspectionCategoryUuid(row),
     content: row.content === "-" ? "" : row.content,
     standard: row.standard === "-" ? "" : row.standard,
     isForcePhoto: row.isForcePhoto,
@@ -465,12 +523,39 @@ function buildFormFromRow(row: InspectionItemRow): InspectionItemForm {
 function createInspectionItemForm(): InspectionItemForm {
   return {
     name: "",
-    categoryName: "",
+    categoryUuid: "",
     content: "",
     standard: "",
     isForcePhoto: false,
     isMeasureRecord: false,
   }
+}
+
+function normalizeInspectionCategoryOption(item: { Id?: number, Uuid?: string, Name?: string }) {
+  return {
+    id: toOptionalNumber(item.Id),
+    uuid: toText(item.Uuid),
+    name: toText(item.Name),
+  }
+}
+
+function resolveInspectionCategory(categoryUuid: string) {
+  const normalizedUuid = categoryUuid.trim()
+
+  if (!normalizedUuid) {
+    return undefined
+  }
+
+  return inspectionCategories.value.find(category => category.uuid === normalizedUuid)
+}
+
+function resolveInspectionCategoryUuid(row: InspectionItemRow) {
+  if (row.categoryUuid) {
+    return row.categoryUuid
+  }
+
+  const matchedCategory = inspectionCategories.value.find(category => category.name === row.categoryName)
+  return matchedCategory?.uuid || ""
 }
 
 function createLocalId() {
@@ -537,7 +622,7 @@ function asInspectionItemRow(row: Record<string, unknown>) {
           />
         </div>
 
-        <Button variant="ghost" size="sm" class="h-8 rounded-md px-3" @click="loadInspectionItems">
+        <Button variant="ghost" size="sm" class="h-8 rounded-md px-3" @click="refreshInspectionItemsPage">
           <i class="ri-refresh-line text-sm" />
           <span>刷新列表</span>
         </Button>
@@ -599,17 +684,17 @@ function asInspectionItemRow(row: Record<string, unknown>) {
 
             <div class="grid gap-2">
               <label class="text-sm font-medium text-foreground" for="create-inspection-category">所属分类</label>
-              <Select v-model="createForm.categoryName">
+              <Select v-model="createForm.categoryUuid">
                 <SelectTrigger id="create-inspection-category" class="w-full">
                   <SelectValue placeholder="选择所属分类" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem
                     v-for="option in categoryOptions"
-                    :key="option"
-                    :value="option"
+                    :key="option.uuid"
+                    :value="option.uuid"
                   >
-                    {{ option }}
+                    {{ option.name }}
                   </SelectItem>
                 </SelectContent>
               </Select>
@@ -671,17 +756,17 @@ function asInspectionItemRow(row: Record<string, unknown>) {
 
             <div class="grid gap-2">
               <label class="text-sm font-medium text-foreground" for="edit-inspection-category">所属分类</label>
-              <Select v-model="editForm.categoryName" :disabled="editDetailLoading">
+              <Select v-model="editForm.categoryUuid" :disabled="editDetailLoading">
                 <SelectTrigger id="edit-inspection-category" class="w-full">
                   <SelectValue placeholder="选择所属分类" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem
                     v-for="option in categoryOptions"
-                    :key="option"
-                    :value="option"
+                    :key="option.uuid"
+                    :value="option.uuid"
                   >
-                    {{ option }}
+                    {{ option.name }}
                   </SelectItem>
                 </SelectContent>
               </Select>
