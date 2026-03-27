@@ -108,6 +108,16 @@ type CustomerWorkOrderRow = {
   updatedAt: string
 }
 
+type MonitoringRow = {
+  id: string
+  deviceName: string
+  platform: string
+  deviceId: string
+  customerName: string
+  parkName: string
+  buildingName: string
+}
+
 type CustomerPackageMockRecord = {
   name: string
   packageName: string
@@ -182,7 +192,11 @@ const detailHeaderTabs = computed(() => detailTabs.value.map(tab => ({
   ...tab,
   active: activeTab.value === tab.id,
 })))
-const isFullWidthTableTab = computed(() => activeTab.value === "building-assets" || activeTab.value === "work-orders")
+const isFullWidthTableTab = computed(() => (
+  activeTab.value === "building-assets"
+  || activeTab.value === "work-orders"
+  || activeTab.value === "monitoring"
+))
 const detailTabActionsByTab: Record<CustomerDetailTab, CustomerDetailTabActions> = {
   "basic-info": {
     deleteCustomer: true,
@@ -239,7 +253,7 @@ const activeDetailMobileActionItems = computed(() => {
     destructive?: boolean
   }> = []
 
-  if (isFullWidthTableTab.value) {
+  if (activeTablePage.value) {
     items.push({
       key: "toggle-filters",
       label: activeTablePage.value?.showControls.value ? "隐藏筛选" : "显示筛选",
@@ -297,8 +311,22 @@ const pagedWorkOrders = computed(() => {
   const end = start + workOrdersPageSize.value
   return workOrders.value.slice(start, end)
 })
-const activeTablePage = computed(() => activeTab.value === "building-assets" ? buildingAssetsPage : activeTab.value === "work-orders" ? workOrdersPage : null)
-const activeTableTitle = computed(() => activeTab.value === "building-assets" ? "建筑资产" : "工单列表")
+const activeTablePage = computed(() => (
+  activeTab.value === "building-assets"
+    ? buildingAssetsPage
+    : activeTab.value === "work-orders"
+      ? workOrdersPage
+      : activeTab.value === "monitoring"
+        ? monitoringPage
+        : null
+))
+const activeTableTitle = computed(() => (
+  activeTab.value === "building-assets"
+    ? "建筑资产"
+    : activeTab.value === "work-orders"
+      ? "工单列表"
+      : "监控"
+))
 const activeTableSortPopoverOpen = ref(false)
 const activeTableExportDialogOpen = ref(false)
 const activeTableExporting = ref(false)
@@ -697,6 +725,121 @@ const workOrdersSchema: TablePageSchema<CustomerWorkOrderRow> = {
   },
 }
 
+const monitoringRows = computed<MonitoringRow[]>(() => customer.value ? buildMockMonitoringRows(customer.value) : [])
+
+const monitoringSchema: TablePageSchema<MonitoringRow> = {
+  title: "",
+  description: "",
+  rowKey: "id",
+  data: [],
+  showIndex: true,
+  stickyHeader: true,
+  wrapperClass: "rounded-none border-0 shadow-none",
+  emptyState: {
+    title: "暂无监控数据",
+    description: "当前客户下暂无可展示的监控设备。",
+    icon: "ri-radar-line",
+  },
+  rowActions: [
+    {
+      key: "edit-monitoring",
+      label: "编辑",
+      onClick: row => handleEditMonitoring(row as MonitoringRow),
+    },
+    {
+      key: "view-monitoring",
+      label: "查看",
+      onClick: row => handleViewMonitoring(row as MonitoringRow),
+    },
+  ],
+  columns: [
+    {
+      key: "deviceName",
+      label: "设备名称",
+      filterType: "text",
+      emphasis: "strong",
+      tone: "primary",
+      filter: {
+        type: "text",
+        placeholder: "输入设备名称",
+        defaultVisible: true,
+      },
+      sort: true,
+    },
+    {
+      key: "platform",
+      label: "平台",
+      filterType: "tag",
+      filter: {
+        type: "tag",
+        defaultVisible: true,
+      },
+      sort: true,
+    },
+    {
+      key: "deviceId",
+      label: "设备ID",
+      filterType: "text",
+      filter: {
+        type: "text",
+        placeholder: "输入设备ID",
+        defaultVisible: true,
+      },
+      sort: true,
+    },
+    {
+      key: "customerName",
+      label: "客户名称",
+      filterType: "text",
+      filter: {
+        type: "text",
+        placeholder: "输入客户名称",
+      },
+      sort: true,
+    },
+    {
+      key: "parkName",
+      label: "园区",
+      filterType: "text",
+      filter: {
+        type: "text",
+        placeholder: "输入园区名称",
+        defaultVisible: true,
+      },
+      sort: true,
+    },
+    {
+      key: "buildingName",
+      label: "建筑",
+      filterType: "text",
+      filter: {
+        type: "text",
+        placeholder: "输入建筑名称",
+        defaultVisible: true,
+      },
+      sort: true,
+    },
+  ],
+  filters: [
+    {
+      key: "在页面中",
+      label: "在页面中",
+      type: "text",
+      fixed: true,
+      placeholder: "输入页面内筛选条件",
+      value: row => `${row.deviceName} ${row.platform} ${row.deviceId} ${row.customerName} ${row.parkName} ${row.buildingName}`,
+    },
+  ],
+  sort: {
+    storageKey: "customer-detail-monitoring-sort-preferences",
+    initialField: "deviceName",
+    initialDirection: "asc",
+  },
+  tabs: {
+    mode: "none",
+  },
+}
+
 const buildingAssetsPage = useTablePage({
   ...createTablePageDefinition(buildingAssetsSchema),
   rows: buildingAssets,
@@ -705,6 +848,11 @@ const buildingAssetsPage = useTablePage({
 const workOrdersPage = useTablePage({
   ...createTablePageDefinition(workOrdersSchema),
   rows: pagedWorkOrders,
+})
+
+const monitoringPage = useTablePage({
+  ...createTablePageDefinition(monitoringSchema),
+  rows: monitoringRows,
 })
 
 const parkDetailSheetSections = computed<DetailFieldSection[]>(() => {
@@ -798,6 +946,14 @@ function handleAddBuilding() {
 
 function handleAddMonitoring() {
   toast.info("添加监控页面暂未接入")
+}
+
+function handleEditMonitoring(row: MonitoringRow) {
+  toast.info(`编辑监控「${row.deviceName}」页面暂未接入`)
+}
+
+function handleViewMonitoring(row: MonitoringRow) {
+  toast.info(`查看监控「${row.deviceName}」页面暂未接入`)
 }
 
 function handleAddSubAccount() {
@@ -1567,6 +1723,53 @@ function createMockWorkOrder(
   }
 }
 
+function buildMockMonitoringRows(current: CustomerDetailResult): MonitoringRow[] {
+  const customerName = toDisplayText(current.CorpName, "当前客户")
+  const buildingRows = buildingAssets.value.slice(0, 6)
+
+  if (buildingRows.length) {
+    return buildingRows.map((item, index) => ({
+      id: `${item.uuid || item.id}-monitoring-${index + 1}`,
+      deviceName: `${item.buildingName}${index % 2 === 0 ? "主入口枪机" : "消防通道球机"}`,
+      platform: index % 2 === 0 ? "海康互联" : "萤石云",
+      deviceId: `MON-${(item.uuid || item.id).replace(/[^a-zA-Z0-9]/g, "").slice(0, 10).toUpperCase()}-${String(index + 1).padStart(2, "0")}`,
+      customerName,
+      parkName: item.parkName,
+      buildingName: item.buildingName,
+    }))
+  }
+
+  return [
+    {
+      id: `${customerUuid.value || "customer"}-monitoring-1`,
+      deviceName: "南门出入口枪机",
+      platform: "海康互联",
+      deviceId: `MON-${(customerUuid.value || "customer").replace(/[^a-zA-Z0-9]/g, "").slice(0, 10).toUpperCase()}-01`,
+      customerName,
+      parkName: "默认园区",
+      buildingName: "1号楼",
+    },
+    {
+      id: `${customerUuid.value || "customer"}-monitoring-2`,
+      deviceName: "消防控制室球机",
+      platform: "萤石云",
+      deviceId: `MON-${(customerUuid.value || "customer").replace(/[^a-zA-Z0-9]/g, "").slice(0, 10).toUpperCase()}-02`,
+      customerName,
+      parkName: "默认园区",
+      buildingName: "2号楼",
+    },
+    {
+      id: `${customerUuid.value || "customer"}-monitoring-3`,
+      deviceName: "地下车库入口枪机",
+      platform: "宇视云",
+      deviceId: `MON-${(customerUuid.value || "customer").replace(/[^a-zA-Z0-9]/g, "").slice(0, 10).toUpperCase()}-03`,
+      customerName,
+      parkName: "默认园区",
+      buildingName: "3号楼",
+    },
+  ]
+}
+
 function shiftDateTime(value: string, offsetDays: number) {
   const date = new Date(value.replace(" ", "T"))
 
@@ -1686,7 +1889,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
     <template #tabActions>
       <DetailTabActionsGroup :mobile-items="activeDetailMobileActionItems" @select="handleMobileTabActionSelect">
         <template #leading>
-          <template v-if="isFullWidthTableTab">
+          <template v-if="activeTablePage">
             <button
               type="button"
               :class="[
@@ -1893,19 +2096,9 @@ function toDisplayText(value: unknown, fallback = "未填写") {
         <div v-else class="space-y-5 pb-5">
           <DetailFieldSections v-if="activeTab === 'basic-info'" :sections="fieldSections" />
 
-          <section v-else-if="activeTab === 'monitoring'" class="space-y-3">
-            <div class="rounded-xl border border-border/70 bg-muted/20 px-4 py-3">
-              <div class="text-sm font-medium text-foreground">
-                监控模块待接入
-              </div>
-              <div class="mt-1 text-xs text-muted-foreground">
-                当前已预留客户监控页签，后续可接设备在线状态、告警汇总、监控画面和巡检联动信息。
-              </div>
-            </div>
-            <p class="text-sm leading-6 text-muted-foreground">
-              建议后续把实时监控和告警数据聚合在此处，避免继续堆叠到客户基本资料页。
-            </p>
-          </section>
+          <div v-else-if="activeTab === 'monitoring'" class="flex min-h-0 flex-1 flex-col pb-5">
+            <TablePage :page="monitoringPage" :show-toolbar-actions="false" class="-mt-3 sm:-mx-4 xl:-mx-8" />
+          </div>
 
           <section v-else-if="activeTab === 'sub-accounts'" class="space-y-3">
             <div class="rounded-xl border border-border/70 bg-muted/20 px-4 py-3">
