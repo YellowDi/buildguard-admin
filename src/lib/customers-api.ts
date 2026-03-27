@@ -15,6 +15,9 @@ export type CustomerListItem = {
   CorpName?: string
   Business?: string
   Level?: number
+  ParkNum?: number
+  BuildNum?: number
+  CreatedAt?: string
   PrincipalName?: string
   PrincipalPhone?: string
   Services?: Array<{

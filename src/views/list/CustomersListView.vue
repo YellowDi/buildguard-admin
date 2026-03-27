@@ -54,6 +54,7 @@ type CustomerRecord = {
   riskHighValue: number | null
   riskRectificationValue: number | null
   riskNormalValue: number | null
+  createdAt: string
 }
 
 const customers = ref<CustomerRecord[]>([])
@@ -223,10 +224,16 @@ const schema: TablePageSchema<CustomerRecord> = {
       key: "parkCount",
       label: "园区数量",
       filterType: "number",
+      variant: "metric",
+      cellRenderer: {
+        kind: "metric-unit",
+        unit: "个",
+      },
       filter: {
         type: "number",
         label: "园区数量",
         placeholder: "输入园区数量",
+        value: row => row.parkCountValue ?? "",
       },
       sort: {
         label: "园区数量",
@@ -238,10 +245,16 @@ const schema: TablePageSchema<CustomerRecord> = {
       key: "buildingCount",
       label: "建筑数量",
       filterType: "number",
+      variant: "metric",
+      cellRenderer: {
+        kind: "metric-unit",
+        unit: "栋",
+      },
       filter: {
         type: "number",
         label: "建筑数量",
         placeholder: "输入建筑数量",
+        value: row => row.buildingCountValue ?? "",
       },
       sort: {
         label: "建筑数量",
@@ -265,6 +278,22 @@ const schema: TablePageSchema<CustomerRecord> = {
         value: row => row.riskHighValue ?? -1,
       },
     },
+    {
+      key: "createdAt",
+      label: "创建时间",
+      filterType: "time",
+      format: "numeric",
+      filter: {
+        type: "date",
+        label: "创建时间",
+        value: row => extractDatePart(row.createdAt),
+      },
+      sort: {
+        label: "创建时间",
+        kind: "metric",
+        value: row => toTimestamp(row.createdAt) ?? -1,
+      },
+    },
   ],
   filters: [
     {
@@ -277,9 +306,9 @@ const schema: TablePageSchema<CustomerRecord> = {
     },
   ],
   sort: {
-    storageKey: "customers-sort-preferences",
-    initialField: "customerName",
-    initialDirection: "asc",
+    storageKey: "customers-sort-preferences-v2",
+    initialField: "createdAt",
+    initialDirection: "desc",
   },
   tabs: {
     mode: "enum",
@@ -307,6 +336,11 @@ watch([pageNum, pageSize], ([nextPageNum, nextPageSize], [previousPageNum, previ
   void loadCustomers()
 }, { immediate: true })
 
+function extractDatePart(value: string) {
+  const [datePart] = value.split(" ")
+  return datePart ?? ""
+}
+
 function buildPageFilterText(row: CustomerRecord) {
   return [
     row.customerName,
@@ -321,6 +355,7 @@ function buildPageFilterText(row: CustomerRecord) {
     row.parkCount,
     row.buildingCount,
     row.riskDistribution,
+    row.createdAt,
   ].join(" ")
 }
 
@@ -373,9 +408,10 @@ async function buildCustomerRecords(list: CustomerListItem[]) {
       .map(item => getCustomerId(item))
       .filter(Boolean),
   )
+  const shouldLoadBuildings = list.some(item => getFirstNumber(item, ["BuildNum", "BuildingNum", "BuildCount"]) === null)
   const [parks, buildings, inspectionPlans] = await Promise.all([
     fetchAllParks(),
-    fetchAllBuildings(),
+    shouldLoadBuildings ? fetchAllBuildings() : Promise.resolve([]),
     fetchAllInspectionPlans(),
   ])
   const customerUuidByCustomerId = buildCustomerUuidByCustomerId(parks)
@@ -453,9 +489,10 @@ function normalizeCustomerRecord(
   const remainingDays = getRemainingDays(customerPlans)
   const inspectionTimesValue = customerPlans.length || null
   const inspectionCycle = getInspectionCycle(customerPlans)
-  const parkCountValue = customerParks.length || null
-  const buildingCountValue = getBuildingCount(customerParks, buildingCountByParkUuid)
+  const parkCountValue = getFirstNumber(item, ["ParkNum", "ParkCount", "ParksCount"], customerParks.length || null)
+  const buildingCountValue = getFirstNumber(item, ["BuildNum", "BuildingNum", "BuildCount"], getBuildingCount(customerParks, buildingCountByParkUuid))
   const riskDistributionMetrics = getRiskDistributionMetrics()
+  const createdAt = toText(item.CreatedAt, "-")
 
   return {
     id: `${pageNum.value}-${index + 1}-${principalPhone}-${customerName}`,
@@ -477,9 +514,9 @@ function normalizeCustomerRecord(
     inspectionTimes: formatCount(inspectionTimesValue, "次"),
     inspectionTimesValue,
     inspectionCycle,
-    parkCount: formatCount(parkCountValue, "个"),
+    parkCount: parkCountValue === null ? "-" : String(parkCountValue),
     parkCountValue,
-    buildingCount: formatCount(buildingCountValue, "栋"),
+    buildingCount: buildingCountValue === null ? "-" : String(buildingCountValue),
     buildingCountValue,
     riskDistribution: formatRiskDistribution(
       riskDistributionMetrics.high,
@@ -489,6 +526,7 @@ function normalizeCustomerRecord(
     riskHighValue: riskDistributionMetrics.high,
     riskRectificationValue: riskDistributionMetrics.rectification,
     riskNormalValue: riskDistributionMetrics.normal,
+    createdAt,
   }
 }
 
@@ -927,7 +965,7 @@ function getFirstText(
 function getFirstNumber(
   record: Record<string, unknown>,
   keys: string[],
-  fallback?: number,
+  fallback?: number | null,
 ) {
   for (const key of keys) {
     const value = toNumber(record[key])

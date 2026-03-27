@@ -182,6 +182,14 @@ function getRendererValue(row: Record<string, unknown>, key: string) {
   return row[key]
 }
 
+function hasDisplayValue(value: unknown) {
+  if (value === null || value === undefined) {
+    return false
+  }
+
+  return `${value}`.trim().length > 0
+}
+
 function stringifyValue(value: unknown) {
   if (value === null || value === undefined) {
     return ""
@@ -1186,7 +1194,10 @@ onBeforeUnmount(() => {
                 <span :class="column.cellRenderer.valueClass ?? tableTheme.renderers.metricValue">
                   {{ getRendererValue(row, column.cellRenderer.valueKey ?? column.key) }}
                 </span>
-                <span :class="['ml-1', column.cellRenderer.unitClass ?? tableTheme.renderers.metricUnit]">
+                <span
+                  v-if="hasDisplayValue(getRendererValue(row, column.cellRenderer.valueKey ?? column.key))"
+                  :class="['ml-1', column.cellRenderer.unitClass ?? tableTheme.renderers.metricUnit]"
+                >
                   {{ column.cellRenderer.unit }}
                 </span>
               </div>
