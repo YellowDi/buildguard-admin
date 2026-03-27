@@ -114,6 +114,8 @@ const editSubmitting = ref(false)
 const editDetailLoading = ref(false)
 const deleteSubmitting = ref(false)
 const deleteConfirmOpen = ref(false)
+const createSubmitArmed = ref(false)
+const editSubmitArmed = ref(false)
 const createForm = ref(createInspectionItemForm())
 const editForm = ref(createInspectionItemForm())
 
@@ -272,6 +274,7 @@ async function refreshInspectionItemsPage() {
 
 function openCreateDialog() {
   createForm.value = createInspectionItemForm()
+  createSubmitArmed.value = false
   createDialogOpen.value = true
 }
 
@@ -279,10 +282,16 @@ function closeEditDialog() {
   editDialogOpen.value = false
   editingItemId.value = null
   editDetailLoading.value = false
+  editSubmitArmed.value = false
   editForm.value = createInspectionItemForm()
 }
 
 async function submitCreate() {
+  if (!createSubmitArmed.value) {
+    return
+  }
+
+  createSubmitArmed.value = false
   const nextPayload = buildInspectionItemPayload(createForm.value)
 
   createSubmitting.value = true
@@ -328,20 +337,14 @@ async function openEditDialog(row: InspectionItemRow) {
     const detail = await getInspectionItemDetail({
       Uuid: row.uuid,
     })
-    const nextRow = normalizeInspectionItem(
+    const detailRow = normalizeInspectionItem(
       detail,
       rows.value.findIndex(item => item.id === row.id),
       row,
     )
-    const currentRow = rows.value.find(item => item.id === row.id)
 
-    if (currentRow) {
-      Object.assign(currentRow, {
-        ...currentRow,
-        ...nextRow,
-        id: currentRow.id,
-      })
-      editForm.value = buildFormFromRow(currentRow)
+    if (editingItemId.value === row.id) {
+      editForm.value = buildFormFromRow(detailRow)
     }
   } catch (error) {
     handleApiError(error, {
@@ -356,6 +359,11 @@ async function openEditDialog(row: InspectionItemRow) {
 }
 
 async function submitEdit() {
+  if (!editSubmitArmed.value) {
+    return
+  }
+
+  editSubmitArmed.value = false
   const itemId = editingItemId.value
   const currentRow = rows.value.find(row => row.id === itemId)
 
@@ -397,6 +405,16 @@ async function submitEdit() {
   } finally {
     editSubmitting.value = false
   }
+}
+
+function requestCreateSubmit() {
+  createSubmitArmed.value = true
+  void submitCreate()
+}
+
+function requestEditSubmit() {
+  editSubmitArmed.value = true
+  void submitEdit()
 }
 
 function promptDeleteEditingItem() {
@@ -636,7 +654,7 @@ defineExpose({
           </DialogDescription>
         </DialogHeader>
 
-        <form class="grid gap-4" @submit.prevent="submitCreate">
+        <form class="grid gap-4" @submit.prevent>
           <div class="grid gap-4 sm:grid-cols-2">
             <div class="grid gap-2">
               <label class="text-sm font-medium text-foreground" for="create-inspection-name">检测项名称</label>
@@ -688,7 +706,7 @@ defineExpose({
             <Button type="button" variant="outline" :disabled="createSubmitting" @click="createDialogOpen = false">
               取消
             </Button>
-            <Button type="submit" :disabled="createSubmitting">
+            <Button type="button" :disabled="createSubmitting" @click.stop.prevent="requestCreateSubmit">
               {{ createSubmitting ? "创建中..." : "创建检测项" }}
             </Button>
           </DialogFooter>
@@ -708,7 +726,7 @@ defineExpose({
           </p>
         </DialogHeader>
 
-        <form class="grid gap-4" @submit.prevent="submitEdit">
+        <form class="grid gap-4" @submit.prevent>
           <div class="grid gap-4 sm:grid-cols-2">
             <div class="grid gap-2">
               <label class="text-sm font-medium text-foreground" for="edit-inspection-name">检测项名称</label>
@@ -764,7 +782,11 @@ defineExpose({
               <Button type="button" variant="outline" :disabled="editDetailLoading || editSubmitting || deleteSubmitting" @click="closeEditDialog">
                 取消
               </Button>
-              <Button type="submit" :disabled="editDetailLoading || editSubmitting || deleteSubmitting">
+              <Button
+                type="button"
+                :disabled="editDetailLoading || editSubmitting || deleteSubmitting"
+                @click.stop.prevent="requestEditSubmit"
+              >
                 {{ editSubmitting ? "保存中..." : "保存" }}
               </Button>
             </div>

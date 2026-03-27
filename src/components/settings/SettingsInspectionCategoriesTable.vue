@@ -81,6 +81,8 @@ const createSubmitting = ref(false)
 const editSubmitting = ref(false)
 const deleteSubmitting = ref(false)
 const deleteConfirmOpen = ref(false)
+const createSubmitArmed = ref(false)
+const editSubmitArmed = ref(false)
 const editingCategoryId = ref<number | null>(null)
 const createForm = ref(createInspectionCategoryForm())
 const editForm = ref(createInspectionCategoryForm())
@@ -199,6 +201,7 @@ function toggleSearch() {
 
 function openCreateDialog() {
   createForm.value = createInspectionCategoryForm()
+  createSubmitArmed.value = false
   createDialogOpen.value = true
 }
 
@@ -213,6 +216,7 @@ function openEditDialog(row: InspectionCategoryRow) {
 function closeEditDialog() {
   editDialogOpen.value = false
   editingCategoryId.value = null
+  editSubmitArmed.value = false
   editForm.value = createInspectionCategoryForm()
 }
 
@@ -221,6 +225,11 @@ function promptDeleteEditingCategory() {
 }
 
 async function submitCreate() {
+  if (!createSubmitArmed.value) {
+    return
+  }
+
+  createSubmitArmed.value = false
   createSubmitting.value = true
 
   try {
@@ -255,6 +264,11 @@ async function submitCreate() {
 }
 
 async function submitEdit() {
+  if (!editSubmitArmed.value) {
+    return
+  }
+
+  editSubmitArmed.value = false
   const currentRow = rows.value.find(row => row.id === editingCategoryId.value)
 
   if (!currentRow) {
@@ -282,6 +296,16 @@ async function submitEdit() {
   } finally {
     editSubmitting.value = false
   }
+}
+
+function requestCreateSubmit() {
+  createSubmitArmed.value = true
+  void submitCreate()
+}
+
+function requestEditSubmit() {
+  editSubmitArmed.value = true
+  void submitEdit()
 }
 
 async function confirmDeleteEditingCategory() {
@@ -440,7 +464,7 @@ defineExpose({
           </DialogDescription>
         </DialogHeader>
 
-        <form class="grid gap-4" @submit.prevent="submitCreate">
+        <form class="grid gap-4" @submit.prevent>
           <div class="grid gap-2">
             <label class="text-sm font-medium text-foreground" for="create-inspection-category-name">分类名称</label>
             <Input
@@ -454,7 +478,11 @@ defineExpose({
             <Button type="button" variant="outline" :disabled="createSubmitting" @click="createDialogOpen = false">
               取消
             </Button>
-            <Button type="submit" :disabled="createSubmitting || !createForm.name.trim()">
+            <Button
+              type="button"
+              :disabled="createSubmitting || !createForm.name.trim()"
+              @click.stop.prevent="requestCreateSubmit"
+            >
               <i v-if="createSubmitting" class="ri-loader-4-line animate-spin text-base" />
               <span>{{ createSubmitting ? "保存中" : "保存分类" }}</span>
             </Button>
@@ -472,7 +500,7 @@ defineExpose({
           </DialogDescription>
         </DialogHeader>
 
-        <form class="grid gap-4" @submit.prevent="submitEdit">
+        <form class="grid gap-4" @submit.prevent>
           <div class="grid gap-2">
             <label class="text-sm font-medium text-foreground" for="edit-inspection-category-name">分类名称</label>
             <Input
@@ -498,7 +526,11 @@ defineExpose({
               <Button type="button" variant="outline" :disabled="editSubmitting || deleteSubmitting" @click="closeEditDialog">
                 取消
               </Button>
-              <Button type="submit" :disabled="editSubmitting || deleteSubmitting || !editForm.name.trim()">
+              <Button
+                type="button"
+                :disabled="editSubmitting || deleteSubmitting || !editForm.name.trim()"
+                @click.stop.prevent="requestEditSubmit"
+              >
                 <i v-if="editSubmitting" class="ri-loader-4-line animate-spin text-base" />
                 <span>{{ editSubmitting ? "保存中" : "保存修改" }}</span>
               </Button>
