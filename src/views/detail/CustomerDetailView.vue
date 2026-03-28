@@ -602,14 +602,14 @@ const workOrdersSchema: TablePageSchema<CustomerWorkOrderRow> = {
   },
   rowActions: [
     {
-      key: "view-work-order",
-      label: "查看详情",
-      onClick: row => handleViewWorkOrder(row as CustomerWorkOrderRow),
-    },
-    {
       key: "assign-work-order",
       label: "指派",
       onClick: row => handleAssignWorkOrder(row as CustomerWorkOrderRow),
+    },
+    {
+      key: "view-work-order",
+      label: "查看详情",
+      onClick: row => handleViewWorkOrder(row as CustomerWorkOrderRow),
     },
   ],
   columns: [

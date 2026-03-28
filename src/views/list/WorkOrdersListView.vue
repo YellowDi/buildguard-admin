@@ -95,14 +95,14 @@ const schema: TablePageSchema<WorkOrderRecord> = {
   rowActions: props.kind === "inspection"
     ? [
         {
-          key: "view-detail",
-          label: "查看详情",
-          onClick: row => handleViewDetail(row as WorkOrderRecord),
-        },
-        {
           key: "assign",
           label: "指派",
           onClick: row => handleAssign(row as WorkOrderRecord),
+        },
+        {
+          key: "view-detail",
+          label: "查看详情",
+          onClick: row => handleViewDetail(row as WorkOrderRecord),
         },
       ]
     : [],
