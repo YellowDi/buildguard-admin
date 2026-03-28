@@ -110,8 +110,10 @@ function getBooleanValue(key: keyof SettingsState) {
               v-for="item in section.items"
               :key="item.key"
             >
-              <div class="grid min-w-0 gap-3 py-3 lg:grid-cols-[minmax(0,1fr)_196px] lg:items-start lg:gap-6 xl:grid-cols-[minmax(0,1fr)_220px]">
-                <Field class="gap-1.5">
+              <div
+                class="flex min-w-0 flex-row items-center gap-4 py-3 sm:gap-6 lg:gap-8"
+              >
+                <Field class="min-w-0 flex-1 gap-1.5">
                   <FieldLabel
                     :class="cn('text-sm', section.tone === 'danger' ? 'text-destructive' : undefined)"
                   >
@@ -123,12 +125,7 @@ function getBooleanValue(key: keyof SettingsState) {
                 </Field>
 
                 <div
-                  :class="
-                    cn(
-                      'w-full lg:justify-self-end',
-                      item.type === 'toggle' ? 'flex justify-start lg:justify-end' : '',
-                    )
-                  "
+                  class="flex w-[196px] shrink-0 items-center justify-end xl:w-[220px]"
                 >
                   <Switch
                     v-if="item.type === 'toggle'"
@@ -140,7 +137,7 @@ function getBooleanValue(key: keyof SettingsState) {
                     v-else-if="item.type === 'input'"
                     :model-value="getStringValue(item.modelKey)"
                     :placeholder="item.placeholder"
-                    class="h-9 w-full rounded-md bg-background"
+                    class="h-9 w-full min-w-0 rounded-md bg-background"
                     @update:model-value="updateString(item.modelKey, String($event))"
                   />
 
@@ -149,7 +146,7 @@ function getBooleanValue(key: keyof SettingsState) {
                     :model-value="getStringValue(item.modelKey)"
                     @update:model-value="updateString(item.modelKey, String($event))"
                   >
-                    <SelectTrigger class="h-9 w-full rounded-md bg-background text-sm">
+                    <SelectTrigger class="h-9 w-full min-w-0 rounded-md bg-background text-sm">
                       <SelectValue :placeholder="item.label" />
                     </SelectTrigger>
                     <SelectContent>
@@ -166,7 +163,7 @@ function getBooleanValue(key: keyof SettingsState) {
                   <Button
                     v-else
                     :variant="item.variant ?? 'default'"
-                    class="h-9 rounded-md px-3.5 lg:ml-auto"
+                    class="h-9 shrink-0 rounded-md px-3.5"
                     @click="emit('action', item.actionKey)"
                   >
                     {{ item.buttonLabel }}
