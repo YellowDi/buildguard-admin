@@ -807,7 +807,7 @@ function formatDateTime(...values: unknown[]) {
           </DialogDescription>
         </DialogHeader>
 
-        <form class="grid gap-4 py-2" @submit.prevent="submitCreateMenu">
+        <form class="grid gap-4" @submit.prevent="submitCreateMenu">
           <div class="grid gap-4 sm:grid-cols-2">
             <div class="grid gap-2">
               <label class="text-sm font-medium text-foreground" for="menu-name">菜单名称</label>

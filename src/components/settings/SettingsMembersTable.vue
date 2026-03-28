@@ -55,7 +55,7 @@ import {
   updateMember as requestMemberUpdate,
   updateMemberStatus as requestMemberStatusUpdate,
 } from "@/lib/members-api"
-import { fetchRoles } from "@/lib/roles-api"
+import { createRole as requestRoleCreate, fetchRoles } from "@/lib/roles-api"
 import { cn } from "@/lib/utils"
 import TablePageTable from "@/components/table-page/TablePageTable.vue"
 import type { TableColumn, TablePageEmptyState } from "@/components/table-page/types"
@@ -107,6 +107,11 @@ type ManualMemberForm = {
   permissionGroup: string
 }
 
+type RoleForm = {
+  name: string
+  remark: string
+}
+
 type EditMemberForm = {
   name: string
   phone: string
@@ -149,9 +154,11 @@ const permissionUpdatingMemberIds = ref<number[]>([])
 const statusUpdatingMemberIds = ref<number[]>([])
 const activeView = ref<MemberViewKey>("members")
 const manualDialogOpen = ref(false)
+const roleDialogOpen = ref(false)
 const editDialogOpen = ref(false)
 const editingMemberId = ref<number | null>(null)
 const manualSubmitting = ref(false)
+const roleSubmitting = ref(false)
 const editDetailLoading = ref(false)
 const editSubmitting = ref(false)
 const deleteSubmitting = ref(false)
@@ -168,6 +175,7 @@ const globalPermissionOptions = computed(() => buildPermissionOptions([
 ]))
 const availablePermissionGroups = computed(() => globalPermissionOptions.value.map(option => option.label))
 const manualMemberForm = ref(createManualMemberForm())
+const roleForm = ref(createRoleForm())
 const editMemberForm = ref(createEditMemberForm())
 
 const memberColumns: TableColumn[] = [
@@ -870,9 +878,7 @@ function handleMemberAction(actionKey: MemberActionKey, member?: MemberRow) {
   }
 
   if (actionKey === "create-role") {
-    toast("创建角色待接入", {
-      description: "后续可接角色表单和权限配置能力。",
-    })
+    openRoleDialog()
     return
   }
 
@@ -925,6 +931,13 @@ function createManualMemberForm(): ManualMemberForm {
   }
 }
 
+function createRoleForm(): RoleForm {
+  return {
+    name: "",
+    remark: "",
+  }
+}
+
 function createEditMemberForm(): EditMemberForm {
   return {
     name: "",
@@ -939,6 +952,11 @@ function createEditMemberForm(): EditMemberForm {
 function openManualMemberDialog() {
   manualMemberForm.value = createManualMemberForm()
   manualDialogOpen.value = true
+}
+
+function openRoleDialog() {
+  roleForm.value = createRoleForm()
+  roleDialogOpen.value = true
 }
 
 function openEditMemberDialog(member: MemberRow) {
@@ -1011,6 +1029,38 @@ async function submitManualMember() {
     })
   } finally {
     manualSubmitting.value = false
+  }
+}
+
+async function submitRole() {
+  const name = roleForm.value.name.trim()
+
+  if (!name) {
+    toast.error("请填写角色名称")
+    return
+  }
+
+  roleSubmitting.value = true
+
+  try {
+    await requestRoleCreate({
+      Name: name,
+      Remark: roleForm.value.remark.trim() || undefined,
+    })
+
+    roleDialogOpen.value = false
+    roleForm.value = createRoleForm()
+    toast.success("角色已创建", {
+      description: `${name} 已提交到角色接口。`,
+    })
+    await loadRoles()
+  } catch (error) {
+    handleApiError(error, {
+      title: "角色创建失败",
+      fallback: "角色创建失败，请稍后重试。",
+    })
+  } finally {
+    roleSubmitting.value = false
   }
 }
 
@@ -1366,7 +1416,7 @@ function asMemberRow(row: Record<string, unknown>) {
           </DialogDescription>
         </DialogHeader>
 
-        <form class="grid gap-4 py-2" @submit.prevent="submitManualMember">
+        <form class="grid gap-4" @submit.prevent="submitManualMember">
           <div class="grid gap-2">
             <label class="text-sm font-medium text-foreground" for="manual-member-name">成员姓名</label>
             <Input id="manual-member-name" v-model="manualMemberForm.name" placeholder="请输入成员姓名" />
@@ -1422,6 +1472,38 @@ function asMemberRow(row: Record<string, unknown>) {
       </DialogContent>
     </Dialog>
 
+    <Dialog :open="roleDialogOpen" @update:open="roleDialogOpen = $event">
+      <DialogContent class="sm:max-w-[520px]">
+        <DialogHeader>
+          <DialogTitle>添加角色</DialogTitle>
+          <DialogDescription>
+            填写角色名称和备注后，将调用角色新建接口保存。
+          </DialogDescription>
+        </DialogHeader>
+
+        <form class="grid gap-4" @submit.prevent="submitRole">
+          <div class="grid gap-2">
+            <label class="text-sm font-medium text-foreground" for="role-name">角色名称</label>
+            <Input id="role-name" v-model="roleForm.name" placeholder="请输入角色名称" />
+          </div>
+
+          <div class="grid gap-2">
+            <label class="text-sm font-medium text-foreground" for="role-remark">备注</label>
+            <Input id="role-remark" v-model="roleForm.remark" placeholder="请输入角色备注" />
+          </div>
+
+          <DialogFooter class="pt-2">
+            <Button type="button" variant="outline" :disabled="roleSubmitting" @click="roleDialogOpen = false">
+              取消
+            </Button>
+            <Button type="submit" :disabled="roleSubmitting">
+              {{ roleSubmitting ? "创建中..." : "添加角色" }}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+
     <Dialog :open="editDialogOpen" @update:open="($event ? (editDialogOpen = true) : closeEditDialog())">
       <DialogContent class="sm:max-w-[520px]">
         <DialogHeader>
@@ -1434,7 +1516,7 @@ function asMemberRow(row: Record<string, unknown>) {
           </p>
         </DialogHeader>
 
-        <form class="grid gap-4 py-2" @submit.prevent="submitEditMember">
+        <form class="grid gap-4" @submit.prevent="submitEditMember">
           <div class="grid gap-4 sm:grid-cols-2">
             <div class="grid gap-2">
               <label class="text-sm font-medium text-foreground" for="edit-member-name">成员姓名</label>
