@@ -151,6 +151,7 @@ type CustomerDetailTabActions = {
   addPark: boolean
   addBuilding: boolean
   addWorkOrder: boolean
+  addRepairWorkOrder: boolean
   addMonitoring: boolean
   addSubAccount: boolean
   editCustomer: boolean
@@ -210,7 +211,7 @@ const isEmpty = computed(() => !loading.value && !customer.value)
 const detailTabs = computed(() => [
   { id: "basic-info", label: "基本信息" },
   { id: "building-assets", label: "建筑资产" },
-  { id: "work-orders", label: "工单列表" },
+  { id: "work-orders", label: "检修工单" },
   { id: "monitoring", label: "监控" },
   { id: "sub-accounts", label: "子账号" },
 ])
@@ -224,6 +225,7 @@ const detailTabActionsByTab: Record<CustomerDetailTab, CustomerDetailTabActions>
     addPark: false,
     addBuilding: false,
     addWorkOrder: false,
+    addRepairWorkOrder: false,
     addMonitoring: false,
     addSubAccount: false,
     editCustomer: true,
@@ -234,6 +236,7 @@ const detailTabActionsByTab: Record<CustomerDetailTab, CustomerDetailTabActions>
     addPark: true,
     addBuilding: true,
     addWorkOrder: false,
+    addRepairWorkOrder: false,
     addMonitoring: false,
     addSubAccount: false,
     editCustomer: false,
@@ -244,6 +247,7 @@ const detailTabActionsByTab: Record<CustomerDetailTab, CustomerDetailTabActions>
     addPark: false,
     addBuilding: false,
     addWorkOrder: true,
+    addRepairWorkOrder: true,
     addMonitoring: false,
     addSubAccount: false,
     editCustomer: false,
@@ -254,6 +258,7 @@ const detailTabActionsByTab: Record<CustomerDetailTab, CustomerDetailTabActions>
     addPark: false,
     addBuilding: false,
     addWorkOrder: false,
+    addRepairWorkOrder: false,
     addMonitoring: true,
     addSubAccount: false,
     editCustomer: false,
@@ -264,6 +269,7 @@ const detailTabActionsByTab: Record<CustomerDetailTab, CustomerDetailTabActions>
     addPark: false,
     addBuilding: false,
     addWorkOrder: false,
+    addRepairWorkOrder: false,
     addMonitoring: false,
     addSubAccount: true,
     editCustomer: false,
@@ -315,7 +321,11 @@ const activeDetailMobileActionItems = computed(() => {
   }
 
   if (activeDetailTabActions.value.addWorkOrder) {
-    items.push({ key: "add-work-order", label: "添加工单", iconClass: "ri-file-add-line" })
+    items.push({ key: "add-work-order", label: "添加检修工单", iconClass: "ri-file-add-line" })
+  }
+
+  if (activeDetailTabActions.value.addRepairWorkOrder) {
+    items.push({ key: "add-repair-work-order", label: "添加维修工单", iconClass: "ri-hammer-line" })
   }
 
   if (activeDetailTabActions.value.addMonitoring) {
@@ -596,8 +606,8 @@ const workOrdersSchema: TablePageSchema<CustomerWorkOrderRow> = {
   stickyHeader: true,
   wrapperClass: "rounded-none border-0 shadow-none",
   emptyState: {
-    title: "暂无工单数据",
-    description: "当前客户下暂无可展示的工单。",
+    title: "暂无检修工单数据",
+    description: "当前客户下暂无可展示的检修工单。",
     icon: "ri-file-list-3-line",
   },
   rowActions: [
@@ -1094,6 +1104,21 @@ function handleAddWorkOrder() {
   })
 }
 
+function handleAddRepairWorkOrder() {
+  if (!customerUuid.value) {
+    return
+  }
+
+  router.push({
+    name: "repair-work-order-create",
+    query: {
+      customerUuid: customerUuid.value,
+      customerName: toDisplayText(customer.value?.CorpName, "当前客户"),
+      returnTo: "repair-work-orders",
+    },
+  })
+}
+
 function handleViewWorkOrder(row: CustomerWorkOrderRow) {
   if (!row.uuid) {
     toast.error("当前工单缺少 Uuid，无法查看详情")
@@ -1223,6 +1248,9 @@ function handleMobileTabActionSelect(key: string) {
       return
     case "add-work-order":
       handleAddWorkOrder()
+      return
+    case "add-repair-work-order":
+      handleAddRepairWorkOrder()
       return
     case "add-monitoring":
       handleAddMonitoring()
@@ -2320,7 +2348,17 @@ function toDisplayText(value: unknown, fallback = "未填写") {
             @click="handleAddWorkOrder"
           >
             <i class="ri-file-add-line text-base" />
-            添加工单
+            添加检修工单
+          </Button>
+          <Button
+            v-if="activeDetailTabActions.addRepairWorkOrder"
+            variant="outline"
+            size="sm"
+            class="h-8 gap-1 border-border/80 bg-background px-3 text-[14px] font-medium text-foreground shadow-none"
+            @click="handleAddRepairWorkOrder"
+          >
+            <i class="ri-hammer-line text-base" />
+            添加维修工单
           </Button>
           <Button
             v-if="activeDetailTabActions.addMonitoring"

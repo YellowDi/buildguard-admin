@@ -49,6 +49,15 @@ export type CreateWorkOrderResult = {
   [property: string]: unknown
 }
 
+export type CreateRepairWorkOrderPayload = {
+  CustomerUuid: string
+  ParkUuid: string
+  Title: string
+  ReportType: number
+  Important: number
+  Content: string
+}
+
 export type UpdateWorkOrderPayload = {
   Uuid: string
   Remark?: string
@@ -104,11 +113,13 @@ export type ListWorkOrdersPayload = {
 
 const WORK_ORDERS_API_URL = buildApiUrl(API_PATHS.workOrdersList)
 const REPAIR_WORK_ORDERS_API_URL = buildApiUrl(API_PATHS.workOrderReportList)
+const REPAIR_WORK_ORDER_CREATE_API_URL = buildApiUrl(API_PATHS.workOrderReportCreate)
 const WORK_ORDER_CREATE_API_URL = buildApiUrl(API_PATHS.workOrderCreate)
 const WORK_ORDER_DETAIL_API_URL = API_PATHS.workOrderDetail
 const WORK_ORDER_UPDATE_API_URL = buildApiUrl(API_PATHS.workOrderUpdate)
 const WORK_ORDERS_LOAD_ERROR_MESSAGE = "工单列表加载失败，请稍后重试。"
 const WORK_ORDER_CREATE_ERROR_MESSAGE = "工单创建失败，请稍后重试。"
+const REPAIR_WORK_ORDER_CREATE_ERROR_MESSAGE = "维修工单创建失败，请稍后重试。"
 const WORK_ORDER_DETAIL_ERROR_MESSAGE = "工单详情加载失败，请稍后重试。"
 const WORK_ORDER_UPDATE_ERROR_MESSAGE = "工单更新失败，请稍后重试。"
 
@@ -173,6 +184,34 @@ export async function createWorkOrder(payload: CreateWorkOrderPayload): Promise<
   }
 
   assertApiSuccess(responseBody, WORK_ORDER_CREATE_ERROR_MESSAGE)
+
+  return extractCreateResult(responseBody)
+}
+
+export async function createRepairWorkOrder(payload: CreateRepairWorkOrderPayload): Promise<CreateWorkOrderResult> {
+  const normalizedPayload = {
+    CustomerUuid: getRequiredString(payload.CustomerUuid, "CustomerUuid"),
+    ParkUuid: getRequiredString(payload.ParkUuid, "ParkUuid"),
+    Title: getRequiredString(payload.Title, "Title"),
+    ReportType: getRequiredNumber(payload.ReportType, "ReportType"),
+    Important: getRequiredNumber(payload.Important, "Important"),
+    Content: getRequiredString(payload.Content, "Content"),
+  }
+
+  const response = await fetch(REPAIR_WORK_ORDER_CREATE_API_URL, {
+    method: "POST",
+    headers: buildApiHeaders({
+      "Content-Type": "application/json",
+    }),
+    body: JSON.stringify(normalizedPayload),
+  })
+  const responseBody = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responseBody, REPAIR_WORK_ORDER_CREATE_ERROR_MESSAGE)
+  }
+
+  assertApiSuccess(responseBody, REPAIR_WORK_ORDER_CREATE_ERROR_MESSAGE)
 
   return extractCreateResult(responseBody)
 }

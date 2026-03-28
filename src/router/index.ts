@@ -167,6 +167,7 @@ const router = createRouter({
           path: "customers/:id/work-orders/create",
           name: "customer-work-order-create",
           component: () => import("@/views/form/WorkOrderCreateView.vue"),
+          props: { kind: "inspection" },
           meta: {
             title: "添加工单",
             loading: "form",
@@ -334,6 +335,7 @@ const router = createRouter({
           path: "work-orders/inspection/create",
           name: "inspection-work-order-create",
           component: () => import("@/views/form/WorkOrderCreateView.vue"),
+          props: { kind: "inspection" },
           meta: {
             title: "添加工单",
             loading: "form",
@@ -361,6 +363,7 @@ const router = createRouter({
           path: "work-orders/inspection/:id/edit",
           name: "inspection-work-order-edit",
           component: () => import("@/views/form/WorkOrderCreateView.vue"),
+          props: { kind: "inspection" },
           meta: {
             title: "编辑工单",
             loading: "form",
@@ -378,6 +381,20 @@ const router = createRouter({
           meta: {
             title: "维修工单",
             loading: "table",
+          } satisfies RouteMetaConfig,
+        },
+        {
+          path: "work-orders/repair/create",
+          name: "repair-work-order-create",
+          component: () => import("@/views/form/WorkOrderCreateView.vue"),
+          props: { kind: "repair" },
+          meta: {
+            title: "添加维修工单",
+            loading: "form",
+            breadcrumb: [
+              { title: "工单", to: "repair-work-orders" },
+              { title: "添加维修工单" },
+            ] satisfies BreadcrumbMetaItem[],
           } satisfies RouteMetaConfig,
         },
         {

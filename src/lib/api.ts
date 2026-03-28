@@ -22,6 +22,7 @@ export const API_PATHS = {
   buildingDelete: "/bqi/build/del",
   workOrdersList: "/bqi/work-order/list",
   workOrderReportList: "/bqi/work-order/report/list",
+  workOrderReportCreate: "/bqi/work-order/report/new",
   workOrderCreate: "/bqi/work-order/new",
   workOrderDetail: "/bqi/work-order/detail",
   workOrderUpdate: "/bqi/work-order/update",

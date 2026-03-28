@@ -19,10 +19,12 @@ import {
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { handleApiError } from "@/lib/api-errors"
-import { fetchCustomers, type CustomerListItem } from "@/lib/customers-api"
-import { fetchCustomerDetail } from "@/lib/customers-api"
+import { fetchCustomerDetail, fetchCustomers, type CustomerListItem } from "@/lib/customers-api"
 import { fetchInspectionPlans, type InspectionPlanListItem } from "@/lib/inspection-plans-api"
-import { createWorkOrder, updateWorkOrder } from "@/lib/work-orders-api"
+import { fetchParks, type ParkListItem } from "@/lib/parks-api"
+import { createRepairWorkOrder, createWorkOrder, updateWorkOrder } from "@/lib/work-orders-api"
+
+type WorkOrderPageKind = "inspection" | "repair"
 
 type QuickNavItem = {
   id: string
@@ -36,6 +38,11 @@ type WorkOrderFormState = {
   deadline: string
   status: string
   remark: string
+  parkUuid: string
+  title: string
+  reportType: string
+  important: string
+  content: string
 }
 
 type PlanOption = {
@@ -48,7 +55,18 @@ type CustomerOption = {
   name: string
 }
 
-const STATUS_OPTIONS = [
+type ParkOption = {
+  uuid: string
+  name: string
+}
+
+const props = withDefaults(defineProps<{
+  kind?: WorkOrderPageKind
+}>(), {
+  kind: "inspection",
+})
+
+const INSPECTION_STATUS_OPTIONS = [
   { value: "1", label: "待指派" },
   { value: "2", label: "待开始" },
   { value: "3", label: "进行中" },
@@ -64,6 +82,11 @@ function createEmptyForm(): WorkOrderFormState {
     deadline: "",
     status: "1",
     remark: "",
+    parkUuid: "",
+    title: "",
+    reportType: "",
+    important: "",
+    content: "",
   }
 }
 
@@ -75,9 +98,10 @@ const customerName = ref("")
 const loadError = ref("")
 const submitting = ref(false)
 const customerLoading = ref(false)
-const planLoading = ref(false)
+const relatedOptionsLoading = ref(false)
 const customerOptions = ref<CustomerOption[]>([])
 const planOptions = ref<PlanOption[]>([])
+const parkOptions = ref<ParkOption[]>([])
 const anchorItems = ref<QuickNavItem[]>([])
 const activeNavId = ref("")
 const formSectionsRef = ref<HTMLElement | null>(null)
@@ -86,6 +110,8 @@ let observer: IntersectionObserver | null = null
 let observerActive = false
 let suppressCustomerWatch = false
 
+const isInspectionKind = computed(() => props.kind === "inspection")
+const isRepairKind = computed(() => props.kind === "repair")
 const isEditMode = computed(() => route.name === "inspection-work-order-edit")
 const routeCustomerUuid = computed(() => {
   if (isEditMode.value) {
@@ -103,27 +129,57 @@ const queryPackageName = computed(() => typeof route.query.packageName === "stri
 const queryDeadline = computed(() => typeof route.query.deadline === "string" ? route.query.deadline.trim() : "")
 const queryStatus = computed(() => typeof route.query.status === "string" ? route.query.status.trim() : "")
 const queryRemark = computed(() => typeof route.query.remark === "string" ? route.query.remark : "")
+const queryParkUuid = computed(() => typeof route.query.parkUuid === "string" ? route.query.parkUuid.trim() : "")
+const queryParkName = computed(() => typeof route.query.parkName === "string" ? route.query.parkName.trim() : "")
+const queryTitle = computed(() => typeof route.query.title === "string" ? route.query.title.trim() : "")
+const queryReportType = computed(() => typeof route.query.reportType === "string" ? route.query.reportType.trim() : "")
+const queryImportant = computed(() => typeof route.query.important === "string" ? route.query.important.trim() : "")
+const queryContent = computed(() => typeof route.query.content === "string" ? route.query.content : "")
 const queryReturnTo = computed(() => typeof route.query.returnTo === "string" ? route.query.returnTo.trim() : "")
-const pageTitle = computed(() => isEditMode.value ? "编辑工单" : "添加工单")
-const canSubmit = computed(() =>
-  isEditMode.value
-    ? Boolean(normalizeText(workOrderUuid.value) && !submitting.value)
-    : Boolean(
-        normalizeText(form.customerUuid)
-        && normalizeText(form.planUuid)
-        && normalizeText(form.packageName)
-        && normalizeText(form.deadline)
-        && normalizeText(form.status)
-        && !submitting.value
-        && !planLoading.value,
-      ),
-)
-const submitButtonLabel = computed(() => {
-  if (submitting.value) {
-    return isEditMode.value ? "保存中..." : "提交中..."
+const pageTitle = computed(() => {
+  if (isEditMode.value) {
+    return "编辑工单"
   }
 
-  return isEditMode.value ? "保存备注" : "添加工单"
+  return isRepairKind.value ? "添加维修工单" : "添加工单"
+})
+const canSubmit = computed(() => {
+  if (isEditMode.value) {
+    return Boolean(normalizeText(workOrderUuid.value) && !submitting.value)
+  }
+
+  if (isRepairKind.value) {
+    return Boolean(
+      normalizeText(form.customerUuid)
+      && normalizeText(form.parkUuid)
+      && normalizeText(form.title)
+      && normalizeText(form.reportType)
+      && normalizeText(form.important)
+      && normalizeText(form.content)
+      && !submitting.value
+      && !customerLoading.value
+      && !relatedOptionsLoading.value,
+    )
+  }
+
+  return Boolean(
+    normalizeText(form.customerUuid)
+    && normalizeText(form.planUuid)
+    && normalizeText(form.packageName)
+    && normalizeText(form.deadline)
+    && normalizeText(form.status)
+    && !submitting.value
+    && !relatedOptionsLoading.value,
+  )
+})
+const submitButtonLabel = computed(() => {
+  if (submitting.value) {
+    if (isEditMode.value) return "保存中..."
+    return isRepairKind.value ? "提交中..." : "提交中..."
+  }
+
+  if (isEditMode.value) return "保存备注"
+  return isRepairKind.value ? "添加维修工单" : "添加工单"
 })
 const resetDialogDescription = computed(() =>
   isEditMode.value
@@ -167,7 +223,7 @@ function scrollToSection(id: string) {
 
   nextTick(() => {
     const focusable = section.querySelector<HTMLElement>(
-      'input:not([type=hidden]):not([disabled]), textarea:not([disabled]), button:not([disabled])',
+      "input:not([type=hidden]):not([disabled]), textarea:not([disabled]), button:not([disabled])",
     )
     focusable?.focus({ preventScroll: true })
     setTimeout(() => { observerActive = true }, 350)
@@ -176,53 +232,65 @@ function scrollToSection(id: string) {
 
 async function handleSubmit() {
   if (isEditMode.value) {
-    if (!normalizeText(workOrderUuid.value)) {
-      toast.error("工单 Uuid 缺失")
-      return
-    }
-
-    submitting.value = true
-
-    try {
-      const payload = {
-        Uuid: normalizeText(workOrderUuid.value),
-        Remark: getOptionalText(form.remark),
-      }
-      const result = await updateWorkOrder(payload)
-
-      toast.success("工单备注已更新", {
-        description: result.Uuid
-          ? `工单 UUID：${result.Uuid}`
-          : "工单备注已提交到接口。",
-      })
-
-      if (queryReturnTo.value === "inspection-work-orders") {
-        await router.push({ name: "inspection-work-orders" })
-        return
-      }
-
-      if (normalizeText(form.customerUuid)) {
-        await router.push({
-          name: "customer-detail",
-          params: { id: normalizeText(form.customerUuid) },
-          query: { tab: "work-orders" },
-        })
-        return
-      }
-
-      router.back()
-    } catch (error) {
-      handleApiError(error, {
-        title: "工单更新失败",
-        fallback: "工单更新失败，请稍后重试。",
-      })
-    } finally {
-      submitting.value = false
-    }
-
+    await handleInspectionEditSubmit()
     return
   }
 
+  if (isRepairKind.value) {
+    await handleRepairCreateSubmit()
+    return
+  }
+
+  await handleInspectionCreateSubmit()
+}
+
+async function handleInspectionEditSubmit() {
+  if (!normalizeText(workOrderUuid.value)) {
+    toast.error("工单 Uuid 缺失")
+    return
+  }
+
+  submitting.value = true
+
+  try {
+    const payload = {
+      Uuid: normalizeText(workOrderUuid.value),
+      Remark: getOptionalText(form.remark),
+    }
+    const result = await updateWorkOrder(payload)
+
+    toast.success("工单备注已更新", {
+      description: result.Uuid
+        ? `工单 UUID：${result.Uuid}`
+        : "工单备注已提交到接口。",
+    })
+
+    if (queryReturnTo.value === "inspection-work-orders") {
+      await router.push({ name: "inspection-work-orders" })
+      return
+    }
+
+    if (normalizeText(form.customerUuid)) {
+      await router.push({
+        name: "customer-detail",
+        params: { id: normalizeText(form.customerUuid) },
+        query: { tab: "work-orders" },
+      })
+      return
+    }
+
+    router.back()
+  } catch (error) {
+    handleApiError(error, {
+      title: "工单更新失败",
+      fallback: "工单更新失败，请稍后重试。",
+    })
+  } finally {
+    submitting.value = false
+  }
+}
+
+async function handleInspectionCreateSubmit() {
   if (!normalizeText(form.customerUuid)) {
     toast.error("所属客户信息缺失")
     return
@@ -282,6 +350,76 @@ async function handleSubmit() {
   }
 }
 
+async function handleRepairCreateSubmit() {
+  if (!normalizeText(form.customerUuid)) {
+    toast.error("所属客户信息缺失")
+    return
+  }
+
+  if (!normalizeText(form.parkUuid)) {
+    toast.error("请选择园区")
+    return
+  }
+
+  if (!normalizeText(form.title)) {
+    toast.error("请填写报修标题")
+    return
+  }
+
+  const reportType = parseIntegerField(form.reportType)
+
+  if (reportType === null) {
+    toast.error("请填写有效的报修类型")
+    return
+  }
+
+  const important = parseIntegerField(form.important)
+
+  if (important === null) {
+    toast.error("请填写有效的重要程度")
+    return
+  }
+
+  if (!normalizeText(form.content)) {
+    toast.error("请填写报修内容")
+    return
+  }
+
+  submitting.value = true
+
+  try {
+    const payload = {
+      CustomerUuid: normalizeText(form.customerUuid),
+      ParkUuid: normalizeText(form.parkUuid),
+      Title: normalizeText(form.title),
+      ReportType: reportType,
+      Important: important,
+      Content: normalizeText(form.content),
+    }
+    const result = await createRepairWorkOrder(payload)
+
+    toast.success("维修工单已创建", {
+      description: result.Uuid
+        ? `工单 UUID：${result.Uuid}`
+        : "维修工单信息已提交到接口。",
+    })
+
+    if (queryReturnTo.value === "repair-work-orders") {
+      await router.push({ name: "repair-work-orders" })
+      return
+    }
+
+    await router.push({ name: "repair-work-orders" })
+  } catch (error) {
+    handleApiError(error, {
+      title: "维修工单创建失败",
+      fallback: "维修工单创建失败，请稍后重试。",
+    })
+  } finally {
+    submitting.value = false
+  }
+}
+
 function handleReset() {
   Object.assign(form, initialFormState.value)
 }
@@ -290,6 +428,7 @@ async function loadFormContext() {
   loadError.value = ""
   customerOptions.value = []
   planOptions.value = []
+  parkOptions.value = []
 
   try {
     if (isEditMode.value) {
@@ -319,6 +458,7 @@ function loadEditContext() {
   }
 
   const nextForm = {
+    ...createEmptyForm(),
     customerUuid: normalizeRouteField(queryCustomerUuid.value),
     planUuid: normalizeRouteField(queryPlanUuid.value),
     packageName: normalizeRouteField(queryPackageName.value),
@@ -332,40 +472,29 @@ function loadEditContext() {
     ? [{ uuid: queryPlanUuid.value, name: queryPlanName.value || queryPlanUuid.value }]
     : []
 
-  Object.assign(form, {
-    ...createEmptyForm(),
-    ...nextForm,
-  })
-  initialFormState.value = {
-    ...createEmptyForm(),
-    ...nextForm,
-  }
+  Object.assign(form, nextForm)
+  initialFormState.value = { ...nextForm }
 }
 
 async function loadFixedCustomerContext(customerUuid: string) {
-  planLoading.value = true
+  relatedOptionsLoading.value = true
 
   try {
-    const [customerDetail, plans] = await Promise.all([
-      fetchCustomerDetail({ Uuid: customerUuid }),
-      fetchAllInspectionPlans(customerUuid),
-    ])
-
+    const customerDetail = await fetchCustomerDetail({ Uuid: customerUuid })
     customerName.value = normalizeText(customerDetail.CorpName) || queryCustomerName.value || "当前客户"
     form.customerUuid = customerUuid
-    planOptions.value = plans.map(mapPlanOption)
 
-    if (!normalizeText(form.planUuid) && planOptions.value.length) {
-      form.planUuid = planOptions.value[0]?.uuid ?? ""
+    if (isRepairKind.value) {
+      await loadParksForCustomer(customerUuid)
+      applyRepairPrefill()
+    } else {
+      await loadPlansForCustomer(customerUuid)
+      applyInspectionPrefill()
     }
 
-    initialFormState.value = {
-      ...createEmptyForm(),
-      customerUuid: customerUuid,
-      planUuid: form.planUuid,
-    }
+    initialFormState.value = { ...form }
   } finally {
-    planLoading.value = false
+    relatedOptionsLoading.value = false
   }
 }
 
@@ -380,25 +509,34 @@ async function loadSelectableCustomerContext() {
       throw new Error("当前没有可用客户，无法创建工单。")
     }
 
-    const nextCustomerUuid = normalizeText(form.customerUuid) || customerOptions.value[0]?.uuid || ""
-    const matchedCustomer = customerOptions.value.find(item => item.uuid === nextCustomerUuid) ?? customerOptions.value[0]
+    const preferredCustomerUuid = normalizeText(queryCustomerUuid.value) || normalizeText(form.customerUuid)
+    const matchedCustomer = customerOptions.value.find(item => item.uuid === preferredCustomerUuid) ?? customerOptions.value[0]
 
     suppressCustomerWatch = true
     form.customerUuid = matchedCustomer?.uuid ?? ""
     customerName.value = matchedCustomer?.name ?? "当前客户"
     form.planUuid = ""
+    form.parkUuid = ""
     suppressCustomerWatch = false
 
-    await loadPlansForCustomer(form.customerUuid)
-
-    initialFormState.value = {
-      ...createEmptyForm(),
-      customerUuid: form.customerUuid,
-      planUuid: form.planUuid,
-    }
+    relatedOptionsLoading.value = true
+    await loadRelatedOptionsForCustomer(form.customerUuid, true)
+    initialFormState.value = { ...form }
   } finally {
     customerLoading.value = false
+    relatedOptionsLoading.value = false
   }
+}
+
+async function loadRelatedOptionsForCustomer(customerUuid: string, useRoutePrefill = false) {
+  if (isRepairKind.value) {
+    await loadParksForCustomer(customerUuid)
+    applyRepairPrefill(useRoutePrefill)
+    return
+  }
+
+  await loadPlansForCustomer(customerUuid)
+  applyInspectionPrefill(useRoutePrefill)
 }
 
 async function loadPlansForCustomer(customerUuid: string) {
@@ -411,17 +549,61 @@ async function loadPlansForCustomer(customerUuid: string) {
     return
   }
 
-  planLoading.value = true
+  const plans = await fetchAllInspectionPlans(normalizedCustomerUuid)
+  planOptions.value = plans.map(mapPlanOption)
+}
 
-  try {
-    const plans = await fetchAllInspectionPlans(normalizedCustomerUuid)
-    planOptions.value = plans.map(mapPlanOption)
+async function loadParksForCustomer(customerUuid: string) {
+  const normalizedCustomerUuid = normalizeText(customerUuid)
 
-    if (planOptions.value.length) {
-      form.planUuid = planOptions.value[0]?.uuid ?? ""
-    }
-  } finally {
-    planLoading.value = false
+  parkOptions.value = []
+  form.parkUuid = ""
+
+  if (!normalizedCustomerUuid) {
+    return
+  }
+
+  const parks = await fetchAllParks(normalizedCustomerUuid)
+  parkOptions.value = parks.map(mapParkOption)
+}
+
+function applyInspectionPrefill(useRoutePrefill = false) {
+  const preferredPlanUuid = useRoutePrefill ? normalizeText(queryPlanUuid.value) : ""
+  const hasPreferredPlan = preferredPlanUuid && planOptions.value.some(item => item.uuid === preferredPlanUuid)
+
+  form.planUuid = hasPreferredPlan
+    ? preferredPlanUuid
+    : planOptions.value[0]?.uuid ?? preferredPlanUuid
+
+  if (useRoutePrefill) {
+    form.packageName = normalizeRouteField(queryPackageName.value)
+    form.deadline = normalizeRouteField(queryDeadline.value)
+    form.status = queryStatus.value || "1"
+    form.remark = normalizeRouteField(queryRemark.value)
+  }
+}
+
+function applyRepairPrefill(useRoutePrefill = false) {
+  const preferredParkUuid = normalizeText(queryParkUuid.value)
+  const fallbackParkUuid = useRoutePrefill ? preferredParkUuid : ""
+
+  if (useRoutePrefill && queryParkUuid.value && queryParkName.value && !parkOptions.value.some(item => item.uuid === queryParkUuid.value)) {
+    parkOptions.value = [{ uuid: queryParkUuid.value, name: queryParkName.value }, ...parkOptions.value]
+  }
+
+  const hasPreferredPark = useRoutePrefill && preferredParkUuid && parkOptions.value.some(item => item.uuid === preferredParkUuid)
+
+  if (hasPreferredPark || !parkOptions.value.length) {
+    form.parkUuid = fallbackParkUuid
+  } else {
+    form.parkUuid = parkOptions.value[0]?.uuid ?? ""
+  }
+
+  if (useRoutePrefill) {
+    form.title = normalizeRouteField(queryTitle.value)
+    form.reportType = normalizeRouteField(queryReportType.value)
+    form.important = normalizeRouteField(queryImportant.value)
+    form.content = normalizeRouteField(queryContent.value)
   }
 }
 
@@ -453,6 +635,36 @@ async function fetchAllInspectionPlans(customerUuid: string) {
   }
 
   return dedupePlans(allItems)
+}
+
+async function fetchAllParks(customerUuid: string) {
+  const pageSize = 200
+  const allItems: ParkListItem[] = []
+  let pageNum = 1
+  let total = 0
+
+  while (pageNum <= 20) {
+    const result = await fetchParks({
+      CustomerUuid: customerUuid,
+      PageNum: pageNum,
+      PageSize: pageSize,
+    })
+
+    if (pageNum === 1) {
+      total = result.total
+    }
+
+    const matchedItems = result.list.filter(item => normalizeText(item.CustomerUuid) === customerUuid)
+    allItems.push(...matchedItems)
+
+    if (!result.list.length || (total > 0 && pageNum * pageSize >= total)) {
+      break
+    }
+
+    pageNum += 1
+  }
+
+  return dedupeParks(allItems)
 }
 
 async function fetchAllCustomers() {
@@ -498,6 +710,21 @@ function dedupePlans(items: InspectionPlanListItem[]) {
   })
 }
 
+function dedupeParks(items: ParkListItem[]) {
+  const seen = new Set<string>()
+
+  return items.filter((item) => {
+    const uuid = normalizeText(item.Uuid)
+
+    if (!uuid || seen.has(uuid)) {
+      return false
+    }
+
+    seen.add(uuid)
+    return true
+  })
+}
+
 function dedupeCustomers(items: CustomerListItem[]) {
   const seen = new Set<string>()
 
@@ -517,6 +744,13 @@ function mapPlanOption(item: InspectionPlanListItem): PlanOption {
   return {
     uuid: normalizeText(item.Uuid),
     name: normalizeText(item.ServiceName) || `检测计划 ${normalizeText(item.Id) || "-"}`,
+  }
+}
+
+function mapParkOption(item: ParkListItem): ParkOption {
+  return {
+    uuid: normalizeText(item.Uuid),
+    name: normalizeText(item.Name) || `园区 ${normalizeText(item.Id) || "-"}`,
   }
 }
 
@@ -548,11 +782,21 @@ function normalizeRouteField(value: string) {
   return value === "-" ? "" : value
 }
 
+function parseIntegerField(value: string) {
+  if (!/^\d+$/.test(value.trim())) {
+    return null
+  }
+
+  const parsed = Number(value)
+  return Number.isInteger(parsed) ? parsed : null
+}
+
 function resetLocalStateForRoute() {
   loadError.value = ""
   customerName.value = ""
   customerOptions.value = []
   planOptions.value = []
+  parkOptions.value = []
   Object.assign(form, createEmptyForm())
 
   if (isEditMode.value) {
@@ -630,14 +874,21 @@ watch(
 
 watch(
   () => form.customerUuid,
-  (nextCustomerUuid, previousCustomerUuid) => {
-    if (routeCustomerUuid.value || suppressCustomerWatch || nextCustomerUuid === previousCustomerUuid) {
+  async (nextCustomerUuid, previousCustomerUuid) => {
+    if (routeCustomerUuid.value || suppressCustomerWatch || nextCustomerUuid === previousCustomerUuid || isEditMode.value) {
       return
     }
 
     const matchedCustomer = customerOptions.value.find(item => item.uuid === normalizeText(nextCustomerUuid))
     customerName.value = matchedCustomer?.name ?? "当前客户"
-    void loadPlansForCustomer(nextCustomerUuid)
+
+    relatedOptionsLoading.value = true
+
+    try {
+      await loadRelatedOptionsForCustomer(nextCustomerUuid)
+    } finally {
+      relatedOptionsLoading.value = false
+    }
   },
 )
 </script>
@@ -693,105 +944,202 @@ watch(
             </Select>
           </FormFieldSection>
 
-          <FormFieldSection
-            id="section-plan"
-            quick-nav-label="检测计划"
-            label="检测计划"
-          >
-            <Input
-              v-if="isEditMode"
-              id="work-order-plan"
-              :model-value="queryPlanName || form.planUuid || '-'"
-              disabled
-              class="w-full"
-              @focus="handleFocus('section-plan')"
-            />
-            <Select v-else-if="planOptions.length" v-model="form.planUuid" :disabled="planLoading">
-              <SelectTrigger id="work-order-plan" class="w-full" @focus="handleFocus('section-plan')">
-                <SelectValue :placeholder="planLoading ? '正在加载检测计划...' : '请选择检测计划'" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem v-for="plan in planOptions" :key="plan.uuid" :value="plan.uuid">
-                  {{ plan.name }}
-                </SelectItem>
-              </SelectContent>
-            </Select>
-            <Input
-              v-else
-              id="work-order-plan"
-              v-model="form.planUuid"
-              required
-              :placeholder="planLoading ? '正在加载检测计划...' : '请输入检测计划 UUID'"
-              class="w-full"
-              @focus="handleFocus('section-plan')"
-            />
-          </FormFieldSection>
+          <template v-if="isRepairKind && !isEditMode">
+            <FormFieldSection
+              id="section-park"
+              quick-nav-label="所属园区"
+              label="所属园区"
+            >
+              <Select v-if="parkOptions.length" v-model="form.parkUuid" :disabled="relatedOptionsLoading">
+                <SelectTrigger id="work-order-park" class="w-full" @focus="handleFocus('section-park')">
+                  <SelectValue :placeholder="relatedOptionsLoading ? '正在加载园区...' : '请选择所属园区'" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem v-for="park in parkOptions" :key="park.uuid" :value="park.uuid">
+                    {{ park.name }}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <Input
+                v-else
+                id="work-order-park"
+                v-model="form.parkUuid"
+                required
+                :placeholder="relatedOptionsLoading ? '正在加载园区...' : '请输入园区 UUID'"
+                class="w-full"
+                @focus="handleFocus('section-park')"
+              />
+            </FormFieldSection>
 
-          <FormFieldSection
-            id="section-package"
-            quick-nav-label="套餐名称"
-            label="套餐名称"
-            label-for="work-order-package"
-          >
-            <Input
-              id="work-order-package"
-              v-model="form.packageName"
-              :disabled="isEditMode"
-              :required="!isEditMode"
-              :placeholder="isEditMode ? '-' : '请输入套餐名称'"
-              class="w-full"
-              @focus="handleFocus('section-package')"
-            />
-          </FormFieldSection>
+            <FormFieldSection
+              id="section-title"
+              quick-nav-label="报修标题"
+              label="报修标题"
+              label-for="work-order-title"
+            >
+              <Input
+                id="work-order-title"
+                v-model="form.title"
+                required
+                placeholder="请输入报修标题"
+                class="w-full"
+                @focus="handleFocus('section-title')"
+              />
+            </FormFieldSection>
 
-          <FormFieldSection
-            id="section-deadline"
-            quick-nav-label="截止时间"
-            label="截止时间"
-            label-for="work-order-deadline"
-          >
-            <FormDatePicker
-              id="work-order-deadline"
-              v-model="form.deadline"
-              :disabled="isEditMode"
-              :placeholder="isEditMode ? '-' : '请选择截止时间'"
-              @focus="handleFocus('section-deadline')"
-            />
-          </FormFieldSection>
+            <FormFieldSection
+              id="section-report-type"
+              quick-nav-label="报修类型"
+              label="报修类型"
+              label-for="work-order-report-type"
+            >
+              <Input
+                id="work-order-report-type"
+                v-model="form.reportType"
+                required
+                inputmode="numeric"
+                placeholder="请输入报修类型编码"
+                class="w-full"
+                @focus="handleFocus('section-report-type')"
+              />
+            </FormFieldSection>
 
-          <FormFieldSection
-            id="section-status"
-            quick-nav-label="状态"
-            label="状态"
-          >
-            <Select v-model="form.status" :disabled="isEditMode">
-              <SelectTrigger id="work-order-status" class="w-full" @focus="handleFocus('section-status')">
-                <SelectValue placeholder="请选择状态" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem v-for="status in STATUS_OPTIONS" :key="status.value" :value="status.value">
-                  {{ status.label }}
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </FormFieldSection>
+            <FormFieldSection
+              id="section-important"
+              quick-nav-label="重要程度"
+              label="重要程度"
+              label-for="work-order-important"
+            >
+              <Input
+                id="work-order-important"
+                v-model="form.important"
+                required
+                inputmode="numeric"
+                placeholder="请输入重要程度编码"
+                class="w-full"
+                @focus="handleFocus('section-important')"
+              />
+            </FormFieldSection>
 
-          <FormFieldSection
-            id="section-remark"
-            quick-nav-label="备注"
-            label="备注"
-            label-for="work-order-remark"
-            align="start"
-            last
-          >
-            <Textarea
-              id="work-order-remark"
-              v-model="form.remark"
-              placeholder="请输入备注"
-              class="min-h-[120px] w-full resize-y"
-              @focus="handleFocus('section-remark')"
-            />
-          </FormFieldSection>
+            <FormFieldSection
+              id="section-content"
+              quick-nav-label="报修内容"
+              label="报修内容"
+              label-for="work-order-content"
+              align="start"
+              last
+            >
+              <Textarea
+                id="work-order-content"
+                v-model="form.content"
+                placeholder="请输入报修内容"
+                class="min-h-[120px] w-full resize-y"
+                @focus="handleFocus('section-content')"
+              />
+            </FormFieldSection>
+          </template>
+
+          <template v-else>
+            <FormFieldSection
+              id="section-plan"
+              quick-nav-label="检测计划"
+              label="检测计划"
+            >
+              <Input
+                v-if="isEditMode"
+                id="work-order-plan"
+                :model-value="queryPlanName || form.planUuid || '-'"
+                disabled
+                class="w-full"
+                @focus="handleFocus('section-plan')"
+              />
+              <Select v-else-if="planOptions.length" v-model="form.planUuid" :disabled="relatedOptionsLoading">
+                <SelectTrigger id="work-order-plan" class="w-full" @focus="handleFocus('section-plan')">
+                  <SelectValue :placeholder="relatedOptionsLoading ? '正在加载检测计划...' : '请选择检测计划'" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem v-for="plan in planOptions" :key="plan.uuid" :value="plan.uuid">
+                    {{ plan.name }}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <Input
+                v-else
+                id="work-order-plan"
+                v-model="form.planUuid"
+                required
+                :placeholder="relatedOptionsLoading ? '正在加载检测计划...' : '请输入检测计划 UUID'"
+                class="w-full"
+                @focus="handleFocus('section-plan')"
+              />
+            </FormFieldSection>
+
+            <FormFieldSection
+              id="section-package"
+              quick-nav-label="套餐名称"
+              label="套餐名称"
+              label-for="work-order-package"
+            >
+              <Input
+                id="work-order-package"
+                v-model="form.packageName"
+                :disabled="isEditMode"
+                :required="!isEditMode"
+                :placeholder="isEditMode ? '-' : '请输入套餐名称'"
+                class="w-full"
+                @focus="handleFocus('section-package')"
+              />
+            </FormFieldSection>
+
+            <FormFieldSection
+              id="section-deadline"
+              quick-nav-label="截止时间"
+              label="截止时间"
+              label-for="work-order-deadline"
+            >
+              <FormDatePicker
+                id="work-order-deadline"
+                v-model="form.deadline"
+                :disabled="isEditMode"
+                :placeholder="isEditMode ? '-' : '请选择截止时间'"
+                @focus="handleFocus('section-deadline')"
+              />
+            </FormFieldSection>
+
+            <FormFieldSection
+              id="section-status"
+              quick-nav-label="状态"
+              label="状态"
+            >
+              <Select v-model="form.status" :disabled="isEditMode">
+                <SelectTrigger id="work-order-status" class="w-full" @focus="handleFocus('section-status')">
+                  <SelectValue placeholder="请选择状态" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem v-for="status in INSPECTION_STATUS_OPTIONS" :key="status.value" :value="status.value">
+                    {{ status.label }}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </FormFieldSection>
+
+            <FormFieldSection
+              id="section-remark"
+              quick-nav-label="备注"
+              label="备注"
+              label-for="work-order-remark"
+              align="start"
+              last
+            >
+              <Textarea
+                id="work-order-remark"
+                v-model="form.remark"
+                placeholder="请输入备注"
+                class="min-h-[120px] w-full resize-y"
+                @focus="handleFocus('section-remark')"
+              />
+            </FormFieldSection>
+          </template>
         </div>
       </form>
 

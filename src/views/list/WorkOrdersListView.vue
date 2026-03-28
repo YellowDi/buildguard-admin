@@ -82,7 +82,7 @@ const pageEmptyStateDescription = computed(() => props.kind === "inspection"
 const pageSortStorageKey = computed(() => props.kind === "inspection"
   ? "inspection-work-orders-sort-preferences"
   : "repair-work-orders-sort-preferences")
-const primaryActionLabel = props.kind === "inspection" ? "添加工单" : ""
+const primaryActionLabel = "添加工单"
 const router = useRouter()
 const columns = props.kind === "inspection" ? createInspectionColumns() : createRepairColumns()
 
@@ -685,14 +685,20 @@ function toNumber(value: unknown) {
 }
 
 function handlePrimaryAction() {
-  if (props.kind !== "inspection") {
+  if (props.kind === "inspection") {
+    router.push({
+      name: "inspection-work-order-create",
+      query: {
+        returnTo: "inspection-work-orders",
+      },
+    })
     return
   }
 
   router.push({
-    name: "inspection-work-order-create",
+    name: "repair-work-order-create",
     query: {
-      returnTo: "inspection-work-orders",
+      returnTo: "repair-work-orders",
     },
   })
 }
