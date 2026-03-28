@@ -51,6 +51,11 @@ const props = withDefaults(defineProps<{
   emptyState?: TablePageEmptyState
   /** 一级列表全页表格：操作列右侧额外留白；详情/设置内嵌表勿开 */
   listLevelTable?: boolean
+  /**
+   * 使用原生 `position:sticky` 固定表头（表格外层横向滚动时往往无法相对侧栏竖向滚动吸顶）。
+   * 一般请用 `stickyHeader`（fixed 克隆，已 Teleport 到 body）；勿与 `stickyHeader` 同时开启。
+   */
+  stickyThead?: boolean
 }>(), {
   summary: "",
   showIndex: false,
@@ -59,6 +64,7 @@ const props = withDefaults(defineProps<{
   tableClass: "",
   emptyState: undefined,
   listLevelTable: false,
+  stickyThead: false,
 })
 const emit = defineEmits<{
   "update:selected-row-keys": [keys: RowSelectionKey[]]
@@ -111,6 +117,7 @@ const headerCheckboxState = computed<CheckboxState>(() => {
 })
 const stickyHeaderVisible = computed(() => (
   props.stickyHeader
+  && !props.stickyThead
   && stickyHeaderActive.value
   && stickyHeaderWidth.value > 0
   && stickyColumnWidths.value.length > 0
@@ -946,76 +953,78 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <div
-      v-if="stickyHeaderVisible"
-      aria-hidden="true"
-      :class="tableTheme.stickyViewport"
-      :style="stickyViewportStyle"
-    >
-      <table :class="tableClassName" :style="stickyTableStyle">
-        <colgroup>
-          <col
-            v-for="(width, columnIndex) in stickyColumnWidths"
-            :key="`sticky-col-${columnIndex}`"
-            :style="{ width: `${width}px` }"
-          >
-        </colgroup>
-        <thead :class="[tableTheme.head, tableTheme.headActive]">
-          <tr>
-            <th
-              v-if="showIndex"
-              :class="[tableTheme.indexHeader.base, tableTheme.indexHeader.sticky, 'group']"
-              :style="getStickyCellStyle(0)"
-            >
-              <div :class="getHeaderCheckboxWrapperClass()">
-                <Checkbox
-                  :model-value="headerCheckboxState"
-                  :disabled="rows.length === 0"
-                  :class="selectionCheckboxClass"
-                  @update:model-value="updateAllRowsSelection($event)"
-                />
-              </div>
-            </th>
-            <th
-              v-for="(column, columnIndex) in columns"
-              :key="`sticky-${column.key}`"
-              :class="[
-                tableTheme.headerCell.base,
-                getStickyHeaderCellClass(column, columnIndex),
-              ]"
-              :style="getStickyCellStyle(columnIndex + (showIndex ? 1 : 0))"
-            >
-              {{ column.label }}
-            </th>
-            <th
-              v-if="hasRowActions"
-              :class="[actionPaddingTheme.header, tableTheme.actionHeaderSticky]"
-              :style="getActionColumnStyle() ?? getStickyCellStyle(stickyColumnWidths.length - 2)"
-            />
-            <th
-              :class="tableTheme.endSpacerHeader"
-              :style="getStickyCellStyle(stickyColumnWidths.length - 1)"
-            />
-          </tr>
-        </thead>
-      </table>
-
+    <!-- fixed 克隆挂到 body，与 getBoundingClientRect 视口坐标一致；避免嵌套 overflow/transform 导致吸顶错位 -->
+    <Teleport v-if="stickyHeaderVisible" to="body">
       <div
-        v-if="actionHeaderRailVisible"
-        :class="tableTheme.actionHeaderRailHost"
-        :style="actionHeaderRailStyle"
+        aria-hidden="true"
+        :class="tableTheme.stickyViewport"
+        :style="stickyViewportStyle"
       >
-        <div :class="tableTheme.actionHeaderRail" :style="{ width: `${actionRailWidth}px`, height: `${actionHeaderHeight}px` }">
-          <div
-            :class="getActionHeaderRailSurfaceClass()"
-            :style="getActionHeaderRailSurfaceStyle()"
-          >
-            操作
+        <table :class="tableClassName" :style="stickyTableStyle">
+          <colgroup>
+            <col
+              v-for="(width, columnIndex) in stickyColumnWidths"
+              :key="`sticky-col-${columnIndex}`"
+              :style="{ width: `${width}px` }"
+            >
+          </colgroup>
+          <thead :class="[tableTheme.head, tableTheme.headActive]">
+            <tr>
+              <th
+                v-if="showIndex"
+                :class="[tableTheme.indexHeader.base, tableTheme.indexHeader.sticky, 'group']"
+                :style="getStickyCellStyle(0)"
+              >
+                <div :class="getHeaderCheckboxWrapperClass()">
+                  <Checkbox
+                    :model-value="headerCheckboxState"
+                    :disabled="rows.length === 0"
+                    :class="selectionCheckboxClass"
+                    @update:model-value="updateAllRowsSelection($event)"
+                  />
+                </div>
+              </th>
+              <th
+                v-for="(column, columnIndex) in columns"
+                :key="`sticky-${column.key}`"
+                :class="[
+                  tableTheme.headerCell.base,
+                  getStickyHeaderCellClass(column, columnIndex),
+                ]"
+                :style="getStickyCellStyle(columnIndex + (showIndex ? 1 : 0))"
+              >
+                {{ column.label }}
+              </th>
+              <th
+                v-if="hasRowActions"
+                :class="[actionPaddingTheme.header, tableTheme.actionHeaderSticky]"
+                :style="getActionColumnStyle() ?? getStickyCellStyle(stickyColumnWidths.length - 2)"
+              />
+              <th
+                :class="tableTheme.endSpacerHeader"
+                :style="getStickyCellStyle(stickyColumnWidths.length - 1)"
+              />
+            </tr>
+          </thead>
+        </table>
+
+        <div
+          v-if="actionHeaderRailVisible"
+          :class="tableTheme.actionHeaderRailHost"
+          :style="actionHeaderRailStyle"
+        >
+          <div :class="tableTheme.actionHeaderRail" :style="{ width: `${actionRailWidth}px`, height: `${actionHeaderHeight}px` }">
+            <div
+              :class="getActionHeaderRailSurfaceClass()"
+              :style="getActionHeaderRailSurfaceStyle()"
+            >
+              操作
+            </div>
+            <div :class="getActionHeaderRailSpacerClass()" :style="getActionRailSpacerStyle()" />
           </div>
-          <div :class="getActionHeaderRailSpacerClass()" :style="getActionRailSpacerStyle()" />
         </div>
       </div>
-    </div>
+    </Teleport>
 
     <div
       ref="tableWrapperRef"
@@ -1047,7 +1056,15 @@ onBeforeUnmount(() => {
         ref="tableRef"
         :class="tableClassName"
       >
-      <thead :class="tableTheme.head">
+      <thead
+        :class="
+          cn(
+            tableTheme.head,
+            props.stickyThead
+              && 'sticky top-0 z-30 bg-background shadow-[inset_0_-1px_0_hsl(var(--border))]',
+          )
+        "
+      >
         <tr>
           <th
             v-if="showIndex"

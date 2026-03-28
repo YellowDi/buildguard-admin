@@ -18,6 +18,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import TopTabSwitch from "@/components/layout/TopTabSwitch.vue"
+import SettingsRightPanelLayout from "@/components/settings/SettingsRightPanelLayout.vue"
 import SettingsToolbarRow from "@/components/settings/SettingsToolbarRow.vue"
 import SettingsToolbarRefreshSlot from "@/components/settings/SettingsToolbarRefreshSlot.vue"
 import SettingsToolbarSearchInput from "@/components/settings/SettingsToolbarSearchInput.vue"
@@ -65,6 +66,11 @@ import {
 } from "@/lib/roles-api"
 import TablePageTable from "@/components/table-page/TablePageTable.vue"
 import type { TableColumn, TablePageEmptyState } from "@/components/table-page/types"
+
+const props = defineProps<{
+  pageTitle: string
+  pageDescription?: string | null
+}>()
 
 type MemberViewKey = "members" | "roles" | "permission-groups"
 
@@ -1351,8 +1357,12 @@ function asRoleRow(row: Record<string, unknown>) {
 </script>
 
 <template>
-  <section class="space-y-5">
-    <div class="flex flex-col gap-4">
+  <SettingsRightPanelLayout
+    variant="with-tabs"
+    :title="props.pageTitle"
+    :description="props.pageDescription"
+  >
+    <template #toolbar>
       <SettingsToolbarRow>
         <template #leading>
         <TopTabSwitch
@@ -1422,8 +1432,9 @@ function asRoleRow(row: Record<string, unknown>) {
           </Button>
         </div>
       </SettingsToolbarRow>
-    </div>
+    </template>
 
+    <section class="space-y-5">
     <Alert
       v-if="currentErrorMessage"
       variant="destructive"
@@ -1437,6 +1448,7 @@ function asRoleRow(row: Record<string, unknown>) {
     </Alert>
 
     <TablePageTable
+      sticky-header
       :columns="currentColumns"
       :rows="currentRows"
       :row-key="currentRowKey"
@@ -1760,4 +1772,5 @@ function asRoleRow(row: Record<string, unknown>) {
       </AlertDialogContent>
     </AlertDialog>
   </section>
+  </SettingsRightPanelLayout>
 </template>

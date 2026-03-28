@@ -2,6 +2,7 @@
 import { computed, ref } from "vue"
 
 import TopTabSwitch from "@/components/layout/TopTabSwitch.vue"
+import SettingsRightPanelLayout from "@/components/settings/SettingsRightPanelLayout.vue"
 import SettingsInspectionCategoriesTable from "@/components/settings/SettingsInspectionCategoriesTable.vue"
 import SettingsInspectionItemsTable from "@/components/settings/SettingsInspectionItemsTable.vue"
 import SettingsToolbarRow from "@/components/settings/SettingsToolbarRow.vue"
@@ -15,6 +16,11 @@ type ExposedActions = {
   openCreateDialog: () => void
   refreshData: () => void | Promise<void>
 }
+
+const props = defineProps<{
+  pageTitle: string
+  pageDescription?: string | null
+}>()
 
 const activeTab = ref<InspectionHubTabKey>("items")
 const itemsCount = ref(0)
@@ -101,8 +107,12 @@ async function refreshCurrentTab() {
 </script>
 
 <template>
-  <section class="space-y-5">
-    <div class="flex flex-col gap-4">
+  <SettingsRightPanelLayout
+    variant="with-tabs"
+    :title="props.pageTitle"
+    :description="props.pageDescription"
+  >
+    <template #toolbar>
       <SettingsToolbarRow>
         <template #leading>
           <TopTabSwitch
@@ -142,8 +152,9 @@ async function refreshCurrentTab() {
           </Button>
         </div>
       </SettingsToolbarRow>
-    </div>
+    </template>
 
+    <section class="space-y-5">
     <div v-show="activeTab === 'items'">
       <SettingsInspectionItemsTable
         ref="itemsTableRef"
@@ -176,5 +187,6 @@ async function refreshCurrentTab() {
         模板功能入口已预留，后续接入接口后可在这里统一维护模板内容。
       </p>
     </section>
-  </section>
+    </section>
+  </SettingsRightPanelLayout>
 </template>

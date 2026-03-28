@@ -408,6 +408,7 @@ defineExpose({
 
     <TablePageTable
       row-key="uuid"
+      sticky-header
       :columns="columns"
       :rows="filteredRows"
       :table-class="compactTableClass"

@@ -13,7 +13,8 @@ export const tableTheme = {
   table: "min-w-full w-full table-auto border-separate border-spacing-0 bg-background text-[14px] text-foreground",
   head: "relative z-20 text-muted-foreground",
   headActive: "shadow-[inset_0_-1px_0_hsl(var(--border))]",
-  stickyViewport: "fixed z-30 overflow-hidden bg-background",
+  /** z 须高于 Dialog/Overlay（z-50），否则 Teleport 到 body 的吸顶表头会被设置弹窗等挡住 */
+  stickyViewport: "fixed z-[60] overflow-hidden bg-background",
   body: "text-foreground",
   row: "group transition hover:bg-surface-tertiary",
   summary: "px-3 py-3 text-[13px] text-muted-foreground",

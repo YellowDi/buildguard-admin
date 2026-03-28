@@ -17,6 +17,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import TopTabSwitch from "@/components/layout/TopTabSwitch.vue"
+import SettingsRightPanelLayout from "@/components/settings/SettingsRightPanelLayout.vue"
 import SettingsToolbarRow from "@/components/settings/SettingsToolbarRow.vue"
 import SettingsToolbarRefreshSlot from "@/components/settings/SettingsToolbarRefreshSlot.vue"
 import SettingsToolbarSearchInput from "@/components/settings/SettingsToolbarSearchInput.vue"
@@ -42,6 +43,12 @@ import {
   importSystemApi,
   type SystemResourceRecord,
 } from "@/lib/system-resources-api"
+
+const props = defineProps<{
+  pageTitle: string
+  pageDescription?: string | null
+}>()
+
 type MenuRow = {
   id: number
   uuid: string
@@ -738,8 +745,12 @@ function formatDateTime(...values: unknown[]) {
 </script>
 
 <template>
-  <section class="space-y-4">
-    <div class="flex flex-col gap-4">
+  <SettingsRightPanelLayout
+    variant="with-tabs"
+    :title="props.pageTitle"
+    :description="props.pageDescription"
+  >
+    <template #toolbar>
       <SettingsToolbarRow>
         <template #leading>
         <TopTabSwitch
@@ -796,8 +807,9 @@ function formatDateTime(...values: unknown[]) {
           </Button>
         </div>
       </SettingsToolbarRow>
-    </div>
+    </template>
 
+    <section class="space-y-4">
     <Alert
       v-if="errorMessage"
       variant="destructive"
@@ -810,6 +822,7 @@ function formatDateTime(...values: unknown[]) {
 
     <TablePageTable
       row-key="id"
+      sticky-header
       :columns="currentColumns"
       :rows="currentRows"
       :table-class="compactTableClass"
@@ -907,4 +920,5 @@ function formatDateTime(...values: unknown[]) {
       </DialogContent>
     </Dialog>
   </section>
+  </SettingsRightPanelLayout>
 </template>
