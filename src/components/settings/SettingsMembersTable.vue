@@ -54,11 +54,12 @@ import {
   updateMember as requestMemberUpdate,
   updateMemberStatus as requestMemberStatusUpdate,
 } from "@/lib/members-api"
+import { fetchRoles } from "@/lib/roles-api"
 import { cn } from "@/lib/utils"
 import TablePageTable from "@/components/table-page/TablePageTable.vue"
 import type { TableColumn, TablePageEmptyState } from "@/components/table-page/types"
 
-type MemberViewKey = "members" | "departments" | "permission-groups"
+type MemberViewKey = "members" | "roles" | "permission-groups"
 
 type PermissionOption = {
   label: string
@@ -79,14 +80,13 @@ type MemberRow = {
   source: "remote" | "local"
 }
 
-type DepartmentRow = {
-  id: string
-  departmentName: string
-  memberCount: number
-  activeCount: number
-  positionCount: number
-  permissionGroupCount: number
-  membersPreview: string
+type RoleRow = {
+  id: number
+  uuid: string
+  name: string
+  remark: string
+  createdAt: string
+  updatedAt: string
 }
 
 type PermissionGroupRow = {
@@ -119,7 +119,7 @@ type MemberActionKey =
   | "manual"
   | "import-excel"
   | "sync-directory"
-  | "create-department"
+  | "create-role"
   | "create-permission-group"
   | "view"
   | "invite"
@@ -139,8 +139,11 @@ const memberStatusMap = {
 } as const
 
 const rows = ref<MemberRow[]>([])
+const roleRows = ref<RoleRow[]>([])
 const loading = ref(false)
+const rolesLoading = ref(false)
 const errorMessage = ref("")
+const rolesErrorMessage = ref("")
 const permissionUpdatingMemberIds = ref<number[]>([])
 const statusUpdatingMemberIds = ref<number[]>([])
 const activeView = ref<MemberViewKey>("members")
@@ -155,9 +158,14 @@ const deleteConfirmOpen = ref(false)
 const editPermissionGroupOptions = ref<PermissionOption[]>([])
 const searchExpanded = ref(false)
 const searchQuery = ref("")
-const availablePermissionGroups = computed(() => Array.from(
-  new Set(rows.value.flatMap(row => row.permissionOptions.map(option => option.label)).filter(Boolean)),
-))
+const globalPermissionOptions = computed(() => buildPermissionOptions([
+  ...roleRows.value.map(role => ({
+    label: role.name,
+    uuid: role.uuid,
+  })),
+  ...rows.value.flatMap(row => row.permissionOptions),
+]))
+const availablePermissionGroups = computed(() => globalPermissionOptions.value.map(option => option.label))
 const manualMemberForm = ref(createManualMemberForm())
 const editMemberForm = ref(createEditMemberForm())
 
@@ -216,71 +224,35 @@ const memberColumns: TableColumn[] = [
   },
 ]
 
-const departmentColumns: TableColumn[] = [
+const roleColumns: TableColumn[] = [
   {
-    key: "departmentName",
-    label: "部门",
+    key: "name",
+    label: "角色",
     filterType: "text",
     emphasis: "strong",
     tone: "primary",
     cellClass: "font-medium text-foreground",
+    width: "fill",
   },
   {
-    key: "memberCount",
-    label: "成员数量",
-    filterType: "number",
-    variant: "metric",
-    cellRenderer: {
-      kind: "metric-unit",
-      unit: "人",
-      valueClass: "tabular-nums text-link",
-      unitClass: "ml-1 text-[12px] text-muted-foreground",
-    },
-  },
-  {
-    key: "activeCount",
-    label: "在岗成员",
-    filterType: "number",
-    variant: "metric",
-    cellRenderer: {
-      kind: "metric-unit",
-      unit: "人",
-      valueClass: "tabular-nums text-link",
-      unitClass: "ml-1 text-[12px] text-muted-foreground",
-    },
-  },
-  {
-    key: "positionCount",
-    label: "职位数",
-    filterType: "number",
-    variant: "metric",
-    cellRenderer: {
-      kind: "metric-unit",
-      unit: "个",
-      valueClass: "tabular-nums text-link",
-      unitClass: "ml-1 text-[12px] text-muted-foreground",
-    },
-  },
-  {
-    key: "permissionGroupCount",
-    label: "权限组数",
-    filterType: "number",
-    variant: "metric",
-    cellRenderer: {
-      kind: "metric-unit",
-      unit: "组",
-      valueClass: "tabular-nums text-link",
-      unitClass: "ml-1 text-[12px] text-muted-foreground",
-    },
-  },
-  {
-    key: "membersPreview",
-    label: "成员",
-    filterType: "none",
-    variant: "note",
-    format: "note",
+    key: "remark",
+    label: "备注",
+    filterType: "text",
+    tone: "muted",
     width: "fill",
     cellRenderer: { kind: "note" },
+  },
+  {
+    key: "createdAt",
+    label: "创建时间",
+    filterType: "text",
+    tone: "muted",
+  },
+  {
+    key: "updatedAt",
+    label: "更新时间",
+    filterType: "text",
+    tone: "muted",
   },
 ]
 
@@ -340,29 +312,6 @@ const permissionGroupColumns: TableColumn[] = [
   },
 ]
 
-const departmentRows = computed<DepartmentRow[]>(() => {
-  const grouped = new Map<string, MemberRow[]>()
-
-  for (const row of rows.value) {
-    const key = row.departmentName || "未分组"
-    const current = grouped.get(key) ?? []
-    current.push(row)
-    grouped.set(key, current)
-  }
-
-  return Array.from(grouped.entries())
-    .map(([departmentName, members]) => ({
-      id: departmentName,
-      departmentName,
-      memberCount: members.length,
-      activeCount: members.filter(member => member.status === "正常").length,
-      positionCount: new Set(members.map(member => member.position)).size,
-      permissionGroupCount: new Set(members.map(member => member.permissionGroup)).size,
-      membersPreview: members.map(member => member.name).join("、"),
-    }))
-    .sort((left, right) => right.memberCount - left.memberCount || left.departmentName.localeCompare(right.departmentName, "zh-Hans-CN"))
-})
-
 const permissionGroupRows = computed<PermissionGroupRow[]>(() => {
   const grouped = new Map<string, MemberRow[]>()
 
@@ -392,9 +341,9 @@ const viewTabs = computed(() => [
     badge: rows.value.length,
   },
   {
-    id: "departments",
-    label: "部门列表",
-    badge: departmentRows.value.length,
+    id: "roles",
+    label: "角色",
+    badge: roleRows.value.length,
   },
   {
     id: "permission-groups",
@@ -425,21 +374,19 @@ const filteredMemberRows = computed(() => {
   })
 })
 
-const filteredDepartmentRows = computed(() => {
+const filteredRoleRows = computed(() => {
   const keyword = searchQuery.value.trim().toLowerCase()
 
-  return departmentRows.value.filter((row) => {
+  return roleRows.value.filter((row) => {
     if (!keyword) {
       return true
     }
 
     return [
-      row.departmentName,
-      row.memberCount,
-      row.activeCount,
-      row.positionCount,
-      row.permissionGroupCount,
-      row.membersPreview,
+      row.name,
+      row.remark,
+      row.createdAt,
+      row.updatedAt,
     ]
       .join(" ")
       .toLowerCase()
@@ -469,8 +416,8 @@ const filteredPermissionGroupRows = computed(() => {
 })
 
 const currentColumns = computed(() => {
-  if (activeView.value === "departments") {
-    return departmentColumns
+  if (activeView.value === "roles") {
+    return roleColumns
   }
 
   if (activeView.value === "permission-groups") {
@@ -481,8 +428,8 @@ const currentColumns = computed(() => {
 })
 
 const currentRows = computed<Record<string, unknown>[]>(() => {
-  if (activeView.value === "departments") {
-    return filteredDepartmentRows.value
+  if (activeView.value === "roles") {
+    return filteredRoleRows.value
   }
 
   if (activeView.value === "permission-groups") {
@@ -497,8 +444,8 @@ const currentRowKey = computed(() => (
 ))
 
 const currentTotalRows = computed(() => {
-  if (activeView.value === "departments") {
-    return departmentRows.value.length
+  if (activeView.value === "roles") {
+    return roleRows.value.length
   }
 
   if (activeView.value === "permission-groups") {
@@ -509,8 +456,8 @@ const currentTotalRows = computed(() => {
 })
 
 const currentSearchPlaceholder = computed(() => {
-  if (activeView.value === "departments") {
-    return "搜索部门名称或成员"
+  if (activeView.value === "roles") {
+    return "搜索角色名称或备注"
   }
 
   if (activeView.value === "permission-groups") {
@@ -521,7 +468,7 @@ const currentSearchPlaceholder = computed(() => {
 })
 
 const tableEmptyState = computed<TablePageEmptyState>(() => {
-  if (loading.value) {
+  if (currentLoading.value) {
     return {
       title: "加载中",
       description: "正在获取当前视图的数据，请稍候。",
@@ -529,10 +476,10 @@ const tableEmptyState = computed<TablePageEmptyState>(() => {
     }
   }
 
-  if (errorMessage.value) {
+  if (currentErrorMessage.value) {
     return {
       title: "数据加载失败",
-      description: errorMessage.value,
+      description: currentErrorMessage.value,
       icon: "ri-error-warning-line",
     }
   }
@@ -545,11 +492,11 @@ const tableEmptyState = computed<TablePageEmptyState>(() => {
     }
   }
 
-  if (activeView.value === "departments") {
+  if (activeView.value === "roles") {
     return {
-      title: "暂无部门数据",
-      description: "当前成员数据还无法聚合出部门列表。",
-      icon: "ri-building-line",
+      title: "暂无角色数据",
+      description: "角色接口暂未返回可展示的角色列表。",
+      icon: "ri-shield-user-line",
     }
   }
 
@@ -569,8 +516,23 @@ const tableEmptyState = computed<TablePageEmptyState>(() => {
 })
 
 onMounted(() => {
-  void loadMembers()
+  void loadAllData()
 })
+
+const currentLoading = computed(() => (
+  activeView.value === "roles" ? rolesLoading.value : loading.value
+))
+
+const currentErrorMessage = computed(() => (
+  activeView.value === "roles" ? rolesErrorMessage.value : errorMessage.value
+))
+
+async function loadAllData() {
+  await Promise.allSettled([
+    loadMembers(),
+    loadRoles(),
+  ])
+}
 
 async function loadMembers() {
   loading.value = true
@@ -587,6 +549,24 @@ async function loadMembers() {
     })
   } finally {
     loading.value = false
+  }
+}
+
+async function loadRoles() {
+  rolesLoading.value = true
+  rolesErrorMessage.value = ""
+
+  try {
+    const result = await fetchRoles()
+
+    roleRows.value = result.list.map((item, index) => normalizeRoleRow(item, index))
+  } catch (error) {
+    rolesErrorMessage.value = handleApiError(error, {
+      mode: "silent",
+      fallback: "角色列表加载失败，请稍后重试。",
+    })
+  } finally {
+    rolesLoading.value = false
   }
 }
 
@@ -607,6 +587,19 @@ function normalizeMemberRow(raw: unknown, index: number): MemberRow {
     permissionOptions,
     status: normalizeStatus(record.Status),
     source: "remote",
+  }
+}
+
+function normalizeRoleRow(raw: unknown, index: number): RoleRow {
+  const record = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>
+
+  return {
+    id: toNumber(record.Id, index + 1),
+    uuid: toText(record.Uuid),
+    name: toText(record.Name, `角色 ${index + 1}`),
+    remark: toText(record.Remark, "-"),
+    createdAt: toText(record.CreatedAt, "-"),
+    updatedAt: toText(record.UpdatedAt, "-"),
   }
 }
 
@@ -700,7 +693,17 @@ function toText(...values: unknown[]) {
 }
 
 function getPermissionOption(member: MemberRow, groupLabel: string) {
-  return member.permissionOptions.find(option => option.label === groupLabel)
+  return getAssignablePermissionOptions(member).find(option => option.label === groupLabel)
+}
+
+function getAssignablePermissionOptions(member: MemberRow) {
+  return buildPermissionOptions([
+    ...globalPermissionOptions.value,
+    ...member.permissionOptions,
+    ...(member.permissionGroup && member.permissionGroup !== "未分配"
+      ? [{ label: member.permissionGroup, uuid: member.permissionOptions.find(option => option.label === member.permissionGroup)?.uuid }]
+      : []),
+  ])
 }
 
 function getDepartmentMatch(departmentName: string) {
@@ -718,15 +721,7 @@ function getPermissionOptionByLabel(groupLabel: string) {
     return null
   }
 
-  for (const row of rows.value) {
-    const option = getPermissionOption(row, groupLabel)
-
-    if (option?.uuid) {
-      return option
-    }
-  }
-
-  return null
+  return globalPermissionOptions.value.find(option => option.label === groupLabel) ?? null
 }
 
 function toggleSearch() {
@@ -873,9 +868,9 @@ function handleMemberAction(actionKey: MemberActionKey, member?: MemberRow) {
     return
   }
 
-  if (actionKey === "create-department") {
-    toast("创建部门待接入", {
-      description: "后续可接部门表单或组织架构同步能力。",
+  if (actionKey === "create-role") {
+    toast("创建角色待接入", {
+      description: "后续可接角色表单和权限配置能力。",
     })
     return
   }
@@ -909,8 +904,8 @@ function handleMemberAction(actionKey: MemberActionKey, member?: MemberRow) {
 }
 
 function handlePrimaryAction() {
-  if (activeView.value === "departments") {
-    handleMemberAction("create-department")
+  if (activeView.value === "roles") {
+    handleMemberAction("create-role")
     return
   }
 
@@ -1092,12 +1087,7 @@ async function submitEditMember() {
 }
 
 function applyEditMemberSnapshot(member: MemberRow) {
-  editPermissionGroupOptions.value = buildPermissionOptions([
-    ...member.permissionOptions,
-    ...(member.permissionGroup && member.permissionGroup !== "未分配"
-      ? [{ label: member.permissionGroup, uuid: getPermissionOption(member, member.permissionGroup)?.uuid }]
-      : []),
-  ])
+  editPermissionGroupOptions.value = getAssignablePermissionOptions(member)
   editMemberForm.value = {
     name: member.name,
     phone: member.phone === "-" ? "" : member.phone,
@@ -1240,7 +1230,7 @@ function asMemberRow(row: Record<string, unknown>) {
             />
           </div>
 
-          <Button variant="ghost" size="sm" class="h-8 rounded-md px-3" @click="loadMembers">
+          <Button variant="ghost" size="sm" class="h-8 rounded-md px-3" @click="loadAllData">
             <i class="ri-refresh-line text-sm" />
             <span>刷新列表</span>
           </Button>
@@ -1283,21 +1273,21 @@ function asMemberRow(row: Record<string, unknown>) {
             @click="handlePrimaryAction"
           >
             <i class="ri-add-line text-base" />
-            <span>{{ activeView === "departments" ? "添加部门" : "添加权限组" }}</span>
+            <span>{{ activeView === "roles" ? "添加角色" : "添加权限组" }}</span>
           </Button>
         </div>
       </div>
     </div>
 
     <Alert
-      v-if="errorMessage"
+      v-if="currentErrorMessage"
       variant="destructive"
       class="border-destructive/20 bg-destructive/3"
     >
       <i class="ri-error-warning-line text-base" />
-      <AlertTitle>成员接口加载失败</AlertTitle>
+      <AlertTitle>{{ activeView === "roles" ? "角色接口加载失败" : "成员接口加载失败" }}</AlertTitle>
       <AlertDescription>
-        {{ errorMessage }}
+        {{ currentErrorMessage }}
       </AlertDescription>
     </Alert>
 
@@ -1331,14 +1321,14 @@ function asMemberRow(row: Record<string, unknown>) {
               @update:model-value="updatePermissionGroup(asMemberRow(rawRow).id, String($event))"
             >
               <DropdownMenuItem
-                v-if="asMemberRow(rawRow).permissionOptions.length === 0"
+                v-if="getAssignablePermissionOptions(asMemberRow(rawRow)).length === 0"
                 disabled
                 class="rounded-lg px-2.5 py-2 text-muted-foreground"
               >
                 暂无可用权限组
               </DropdownMenuItem>
               <DropdownMenuRadioItem
-                v-for="option in asMemberRow(rawRow).permissionOptions"
+                v-for="option in getAssignablePermissionOptions(asMemberRow(rawRow))"
                 :key="`${asMemberRow(rawRow).id}-${option.uuid ?? option.label}`"
                 :value="option.label"
                 class="rounded-lg py-2 pr-2 pl-8"

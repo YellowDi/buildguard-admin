@@ -344,6 +344,20 @@ const router = createRouter({
           } satisfies RouteMetaConfig,
         },
         {
+          path: "work-orders/inspection/:id",
+          name: "inspection-work-order-detail",
+          component: () => import("@/views/detail/WorkOrderDetailView.vue"),
+          meta: {
+            title: "工单详情",
+            loading: "detail",
+            useDetailBreadcrumbTitle: true,
+            breadcrumb: [
+              { title: "工单", to: "inspection-work-orders" },
+              { title: "详情" },
+            ] satisfies BreadcrumbMetaItem[],
+          } satisfies RouteMetaConfig,
+        },
+        {
           path: "work-orders/inspection/:id/edit",
           name: "inspection-work-order-edit",
           component: () => import("@/views/form/WorkOrderCreateView.vue"),

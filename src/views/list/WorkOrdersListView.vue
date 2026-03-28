@@ -290,7 +290,19 @@ function buildPageFilterText(row: WorkOrderRecord) {
 }
 
 function handleViewDetail(row: WorkOrderRecord) {
-  toast.info(`工单「${row.orderNo || row.uuid}」详情页暂未接入`)
+  if (!row.uuid) {
+    toast.error("当前工单缺少 Uuid，无法查看详情")
+    return
+  }
+
+  void router.push({
+    name: "inspection-work-order-detail",
+    params: { id: row.uuid },
+    query: {
+      customerUuid: row.customerUuid,
+      returnTo: "inspection-work-orders",
+    },
+  })
 }
 
 function handleAssign(row: WorkOrderRecord) {

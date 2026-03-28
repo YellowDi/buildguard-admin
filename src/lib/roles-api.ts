@@ -1,0 +1,110 @@
+import { createHttpError, readResponseBody } from "@/lib/api-errors"
+import { API_PATHS, buildApiHeaders, buildApiUrl } from "@/lib/api"
+
+type RolesListEnvelope = {
+  Total?: number
+  List?: unknown
+  data?: unknown
+  list?: unknown
+  rows?: unknown
+}
+
+export type RoleRecord = {
+  Uuid?: string
+  Id?: number
+  Name?: string
+  Remark?: string
+  CreatedAt?: string
+  UpdatedAt?: string
+  [property: string]: unknown
+}
+
+export type RolesListResult = {
+  list: RoleRecord[]
+  total: number
+}
+
+const ROLES_API_URL = buildApiUrl(API_PATHS.rolesList)
+const ROLES_LOAD_ERROR_MESSAGE = "角色列表加载失败，请稍后重试。"
+
+export async function fetchRoles(): Promise<RolesListResult> {
+  const response = await fetch(ROLES_API_URL, {
+    method: "POST",
+    headers: buildApiHeaders({
+      "Content-Type": "application/json",
+    }),
+    body: JSON.stringify({}),
+  })
+  const responsePayload = await readResponseBody(response) as RolesListEnvelope | unknown[]
+
+  if (!response.ok) {
+    throw createHttpError(response, responsePayload, ROLES_LOAD_ERROR_MESSAGE)
+  }
+
+  const list = extractList(responsePayload)
+
+  return {
+    list,
+    total: extractTotal(responsePayload, list.length),
+  }
+}
+
+function extractList(payload: RolesListEnvelope | unknown[]) {
+  if (Array.isArray(payload)) {
+    return payload as RoleRecord[]
+  }
+
+  if (Array.isArray(payload.List)) {
+    return payload.List as RoleRecord[]
+  }
+
+  if (Array.isArray(payload.data)) {
+    return payload.data as RoleRecord[]
+  }
+
+  if (payload.data && typeof payload.data === "object") {
+    const nested = payload.data as RolesListEnvelope
+
+    if (Array.isArray(nested.List)) {
+      return nested.List as RoleRecord[]
+    }
+
+    if (Array.isArray(nested.list)) {
+      return nested.list as RoleRecord[]
+    }
+
+    if (Array.isArray(nested.rows)) {
+      return nested.rows as RoleRecord[]
+    }
+  }
+
+  if (Array.isArray(payload.list)) {
+    return payload.list as RoleRecord[]
+  }
+
+  if (Array.isArray(payload.rows)) {
+    return payload.rows as RoleRecord[]
+  }
+
+  return []
+}
+
+function extractTotal(payload: RolesListEnvelope | unknown[], fallback: number) {
+  if (Array.isArray(payload)) {
+    return payload.length
+  }
+
+  if (typeof payload.Total === "number") {
+    return payload.Total
+  }
+
+  if (payload.data && typeof payload.data === "object") {
+    const nested = payload.data as RolesListEnvelope
+
+    if (typeof nested.Total === "number") {
+      return nested.Total
+    }
+  }
+
+  return fallback
+}

@@ -1,5 +1,5 @@
 import { ApiError, assertApiSuccess, createHttpError, readResponseBody } from "@/lib/api-errors"
-import { API_PATHS, buildApiHeaders, buildApiUrl } from "@/lib/api"
+import { API_PATHS, buildApiHeaders, buildApiRequestUrl, buildApiUrl } from "@/lib/api"
 
 type WorkOrdersListEnvelope = {
   Total?: number
@@ -54,6 +54,12 @@ export type UpdateWorkOrderPayload = {
   Remark?: string
 }
 
+export type WorkOrderDetailPayload = {
+  Uuid: string
+}
+
+export type WorkOrderDetailResult = WorkOrderListItem
+
 export type RepairWorkOrderListItem = {
   Id?: number
   Uuid?: string
@@ -99,9 +105,11 @@ export type ListWorkOrdersPayload = {
 const WORK_ORDERS_API_URL = buildApiUrl(API_PATHS.workOrdersList)
 const REPAIR_WORK_ORDERS_API_URL = buildApiUrl(API_PATHS.workOrderReportList)
 const WORK_ORDER_CREATE_API_URL = buildApiUrl(API_PATHS.workOrderCreate)
+const WORK_ORDER_DETAIL_API_URL = API_PATHS.workOrderDetail
 const WORK_ORDER_UPDATE_API_URL = buildApiUrl(API_PATHS.workOrderUpdate)
 const WORK_ORDERS_LOAD_ERROR_MESSAGE = "工单列表加载失败，请稍后重试。"
 const WORK_ORDER_CREATE_ERROR_MESSAGE = "工单创建失败，请稍后重试。"
+const WORK_ORDER_DETAIL_ERROR_MESSAGE = "工单详情加载失败，请稍后重试。"
 const WORK_ORDER_UPDATE_ERROR_MESSAGE = "工单更新失败，请稍后重试。"
 
 export async function fetchWorkOrders(payload: ListWorkOrdersPayload = {}): Promise<WorkOrdersListResult> {
@@ -167,6 +175,27 @@ export async function createWorkOrder(payload: CreateWorkOrderPayload): Promise<
   assertApiSuccess(responseBody, WORK_ORDER_CREATE_ERROR_MESSAGE)
 
   return extractCreateResult(responseBody)
+}
+
+export async function fetchWorkOrderDetail(payload: WorkOrderDetailPayload): Promise<WorkOrderDetailResult> {
+  const url = buildApiRequestUrl(WORK_ORDER_DETAIL_API_URL)
+  const uuid = getRequiredString(payload.Uuid, "Uuid")
+
+  url.searchParams.set("Uuid", uuid)
+
+  const response = await fetch(url.toString(), {
+    method: "GET",
+    headers: buildApiHeaders(),
+  })
+  const responseBody = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responseBody, WORK_ORDER_DETAIL_ERROR_MESSAGE)
+  }
+
+  assertApiSuccess(responseBody, WORK_ORDER_DETAIL_ERROR_MESSAGE)
+
+  return normalizeWorkOrderListItem(extractDetailRecord(responseBody))
 }
 
 export async function updateWorkOrder(payload: UpdateWorkOrderPayload): Promise<CreateWorkOrderResult> {
@@ -354,6 +383,22 @@ function extractCreateResult(payload: unknown): CreateWorkOrderResult {
   }
 
   return record as CreateWorkOrderResult
+}
+
+function extractDetailRecord(payload: unknown): WorkOrderDetailResult {
+  const record = asRecord(payload)
+
+  if (!record) {
+    return {}
+  }
+
+  const nestedRecord = asRecord(record.data)
+
+  if (nestedRecord) {
+    return nestedRecord as WorkOrderDetailResult
+  }
+
+  return record as WorkOrderDetailResult
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {
