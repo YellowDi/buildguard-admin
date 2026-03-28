@@ -51,6 +51,10 @@ const userStatusLine = computed(() => {
     return "正在同步账号信息..."
   }
 
+  if (user.missingProfileMessage) {
+    return user.missingProfileMessage
+  }
+
   return userDescription.value || userContactLine.value || "暂无账号信息"
 })
 

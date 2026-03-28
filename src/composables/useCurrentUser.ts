@@ -9,6 +9,7 @@ export type CurrentUserState = {
   departmentName: string
   email: string
   id: number | null
+  missingProfileMessage: string
   name: string
   phone: string
   position: string
@@ -23,6 +24,7 @@ const currentUser = reactive<CurrentUserState>({
   departmentName: "",
   email: "",
   id: null,
+  missingProfileMessage: "",
   name: "当前用户",
   phone: "",
   position: "",
@@ -90,12 +92,13 @@ export function clearCurrentUser() {
 function applyCurrentUser(profile: CurrentUserInfoResult) {
   const employee = profile.EmployeeInfo
   const customer = profile.CustomerInfo
-  const resolvedName = employee?.Name?.trim() || customer?.Name?.trim() || "当前用户"
+  const resolvedName = employee?.Name?.trim() || customer?.Name?.trim() || buildFallbackName(profile)
   const resolvedPhone = employee?.Phone?.trim() || customer?.Phone?.trim() || ""
 
   currentUser.uuid = profile.Uuid?.trim() ?? ""
   currentUser.id = typeof profile.Id === "number" ? profile.Id : null
   currentUser.type = typeof profile.Type === "number" ? profile.Type : null
+  currentUser.missingProfileMessage = buildMissingProfileMessage(profile)
   currentUser.name = resolvedName
   currentUser.phone = resolvedPhone
   currentUser.email = resolvedPhone
@@ -109,6 +112,7 @@ function resetCurrentUser() {
   currentUser.uuid = ""
   currentUser.id = null
   currentUser.type = null
+  currentUser.missingProfileMessage = ""
   currentUser.name = "当前用户"
   currentUser.phone = ""
   currentUser.email = ""
@@ -116,4 +120,34 @@ function resetCurrentUser() {
   currentUser.position = ""
   currentUser.roles = []
   currentUser.corpName = ""
+}
+
+function buildFallbackName(profile: CurrentUserInfoResult) {
+  const idSuffix = typeof profile.Id === "number" ? ` #${profile.Id}` : ""
+
+  if (profile.Type === 1) {
+    return `员工账号${idSuffix}`
+  }
+
+  if (profile.Type === 2) {
+    return `客户账号${idSuffix}`
+  }
+
+  return idSuffix ? `用户${idSuffix}` : "当前用户"
+}
+
+function buildMissingProfileMessage(profile: CurrentUserInfoResult) {
+  if (profile.EmployeeInfo?.Name?.trim() || profile.CustomerInfo?.Name?.trim()) {
+    return ""
+  }
+
+  if (profile.Type === 1) {
+    return "当前账号未绑定员工档案"
+  }
+
+  if (profile.Type === 2) {
+    return "当前账号未绑定客户档案"
+  }
+
+  return "当前账号未绑定用户档案"
 }
