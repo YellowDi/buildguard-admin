@@ -430,7 +430,7 @@ defineExpose({
         <DialogHeader>
           <DialogTitle>添加检测项分类</DialogTitle>
           <DialogDescription>
-            新增一个检测项分类，便于后续统一归类和筛选检测项。
+            添加一个检测项分类，便于后续统一归类和筛选检测项。
           </DialogDescription>
         </DialogHeader>
 

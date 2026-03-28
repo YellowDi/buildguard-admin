@@ -816,7 +816,7 @@ function formatDateTime(...values: unknown[]) {
             @click="openCreateDialog"
           >
             <i class="ri-add-line text-base" />
-            <span>新增菜单</span>
+            <span>添加菜单</span>
           </Button>
         </div>
       </SettingsToolbarRow>
@@ -846,7 +846,7 @@ function formatDateTime(...values: unknown[]) {
     <Dialog :open="createDialogOpen" @update:open="($event ? (createDialogOpen = true) : closeCreateDialog())">
       <DialogContent class="sm:max-w-[560px]">
         <DialogHeader>
-          <DialogTitle>新增菜单</DialogTitle>
+          <DialogTitle>添加菜单</DialogTitle>
           <DialogDescription>
             填写菜单基础信息后会调用菜单新建接口。
           </DialogDescription>

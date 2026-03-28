@@ -715,7 +715,7 @@ defineExpose({
     <Dialog :open="createDialogOpen" @update:open="createDialogOpen = $event">
       <DialogContent class="sm:max-w-[640px]">
         <DialogHeader>
-          <DialogTitle>新增检测项</DialogTitle>
+          <DialogTitle>添加检测项</DialogTitle>
           <DialogDescription>
             填写检测项基础信息后，将调用检测项新建接口保存。
           </DialogDescription>
