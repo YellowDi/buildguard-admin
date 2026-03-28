@@ -2324,7 +2324,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
             v-if="activeDetailTabActions.addPark"
             variant="outline"
             size="sm"
-            class="h-8 gap-1 border-border/80 bg-background px-3 text-[14px] font-medium text-foreground shadow-none"
+            class="h-8 gap-1 border-border/80 bg-background px-3 text-[14px] font-medium shadow-none"
             @click="goToCreatePark"
           >
             <i class="ri-add-line text-base" />
@@ -2334,7 +2334,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
             v-if="activeDetailTabActions.addBuilding"
             variant="outline"
             size="sm"
-            class="h-8 gap-1 border-border/80 bg-background px-3 text-[14px] font-medium text-foreground shadow-none"
+            class="h-8 gap-1 border-border/80 bg-background px-3 text-[14px] font-medium shadow-none"
             @click="handleAddBuilding"
           >
             <i class="ri-building-line text-base" />
@@ -2344,7 +2344,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
             v-if="activeDetailTabActions.addWorkOrder"
             variant="outline"
             size="sm"
-            class="h-8 gap-1 border-border/80 bg-background px-3 text-[14px] font-medium text-foreground shadow-none"
+            class="h-8 gap-1 border-border/80 bg-background px-3 text-[14px] font-medium shadow-none"
             @click="handleAddWorkOrder"
           >
             <i class="ri-file-add-line text-base" />
@@ -2354,7 +2354,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
             v-if="activeDetailTabActions.addRepairWorkOrder"
             variant="outline"
             size="sm"
-            class="h-8 gap-1 border-border/80 bg-background px-3 text-[14px] font-medium text-foreground shadow-none"
+            class="h-8 gap-1 border-border/80 bg-background px-3 text-[14px] font-medium shadow-none"
             @click="handleAddRepairWorkOrder"
           >
             <i class="ri-hammer-line text-base" />
@@ -2364,7 +2364,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
             v-if="activeDetailTabActions.addMonitoring"
             variant="outline"
             size="sm"
-            class="h-8 gap-1 border-border/80 bg-background px-3 text-[14px] font-medium text-foreground shadow-none"
+            class="h-8 gap-1 border-border/80 bg-background px-3 text-[14px] font-medium shadow-none"
             @click="handleAddMonitoring"
           >
             <i class="ri-radar-line text-base" />
@@ -2374,7 +2374,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
             v-if="activeDetailTabActions.addSubAccount"
             variant="outline"
             size="sm"
-            class="h-8 gap-1 border-border/80 bg-background px-3 text-[14px] font-medium text-foreground shadow-none"
+            class="h-8 gap-1 border-border/80 bg-background px-3 text-[14px] font-medium shadow-none"
             @click="handleAddSubAccount"
           >
             <i class="ri-user-add-line text-base" />
@@ -2384,7 +2384,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
             v-if="activeDetailTabActions.editCustomer"
             variant="outline"
             size="sm"
-            class="h-8 gap-1 border-border/80 bg-background px-3 text-[14px] font-medium text-foreground shadow-none"
+            class="h-8 gap-1 border-border/80 bg-background px-3 text-[14px] font-medium shadow-none"
             @click="goToCustomerEdit"
           >
             <i class="ri-edit-line text-base" />
@@ -2394,7 +2394,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
             v-if="activeDetailTabActions.back"
             variant="outline"
             size="sm"
-            class="h-8 gap-1 border-border/80 bg-background px-3 text-[14px] font-medium text-foreground shadow-none"
+            class="h-8 gap-1 border-border/80 bg-background px-3 text-[14px] font-medium shadow-none"
             @click="goBack"
           >
             <i class="ri-arrow-left-line text-base" />

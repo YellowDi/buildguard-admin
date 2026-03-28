@@ -47,7 +47,7 @@ export const tableTheme = {
   actionRailSurfaceList: "flex items-center justify-end gap-2 border-b border-l border-border px-3 transition-colors sm:pr-8",
   actionRailSurfaceShadow: "shadow-[-10px_0_14px_-12px_rgba(15,23,42,0.28)]",
   actionRailSpacer: "transition-colors",
-  actionButton: "pointer-events-auto border-border/80 bg-background/95 text-foreground shadow-sm",
+  actionButton: "pointer-events-auto border-border/80 bg-background/95 shadow-sm",
   actionHeaderRailHost: "pointer-events-none absolute right-0 z-[26]",
   actionHeaderRail: "flex overflow-hidden",
   actionHeaderRailSurface: "flex items-center border-b border-l border-border px-3 text-left text-[14px] font-normal text-muted-foreground transition-colors",

@@ -277,7 +277,7 @@ onUnmounted(() => { detailBreadcrumbTitle.value = null })
       <Button
         variant="outline"
         size="sm"
-        class="border-border/80 bg-background font-medium text-foreground shadow-none"
+        class="border-border/80 bg-background font-medium shadow-none"
       >
         编辑企业资料
       </Button>

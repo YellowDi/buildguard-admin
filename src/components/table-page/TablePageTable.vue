@@ -1278,7 +1278,7 @@ onBeforeUnmount(() => {
                 :key="`sizer-${action.key}`"
                 variant="outline"
                 size="sm"
-                class="border-border/80 bg-background/95 text-foreground shadow-sm"
+                class="border-border/80 bg-background/95 shadow-sm"
                 tabindex="-1"
               >
                 {{ action.label }}
