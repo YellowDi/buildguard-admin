@@ -1035,7 +1035,12 @@ function formatDateTime(...values: unknown[]) {
             </div>
           </div>
 
-          <DialogFooter class="pt-2 flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <DialogFooter
+            :class="[
+              'pt-2 flex-col-reverse gap-2 sm:flex-row sm:items-center',
+              menuDialogMode === 'edit' ? 'sm:justify-between' : 'sm:justify-end',
+            ]"
+          >
             <Button
               v-if="menuDialogMode === 'edit'"
               type="button"
