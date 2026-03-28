@@ -53,8 +53,8 @@ export const tableTheme = {
   actionHeaderRailSurface: "flex items-center border-b border-l border-border px-3 text-left text-[14px] font-normal text-muted-foreground transition-colors",
   actionHeaderRailSurfaceList: "flex items-center border-b border-l border-border px-3 text-left text-[14px] font-normal text-muted-foreground transition-colors sm:pr-8",
   actionHeaderRailSpacer: "transition-colors",
-  endSpacerHeader: "w-8 min-w-8 border-b-0 p-0",
-  endSpacerCell: "w-8 min-w-8 border-b-0 p-0",
+  endSpacerHeader: "w-8 min-w-8 border-b border-border p-0",
+  endSpacerCell: "w-8 min-w-8 border-b border-border p-0",
   tones: {
     default: "text-foreground",
     primary: "text-foreground",

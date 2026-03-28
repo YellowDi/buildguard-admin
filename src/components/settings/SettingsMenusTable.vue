@@ -17,6 +17,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import TopTabSwitch from "@/components/layout/TopTabSwitch.vue"
+import { SETTINGS_TABLE_PAGE_CLASS } from "@/components/settings/settingsTablePageClass"
 import SettingsRightPanelLayout from "@/components/settings/SettingsRightPanelLayout.vue"
 import SettingsToolbarRow from "@/components/settings/SettingsToolbarRow.vue"
 import SettingsToolbarRefreshSlot from "@/components/settings/SettingsToolbarRefreshSlot.vue"
@@ -99,8 +100,6 @@ const BUTTONS_LOAD_ERROR_MESSAGE = "按钮列表加载失败，请稍后重试�
 const APIS_LOAD_ERROR_MESSAGE = "API 列表加载失败，请稍后重试。"
 const MENU_CREATE_ERROR_MESSAGE = "菜单创建失败，请稍后重试。"
 const ROOT_MENU_VALUE = "__root_menu__"
-const compactTableClass =
-  "text-[13px] [&_thead_th]:px-2.5 [&_thead_th]:py-1.5 [&_tbody_td]:px-2.5 [&_tbody_td]:py-2 [&_tbody_td]:align-middle [&_tbody_td]:!border-l-0"
 const menuStatusMap = {
   启用: { tone: "green", icon: "check" },
   停用: { tone: "gray", icon: "minus" },
@@ -137,7 +136,6 @@ const columns: TableColumn[] = [
     emphasis: "strong",
     tone: "primary",
     cellClass: "font-medium text-foreground",
-    width: "fill",
   },
   {
     key: "path",
@@ -145,7 +143,6 @@ const columns: TableColumn[] = [
     filterType: "text",
     tone: "muted",
     cellClass: "font-mono text-[12px] text-muted-foreground",
-    width: "fill",
   },
   {
     key: "parentName",
@@ -177,6 +174,13 @@ const columns: TableColumn[] = [
     label: "更新时间",
     filterType: "text",
     tone: "muted",
+    width: "fill",
+  },
+  {
+    key: "actions",
+    label: "",
+    filterType: "none",
+    cellClass: "text-right",
   },
 ]
 
@@ -188,7 +192,6 @@ const buttonColumns: TableColumn[] = [
     emphasis: "strong",
     tone: "primary",
     cellClass: "font-medium text-foreground",
-    width: "fill",
   },
   {
     key: "code",
@@ -196,7 +199,6 @@ const buttonColumns: TableColumn[] = [
     filterType: "text",
     tone: "muted",
     cellClass: "font-mono text-[12px] text-muted-foreground",
-    width: "fill",
   },
   {
     key: "menuName",
@@ -215,6 +217,13 @@ const buttonColumns: TableColumn[] = [
     label: "更新时间",
     filterType: "text",
     tone: "muted",
+    width: "fill",
+  },
+  {
+    key: "actions",
+    label: "",
+    filterType: "none",
+    cellClass: "text-right",
   },
 ]
 
@@ -226,7 +235,6 @@ const apiColumns: TableColumn[] = [
     emphasis: "strong",
     tone: "primary",
     cellClass: "font-medium text-foreground",
-    width: "fill",
   },
   {
     key: "path",
@@ -234,7 +242,6 @@ const apiColumns: TableColumn[] = [
     filterType: "text",
     tone: "muted",
     cellClass: "font-mono text-[12px] text-muted-foreground",
-    width: "fill",
   },
   {
     key: "method",
@@ -247,7 +254,6 @@ const apiColumns: TableColumn[] = [
     label: "说明",
     filterType: "text",
     tone: "muted",
-    width: "fill",
     cellRenderer: { kind: "note" },
   },
   {
@@ -255,6 +261,13 @@ const apiColumns: TableColumn[] = [
     label: "更新时间",
     filterType: "text",
     tone: "muted",
+    width: "fill",
+  },
+  {
+    key: "actions",
+    label: "",
+    filterType: "none",
+    cellClass: "text-right",
   },
 ]
 
@@ -825,7 +838,7 @@ function formatDateTime(...values: unknown[]) {
       sticky-header
       :columns="currentColumns"
       :rows="currentRows"
-      :table-class="compactTableClass"
+      :table-class="SETTINGS_TABLE_PAGE_CLASS"
       :empty-state="tableEmptyState"
     />
 

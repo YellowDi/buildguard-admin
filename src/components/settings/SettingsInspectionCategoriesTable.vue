@@ -30,6 +30,7 @@ import SettingsToolbarRow from "@/components/settings/SettingsToolbarRow.vue"
 import SettingsToolbarRefreshSlot from "@/components/settings/SettingsToolbarRefreshSlot.vue"
 import SettingsToolbarSearchInput from "@/components/settings/SettingsToolbarSearchInput.vue"
 import { Input } from "@/components/ui/input"
+import { SETTINGS_TABLE_PAGE_CLASS } from "@/components/settings/settingsTablePageClass"
 import TablePageTable from "@/components/table-page/TablePageTable.vue"
 import type { TableColumn, TablePageEmptyState } from "@/components/table-page/types"
 import { handleApiError } from "@/lib/api-errors"
@@ -66,9 +67,6 @@ type InspectionCategoryForm = {
 }
 
 const INSPECTION_CATEGORIES_LOAD_ERROR_MESSAGE = "检测项分类列表加载失败，请稍后重试。"
-const compactTableClass =
-  "text-[13px] [&_thead_th]:px-2.5 [&_thead_th]:py-1.5 [&_tbody_td]:px-2.5 [&_tbody_td]:py-2 [&_tbody_td]:align-middle [&_tbody_td]:!border-l-0 [&_thead_th:last-child]:w-0 [&_thead_th:last-child]:min-w-0 [&_thead_th:last-child]:p-0 [&_tbody_td:last-child]:w-0 [&_tbody_td:last-child]:min-w-0 [&_tbody_td:last-child]:p-0 [&_tbody_tr:hover]:bg-transparent [&_tbody_tr:hover_td]:bg-transparent"
-
 const rows = ref<InspectionCategoryRow[]>([])
 const loading = ref(false)
 const errorMessage = ref("")
@@ -100,7 +98,6 @@ const columns: TableColumn[] = [
     emphasis: "strong",
     tone: "primary",
     cellClass: "font-medium text-foreground",
-    width: "fill",
   },
   {
     key: "uuid",
@@ -108,14 +105,14 @@ const columns: TableColumn[] = [
     filterType: "text",
     tone: "muted",
     cellClass: "font-mono text-[12px] text-muted-foreground",
+    width: "fill",
   },
   {
     key: "actions",
     label: "",
     filterType: "none",
     slot: "cell-actions",
-    headerClass: "w-[6.5rem]",
-    cellClass: "w-[6.5rem] text-right",
+    cellClass: "text-right",
   },
 ]
 
@@ -411,7 +408,7 @@ defineExpose({
       sticky-header
       :columns="columns"
       :rows="filteredRows"
-      :table-class="compactTableClass"
+      :table-class="SETTINGS_TABLE_PAGE_CLASS"
       :empty-state="tableEmptyState"
     >
       <template #cell-actions="{ row: rawRow }">

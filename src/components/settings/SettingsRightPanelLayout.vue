@@ -30,7 +30,7 @@ const props = defineProps<{
     </div>
 
     <div
-      class="min-h-0 flex-1 overflow-y-auto px-3 pb-4 scrollbar-gutter-stable sm:px-4"
+      class="min-h-0 flex-1 overflow-y-auto px-3 pb-4 sm:px-4"
     >
       <slot />
     </div>

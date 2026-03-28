@@ -64,6 +64,7 @@ import {
   fetchRoles,
   updateRole as requestRoleUpdate,
 } from "@/lib/roles-api"
+import { SETTINGS_TABLE_PAGE_CLASS } from "@/components/settings/settingsTablePageClass"
 import TablePageTable from "@/components/table-page/TablePageTable.vue"
 import type { TableColumn, TablePageEmptyState } from "@/components/table-page/types"
 
@@ -146,8 +147,6 @@ type MemberActionKey =
 const MEMBERS_LOAD_ERROR_MESSAGE = "成员列表加载失败，请稍后重试。"
 const MEMBER_STATUS_UPDATE_ERROR_MESSAGE = "成员状态更新失败，请稍后重试。"
 const MEMBER_UPDATE_ERROR_MESSAGE = "成员信息更新失败，请稍后重试。"
-const compactTableClass =
-  "text-[13px] [&_thead_th]:px-2.5 [&_thead_th]:py-1.5 [&_tbody_td]:px-2.5 [&_tbody_td]:py-2 [&_tbody_td]:align-middle [&_tbody_td]:!border-l-0 [&_thead_th:last-child]:w-0 [&_thead_th:last-child]:min-w-0 [&_thead_th:last-child]:p-0 [&_tbody_td:last-child]:w-0 [&_tbody_td:last-child]:min-w-0 [&_tbody_td:last-child]:p-0 [&_tbody_tr:hover]:bg-transparent [&_tbody_tr:hover_td]:bg-transparent"
 const memberStatusMap = {
   正常: { tone: "green", icon: "check" },
   离职: { tone: "gray", icon: "minus" },
@@ -197,7 +196,6 @@ const memberColumns: TableColumn[] = [
     label: "成员",
     filterType: "contact",
     variant: "contact",
-    width: "fill",
     cellRenderer: {
       kind: "dual-inline",
       primaryKey: "name",
@@ -213,7 +211,6 @@ const memberColumns: TableColumn[] = [
     emphasis: "strong",
     tone: "primary",
     cellClass: "font-medium text-foreground",
-    width: "fill",
   },
   {
     key: "position",
@@ -231,6 +228,7 @@ const memberColumns: TableColumn[] = [
     key: "status",
     label: "状态",
     filterType: "tag",
+    width: "fill",
     cellRenderer: {
       kind: "status",
       map: memberStatusMap,
@@ -241,8 +239,7 @@ const memberColumns: TableColumn[] = [
     label: "",
     filterType: "none",
     slot: "cell-actions",
-    headerClass: "w-[6.5rem]",
-    cellClass: "w-[6.5rem] text-right",
+    cellClass: "text-right",
   },
 ]
 
@@ -254,14 +251,12 @@ const roleColumns: TableColumn[] = [
     emphasis: "strong",
     tone: "primary",
     cellClass: "font-medium text-foreground",
-    width: "fill",
   },
   {
     key: "remark",
     label: "备注",
     filterType: "text",
     tone: "muted",
-    width: "fill",
     cellRenderer: { kind: "note" },
   },
   {
@@ -275,14 +270,14 @@ const roleColumns: TableColumn[] = [
     label: "更新时间",
     filterType: "text",
     tone: "muted",
+    width: "fill",
   },
   {
     key: "actions",
     label: "",
     filterType: "none",
     slot: "cell-actions",
-    headerClass: "w-[6.5rem]",
-    cellClass: "w-[6.5rem] text-right",
+    cellClass: "text-right",
   },
 ]
 
@@ -1452,8 +1447,8 @@ function asRoleRow(row: Record<string, unknown>) {
       :columns="currentColumns"
       :rows="currentRows"
       :row-key="currentRowKey"
+      :table-class="SETTINGS_TABLE_PAGE_CLASS"
       :empty-state="tableEmptyState"
-      :table-class="compactTableClass"
     >
       <template #cell-permission="{ row: rawRow }">
         <DropdownMenu v-if="activeView === 'members'">
