@@ -1,4 +1,4 @@
-import { ApiError, createHttpError, readResponseBody } from "@/lib/api-errors"
+import { ApiError, assertApiSuccess, createHttpError, readResponseBody } from "@/lib/api-errors"
 import { API_PATHS, buildApiHeaders, buildApiUrl } from "@/lib/api"
 
 type MenusListEnvelope = {
@@ -39,13 +39,23 @@ export type ListMenusPayload = {
 }
 
 export type CreateMenuPayload = {
-  Name: string
-  Path: string
-  Icon: string
-  ParentUuid: string
-  Level: number
-  Sort: number
-  Status: number
+  Name?: string
+  Path?: string
+  Icon?: string
+  ParentUuid?: string
+  Level?: number
+  Sort?: number
+  Status?: number
+  [property: string]: unknown
+}
+
+export type UpdateMenuPayload = CreateMenuPayload & {
+  Uuid: string
+}
+
+export type DeleteMenuPayload = {
+  Uuid: string
+  [property: string]: unknown
 }
 
 export type CreateMenuResult = {
@@ -56,8 +66,12 @@ export type CreateMenuResult = {
 
 const MENUS_API_URL = buildApiUrl(API_PATHS.menusList)
 const MENU_CREATE_API_URL = buildApiUrl(API_PATHS.menuCreate)
+const MENU_UPDATE_API_URL = buildApiUrl(API_PATHS.menuUpdate)
+const MENU_DELETE_API_URL = buildApiUrl(API_PATHS.menuDelete)
 const MENUS_LOAD_ERROR_MESSAGE = "菜单列表加载失败，请稍后重试。"
 const MENU_CREATE_ERROR_MESSAGE = "菜单创建失败，请稍后重试。"
+const MENU_UPDATE_ERROR_MESSAGE = "菜单更新失败，请稍后重试。"
+const MENU_DELETE_ERROR_MESSAGE = "菜单删除失败，请稍后重试。"
 
 export async function fetchMenus(payload: ListMenusPayload = {}): Promise<MenusListResult> {
   const normalizedPayload = {
@@ -80,6 +94,8 @@ export async function fetchMenus(payload: ListMenusPayload = {}): Promise<MenusL
     throw createHttpError(response, responsePayload, MENUS_LOAD_ERROR_MESSAGE)
   }
 
+  assertApiSuccess(responsePayload, MENUS_LOAD_ERROR_MESSAGE)
+
   const list = extractList(responsePayload)
 
   return {
@@ -94,15 +110,7 @@ export async function createMenu(payload: CreateMenuPayload): Promise<CreateMenu
     headers: buildApiHeaders({
       "Content-Type": "application/json",
     }),
-    body: JSON.stringify({
-      Name: payload.Name.trim(),
-      Path: payload.Path.trim(),
-      Icon: payload.Icon.trim(),
-      ParentUuid: payload.ParentUuid.trim(),
-      Level: payload.Level,
-      Sort: payload.Sort,
-      Status: payload.Status,
-    }),
+    body: JSON.stringify(normalizeWritePayload(payload)),
   })
   const responsePayload = await readResponseBody(response) as CreateMenuResult
 
@@ -110,6 +118,75 @@ export async function createMenu(payload: CreateMenuPayload): Promise<CreateMenu
     throw createHttpError(response, responsePayload, MENU_CREATE_ERROR_MESSAGE)
   }
 
+  assertApiSuccess(responsePayload, MENU_CREATE_ERROR_MESSAGE)
+  return extractDetailRecord(responsePayload)
+}
+
+export async function updateMenu(payload: UpdateMenuPayload): Promise<CreateMenuResult> {
+  const response = await fetch(MENU_UPDATE_API_URL, {
+    method: "POST",
+    headers: buildApiHeaders({
+      "Content-Type": "application/json",
+    }),
+    body: JSON.stringify({
+      Uuid: getRequiredString(payload.Uuid, "Uuid"),
+      ...normalizeWritePayload(payload),
+    }),
+  })
+  const responsePayload = await readResponseBody(response) as CreateMenuResult
+
+  if (!response.ok) {
+    throw createHttpError(response, responsePayload, MENU_UPDATE_ERROR_MESSAGE)
+  }
+
+  assertApiSuccess(responsePayload, MENU_UPDATE_ERROR_MESSAGE)
+  return extractDetailRecord(responsePayload)
+}
+
+function normalizeWritePayload(payload: CreateMenuPayload | UpdateMenuPayload) {
+  const normalized: Record<string, unknown> = {
+    Name: normalizeOptionalText(payload.Name),
+    Path: normalizeOptionalText(payload.Path),
+    Icon: normalizeOptionalText(payload.Icon),
+    ParentUuid: normalizeOptionalText(payload.ParentUuid),
+  }
+
+  const level = getOptionalNumber(payload.Level, "Level")
+  const sort = getOptionalNumber(payload.Sort, "Sort")
+  const status = getOptionalNumber(payload.Status, "Status")
+
+  if (level !== undefined) {
+    normalized.Level = level
+  }
+
+  if (sort !== undefined) {
+    normalized.Sort = sort
+  }
+
+  if (status !== undefined) {
+    normalized.Status = status
+  }
+
+  return normalized
+}
+
+export async function deleteMenu(payload: DeleteMenuPayload) {
+  const response = await fetch(MENU_DELETE_API_URL, {
+    method: "POST",
+    headers: buildApiHeaders({
+      "Content-Type": "application/json",
+    }),
+    body: JSON.stringify({
+      Uuid: getRequiredString(payload.Uuid, "Uuid"),
+    }),
+  })
+  const responsePayload = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responsePayload, MENU_DELETE_ERROR_MESSAGE)
+  }
+
+  assertApiSuccess(responsePayload, MENU_DELETE_ERROR_MESSAGE)
   return responsePayload
 }
 
@@ -173,6 +250,20 @@ function extractTotal(payload: MenusListEnvelope | unknown[], fallback: number) 
   return fallback
 }
 
+function extractDetailRecord(payload: unknown) {
+  if (payload && typeof payload === "object" && !Array.isArray(payload)) {
+    const envelope = payload as Record<string, unknown>
+
+    if (envelope.data && typeof envelope.data === "object" && !Array.isArray(envelope.data)) {
+      return envelope.data as CreateMenuResult
+    }
+
+    return envelope as CreateMenuResult
+  }
+
+  return {} as CreateMenuResult
+}
+
 function getOptionalNumber(value: unknown, field: string) {
   if (value === undefined || value === null || value === "") {
     return undefined
@@ -201,4 +292,30 @@ function getOptionalString(value: unknown) {
   }
 
   throw new ApiError("请求参数校验失败：Name 必须是有效字符串。")
+}
+
+function normalizeOptionalText(value: unknown) {
+  if (value === undefined || value === null) {
+    return ""
+  }
+
+  if (typeof value === "string") {
+    return value.trim()
+  }
+
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return String(value)
+  }
+
+  throw new ApiError("请求参数校验失败：字符串字段格式无效。")
+}
+
+function getRequiredString(value: unknown, field: string) {
+  const result = getOptionalString(value)
+
+  if (result !== undefined) {
+    return result
+  }
+
+  throw new ApiError(`请求参数校验失败：${field} 不能为空。`)
 }

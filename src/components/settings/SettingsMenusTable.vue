@@ -7,6 +7,16 @@ import {
   AlertDescription,
   AlertTitle,
 } from "@/components/ui/alert"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -35,8 +45,10 @@ import type { TableColumn, TablePageEmptyState } from "@/components/table-page/t
 import { handleApiError } from "@/lib/api-errors"
 import {
   createMenu as requestMenuCreate,
+  deleteMenu as requestMenuDelete,
   fetchMenus,
   type MenuRecord,
+  updateMenu as requestMenuUpdate,
 } from "@/lib/menus-api"
 import {
   fetchSystemApis,
@@ -75,6 +87,8 @@ type MenuForm = {
   status: string
 }
 
+type MenuDialogMode = "create" | "edit"
+
 type SystemViewKey = "menus" | "buttons" | "apis"
 
 type ButtonRow = {
@@ -99,10 +113,13 @@ const MENUS_LOAD_ERROR_MESSAGE = "菜单列表加载失败，请稍后重试。"
 const BUTTONS_LOAD_ERROR_MESSAGE = "按钮列表加载失败，请稍后重试。"
 const APIS_LOAD_ERROR_MESSAGE = "API 列表加载失败，请稍后重试。"
 const MENU_CREATE_ERROR_MESSAGE = "菜单创建失败，请稍后重试。"
+const MENU_UPDATE_ERROR_MESSAGE = "菜单更新失败，请稍后重试。"
+const MENU_DELETE_ERROR_MESSAGE = "菜单删除失败，请稍后重试。"
 const ROOT_MENU_VALUE = "__root_menu__"
+const MENU_STATUS_UNSET = "__menu_status_unset__"
 const menuStatusMap = {
   启用: { tone: "green", icon: "check" },
-  停用: { tone: "gray", icon: "minus" },
+  禁用: { tone: "gray", icon: "minus" },
   未知: { tone: "gray", icon: "alert" },
 } as const
 
@@ -112,8 +129,12 @@ const errorMessage = ref("")
 const searchQuery = ref("")
 const searchExpanded = ref(false)
 const activeView = ref<SystemViewKey>("menus")
-const createDialogOpen = ref(false)
-const createSubmitting = ref(false)
+const menuDialogOpen = ref(false)
+const menuDialogMode = ref<MenuDialogMode>("create")
+const menuSubmitting = ref(false)
+const deleteSubmitting = ref(false)
+const deleteConfirmOpen = ref(false)
+const editingMenuUuid = ref("")
 const menuForm = ref(createMenuForm())
 const buttonRows = ref<ButtonRow[]>([])
 const apiRows = ref<ApiRow[]>([])
@@ -121,6 +142,7 @@ const importSubmitting = ref(false)
 const apiImportInput = useTemplateRef<HTMLInputElement>("apiImportInput")
 
 const parentMenuOptions = computed(() => [...rows.value]
+  .filter(row => row.uuid !== editingMenuUuid.value)
   .sort((left, right) => left.level - right.level || left.sort - right.sort || left.name.localeCompare(right.name, "zh-Hans-CN"))
   .map(row => ({
     uuid: row.uuid,
@@ -180,6 +202,7 @@ const columns: TableColumn[] = [
     key: "actions",
     label: "",
     filterType: "none",
+    slot: "cell-actions",
     cellClass: "text-right",
   },
 ]
@@ -641,15 +664,32 @@ function createMenuForm(): MenuForm {
     path: "",
     icon: "",
     parentUuid: ROOT_MENU_VALUE,
-    level: "0",
-    sort: "0",
-    status: "1",
+    level: "",
+    sort: "",
+    status: MENU_STATUS_UNSET,
   }
 }
 
 function openCreateDialog() {
+  menuDialogMode.value = "create"
+  editingMenuUuid.value = ""
   menuForm.value = createMenuForm()
-  createDialogOpen.value = true
+  menuDialogOpen.value = true
+}
+
+function openEditDialog(row: MenuRow) {
+  menuDialogMode.value = "edit"
+  editingMenuUuid.value = row.uuid
+  menuForm.value = {
+    name: row.name,
+    path: row.path === "-" ? "" : row.path,
+    icon: row.icon === "-" ? "" : row.icon,
+    parentUuid: row.parentUuid || ROOT_MENU_VALUE,
+    level: String(row.level),
+    sort: String(row.sort),
+    status: row.status === "禁用" ? "2" : "1",
+  }
+  menuDialogOpen.value = true
 }
 
 function toggleSearch() {
@@ -665,54 +705,102 @@ function toggleSearch() {
   searchExpanded.value = true
 }
 
-function closeCreateDialog() {
-  createDialogOpen.value = false
+function closeMenuDialog() {
+  menuDialogOpen.value = false
+  deleteConfirmOpen.value = false
+  editingMenuUuid.value = ""
+  menuForm.value = createMenuForm()
 }
 
-async function submitCreateMenu() {
-  const name = menuForm.value.name.trim()
-  const path = menuForm.value.path.trim()
+function promptDeleteMenu() {
+  deleteConfirmOpen.value = true
+}
 
-  if (!name) {
-    toast.error("请填写菜单名称")
-    return
-  }
+async function submitMenu() {
+  const level = toOptionalNumber(menuForm.value.level)
+  const sort = toOptionalNumber(menuForm.value.sort)
+  const status = menuForm.value.status === MENU_STATUS_UNSET ? undefined : toOptionalNumber(menuForm.value.status)
 
-  if (!path) {
-    toast.error("请填写菜单 Path")
-    return
-  }
-
-  const level = toNumber(menuForm.value.level, 0)
-  const sort = toNumber(menuForm.value.sort, 0)
-  const status = toNumber(menuForm.value.status, 1)
-
-  createSubmitting.value = true
+  menuSubmitting.value = true
 
   try {
-    const result = await requestMenuCreate({
-      Name: name,
-      Path: path,
+    const payload = {
+      Name: menuForm.value.name.trim(),
+      Path: menuForm.value.path.trim(),
       Icon: menuForm.value.icon.trim(),
       ParentUuid: menuForm.value.parentUuid === ROOT_MENU_VALUE ? "" : menuForm.value.parentUuid.trim(),
       Level: level,
       Sort: sort,
       Status: status,
-    })
+    }
 
-    closeCreateDialog()
-    toast.success("菜单已创建", {
-      description: `${name} 已创建${toText(result.Uuid) ? `，Uuid：${toText(result.Uuid)}` : ""}。`,
+    if (menuDialogMode.value === "edit") {
+      if (!editingMenuUuid.value) {
+        toast.error("缺少菜单 Uuid，无法保存修改")
+        return
+      }
+
+      const result = await requestMenuUpdate({
+        Uuid: editingMenuUuid.value,
+        ...payload,
+      })
+
+      closeMenuDialog()
+      toast.success("菜单已更新", {
+        description: `${menuForm.value.name.trim() || "当前菜单"} 已更新${toText(result.Uuid) ? `，Uuid：${toText(result.Uuid)}` : ""}。`,
+      })
+    } else {
+      const result = await requestMenuCreate(payload)
+
+      closeMenuDialog()
+      toast.success("菜单已创建", {
+        description: `${menuForm.value.name.trim() || "菜单"} 已创建${toText(result.Uuid) ? `，Uuid：${toText(result.Uuid)}` : ""}。`,
+      })
+    }
+
+    await loadMenus()
+  } catch (error) {
+    handleApiError(error, {
+      title: menuDialogMode.value === "edit" ? "菜单更新失败" : "菜单创建失败",
+      fallback: menuDialogMode.value === "edit" ? MENU_UPDATE_ERROR_MESSAGE : MENU_CREATE_ERROR_MESSAGE,
+    })
+  } finally {
+    menuSubmitting.value = false
+  }
+}
+
+async function confirmDeleteMenu() {
+  if (!editingMenuUuid.value) {
+    toast.error("缺少菜单 Uuid，无法删除")
+    return
+  }
+
+  const target = rows.value.find(row => row.uuid === editingMenuUuid.value)
+
+  deleteSubmitting.value = true
+
+  try {
+    await requestMenuDelete({
+      Uuid: editingMenuUuid.value,
+    })
+    deleteConfirmOpen.value = false
+    closeMenuDialog()
+    toast.success("菜单已删除", {
+      description: `${target?.name ?? "当前菜单"} 已从列表移除。`,
     })
     await loadMenus()
   } catch (error) {
     handleApiError(error, {
-      title: "菜单创建失败",
-      fallback: MENU_CREATE_ERROR_MESSAGE,
+      title: "菜单删除失败",
+      fallback: MENU_DELETE_ERROR_MESSAGE,
     })
   } finally {
-    createSubmitting.value = false
+    deleteSubmitting.value = false
   }
+}
+
+function asMenuRow(row: Record<string, unknown>) {
+  return row as MenuRow
 }
 
 function normalizeStatus(value: unknown) {
@@ -720,8 +808,8 @@ function normalizeStatus(value: unknown) {
     return "启用"
   }
 
-  if (value === 0 || value === "0" || value === "停用") {
-    return "停用"
+  if (value === 2 || value === "2" || value === "禁用" || value === 0 || value === "0" || value === "停用") {
+    return "禁用"
   }
 
   return "未知"
@@ -744,6 +832,15 @@ function toText(...values: unknown[]) {
 function toNumber(value: unknown, fallback = 0) {
   const parsed = Number(value)
   return Number.isFinite(parsed) ? parsed : fallback
+}
+
+function toOptionalNumber(value: unknown) {
+  if (value === undefined || value === null || value === "") {
+    return undefined
+  }
+
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : undefined
 }
 
 function formatDateTime(...values: unknown[]) {
@@ -841,18 +938,31 @@ function formatDateTime(...values: unknown[]) {
       :rows="currentRows"
       :table-class="SETTINGS_TABLE_PAGE_CLASS"
       :empty-state="tableEmptyState"
-    />
+    >
+      <template #cell-actions="{ row: rawRow }">
+        <Button
+          v-if="activeView === 'menus'"
+          variant="outline"
+          size="sm"
+          class="ml-auto h-8 gap-1 rounded-md px-2.5 text-[13px]"
+          @click="openEditDialog(asMenuRow(rawRow))"
+        >
+          <i class="ri-edit-line text-base" />
+          <span>编辑</span>
+        </Button>
+      </template>
+    </TablePageTable>
 
-    <Dialog :open="createDialogOpen" @update:open="($event ? (createDialogOpen = true) : closeCreateDialog())">
+    <Dialog :open="menuDialogOpen" @update:open="($event ? (menuDialogOpen = true) : closeMenuDialog())">
       <DialogContent class="sm:max-w-[560px]">
         <DialogHeader>
-          <DialogTitle>添加菜单</DialogTitle>
+          <DialogTitle>{{ menuDialogMode === "edit" ? "编辑菜单" : "添加菜单" }}</DialogTitle>
           <DialogDescription>
-            填写菜单基础信息后会调用菜单新建接口。
+            {{ menuDialogMode === "edit" ? "修改菜单基础信息后会调用菜单更新接口。" : "填写菜单基础信息后会调用菜单新建接口。" }}
           </DialogDescription>
         </DialogHeader>
 
-        <form class="grid gap-4" @submit.prevent="submitCreateMenu">
+        <form class="grid gap-4" @submit.prevent="submitMenu">
           <div class="grid gap-4 sm:grid-cols-2">
             <div class="grid gap-2">
               <label class="text-sm font-medium text-foreground" for="menu-name">菜单名称</label>
@@ -911,28 +1021,65 @@ function formatDateTime(...values: unknown[]) {
                   <SelectValue placeholder="选择状态" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem :value="MENU_STATUS_UNSET">
+                    未设置
+                  </SelectItem>
                   <SelectItem value="1">
                     启用
                   </SelectItem>
-                  <SelectItem value="0">
-                    停用
+                  <SelectItem value="2">
+                    禁用
                   </SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
 
-          <DialogFooter class="pt-2">
-            <Button type="button" variant="outline" :disabled="createSubmitting" @click="closeCreateDialog">
-              取消
+          <DialogFooter class="pt-2 flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <Button
+              v-if="menuDialogMode === 'edit'"
+              type="button"
+              variant="destructive"
+              class="w-full sm:w-auto"
+              :disabled="menuSubmitting || deleteSubmitting"
+              @click="promptDeleteMenu"
+            >
+              <i class="ri-delete-bin-line text-base" />
+              <span>删除菜单</span>
             </Button>
-            <Button type="submit" :disabled="createSubmitting">
-              {{ createSubmitting ? "创建中..." : "创建菜单" }}
-            </Button>
+
+            <div class="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row">
+              <Button type="button" variant="outline" :disabled="menuSubmitting || deleteSubmitting" @click="closeMenuDialog">
+                取消
+              </Button>
+              <Button type="submit" :disabled="menuSubmitting || deleteSubmitting">
+                {{ menuSubmitting ? (menuDialogMode === "edit" ? "保存中..." : "创建中...") : (menuDialogMode === "edit" ? "保存修改" : "创建菜单") }}
+              </Button>
+            </div>
           </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
+
+    <AlertDialog :open="deleteConfirmOpen" @update:open="deleteConfirmOpen = $event">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>确认删除菜单？</AlertDialogTitle>
+          <AlertDialogDescription>
+            该操作会删除当前菜单，且不可撤销。确认后将立即提交删除请求。
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel :disabled="deleteSubmitting">
+            取消
+          </AlertDialogCancel>
+          <AlertDialogAction :disabled="deleteSubmitting" @click="confirmDeleteMenu">
+            <i v-if="deleteSubmitting" class="ri-loader-4-line animate-spin text-base" />
+            <span>{{ deleteSubmitting ? "删除中..." : "确认删除" }}</span>
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   </section>
   </SettingsRightPanelLayout>
 </template>
