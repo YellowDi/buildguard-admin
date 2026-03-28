@@ -495,7 +495,12 @@ function handlePrimaryAction() {
     return
   }
 
-  router.push({ name: "inspection-work-order-create" })
+  router.push({
+    name: "inspection-work-order-create",
+    query: {
+      returnTo: "inspection-work-orders",
+    },
+  })
 }
 </script>
 

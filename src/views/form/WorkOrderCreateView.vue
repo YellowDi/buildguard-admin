@@ -262,6 +262,11 @@ async function handleSubmit() {
         : "工单信息已提交到接口。",
     })
 
+    if (queryReturnTo.value === "inspection-work-orders") {
+      await router.push({ name: "inspection-work-orders" })
+      return
+    }
+
     await router.push({
       name: "customer-detail",
       params: { id: payload.CustomerUuid },
