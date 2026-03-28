@@ -55,7 +55,12 @@ import {
   updateMember as requestMemberUpdate,
   updateMemberStatus as requestMemberStatusUpdate,
 } from "@/lib/members-api"
-import { createRole as requestRoleCreate, fetchRoles } from "@/lib/roles-api"
+import {
+  createRole as requestRoleCreate,
+  deleteRole as requestRoleDelete,
+  fetchRoles,
+  updateRole as requestRoleUpdate,
+} from "@/lib/roles-api"
 import { cn } from "@/lib/utils"
 import TablePageTable from "@/components/table-page/TablePageTable.vue"
 import type { TableColumn, TablePageEmptyState } from "@/components/table-page/types"
@@ -157,8 +162,11 @@ const manualDialogOpen = ref(false)
 const roleDialogOpen = ref(false)
 const editDialogOpen = ref(false)
 const editingMemberId = ref<number | null>(null)
+const editingRoleId = ref<number | null>(null)
 const manualSubmitting = ref(false)
 const roleSubmitting = ref(false)
+const roleDeleteSubmitting = ref(false)
+const roleDeleteConfirmOpen = ref(false)
 const editDetailLoading = ref(false)
 const editSubmitting = ref(false)
 const deleteSubmitting = ref(false)
@@ -262,6 +270,14 @@ const roleColumns: TableColumn[] = [
     label: "更新时间",
     filterType: "text",
     tone: "muted",
+  },
+  {
+    key: "actions",
+    label: "",
+    filterType: "none",
+    slot: "cell-actions",
+    headerClass: "w-[6.5rem]",
+    cellClass: "w-[6.5rem] text-right",
   },
 ]
 
@@ -955,8 +971,26 @@ function openManualMemberDialog() {
 }
 
 function openRoleDialog() {
+  editingRoleId.value = null
+  roleDeleteConfirmOpen.value = false
   roleForm.value = createRoleForm()
   roleDialogOpen.value = true
+}
+
+function openEditRoleDialog(role: RoleRow) {
+  editingRoleId.value = role.id
+  roleDeleteConfirmOpen.value = false
+  roleForm.value = {
+    name: role.name,
+    remark: role.remark === "-" ? "" : role.remark,
+  }
+  roleDialogOpen.value = true
+}
+
+function closeRoleDialog() {
+  roleDialogOpen.value = false
+  editingRoleId.value = null
+  roleDeleteConfirmOpen.value = false
 }
 
 function openEditMemberDialog(member: MemberRow) {
@@ -1043,24 +1077,93 @@ async function submitRole() {
   roleSubmitting.value = true
 
   try {
-    await requestRoleCreate({
-      Name: name,
-      Remark: roleForm.value.remark.trim() || undefined,
+    const editingRole = roleRows.value.find(role => role.id === editingRoleId.value) ?? null
+
+    if (editingRoleId.value !== null) {
+      if (!editingRole?.uuid) {
+        toast.error("角色更新失败", {
+          description: `${name} 缺少角色 Uuid，无法提交更新。`,
+        })
+        return
+      }
+
+      await requestRoleUpdate({
+        Uuid: editingRole.uuid,
+        Name: name,
+        Remark: roleForm.value.remark.trim() || undefined,
+      })
+
+      closeRoleDialog()
+      roleForm.value = createRoleForm()
+      toast.success("角色已更新", {
+        description: `${name} 的信息已保存。`,
+      })
+    } else {
+      await requestRoleCreate({
+        Name: name,
+        Remark: roleForm.value.remark.trim() || undefined,
+      })
+
+      closeRoleDialog()
+      roleForm.value = createRoleForm()
+      toast.success("角色已创建", {
+        description: `${name} 已提交到角色接口。`,
+      })
+    }
+
+    await loadRoles()
+  } catch (error) {
+    handleApiError(error, {
+      title: editingRoleId.value === null ? "角色创建失败" : "角色更新失败",
+      fallback: editingRoleId.value === null ? "角色创建失败，请稍后重试。" : "角色更新失败，请稍后重试。",
+    })
+  } finally {
+    roleSubmitting.value = false
+  }
+}
+
+function promptDeleteEditingRole() {
+  if (editingRoleId.value === null || roleSubmitting.value || roleDeleteSubmitting.value) {
+    return
+  }
+
+  roleDeleteConfirmOpen.value = true
+}
+
+async function confirmDeleteEditingRole() {
+  const role = roleRows.value.find(item => item.id === editingRoleId.value)
+
+  if (!role || roleDeleteSubmitting.value) {
+    return
+  }
+
+  if (!role.uuid) {
+    toast.error("角色删除失败", {
+      description: `${role.name} 缺少角色 Uuid，无法提交删除。`,
+    })
+    return
+  }
+
+  roleDeleteSubmitting.value = true
+
+  try {
+    await requestRoleDelete({
+      Uuid: role.uuid,
     })
 
-    roleDialogOpen.value = false
-    roleForm.value = createRoleForm()
-    toast.success("角色已创建", {
-      description: `${name} 已提交到角色接口。`,
+    roleDeleteConfirmOpen.value = false
+    closeRoleDialog()
+    toast.success("角色已删除", {
+      description: `${role.name} 已从当前角色列表移除。`,
     })
     await loadRoles()
   } catch (error) {
     handleApiError(error, {
-      title: "角色创建失败",
-      fallback: "角色创建失败，请稍后重试。",
+      title: "角色删除失败",
+      fallback: "角色删除失败，请稍后重试。",
     })
   } finally {
-    roleSubmitting.value = false
+    roleDeleteSubmitting.value = false
   }
 }
 
@@ -1242,6 +1345,10 @@ async function confirmDeleteEditingMember() {
 function asMemberRow(row: Record<string, unknown>) {
   return row as MemberRow
 }
+
+function asRoleRow(row: Record<string, unknown>) {
+  return row as RoleRow
+}
 </script>
 
 <template>
@@ -1404,6 +1511,16 @@ function asMemberRow(row: Record<string, unknown>) {
           <i class="ri-edit-line text-base" />
           <span>编辑</span>
         </Button>
+        <Button
+          v-else-if="activeView === 'roles'"
+          variant="outline"
+          size="sm"
+          class="ml-auto h-8 gap-1 rounded-md px-2.5 text-[13px]"
+          @click="openEditRoleDialog(asRoleRow(rawRow))"
+        >
+          <i class="ri-edit-line text-base" />
+          <span>编辑</span>
+        </Button>
       </template>
     </TablePageTable>
 
@@ -1472,12 +1589,12 @@ function asMemberRow(row: Record<string, unknown>) {
       </DialogContent>
     </Dialog>
 
-    <Dialog :open="roleDialogOpen" @update:open="roleDialogOpen = $event">
+    <Dialog :open="roleDialogOpen" @update:open="($event ? (roleDialogOpen = true) : closeRoleDialog())">
       <DialogContent class="sm:max-w-[520px]">
         <DialogHeader>
-          <DialogTitle>添加角色</DialogTitle>
+          <DialogTitle>{{ editingRoleId === null ? "添加角色" : "编辑角色" }}</DialogTitle>
           <DialogDescription>
-            填写角色名称和备注后，将调用角色新建接口保存。
+            {{ editingRoleId === null ? "填写角色名称和备注后，将调用角色新建接口保存。" : "修改角色名称和备注后，保存时会调用角色更新接口。" }}
           </DialogDescription>
         </DialogHeader>
 
@@ -1492,13 +1609,24 @@ function asMemberRow(row: Record<string, unknown>) {
             <Input id="role-remark" v-model="roleForm.remark" placeholder="请输入角色备注" />
           </div>
 
-          <DialogFooter class="pt-2">
-            <Button type="button" variant="outline" :disabled="roleSubmitting" @click="roleDialogOpen = false">
-              取消
+          <DialogFooter :class="editingRoleId === null ? 'pt-2' : 'pt-2 sm:justify-between'">
+            <Button
+              v-if="editingRoleId !== null"
+              type="button"
+              variant="destructive"
+              :disabled="roleSubmitting || roleDeleteSubmitting"
+              @click="promptDeleteEditingRole"
+            >
+              {{ roleDeleteSubmitting ? "删除中..." : "删除角色" }}
             </Button>
-            <Button type="submit" :disabled="roleSubmitting">
-              {{ roleSubmitting ? "创建中..." : "添加角色" }}
-            </Button>
+            <div class="flex items-center justify-end gap-2">
+              <Button type="button" variant="outline" :disabled="roleSubmitting || roleDeleteSubmitting" @click="closeRoleDialog">
+                取消
+              </Button>
+              <Button type="submit" :disabled="roleSubmitting || roleDeleteSubmitting || !roleForm.name.trim()">
+                {{ roleSubmitting ? "保存中..." : editingRoleId === null ? "添加角色" : "保存" }}
+              </Button>
+            </div>
           </DialogFooter>
         </form>
       </DialogContent>
@@ -1619,6 +1747,29 @@ function asMemberRow(row: Record<string, unknown>) {
             @click="confirmDeleteEditingMember"
           >
             {{ deleteSubmitting ? "删除中..." : "确认删除" }}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
+    <AlertDialog :open="roleDeleteConfirmOpen" @update:open="roleDeleteConfirmOpen = $event">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>确认删除角色？</AlertDialogTitle>
+          <AlertDialogDescription>
+            该操作会删除当前角色，且不可撤销。确认后将立即提交删除请求。
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel :disabled="roleDeleteSubmitting">
+            取消
+          </AlertDialogCancel>
+          <AlertDialogAction
+            class="bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60"
+            :disabled="roleDeleteSubmitting"
+            @click="confirmDeleteEditingRole"
+          >
+            {{ roleDeleteSubmitting ? "删除中..." : "确认删除" }}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

@@ -35,10 +35,24 @@ export type CreateRoleResult = {
   [property: string]: unknown
 }
 
+export type UpdateRolePayload = {
+  Uuid: string
+  Name: string
+  Remark?: string
+}
+
+export type DeleteRolePayload = {
+  Uuid: string
+}
+
 const ROLES_API_URL = buildApiUrl(API_PATHS.rolesList)
 const ROLE_CREATE_API_URL = buildApiUrl(API_PATHS.roleCreate)
+const ROLE_UPDATE_API_URL = buildApiUrl(API_PATHS.roleUpdate)
+const ROLE_DELETE_API_URL = buildApiUrl(API_PATHS.roleDelete)
 const ROLES_LOAD_ERROR_MESSAGE = "角色列表加载失败，请稍后重试。"
 const ROLE_CREATE_ERROR_MESSAGE = "角色创建失败，请稍后重试。"
+const ROLE_UPDATE_ERROR_MESSAGE = "角色更新失败，请稍后重试。"
+const ROLE_DELETE_ERROR_MESSAGE = "角色删除失败，请稍后重试。"
 
 export async function fetchRoles(): Promise<RolesListResult> {
   const response = await fetch(ROLES_API_URL, {
@@ -79,6 +93,48 @@ export async function createRole(payload: CreateRolePayload): Promise<CreateRole
 
   if (!response.ok) {
     throw createHttpError(response, responsePayload, ROLE_CREATE_ERROR_MESSAGE)
+  }
+
+  return responsePayload
+}
+
+export async function updateRole(payload: UpdateRolePayload): Promise<CreateRoleResult> {
+  const normalizedPayload = {
+    Uuid: getRequiredString(payload.Uuid, "Uuid"),
+    Name: getRequiredString(payload.Name, "Name"),
+    Remark: getOptionalString(payload.Remark) ?? "",
+  }
+
+  const response = await fetch(ROLE_UPDATE_API_URL, {
+    method: "POST",
+    headers: buildApiHeaders({
+      "Content-Type": "application/json",
+    }),
+    body: JSON.stringify(normalizedPayload),
+  })
+  const responsePayload = await readResponseBody(response) as CreateRoleResult
+
+  if (!response.ok) {
+    throw createHttpError(response, responsePayload, ROLE_UPDATE_ERROR_MESSAGE)
+  }
+
+  return responsePayload
+}
+
+export async function deleteRole(payload: DeleteRolePayload) {
+  const response = await fetch(ROLE_DELETE_API_URL, {
+    method: "POST",
+    headers: buildApiHeaders({
+      "Content-Type": "application/json",
+    }),
+    body: JSON.stringify({
+      Uuid: getRequiredString(payload.Uuid, "Uuid"),
+    }),
+  })
+  const responsePayload = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responsePayload, ROLE_DELETE_ERROR_MESSAGE)
   }
 
   return responsePayload
