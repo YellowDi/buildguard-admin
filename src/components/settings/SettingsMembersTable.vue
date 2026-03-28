@@ -18,6 +18,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import TopTabSwitch from "@/components/layout/TopTabSwitch.vue"
+import SettingsToolbarRow from "@/components/settings/SettingsToolbarRow.vue"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -1196,7 +1197,8 @@ function asMemberRow(row: Record<string, unknown>) {
 <template>
   <section class="space-y-5">
     <div class="flex flex-col gap-4">
-      <div class="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+      <SettingsToolbarRow>
+        <template #leading>
         <TopTabSwitch
           :tabs="viewTabs"
           :model-value="activeView"
@@ -1205,8 +1207,9 @@ function asMemberRow(row: Record<string, unknown>) {
           aria-label="成员管理视图切换"
           @update:model-value="activeView = $event as MemberViewKey"
         />
+        </template>
 
-        <div class="flex flex-wrap items-center justify-end gap-2">
+        <div class="flex flex-nowrap items-center justify-end gap-2">
           <div
             :class="
               cn(
@@ -1276,7 +1279,7 @@ function asMemberRow(row: Record<string, unknown>) {
             <span>{{ activeView === "roles" ? "添加角色" : "添加权限组" }}</span>
           </Button>
         </div>
-      </div>
+      </SettingsToolbarRow>
     </div>
 
     <Alert

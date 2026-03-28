@@ -26,6 +26,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import SettingsToolbarRow from "@/components/settings/SettingsToolbarRow.vue"
 import { Input } from "@/components/ui/input"
 import TablePageTable from "@/components/table-page/TablePageTable.vue"
 import type { TableColumn, TablePageEmptyState } from "@/components/table-page/types"
@@ -367,8 +368,8 @@ defineExpose({
 
 <template>
   <section class="space-y-5">
-    <div v-if="!props.hideToolbar" class="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-      <div class="flex items-center justify-end gap-2 overflow-x-auto">
+    <SettingsToolbarRow v-if="!props.hideToolbar">
+      <div class="flex flex-nowrap items-center justify-end gap-2">
         <div
           :class="
             cn(
@@ -408,7 +409,7 @@ defineExpose({
           <span>添加分类</span>
         </Button>
       </div>
-    </div>
+    </SettingsToolbarRow>
 
     <Alert
       v-if="errorMessage"

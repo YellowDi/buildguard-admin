@@ -17,6 +17,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import TopTabSwitch from "@/components/layout/TopTabSwitch.vue"
+import SettingsToolbarRow from "@/components/settings/SettingsToolbarRow.vue"
 import { Input } from "@/components/ui/input"
 import {
   Select,
@@ -707,7 +708,8 @@ function formatDateTime(...values: unknown[]) {
 <template>
   <section class="space-y-4">
     <div class="flex flex-col gap-4">
-      <div class="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+      <SettingsToolbarRow>
+        <template #leading>
         <TopTabSwitch
           :tabs="viewTabs"
           :model-value="activeView"
@@ -716,8 +718,9 @@ function formatDateTime(...values: unknown[]) {
           aria-label="系统资源视图切换"
           @update:model-value="activeView = $event as SystemViewKey"
         />
+        </template>
 
-        <div class="flex flex-wrap items-center justify-end gap-2">
+        <div class="flex flex-nowrap items-center justify-end gap-2">
           <input
             ref="apiImportInput"
             type="file"
@@ -774,7 +777,7 @@ function formatDateTime(...values: unknown[]) {
             <span>新增菜单</span>
           </Button>
         </div>
-      </div>
+      </SettingsToolbarRow>
     </div>
 
     <Alert
