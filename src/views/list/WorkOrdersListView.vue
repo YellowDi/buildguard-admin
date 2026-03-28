@@ -41,7 +41,7 @@ type WorkOrderRecord = {
   customerName: string
   parkName: string
   packageName: string
-  executionPlan: string
+  planName: string
   executor: string
   status: string
   statusValue: number | null
@@ -54,8 +54,7 @@ type WorkOrderRecord = {
   resultLabel: string
   score: number | null
   scoreLabel: string
-  recheckStatus: string
-  recheckTime: string
+  deadline: string
   remark: string
   createdAt: string
   updatedAt: string
@@ -80,8 +79,8 @@ const pageEmptyStateDescription = computed(() => props.kind === "inspection"
   ? "当前接口暂未返回可展示的检修工单。"
   : "当前接口暂未返回可展示的维修工单。")
 const pageSortStorageKey = computed(() => props.kind === "inspection"
-  ? "inspection-work-orders-sort-preferences"
-  : "repair-work-orders-sort-preferences")
+  ? "inspection-work-orders-sort-preferences-created-at-v2"
+  : "repair-work-orders-sort-preferences-created-at-v2")
 const primaryActionLabel = "添加工单"
 const router = useRouter()
 const columns = props.kind === "inspection" ? createInspectionColumns() : createRepairColumns()
@@ -132,7 +131,7 @@ const schema: TablePageSchema<WorkOrderRecord> = {
   ],
   sort: {
     storageKey: pageSortStorageKey.value,
-    initialField: "updatedAt",
+    initialField: "createdAt",
     initialDirection: "desc",
   },
   tabs: {
@@ -182,13 +181,14 @@ function buildPageFilterText(row: WorkOrderRecord) {
     row.orderNo,
     row.customerName,
     row.packageName,
-    row.executionPlan,
+    row.planName,
     row.executor,
     row.statusLabel,
     row.resultLabel,
     row.scoreLabel,
-    row.recheckStatus,
-    row.recheckTime,
+    row.createdAt,
+    row.deadline,
+    row.remark,
   ].join(" ")
 }
 
@@ -288,7 +288,7 @@ function normalizeInspectionWorkOrderRecord(item: WorkOrderListItem, index: numb
     customerName: toText(item.CustomerName, "-"),
     parkName: "-",
     packageName,
-    executionPlan: "-",
+    planName: toText(item.PlanName, "-"),
     executor: toText(item.Executor, "-"),
     status: statusValue === null ? "" : String(statusValue),
     statusValue,
@@ -301,8 +301,7 @@ function normalizeInspectionWorkOrderRecord(item: WorkOrderListItem, index: numb
     resultLabel: formatResultLabel(resultValue, props.kind),
     score,
     scoreLabel: formatScoreLabel(score, props.kind),
-    recheckStatus: "-",
-    recheckTime: "-",
+    deadline: toText(item.Deadline, "-"),
     remark,
     createdAt: toText(item.CreatedAt, "-"),
     updatedAt: toText(item.UpdatedAt, "-"),
@@ -327,7 +326,7 @@ function normalizeRepairWorkOrderRecord(item: RepairWorkOrderListItem, index: nu
     customerName: toText(item.CustomerName || item.CorpName, "-"),
     parkName: toText(item.ParkName, "-"),
     packageName: "-",
-    executionPlan: "-",
+    planName: "-",
     executor: toText(item.UserName, "-"),
     status: statusValue === null ? "" : String(statusValue),
     statusValue,
@@ -340,8 +339,7 @@ function normalizeRepairWorkOrderRecord(item: RepairWorkOrderListItem, index: nu
     resultLabel: formatResultLabel(reportTypeValue, props.kind),
     score: importantValue,
     scoreLabel: formatScoreLabel(importantValue, props.kind),
-    recheckStatus: "-",
-    recheckTime: "-",
+    deadline: "-",
     remark: toText(item.RepairContent || item.Content, "-"),
     createdAt,
     updatedAt: createdAt,
@@ -446,21 +444,21 @@ function createInspectionColumns(): TablePageSchema<WorkOrderRecord>["columns"] 
     },
     {
       key: "packageName",
-      label: "检测服务",
+      label: "套餐名称",
       filterType: "text",
       filter: {
         type: "text",
-        placeholder: "输入检测服务",
+        placeholder: "输入套餐名称",
       },
       sort: true,
     },
     {
-      key: "executionPlan",
-      label: "执行计划",
+      key: "planName",
+      label: "检测计划名称",
       filterType: "text",
       filter: {
         type: "text",
-        placeholder: "输入执行计划",
+        placeholder: "输入检测计划名称",
       },
       sort: true,
     },
@@ -524,23 +522,34 @@ function createInspectionColumns(): TablePageSchema<WorkOrderRecord>["columns"] 
       },
     },
     {
-      key: "recheckStatus",
-      label: "复检状态",
-      filterType: "text",
-      filter: {
-        type: "text",
-        placeholder: "输入复检状态",
-      },
-      sort: true,
-    },
-    {
-      key: "recheckTime",
-      label: "复检时间",
+      key: "deadline",
+      label: "截止时间",
       filterType: "time",
       format: "numeric",
       filter: {
         type: "date",
-        value: row => extractDatePart(row.recheckTime),
+        value: row => extractDatePart(row.deadline),
+      },
+      sort: true,
+    },
+    {
+      key: "remark",
+      label: "备注",
+      filterType: "text",
+      format: "note",
+      filter: {
+        type: "text",
+        placeholder: "输入备注",
+      },
+    },
+    {
+      key: "createdAt",
+      label: "创建时间",
+      filterType: "time",
+      format: "numeric",
+      filter: {
+        type: "date",
+        value: row => extractDatePart(row.createdAt),
       },
       sort: true,
     },
@@ -553,8 +562,8 @@ function createRepairColumns(): TablePageSchema<WorkOrderRecord>["columns"] {
       key: "orderNo",
       label: "工单编号",
       filterType: "text",
-      emphasis: "strong",
-      tone: "primary",
+      emphasis: "default",
+      tone: "muted",
       filter: {
         type: "text",
         placeholder: "输入工单编号",
@@ -651,6 +660,16 @@ function createRepairColumns(): TablePageSchema<WorkOrderRecord>["columns"] {
       },
     },
     {
+      key: "remark",
+      label: "内容说明",
+      filterType: "text",
+      format: "note",
+      filter: {
+        type: "text",
+        placeholder: "输入内容说明",
+      },
+    },
+    {
       key: "createdAt",
       label: "创建时间",
       filterType: "time",
@@ -661,16 +680,6 @@ function createRepairColumns(): TablePageSchema<WorkOrderRecord>["columns"] {
         value: row => extractDatePart(row.createdAt),
       },
       sort: true,
-    },
-    {
-      key: "remark",
-      label: "内容说明",
-      filterType: "text",
-      format: "note",
-      filter: {
-        type: "text",
-        placeholder: "输入内容说明",
-      },
     },
   ]
 }

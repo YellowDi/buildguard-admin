@@ -121,7 +121,7 @@ type CustomerWorkOrderRow = {
   customerName: string
   parkName: string
   packageName: string
-  executionPlan: string
+  planName: string
   executor: string
   status: string
   statusValue: number | null
@@ -134,8 +134,7 @@ type CustomerWorkOrderRow = {
   resultLabel: string
   score: number | null
   scoreLabel: string
-  recheckStatus: string
-  recheckTime: string
+  deadline: string
   remark: string
   createdAt: string
   updatedAt: string
@@ -714,21 +713,21 @@ const inspectionWorkOrdersSchema: TablePageSchema<CustomerWorkOrderRow> = {
     },
     {
       key: "packageName",
-      label: "检测服务",
+      label: "套餐名称",
       filterType: "text",
       filter: {
         type: "text",
-        placeholder: "输入检测服务",
+        placeholder: "输入套餐名称",
       },
       sort: true,
     },
     {
-      key: "executionPlan",
-      label: "执行计划",
+      key: "planName",
+      label: "检测计划名称",
       filterType: "text",
       filter: {
         type: "text",
-        placeholder: "输入执行计划",
+        placeholder: "输入检测计划名称",
       },
       sort: true,
     },
@@ -792,23 +791,34 @@ const inspectionWorkOrdersSchema: TablePageSchema<CustomerWorkOrderRow> = {
       },
     },
     {
-      key: "recheckStatus",
-      label: "复检状态",
-      filterType: "text",
-      filter: {
-        type: "text",
-        placeholder: "输入复检状态",
-      },
-      sort: true,
-    },
-    {
-      key: "recheckTime",
-      label: "复检时间",
+      key: "deadline",
+      label: "截止时间",
       filterType: "time",
       format: "numeric",
       filter: {
         type: "date",
-        value: row => extractDatePart(row.recheckTime),
+        value: row => extractDatePart(row.deadline),
+      },
+      sort: true,
+    },
+    {
+      key: "remark",
+      label: "备注",
+      filterType: "text",
+      format: "note",
+      filter: {
+        type: "text",
+        placeholder: "输入备注",
+      },
+    },
+    {
+      key: "createdAt",
+      label: "创建时间",
+      filterType: "time",
+      format: "numeric",
+      filter: {
+        type: "date",
+        value: row => extractDatePart(row.createdAt),
       },
       sort: true,
     },
@@ -824,8 +834,8 @@ const inspectionWorkOrdersSchema: TablePageSchema<CustomerWorkOrderRow> = {
     },
   ],
   sort: {
-    storageKey: "customer-detail-inspection-work-orders-sort-preferences",
-    initialField: "updatedAt",
+    storageKey: "customer-detail-inspection-work-orders-sort-preferences-created-at-v2",
+    initialField: "createdAt",
     initialDirection: "desc",
   },
   tabs: {
@@ -858,8 +868,8 @@ const repairWorkOrdersSchema: TablePageSchema<CustomerWorkOrderRow> = {
       key: "orderNo",
       label: "工单编号",
       filterType: "text",
-      emphasis: "strong",
-      tone: "primary",
+      emphasis: "default",
+      tone: "muted",
       filter: {
         type: "text",
         placeholder: "输入工单编号",
@@ -956,6 +966,16 @@ const repairWorkOrdersSchema: TablePageSchema<CustomerWorkOrderRow> = {
       },
     },
     {
+      key: "remark",
+      label: "内容说明",
+      filterType: "text",
+      format: "note",
+      filter: {
+        type: "text",
+        placeholder: "输入内容说明",
+      },
+    },
+    {
       key: "createdAt",
       label: "创建时间",
       filterType: "time",
@@ -965,16 +985,6 @@ const repairWorkOrdersSchema: TablePageSchema<CustomerWorkOrderRow> = {
         value: row => extractDatePart(row.createdAt),
       },
       sort: true,
-    },
-    {
-      key: "remark",
-      label: "内容说明",
-      filterType: "text",
-      format: "note",
-      filter: {
-        type: "text",
-        placeholder: "输入内容说明",
-      },
     },
   ],
   filters: [
@@ -988,7 +998,7 @@ const repairWorkOrdersSchema: TablePageSchema<CustomerWorkOrderRow> = {
     },
   ],
   sort: {
-    storageKey: "customer-detail-repair-work-orders-sort-preferences",
+    storageKey: "customer-detail-repair-work-orders-sort-preferences-created-at-v2",
     initialField: "createdAt",
     initialDirection: "desc",
   },
@@ -2352,13 +2362,14 @@ function buildInspectionWorkOrdersFilterText(row: CustomerWorkOrderRow) {
     row.orderNo,
     row.customerName,
     row.packageName,
-    row.executionPlan,
+    row.planName,
     row.executor,
     row.statusLabel,
     row.resultLabel,
     row.scoreLabel,
-    row.recheckStatus,
-    row.recheckTime,
+    row.createdAt,
+    row.deadline,
+    row.remark,
   ].join(" ")
 }
 
@@ -2466,7 +2477,7 @@ function mapInspectionWorkOrderRow(item: WorkOrderListItem, index: number): Cust
     customerName: toDisplayText(item.CustomerName, toDisplayText(customer.value?.CorpName, "-")),
     parkName: "-",
     packageName: toDisplayText(item.PackageName, "-"),
-    executionPlan: "-",
+    planName: toDisplayText(item.PlanName, "-"),
     executor: toDisplayText(item.Executor, "-"),
     status: statusValue === null ? "" : String(statusValue),
     statusValue,
@@ -2479,8 +2490,7 @@ function mapInspectionWorkOrderRow(item: WorkOrderListItem, index: number): Cust
     resultLabel: formatWorkOrderResult(resultValue),
     score,
     scoreLabel: formatWorkOrderScore(score),
-    recheckStatus: "-",
-    recheckTime: "-",
+    deadline: toDisplayText(item.Deadline, "-"),
     remark: toDisplayText(item.Remark, "-"),
     createdAt: toDisplayText(item.CreatedAt, "-"),
     updatedAt: toDisplayText(item.UpdatedAt, "-"),
@@ -2507,7 +2517,7 @@ function mapRepairWorkOrderRow(item: RepairWorkOrderListItem, index: number): Cu
     customerName: toDisplayText(item.CustomerName || item.CorpName, toDisplayText(customer.value?.CorpName, "-")),
     parkName: toDisplayText(item.ParkName, "-"),
     packageName: "-",
-    executionPlan: "-",
+    planName: "-",
     executor: toDisplayText(item.UserName, "-"),
     status: statusValue === null ? "" : String(statusValue),
     statusValue,
@@ -2520,8 +2530,7 @@ function mapRepairWorkOrderRow(item: RepairWorkOrderListItem, index: number): Cu
     resultLabel: formatRepairReportTypeLabel(reportTypeValue),
     score: importantValue,
     scoreLabel: formatRepairImportantLabel(importantValue),
-    recheckStatus: "-",
-    recheckTime: "-",
+    deadline: "-",
     remark: toDisplayText(item.RepairContent || item.Content, "-"),
     createdAt,
     updatedAt: createdAt,
