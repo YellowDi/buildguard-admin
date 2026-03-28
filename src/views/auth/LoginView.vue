@@ -3,7 +3,7 @@ import { reactive, ref } from "vue"
 import { useRouter } from "vue-router"
 import { toast } from "vue-sonner"
 
-import loginVisual from "@/assets/auth-login-visual.svg"
+import loginVideo from "@/assets/video.mp4"
 import BrandLogo from "@/components/layout/BrandLogo.vue"
 import { Button } from "@/components/ui/button"
 import {
@@ -124,11 +124,20 @@ async function handleSubmit() {
     </div>
 
     <div class="bg-muted relative hidden lg:block">
-      <img
-        :src="loginVisual"
-        alt="登录页抽象花瓣背景"
+      <video
         class="absolute inset-0 h-full w-full object-cover"
-      >
+        :src="loginVideo"
+        autoplay
+        loop
+        muted
+        playsinline
+        aria-hidden="true"
+        @contextmenu.prevent
+      />
+      <div
+        class="pointer-events-none absolute inset-0 z-10 bg-white/35 backdrop-blur-md"
+        aria-hidden="true"
+      />
     </div>
   </div>
 </template>
