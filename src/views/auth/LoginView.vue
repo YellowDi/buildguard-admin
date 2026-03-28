@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { reactive, ref } from "vue"
+import { computed, reactive, ref } from "vue"
 import { useRouter } from "vue-router"
 import { toast } from "vue-sonner"
 
+import loginVisual from "@/assets/auth-login-visual.svg"
 import loginVideo from "@/assets/video.mp4"
 import BrandLogo from "@/components/layout/BrandLogo.vue"
 import { Button } from "@/components/ui/button"
@@ -25,6 +26,24 @@ const form = reactive({
   password: "",
 })
 const isSubmitting = ref(false)
+
+const videoReady = ref(false)
+const videoError = ref(false)
+const showLoginVisualFallback = computed(
+  () => !videoReady.value || videoError.value,
+)
+
+function onLoginVideoCanPlay() {
+  if (videoError.value) {
+    return
+  }
+  videoReady.value = true
+}
+
+function onLoginVideoError() {
+  videoError.value = true
+  videoReady.value = false
+}
 
 async function handleSubmit() {
   if (isSubmitting.value) {
@@ -125,16 +144,36 @@ async function handleSubmit() {
 
     <div class="bg-muted relative hidden lg:block">
       <video
-        class="absolute inset-0 h-full w-full object-cover"
+        class="absolute inset-0 z-0 h-full w-full object-cover"
         :src="loginVideo"
+        preload="auto"
         autoplay
         loop
         muted
         playsinline
         aria-hidden="true"
+        @canplay="onLoginVideoCanPlay"
+        @error="onLoginVideoError"
         @contextmenu.prevent
       />
       <div
+        v-show="showLoginVisualFallback"
+        class="absolute inset-0 z-[1]"
+      >
+        <img
+          :src="loginVisual"
+          alt=""
+          class="absolute inset-0 h-full w-full object-cover"
+          aria-hidden="true"
+          @contextmenu.prevent
+        />
+        <div
+          class="pointer-events-none absolute inset-0 bg-white/35 backdrop-blur-md"
+          aria-hidden="true"
+        />
+      </div>
+      <div
+        v-show="!showLoginVisualFallback"
         class="pointer-events-none absolute inset-0 z-10 bg-white/35 backdrop-blur-md"
         aria-hidden="true"
       />
