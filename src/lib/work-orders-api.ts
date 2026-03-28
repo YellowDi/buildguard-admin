@@ -49,6 +49,11 @@ export type CreateWorkOrderResult = {
   [property: string]: unknown
 }
 
+export type UpdateWorkOrderPayload = {
+  Uuid: string
+  Remark?: string
+}
+
 export type RepairWorkOrderListItem = {
   Id?: number
   Uuid?: string
@@ -94,8 +99,10 @@ export type ListWorkOrdersPayload = {
 const WORK_ORDERS_API_URL = buildApiUrl(API_PATHS.workOrdersList)
 const REPAIR_WORK_ORDERS_API_URL = buildApiUrl(API_PATHS.workOrderReportList)
 const WORK_ORDER_CREATE_API_URL = buildApiUrl(API_PATHS.workOrderCreate)
+const WORK_ORDER_UPDATE_API_URL = buildApiUrl(API_PATHS.workOrderUpdate)
 const WORK_ORDERS_LOAD_ERROR_MESSAGE = "工单列表加载失败，请稍后重试。"
 const WORK_ORDER_CREATE_ERROR_MESSAGE = "工单创建失败，请稍后重试。"
+const WORK_ORDER_UPDATE_ERROR_MESSAGE = "工单更新失败，请稍后重试。"
 
 export async function fetchWorkOrders(payload: ListWorkOrdersPayload = {}): Promise<WorkOrdersListResult> {
   const normalizedPayload = {
@@ -158,6 +165,30 @@ export async function createWorkOrder(payload: CreateWorkOrderPayload): Promise<
   }
 
   assertApiSuccess(responseBody, WORK_ORDER_CREATE_ERROR_MESSAGE)
+
+  return extractCreateResult(responseBody)
+}
+
+export async function updateWorkOrder(payload: UpdateWorkOrderPayload): Promise<CreateWorkOrderResult> {
+  const normalizedPayload = {
+    Uuid: getRequiredString(payload.Uuid, "Uuid"),
+    Remark: getOptionalString(payload.Remark),
+  }
+
+  const response = await fetch(WORK_ORDER_UPDATE_API_URL, {
+    method: "POST",
+    headers: buildApiHeaders({
+      "Content-Type": "application/json",
+    }),
+    body: JSON.stringify(normalizedPayload),
+  })
+  const responseBody = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responseBody, WORK_ORDER_UPDATE_ERROR_MESSAGE)
+  }
+
+  assertApiSuccess(responseBody, WORK_ORDER_UPDATE_ERROR_MESSAGE)
 
   return extractCreateResult(responseBody)
 }

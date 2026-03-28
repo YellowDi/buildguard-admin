@@ -22,7 +22,7 @@ import { handleApiError } from "@/lib/api-errors"
 import { fetchCustomers, type CustomerListItem } from "@/lib/customers-api"
 import { fetchCustomerDetail } from "@/lib/customers-api"
 import { fetchInspectionPlans, type InspectionPlanListItem } from "@/lib/inspection-plans-api"
-import { createWorkOrder } from "@/lib/work-orders-api"
+import { createWorkOrder, updateWorkOrder } from "@/lib/work-orders-api"
 
 type QuickNavItem = {
   id: string
@@ -86,20 +86,50 @@ let observer: IntersectionObserver | null = null
 let observerActive = false
 let suppressCustomerWatch = false
 
-const routeCustomerUuid = computed(() => typeof route.params.id === "string" ? route.params.id.trim() : "")
+const isEditMode = computed(() => route.name === "inspection-work-order-edit")
+const routeCustomerUuid = computed(() => {
+  if (isEditMode.value) {
+    return ""
+  }
+
+  return typeof route.params.id === "string" ? route.params.id.trim() : ""
+})
+const workOrderUuid = computed(() => isEditMode.value && typeof route.params.id === "string" ? route.params.id.trim() : "")
 const queryCustomerName = computed(() => typeof route.query.customerName === "string" ? route.query.customerName.trim() : "")
+const queryCustomerUuid = computed(() => typeof route.query.customerUuid === "string" ? route.query.customerUuid.trim() : "")
+const queryPlanUuid = computed(() => typeof route.query.planUuid === "string" ? route.query.planUuid.trim() : "")
+const queryPlanName = computed(() => typeof route.query.planName === "string" ? route.query.planName.trim() : "")
+const queryPackageName = computed(() => typeof route.query.packageName === "string" ? route.query.packageName.trim() : "")
+const queryDeadline = computed(() => typeof route.query.deadline === "string" ? route.query.deadline.trim() : "")
+const queryStatus = computed(() => typeof route.query.status === "string" ? route.query.status.trim() : "")
+const queryRemark = computed(() => typeof route.query.remark === "string" ? route.query.remark : "")
+const queryReturnTo = computed(() => typeof route.query.returnTo === "string" ? route.query.returnTo.trim() : "")
+const pageTitle = computed(() => isEditMode.value ? "编辑工单" : "添加工单")
 const canSubmit = computed(() =>
-  Boolean(
-    normalizeText(form.customerUuid)
-    && normalizeText(form.planUuid)
-    && normalizeText(form.packageName)
-    && normalizeText(form.deadline)
-    && normalizeText(form.status)
-    && !submitting.value
-    && !planLoading.value,
-  ),
+  isEditMode.value
+    ? Boolean(normalizeText(workOrderUuid.value) && !submitting.value)
+    : Boolean(
+        normalizeText(form.customerUuid)
+        && normalizeText(form.planUuid)
+        && normalizeText(form.packageName)
+        && normalizeText(form.deadline)
+        && normalizeText(form.status)
+        && !submitting.value
+        && !planLoading.value,
+      ),
 )
-const submitButtonLabel = computed(() => submitting.value ? "提交中..." : "添加工单")
+const submitButtonLabel = computed(() => {
+  if (submitting.value) {
+    return isEditMode.value ? "保存中..." : "提交中..."
+  }
+
+  return isEditMode.value ? "保存备注" : "添加工单"
+})
+const resetDialogDescription = computed(() =>
+  isEditMode.value
+    ? "当前已修改的备注将恢复为最近一次加载的内容，此操作不可撤销。"
+    : "当前已填写的工单信息都会被清空，此操作不可撤销。",
+)
 
 function handleFocus(sectionId: string) {
   activeNavId.value = sectionId
@@ -145,6 +175,54 @@ function scrollToSection(id: string) {
 }
 
 async function handleSubmit() {
+  if (isEditMode.value) {
+    if (!normalizeText(workOrderUuid.value)) {
+      toast.error("工单 Uuid 缺失")
+      return
+    }
+
+    submitting.value = true
+
+    try {
+      const payload = {
+        Uuid: normalizeText(workOrderUuid.value),
+        Remark: getOptionalText(form.remark),
+      }
+      const result = await updateWorkOrder(payload)
+
+      toast.success("工单备注已更新", {
+        description: result.Uuid
+          ? `工单 UUID：${result.Uuid}`
+          : "工单备注已提交到接口。",
+      })
+
+      if (queryReturnTo.value === "inspection-work-orders") {
+        await router.push({ name: "inspection-work-orders" })
+        return
+      }
+
+      if (normalizeText(form.customerUuid)) {
+        await router.push({
+          name: "customer-detail",
+          params: { id: normalizeText(form.customerUuid) },
+          query: { tab: "work-orders" },
+        })
+        return
+      }
+
+      router.back()
+    } catch (error) {
+      handleApiError(error, {
+        title: "工单更新失败",
+        fallback: "工单更新失败，请稍后重试。",
+      })
+    } finally {
+      submitting.value = false
+    }
+
+    return
+  }
+
   if (!normalizeText(form.customerUuid)) {
     toast.error("所属客户信息缺失")
     return
@@ -209,6 +287,11 @@ async function loadFormContext() {
   planOptions.value = []
 
   try {
+    if (isEditMode.value) {
+      loadEditContext()
+      return
+    }
+
     if (routeCustomerUuid.value) {
       await loadFixedCustomerContext(routeCustomerUuid.value)
       return
@@ -221,6 +304,36 @@ async function loadFormContext() {
       mode: "silent",
       fallback: "工单表单初始化失败，请稍后重试。",
     })
+  }
+}
+
+function loadEditContext() {
+  if (!workOrderUuid.value) {
+    loadError.value = "工单 Uuid 缺失，无法加载编辑表单。"
+    return
+  }
+
+  const nextForm = {
+    customerUuid: normalizeRouteField(queryCustomerUuid.value),
+    planUuid: normalizeRouteField(queryPlanUuid.value),
+    packageName: normalizeRouteField(queryPackageName.value),
+    deadline: normalizeRouteField(queryDeadline.value),
+    status: queryStatus.value || "1",
+    remark: normalizeRouteField(queryRemark.value),
+  }
+
+  customerName.value = queryCustomerName.value || "当前客户"
+  planOptions.value = queryPlanUuid.value
+    ? [{ uuid: queryPlanUuid.value, name: queryPlanName.value || queryPlanUuid.value }]
+    : []
+
+  Object.assign(form, {
+    ...createEmptyForm(),
+    ...nextForm,
+  })
+  initialFormState.value = {
+    ...createEmptyForm(),
+    ...nextForm,
   }
 }
 
@@ -426,11 +539,21 @@ function getOptionalText(value: unknown) {
   return normalized || undefined
 }
 
+function normalizeRouteField(value: string) {
+  return value === "-" ? "" : value
+}
+
 function resetLocalStateForRoute() {
   loadError.value = ""
   customerName.value = ""
+  customerOptions.value = []
   planOptions.value = []
   Object.assign(form, createEmptyForm())
+
+  if (isEditMode.value) {
+    initialFormState.value = createEmptyForm()
+    return
+  }
 
   if (routeCustomerUuid.value) {
     form.customerUuid = routeCustomerUuid.value
@@ -493,7 +616,7 @@ onUnmounted(() => {
 })
 
 watch(
-  () => [route.params.id, route.query.customerName] as const,
+  () => route.fullPath,
   () => {
     resetLocalStateForRoute()
     void loadFormContext()
@@ -517,10 +640,10 @@ watch(
 <template>
   <section class="mx-auto flex w-full max-w-4xl min-w-0 flex-col gap-6 pb-8">
     <FormHeader
-      title="添加工单"
+      :title="pageTitle"
       :primary-action="{ label: submitButtonLabel, icon: 'ri-file-add-line', disabled: !canSubmit }"
       :secondary-actions="[{ key: 'reset', label: '重置表单' }]"
-      :reset-dialog="{ description: '当前已填写的工单信息都会被清空，此操作不可撤销。' }"
+      :reset-dialog="{ description: resetDialogDescription }"
       @back="goBack"
       @reset="handleReset"
       @submit="handleSubmit"
@@ -546,7 +669,7 @@ watch(
             label-for="work-order-customer"
           >
             <Input
-              v-if="routeCustomerUuid"
+              v-if="routeCustomerUuid || isEditMode"
               id="work-order-customer"
               :model-value="customerName || '当前客户'"
               disabled
@@ -570,7 +693,15 @@ watch(
             quick-nav-label="检测计划"
             label="检测计划"
           >
-            <Select v-if="planOptions.length" v-model="form.planUuid" :disabled="planLoading">
+            <Input
+              v-if="isEditMode"
+              id="work-order-plan"
+              :model-value="queryPlanName || form.planUuid || '-'"
+              disabled
+              class="w-full"
+              @focus="handleFocus('section-plan')"
+            />
+            <Select v-else-if="planOptions.length" v-model="form.planUuid" :disabled="planLoading">
               <SelectTrigger id="work-order-plan" class="w-full" @focus="handleFocus('section-plan')">
                 <SelectValue :placeholder="planLoading ? '正在加载检测计划...' : '请选择检测计划'" />
               </SelectTrigger>
@@ -600,8 +731,9 @@ watch(
             <Input
               id="work-order-package"
               v-model="form.packageName"
-              required
-              placeholder="请输入套餐名称"
+              :disabled="isEditMode"
+              :required="!isEditMode"
+              :placeholder="isEditMode ? '-' : '请输入套餐名称'"
               class="w-full"
               @focus="handleFocus('section-package')"
             />
@@ -616,7 +748,8 @@ watch(
             <FormDatePicker
               id="work-order-deadline"
               v-model="form.deadline"
-              placeholder="请选择截止时间"
+              :disabled="isEditMode"
+              :placeholder="isEditMode ? '-' : '请选择截止时间'"
               @focus="handleFocus('section-deadline')"
             />
           </FormFieldSection>
@@ -626,7 +759,7 @@ watch(
             quick-nav-label="状态"
             label="状态"
           >
-            <Select v-model="form.status">
+            <Select v-model="form.status" :disabled="isEditMode">
               <SelectTrigger id="work-order-status" class="w-full" @focus="handleFocus('section-status')">
                 <SelectValue placeholder="请选择状态" />
               </SelectTrigger>

@@ -23,6 +23,7 @@ import {
 import { Button } from "@/components/ui/button"
 import CustomerDetailContentLoading from "@/components/loading/CustomerDetailContentLoading.vue"
 import ExportTableDialog from "@/components/table-page/ExportTableDialog.vue"
+import { workOrderStatusMap } from "@/components/table-page/statusPresets"
 import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import TablePage from "@/components/table-page/TablePage.vue"
 import SortPopover, { type SortRule } from "@/components/table-page/TableSortPopover.vue"
@@ -95,18 +96,22 @@ type CustomerBuildingAssetRow = {
 type CustomerWorkOrderRow = {
   id: string
   uuid: string
+  customerUuid: string
+  planUuid: string
   orderNo: string
-  planName: string
-  packageName: string
   customerName: string
-  deadline: string
+  packageName: string
+  executionPlan: string
   executor: string
+  status: string
   statusValue: number | null
   statusLabel: string
-  score: number | null
-  scoreLabel: string
   resultValue: number | null
   resultLabel: string
+  score: number | null
+  scoreLabel: string
+  recheckStatus: string
+  recheckTime: string
   remark: string
   createdAt: string
   updatedAt: string
@@ -535,6 +540,11 @@ const buildingAssetsSchema: TablePageSchema<CustomerBuildingAssetRow> = {
       key: "statusLabel",
       label: "状态",
       filterType: "tag",
+      cellRenderer: {
+        kind: "status",
+        map: workOrderStatusMap,
+        fallback: { tone: "gray", icon: "dot" },
+      },
       filter: {
         type: "tag",
         defaultVisible: true,
@@ -590,6 +600,18 @@ const workOrdersSchema: TablePageSchema<CustomerWorkOrderRow> = {
     description: "当前客户下暂无可展示的工单。",
     icon: "ri-file-list-3-line",
   },
+  rowActions: [
+    {
+      key: "view-work-order",
+      label: "查看详情",
+      onClick: row => handleViewWorkOrder(row as CustomerWorkOrderRow),
+    },
+    {
+      key: "assign-work-order",
+      label: "指派",
+      onClick: row => handleAssignWorkOrder(row as CustomerWorkOrderRow),
+    },
+  ],
   columns: [
     {
       key: "orderNo",
@@ -605,35 +627,33 @@ const workOrdersSchema: TablePageSchema<CustomerWorkOrderRow> = {
       sort: true,
     },
     {
-      key: "planName",
-      label: "计划名称",
+      key: "customerName",
+      label: "客户名称",
       filterType: "text",
       filter: {
         type: "text",
-        placeholder: "输入计划名称",
+        placeholder: "输入客户名称",
         defaultVisible: true,
       },
       sort: true,
     },
     {
       key: "packageName",
-      label: "套餐名称",
+      label: "检测服务",
       filterType: "text",
       filter: {
         type: "text",
-        placeholder: "输入套餐名称",
+        placeholder: "输入检测服务",
       },
       sort: true,
     },
     {
-      key: "deadline",
-      label: "截止时间",
-      filterType: "time",
-      format: "numeric",
+      key: "executionPlan",
+      label: "执行计划",
+      filterType: "text",
       filter: {
-        type: "date",
-        defaultVisible: true,
-        value: row => extractDatePart(row.deadline),
+        type: "text",
+        placeholder: "输入执行计划",
       },
       sort: true,
     },
@@ -662,6 +682,20 @@ const workOrdersSchema: TablePageSchema<CustomerWorkOrderRow> = {
       },
     },
     {
+      key: "resultLabel",
+      label: "检测结果",
+      filterType: "tag",
+      filter: {
+        type: "tag",
+        defaultVisible: true,
+      },
+      sort: {
+        label: "结果",
+        kind: "metric",
+        value: row => row.resultValue ?? -1,
+      },
+    },
+    {
       key: "scoreLabel",
       label: "评分",
       filterType: "number",
@@ -678,39 +712,25 @@ const workOrdersSchema: TablePageSchema<CustomerWorkOrderRow> = {
       },
     },
     {
-      key: "resultLabel",
-      label: "结果",
-      filterType: "tag",
+      key: "recheckStatus",
+      label: "复检状态",
+      filterType: "text",
       filter: {
-        type: "tag",
-        defaultVisible: true,
-      },
-      sort: {
-        label: "结果",
-        kind: "metric",
-        value: row => row.resultValue ?? -1,
-      },
-    },
-    {
-      key: "updatedAt",
-      label: "更新时间",
-      filterType: "time",
-      format: "numeric",
-      filter: {
-        type: "date",
-        value: row => extractDatePart(row.updatedAt),
+        type: "text",
+        placeholder: "输入复检状态",
       },
       sort: true,
     },
     {
-      key: "remark",
-      label: "备注",
-      filterType: "none",
-      variant: "note",
-      format: "note",
-      tone: "muted",
-      width: "fill",
-      cellRenderer: { kind: "note" },
+      key: "recheckTime",
+      label: "复检时间",
+      filterType: "time",
+      format: "numeric",
+      filter: {
+        type: "date",
+        value: row => extractDatePart(row.recheckTime),
+      },
+      sort: true,
     },
   ],
   filters: [
@@ -1067,6 +1087,14 @@ function handleAddWorkOrder() {
       customerName: toDisplayText(customer.value?.CorpName, "当前客户"),
     },
   })
+}
+
+function handleViewWorkOrder(row: CustomerWorkOrderRow) {
+  toast.info(`工单「${row.orderNo || row.uuid}」详情页暂未接入`)
+}
+
+function handleAssignWorkOrder(row: CustomerWorkOrderRow) {
+  toast.info(`工单「${row.orderNo || row.uuid}」指派功能暂未接入`)
 }
 
 function handleAddMonitoring() {
@@ -1834,17 +1862,15 @@ function buildBuildingAssetsFilterText(row: CustomerBuildingAssetRow) {
 function buildWorkOrdersFilterText(row: CustomerWorkOrderRow) {
   return [
     row.orderNo,
-    row.planName,
-    row.packageName,
     row.customerName,
-    row.deadline,
+    row.packageName,
+    row.executionPlan,
     row.executor,
     row.statusLabel,
-    row.scoreLabel,
     row.resultLabel,
-    row.remark,
-    row.createdAt,
-    row.updatedAt,
+    row.scoreLabel,
+    row.recheckStatus,
+    row.recheckTime,
   ].join(" ")
 }
 
@@ -1928,18 +1954,22 @@ function mapWorkOrderRow(item: WorkOrderListItem, index: number): CustomerWorkOr
   return {
     id: uuid || fallbackId,
     uuid: uuid || fallbackId,
+    customerUuid: toDisplayText(item.CustomerUuid, customerUuid.value),
+    planUuid: toDisplayText(item.PlanUuid, ""),
     orderNo: toDisplayText(item.OrderNo, "-"),
-    planName: toDisplayText(item.PlanName, "-"),
-    packageName: toDisplayText(item.PackageName, "-"),
     customerName: toDisplayText(item.CustomerName, toDisplayText(customer.value?.CorpName, "-")),
-    deadline: toDisplayText(item.Deadline, "-"),
+    packageName: toDisplayText(item.PackageName, "-"),
+    executionPlan: "-",
     executor: toDisplayText(item.Executor, "-"),
+    status: statusValue === null ? "" : String(statusValue),
     statusValue,
     statusLabel: formatWorkOrderStatus(statusValue),
-    score,
-    scoreLabel: formatWorkOrderScore(score),
     resultValue,
     resultLabel: formatWorkOrderResult(resultValue),
+    score,
+    scoreLabel: formatWorkOrderScore(score),
+    recheckStatus: "-",
+    recheckTime: "-",
     remark: toDisplayText(item.Remark, "-"),
     createdAt: toDisplayText(item.CreatedAt, "-"),
     updatedAt: toDisplayText(item.UpdatedAt, "-"),

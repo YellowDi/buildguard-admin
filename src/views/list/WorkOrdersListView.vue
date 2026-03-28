@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
+import { toast } from "vue-sonner"
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import TablePageLoading from "@/components/loading/TablePageLoading.vue"
 import TablePage from "@/components/table-page/TablePage.vue"
+import { workOrderStatusMap } from "@/components/table-page/statusPresets"
 import { createTablePageDefinition, useTablePage } from "@/components/table-page/useTablePage"
 import type { TablePageSchema } from "@/components/table-page/types"
 import { useRouteTableSearch } from "@/composables/useRouteTableSearch"
@@ -32,18 +34,22 @@ type WorkOrderPageKind = "inspection" | "repair"
 type WorkOrderRecord = {
   id: string
   uuid: string
+  customerUuid: string
+  planUuid: string
   orderNo: string
-  planName: string
-  packageName: string
   customerName: string
-  deadline: string
+  packageName: string
+  executionPlan: string
   executor: string
+  status: string
   statusValue: number | null
   statusLabel: string
-  score: number | null
-  scoreLabel: string
   resultValue: number | null
   resultLabel: string
+  score: number | null
+  scoreLabel: string
+  recheckStatus: string
+  recheckTime: string
   remark: string
   createdAt: string
   updatedAt: string
@@ -73,14 +79,6 @@ const pageSortStorageKey = computed(() => props.kind === "inspection"
 const primaryActionLabel = props.kind === "inspection" ? "添加工单" : ""
 const router = useRouter()
 
-const planColumnLabel = props.kind === "inspection" ? "计划名称" : "报修标题"
-const packageColumnLabel = props.kind === "inspection" ? "套餐名称" : "园区名称"
-const deadlineColumnLabel = props.kind === "inspection" ? "截止时间" : "创建时间"
-const executorColumnLabel = props.kind === "inspection" ? "执行人" : "报修人"
-const scoreColumnLabel = props.kind === "inspection" ? "评分" : "紧急程度"
-const resultColumnLabel = props.kind === "inspection" ? "结果" : "报修类型"
-const updatedAtColumnLabel = props.kind === "inspection" ? "更新时间" : "创建时间"
-
 const schema: TablePageSchema<WorkOrderRecord> = {
   title: pageTitle.value,
   description: props.kind === "inspection" ? "所有客户检修工单列表" : "所有客户维修工单列表",
@@ -94,6 +92,20 @@ const schema: TablePageSchema<WorkOrderRecord> = {
     description: pageEmptyStateDescription.value,
     icon: "ri-file-list-3-line",
   },
+  rowActions: props.kind === "inspection"
+    ? [
+        {
+          key: "view-detail",
+          label: "查看详情",
+          onClick: row => handleViewDetail(row as WorkOrderRecord),
+        },
+        {
+          key: "assign",
+          label: "指派",
+          onClick: row => handleAssign(row as WorkOrderRecord),
+        },
+      ]
+    : [],
   columns: [
     {
       key: "orderNo",
@@ -109,27 +121,6 @@ const schema: TablePageSchema<WorkOrderRecord> = {
       sort: true,
     },
     {
-      key: "planName",
-      label: planColumnLabel,
-      filterType: "text",
-      filter: {
-        type: "text",
-        placeholder: props.kind === "inspection" ? "输入计划名称" : "输入报修标题",
-        defaultVisible: true,
-      },
-      sort: true,
-    },
-    {
-      key: "packageName",
-      label: packageColumnLabel,
-      filterType: "text",
-      filter: {
-        type: "text",
-        placeholder: props.kind === "inspection" ? "输入套餐名称" : "输入园区名称",
-      },
-      sort: true,
-    },
-    {
       key: "customerName",
       label: "客户名称",
       filterType: "text",
@@ -141,24 +132,32 @@ const schema: TablePageSchema<WorkOrderRecord> = {
       sort: true,
     },
     {
-      key: "deadline",
-      label: deadlineColumnLabel,
-      filterType: "time",
-      format: "numeric",
+      key: "packageName",
+      label: "检测服务",
+      filterType: "text",
       filter: {
-        type: "date",
-        defaultVisible: true,
-        value: row => extractDatePart(row.deadline),
+        type: "text",
+        placeholder: "输入检测服务",
+      },
+      sort: true,
+    },
+    {
+      key: "executionPlan",
+      label: "执行计划",
+      filterType: "text",
+      filter: {
+        type: "text",
+        placeholder: "输入执行计划",
       },
       sort: true,
     },
     {
       key: "executor",
-      label: executorColumnLabel,
+      label: "执行人",
       filterType: "text",
       filter: {
         type: "text",
-        placeholder: props.kind === "inspection" ? "输入执行人" : "输入报修人",
+        placeholder: "输入执行人",
       },
       sort: true,
     },
@@ -166,6 +165,11 @@ const schema: TablePageSchema<WorkOrderRecord> = {
       key: "statusLabel",
       label: "状态",
       filterType: "tag",
+      cellRenderer: {
+        kind: "status",
+        map: workOrderStatusMap,
+        fallback: { tone: "gray", icon: "dot" },
+      },
       filter: {
         type: "tag",
         defaultVisible: true,
@@ -177,8 +181,22 @@ const schema: TablePageSchema<WorkOrderRecord> = {
       },
     },
     {
+      key: "resultLabel",
+      label: "检测结果",
+      filterType: "tag",
+      filter: {
+        type: "tag",
+        defaultVisible: true,
+      },
+      sort: {
+        label: "结果",
+        kind: "metric",
+        value: row => row.resultValue ?? -1,
+      },
+    },
+    {
       key: "scoreLabel",
-      label: scoreColumnLabel,
+      label: "评分",
       filterType: "number",
       format: "numeric",
       filter: {
@@ -193,39 +211,25 @@ const schema: TablePageSchema<WorkOrderRecord> = {
       },
     },
     {
-      key: "resultLabel",
-      label: resultColumnLabel,
-      filterType: "tag",
+      key: "recheckStatus",
+      label: "复检状态",
+      filterType: "text",
       filter: {
-        type: "tag",
-        defaultVisible: true,
-      },
-      sort: {
-        label: "结果",
-        kind: "metric",
-        value: row => row.resultValue ?? -1,
-      },
-    },
-    {
-      key: "updatedAt",
-      label: updatedAtColumnLabel,
-      filterType: "time",
-      format: "numeric",
-      filter: {
-        type: "date",
-        value: row => extractDatePart(row.updatedAt),
+        type: "text",
+        placeholder: "输入复检状态",
       },
       sort: true,
     },
     {
-      key: "remark",
-      label: "备注",
-      filterType: "none",
-      variant: "note",
-      format: "note",
-      tone: "muted",
-      width: "fill",
-      cellRenderer: { kind: "note" },
+      key: "recheckTime",
+      label: "复检时间",
+      filterType: "time",
+      format: "numeric",
+      filter: {
+        type: "date",
+        value: row => extractDatePart(row.recheckTime),
+      },
+      sort: true,
     },
   ],
   filters: [
@@ -273,18 +277,24 @@ function extractDatePart(value: string) {
 function buildPageFilterText(row: WorkOrderRecord) {
   return [
     row.orderNo,
-    row.planName,
-    row.packageName,
     row.customerName,
-    row.deadline,
+    row.packageName,
+    row.executionPlan,
     row.executor,
     row.statusLabel,
-    row.scoreLabel,
     row.resultLabel,
-    row.remark,
-    row.createdAt,
-    row.updatedAt,
+    row.scoreLabel,
+    row.recheckStatus,
+    row.recheckTime,
   ].join(" ")
+}
+
+function handleViewDetail(row: WorkOrderRecord) {
+  toast.info(`工单「${row.orderNo || row.uuid}」详情页暂未接入`)
+}
+
+function handleAssign(row: WorkOrderRecord) {
+  toast.info(`工单「${row.orderNo || row.uuid}」指派功能暂未接入`)
 }
 
 async function loadWorkOrders() {
@@ -350,25 +360,28 @@ function normalizeInspectionWorkOrderRecord(item: WorkOrderListItem, index: numb
   const score = toNumber(item.Score)
   const resultValue = toNumber(item.Result)
   const orderNo = toText(item.OrderNo, `WO-${fallbackId}`)
-  const planName = toText(item.PlanName, "-")
   const packageName = toText(item.PackageName, "-")
   const remark = toText(item.Remark, "-")
 
   return {
     id: uuid || fallbackId,
     uuid: uuid || fallbackId,
+    customerUuid: toText(item.CustomerUuid),
+    planUuid: toText(item.PlanUuid),
     orderNo,
-    planName,
-    packageName,
     customerName: toText(item.CustomerName, "-"),
-    deadline: toText(item.Deadline, "-"),
+    packageName,
+    executionPlan: "-",
     executor: toText(item.Executor, "-"),
+    status: statusValue === null ? "" : String(statusValue),
     statusValue,
     statusLabel: formatStatusLabel(props.kind, statusValue),
-    score,
-    scoreLabel: formatScoreLabel(score, props.kind),
     resultValue,
     resultLabel: formatResultLabel(resultValue, props.kind),
+    score,
+    scoreLabel: formatScoreLabel(score, props.kind),
+    recheckStatus: "-",
+    recheckTime: "-",
     remark,
     createdAt: toText(item.CreatedAt, "-"),
     updatedAt: toText(item.UpdatedAt, "-"),
@@ -386,18 +399,22 @@ function normalizeRepairWorkOrderRecord(item: RepairWorkOrderListItem, index: nu
   return {
     id: uuid || fallbackId,
     uuid: uuid || fallbackId,
+    customerUuid: toText(item.CustomerUuid),
+    planUuid: "",
     orderNo: toText(item.OrderNo, `RP-${fallbackId}`),
-    planName: toText(item.Title, "-"),
-    packageName: toText(item.ParkName, "-"),
     customerName: toText(item.CustomerName || item.CorpName, "-"),
-    deadline: createdAt,
+    packageName: toText(item.ParkName, "-"),
+    executionPlan: "-",
     executor: toText(item.UserName, "-"),
+    status: statusValue === null ? "" : String(statusValue),
     statusValue,
     statusLabel: formatStatusLabel(props.kind, statusValue),
-    score: importantValue,
-    scoreLabel: formatScoreLabel(importantValue, props.kind),
     resultValue: reportTypeValue,
     resultLabel: formatResultLabel(reportTypeValue, props.kind),
+    score: importantValue,
+    scoreLabel: formatScoreLabel(importantValue, props.kind),
+    recheckStatus: "-",
+    recheckTime: "-",
     remark: toText(item.RepairContent || item.Content, "-"),
     createdAt,
     updatedAt: createdAt,
