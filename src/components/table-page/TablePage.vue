@@ -14,6 +14,11 @@ const props = defineProps({
     type: Boolean,
     default: true,
   },
+  /** 默认 true（路由一级列表）；详情页内嵌表传 false */
+  listLevelTable: {
+    type: Boolean,
+    default: true,
+  },
 })
 
 const emit = defineEmits<{
@@ -61,6 +66,7 @@ const slots = useSlots()
     :table-class="page.tableClass"
     :empty-state="page.emptyState"
     :show-toolbar-actions="props.showToolbarActions"
+    :list-level-table="props.listLevelTable"
     @tab-click="page.handleTabClick"
     @add-filter="page.handleAddFilter"
     @replace-filter="page.handleReplaceFilter"

@@ -62,8 +62,11 @@ const props = withDefaults(defineProps<{
   sections?: TableSection[]
   emptyState?: TablePageEmptyState
   showToolbarActions?: boolean
+  /** 一级列表页表格：操作列右侧额外留白 */
+  listLevelTable?: boolean
 }>(), {
   showToolbarActions: true,
+  listLevelTable: false,
 })
 
 const emit = defineEmits<{
@@ -215,6 +218,7 @@ async function handleExportConfirm(payload: { scope: TableExportScope; format: T
                 :wrapper-class="section.wrapperClass ?? props.wrapperClass"
                 :table-class="section.tableClass ?? props.tableClass"
                 :empty-state="props.emptyState"
+                :list-level-table="props.listLevelTable"
                 @update:selected-row-keys="emit('update:selected-row-keys', $event)"
               >
                 <template
@@ -239,6 +243,7 @@ async function handleExportConfirm(payload: { scope: TableExportScope; format: T
               :wrapper-class="props.wrapperClass"
               :table-class="props.tableClass"
               :empty-state="props.emptyState"
+              :list-level-table="props.listLevelTable"
               @update:selected-row-keys="emit('update:selected-row-keys', $event)"
             >
               <template

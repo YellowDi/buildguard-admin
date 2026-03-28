@@ -49,6 +49,8 @@ const props = withDefaults(defineProps<{
   wrapperClass?: string
   tableClass?: string
   emptyState?: TablePageEmptyState
+  /** 一级列表全页表格：操作列右侧额外留白；详情/设置内嵌表勿开 */
+  listLevelTable?: boolean
 }>(), {
   summary: "",
   showIndex: false,
@@ -56,6 +58,7 @@ const props = withDefaults(defineProps<{
   wrapperClass: "",
   tableClass: "",
   emptyState: undefined,
+  listLevelTable: false,
 })
 const emit = defineEmits<{
   "update:selected-row-keys": [keys: RowSelectionKey[]]
@@ -65,6 +68,12 @@ const wrapperClassName = computed(() => getTableWrapperClass(props.wrapperClass)
 const scrollViewportClassName = computed(() => getTableScrollViewportClass())
 const tableClassName = computed(() => getTableClass(props.tableClass))
 const hasRowActions = computed(() => (props.rowActions?.length ?? 0) > 0)
+const actionPaddingTheme = computed(() => ({
+  header: props.listLevelTable ? tableTheme.actionHeaderList : tableTheme.actionHeader,
+  sizer: props.listLevelTable ? tableTheme.actionSizerList : tableTheme.actionSizer,
+  railSurface: props.listLevelTable ? tableTheme.actionRailSurfaceList : tableTheme.actionRailSurface,
+  headerRailSurface: props.listLevelTable ? tableTheme.actionHeaderRailSurfaceList : tableTheme.actionHeaderRailSurface,
+}))
 const tableShellRef = ref<HTMLElement | null>(null)
 const tableWrapperRef = ref<HTMLElement | null>(null)
 const tableRef = ref<HTMLTableElement | null>(null)
@@ -299,7 +308,7 @@ function getActionRailRowClass(rowKey: RowSelectionKey) {
 
 function getActionRailSurfaceClass(rowKey: RowSelectionKey) {
   return cn(
-    tableTheme.actionRailSurface,
+    actionPaddingTheme.value.railSurface,
     horizontalOverflow.value ? tableTheme.actionRailSurfaceShadow : "",
     isRowKeySelected(rowKey)
       ? "bg-[#EBF1FF]"
@@ -423,7 +432,7 @@ function getActionRailSpacerStyle() {
 
 function getActionHeaderRailSurfaceClass() {
   return cn(
-    tableTheme.actionHeaderRailSurface,
+    actionPaddingTheme.value.headerRailSurface,
     horizontalOverflow.value ? tableTheme.actionRailSurfaceShadow : "",
     "bg-background",
   )
@@ -980,7 +989,7 @@ onBeforeUnmount(() => {
             </th>
             <th
               v-if="hasRowActions"
-              :class="[tableTheme.actionHeader, tableTheme.actionHeaderSticky]"
+              :class="[actionPaddingTheme.header, tableTheme.actionHeaderSticky]"
               :style="getActionColumnStyle() ?? getStickyCellStyle(stickyColumnWidths.length - 2)"
             />
             <th
@@ -1069,7 +1078,7 @@ onBeforeUnmount(() => {
           </th>
           <th
             v-if="hasRowActions"
-            :class="tableTheme.actionHeader"
+            :class="actionPaddingTheme.header"
             :style="getActionColumnStyle()"
           />
           <th :class="tableTheme.endSpacerHeader" />
@@ -1225,7 +1234,7 @@ onBeforeUnmount(() => {
             :class="getActionCellClass(row, index)"
             :style="getActionColumnStyle()"
           >
-            <div aria-hidden="true" :class="tableTheme.actionSizer" data-table-action-sizer>
+            <div aria-hidden="true" :class="actionPaddingTheme.sizer" data-table-action-sizer>
               <Button
                 v-for="action in rowActions"
                 :key="`sizer-${action.key}`"

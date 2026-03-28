@@ -984,7 +984,7 @@ function getInspectionServiceWorkOrders() {
         </div>
 
         <div v-else-if="workOrders.length" class="flex min-h-0 flex-1 flex-col">
-          <TablePage :page="workOrdersPage" :show-toolbar-actions="false" class="-mt-3 sm:-mx-4 xl:-mx-8" />
+          <TablePage :page="workOrdersPage" :show-toolbar-actions="false" :list-level-table="false" class="-mt-3 sm:-mx-4 xl:-mx-8" />
 
           <div class="mt-auto flex items-center justify-end gap-3 px-4 pt-4 sm:px-0">
             <span class="text-sm text-muted-foreground">

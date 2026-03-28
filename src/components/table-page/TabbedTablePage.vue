@@ -67,6 +67,7 @@ const emit = defineEmits<{
     :sticky-header="activePage.stickyHeader"
     :wrapper-class="activePage.wrapperClass"
     :table-class="activePage.tableClass"
+    :list-level-table="true"
     @tab-click="emit('tab-click', $event)"
     @add-filter="activePage.handleAddFilter"
     @replace-filter="activePage.handleReplaceFilter"
