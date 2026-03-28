@@ -394,6 +394,7 @@ defineExpose({
         </div>
 
         <Button
+          v-if="!searchExpanded"
           variant="ghost"
           size="sm"
           class="h-8 rounded-md px-3"

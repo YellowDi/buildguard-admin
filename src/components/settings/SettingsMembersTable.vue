@@ -1233,7 +1233,7 @@ function asMemberRow(row: Record<string, unknown>) {
             />
           </div>
 
-          <Button variant="ghost" size="sm" class="h-8 rounded-md px-3" @click="loadAllData">
+          <Button v-if="!searchExpanded" variant="ghost" size="sm" class="h-8 rounded-md px-3" @click="loadAllData">
             <i class="ri-refresh-line text-sm" />
             <span>刷新列表</span>
           </Button>

@@ -683,7 +683,7 @@ defineExpose({
           />
         </div>
 
-        <Button variant="ghost" size="sm" class="h-8 rounded-md px-3" @click="refreshInspectionItemsPage">
+        <Button v-if="!searchExpanded" variant="ghost" size="sm" class="h-8 rounded-md px-3" @click="refreshInspectionItemsPage">
           <i class="ri-refresh-line text-sm" />
           <span>刷新列表</span>
         </Button>

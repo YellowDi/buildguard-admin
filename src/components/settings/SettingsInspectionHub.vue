@@ -122,7 +122,7 @@ async function refreshCurrentTab() {
             :class="
               cn(
                 'flex h-8 items-center overflow-hidden rounded-full border border-input bg-background transition-[width,padding] duration-200 ease-out',
-                searchExpanded ? 'w-[220px] px-1.5' : 'w-8 justify-center border-transparent px-0',
+                searchExpanded ? 'w-[260px] px-1.5' : 'w-8 justify-center border-transparent px-0',
               )
             "
           >
@@ -142,6 +142,7 @@ async function refreshCurrentTab() {
           </div>
 
           <Button
+            v-if="!searchExpanded"
             variant="ghost"
             size="sm"
             class="h-8 rounded-md px-3"

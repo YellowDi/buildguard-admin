@@ -752,7 +752,7 @@ function formatDateTime(...values: unknown[]) {
             />
           </div>
 
-          <Button variant="ghost" size="sm" class="h-8 rounded-md px-3" :disabled="loading" @click="handleRefresh">
+          <Button v-if="!searchExpanded" variant="ghost" size="sm" class="h-8 rounded-md px-3" :disabled="loading" @click="handleRefresh">
             <i :class="loading ? 'ri-loader-4-line animate-spin text-sm' : 'ri-refresh-line text-sm'" />
             <span>刷新列表</span>
           </Button>
