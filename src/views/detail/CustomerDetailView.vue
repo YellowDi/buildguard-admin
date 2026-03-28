@@ -138,6 +138,8 @@ type CustomerWorkOrderRow = {
   remark: string
   createdAt: string
   updatedAt: string
+  createdStartAt: string
+  createdEndAt: string
 }
 
 type MonitoringRow = {
@@ -812,13 +814,24 @@ const inspectionWorkOrdersSchema: TablePageSchema<CustomerWorkOrderRow> = {
       },
     },
     {
-      key: "createdAt",
-      label: "创建时间",
+      key: "createdStartAt",
+      label: "创建开始时间",
       filterType: "time",
       format: "numeric",
       filter: {
         type: "date",
-        value: row => extractDatePart(row.createdAt),
+        value: row => extractDatePart(row.createdStartAt),
+      },
+      sort: true,
+    },
+    {
+      key: "createdEndAt",
+      label: "创建结束时间",
+      filterType: "time",
+      format: "numeric",
+      filter: {
+        type: "date",
+        value: row => extractDatePart(row.createdEndAt),
       },
       sort: true,
     },
@@ -976,13 +989,24 @@ const repairWorkOrdersSchema: TablePageSchema<CustomerWorkOrderRow> = {
       },
     },
     {
-      key: "createdAt",
-      label: "创建时间",
+      key: "createdStartAt",
+      label: "创建开始时间",
       filterType: "time",
       format: "numeric",
       filter: {
         type: "date",
-        value: row => extractDatePart(row.createdAt),
+        value: row => extractDatePart(row.createdStartAt),
+      },
+      sort: true,
+    },
+    {
+      key: "createdEndAt",
+      label: "创建结束时间",
+      filterType: "time",
+      format: "numeric",
+      filter: {
+        type: "date",
+        value: row => extractDatePart(row.createdEndAt),
       },
       sort: true,
     },
@@ -998,8 +1022,8 @@ const repairWorkOrdersSchema: TablePageSchema<CustomerWorkOrderRow> = {
     },
   ],
   sort: {
-    storageKey: "customer-detail-repair-work-orders-sort-preferences-created-at-v2",
-    initialField: "createdAt",
+    storageKey: "customer-detail-repair-work-orders-sort-preferences-created-start-at-v3",
+    initialField: "createdStartAt",
     initialDirection: "desc",
   },
   tabs: {
@@ -2368,8 +2392,11 @@ function buildInspectionWorkOrdersFilterText(row: CustomerWorkOrderRow) {
     row.resultLabel,
     row.scoreLabel,
     row.createdAt,
+    row.updatedAt,
     row.deadline,
     row.remark,
+    row.createdStartAt,
+    row.createdEndAt,
   ].join(" ")
 }
 
@@ -2385,6 +2412,9 @@ function buildRepairWorkOrdersFilterText(row: CustomerWorkOrderRow) {
     row.statusLabel,
     row.remark,
     row.createdAt,
+    row.updatedAt,
+    row.createdStartAt,
+    row.createdEndAt,
   ].join(" ")
 }
 
@@ -2494,6 +2524,8 @@ function mapInspectionWorkOrderRow(item: WorkOrderListItem, index: number): Cust
     remark: toDisplayText(item.Remark, "-"),
     createdAt: toDisplayText(item.CreatedAt, "-"),
     updatedAt: toDisplayText(item.UpdatedAt, "-"),
+    createdStartAt: "-",
+    createdEndAt: "-",
   }
 }
 
@@ -2503,7 +2535,8 @@ function mapRepairWorkOrderRow(item: RepairWorkOrderListItem, index: number): Cu
   const statusValue = toNullableNumber(item.Status)
   const importantValue = toNullableNumber(item.Important)
   const reportTypeValue = toNullableNumber(item.ReportType)
-  const createdAt = toDisplayText(item.CreatedAt, "-")
+  const createdStartAt = toDisplayText(item.CreatedStartAt, "-")
+  const createdEndAt = toDisplayText(item.CreatedEndAt, "-")
 
   return {
     id: uuid || fallbackId,
@@ -2532,8 +2565,10 @@ function mapRepairWorkOrderRow(item: RepairWorkOrderListItem, index: number): Cu
     scoreLabel: formatRepairImportantLabel(importantValue),
     deadline: "-",
     remark: toDisplayText(item.RepairContent || item.Content, "-"),
-    createdAt,
-    updatedAt: createdAt,
+    createdAt: "-",
+    updatedAt: "-",
+    createdStartAt,
+    createdEndAt,
   }
 }
 

@@ -58,6 +58,8 @@ type WorkOrderRecord = {
   remark: string
   createdAt: string
   updatedAt: string
+  createdStartAt: string
+  createdEndAt: string
 }
 
 const props = defineProps<{
@@ -80,7 +82,7 @@ const pageEmptyStateDescription = computed(() => props.kind === "inspection"
   : "当前接口暂未返回可展示的维修工单。")
 const pageSortStorageKey = computed(() => props.kind === "inspection"
   ? "inspection-work-orders-sort-preferences-created-at-v2"
-  : "repair-work-orders-sort-preferences-created-at-v2")
+  : "repair-work-orders-sort-preferences-created-start-at-v3")
 const primaryActionLabel = "添加工单"
 const router = useRouter()
 const columns = props.kind === "inspection" ? createInspectionColumns() : createRepairColumns()
@@ -131,7 +133,7 @@ const schema: TablePageSchema<WorkOrderRecord> = {
   ],
   sort: {
     storageKey: pageSortStorageKey.value,
-    initialField: "createdAt",
+    initialField: props.kind === "inspection" ? "createdAt" : "createdStartAt",
     initialDirection: "desc",
   },
   tabs: {
@@ -173,7 +175,8 @@ function buildPageFilterText(row: WorkOrderRecord) {
       row.reportTypeLabel,
       row.statusLabel,
       row.remark,
-      row.createdAt,
+      row.createdStartAt,
+      row.createdEndAt,
     ].join(" ")
   }
 
@@ -187,8 +190,11 @@ function buildPageFilterText(row: WorkOrderRecord) {
     row.resultLabel,
     row.scoreLabel,
     row.createdAt,
+    row.updatedAt,
     row.deadline,
     row.remark,
+    row.createdStartAt,
+    row.createdEndAt,
   ].join(" ")
 }
 
@@ -305,6 +311,8 @@ function normalizeInspectionWorkOrderRecord(item: WorkOrderListItem, index: numb
     remark,
     createdAt: toText(item.CreatedAt, "-"),
     updatedAt: toText(item.UpdatedAt, "-"),
+    createdStartAt: "-",
+    createdEndAt: "-",
   }
 }
 
@@ -314,7 +322,8 @@ function normalizeRepairWorkOrderRecord(item: RepairWorkOrderListItem, index: nu
   const statusValue = toNumber(item.Status)
   const importantValue = toNumber(item.Important)
   const reportTypeValue = toNumber(item.ReportType)
-  const createdAt = toText(item.CreatedAt, "-")
+  const createdStartAt = toText(item.CreatedStartAt, "-")
+  const createdEndAt = toText(item.CreatedEndAt, "-")
 
   return {
     id: uuid || fallbackId,
@@ -341,8 +350,10 @@ function normalizeRepairWorkOrderRecord(item: RepairWorkOrderListItem, index: nu
     scoreLabel: formatScoreLabel(importantValue, props.kind),
     deadline: "-",
     remark: toText(item.RepairContent || item.Content, "-"),
-    createdAt,
-    updatedAt: createdAt,
+    createdAt: "-",
+    updatedAt: "-",
+    createdStartAt,
+    createdEndAt,
   }
 }
 
@@ -553,6 +564,17 @@ function createInspectionColumns(): TablePageSchema<WorkOrderRecord>["columns"] 
       },
       sort: true,
     },
+    {
+      key: "updatedAt",
+      label: "更新时间",
+      filterType: "time",
+      format: "numeric",
+      filter: {
+        type: "date",
+        value: row => extractDatePart(row.updatedAt),
+      },
+      sort: true,
+    },
   ]
 }
 
@@ -670,14 +692,25 @@ function createRepairColumns(): TablePageSchema<WorkOrderRecord>["columns"] {
       },
     },
     {
-      key: "createdAt",
-      label: "创建时间",
+      key: "createdStartAt",
+      label: "创建开始时间",
       filterType: "time",
       format: "numeric",
       filter: {
         type: "date",
         defaultVisible: true,
-        value: row => extractDatePart(row.createdAt),
+        value: row => extractDatePart(row.createdStartAt),
+      },
+      sort: true,
+    },
+    {
+      key: "createdEndAt",
+      label: "创建结束时间",
+      filterType: "time",
+      format: "numeric",
+      filter: {
+        type: "date",
+        value: row => extractDatePart(row.createdEndAt),
       },
       sort: true,
     },

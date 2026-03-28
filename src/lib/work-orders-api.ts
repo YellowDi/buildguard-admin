@@ -86,7 +86,10 @@ export type RepairWorkOrderListItem = {
   Content?: string
   Title?: string
   Status?: number
+  CreatedStartAt?: string
+  CreatedEndAt?: string
   CreatedAt?: string
+  UpdatedAt?: string
   AfterRepairFile?: string
   BeforeRepairFile?: string
   RepairContent?: string
@@ -395,6 +398,8 @@ function normalizeWorkOrderListItem(value: unknown): WorkOrderListItem {
     Score: getFirstNumber(record, ["Score", "score", "TotalScore", "totalScore"]),
     Result: getFirstNumber(record, ["Result", "result", "WorkOrderResult", "workOrderResult"]),
     Remark: getFirstText(record, ["Remark", "remark", "Note", "note", "Description", "description"]),
+    CreatedStartAt: getFirstText(record, ["CreatedStartAt", "createdStartAt"]),
+    CreatedEndAt: getFirstText(record, ["CreatedEndAt", "createdEndAt"]),
     CreatedAt: getFirstText(record, ["CreatedAt", "createdAt", "CreateTime", "createTime"]),
     UpdatedAt: getFirstText(record, ["UpdatedAt", "updatedAt", "UpdateTime", "updateTime"]),
   }
@@ -425,6 +430,7 @@ function normalizeRepairWorkOrderListItem(value: unknown): RepairWorkOrderListIt
     Title: getFirstText(record, ["Title", "title"]),
     Status: getFirstNumber(record, ["Status", "status"]),
     CreatedAt: getFirstText(record, ["CreatedAt", "createdAt", "CreateTime", "createTime"]),
+    UpdatedAt: getFirstText(record, ["UpdatedAt", "updatedAt", "UpdateTime", "updateTime"]),
     AfterRepairFile: getFirstText(record, ["AfterRepairFile", "afterRepairFile"]),
     BeforeRepairFile: getFirstText(record, ["BeforeRepairFile", "beforeRepairFile"]),
     RepairContent: getFirstText(record, ["RepairContent", "repairContent"]),
