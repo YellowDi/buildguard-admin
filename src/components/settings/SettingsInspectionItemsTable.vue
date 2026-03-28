@@ -856,7 +856,13 @@ defineExpose({
           </div>
 
           <DialogFooter class="pt-2 sm:justify-between">
-            <Button type="button" variant="destructive" :disabled="editDetailLoading || editSubmitting || deleteSubmitting" @click="promptDeleteEditingItem">
+            <Button
+              type="button"
+              variant="outline"
+              class="border-destructive/30 bg-background font-medium text-destructive shadow-none hover:bg-destructive/5 hover:text-destructive"
+              :disabled="editDetailLoading || editSubmitting || deleteSubmitting"
+              @click="promptDeleteEditingItem"
+            >
               {{ deleteSubmitting ? "删除中..." : "删除检测项" }}
             </Button>
             <div class="flex items-center justify-end gap-2">

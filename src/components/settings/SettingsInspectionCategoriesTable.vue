@@ -483,8 +483,8 @@ defineExpose({
           <DialogFooter class="flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
             <Button
               type="button"
-              variant="destructive"
-              class="w-full sm:w-auto"
+              variant="outline"
+              class="w-full gap-1 border-destructive/30 bg-background font-medium text-destructive shadow-none hover:bg-destructive/5 hover:text-destructive sm:w-auto"
               :disabled="editSubmitting || deleteSubmitting"
               @click="promptDeleteEditingCategory"
             >

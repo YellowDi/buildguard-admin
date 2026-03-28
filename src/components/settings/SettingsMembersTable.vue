@@ -1607,7 +1607,8 @@ function asRoleRow(row: Record<string, unknown>) {
             <Button
               v-if="editingRoleId !== null"
               type="button"
-              variant="destructive"
+              variant="outline"
+              class="border-destructive/30 bg-background font-medium text-destructive shadow-none hover:bg-destructive/5 hover:text-destructive"
               :disabled="roleSubmitting || roleDeleteSubmitting"
               @click="promptDeleteEditingRole"
             >
@@ -1707,7 +1708,13 @@ function asRoleRow(row: Record<string, unknown>) {
           </div>
 
           <DialogFooter class="pt-2 sm:justify-between">
-            <Button type="button" variant="destructive" :disabled="editDetailLoading || editSubmitting || deleteSubmitting" @click="promptDeleteEditingMember">
+            <Button
+              type="button"
+              variant="outline"
+              class="border-destructive/30 bg-background font-medium text-destructive shadow-none hover:bg-destructive/5 hover:text-destructive"
+              :disabled="editDetailLoading || editSubmitting || deleteSubmitting"
+              @click="promptDeleteEditingMember"
+            >
               {{ deleteSubmitting ? "删除中..." : "删除用户" }}
             </Button>
             <div class="flex items-center justify-end gap-2">

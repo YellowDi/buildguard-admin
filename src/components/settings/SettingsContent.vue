@@ -172,8 +172,12 @@ function getBooleanValue(key: keyof SettingsState) {
 
                   <Button
                     v-else
-                    :variant="item.variant ?? 'default'"
-                    class="h-9 shrink-0 rounded-md px-3.5"
+                    :variant="item.variant === 'destructive' ? 'outline' : (item.variant ?? 'default')"
+                    :class="cn(
+                      'h-9 shrink-0 rounded-md px-3.5',
+                      item.variant === 'destructive'
+                        && 'border-destructive/30 bg-background font-medium text-destructive shadow-none hover:bg-destructive/5 hover:text-destructive',
+                    )"
                     @click="emit('action', item.actionKey)"
                   >
                     {{ item.buttonLabel }}

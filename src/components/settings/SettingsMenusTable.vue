@@ -1039,8 +1039,8 @@ function formatDateTime(...values: unknown[]) {
             <Button
               v-if="menuDialogMode === 'edit'"
               type="button"
-              variant="destructive"
-              class="w-full sm:w-auto"
+              variant="outline"
+              class="w-full gap-1 border-destructive/30 bg-background font-medium text-destructive shadow-none hover:bg-destructive/5 hover:text-destructive sm:w-auto"
               :disabled="menuSubmitting || deleteSubmitting"
               @click="promptDeleteMenu"
             >
