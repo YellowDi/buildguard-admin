@@ -138,10 +138,10 @@ const queryContent = computed(() => typeof route.query.content === "string" ? ro
 const queryReturnTo = computed(() => typeof route.query.returnTo === "string" ? route.query.returnTo.trim() : "")
 const pageTitle = computed(() => {
   if (isEditMode.value) {
-    return "编辑工单"
+    return "编辑检修工单"
   }
 
-  return isRepairKind.value ? "添加维修工单" : "添加工单"
+  return isRepairKind.value ? "添加维修工单" : "添加检修工单"
 })
 const canSubmit = computed(() => {
   if (isEditMode.value) {
