@@ -505,9 +505,10 @@ function handleMobileToolbarActionSelect(action: "filters" | "sort" | "export" |
       leave-from-class="max-h-16 opacity-100 translate-y-0"
       leave-to-class="max-h-0 opacity-0 -translate-y-1"
     >
-      <div v-if="showControls" class="px-4 py-2 sm:px-8">
-        <div class="flex flex-wrap items-center gap-0.5 text-[14px] text-muted-foreground">
-          <div class="flex min-w-0 flex-wrap items-center gap-0.5">
+        <div v-if="showControls" class="px-4 py-2 sm:px-8">
+          <div class="flex flex-wrap items-center gap-0.5 text-[14px] text-muted-foreground">
+            <slot name="controls-prefix" />
+            <div class="flex min-w-0 flex-wrap items-center gap-0.5">
             <template v-for="field in sortFields" :key="field.key">
               <Popover
                 :open="field.kind === 'sort' && openPopover === 'sort-popover' && sortPopoverSource === 'chip'"

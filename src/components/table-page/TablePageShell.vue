@@ -199,7 +199,11 @@ async function handleExportConfirm(payload: { scope: TableExportScope; format: T
           @update-date-filter="emit('update-date-filter', $event)"
           @export-action="handleOpenExportDialog"
           @primary-action="emit('primary-action')"
-        />
+        >
+          <template v-if="slots['controls-prefix']" #controls-prefix>
+            <slot name="controls-prefix" />
+          </template>
+        </Header>
 
         <div class="min-h-0 min-w-0 flex-1">
           <div class="min-h-0 min-w-0 w-full overflow-visible">

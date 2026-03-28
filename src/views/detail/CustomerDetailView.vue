@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import CustomerDetailContentLoading from "@/components/loading/CustomerDetailContentLoading.vue"
+import TopTabSwitch from "@/components/layout/TopTabSwitch.vue"
 import ExportTableDialog from "@/components/table-page/ExportTableDialog.vue"
 import { workOrderStatusMap } from "@/components/table-page/statusPresets"
 import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
@@ -43,7 +44,12 @@ import { handleApiError } from "@/lib/api-errors"
 import { fetchBuildings, type BuildingListItem } from "@/lib/buildings-api"
 import { readCustomerSubAccountLocalRecords } from "@/lib/customer-sub-accounts-api"
 import { deleteCustomer, fetchCustomerDetail, type CustomerDetailPerson, type CustomerDetailResult } from "@/lib/customers-api"
-import { fetchWorkOrders, type WorkOrderListItem } from "@/lib/work-orders-api"
+import {
+  fetchRepairWorkOrders,
+  fetchWorkOrders,
+  type RepairWorkOrderListItem,
+  type WorkOrderListItem,
+} from "@/lib/work-orders-api"
 import customersData from "@/mocks/customers.json"
 import { deletePark, fetchParkDetail, fetchParks, type ParkDetailResult, type ParkListItem } from "@/lib/parks-api"
 
@@ -96,16 +102,24 @@ type CustomerBuildingAssetRow = {
 type CustomerWorkOrderRow = {
   id: string
   uuid: string
+  workOrderKind: "inspection" | "repair"
+  workOrderTypeLabel: string
   customerUuid: string
   planUuid: string
   orderNo: string
+  workOrderName: string
   customerName: string
+  parkName: string
   packageName: string
   executionPlan: string
   executor: string
   status: string
   statusValue: number | null
   statusLabel: string
+  importantValue: number | null
+  importantLabel: string
+  reportTypeValue: number | null
+  reportTypeLabel: string
   resultValue: number | null
   resultLabel: string
   score: number | null
@@ -173,12 +187,19 @@ const parkBuildingGroups = ref<ParkBuildingGroup[]>([])
 const buildingAssets = ref<CustomerBuildingAssetRow[]>([])
 const buildingAssetsLoading = ref(false)
 const buildingAssetsErrorMessage = ref("")
-const workOrders = ref<CustomerWorkOrderRow[]>([])
-const workOrdersLoading = ref(false)
-const workOrdersErrorMessage = ref("")
-const workOrdersPageNum = ref(1)
-const workOrdersPageSize = ref(10)
-const workOrdersTotal = ref(0)
+const activeWorkOrderTableTab = ref<"inspection" | "repair">("inspection")
+const inspectionWorkOrders = ref<CustomerWorkOrderRow[]>([])
+const inspectionWorkOrdersLoading = ref(false)
+const inspectionWorkOrdersErrorMessage = ref("")
+const inspectionWorkOrdersPageNum = ref(1)
+const inspectionWorkOrdersPageSize = ref(10)
+const inspectionWorkOrdersTotal = ref(0)
+const repairWorkOrders = ref<CustomerWorkOrderRow[]>([])
+const repairWorkOrdersLoading = ref(false)
+const repairWorkOrdersErrorMessage = ref("")
+const repairWorkOrdersPageNum = ref(1)
+const repairWorkOrdersPageSize = ref(10)
+const repairWorkOrdersTotal = ref(0)
 const parkDetailSheetOpen = ref(false)
 const parkDetailLoading = ref(false)
 const parkDetailErrorMessage = ref("")
@@ -191,7 +212,8 @@ const activeBuildingParkUuid = ref("")
 let latestRequestId = 0
 let latestRelationsRequestId = 0
 let latestBuildingAssetsRequestId = 0
-let latestWorkOrdersRequestId = 0
+let latestInspectionWorkOrdersRequestId = 0
+let latestRepairWorkOrdersRequestId = 0
 let latestParkDetailRequestId = 0
 
 const customerUuid = computed(() => {
@@ -211,7 +233,7 @@ const isEmpty = computed(() => !loading.value && !customer.value)
 const detailTabs = computed(() => [
   { id: "basic-info", label: "基本信息" },
   { id: "building-assets", label: "建筑资产" },
-  { id: "work-orders", label: "检修工单" },
+  { id: "work-orders", label: "工单列表" },
   { id: "monitoring", label: "监控" },
   { id: "sub-accounts", label: "子账号" },
 ])
@@ -350,7 +372,7 @@ const activeTablePage = computed(() => (
   activeTab.value === "building-assets"
     ? buildingAssetsPage
     : activeTab.value === "work-orders"
-      ? workOrdersPage
+      ? (activeWorkOrderTableTab.value === "inspection" ? inspectionWorkOrdersPage : repairWorkOrdersPage)
       : activeTab.value === "monitoring"
         ? monitoringPage
         : activeTab.value === "sub-accounts"
@@ -361,10 +383,35 @@ const activeTableTitle = computed(() => (
   activeTab.value === "building-assets"
     ? "建筑资产"
     : activeTab.value === "work-orders"
-      ? "工单列表"
+      ? (activeWorkOrderTableTab.value === "inspection" ? "检修工单" : "维修工单")
       : activeTab.value === "monitoring"
         ? "监控"
         : "子账号"
+))
+const activeWorkOrderTableErrorMessage = computed(() => (
+  activeWorkOrderTableTab.value === "inspection"
+    ? inspectionWorkOrdersErrorMessage.value
+    : repairWorkOrdersErrorMessage.value
+))
+const activeWorkOrderTableLoading = computed(() => (
+  activeWorkOrderTableTab.value === "inspection"
+    ? inspectionWorkOrdersLoading.value
+    : repairWorkOrdersLoading.value
+))
+const activeWorkOrderTablePageNum = computed(() => (
+  activeWorkOrderTableTab.value === "inspection"
+    ? inspectionWorkOrdersPageNum.value
+    : repairWorkOrdersPageNum.value
+))
+const activeWorkOrderTablePageSize = computed(() => (
+  activeWorkOrderTableTab.value === "inspection"
+    ? inspectionWorkOrdersPageSize.value
+    : repairWorkOrdersPageSize.value
+))
+const activeWorkOrderTableTotal = computed(() => (
+  activeWorkOrderTableTab.value === "inspection"
+    ? inspectionWorkOrdersTotal.value
+    : repairWorkOrdersTotal.value
 ))
 const activeTableSortPopoverOpen = ref(false)
 const activeTableExportDialogOpen = ref(false)
@@ -597,7 +644,7 @@ const buildingAssetsSchema: TablePageSchema<CustomerBuildingAssetRow> = {
   },
 }
 
-const workOrdersSchema: TablePageSchema<CustomerWorkOrderRow> = {
+const inspectionWorkOrdersSchema: TablePageSchema<CustomerWorkOrderRow> = {
   title: "",
   description: "",
   rowKey: "uuid",
@@ -755,12 +802,169 @@ const workOrdersSchema: TablePageSchema<CustomerWorkOrderRow> = {
       type: "text",
       fixed: true,
       placeholder: "输入页面内筛选条件",
-      value: row => buildWorkOrdersFilterText(row),
+      value: row => buildInspectionWorkOrdersFilterText(row),
     },
   ],
   sort: {
-    storageKey: "customer-detail-work-orders-sort-preferences",
+    storageKey: "customer-detail-inspection-work-orders-sort-preferences",
     initialField: "updatedAt",
+    initialDirection: "desc",
+  },
+  tabs: {
+    mode: "none",
+  },
+}
+
+const repairWorkOrdersSchema: TablePageSchema<CustomerWorkOrderRow> = {
+  title: "",
+  description: "",
+  rowKey: "uuid",
+  data: [],
+  showIndex: true,
+  stickyHeader: true,
+  wrapperClass: "rounded-none border-0 shadow-none",
+  emptyState: {
+    title: "暂无维修工单数据",
+    description: "当前客户下暂无可展示的维修工单。",
+    icon: "ri-file-list-3-line",
+  },
+  columns: [
+    {
+      key: "orderNo",
+      label: "工单编号",
+      filterType: "text",
+      emphasis: "strong",
+      tone: "primary",
+      filter: {
+        type: "text",
+        placeholder: "输入工单编号",
+        defaultVisible: true,
+      },
+      sort: true,
+    },
+    {
+      key: "workOrderName",
+      label: "报修标题",
+      filterType: "text",
+      filter: {
+        type: "text",
+        placeholder: "输入报修标题",
+        defaultVisible: true,
+      },
+      sort: true,
+    },
+    {
+      key: "customerName",
+      label: "客户名称",
+      filterType: "text",
+      filter: {
+        type: "text",
+        placeholder: "输入客户名称",
+      },
+      sort: true,
+    },
+    {
+      key: "parkName",
+      label: "园区名称",
+      filterType: "text",
+      filter: {
+        type: "text",
+        placeholder: "输入园区名称",
+      },
+      sort: true,
+    },
+    {
+      key: "executor",
+      label: "维修人员",
+      filterType: "text",
+      filter: {
+        type: "text",
+        placeholder: "输入维修人员",
+      },
+      sort: true,
+    },
+    {
+      key: "importantLabel",
+      label: "重要程度",
+      filterType: "tag",
+      filter: {
+        type: "tag",
+        defaultVisible: true,
+      },
+      sort: {
+        label: "重要程度",
+        kind: "metric",
+        value: row => row.importantValue ?? -1,
+      },
+    },
+    {
+      key: "reportTypeLabel",
+      label: "报修类型",
+      filterType: "tag",
+      filter: {
+        type: "tag",
+        defaultVisible: true,
+      },
+      sort: {
+        label: "报修类型",
+        kind: "metric",
+        value: row => row.reportTypeValue ?? -1,
+      },
+    },
+    {
+      key: "statusLabel",
+      label: "状态",
+      filterType: "tag",
+      cellRenderer: {
+        kind: "status",
+        map: workOrderStatusMap,
+        fallback: { tone: "gray", icon: "dot" },
+      },
+      filter: {
+        type: "tag",
+        defaultVisible: true,
+      },
+      sort: {
+        label: "状态",
+        kind: "metric",
+        value: row => row.statusValue ?? -1,
+      },
+    },
+    {
+      key: "createdAt",
+      label: "创建时间",
+      filterType: "time",
+      format: "numeric",
+      filter: {
+        type: "date",
+        value: row => extractDatePart(row.createdAt),
+      },
+      sort: true,
+    },
+    {
+      key: "remark",
+      label: "内容说明",
+      filterType: "text",
+      format: "note",
+      filter: {
+        type: "text",
+        placeholder: "输入内容说明",
+      },
+    },
+  ],
+  filters: [
+    {
+      key: "在页面中",
+      label: "在页面中",
+      type: "text",
+      fixed: true,
+      placeholder: "输入页面内筛选条件",
+      value: row => buildRepairWorkOrdersFilterText(row),
+    },
+  ],
+  sort: {
+    storageKey: "customer-detail-repair-work-orders-sort-preferences",
+    initialField: "createdAt",
     initialDirection: "desc",
   },
   tabs: {
@@ -978,9 +1182,14 @@ const buildingAssetsPage = useTablePage({
   rows: buildingAssets,
 })
 
-const workOrdersPage = useTablePage({
-  ...createTablePageDefinition(workOrdersSchema),
-  rows: workOrders,
+const inspectionWorkOrdersPage = useTablePage({
+  ...createTablePageDefinition(inspectionWorkOrdersSchema),
+  rows: inspectionWorkOrders,
+})
+
+const repairWorkOrdersPage = useTablePage({
+  ...createTablePageDefinition(repairWorkOrdersSchema),
+  rows: repairWorkOrders,
 })
 
 const monitoringPage = useTablePage({
@@ -1023,26 +1232,43 @@ watch(customer, current => {
 watch(customerUuid, (uuid) => {
   buildingAssets.value = []
   buildingAssetsErrorMessage.value = ""
-  workOrders.value = []
-  workOrdersErrorMessage.value = ""
-  workOrdersTotal.value = 0
-  workOrdersPageNum.value = 1
+  inspectionWorkOrders.value = []
+  inspectionWorkOrdersErrorMessage.value = ""
+  inspectionWorkOrdersTotal.value = 0
+  inspectionWorkOrdersPageNum.value = 1
+  repairWorkOrders.value = []
+  repairWorkOrdersErrorMessage.value = ""
+  repairWorkOrdersTotal.value = 0
+  repairWorkOrdersPageNum.value = 1
   void loadCustomerDetail(uuid)
   void loadBuildingAssets(uuid)
-  void loadWorkOrders(uuid)
+  void loadInspectionWorkOrders(uuid)
+  void loadRepairWorkOrders(uuid)
   void loadParkBuildings(uuid)
 }, { immediate: true })
 
-watch(workOrdersPageSize, () => {
-  workOrdersPageNum.value = 1
+watch(inspectionWorkOrdersPageSize, () => {
+  inspectionWorkOrdersPageNum.value = 1
 })
 
-watch([workOrdersPageNum, workOrdersPageSize], () => {
+watch(repairWorkOrdersPageSize, () => {
+  repairWorkOrdersPageNum.value = 1
+})
+
+watch([inspectionWorkOrdersPageNum, inspectionWorkOrdersPageSize], () => {
   if (!customerUuid.value) {
     return
   }
 
-  void loadWorkOrders(customerUuid.value)
+  void loadInspectionWorkOrders(customerUuid.value)
+})
+
+watch([repairWorkOrdersPageNum, repairWorkOrdersPageSize], () => {
+  if (!customerUuid.value) {
+    return
+  }
+
+  void loadRepairWorkOrders(customerUuid.value)
 })
 
 onUnmounted(() => {
@@ -1119,7 +1345,30 @@ function handleAddRepairWorkOrder() {
   })
 }
 
+function goToPreviousWorkOrderPage() {
+  if (activeWorkOrderTableTab.value === "inspection") {
+    inspectionWorkOrdersPageNum.value -= 1
+    return
+  }
+
+  repairWorkOrdersPageNum.value -= 1
+}
+
+function goToNextWorkOrderPage() {
+  if (activeWorkOrderTableTab.value === "inspection") {
+    inspectionWorkOrdersPageNum.value += 1
+    return
+  }
+
+  repairWorkOrdersPageNum.value += 1
+}
+
 function handleViewWorkOrder(row: CustomerWorkOrderRow) {
+  if (row.workOrderKind === "repair") {
+    toast.info(`维修工单「${row.orderNo || row.uuid}」详情页暂未接入`)
+    return
+  }
+
   if (!row.uuid) {
     toast.error("当前工单缺少 Uuid，无法查看详情")
     return
@@ -1135,6 +1384,11 @@ function handleViewWorkOrder(row: CustomerWorkOrderRow) {
 }
 
 function handleAssignWorkOrder(row: CustomerWorkOrderRow) {
+  if (row.workOrderKind === "repair") {
+    toast.info(`维修工单「${row.orderNo || row.uuid}」指派功能暂未接入`)
+    return
+  }
+
   toast.info(`工单「${row.orderNo || row.uuid}」指派功能暂未接入`)
 }
 
@@ -1651,46 +1905,90 @@ async function loadBuildingAssets(uuid: string) {
   }
 }
 
-async function loadWorkOrders(uuid: string) {
-  const requestId = ++latestWorkOrdersRequestId
+async function loadInspectionWorkOrders(uuid: string) {
+  const requestId = ++latestInspectionWorkOrdersRequestId
 
   if (!uuid) {
-    workOrders.value = []
-    workOrdersTotal.value = 0
-    workOrdersErrorMessage.value = "客户 Uuid 缺失，无法加载工单列表。"
+    inspectionWorkOrders.value = []
+    inspectionWorkOrdersTotal.value = 0
+    inspectionWorkOrdersErrorMessage.value = "客户 Uuid 缺失，无法加载检修工单列表。"
     return
   }
 
-  workOrdersLoading.value = true
-  workOrdersErrorMessage.value = ""
+  inspectionWorkOrdersLoading.value = true
+  inspectionWorkOrdersErrorMessage.value = ""
 
   try {
     const result = await fetchWorkOrders({
       CustomerUuid: uuid,
-      PageNum: workOrdersPageNum.value,
-      PageSize: workOrdersPageSize.value,
+      PageNum: inspectionWorkOrdersPageNum.value,
+      PageSize: inspectionWorkOrdersPageSize.value,
     })
 
-    if (requestId !== latestWorkOrdersRequestId) {
+    if (requestId !== latestInspectionWorkOrdersRequestId) {
       return
     }
 
-    workOrders.value = result.list.map((item, index) => mapWorkOrderRow(item, index))
-    workOrdersTotal.value = result.total
+    inspectionWorkOrders.value = result.list.map((item, index) => mapInspectionWorkOrderRow(item, index))
+    inspectionWorkOrdersTotal.value = result.total
   } catch (error) {
-    if (requestId !== latestWorkOrdersRequestId) {
+    if (requestId !== latestInspectionWorkOrdersRequestId) {
       return
     }
 
-    workOrders.value = []
-    workOrdersTotal.value = 0
-    workOrdersErrorMessage.value = handleApiError(error, {
+    inspectionWorkOrders.value = []
+    inspectionWorkOrdersTotal.value = 0
+    inspectionWorkOrdersErrorMessage.value = handleApiError(error, {
       mode: "silent",
-      fallback: "工单列表加载失败，请稍后重试。",
+      fallback: "检修工单列表加载失败，请稍后重试。",
     })
   } finally {
-    if (requestId === latestWorkOrdersRequestId) {
-      workOrdersLoading.value = false
+    if (requestId === latestInspectionWorkOrdersRequestId) {
+      inspectionWorkOrdersLoading.value = false
+    }
+  }
+}
+
+async function loadRepairWorkOrders(uuid: string) {
+  const requestId = ++latestRepairWorkOrdersRequestId
+
+  if (!uuid) {
+    repairWorkOrders.value = []
+    repairWorkOrdersTotal.value = 0
+    repairWorkOrdersErrorMessage.value = "客户 Uuid 缺失，无法加载维修工单列表。"
+    return
+  }
+
+  repairWorkOrdersLoading.value = true
+  repairWorkOrdersErrorMessage.value = ""
+
+  try {
+    const result = await fetchRepairWorkOrders({
+      CustomerUuid: uuid,
+      PageNum: repairWorkOrdersPageNum.value,
+      PageSize: repairWorkOrdersPageSize.value,
+    })
+
+    if (requestId !== latestRepairWorkOrdersRequestId) {
+      return
+    }
+
+    repairWorkOrders.value = result.list.map((item, index) => mapRepairWorkOrderRow(item, index))
+    repairWorkOrdersTotal.value = result.total
+  } catch (error) {
+    if (requestId !== latestRepairWorkOrdersRequestId) {
+      return
+    }
+
+    repairWorkOrders.value = []
+    repairWorkOrdersTotal.value = 0
+    repairWorkOrdersErrorMessage.value = handleApiError(error, {
+      mode: "silent",
+      fallback: "维修工单列表加载失败，请稍后重试。",
+    })
+  } finally {
+    if (requestId === latestRepairWorkOrdersRequestId) {
+      repairWorkOrdersLoading.value = false
     }
   }
 }
@@ -1723,6 +2021,7 @@ async function fetchAllBuildingAssets(uuid: string) {
 
   return allItems
 }
+
 
 function resolveContactRole(isMain: unknown, index: number) {
   if (Number(isMain) === 1) {
@@ -1903,7 +2202,7 @@ function buildBuildingAssetsFilterText(row: CustomerBuildingAssetRow) {
   ].join(" ")
 }
 
-function buildWorkOrdersFilterText(row: CustomerWorkOrderRow) {
+function buildInspectionWorkOrdersFilterText(row: CustomerWorkOrderRow) {
   return [
     row.orderNo,
     row.customerName,
@@ -1915,6 +2214,21 @@ function buildWorkOrdersFilterText(row: CustomerWorkOrderRow) {
     row.scoreLabel,
     row.recheckStatus,
     row.recheckTime,
+  ].join(" ")
+}
+
+function buildRepairWorkOrdersFilterText(row: CustomerWorkOrderRow) {
+  return [
+    row.orderNo,
+    row.workOrderName,
+    row.customerName,
+    row.parkName,
+    row.executor,
+    row.importantLabel,
+    row.reportTypeLabel,
+    row.statusLabel,
+    row.remark,
+    row.createdAt,
   ].join(" ")
 }
 
@@ -1988,9 +2302,9 @@ function mapBuildingAssetRow(item: BuildingListItem, currentCustomerUuid: string
   }
 }
 
-function mapWorkOrderRow(item: WorkOrderListItem, index: number): CustomerWorkOrderRow {
-  const uuid = toDisplayText(item.Uuid, toDisplayText(item.Id, `${workOrdersPageNum.value}-${index + 1}`))
-  const fallbackId = toDisplayText(item.Id, `${workOrdersPageNum.value}-${index + 1}`)
+function mapInspectionWorkOrderRow(item: WorkOrderListItem, index: number): CustomerWorkOrderRow {
+  const uuid = toDisplayText(item.Uuid, toDisplayText(item.Id, `${inspectionWorkOrdersPageNum.value}-${index + 1}`))
+  const fallbackId = toDisplayText(item.Id, `${inspectionWorkOrdersPageNum.value}-${index + 1}`)
   const statusValue = toNullableNumber(item.Status)
   const score = toNullableNumber(item.Score)
   const resultValue = toNullableNumber(item.Result)
@@ -1998,16 +2312,24 @@ function mapWorkOrderRow(item: WorkOrderListItem, index: number): CustomerWorkOr
   return {
     id: uuid || fallbackId,
     uuid: uuid || fallbackId,
+    workOrderKind: "inspection",
+    workOrderTypeLabel: "检修工单",
     customerUuid: toDisplayText(item.CustomerUuid, customerUuid.value),
     planUuid: toDisplayText(item.PlanUuid, ""),
     orderNo: toDisplayText(item.OrderNo, "-"),
+    workOrderName: toDisplayText(item.PackageName, "-"),
     customerName: toDisplayText(item.CustomerName, toDisplayText(customer.value?.CorpName, "-")),
+    parkName: "-",
     packageName: toDisplayText(item.PackageName, "-"),
     executionPlan: "-",
     executor: toDisplayText(item.Executor, "-"),
     status: statusValue === null ? "" : String(statusValue),
     statusValue,
     statusLabel: formatWorkOrderStatus(statusValue),
+    importantValue: null,
+    importantLabel: "-",
+    reportTypeValue: null,
+    reportTypeLabel: "-",
     resultValue,
     resultLabel: formatWorkOrderResult(resultValue),
     score,
@@ -2018,6 +2340,82 @@ function mapWorkOrderRow(item: WorkOrderListItem, index: number): CustomerWorkOr
     createdAt: toDisplayText(item.CreatedAt, "-"),
     updatedAt: toDisplayText(item.UpdatedAt, "-"),
   }
+}
+
+function mapRepairWorkOrderRow(item: RepairWorkOrderListItem, index: number): CustomerWorkOrderRow {
+  const uuid = toDisplayText(item.Uuid, toDisplayText(item.Id, `repair-${index + 1}`))
+  const fallbackId = toDisplayText(item.Id, `repair-${index + 1}`)
+  const statusValue = toNullableNumber(item.Status)
+  const importantValue = toNullableNumber(item.Important)
+  const reportTypeValue = toNullableNumber(item.ReportType)
+  const createdAt = toDisplayText(item.CreatedAt, "-")
+
+  return {
+    id: uuid || fallbackId,
+    uuid: uuid || fallbackId,
+    workOrderKind: "repair",
+    workOrderTypeLabel: "维修工单",
+    customerUuid: toDisplayText(item.CustomerUuid, customerUuid.value),
+    planUuid: "",
+    orderNo: toDisplayText(item.OrderNo, "-"),
+    workOrderName: toDisplayText(item.Title, "-"),
+    customerName: toDisplayText(item.CustomerName || item.CorpName, toDisplayText(customer.value?.CorpName, "-")),
+    parkName: toDisplayText(item.ParkName, "-"),
+    packageName: "-",
+    executionPlan: "-",
+    executor: toDisplayText(item.UserName, "-"),
+    status: statusValue === null ? "" : String(statusValue),
+    statusValue,
+    statusLabel: formatRepairWorkOrderStatus(statusValue),
+    importantValue,
+    importantLabel: formatRepairImportantLabel(importantValue),
+    reportTypeValue,
+    reportTypeLabel: formatRepairReportTypeLabel(reportTypeValue),
+    resultValue: reportTypeValue,
+    resultLabel: formatRepairReportTypeLabel(reportTypeValue),
+    score: importantValue,
+    scoreLabel: formatRepairImportantLabel(importantValue),
+    recheckStatus: "-",
+    recheckTime: "-",
+    remark: toDisplayText(item.RepairContent || item.Content, "-"),
+    createdAt,
+    updatedAt: createdAt,
+  }
+}
+
+function formatRepairWorkOrderStatus(status: number | null) {
+  if (status === null) {
+    return "未知状态"
+  }
+
+  switch (status) {
+    case 0:
+      return "待处理"
+    case 1:
+      return "处理中"
+    case 2:
+      return "已完成"
+    case 3:
+      return "已关闭"
+    default:
+      return `状态 ${status}`
+  }
+}
+
+function formatRepairReportTypeLabel(value: number | null) {
+  if (value === null) {
+    return "-"
+  }
+
+  return `类型 ${value}`
+}
+
+function formatRepairImportantLabel(value: number | null) {
+  if (value === null) {
+    return "-"
+  }
+
+  return `等级 ${value}`
 }
 
 function toNullableNumber(value: unknown) {
@@ -2423,32 +2821,47 @@ function toDisplayText(value: unknown, fallback = "未填写") {
       </template>
 
       <template v-else-if="activeTab === 'work-orders'">
-        <CustomerDetailContentLoading v-if="loading || workOrdersLoading" variant="work-orders" />
+        <CustomerDetailContentLoading v-if="loading || activeWorkOrderTableLoading" variant="work-orders" />
         <div v-else-if="customer" class="flex min-h-0 flex-1 flex-col pb-5">
-          <Alert v-if="workOrdersErrorMessage" variant="destructive" class="mb-5">
+          <Alert v-if="activeWorkOrderTableErrorMessage" variant="destructive" class="mb-5">
             <AlertTitle>工单列表接口加载失败</AlertTitle>
-            <AlertDescription>{{ workOrdersErrorMessage }}</AlertDescription>
+            <AlertDescription>{{ activeWorkOrderTableErrorMessage }}</AlertDescription>
           </Alert>
 
-          <TablePage :page="workOrdersPage" :show-toolbar-actions="false" :list-level-table="false" class="-mt-3 sm:-mx-4 xl:-mx-8" />
+          <TablePage :page="activeWorkOrderTableTab === 'inspection' ? inspectionWorkOrdersPage : repairWorkOrdersPage" :show-toolbar-actions="false" :list-level-table="false" class="-mt-3 sm:-mx-4 xl:-mx-8">
+            <template #controls-prefix>
+              <div class="mr-2 flex items-center gap-2.5">
+                <TopTabSwitch
+                  v-model="activeWorkOrderTableTab"
+                  :tabs="[
+                    { id: 'inspection', label: '检修工单', badge: inspectionWorkOrdersTotal },
+                    { id: 'repair', label: '维修工单', badge: repairWorkOrdersTotal },
+                  ]"
+                  tone="default"
+                  :collapse-inactive="false"
+                />
+                <div class="h-5 w-px shrink-0 bg-border" aria-hidden="true" />
+              </div>
+            </template>
+          </TablePage>
 
           <div class="mt-auto flex items-center justify-end gap-3 px-4 pt-4 sm:px-0">
             <span class="text-sm text-muted-foreground">
-              第 {{ workOrdersPageNum }} / {{ Math.max(1, Math.ceil(workOrdersTotal / workOrdersPageSize)) }} 页，共 {{ workOrdersTotal }} 条
+              第 {{ activeWorkOrderTablePageNum }} / {{ Math.max(1, Math.ceil(activeWorkOrderTableTotal / activeWorkOrderTablePageSize)) }} 页，共 {{ activeWorkOrderTableTotal }} 条
             </span>
             <Button
               variant="outline"
               size="sm"
-              :disabled="workOrdersPageNum <= 1"
-              @click="workOrdersPageNum -= 1"
+              :disabled="activeWorkOrderTablePageNum <= 1"
+              @click="goToPreviousWorkOrderPage"
             >
               上一页
             </Button>
             <Button
               variant="outline"
               size="sm"
-              :disabled="workOrdersPageNum >= Math.max(1, Math.ceil(workOrdersTotal / workOrdersPageSize))"
-              @click="workOrdersPageNum += 1"
+              :disabled="activeWorkOrderTablePageNum >= Math.max(1, Math.ceil(activeWorkOrderTableTotal / activeWorkOrderTablePageSize))"
+              @click="goToNextWorkOrderPage"
             >
               下一页
             </Button>
