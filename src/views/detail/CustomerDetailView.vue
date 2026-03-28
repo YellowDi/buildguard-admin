@@ -671,6 +671,11 @@ const workOrdersSchema: TablePageSchema<CustomerWorkOrderRow> = {
       key: "statusLabel",
       label: "状态",
       filterType: "tag",
+      cellRenderer: {
+        kind: "status",
+        map: workOrderStatusMap,
+        fallback: { tone: "gray", icon: "dot" },
+      },
       filter: {
         type: "tag",
         defaultVisible: true,
