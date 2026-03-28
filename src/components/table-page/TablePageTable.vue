@@ -56,6 +56,8 @@ const props = withDefaults(defineProps<{
    * 一般请用 `stickyHeader`（fixed 克隆，已 Teleport 到 body）；勿与 `stickyHeader` 同时开启。
    */
   stickyThead?: boolean
+  /** 最右侧是否保留一级列表用的 w-8 占位列；设置浮窗等场景可关，使最后一列贴齐容器 */
+  endSpacer?: boolean
 }>(), {
   summary: "",
   showIndex: false,
@@ -65,6 +67,7 @@ const props = withDefaults(defineProps<{
   emptyState: undefined,
   listLevelTable: false,
   stickyThead: false,
+  endSpacer: true,
 })
 const emit = defineEmits<{
   "update:selected-row-keys": [keys: RowSelectionKey[]]
@@ -880,6 +883,7 @@ watch(() => props.rows, scheduleStickySync, { deep: true })
 watch(() => props.showIndex, scheduleStickySync)
 watch(() => hasRowActions.value, scheduleStickySync)
 watch(() => props.stickyHeader, scheduleStickySync)
+watch(() => props.endSpacer, scheduleStickySync)
 watch(() => [props.rows, props.selectedRowKeys] as const, ([rows, selectedKeys]) => {
   const availableRowKeys = new Set(rows.map((row, index) => getRowKey(row, index)))
   const nextSelections = new Set(
@@ -1001,6 +1005,7 @@ onBeforeUnmount(() => {
                 :style="getActionColumnStyle() ?? getStickyCellStyle(stickyColumnWidths.length - 2)"
               />
               <th
+                v-if="endSpacer"
                 :class="tableTheme.endSpacerHeader"
                 :style="getStickyCellStyle(stickyColumnWidths.length - 1)"
               />
@@ -1098,7 +1103,7 @@ onBeforeUnmount(() => {
             :class="actionPaddingTheme.header"
             :style="getActionColumnStyle()"
           />
-          <th :class="tableTheme.endSpacerHeader" />
+          <th v-if="endSpacer" :class="tableTheme.endSpacerHeader" />
         </tr>
       </thead>
 
@@ -1264,7 +1269,7 @@ onBeforeUnmount(() => {
               </Button>
             </div>
           </td>
-          <td :class="getEndSpacerCellClass(row, index)" />
+          <td v-if="endSpacer" :class="getEndSpacerCellClass(row, index)" />
         </tr>
       </tbody>
       </table>

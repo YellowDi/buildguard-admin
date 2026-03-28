@@ -692,6 +692,7 @@ defineExpose({
 
     <TablePageTable
       sticky-header
+      :end-spacer="false"
       :columns="columns"
       :rows="filteredRows"
       row-key="id"

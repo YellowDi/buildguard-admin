@@ -1444,6 +1444,7 @@ function asRoleRow(row: Record<string, unknown>) {
 
     <TablePageTable
       sticky-header
+      :end-spacer="false"
       :columns="currentColumns"
       :rows="currentRows"
       :row-key="currentRowKey"

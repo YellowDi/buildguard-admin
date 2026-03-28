@@ -836,6 +836,7 @@ function formatDateTime(...values: unknown[]) {
     <TablePageTable
       row-key="id"
       sticky-header
+      :end-spacer="false"
       :columns="currentColumns"
       :rows="currentRows"
       :table-class="SETTINGS_TABLE_PAGE_CLASS"
