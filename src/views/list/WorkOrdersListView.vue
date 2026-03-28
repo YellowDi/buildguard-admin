@@ -112,7 +112,13 @@ const schema: TablePageSchema<WorkOrderRecord> = {
           onClick: row => handleViewDetail(row as WorkOrderRecord),
         },
       ]
-    : [],
+    : [
+        {
+          key: "view-detail",
+          label: "查看详情",
+          onClick: row => handleViewDetail(row as WorkOrderRecord),
+        },
+      ],
   columns,
   filters: [
     {
@@ -193,11 +199,11 @@ function handleViewDetail(row: WorkOrderRecord) {
   }
 
   void router.push({
-    name: "inspection-work-order-detail",
+    name: props.kind === "repair" ? "repair-work-order-detail" : "inspection-work-order-detail",
     params: { id: row.uuid },
     query: {
       customerUuid: row.customerUuid,
-      returnTo: "inspection-work-orders",
+      returnTo: props.kind === "repair" ? "repair-work-orders" : "inspection-work-orders",
     },
   })
 }
@@ -355,10 +361,11 @@ function formatStatusLabel(kind: WorkOrderPageKind, value: number | null) {
     if (value === 5) return "已结单"
   }
 
-  if (value === 0) return "待处理"
-  if (value === 1) return "处理中"
-  if (value === 2) return "已完成"
-  if (value === 3) return "已关闭"
+  if (value === 1) return "待指派"
+  if (value === 2) return "待开始"
+  if (value === 3) return "进行中"
+  if (value === 4) return "报告生成中"
+  if (value === 5) return "已结单"
 
   return `状态 ${value}`
 }

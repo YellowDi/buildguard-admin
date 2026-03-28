@@ -8,6 +8,12 @@ import DetailAccordionModule from "@/components/detail/DetailAccordionModule.vue
 import DetailTabActionsGroup from "@/components/detail/DetailTabActionsGroup.vue"
 import DetailFieldSections from "@/components/detail/DetailFieldSections.vue"
 import DetailRelationModule from "@/components/detail/DetailRelationModule.vue"
+import {
+  buildRepairWorkOrderPrimarySections,
+  buildRepairWorkOrderSecondarySections,
+  toText as toRepairWorkOrderText,
+} from "@/components/detail/repairWorkOrderDetailFields"
+import { buildWorkOrderPrimarySections, buildWorkOrderSecondarySections, toText as toWorkOrderText } from "@/components/detail/workOrderDetailFields"
 import type { DetailContactValue, DetailFieldSection, DetailRelationModuleSchema } from "@/components/detail/types"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import {
@@ -45,9 +51,13 @@ import { fetchBuildings, type BuildingListItem } from "@/lib/buildings-api"
 import { readCustomerSubAccountLocalRecords } from "@/lib/customer-sub-accounts-api"
 import { deleteCustomer, fetchCustomerDetail, type CustomerDetailPerson, type CustomerDetailResult } from "@/lib/customers-api"
 import {
+  fetchRepairWorkOrderDetail,
+  fetchWorkOrderDetail,
   fetchRepairWorkOrders,
   fetchWorkOrders,
+  type RepairWorkOrderDetailResult,
   type RepairWorkOrderListItem,
+  type WorkOrderDetailResult,
   type WorkOrderListItem,
 } from "@/lib/work-orders-api"
 import customersData from "@/mocks/customers.json"
@@ -206,6 +216,13 @@ const parkDetailErrorMessage = ref("")
 const parkDeleteConfirmOpen = ref(false)
 const parkDeleteSubmitting = ref(false)
 const activeParkDetail = ref<ParkDetailResult | null>(null)
+const workOrderDetailSheetOpen = ref(false)
+const workOrderDetailLoading = ref(false)
+const workOrderDetailErrorMessage = ref("")
+const activeWorkOrderDetailKind = ref<"inspection" | "repair">("inspection")
+const activeInspectionWorkOrderDetail = ref<WorkOrderDetailResult | null>(null)
+const activeRepairWorkOrderDetail = ref<RepairWorkOrderDetailResult | null>(null)
+const activeWorkOrderDetailCustomer = ref<CustomerDetailResult | null>(null)
 const buildingDetailSheetOpen = ref(false)
 const activeBuildingUuid = ref("")
 const activeBuildingParkUuid = ref("")
@@ -215,6 +232,7 @@ let latestBuildingAssetsRequestId = 0
 let latestInspectionWorkOrdersRequestId = 0
 let latestRepairWorkOrdersRequestId = 0
 let latestParkDetailRequestId = 0
+let latestWorkOrderDetailRequestId = 0
 
 const customerUuid = computed(() => {
   const value = route.params.id
@@ -828,6 +846,13 @@ const repairWorkOrdersSchema: TablePageSchema<CustomerWorkOrderRow> = {
     description: "当前客户下暂无可展示的维修工单。",
     icon: "ri-file-list-3-line",
   },
+  rowActions: [
+    {
+      key: "view-work-order",
+      label: "查看详情",
+      onClick: row => handleViewWorkOrder(row as CustomerWorkOrderRow),
+    },
+  ],
   columns: [
     {
       key: "orderNo",
@@ -1225,6 +1250,24 @@ const parkDetailSheetSections = computed<DetailFieldSection[]>(() => {
   ]
 })
 
+const workOrderDetailSheetTitle = computed(() => (
+  activeWorkOrderDetailKind.value === "repair"
+    ? toRepairWorkOrderText(activeRepairWorkOrderDetail.value?.Title, "维修工单详情")
+    : toWorkOrderText(activeInspectionWorkOrderDetail.value?.OrderNo, "检修工单详情")
+))
+
+const workOrderDetailPrimarySections = computed<DetailFieldSection[]>(() => {
+  return activeWorkOrderDetailKind.value === "repair"
+    ? buildRepairWorkOrderPrimarySections(activeRepairWorkOrderDetail.value, activeWorkOrderDetailCustomer.value)
+    : buildWorkOrderPrimarySections(activeInspectionWorkOrderDetail.value, activeWorkOrderDetailCustomer.value)
+})
+
+const workOrderDetailSecondarySections = computed<DetailFieldSection[]>(() => {
+  return activeWorkOrderDetailKind.value === "repair"
+    ? buildRepairWorkOrderSecondarySections(activeRepairWorkOrderDetail.value)
+    : buildWorkOrderSecondarySections(activeInspectionWorkOrderDetail.value)
+})
+
 watch(customer, current => {
   detailBreadcrumbTitle.value = current?.CorpName?.trim() || null
 })
@@ -1240,6 +1283,7 @@ watch(customerUuid, (uuid) => {
   repairWorkOrdersErrorMessage.value = ""
   repairWorkOrdersTotal.value = 0
   repairWorkOrdersPageNum.value = 1
+  handleWorkOrderDetailSheetOpenChange(false)
   void loadCustomerDetail(uuid)
   void loadBuildingAssets(uuid)
   void loadInspectionWorkOrders(uuid)
@@ -1364,23 +1408,14 @@ function goToNextWorkOrderPage() {
 }
 
 function handleViewWorkOrder(row: CustomerWorkOrderRow) {
-  if (row.workOrderKind === "repair") {
-    toast.info(`维修工单「${row.orderNo || row.uuid}」详情页暂未接入`)
-    return
-  }
-
   if (!row.uuid) {
     toast.error("当前工单缺少 Uuid，无法查看详情")
     return
   }
 
-  void router.push({
-    name: "inspection-work-order-detail",
-    params: { id: row.uuid },
-    query: {
-      customerUuid: row.customerUuid || customerUuid.value,
-    },
-  })
+  activeWorkOrderDetailKind.value = row.workOrderKind
+  workOrderDetailSheetOpen.value = true
+  void loadWorkOrderDetail(row.workOrderKind, row.uuid, row.customerUuid || customerUuid.value)
 }
 
 function handleAssignWorkOrder(row: CustomerWorkOrderRow) {
@@ -1652,6 +1687,116 @@ function handleParkDetailSheetOpenChange(open: boolean) {
     parkDeleteSubmitting.value = false
     activeParkDetail.value = null
   }
+}
+
+function handleWorkOrderDetailSheetOpenChange(open: boolean) {
+  workOrderDetailSheetOpen.value = open
+
+  if (!open) {
+    latestWorkOrderDetailRequestId += 1
+    workOrderDetailLoading.value = false
+    workOrderDetailErrorMessage.value = ""
+    activeInspectionWorkOrderDetail.value = null
+    activeRepairWorkOrderDetail.value = null
+    activeWorkOrderDetailCustomer.value = null
+  }
+}
+
+async function loadWorkOrderDetail(kind: "inspection" | "repair", workOrderUuid: string, fallbackCustomerUuid = "") {
+  const requestId = ++latestWorkOrderDetailRequestId
+
+  if (!workOrderUuid) {
+    activeInspectionWorkOrderDetail.value = null
+    activeRepairWorkOrderDetail.value = null
+    activeWorkOrderDetailCustomer.value = null
+    workOrderDetailErrorMessage.value = "工单 Uuid 缺失，无法加载详情。"
+    return
+  }
+
+  workOrderDetailLoading.value = true
+  workOrderDetailErrorMessage.value = ""
+  activeInspectionWorkOrderDetail.value = null
+  activeRepairWorkOrderDetail.value = null
+  activeWorkOrderDetailCustomer.value = null
+
+  try {
+    const detail = kind === "repair"
+      ? await fetchRepairWorkOrderDetail({ Uuid: workOrderUuid })
+      : await fetchWorkOrderDetail({ Uuid: workOrderUuid })
+
+    if (requestId !== latestWorkOrderDetailRequestId) {
+      return
+    }
+
+    activeWorkOrderDetailKind.value = kind
+
+    if (kind === "repair") {
+      activeRepairWorkOrderDetail.value = detail as RepairWorkOrderDetailResult
+    } else {
+      activeInspectionWorkOrderDetail.value = detail as WorkOrderDetailResult
+    }
+
+    const nextCustomerUuid = kind === "repair"
+      ? toRepairWorkOrderText((detail as RepairWorkOrderDetailResult).CustomerUuid, fallbackCustomerUuid).trim()
+      : toDisplayText((detail as WorkOrderDetailResult).CustomerUuid, fallbackCustomerUuid).trim()
+
+    if (nextCustomerUuid) {
+      try {
+        const detailCustomer = await fetchCustomerDetail({ Uuid: nextCustomerUuid })
+
+        if (requestId !== latestWorkOrderDetailRequestId) {
+          return
+        }
+
+        activeWorkOrderDetailCustomer.value = detailCustomer
+      } catch {
+        if (requestId !== latestWorkOrderDetailRequestId) {
+          return
+        }
+
+        activeWorkOrderDetailCustomer.value = null
+      }
+    }
+  } catch (error) {
+    if (requestId !== latestWorkOrderDetailRequestId) {
+      return
+    }
+
+    activeInspectionWorkOrderDetail.value = null
+    activeRepairWorkOrderDetail.value = null
+    activeWorkOrderDetailCustomer.value = null
+    workOrderDetailErrorMessage.value = handleApiError(error, {
+      mode: "silent",
+      fallback: "工单详情加载失败，请稍后重试。",
+    })
+  } finally {
+    if (requestId === latestWorkOrderDetailRequestId) {
+      workOrderDetailLoading.value = false
+    }
+  }
+}
+
+function goToWorkOrderFullDetail() {
+  const targetUuid = activeWorkOrderDetailKind.value === "repair"
+    ? activeRepairWorkOrderDetail.value?.Uuid
+    : activeInspectionWorkOrderDetail.value?.Uuid
+  const targetCustomerUuid = activeWorkOrderDetailKind.value === "repair"
+    ? activeRepairWorkOrderDetail.value?.CustomerUuid
+    : activeInspectionWorkOrderDetail.value?.CustomerUuid
+
+  if (!targetUuid) {
+    return
+  }
+
+  handleWorkOrderDetailSheetOpenChange(false)
+
+  void router.push({
+    name: activeWorkOrderDetailKind.value === "repair" ? "repair-work-order-detail" : "inspection-work-order-detail",
+    params: { id: targetUuid },
+    query: {
+      customerUuid: targetCustomerUuid || customerUuid.value,
+    },
+  })
 }
 
 function promptDeletePark() {
@@ -2389,14 +2534,16 @@ function formatRepairWorkOrderStatus(status: number | null) {
   }
 
   switch (status) {
-    case 0:
-      return "待处理"
     case 1:
-      return "处理中"
+      return "待指派"
     case 2:
-      return "已完成"
+      return "待开始"
     case 3:
-      return "已关闭"
+      return "进行中"
+    case 4:
+      return "报告生成中"
+    case 5:
+      return "已结单"
     default:
       return `状态 ${status}`
   }
@@ -2987,6 +3134,54 @@ function toDisplayText(value: unknown, fallback = "未填写") {
       </template>
     </template>
   </DetailLayout>
+
+  <Sheet :open="workOrderDetailSheetOpen" @update:open="handleWorkOrderDetailSheetOpenChange">
+    <SheetContent side="right" class="overflow-hidden max-sm:w-[calc(100vw-1rem)] sm:max-w-xl">
+      <SheetHeader>
+        <template #actions>
+          <div class="flex items-center justify-between gap-3">
+            <div class="flex items-center gap-1">
+              <SheetClose
+                class="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none"
+              >
+                <i class="ri-arrow-right-double-line text-[16px]" />
+                <span class="sr-only">关闭工单详情</span>
+              </SheetClose>
+              <button
+                v-if="activeWorkOrderDetailKind === 'repair' ? activeRepairWorkOrderDetail?.Uuid : activeInspectionWorkOrderDetail?.Uuid"
+                type="button"
+                class="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none"
+                @click="goToWorkOrderFullDetail"
+              >
+                <i class="ri-fullscreen-line text-[16px]" />
+                <span class="sr-only">打开完整工单详情页</span>
+              </button>
+            </div>
+          </div>
+        </template>
+        <SheetTitle>{{ workOrderDetailSheetTitle }}</SheetTitle>
+      </SheetHeader>
+
+      <div class="space-y-5 overflow-y-auto">
+        <Alert v-if="workOrderDetailErrorMessage" variant="destructive" class="mb-4">
+          <AlertTitle>工单详情接口加载失败</AlertTitle>
+          <AlertDescription>{{ workOrderDetailErrorMessage }}</AlertDescription>
+        </Alert>
+
+        <div
+          v-if="workOrderDetailLoading"
+          class="rounded-lg border border-border/70 px-4 py-5 text-sm text-muted-foreground"
+        >
+          正在获取工单详情数据。
+        </div>
+
+        <template v-else-if="activeWorkOrderDetailKind === 'repair' ? activeRepairWorkOrderDetail : activeInspectionWorkOrderDetail">
+          <DetailFieldSections :sections="workOrderDetailPrimarySections" />
+          <DetailFieldSections :sections="workOrderDetailSecondarySections" />
+        </template>
+      </div>
+    </SheetContent>
+  </Sheet>
 
   <Sheet :open="parkDetailSheetOpen" @update:open="handleParkDetailSheetOpenChange">
     <SheetContent side="right" class="overflow-hidden max-sm:w-[calc(100vw-1rem)] sm:max-w-xl">

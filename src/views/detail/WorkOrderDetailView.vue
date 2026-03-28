@@ -3,18 +3,34 @@ import { computed, onUnmounted, ref, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
 
 import DetailFieldSections from "@/components/detail/DetailFieldSections.vue"
-import type { DetailContactValue, DetailFieldSection } from "@/components/detail/types"
+import { buildRepairWorkOrderPrimarySections, buildRepairWorkOrderSecondarySections, toText as toRepairWorkOrderText } from "@/components/detail/repairWorkOrderDetailFields"
+import { buildWorkOrderPrimarySections, buildWorkOrderSecondarySections, toText } from "@/components/detail/workOrderDetailFields"
+import type { DetailFieldSection } from "@/components/detail/types"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
 import DetailLayout from "@/layouts/DetailLayout.vue"
 import { handleApiError } from "@/lib/api-errors"
 import { fetchCustomerDetail, type CustomerDetailResult } from "@/lib/customers-api"
-import { fetchWorkOrderDetail, type WorkOrderDetailResult } from "@/lib/work-orders-api"
+import {
+  fetchRepairWorkOrderDetail,
+  fetchWorkOrderDetail,
+  type RepairWorkOrderDetailResult,
+  type WorkOrderDetailResult,
+} from "@/lib/work-orders-api"
+
+type WorkOrderDetailKind = "inspection" | "repair"
+
+const props = withDefaults(defineProps<{
+  kind?: WorkOrderDetailKind
+}>(), {
+  kind: "inspection",
+})
 
 const route = useRoute()
 const router = useRouter()
 
-const workOrder = ref<WorkOrderDetailResult | null>(null)
+const inspectionWorkOrder = ref<WorkOrderDetailResult | null>(null)
+const repairWorkOrder = ref<RepairWorkOrderDetailResult | null>(null)
 const customer = ref<CustomerDetailResult | null>(null)
 const loading = ref(false)
 const errorMessage = ref("")
@@ -23,84 +39,58 @@ let latestRequestId = 0
 const workOrderUuid = computed(() => typeof route.params.id === "string" ? route.params.id.trim() : "")
 const customerUuid = computed(() => {
   const queryValue = typeof route.query.customerUuid === "string" ? route.query.customerUuid.trim() : ""
-  return queryValue || toText(workOrder.value?.CustomerUuid)
+  return queryValue || (
+    props.kind === "repair"
+      ? toRepairWorkOrderText(repairWorkOrder.value?.CustomerUuid)
+      : toText(inspectionWorkOrder.value?.CustomerUuid)
+  )
 })
 const queryReturnTo = computed(() => typeof route.query.returnTo === "string" ? route.query.returnTo.trim() : "")
 
 const primarySections = computed<DetailFieldSection[]>(() => {
-  const current = workOrder.value
-
-  if (!current) {
-    return []
+  if (props.kind === "repair") {
+    return buildRepairWorkOrderPrimarySections(repairWorkOrder.value, customer.value)
   }
 
-  return [
-    {
-      key: "work-order-basic",
-      title: "基本信息",
-      rows: [
-        { key: "work-order-id", label: "工单ID", value: toText(current.Uuid, toText(current.Id, "-")) },
-        { key: "plan-time", label: "计划时间", value: "-" },
-        { key: "deadline", label: "截止时间", value: toText(current.Deadline, "-") },
-        { key: "executor", label: "执行人", value: toText(current.Executor, "-") },
-        { key: "package-name", label: "关联套餐", value: toText(current.PackageName, "-") },
-        { key: "plan-name", label: "关联计划", value: toText(current.PlanName, "-") },
-      ],
-    },
-    {
-      key: "work-order-customer",
-      title: "客户信息",
-      rows: [
-        { key: "customer-name", label: "客户名称", value: toText(customer.value?.CorpName, toText(current.CustomerName, "-")) },
-        { key: "park-building", label: "园区/建筑", value: "-" },
-        {
-          key: "address",
-          label: "地址",
-          value: toText(customer.value?.Address, "-"),
-          truncate: false,
-          valueClass: "leading-6",
-        },
-        {
-          key: "contact",
-          label: "园区/建筑联系人",
-          value: buildContactValue(
-            resolveCustomerContactName(customer.value),
-            resolveCustomerContactPhone(customer.value),
-          ),
-        },
-      ],
-    },
-  ]
+  return buildWorkOrderPrimarySections(inspectionWorkOrder.value, customer.value)
 })
 
 const secondarySections = computed<DetailFieldSection[]>(() => {
-  const current = workOrder.value
-
-  if (!current) {
-    return []
+  if (props.kind === "repair") {
+    return buildRepairWorkOrderSecondarySections(repairWorkOrder.value)
   }
 
-  return [
-    {
-      key: "work-order-report-suggestion",
-      title: "报告建议",
-      rows: [
-        { key: "remark", label: "建议内容", value: toText(current.Remark, "-"), truncate: false, valueClass: "leading-6" },
-      ],
-    },
-    {
-      key: "work-order-result",
-      title: "检测结果",
-      rows: [
-        { key: "status", label: "状态", value: formatStatus(current.Status) },
-        { key: "result", label: "检测结果", value: formatResult(current.Result) },
-        { key: "score", label: "评分", value: formatScore(current.Score) },
-      ],
-    },
-  ]
+  return buildWorkOrderSecondarySections(inspectionWorkOrder.value)
 })
 
-watch(workOrder, (current) => {
+const pageTitle = computed(() => {
+  if (props.kind === "repair") {
+    return toRepairWorkOrderText(repairWorkOrder.value?.Title, "维修工单详情")
+  }
+
+  return toText(inspectionWorkOrder.value?.PackageName, "关联套餐") || "关联套餐"
+})
+
+const pageSubtitle = computed(() => {
+  if (props.kind === "repair") {
+    return toRepairWorkOrderText(repairWorkOrder.value?.OrderNo, "工单编号") || "工单编号"
+  }
+
+  return toText(inspectionWorkOrder.value?.OrderNo, "工单编号") || "工单编号"
+})
+
+const hasWorkOrder = computed(() => (
+  props.kind === "repair" ? Boolean(repairWorkOrder.value) : Boolean(inspectionWorkOrder.value)
+))
+
+watch([inspectionWorkOrder, repairWorkOrder], () => {
+  if (props.kind === "repair") {
+    const current = repairWorkOrder.value
+    detailBreadcrumbTitle.value = toOptionalText(current?.Title) || toOptionalText(current?.OrderNo)
+    return
+  }
+
+  const current = inspectionWorkOrder.value
   detailBreadcrumbTitle.value = toOptionalText(current?.PackageName) || toOptionalText(current?.OrderNo)
 })
 
@@ -118,6 +108,11 @@ function goBack() {
     return
   }
 
+  if (queryReturnTo.value === "repair-work-orders") {
+    void router.push({ name: "repair-work-orders" })
+    return
+  }
+
   if (customerUuid.value) {
     void router.push({
       name: "customer-detail",
@@ -127,14 +122,15 @@ function goBack() {
     return
   }
 
-  void router.push({ name: "inspection-work-orders" })
+  void router.push({ name: props.kind === "repair" ? "repair-work-orders" : "inspection-work-orders" })
 }
 
 async function loadWorkOrderDetail(uuid: string) {
   const requestId = ++latestRequestId
 
   if (!uuid) {
-    workOrder.value = null
+    inspectionWorkOrder.value = null
+    repairWorkOrder.value = null
     customer.value = null
     errorMessage.value = "工单 Uuid 缺失，无法加载详情。"
     return
@@ -144,15 +140,25 @@ async function loadWorkOrderDetail(uuid: string) {
   errorMessage.value = ""
 
   try {
-    const result = await fetchWorkOrderDetail({ Uuid: uuid })
+    const result = props.kind === "repair"
+      ? await fetchRepairWorkOrderDetail({ Uuid: uuid })
+      : await fetchWorkOrderDetail({ Uuid: uuid })
 
     if (requestId !== latestRequestId) {
       return
     }
 
-    workOrder.value = result
+    if (props.kind === "repair") {
+      repairWorkOrder.value = result as RepairWorkOrderDetailResult
+      inspectionWorkOrder.value = null
+    } else {
+      inspectionWorkOrder.value = result as WorkOrderDetailResult
+      repairWorkOrder.value = null
+    }
 
-    const nextCustomerUuid = toText(result.CustomerUuid)
+    const nextCustomerUuid = props.kind === "repair"
+      ? toRepairWorkOrderText((result as RepairWorkOrderDetailResult).CustomerUuid)
+      : toText((result as WorkOrderDetailResult).CustomerUuid)
 
     if (nextCustomerUuid) {
       try {
@@ -178,7 +184,8 @@ async function loadWorkOrderDetail(uuid: string) {
       return
     }
 
-    workOrder.value = null
+    inspectionWorkOrder.value = null
+    repairWorkOrder.value = null
     customer.value = null
     errorMessage.value = handleApiError(error, {
       mode: "silent",
@@ -191,80 +198,17 @@ async function loadWorkOrderDetail(uuid: string) {
   }
 }
 
-function formatStatus(value: unknown) {
-  const status = toNumber(value)
-
-  if (status === null) return "-"
-  if (status === 1) return "待指派"
-  if (status === 2) return "待开始"
-  if (status === 3) return "进行中"
-  if (status === 4) return "报告生成中"
-  if (status === 5) return "已结单"
-
-  return `状态 ${status}`
-}
-
-function formatResult(value: unknown) {
-  const result = toNumber(value)
-
-  if (result === null || result === 0) return "未反馈"
-  if (result === 1) return "正常"
-  if (result === 2) return "异常"
-  if (result === 3) return "已驳回"
-
-  return `结果 ${result}`
-}
-
-function formatScore(value: unknown) {
-  const score = toNumber(value)
-  return score === null ? "-" : String(score)
-}
-
-function toText(value: unknown, fallback = "") {
-  if (typeof value === "string" && value.trim()) {
-    return value.trim()
-  }
-
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return String(value)
-  }
-
-  return fallback
-}
-
 function toOptionalText(value: unknown) {
-  const text = toText(value)
+  const text = props.kind === "repair" ? toRepairWorkOrderText(value) : toText(value)
   return text || null
-}
-
-function toNumber(value: unknown) {
-  return typeof value === "number" && Number.isFinite(value) ? value : null
-}
-
-function buildContactValue(name: string, phone?: string | null): DetailContactValue {
-  return {
-    kind: "contact",
-    name,
-    phone,
-  }
-}
-
-function resolveCustomerContactName(detail: CustomerDetailResult | null) {
-  const mainContact = detail?.People?.find(person => toNumber(person?.IsMain) === 1)
-  return toText(mainContact?.Name, toText(detail?.People?.[0]?.Name, "-"))
-}
-
-function resolveCustomerContactPhone(detail: CustomerDetailResult | null) {
-  const mainContact = detail?.People?.find(person => toNumber(person?.IsMain) === 1)
-  return toText(mainContact?.Phone, toText(detail?.People?.[0]?.Phone, "-"))
 }
 </script>
 
 <template>
   <DetailLayout
-    :title="toText(workOrder?.PackageName, '关联套餐') || '关联套餐'"
-    :subtitle="toText(workOrder?.OrderNo, '工单编号') || '工单编号'"
-    :empty="!loading && !workOrder"
+    :title="pageTitle"
+    :subtitle="pageSubtitle"
+    :empty="!loading && !hasWorkOrder"
     empty-text="未找到该工单信息"
     @back="goBack"
   >
@@ -278,11 +222,11 @@ function resolveCustomerContactPhone(detail: CustomerDetailResult | null) {
         正在获取工单详情数据。
       </div>
 
-      <DetailFieldSections v-else-if="workOrder" :sections="primarySections" />
+      <DetailFieldSections v-else-if="hasWorkOrder" :sections="primarySections" />
     </template>
 
     <template #secondary>
-      <div v-if="!loading && workOrder" class="pb-5">
+      <div v-if="!loading && hasWorkOrder" class="pb-5">
         <DetailFieldSections :sections="secondarySections" />
       </div>
     </template>

@@ -68,6 +68,7 @@ export type WorkOrderDetailPayload = {
 }
 
 export type WorkOrderDetailResult = WorkOrderListItem
+export type RepairWorkOrderDetailResult = RepairWorkOrderListItem
 
 export type RepairWorkOrderListItem = {
   Id?: number
@@ -113,6 +114,7 @@ export type ListWorkOrdersPayload = {
 
 const WORK_ORDERS_API_URL = buildApiUrl(API_PATHS.workOrdersList)
 const REPAIR_WORK_ORDERS_API_URL = buildApiUrl(API_PATHS.workOrderReportList)
+const REPAIR_WORK_ORDER_DETAIL_API_URL = API_PATHS.workOrderReportDetail
 const REPAIR_WORK_ORDER_CREATE_API_URL = buildApiUrl(API_PATHS.workOrderReportCreate)
 const WORK_ORDER_CREATE_API_URL = buildApiUrl(API_PATHS.workOrderCreate)
 const WORK_ORDER_DETAIL_API_URL = API_PATHS.workOrderDetail
@@ -235,6 +237,27 @@ export async function fetchWorkOrderDetail(payload: WorkOrderDetailPayload): Pro
   assertApiSuccess(responseBody, WORK_ORDER_DETAIL_ERROR_MESSAGE)
 
   return normalizeWorkOrderListItem(extractDetailRecord(responseBody))
+}
+
+export async function fetchRepairWorkOrderDetail(payload: WorkOrderDetailPayload): Promise<RepairWorkOrderDetailResult> {
+  const url = buildApiRequestUrl(REPAIR_WORK_ORDER_DETAIL_API_URL)
+  const uuid = getRequiredString(payload.Uuid, "Uuid")
+
+  url.searchParams.set("Uuid", uuid)
+
+  const response = await fetch(url.toString(), {
+    method: "GET",
+    headers: buildApiHeaders(),
+  })
+  const responseBody = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responseBody, WORK_ORDER_DETAIL_ERROR_MESSAGE)
+  }
+
+  assertApiSuccess(responseBody, WORK_ORDER_DETAIL_ERROR_MESSAGE)
+
+  return normalizeRepairWorkOrderListItem(extractDetailRecord(responseBody))
 }
 
 export async function updateWorkOrder(payload: UpdateWorkOrderPayload): Promise<CreateWorkOrderResult> {
