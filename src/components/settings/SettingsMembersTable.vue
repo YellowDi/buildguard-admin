@@ -19,6 +19,8 @@ import {
 } from "@/components/ui/alert-dialog"
 import TopTabSwitch from "@/components/layout/TopTabSwitch.vue"
 import SettingsToolbarRow from "@/components/settings/SettingsToolbarRow.vue"
+import SettingsToolbarRefreshSlot from "@/components/settings/SettingsToolbarRefreshSlot.vue"
+import SettingsToolbarSearchInput from "@/components/settings/SettingsToolbarSearchInput.vue"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -61,7 +63,6 @@ import {
   fetchRoles,
   updateRole as requestRoleUpdate,
 } from "@/lib/roles-api"
-import { cn } from "@/lib/utils"
 import TablePageTable from "@/components/table-page/TablePageTable.vue"
 import type { TableColumn, TablePageEmptyState } from "@/components/table-page/types"
 
@@ -139,8 +140,6 @@ type MemberActionKey =
 const MEMBERS_LOAD_ERROR_MESSAGE = "成员列表加载失败，请稍后重试。"
 const MEMBER_STATUS_UPDATE_ERROR_MESSAGE = "成员状态更新失败，请稍后重试。"
 const MEMBER_UPDATE_ERROR_MESSAGE = "成员信息更新失败，请稍后重试。"
-const toolbarIconButtonClass =
-  "top-tab-switch-icon-button flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:text-foreground"
 const compactTableClass =
   "text-[13px] [&_thead_th]:px-2.5 [&_thead_th]:py-1.5 [&_tbody_td]:px-2.5 [&_tbody_td]:py-2 [&_tbody_td]:align-middle [&_tbody_td]:!border-l-0 [&_thead_th:last-child]:w-0 [&_thead_th:last-child]:min-w-0 [&_thead_th:last-child]:p-0 [&_tbody_td:last-child]:w-0 [&_tbody_td:last-child]:min-w-0 [&_tbody_td:last-child]:p-0 [&_tbody_tr:hover]:bg-transparent [&_tbody_tr:hover_td]:bg-transparent"
 const memberStatusMap = {
@@ -1367,33 +1366,19 @@ function asRoleRow(row: Record<string, unknown>) {
         </template>
 
         <div class="flex flex-nowrap items-center justify-end gap-2">
-          <div
-            :class="
-              cn(
-                'flex h-8 items-center overflow-hidden rounded-full border border-input bg-background transition-[width,padding] duration-200 ease-out',
-                searchExpanded ? 'w-[260px] px-1.5' : 'w-8 justify-center px-0 border-transparent',
-              )
-            "
-          >
-            <button
-              type="button"
-              :class="toolbarIconButtonClass"
-              @click="toggleSearch"
-            >
-              <i :class="searchExpanded ? 'ri-close-line text-[17px]' : 'ri-search-line text-[17px]'" />
-            </button>
-            <Input
-              v-if="searchExpanded"
-              v-model="searchQuery"
-              :placeholder="currentSearchPlaceholder"
-              class="h-8 border-0 bg-transparent px-2 text-sm shadow-none focus-visible:border-transparent focus-visible:ring-0"
-            />
-          </div>
+          <SettingsToolbarSearchInput
+            v-model="searchQuery"
+            :expanded="searchExpanded"
+            :placeholder="currentSearchPlaceholder"
+            @toggle="toggleSearch"
+          />
 
-          <Button v-if="!searchExpanded" variant="ghost" size="sm" class="h-8 rounded-md px-3" @click="loadAllData">
-            <i class="ri-refresh-line text-sm" />
-            <span>刷新列表</span>
-          </Button>
+          <SettingsToolbarRefreshSlot :yield-space="searchExpanded">
+            <Button variant="ghost" size="sm" class="h-8 rounded-md px-3" @click="loadAllData">
+              <i class="ri-refresh-line text-sm" />
+              <span>刷新列表</span>
+            </Button>
+          </SettingsToolbarRefreshSlot>
 
           <div v-if="activeView === 'members'" class="inline-flex items-center">
             <Button class="h-8 gap-1 rounded-r-none pr-2.5 pl-3 text-[14px]" @click="handleMemberAction('manual')">

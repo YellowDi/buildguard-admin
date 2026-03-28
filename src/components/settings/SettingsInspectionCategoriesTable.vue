@@ -27,6 +27,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import SettingsToolbarRow from "@/components/settings/SettingsToolbarRow.vue"
+import SettingsToolbarRefreshSlot from "@/components/settings/SettingsToolbarRefreshSlot.vue"
+import SettingsToolbarSearchInput from "@/components/settings/SettingsToolbarSearchInput.vue"
 import { Input } from "@/components/ui/input"
 import TablePageTable from "@/components/table-page/TablePageTable.vue"
 import type { TableColumn, TablePageEmptyState } from "@/components/table-page/types"
@@ -38,7 +40,6 @@ import {
   type InspectionCategoryRecord,
   updateInspectionCategory,
 } from "@/lib/inspection-categories-api"
-import { cn } from "@/lib/utils"
 
 const props = withDefaults(defineProps<{
   hideCreateButton?: boolean
@@ -65,8 +66,6 @@ type InspectionCategoryForm = {
 }
 
 const INSPECTION_CATEGORIES_LOAD_ERROR_MESSAGE = "检测项分类列表加载失败，请稍后重试。"
-const toolbarIconButtonClass =
-  "top-tab-switch-icon-button flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:text-foreground"
 const compactTableClass =
   "text-[13px] [&_thead_th]:px-2.5 [&_thead_th]:py-1.5 [&_tbody_td]:px-2.5 [&_tbody_td]:py-2 [&_tbody_td]:align-middle [&_tbody_td]:!border-l-0 [&_thead_th:last-child]:w-0 [&_thead_th:last-child]:min-w-0 [&_thead_th:last-child]:p-0 [&_tbody_td:last-child]:w-0 [&_tbody_td:last-child]:min-w-0 [&_tbody_td:last-child]:p-0 [&_tbody_tr:hover]:bg-transparent [&_tbody_tr:hover_td]:bg-transparent"
 
@@ -370,40 +369,25 @@ defineExpose({
   <section class="space-y-5">
     <SettingsToolbarRow v-if="!props.hideToolbar">
       <div class="flex flex-nowrap items-center justify-end gap-2">
-        <div
-          :class="
-            cn(
-              'flex h-8 items-center overflow-hidden rounded-full border border-input bg-background transition-[width,padding] duration-200 ease-out',
-              searchExpanded ? 'w-[260px] px-1.5' : 'w-8 justify-center border-transparent px-0',
-            )
-          "
-        >
-          <button
-            type="button"
-            :class="toolbarIconButtonClass"
-            @click="toggleSearch"
-          >
-            <i :class="searchExpanded ? 'ri-close-line text-[17px]' : 'ri-search-line text-[17px]'" />
-          </button>
-          <Input
-            v-if="searchExpanded"
-            v-model="searchQuery"
-            placeholder="搜索分类名称、ID 或 Uuid"
-            class="h-8 border-0 bg-transparent px-2 text-sm shadow-none focus-visible:border-transparent focus-visible:ring-0"
-          />
-        </div>
+        <SettingsToolbarSearchInput
+          v-model="searchQuery"
+          :expanded="searchExpanded"
+          placeholder="搜索分类名称、ID 或 Uuid"
+          @toggle="toggleSearch"
+        />
 
-        <Button
-          v-if="!searchExpanded"
-          variant="ghost"
-          size="sm"
-          class="h-8 rounded-md px-3"
-          :disabled="loading"
-          @click="loadInspectionCategories"
-        >
-          <i :class="loading ? 'ri-loader-4-line animate-spin text-sm' : 'ri-refresh-line text-sm'" />
-          <span>刷新列表</span>
-        </Button>
+        <SettingsToolbarRefreshSlot :yield-space="searchExpanded">
+          <Button
+            variant="ghost"
+            size="sm"
+            class="h-8 rounded-md px-3"
+            :disabled="loading"
+            @click="loadInspectionCategories"
+          >
+            <i :class="loading ? 'ri-loader-4-line animate-spin text-sm' : 'ri-refresh-line text-sm'" />
+            <span>刷新列表</span>
+          </Button>
+        </SettingsToolbarRefreshSlot>
 
         <Button v-if="!props.hideCreateButton" class="h-8 gap-1 rounded-md px-3 text-[14px]" @click="openCreateDialog">
           <i class="ri-add-line text-base" />

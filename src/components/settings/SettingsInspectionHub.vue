@@ -4,9 +4,10 @@ import { computed, ref } from "vue"
 import TopTabSwitch from "@/components/layout/TopTabSwitch.vue"
 import SettingsInspectionCategoriesTable from "@/components/settings/SettingsInspectionCategoriesTable.vue"
 import SettingsInspectionItemsTable from "@/components/settings/SettingsInspectionItemsTable.vue"
+import SettingsToolbarRow from "@/components/settings/SettingsToolbarRow.vue"
+import SettingsToolbarRefreshSlot from "@/components/settings/SettingsToolbarRefreshSlot.vue"
+import SettingsToolbarSearchInput from "@/components/settings/SettingsToolbarSearchInput.vue"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { cn } from "@/lib/utils"
 
 type InspectionHubTabKey = "items" | "categories" | "templates"
 
@@ -32,9 +33,6 @@ const tabs = computed(() => [
   { id: "categories", label: "分类", badge: categoriesCount.value },
   { id: "templates", label: "模板", badge: 0 },
 ])
-
-const toolbarIconButtonClass =
-  "top-tab-switch-icon-button flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:text-foreground"
 
 const currentSearchQuery = computed({
   get: () => searchQueries.value[activeTab.value],
@@ -104,61 +102,46 @@ async function refreshCurrentTab() {
 
 <template>
   <section class="space-y-5">
-    <div class="overflow-x-auto">
-      <div class="flex min-w-max items-center justify-between gap-3">
-        <TopTabSwitch
-          :tabs="tabs"
-          :model-value="activeTab"
-          :collapse-inactive="false"
-          tone="default"
-          aria-label="检测项页签切换"
-          @update:model-value="activeTab = $event as InspectionHubTabKey"
-        />
+    <div class="flex flex-col gap-4">
+      <SettingsToolbarRow>
+        <template #leading>
+          <TopTabSwitch
+            :tabs="tabs"
+            :model-value="activeTab"
+            :collapse-inactive="false"
+            tone="default"
+            aria-label="检测项页签切换"
+            @update:model-value="activeTab = $event as InspectionHubTabKey"
+          />
+        </template>
 
-        <div
-          class="flex shrink-0 items-center justify-end gap-2"
-        >
-          <div
-            :class="
-              cn(
-                'flex h-8 items-center overflow-hidden rounded-full border border-input bg-background transition-[width,padding] duration-200 ease-out',
-                searchExpanded ? 'w-[260px] px-1.5' : 'w-8 justify-center border-transparent px-0',
-              )
-            "
-          >
-            <button
-              type="button"
-              :class="toolbarIconButtonClass"
-              @click="toggleSearch"
+        <div class="flex flex-nowrap items-center justify-end gap-2">
+          <SettingsToolbarSearchInput
+            v-model="currentSearchQuery"
+            :expanded="searchExpanded"
+            :placeholder="currentSearchPlaceholder"
+            @toggle="toggleSearch"
+          />
+
+          <SettingsToolbarRefreshSlot :yield-space="searchExpanded">
+            <Button
+              variant="ghost"
+              size="sm"
+              class="h-8 rounded-md px-3"
+              :disabled="refreshDisabled"
+              @click="refreshCurrentTab"
             >
-              <i :class="searchExpanded ? 'ri-close-line text-[17px]' : 'ri-search-line text-[17px]'" />
-            </button>
-            <Input
-              v-if="searchExpanded"
-              v-model="currentSearchQuery"
-              :placeholder="currentSearchPlaceholder"
-              class="h-8 border-0 bg-transparent px-2 text-sm shadow-none focus-visible:border-transparent focus-visible:ring-0"
-            />
-          </div>
-
-          <Button
-            v-if="!searchExpanded"
-            variant="ghost"
-            size="sm"
-            class="h-8 rounded-md px-3"
-            :disabled="refreshDisabled"
-            @click="refreshCurrentTab"
-          >
-            <i class="ri-refresh-line text-sm" />
-            <span>刷新列表</span>
-          </Button>
+              <i class="ri-refresh-line text-sm" />
+              <span>刷新列表</span>
+            </Button>
+          </SettingsToolbarRefreshSlot>
 
           <Button v-if="showPrimaryAction" class="h-8 gap-1 rounded-md px-3 text-[14px]" @click="triggerPrimaryAction">
             <i class="ri-add-line text-base" />
             <span>{{ actionLabel }}</span>
           </Button>
         </div>
-      </div>
+      </SettingsToolbarRow>
     </div>
 
     <div v-show="activeTab === 'items'">
