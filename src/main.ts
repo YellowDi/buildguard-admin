@@ -2,6 +2,7 @@ import { createApp } from "vue"
 
 import App from "./App.vue"
 import router from "./router"
+import "@/composables/useGlobalBranding"
 import { clearAuthToken, onAuthExpired } from "./lib/auth"
 import { clearCurrentUser } from "./composables/useCurrentUser"
 import "./styles/global.css"

@@ -364,10 +364,23 @@ const categories = computed<SettingsCategory[]>(() => [
     key: "system",
     group: "admin",
     label: "系统",
-    description: "集中查看系统菜单、按钮权限和 API 资源。",
-    icon: "ri-apps-2-line",
+    description: "自定义登录页与菜单上显示的名称和标志。",
+    icon: "ri-computer-line",
     pageTitle: "系统",
-    pageDescription: "通过胶囊标签切换系统资源表，统一管理菜单、按钮和 API 配置。",
+    pageDescription:
+      "在这里修改站点名称和标志图片，登录页、左侧菜单和浏览器标签页标题会随之更新。设置保存在当前使用的浏览器中，换电脑或清除浏览器数据后需重新设置。",
+    sections: [],
+  },
+  {
+    key: "developer",
+    group: "admin",
+    label: "开发者",
+    description:
+      "查看并维护后台路由、操作权限与接口元数据，支撑权限策略与前后端联调。",
+    icon: "ri-braces-line",
+    pageTitle: "开发者",
+    pageDescription:
+      "查看并维护后台路由、操作权限与接口元数据，支撑权限策略与前后端联调。",
     sections: [],
   },
   {

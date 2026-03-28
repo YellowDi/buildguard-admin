@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
+import SettingsGlobalBranding from "@/components/settings/SettingsGlobalBranding.vue"
 import SettingsInspectionHub from "@/components/settings/SettingsInspectionHub.vue"
 import SettingsMenusTable from "@/components/settings/SettingsMenusTable.vue"
 import SettingsMembersTable from "@/components/settings/SettingsMembersTable.vue"
@@ -66,7 +67,7 @@ function getBooleanValue(key: keyof SettingsState) {
     :page-description="props.category.pageDescription ?? props.category.description"
   />
   <SettingsMenusTable
-    v-else-if="props.category.key === 'system'"
+    v-else-if="props.category.key === 'developer'"
     :page-title="props.category.pageTitle ?? props.category.label"
     :page-description="props.category.pageDescription ?? props.category.description"
   />
@@ -75,6 +76,15 @@ function getBooleanValue(key: keyof SettingsState) {
     :page-title="props.category.pageTitle ?? props.category.label"
     :page-description="props.category.pageDescription ?? props.category.description"
   />
+
+  <SettingsRightPanelLayout
+    v-else-if="props.category.key === 'system'"
+    variant="title-only"
+    :title="props.category.pageTitle ?? props.category.label"
+    :description="props.category.pageDescription ?? props.category.description"
+  >
+    <SettingsGlobalBranding />
+  </SettingsRightPanelLayout>
 
   <SettingsRightPanelLayout
     v-else

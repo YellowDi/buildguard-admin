@@ -868,7 +868,7 @@ function formatDateTime(...values: unknown[]) {
           :model-value="activeView"
           :collapse-inactive="false"
           tone="default"
-          aria-label="系统资源视图切换"
+          aria-label="开发者资源视图切换"
           @update:model-value="activeView = $event as SystemViewKey"
         />
         </template>

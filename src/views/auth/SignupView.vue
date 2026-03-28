@@ -32,7 +32,6 @@ function handleSubmit() {
       <div class="flex justify-center gap-2 md:justify-start">
         <RouterLink to="/login" class="flex items-center gap-2 font-medium">
           <BrandLogo
-            label="Workspace"
             image-class="size-8"
             text-class="truncate text-base font-semibold"
           />
