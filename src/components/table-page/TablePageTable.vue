@@ -488,12 +488,28 @@ function isFillColumnActive(column: TableColumn, columnIndex: number) {
     && fillColumnActive.value
 }
 
+function isNoteLikeColumn(column: TableColumn) {
+  return column.variant === "note" || column.cellRenderer?.kind === "note"
+}
+
+/**
+ * table-auto 下可换行单元格的 min-content 宽度极窄，备注列会被压成「两字一行」。
+ * 非 fill 的备注列需设下限；有数据时不再走 getEmptyColumnWidthClass，此处单独补全。
+ */
+function getNoteColumnMinWidthClass(column: TableColumn) {
+  if (column.width === "fill" || !isNoteLikeColumn(column)) {
+    return ""
+  }
+
+  return "min-w-[12rem]"
+}
+
 function getResolvedColumnHeaderClass(column: TableColumn, columnIndex: number) {
   const fillActive = isFillColumnActive(column, columnIndex)
 
   return [
     getColumnHeaderClass(column, fillActive),
-    props.rows.length === 0 ? getEmptyColumnWidthClass(column) : "",
+    props.rows.length === 0 ? getEmptyColumnWidthClass(column) : getNoteColumnMinWidthClass(column),
     column.width === "fill" ? "" : "w-px",
   ]
 }
@@ -510,7 +526,7 @@ function getResolvedColumnCellClass(column: TableColumn, columnIndex: number) {
 
   return [
     getColumnCellClass(column, fillActive),
-    props.rows.length === 0 ? getEmptyColumnWidthClass(column) : "",
+    props.rows.length === 0 ? getEmptyColumnWidthClass(column) : getNoteColumnMinWidthClass(column),
     column.width === "fill" ? "" : "w-px",
     column.width === "fill"
       ? fillActive
@@ -521,7 +537,7 @@ function getResolvedColumnCellClass(column: TableColumn, columnIndex: number) {
 }
 
 function getEmptyColumnWidthClass(column: TableColumn) {
-  if (column.width === "fill" || column.variant === "note") {
+  if (column.width === "fill" || isNoteLikeColumn(column)) {
     return "min-w-[16rem]"
   }
 

@@ -257,6 +257,7 @@ const roleColumns: TableColumn[] = [
     label: "备注",
     filterType: "text",
     tone: "muted",
+    variant: "note",
     cellRenderer: { kind: "note" },
   },
   {
