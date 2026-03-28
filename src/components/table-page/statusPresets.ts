@@ -32,9 +32,9 @@ export const outboundTaskStatusMap = {
 } satisfies Record<string, TableStatusOption>
 
 export const workOrderStatusMap = {
-  待指派: { tone: "orange", icon: "clock" },
-  待开始: { tone: "orange", icon: "clock" },
-  进行中: { tone: "blue", icon: "clock" },
-  报告生成中: { tone: "orange", icon: "clock" },
+  待指派: { tone: "gray", icon: "dot" },
+  待开始: { tone: "purple", icon: "clock" },
+  进行中: { tone: "green", icon: "clock" },
+  报告生成中: { tone: "blue", icon: "clock" },
   已结单: { tone: "green", icon: "check" },
 } satisfies Record<string, TableStatusOption>
