@@ -410,8 +410,24 @@ const tableEmptyState = computed<TablePageEmptyState>(() => {
 })
 
 onMounted(() => {
-  void loadMenus()
+  void bootstrapSystemResources()
 })
+
+/** 进入系统页时并行拉取菜单 / 按钮 / API，胶囊 badge 才能立刻显示正确数量（否则仅当前 Tab 有数据，其余长期为 0） */
+async function bootstrapSystemResources() {
+  loading.value = true
+  errorMessage.value = ""
+
+  try {
+    await Promise.allSettled([
+      loadMenus({ manageLoading: false }),
+      loadButtons({ manageLoading: false }),
+      loadApis({ manageLoading: false }),
+    ])
+  } finally {
+    loading.value = false
+  }
+}
 
 watch(activeView, (value) => {
   if (value === "buttons" && buttonRows.value.length === 0) {
@@ -429,9 +445,13 @@ watch(() => menuForm.value.parentUuid, (value) => {
   menuForm.value.level = String(parent ? parent.level + 1 : 0)
 })
 
-async function loadMenus() {
-  loading.value = true
-  errorMessage.value = ""
+async function loadMenus(options?: { manageLoading?: boolean }) {
+  const manageLoading = options?.manageLoading !== false
+
+  if (manageLoading) {
+    loading.value = true
+    errorMessage.value = ""
+  }
 
   try {
     const result = await fetchMenus({
@@ -448,13 +468,19 @@ async function loadMenus() {
       mode: "silent",
     })
   } finally {
-    loading.value = false
+    if (manageLoading) {
+      loading.value = false
+    }
   }
 }
 
-async function loadButtons() {
-  loading.value = true
-  errorMessage.value = ""
+async function loadButtons(options?: { manageLoading?: boolean }) {
+  const manageLoading = options?.manageLoading !== false
+
+  if (manageLoading) {
+    loading.value = true
+    errorMessage.value = ""
+  }
 
   try {
     const result = await fetchSystemButtons()
@@ -466,13 +492,19 @@ async function loadButtons() {
       mode: "silent",
     })
   } finally {
-    loading.value = false
+    if (manageLoading) {
+      loading.value = false
+    }
   }
 }
 
-async function loadApis() {
-  loading.value = true
-  errorMessage.value = ""
+async function loadApis(options?: { manageLoading?: boolean }) {
+  const manageLoading = options?.manageLoading !== false
+
+  if (manageLoading) {
+    loading.value = true
+    errorMessage.value = ""
+  }
 
   try {
     const result = await fetchSystemApis()
@@ -484,7 +516,9 @@ async function loadApis() {
       mode: "silent",
     })
   } finally {
-    loading.value = false
+    if (manageLoading) {
+      loading.value = false
+    }
   }
 }
 
