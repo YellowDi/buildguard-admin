@@ -1,4 +1,4 @@
-import { createHttpError, readResponseBody } from "@/lib/api-errors"
+import { assertApiSuccess, createHttpError, readResponseBody } from "@/lib/api-errors"
 import { API_PATHS, buildApiHeaders, buildApiUrl } from "@/lib/api"
 
 export type CurrentUserRole = {
@@ -29,21 +29,38 @@ export type CurrentUserInfoResult = {
   CustomerInfo?: CurrentUserCustomerInfo
 }
 
-const CURRENT_USER_INFO_API_URL = buildApiUrl(API_PATHS.currentUserInfo)
 const CURRENT_USER_INFO_ERROR_MESSAGE = "当前用户信息加载失败，请稍后重试。"
+const CURRENT_USER_INFO_API_PATHS = [
+  API_PATHS.currentUserInfo,
+  "/bqi/user/info",
+] as const
 
 export async function fetchCurrentUserInfo(): Promise<CurrentUserInfoResult> {
-  const response = await fetch(CURRENT_USER_INFO_API_URL, {
-    method: "GET",
-    headers: buildApiHeaders(),
-  })
-  const responseBody = await readResponseBody(response)
+  let lastError: Error | null = null
 
-  if (!response.ok) {
-    throw createHttpError(response, responseBody, CURRENT_USER_INFO_ERROR_MESSAGE)
+  for (const path of CURRENT_USER_INFO_API_PATHS) {
+    const response = await fetch(buildApiUrl(path), {
+      method: "GET",
+      headers: buildApiHeaders(),
+    })
+    const responseBody = await readResponseBody(response)
+
+    if (!response.ok) {
+      const httpError = createHttpError(response, responseBody, CURRENT_USER_INFO_ERROR_MESSAGE)
+
+      if (response.status === 404 && path !== CURRENT_USER_INFO_API_PATHS[CURRENT_USER_INFO_API_PATHS.length - 1]) {
+        lastError = httpError
+        continue
+      }
+
+      throw httpError
+    }
+
+    assertApiSuccess(responseBody, CURRENT_USER_INFO_ERROR_MESSAGE)
+    return extractCurrentUserRecord(responseBody)
   }
 
-  return extractCurrentUserRecord(responseBody)
+  throw lastError ?? new Error(CURRENT_USER_INFO_ERROR_MESSAGE)
 }
 
 function extractCurrentUserRecord(payload: unknown): CurrentUserInfoResult {

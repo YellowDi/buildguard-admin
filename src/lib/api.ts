@@ -102,6 +102,25 @@ export function getApiDevice() {
     || DEFAULT_API_DEVICE
 }
 
+export function setApiDevice(device: string) {
+  if (typeof window === "undefined") {
+    return
+  }
+
+  const normalized = device.trim()
+
+  if (!normalized) {
+    for (const storage of [window.localStorage, window.sessionStorage]) {
+      for (const key of DEVICE_STORAGE_KEYS) {
+        storage.removeItem(key)
+      }
+    }
+    return
+  }
+
+  window.localStorage.setItem("X-Device", normalized)
+}
+
 export function getApiToken() {
   return normalizeAuthToken(import.meta.env.VITE_API_TOKEN?.trim() || readStorageValue(TOKEN_STORAGE_KEYS))
 }
@@ -120,6 +139,10 @@ export function buildApiHeaders(headers: HeadersInit = {}) {
       : token
 
     resolvedHeaders.set(authHeaderName, authHeaderValue)
+
+    if (authHeaderName.toLowerCase() !== "token" && !resolvedHeaders.has("Token")) {
+      resolvedHeaders.set("Token", token)
+    }
   }
 
   return resolvedHeaders

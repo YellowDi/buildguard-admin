@@ -15,9 +15,9 @@ type HandleApiErrorOptions = {
   mode?: "toast" | "silent"
 }
 
-const MESSAGE_KEYS = ["message", "msg", "error", "detail", "title", "reason"] as const
+const MESSAGE_KEYS = ["message", "msg", "error", "detail", "title", "reason", "resp_err", "respErr"] as const
 const NESTED_KEYS = ["data", "error"] as const
-const CODE_KEYS = ["code", "errorCode", "error_code"] as const
+const CODE_KEYS = ["code", "errorCode", "error_code", "status_code", "statusCode"] as const
 const REQUEST_ID_KEYS = ["requestId", "request_id", "traceId", "trace_id"] as const
 const REQUEST_ID_HEADER_KEYS = [
   "x-request-id",
@@ -113,7 +113,10 @@ export function assertApiSuccess(payload: unknown, fallback = "请求失败，�
     })
   }
 
-  const rawCode = record.code ?? record.Code
+  const rawCode = record.code
+    ?? record.Code
+    ?? record.status_code
+    ?? record.statusCode
   const numericCode = typeof rawCode === "string" ? Number(rawCode.trim()) : rawCode
 
   if (typeof numericCode === "number" && Number.isFinite(numericCode) && numericCode !== 0 && numericCode !== 200) {

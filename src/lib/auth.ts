@@ -1,5 +1,6 @@
 const AUTH_TOKEN_STORAGE_KEY = "token"
 const TOKEN_STORAGE_KEYS = ["token", "access_token", "auth_token", "Authorization", "authorization"] as const
+const DEVICE_STORAGE_KEYS = ["X-Device", "x-device", "device", "device_id"] as const
 const AUTH_EXPIRED_EVENT = "app:auth-expired"
 
 export function getAuthToken() {
@@ -32,6 +33,10 @@ export function clearAuthToken() {
 
   for (const storage of [window.localStorage, window.sessionStorage]) {
     for (const key of TOKEN_STORAGE_KEYS) {
+      storage.removeItem(key)
+    }
+
+    for (const key of DEVICE_STORAGE_KEYS) {
       storage.removeItem(key)
     }
   }

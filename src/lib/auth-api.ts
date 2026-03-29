@@ -1,5 +1,5 @@
-import { createHttpError, readResponseBody } from "@/lib/api-errors"
-import { buildApiHeadersWithoutAuth, buildApiUrl } from "@/lib/api"
+import { assertApiSuccess, createHttpError, readResponseBody } from "@/lib/api-errors"
+import { buildApiHeadersWithoutAuth, buildApiUrl, setApiDevice } from "@/lib/api"
 import { isMd5Hash, md5 } from "@/lib/md5"
 
 export type LoginPayload = {
@@ -22,6 +22,11 @@ type LoginResponse = {
     Authorization?: string
     authorization?: string
   }
+  XDevice?: string
+  xDevice?: string
+  x_device?: string
+  device?: string
+  device_id?: string
 }
 
 const LOGIN_API_URL = buildApiUrl("/bqi/public/login")
@@ -46,10 +51,18 @@ export async function login(payload: LoginPayload) {
     throw createHttpError(response, responseBody, LOGIN_ERROR_MESSAGE)
   }
 
-  const token = extractToken(responseBody)
+  assertApiSuccess(responseBody, LOGIN_ERROR_MESSAGE)
+
+  const token = extractToken(responseBody) || extractTokenFromHeaders(response.headers)
 
   if (!token) {
     throw new Error("登录响应缺少 Token 字段。")
+  }
+
+  const device = extractDevice(responseBody) || extractDeviceFromHeaders(response.headers)
+
+  if (device) {
+    setApiDevice(device)
   }
 
   return {
@@ -77,6 +90,84 @@ function readTokenField(value: Record<string, unknown> | null) {
 
     if (resolvedToken) {
       return resolvedToken
+    }
+  }
+
+  return ""
+}
+
+function extractTokenFromHeaders(headers: Pick<Headers, "get">) {
+  for (const key of ["Token", "token", "Authorization", "authorization", "X-Token", "x-token"]) {
+    const resolvedToken = normalizeTokenValue(headers.get(key))
+
+    if (resolvedToken) {
+      return resolvedToken
+    }
+  }
+
+  return ""
+}
+
+function extractDevice(payload: unknown) {
+  const record = asRecord(payload)
+
+  if (!record) {
+    return ""
+  }
+
+  return findDevice(record)
+}
+
+function findDevice(value: unknown, depth = 0): string {
+  if (depth > 4) {
+    return ""
+  }
+
+  const record = asRecord(value)
+
+  if (!record) {
+    return ""
+  }
+
+  const directDevice = readDeviceField(record)
+
+  if (directDevice) {
+    return directDevice
+  }
+
+  for (const key of ["data", "result", "payload"]) {
+    const nestedDevice = findDevice(record[key], depth + 1)
+
+    if (nestedDevice) {
+      return nestedDevice
+    }
+  }
+
+  return ""
+}
+
+function readDeviceField(value: Record<string, unknown> | null) {
+  if (!value) {
+    return ""
+  }
+
+  for (const key of ["XDevice", "xDevice", "x_device", "device", "device_id"]) {
+    const resolvedDevice = normalizeDeviceValue(value[key])
+
+    if (resolvedDevice) {
+      return resolvedDevice
+    }
+  }
+
+  return ""
+}
+
+function extractDeviceFromHeaders(headers: Pick<Headers, "get">) {
+  for (const key of ["X-Device", "x-device", "device", "device_id"]) {
+    const resolvedDevice = normalizeDeviceValue(headers.get(key))
+
+    if (resolvedDevice) {
+      return resolvedDevice
     }
   }
 
@@ -125,6 +216,10 @@ function normalizeTokenValue(value: unknown) {
   return normalized.startsWith("Bearer ")
     ? normalized.slice("Bearer ".length).trim()
     : normalized
+}
+
+function normalizeDeviceValue(value: unknown) {
+  return typeof value === "string" ? value.trim() : ""
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {
