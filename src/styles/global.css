@@ -45,7 +45,7 @@
   --sidebar-border: hsl(220 13% 91%);
   --sidebar-ring: hsl(217.2 91.2% 59.8%);
   --sidebar-active-surface: #FFFFFF;
-  --sidebar-active-surface-shadow:
+  --shadow-card:
     0 20px 20px -10px rgb(23 23 23 / 0.04),
     0 10px 10px -5px rgb(23 23 23 / 0.04),
     0 6px 6px -3px rgb(23 23 23 / 0.04),
@@ -108,7 +108,7 @@
   --sidebar-border: hsl(240 3.7% 15.9%);
   --sidebar-ring: hsl(217.2 91.2% 59.8%);
   --sidebar-active-surface: rgb(255 255 235 / 0.102);
-  --sidebar-active-surface-shadow: none;
+  --shadow-card: none;
   --link: var(--theme-primary);
   --link-foreground: hsl(0 0% 100%);
   --selection: hsl(214 52% 25%);
@@ -347,7 +347,7 @@
   .sidebar-nav-active-surface {
     border-radius: 8px;
     background: var(--sidebar-active-surface);
-    box-shadow: var(--sidebar-active-surface-shadow);
+    box-shadow: var(--shadow-card);
   }
 
   .sidebar-nav-hover-surface:hover,

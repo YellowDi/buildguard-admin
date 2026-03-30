@@ -4,9 +4,9 @@ import { useRoute, useRouter } from "vue-router"
 
 import { buildBuildingDetailSections, toText } from "@/components/detail/buildingDetailFields"
 import DetailFieldSections from "@/components/detail/DetailFieldSections.vue"
+import MapLocationDialog from "@/components/map/MapLocationDialog.vue"
 import type { DetailFieldSection } from "@/components/detail/types"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Button } from "@/components/ui/button"
 import { detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
 import DetailLayout from "@/layouts/DetailLayout.vue"
 import { handleApiError } from "@/lib/api-errors"
@@ -18,6 +18,7 @@ const router = useRouter()
 const building = ref<BuildingListItem | null>(null)
 const loading = ref(false)
 const errorMessage = ref("")
+const mapDialogOpen = ref(false)
 let latestRequestId = 0
 
 const buildingUuid = computed(() => typeof route.params.id === "string" ? route.params.id.trim() : "")
@@ -25,7 +26,11 @@ const parkUuid = computed(() => typeof route.query.parkUuid === "string" ? route
 const customerUuid = computed(() => typeof route.query.customerUuid === "string" ? route.query.customerUuid.trim() : "")
 
 const fieldSections = computed<DetailFieldSection[]>(() => {
-  return buildBuildingDetailSections(building.value)
+  return buildBuildingDetailSections(building.value, {
+    onOpenMap: () => {
+      mapDialogOpen.value = true
+    },
+  })
 })
 
 watch(building, (current) => {
@@ -137,4 +142,11 @@ function toOptionalText(value: unknown) {
       <DetailFieldSections v-else-if="building" :sections="fieldSections" />
     </template>
   </DetailLayout>
+
+  <MapLocationDialog
+    v-model:open="mapDialogOpen"
+    title="建筑位置"
+    :latitude="building?.Latitude ?? ''"
+    :longitude="building?.Longitude ?? ''"
+  />
 </template>

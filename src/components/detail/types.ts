@@ -26,7 +26,10 @@ export type DetailFieldRow = {
   label: string
   value: DetailFieldValue
   imageUrl?: string | null
+  /** 仅展示按钮，不展示 value */
   action?: DetailFieldAction
+  /** 与 value 同格展示在右侧（如地址后的操作按钮） */
+  suffixAction?: DetailFieldAction
   truncate?: boolean
   valueClass?: string
 }

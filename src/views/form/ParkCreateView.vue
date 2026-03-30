@@ -7,11 +7,13 @@ import FormDatePicker from "@/components/form/FormDatePicker.vue"
 import FormFieldSection from "@/components/form/FormFieldSection.vue"
 import FormHeader from "@/components/form/FormHeader.vue"
 import FormQuickNav from "@/components/form/FormQuickNav.vue"
+import MapLocationDialog from "@/components/map/MapLocationDialog.vue"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { handleApiError } from "@/lib/api-errors"
+import { hasValidLatLng } from "@/lib/map-coordinates"
 import { createPark, fetchParkDetail, updatePark } from "@/lib/parks-api"
 
 type QuickNavItem = {
@@ -60,6 +62,7 @@ const formSectionsRef = ref<HTMLElement | null>(null)
 const STICKY_HEADER_OFFSET = 112
 let observer: IntersectionObserver | null = null
 let observerActive = false
+const mapPickerOpen = ref(false)
 const isEditMode = computed(() => route.name === "park-edit")
 const routeCustomerUuid = computed(() => {
   if (isEditMode.value) {
@@ -88,6 +91,13 @@ const resetDialogDescription = computed(() =>
 const canSubmit = computed(() =>
   Boolean(normalizeText(form.customerUuid) && normalizeText(form.name) && !submitting.value),
 )
+
+const parkFormCoordinateLine = computed(() => {
+  if (!hasValidLatLng(form.latitude, form.longitude)) {
+    return "暂无经纬度，地图选点后显示"
+  }
+  return `经度 ${normalizeText(form.longitude)}　纬度 ${normalizeText(form.latitude)}`
+})
 
 function handleFocus(sectionId: string) {
   activeNavId.value = sectionId
@@ -463,27 +473,6 @@ watch(
           </FormFieldSection>
 
           <FormFieldSection
-            id="section-location"
-            quick-nav-label="坐标"
-            label="坐标"
-          >
-            <div class="grid gap-3 sm:grid-cols-2">
-              <Input
-                v-model="form.latitude"
-                placeholder="请输入纬度"
-                class="w-full"
-                @focus="handleFocus('section-location')"
-              />
-              <Input
-                v-model="form.longitude"
-                placeholder="请输入经度"
-                class="w-full"
-                @focus="handleFocus('section-location')"
-              />
-            </div>
-          </FormFieldSection>
-
-          <FormFieldSection
             id="section-address"
             quick-nav-label="地址"
             label="地址"
@@ -491,13 +480,32 @@ watch(
             align="start"
             last
           >
-            <Textarea
-              id="park-address"
-              v-model="form.address"
-              placeholder="请输入园区地址"
-              class="min-h-[120px] w-full resize-y"
-              @focus="handleFocus('section-address')"
-            />
+            <div class="relative overflow-hidden rounded-lg border border-border/80 bg-background shadow-xs">
+              <Textarea
+                id="park-address"
+                v-model="form.address"
+                placeholder="请输入园区地址，可点击右下角在地图选点自动填写"
+                class="min-h-[120px] w-full resize-y border-0 bg-transparent px-3 pb-12 pt-2.5 text-[15px] leading-relaxed focus-visible:ring-0 focus-visible:ring-offset-0"
+                @focus="handleFocus('section-address')"
+              />
+              <div
+                class="pointer-events-none absolute bottom-2 left-2 right-2 z-10 flex min-h-8 items-center justify-between gap-2 sm:left-3 sm:right-3"
+              >
+                <p class="pointer-events-none min-w-0 flex-1 truncate text-left text-[11px] leading-tight text-muted-foreground tabular-nums sm:text-xs">
+                  {{ parkFormCoordinateLine }}
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  class="pointer-events-auto h-8 shrink-0 gap-1 rounded-md px-2.5 text-xs shadow-sm"
+                  @click.stop="mapPickerOpen = true"
+                >
+                  <i class="ri-map-pin-line text-[15px]" />
+                  地图选点
+                </Button>
+              </div>
+            </div>
           </FormFieldSection>
         </div>
       </form>
@@ -511,4 +519,16 @@ watch(
       />
     </div>
   </section>
+
+  <MapLocationDialog
+    v-model:open="mapPickerOpen"
+    title="地图选点"
+    pickable
+    fill-address-on-pick
+    :latitude="form.latitude"
+    :longitude="form.longitude"
+    @update:latitude="form.latitude = $event"
+    @update:longitude="form.longitude = $event"
+    @update:address="form.address = $event"
+  />
 </template>

@@ -4,6 +4,7 @@ import { useRoute, useRouter } from "vue-router"
 import { toast } from "vue-sonner"
 
 import BuildingDetailSheet from "@/components/detail/BuildingDetailSheet.vue"
+import MapLocationDialog from "@/components/map/MapLocationDialog.vue"
 import DetailAccordionModule from "@/components/detail/DetailAccordionModule.vue"
 import DetailTabActionsGroup from "@/components/detail/DetailTabActionsGroup.vue"
 import DetailFieldSections from "@/components/detail/DetailFieldSections.vue"
@@ -58,6 +59,7 @@ import { detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
 import { useDetailRouteTab } from "@/composables/useDetailRouteTab"
 import DetailLayout from "@/layouts/DetailLayout.vue"
 import { handleApiError } from "@/lib/api-errors"
+import { hasValidLatLng } from "@/lib/map-coordinates"
 import { fetchBuildings, type BuildingListItem } from "@/lib/buildings-api"
 import { readCustomerSubAccountLocalRecords } from "@/lib/customer-sub-accounts-api"
 import { deleteCustomer, fetchCustomerDetail, type CustomerDetailPerson, type CustomerDetailResult } from "@/lib/customers-api"
@@ -242,6 +244,7 @@ const parkDetailLoading = ref(false)
 const parkDetailErrorMessage = ref("")
 const parkDeleteConfirmOpen = ref(false)
 const parkDeleteSubmitting = ref(false)
+const parkMapDialogOpen = ref(false)
 const activeParkDetail = ref<ParkDetailResult | null>(null)
 const workOrderDetailSheetOpen = ref(false)
 const workOrderDetailLoading = ref(false)
@@ -1360,6 +1363,24 @@ const parkDetailSheetSections = computed<DetailFieldSection[]>(() => {
     return []
   }
 
+  const addressRow: DetailFieldSection["rows"][number] = {
+    key: "address",
+    label: "地址",
+    value: toDisplayText(current.Address, "-"),
+    truncate: false,
+    valueClass: "leading-6",
+    ...(hasValidLatLng(current.Latitude, current.Longitude)
+      ? {
+          suffixAction: {
+            label: "在地图中查看",
+            onClick: () => {
+              parkMapDialogOpen.value = true
+            },
+          },
+        }
+      : {}),
+  }
+
   return [
     {
       key: "park-sheet-fields",
@@ -1370,7 +1391,7 @@ const parkDetailSheetSections = computed<DetailFieldSection[]>(() => {
         { key: "operation-time", label: "投运时间", value: toDisplayText(current.OperationTime, "-") },
         { key: "building-area", label: "建筑面积", value: toDisplayText(current.BuildArea, "-") },
         { key: "contact", label: "联系人", value: buildContactValue(toDisplayText(current.Contact, "未填写"), toDisplayText(current.ContactPhone, "-")) },
-        { key: "address", label: "地址", value: toDisplayText(current.Address, "-"), truncate: false, valueClass: "leading-6" },
+        addressRow,
       ],
     },
   ]
@@ -3730,6 +3751,14 @@ function toDisplayText(value: unknown, fallback = "未填写") {
       </div>
     </SheetContent>
   </Sheet>
+
+  <MapLocationDialog
+    v-model:open="parkMapDialogOpen"
+    title="园区位置"
+    sheet-address-context
+    :latitude="activeParkDetail?.Latitude ?? ''"
+    :longitude="activeParkDetail?.Longitude ?? ''"
+  />
 
   <AlertDialog :open="parkDeleteConfirmOpen" @update:open="parkDeleteConfirmOpen = $event">
     <AlertDialogContent>

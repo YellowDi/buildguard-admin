@@ -3,6 +3,7 @@ import { computed, onUnmounted, ref, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
 
 import BuildingDetailSheet from "@/components/detail/BuildingDetailSheet.vue"
+import MapLocationDialog from "@/components/map/MapLocationDialog.vue"
 import DetailFieldSections from "@/components/detail/DetailFieldSections.vue"
 import DetailRelationModule from "@/components/detail/DetailRelationModule.vue"
 import type { DetailContactValue, DetailFieldSection, DetailRelationModuleSchema } from "@/components/detail/types"
@@ -11,6 +12,7 @@ import { Button } from "@/components/ui/button"
 import { detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
 import DetailLayout from "@/layouts/DetailLayout.vue"
 import { handleApiError } from "@/lib/api-errors"
+import { hasValidLatLng } from "@/lib/map-coordinates"
 import { fetchBuildings, type BuildingListItem } from "@/lib/buildings-api"
 import { fetchParkDetail, type ParkDetailResult } from "@/lib/parks-api"
 
@@ -29,6 +31,7 @@ const loading = ref(false)
 const errorMessage = ref("")
 const buildingDetailSheetOpen = ref(false)
 const activeBuildingUuid = ref("")
+const mapDialogOpen = ref(false)
 let latestRequestId = 0
 
 const parkUuid = computed(() => typeof route.params.id === "string" ? route.params.id.trim() : "")
@@ -53,6 +56,8 @@ const fieldSections = computed<DetailFieldSection[]>(() => {
         { key: "operation-time", label: "投运时间", value: toText(current.OperationTime, "-") },
         { key: "building-area", label: "建筑面积", value: toText(current.BuildArea, "-") },
         { key: "contact", label: "联系人", value: buildContactValue(toText(current.Contact, "未填写"), toText(current.ContactPhone, "-")) },
+        { key: "latitude", label: "纬度", value: toText(current.Latitude, "-") },
+        { key: "longitude", label: "经度", value: toText(current.Longitude, "-") },
         { key: "address", label: "地址", value: toText(current.Address, "-"), truncate: false, valueClass: "leading-6" },
       ],
     },
@@ -224,7 +229,20 @@ function buildContactValue(name: string | null, phone?: string | null): DetailCo
         正在获取园区详情数据。
       </div>
 
-      <DetailFieldSections v-else-if="park" :sections="fieldSections" />
+      <div v-else-if="park" class="space-y-4">
+        <DetailFieldSections :sections="fieldSections" />
+        <Button
+          v-if="hasValidLatLng(park.Latitude, park.Longitude)"
+          type="button"
+          variant="outline"
+          size="sm"
+          class="h-9 w-full sm:w-auto"
+          @click="mapDialogOpen = true"
+        >
+          <i class="ri-map-pin-line mr-1.5 text-base" />
+          在地图中查看
+        </Button>
+      </div>
     </template>
 
     <template #secondary>
@@ -244,6 +262,13 @@ function buildContactValue(name: string | null, phone?: string | null): DetailCo
       </div>
     </template>
   </DetailLayout>
+
+  <MapLocationDialog
+    v-model:open="mapDialogOpen"
+    title="园区位置"
+    :latitude="park?.Latitude ?? ''"
+    :longitude="park?.Longitude ?? ''"
+  />
 
   <BuildingDetailSheet
     :open="buildingDetailSheetOpen"

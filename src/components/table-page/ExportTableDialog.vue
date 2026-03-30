@@ -176,7 +176,7 @@ function handleConfirm() {
 <template>
   <Dialog :open="open" @update:open="updateOpen">
     <DialogContent
-      class="max-w-[min(96vw,52rem)] gap-0 overflow-hidden border-border/70 p-0 shadow-xl shadow-black/5"
+      class="max-w-[min(96vw,52rem)] gap-0 overflow-hidden p-0"
       :show-close-button="!isExporting"
     >
       <DialogHeader class="px-6 pt-6">

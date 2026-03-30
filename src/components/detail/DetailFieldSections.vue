@@ -66,10 +66,43 @@ function isStatusValue(value: DetailFieldValue): value is DetailStatusValue {
             )"
           >
             <div class="detail-field-row__label">{{ row.label }}</div>
-            <div :class="cn('detail-field-row__value', row.truncate !== false && 'truncate', !row.action && isEmptyLikeValue(row.value) && 'detail-field-row__value--empty', row.valueClass)">
-              <template v-if="isContactValue(row.value)">
+            <div :class="cn('detail-field-row__value', row.truncate !== false && 'truncate', !row.action && !row.suffixAction && isEmptyLikeValue(row.value) && 'detail-field-row__value--empty', row.valueClass)">
+              <template v-if="isContactValue(row.value) && row.suffixAction">
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+                  <div class="min-w-0 flex-1">
+                    <span :class="cn(isEmptyLikeValue(row.value.name) && 'detail-field-row__value--empty')">{{ displayValue(row.value.name) }}</span>
+                    <span v-if="row.value.phone && !isEmptyLikeValue(row.value.phone)" class="ml-2 text-muted-foreground">{{ row.value.phone }}</span>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    type="button"
+                    class="h-7 shrink-0 self-start rounded-md px-2.5 text-xs leading-5"
+                    @click="row.suffixAction.onClick"
+                  >
+                    {{ row.suffixAction.label }}
+                  </Button>
+                </div>
+              </template>
+              <template v-else-if="isContactValue(row.value)">
                 <span :class="cn(isEmptyLikeValue(row.value.name) && 'detail-field-row__value--empty')">{{ displayValue(row.value.name) }}</span>
                 <span v-if="row.value.phone && !isEmptyLikeValue(row.value.phone)" class="ml-2 text-muted-foreground">{{ row.value.phone }}</span>
+              </template>
+              <template v-else-if="isStatusValue(row.value) && row.suffixAction">
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+                  <div class="min-w-0 flex-1">
+                    <TableStatusChip :value="row.value.value" :renderer="row.value.renderer" />
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    type="button"
+                    class="h-7 shrink-0 self-start rounded-md px-2.5 text-xs leading-5"
+                    @click="row.suffixAction.onClick"
+                  >
+                    {{ row.suffixAction.label }}
+                  </Button>
+                </div>
               </template>
               <template v-else-if="isStatusValue(row.value)">
                 <TableStatusChip :value="row.value.value" :renderer="row.value.renderer" />
@@ -81,6 +114,22 @@ function isStatusValue(value: DetailFieldValue): value is DetailStatusValue {
                     :alt="row.label"
                     class="detail-field-row__image object-contain"
                   >
+                </div>
+              </template>
+              <template v-else-if="row.suffixAction">
+                <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
+                  <div :class="cn('min-w-0 flex-1', row.truncate !== false && 'truncate')">
+                    {{ displayValue(row.value) }}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    type="button"
+                    class="h-7 shrink-0 self-start rounded-md px-2.5 text-xs leading-5"
+                    @click="row.suffixAction.onClick"
+                  >
+                    {{ row.suffixAction.label }}
+                  </Button>
                 </div>
               </template>
               <template v-else-if="row.action">

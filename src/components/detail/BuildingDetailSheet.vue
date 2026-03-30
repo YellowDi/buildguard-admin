@@ -4,6 +4,7 @@ import { useRouter } from "vue-router"
 import { toast } from "vue-sonner"
 
 import { buildBuildingDetailSections, toText } from "@/components/detail/buildingDetailFields"
+import MapLocationDialog from "@/components/map/MapLocationDialog.vue"
 import DetailFieldSections from "@/components/detail/DetailFieldSections.vue"
 import type { DetailFieldSection } from "@/components/detail/types"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -40,10 +41,15 @@ const loading = ref(false)
 const errorMessage = ref("")
 const deleteConfirmOpen = ref(false)
 const deleteSubmitting = ref(false)
+const mapDialogOpen = ref(false)
 let latestRequestId = 0
 
 const fieldSections = computed<DetailFieldSection[]>(() => {
-  return buildBuildingDetailSections(building.value)
+  return buildBuildingDetailSections(building.value, {
+    onOpenMap: () => {
+      mapDialogOpen.value = true
+    },
+  })
 })
 
 const deleteTargetName = computed(() => toText(building.value?.Name, "当前建筑"))
@@ -181,6 +187,7 @@ function resetState() {
   building.value = null
   deleteConfirmOpen.value = false
   deleteSubmitting.value = false
+  mapDialogOpen.value = false
 }
 
 </script>
@@ -246,6 +253,14 @@ function resetState() {
       </div>
     </SheetContent>
   </Sheet>
+
+  <MapLocationDialog
+    v-model:open="mapDialogOpen"
+    title="建筑位置"
+    sheet-address-context
+    :latitude="building?.Latitude ?? ''"
+    :longitude="building?.Longitude ?? ''"
+  />
 
   <AlertDialog :open="deleteConfirmOpen" @update:open="deleteConfirmOpen = $event">
     <AlertDialogContent>

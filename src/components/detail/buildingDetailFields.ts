@@ -1,9 +1,34 @@
 import type { DetailFieldSection } from "@/components/detail/types"
 import type { BuildingListItem } from "@/lib/buildings-api"
+import { hasValidLatLng } from "@/lib/map-coordinates"
 
-export function buildBuildingDetailSections(building: BuildingListItem | null): DetailFieldSection[] {
+export type BuildingDetailSectionsOptions = {
+  /** 有坐标时在「地址」行右侧展示「在地图中查看」 */
+  onOpenMap?: () => void
+}
+
+export function buildBuildingDetailSections(
+  building: BuildingListItem | null,
+  options?: BuildingDetailSectionsOptions,
+): DetailFieldSection[] {
   if (!building) {
     return []
+  }
+
+  const addressRow = {
+    key: "address",
+    label: "地址",
+    value: toText(building.Address, "-"),
+    truncate: false,
+    valueClass: "leading-6",
+    ...(hasValidLatLng(building.Latitude, building.Longitude) && options?.onOpenMap
+      ? {
+          suffixAction: {
+            label: "在地图中查看",
+            onClick: options.onOpenMap,
+          },
+        }
+      : {}),
   }
 
   return [
@@ -20,9 +45,7 @@ export function buildBuildingDetailSections(building: BuildingListItem | null): 
         { key: "building-area", label: "建筑面积", value: toText(building.BuildingArea ?? building.BuildArea, "-") },
         { key: "contact-person", label: "联系人", value: toText(building.ContactPerson ?? building.Contact, "未填写") },
         { key: "contact-phone", label: "联系电话", value: toText(building.ContactPhone, "-") },
-        { key: "latitude", label: "纬度", value: toText(building.Latitude, "-") },
-        { key: "longitude", label: "经度", value: toText(building.Longitude, "-") },
-        { key: "address", label: "地址", value: toText(building.Address, "-"), truncate: false, valueClass: "leading-6" },
+        addressRow,
         { key: "created-at", label: "创建时间", value: toText(building.CreatedAt, "-") },
         { key: "updated-at", label: "更新时间", value: toText(building.UpdatedAt, "-") },
       ],

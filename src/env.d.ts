@@ -8,6 +8,10 @@ interface ImportMetaEnv {
   readonly VITE_API_TOKEN_HEADER?: string
   readonly VITE_API_TOKEN_PREFIX?: string
   readonly VITE_USE_MOCK_DATA?: string
+  /** 高德地图 Web JS Key（需在控制台配置域名白名单；存储坐标需与 GCJ-02 一致） */
+  readonly VITE_AMAP_KEY?: string
+  /** 高德「安全密钥」，与 Key 配对时使用；勿提交到 Git */
+  readonly VITE_AMAP_SECURITY_JS_CODE?: string
 }
 
 interface ImportMeta {
