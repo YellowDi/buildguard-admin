@@ -204,7 +204,7 @@ watch(() => route.fullPath, () => {
 
 <template>
   <aside
-    class="fixed inset-y-0 left-0 z-30 flex w-[334px] max-w-[90vw] flex-col overflow-y-auto overflow-x-hidden overscroll-y-contain bg-sidebar text-sidebar-foreground transition-transform duration-300 ease-out min-[1000px]:hidden"
+    class="fixed inset-y-0 left-0 z-30 flex w-[255px] max-w-[90vw] flex-col overflow-y-auto overflow-x-hidden overscroll-y-contain bg-sidebar text-sidebar-foreground transition-transform duration-300 ease-out min-[1000px]:hidden"
     :class="props.mobileOpen ? 'translate-x-0' : '-translate-x-full'"
   >
     <div class="flex min-h-0 flex-1 flex-col">

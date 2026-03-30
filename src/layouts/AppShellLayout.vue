@@ -41,7 +41,7 @@ function closeMobileSidebar() {
     />
     <div
       class="relative z-10 flex h-svh min-w-0 flex-1 flex-col overflow-hidden bg-background transition-transform duration-300 ease-out"
-      :class="mobileSidebarOpen ? 'max-[999px]:translate-x-[334px] max-[999px]:pointer-events-none' : ''"
+      :class="mobileSidebarOpen ? 'max-[999px]:translate-x-[255px] max-[999px]:pointer-events-none' : ''"
       @click="mobileSidebarOpen && closeMobileSidebar()"
     >
       <AppHeader
