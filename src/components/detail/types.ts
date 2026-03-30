@@ -1,3 +1,5 @@
+import type { TableStatusCellRenderer } from "@/components/table-page/types"
+
 // 详情页 schema 类型。
 // 约定页面层只负责把 JSON / 接口结果转成这些结构，组件层不直接感知数据来源。
 export type DetailContactValue = {
@@ -6,7 +8,13 @@ export type DetailContactValue = {
   phone?: string | null
 }
 
-export type DetailFieldValue = string | number | DetailContactValue | null | undefined
+export type DetailStatusValue = {
+  kind: "status"
+  value: string
+  renderer: TableStatusCellRenderer
+}
+
+export type DetailFieldValue = string | number | DetailContactValue | DetailStatusValue | null | undefined
 
 export type DetailFieldAction = {
   label: string

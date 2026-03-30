@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed } from "vue"
 
+import TableStatusChip from "@/components/table-page/TableStatusChip.vue"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import type { DetailContactValue, DetailFieldSection, DetailFieldValue } from "@/components/detail/types"
+import type { DetailContactValue, DetailFieldSection, DetailFieldValue, DetailStatusValue } from "@/components/detail/types"
 import { cn } from "@/lib/utils"
 
 // 左侧“普通字段详情”模块。
@@ -42,6 +43,10 @@ function displayValue(value: DetailFieldValue) {
 function isContactValue(value: DetailFieldValue): value is DetailContactValue {
   return Boolean(value && typeof value === "object" && "kind" in value && value.kind === "contact")
 }
+
+function isStatusValue(value: DetailFieldValue): value is DetailStatusValue {
+  return Boolean(value && typeof value === "object" && "kind" in value && value.kind === "status")
+}
 </script>
 
 <template>
@@ -65,6 +70,9 @@ function isContactValue(value: DetailFieldValue): value is DetailContactValue {
               <template v-if="isContactValue(row.value)">
                 <span :class="cn(isEmptyLikeValue(row.value.name) && 'detail-field-row__value--empty')">{{ displayValue(row.value.name) }}</span>
                 <span v-if="row.value.phone && !isEmptyLikeValue(row.value.phone)" class="ml-2 text-muted-foreground">{{ row.value.phone }}</span>
+              </template>
+              <template v-else-if="isStatusValue(row.value)">
+                <TableStatusChip :value="row.value.value" :renderer="row.value.renderer" />
               </template>
               <template v-else-if="row.imageUrl">
                 <div class="detail-field-row__image-frame">

@@ -17,6 +17,13 @@ export const practitionerStatusMap = {
   异常: { tone: "red", icon: "alert" },
 } satisfies Record<string, TableStatusOption>
 
+export const customerStatusMap = {
+  正常: { tone: "green", icon: "check" },
+  封禁: { tone: "red", icon: "alert" },
+  未完善: { tone: "orange", icon: "clock" },
+  未填写: { tone: "gray", icon: "dot" },
+} satisfies Record<string, TableStatusOption>
+
 export const archiveStatusMap = {
   已归档: { tone: "green", icon: "check" },
   待复盘: { tone: "orange", icon: "clock" },

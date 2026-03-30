@@ -14,7 +14,7 @@ import {
   toText as toRepairWorkOrderText,
 } from "@/components/detail/repairWorkOrderDetailFields"
 import { buildWorkOrderPrimarySections, buildWorkOrderSecondarySections, toText as toWorkOrderText } from "@/components/detail/workOrderDetailFields"
-import type { DetailContactValue, DetailFieldSection, DetailRelationModuleSchema } from "@/components/detail/types"
+import type { DetailContactValue, DetailFieldSection, DetailRelationModuleSchema, DetailStatusValue } from "@/components/detail/types"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import {
   AlertDialog,
@@ -30,7 +30,7 @@ import { Button } from "@/components/ui/button"
 import CustomerDetailContentLoading from "@/components/loading/CustomerDetailContentLoading.vue"
 import TopTabSwitch from "@/components/layout/TopTabSwitch.vue"
 import ExportTableDialog from "@/components/table-page/ExportTableDialog.vue"
-import { workOrderStatusMap } from "@/components/table-page/statusPresets"
+import { customerStatusMap, workOrderStatusMap } from "@/components/table-page/statusPresets"
 import {
   Pagination,
   PaginationContent,
@@ -503,6 +503,7 @@ const fieldSections = computed<DetailFieldSection[]>(() => {
       rows: [
         { key: "corp-name", label: "企业名称", value: toDisplayText(current.CorpName) },
         { key: "business", label: "所属行业", value: toDisplayText(current.Business) },
+        { key: "customer-status", label: "客户状态", value: buildCustomerStatusValue(current.Status) },
         { key: "business-license", label: "营业执照照片", value: current.UsciFile ? null : "—", imageUrl: current.UsciFile || null, truncate: false },
         { key: "usci", label: "信用代码", value: toDisplayText(current.Usci) },
         { key: "address", label: "详细地址", value: toDisplayText(current.Address), truncate: false, valueClass: "leading-6" },
@@ -2922,6 +2923,37 @@ function formatRepairImportantLabel(value: number | null) {
   }
 
   return `等级 ${value}`
+}
+
+function formatCustomerStatus(value: unknown) {
+  const status = typeof value === "number" && Number.isFinite(value)
+    ? value
+    : typeof value === "string" && value.trim()
+      ? Number(value.trim())
+      : null
+
+  switch (status) {
+    case 1:
+      return "正常"
+    case 2:
+      return "封禁"
+    case 3:
+      return "未完善"
+    default:
+      return "未填写"
+  }
+}
+
+function buildCustomerStatusValue(value: unknown): DetailStatusValue {
+  return {
+    kind: "status",
+    value: formatCustomerStatus(value),
+    renderer: {
+      kind: "status",
+      map: customerStatusMap,
+      fallback: { tone: "gray", icon: "dot" },
+    },
+  }
 }
 
 function toNullableNumber(value: unknown) {

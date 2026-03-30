@@ -14,6 +14,7 @@ export type CustomerListItem = {
   Uuid?: string
   CorpName?: string
   Business?: string
+  Status?: number
   Level?: number
   ParkNum?: number
   BuildNum?: number
@@ -52,6 +53,7 @@ export type CustomerDetailResult = {
   Uuid?: string
   People?: CustomerDetailPerson[]
   Business?: string
+  Status?: number
   Usci?: string
   UsciFile?: string
   CorpName?: string
@@ -81,6 +83,7 @@ export type CustomerCreatePayload = {
 export type CustomerUpdatePayload = {
   People: CustomerPrincipalPayload[]
   Business: string
+  Status: number
   Usci: string
   UsciFile: string
   CorpName: string
@@ -181,6 +184,7 @@ export async function updateCustomer(payload: CustomerUpdatePayload): Promise<Cu
     Uuid: getRequiredString(payload.Uuid, "Uuid"),
     People: getRequiredPrincipals(payload.People),
     Business: getUpdateString(payload.Business),
+    Status: getRequiredNumber(payload.Status, "Status"),
     Usci: getUpdateString(payload.Usci),
     UsciFile: getUpdateString(payload.UsciFile),
     CorpName: getUpdateString(payload.CorpName),

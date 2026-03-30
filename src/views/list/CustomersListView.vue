@@ -5,6 +5,7 @@ import { toast } from "vue-sonner"
 
 import TablePage from "@/components/table-page/TablePage.vue"
 import TablePageLoading from "@/components/loading/TablePageLoading.vue"
+import { customerStatusMap } from "@/components/table-page/statusPresets"
 import { createTablePageDefinition, useTablePage } from "@/components/table-page/useTablePage"
 import type { TablePageSchema } from "@/components/table-page/types"
 import { useRouteTableSearch } from "@/composables/useRouteTableSearch"
@@ -30,6 +31,8 @@ type CustomerRecord = {
   id: string
   detailId: string
   customerName: string
+  status: number | null
+  statusLabel: string
   business: string
   level: number | null
   levelLabel: string
@@ -105,6 +108,26 @@ const schema: TablePageSchema<CustomerRecord> = {
         defaultVisible: true,
       },
       sort: true,
+    },
+    {
+      key: "statusLabel",
+      label: "客户状态",
+      filterType: "tag",
+      cellRenderer: {
+        kind: "status",
+        map: customerStatusMap,
+        fallback: { tone: "gray", icon: "dot" },
+      },
+      filter: {
+        type: "tag",
+        label: "客户状态",
+        defaultVisible: true,
+      },
+      sort: {
+        label: "客户状态",
+        kind: "metric",
+        value: row => row.status ?? 0,
+      },
     },
     {
       key: "principalDisplay",
@@ -344,6 +367,7 @@ function extractDatePart(value: string) {
 function buildPageFilterText(row: CustomerRecord) {
   return [
     row.customerName,
+    row.statusLabel,
     row.principalDisplay,
     row.levelLabel,
     row.business,
@@ -468,6 +492,22 @@ function formatLevelLabel(level: number | null) {
   return `等级 ${level}`
 }
 
+function formatCustomerStatus(status: number | null) {
+  if (status === 1) {
+    return "正常"
+  }
+
+  if (status === 2) {
+    return "封禁"
+  }
+
+  if (status === 3) {
+    return "未完善"
+  }
+
+  return "未填写"
+}
+
 function normalizeCustomerRecord(
   item: CustomerListItem,
   index: number,
@@ -489,6 +529,7 @@ function normalizeCustomerRecord(
   const remainingDays = getRemainingDays(customerPlans)
   const inspectionTimesValue = customerPlans.length || null
   const inspectionCycle = getInspectionCycle(customerPlans)
+  const status = getFirstNumber(item, ["Status", "status"])
   const parkCountValue = getFirstNumber(item, ["ParkNum", "ParkCount", "ParksCount"], customerParks.length || null)
   const buildingCountValue = getFirstNumber(item, ["BuildNum", "BuildingNum", "BuildCount"], getBuildingCount(customerParks, buildingCountByParkUuid))
   const riskDistributionMetrics = getRiskDistributionMetrics()
@@ -498,6 +539,8 @@ function normalizeCustomerRecord(
     id: `${pageNum.value}-${index + 1}-${principalPhone}-${customerName}`,
     detailId: resolveCustomerDetailId(item, customerName, customerUuidByCustomerId, customerUuidByCustomerName),
     customerName,
+    status,
+    statusLabel: formatCustomerStatus(status),
     business: getFirstText(item, ["Business", "Industry", "IndustryName"], "未填写"),
     level: getLevelValue(item),
     levelLabel: formatLevelLabel(getLevelValue(item)),
