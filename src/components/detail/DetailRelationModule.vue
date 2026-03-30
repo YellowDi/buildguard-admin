@@ -3,6 +3,7 @@ import { computed, useSlots } from "vue"
 
 import type { DetailRelationColumn, DetailRelationModuleSchema } from "@/components/detail/types"
 import { Badge } from "@/components/ui/badge"
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import { cn } from "@/lib/utils"
 
 type RelationRow = Record<string, unknown>
@@ -98,7 +99,29 @@ function hasNamedSlot(name?: string) {
           </div>
         </div>
 
-        <div class="detail-group-stack">
+        <div
+          v-if="schema.groups.length === 0"
+          class="flex min-h-[min(160px,30vh)] w-full min-w-0 flex-col items-center justify-center px-4 py-12"
+        >
+          <Empty class="w-full max-w-md flex-none border-0 bg-transparent shadow-none !p-6 md:!p-8">
+            <EmptyHeader class="max-w-md">
+              <EmptyMedia variant="icon">
+                <i
+                  :class="[
+                    schema.emptyState?.icon ?? 'ri-inbox-line',
+                    'text-[18px]',
+                  ]"
+                />
+              </EmptyMedia>
+              <EmptyTitle>{{ schema.emptyState?.title ?? "暂无数据" }}</EmptyTitle>
+              <EmptyDescription>
+                {{ schema.emptyState?.description ?? "当前暂无可展示的数据。" }}
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        </div>
+
+        <div v-else class="detail-group-stack">
           <div v-for="group in schema.groups" :key="group.key">
             <div class="detail-group-divider-row detail-section-inset flex items-center gap-3">
               <div class="shrink-0 text-[14px] font-medium text-muted-foreground">{{ group.title }}</div>

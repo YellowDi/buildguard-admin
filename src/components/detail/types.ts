@@ -53,6 +53,11 @@ export type DetailRelationModuleSchema<Row extends Record<string, unknown> = Rec
   key: string
   title: string
   count?: number
+  emptyState?: {
+    title: string
+    description?: string
+    icon?: string
+  }
   columns: DetailRelationColumn<Row>[]
   groups: DetailRelationGroup<Row>[]
   rowKey: DetailRelationRowKey<Row>

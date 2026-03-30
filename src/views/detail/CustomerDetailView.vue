@@ -535,6 +535,11 @@ const maintenanceModule = computed<DetailRelationModuleSchema<MaintenanceRecordR
     return {
       key: "maintenance-records",
       title: "检修工单概览",
+      emptyState: {
+        title: "暂无检修工单数据",
+        description: "当前客户下暂无可展示的检修工单。",
+        icon: "ri-file-list-3-line",
+      },
       rowKey: "id",
       columns: [
         { key: "serviceName", label: "检测服务", slot: "inspection-overview-service-cell" },
@@ -555,6 +560,11 @@ const maintenanceModule = computed<DetailRelationModuleSchema<MaintenanceRecordR
   return {
     key: "maintenance-records",
     title: "检修工单概览",
+    emptyState: {
+      title: "暂无检修工单数据",
+      description: "当前客户下暂无可展示的检修工单。",
+      icon: "ri-file-list-3-line",
+    },
     rowKey: "id",
     columns: [
       { key: "serviceName", label: "检测服务", slot: "inspection-overview-service-cell" },
@@ -577,6 +587,11 @@ const repairOverviewModule = computed<DetailRelationModuleSchema<MaintenanceReco
     return {
       key: "repair-overview-records",
       title: "维修工单概览",
+      emptyState: {
+        title: "暂无维修工单数据",
+        description: "当前客户下暂无可展示的维修工单。",
+        icon: "ri-file-list-3-line",
+      },
       rowKey: "id",
       columns: [
         { key: "location", label: "位置", slot: "repair-overview-location-cell" },
@@ -597,6 +612,11 @@ const repairOverviewModule = computed<DetailRelationModuleSchema<MaintenanceReco
   return {
     key: "repair-overview-records",
     title: "维修工单概览",
+    emptyState: {
+      title: "暂无维修工单数据",
+      description: "当前客户下暂无可展示的维修工单。",
+      icon: "ri-file-list-3-line",
+    },
     rowKey: "id",
     columns: [
       { key: "location", label: "位置", slot: "repair-overview-location-cell" },
