@@ -41,10 +41,6 @@ const props = withDefaults(defineProps<{
 const slots = useSlots()
 const displayCount = computed(() => props.schema.count ?? props.schema.items.length)
 const hasExpandedContent = computed(() => Boolean(slots["expanded-content"]))
-const defaultOpenValue = computed(() => {
-  const defaultItem = props.schema.items.find(item => item.defaultOpen)
-  return defaultItem ? `${defaultItem.key}` : undefined
-})
 </script>
 
 <template>
@@ -63,7 +59,6 @@ const defaultOpenValue = computed(() => {
       v-if="schema.items.length"
       type="single"
       collapsible
-      :default-value="defaultOpenValue"
       class="w-full"
     >
       <AccordionItem

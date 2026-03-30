@@ -499,10 +499,7 @@ const parkBuildingAccordion = computed(() => ({
   title: "园区 / 建筑列表概览",
   count: parkBuildingGroups.value.length,
   emptyText: "暂无园区和建筑数据。",
-  items: parkBuildingGroups.value.map((group, index) => ({
-    ...group,
-    defaultOpen: index === 0,
-  })),
+  items: parkBuildingGroups.value,
 }))
 
 const maintenanceModule = computed<DetailRelationModuleSchema<MaintenanceRecordRow>>(() => {
