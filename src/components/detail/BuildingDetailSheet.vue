@@ -4,8 +4,9 @@ import { useRouter } from "vue-router"
 import { toast } from "vue-sonner"
 
 import { buildBuildingDetailSections, toText } from "@/components/detail/buildingDetailFields"
-import MapLocationDialog from "@/components/map/MapLocationDialog.vue"
 import DetailFieldSections from "@/components/detail/DetailFieldSections.vue"
+import DetailFieldsSkeleton from "@/components/loading/DetailFieldsSkeleton.vue"
+import MapLocationDialog from "@/components/map/MapLocationDialog.vue"
 import type { DetailFieldSection } from "@/components/detail/types"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import {
@@ -245,9 +246,7 @@ function resetState() {
           <AlertDescription>{{ errorMessage }}</AlertDescription>
         </Alert>
 
-        <div v-if="loading" class="rounded-lg border border-border/70 px-4 py-5 text-sm text-muted-foreground">
-          正在获取建筑详情数据。
-        </div>
+        <DetailFieldsSkeleton v-if="loading" :sections="1" :rows-per-section="11" />
 
         <DetailFieldSections v-else-if="building" :sections="fieldSections" />
       </div>

@@ -3,6 +3,7 @@ import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from
 import { useRoute, useRouter } from "vue-router"
 import { toast } from "vue-sonner"
 
+import FormBodyLoading from "@/components/loading/FormBodyLoading.vue"
 import FormFieldSection from "@/components/form/FormFieldSection.vue"
 import FormHeader from "@/components/form/FormHeader.vue"
 import FormQuickNav from "@/components/form/FormQuickNav.vue"
@@ -574,14 +575,12 @@ function normalizePeopleForCompare(people: Array<{ Name: string; Phone: string; 
       <AlertDescription>{{ loadErrorMessage }}</AlertDescription>
     </Alert>
 
-    <div
-      v-if="loadingDetail"
-      class="rounded-lg border border-border/70 px-4 py-5 text-sm text-muted-foreground"
-    >
-      正在获取客户资料。
-    </div>
+    <FormBodyLoading v-if="loadingDetail" />
 
-    <div class="grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1fr)_220px] xl:grid-cols-[minmax(0,1fr)_250px]">
+    <div
+      v-else
+      class="grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1fr)_220px] xl:grid-cols-[minmax(0,1fr)_250px]"
+    >
       <form class="min-w-0 space-y-0" @submit.prevent="handleSubmit">
         <div ref="formSectionsRef" class="min-w-0 space-y-0">
           <FormFieldSection

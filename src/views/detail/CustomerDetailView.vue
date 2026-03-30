@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import CustomerDetailContentLoading from "@/components/loading/CustomerDetailContentLoading.vue"
+import DetailFieldsSkeleton from "@/components/loading/DetailFieldsSkeleton.vue"
 import TopTabSwitch from "@/components/layout/TopTabSwitch.vue"
 import ExportTableDialog from "@/components/table-page/ExportTableDialog.vue"
 import { customerStatusMap, workOrderStatusMap } from "@/components/table-page/statusPresets"
@@ -3672,11 +3673,9 @@ function toDisplayText(value: unknown, fallback = "未填写") {
           <AlertDescription>{{ workOrderDetailErrorMessage }}</AlertDescription>
         </Alert>
 
-        <div
-          v-if="workOrderDetailLoading"
-          class="rounded-lg border border-border/70 px-4 py-5 text-sm text-muted-foreground"
-        >
-          正在获取工单详情数据。
+        <div v-if="workOrderDetailLoading" class="space-y-5">
+          <DetailFieldsSkeleton :sections="2" :rows-per-section="4" />
+          <DetailFieldsSkeleton :sections="2" :rows-per-section="3" />
         </div>
 
         <template v-else-if="activeWorkOrderDetailKind === 'repair' ? activeRepairWorkOrderDetail : activeInspectionWorkOrderDetail">
@@ -3740,12 +3739,11 @@ function toDisplayText(value: unknown, fallback = "未填写") {
           <AlertDescription>{{ parkDetailErrorMessage }}</AlertDescription>
         </Alert>
 
-        <div
+        <DetailFieldsSkeleton
           v-if="parkDetailLoading"
-          class="rounded-lg border border-border/70 px-4 py-5 text-sm text-muted-foreground"
-        >
-          正在获取园区详情数据。
-        </div>
+          :sections="1"
+          :rows-per-section="6"
+        />
 
         <DetailFieldSections v-else-if="activeParkDetail" :sections="parkDetailSheetSections" />
       </div>

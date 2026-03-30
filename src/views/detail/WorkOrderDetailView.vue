@@ -2,6 +2,7 @@
 import { computed, onUnmounted, ref, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
 
+import DetailFieldsSkeleton from "@/components/loading/DetailFieldsSkeleton.vue"
 import DetailFieldSections from "@/components/detail/DetailFieldSections.vue"
 import { buildRepairWorkOrderPrimarySections, buildRepairWorkOrderSecondarySections, toText as toRepairWorkOrderText } from "@/components/detail/repairWorkOrderDetailFields"
 import { buildWorkOrderPrimarySections, buildWorkOrderSecondarySections, toText } from "@/components/detail/workOrderDetailFields"
@@ -218,15 +219,17 @@ function toOptionalText(value: unknown) {
         <AlertDescription>{{ errorMessage }}</AlertDescription>
       </Alert>
 
-      <div v-if="loading" class="rounded-lg border border-border/70 px-4 py-5 text-sm text-muted-foreground">
-        正在获取工单详情数据。
-      </div>
+      <DetailFieldsSkeleton v-if="loading" :sections="2" :rows-per-section="4" />
 
       <DetailFieldSections v-else-if="hasWorkOrder" :sections="primarySections" />
     </template>
 
     <template #secondary>
-      <div v-if="!loading && hasWorkOrder" class="pb-5">
+      <div v-if="loading" class="pb-5">
+        <DetailFieldsSkeleton :sections="2" :rows-per-section="3" />
+      </div>
+
+      <div v-else-if="!loading && hasWorkOrder" class="pb-5">
         <DetailFieldSections :sections="secondarySections" />
       </div>
     </template>

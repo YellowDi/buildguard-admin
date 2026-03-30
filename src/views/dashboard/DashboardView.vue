@@ -20,6 +20,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   Select,
   SelectContent,
@@ -805,8 +806,15 @@ function hashText(value: string) {
                 {{ workOrderHistoryError }}
               </div>
 
-              <div v-else-if="workOrderHistoryLoading" class="flex h-[250px] items-center justify-center text-sm text-muted-foreground">
-                正在加载历史趋势
+              <div v-else-if="workOrderHistoryLoading" class="space-y-3">
+                <div class="mb-3 grid gap-2 sm:grid-cols-5">
+                  <Skeleton
+                    v-for="stat in 5"
+                    :key="`wo-history-stat-${stat}`"
+                    class="h-[54px] w-full rounded-lg border border-border/60"
+                  />
+                </div>
+                <Skeleton class="h-[250px] w-full rounded-xl" />
               </div>
 
               <ChartContainer
@@ -1056,8 +1064,25 @@ function hashText(value: string) {
                   </Button>
                 </div>
 
-                <div v-else-if="buildingRankingLoading" class="flex min-h-[220px] items-center justify-center text-sm text-muted-foreground">
-                  正在加载建筑排行
+                <div v-else-if="buildingRankingLoading" class="flex min-h-[220px] flex-col gap-0 p-0">
+                  <div
+                    v-for="rank in 5"
+                    :key="`building-rank-skeleton-${rank}`"
+                    class="flex w-full items-center gap-2.5 border-b border-dashed border-border/70 py-2 pl-1 pr-3 last:border-b-0"
+                  >
+                    <Skeleton class="size-6 shrink-0 rounded-full" />
+                    <div class="min-w-0 flex-1 space-y-1.5">
+                      <Skeleton class="h-[13px] w-3/4 max-w-[16rem]" />
+                      <Skeleton class="h-3 w-1/2 max-w-[12rem]" />
+                    </div>
+                    <div class="flex shrink-0 items-center gap-1.5">
+                      <div class="space-y-0.5 text-right">
+                        <Skeleton class="ml-auto h-4 w-8" />
+                        <Skeleton class="ml-auto h-2.5 w-10" />
+                      </div>
+                      <Skeleton class="size-4 shrink-0 rounded-sm" />
+                    </div>
+                  </div>
                 </div>
 
                 <div v-else-if="activeBuildingList.length">

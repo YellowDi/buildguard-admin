@@ -3,12 +3,15 @@ import { computed, onUnmounted, ref, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
 
 import BuildingDetailSheet from "@/components/detail/BuildingDetailSheet.vue"
+import DetailFieldsSkeleton from "@/components/loading/DetailFieldsSkeleton.vue"
+import DetailRelationSkeleton from "@/components/loading/DetailRelationSkeleton.vue"
 import MapLocationDialog from "@/components/map/MapLocationDialog.vue"
 import DetailFieldSections from "@/components/detail/DetailFieldSections.vue"
 import DetailRelationModule from "@/components/detail/DetailRelationModule.vue"
 import type { DetailContactValue, DetailFieldSection, DetailRelationModuleSchema } from "@/components/detail/types"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 import { detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
 import DetailLayout from "@/layouts/DetailLayout.vue"
 import { handleApiError } from "@/lib/api-errors"
@@ -225,8 +228,11 @@ function buildContactValue(name: string | null, phone?: string | null): DetailCo
         <AlertDescription>{{ errorMessage }}</AlertDescription>
       </Alert>
 
-      <div v-if="loading" class="rounded-lg border border-border/70 px-4 py-5 text-sm text-muted-foreground">
-        正在获取园区详情数据。
+      <div v-if="loading" class="space-y-4">
+        <DetailFieldsSkeleton :sections="1" :rows-per-section="9" />
+        <div class="px-5">
+          <Skeleton class="h-9 w-full rounded-md sm:w-36" />
+        </div>
       </div>
 
       <div v-else-if="park" class="space-y-4">
@@ -246,7 +252,11 @@ function buildContactValue(name: string | null, phone?: string | null): DetailCo
     </template>
 
     <template #secondary>
-      <div v-if="!loading && park" class="pb-5">
+      <div v-if="loading" class="pb-5">
+        <DetailRelationSkeleton :rows-per-group="4" />
+      </div>
+
+      <div v-else-if="park" class="pb-5">
         <DetailRelationModule :schema="buildingModule">
           <template #building-action-cell="{ row }">
             <Button

@@ -8,6 +8,7 @@ import FormHeader from "@/components/form/FormHeader.vue"
 import FormQuickNav from "@/components/form/FormQuickNav.vue"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import {
@@ -871,18 +872,33 @@ watch(
             align="start"
           >
             <div class="rounded-xl border border-border bg-card">
-              <div class="border-b border-dashed border-border px-4 py-3 text-sm text-muted-foreground">
+              <div class="border-b border-dashed border-border px-4 py-3">
                 <template v-if="buildingLoading">
-                  正在加载该客户下的建筑...
+                  <div class="space-y-3">
+                    <Skeleton class="h-4 w-52 max-w-full" />
+                    <div class="grid gap-3 sm:grid-cols-2">
+                      <Skeleton
+                        v-for="slot in 4"
+                        :key="`building-pick-skeleton-${slot}`"
+                        class="h-16 w-full rounded-lg"
+                      />
+                    </div>
+                  </div>
                 </template>
                 <template v-else-if="!form.customerUuid">
-                  请先选择所属客户。
+                  <p class="text-sm text-muted-foreground">
+                    请先选择所属客户。
+                  </p>
                 </template>
                 <template v-else-if="!groupedBuildings.length">
-                  当前客户下暂无可选建筑。
+                  <p class="text-sm text-muted-foreground">
+                    当前客户下暂无可选建筑。
+                  </p>
                 </template>
                 <template v-else>
-                  勾选要纳入当前检测服务的建筑。
+                  <p class="text-sm text-muted-foreground">
+                    勾选要纳入当前检测服务的建筑。
+                  </p>
                 </template>
               </div>
 

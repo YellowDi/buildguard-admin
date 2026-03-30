@@ -5,6 +5,8 @@ import { toast } from "vue-sonner"
 
 import DetailFieldSections from "@/components/detail/DetailFieldSections.vue"
 import DetailRelationModule from "@/components/detail/DetailRelationModule.vue"
+import DetailFieldsSkeleton from "@/components/loading/DetailFieldsSkeleton.vue"
+import DetailRelationSkeleton from "@/components/loading/DetailRelationSkeleton.vue"
 import type { DetailContactValue, DetailFieldSection, DetailRelationModuleSchema, DetailStatusValue } from "@/components/detail/types"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -287,15 +289,17 @@ function toOptionalText(value: unknown) {
         <AlertDescription>{{ errorMessage }}</AlertDescription>
       </Alert>
 
-      <div v-if="loading" class="rounded-lg border border-border/70 px-4 py-5 text-sm text-muted-foreground">
-        正在获取检测服务详情数据。
-      </div>
+      <DetailFieldsSkeleton v-if="loading" :sections="2" :rows-per-section="4" />
 
       <DetailFieldSections v-else-if="detail" :sections="fieldSections" />
     </template>
 
     <template #secondary>
-      <div v-if="detail" class="pb-5">
+      <div v-if="loading" class="pb-5">
+        <DetailRelationSkeleton :two-data-columns="false" :rows-per-group="3" />
+      </div>
+
+      <div v-else-if="detail" class="pb-5">
         <DetailRelationModule :schema="buildingModule">
           <template #building-action-cell="{ row }">
             <Button
