@@ -117,8 +117,8 @@ function handleTabSelect(value: unknown) {
             </div>
 
             <div class="hidden min-w-0 items-end gap-6 sm:flex">
-              <div class="min-w-0 flex-1 overflow-x-auto">
-                <nav class="flex min-w-max items-center text-[14px]" :aria-label="props.tabsAriaLabel">
+              <div class="min-w-0 flex-1">
+                <nav class="flex min-w-0 flex-wrap items-center text-[14px]" :aria-label="props.tabsAriaLabel">
                   <button
                     v-for="tab in props.tabs"
                     :key="tab.id"
