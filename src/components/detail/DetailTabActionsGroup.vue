@@ -72,18 +72,18 @@ const visibleMobileItems = computed(() => props.mobileItems.filter(item => !item
 
     <div
       v-if="hasLeading || hasTrailing"
-      :class="cn('hidden min-w-0 items-center justify-end gap-2 sm:flex', props.class)"
+      :class="cn('hidden min-w-0 items-center justify-end gap-2 whitespace-nowrap sm:flex', props.class)"
     >
       <div
         v-if="hasLeading"
-        :class="cn('flex min-w-0 flex-wrap items-center justify-end gap-2', props.leadingClass)"
+        :class="cn('flex min-w-0 items-center justify-end gap-2 whitespace-nowrap', props.leadingClass)"
       >
         <slot name="leading" />
       </div>
 
       <div
         v-if="hasTrailing"
-        :class="cn('flex min-w-0 flex-wrap items-center justify-end gap-2', props.trailingClass)"
+        :class="cn('flex min-w-0 items-center justify-end gap-2 whitespace-nowrap', props.trailingClass)"
       >
         <slot name="trailing" />
       </div>

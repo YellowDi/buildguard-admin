@@ -116,37 +116,39 @@ function handleTabSelect(value: unknown) {
               </div>
             </div>
 
-            <div class="hidden min-w-0 flex-row flex-wrap items-end gap-x-6 gap-y-3 sm:flex">
-              <nav class="flex min-w-0 flex-[999_1_24rem] flex-wrap items-center text-[14px]" :aria-label="props.tabsAriaLabel">
-              <button
-                v-for="tab in props.tabs"
-                :key="tab.id"
-                type="button"
-                :aria-pressed="Boolean(tab.active)"
-                :disabled="tab.disabled"
-                :class="[
-                  'group relative px-3 pb-[11px] text-muted-foreground transition-colors hover:text-foreground disabled:pointer-events-none disabled:opacity-40',
-                  tab.active ? 'font-semibold text-foreground' : '',
-                ]"
-                @click="emit('tabClick', tab.id)"
-              >
-                <span class="relative isolate inline-block">
-                  <span class="pointer-events-none absolute -inset-x-2 -inset-y-1 rounded-md transition-colors group-hover:bg-surface-tertiary" />
-                  <span class="relative z-10">{{ tab.label }}</span>
-                </span>
-                <span
-                  v-if="tab.active"
-                  class="absolute inset-x-0 bottom-0 h-0.5 bg-foreground"
-                />
-              </button>
-              </nav>
+            <div class="hidden min-w-0 overflow-x-auto sm:block">
+              <div class="flex w-max min-w-full items-end gap-6">
+                <nav class="flex shrink-0 items-center text-[14px]" :aria-label="props.tabsAriaLabel">
+                  <button
+                    v-for="tab in props.tabs"
+                    :key="tab.id"
+                    type="button"
+                    :aria-pressed="Boolean(tab.active)"
+                    :disabled="tab.disabled"
+                    :class="[
+                      'group relative px-3 pb-[11px] text-muted-foreground transition-colors hover:text-foreground disabled:pointer-events-none disabled:opacity-40',
+                      tab.active ? 'font-semibold text-foreground' : '',
+                    ]"
+                    @click="emit('tabClick', tab.id)"
+                  >
+                    <span class="relative isolate inline-block">
+                      <span class="pointer-events-none absolute -inset-x-2 -inset-y-1 rounded-md transition-colors group-hover:bg-surface-tertiary" />
+                      <span class="relative z-10">{{ tab.label }}</span>
+                    </span>
+                    <span
+                      v-if="tab.active"
+                      class="absolute inset-x-0 bottom-0 h-0.5 bg-foreground"
+                    />
+                  </button>
+                </nav>
 
-              <div
-                v-if="hasTabActions"
-                class="flex min-w-0 w-auto flex-[0_0_auto] items-center justify-end pb-2"
-              >
-                <slot v-if="$slots.tabActions" name="tabActions" />
-                <slot v-else name="actions" />
+                <div
+                  v-if="hasTabActions"
+                  class="ml-auto flex shrink-0 items-center justify-end pb-2"
+                >
+                  <slot v-if="$slots.tabActions" name="tabActions" />
+                  <slot v-else name="actions" />
+                </div>
               </div>
             </div>
           </div>
