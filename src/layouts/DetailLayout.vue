@@ -159,8 +159,8 @@ function handleTabSelect(value: unknown) {
         </div>
       </div>
 
-      <div class="detail-layout__content grid min-h-0 flex-1 grid-cols-1 gap-0 px-0">
-        <div class="detail-layout__primary min-w-0 pr-0">
+      <div class="detail-layout__content grid min-h-0 flex-1 grid-cols-1 grid-rows-[1fr] gap-0 px-0">
+        <div class="detail-layout__primary flex min-h-0 min-w-0 flex-col pr-0">
           <slot name="primary" />
         </div>
 
@@ -170,10 +170,7 @@ function handleTabSelect(value: unknown) {
           class="detail-layout__divider hidden h-auto bg-border/80"
         />
 
-        <div
-          v-if="hasSecondary"
-          class="detail-layout__secondary min-w-0 pt-8"
-        >
+        <div v-if="hasSecondary" class="detail-layout__secondary flex min-h-0 min-w-0 flex-col pt-8">
           <slot name="secondary" />
         </div>
       </div>

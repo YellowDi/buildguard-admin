@@ -31,6 +31,16 @@ import CustomerDetailContentLoading from "@/components/loading/CustomerDetailCon
 import TopTabSwitch from "@/components/layout/TopTabSwitch.vue"
 import ExportTableDialog from "@/components/table-page/ExportTableDialog.vue"
 import { workOrderStatusMap } from "@/components/table-page/statusPresets"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationFirst,
+  PaginationItem,
+  PaginationLast,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
 import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import TablePage from "@/components/table-page/TablePage.vue"
 import SortPopover, { type SortRule } from "@/components/table-page/TableSortPopover.vue"
@@ -462,6 +472,18 @@ const activeWorkOrderTableTotal = computed(() => (
     ? inspectionWorkOrdersTotal.value
     : repairWorkOrdersTotal.value
 ))
+
+const activeWorkOrderTablePageNumProxy = computed({
+  get: () => activeWorkOrderTablePageNum.value,
+  set: (nextPage: number) => {
+    if (activeWorkOrderTableTab.value === "inspection") {
+      inspectionWorkOrdersPageNum.value = nextPage
+    }
+    else {
+      repairWorkOrdersPageNum.value = nextPage
+    }
+  },
+})
 const activeTableSortPopoverOpen = ref(false)
 const activeTableExportDialogOpen = ref(false)
 const activeTableExporting = ref(false)
@@ -3286,7 +3308,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
 
       <template v-else-if="activeTab === 'work-orders'">
         <CustomerDetailContentLoading v-if="loading || activeWorkOrderTableLoading" variant="work-orders" />
-        <div v-else-if="customer" class="flex min-h-0 flex-1 flex-col pb-5">
+        <div v-else-if="customer" class="flex min-h-0 flex-1 flex-col">
           <Alert v-if="activeWorkOrderTableErrorMessage" variant="destructive" class="mb-5">
             <AlertTitle>工单列表接口加载失败</AlertTitle>
             <AlertDescription>{{ activeWorkOrderTableErrorMessage }}</AlertDescription>
@@ -3309,26 +3331,40 @@ function toDisplayText(value: unknown, fallback = "未填写") {
             </template>
           </TablePage>
 
-          <div class="mt-auto flex items-center justify-end gap-3 px-4 pt-4 sm:px-0">
-            <span class="text-sm text-muted-foreground">
-              第 {{ activeWorkOrderTablePageNum }} / {{ Math.max(1, Math.ceil(activeWorkOrderTableTotal / activeWorkOrderTablePageSize)) }} 页，共 {{ activeWorkOrderTableTotal }} 条
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              :disabled="activeWorkOrderTablePageNum <= 1"
-              @click="goToPreviousWorkOrderPage"
-            >
-              上一页
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              :disabled="activeWorkOrderTablePageNum >= Math.max(1, Math.ceil(activeWorkOrderTableTotal / activeWorkOrderTablePageSize))"
-              @click="goToNextWorkOrderPage"
-            >
-              下一页
-            </Button>
+          <div class="mt-auto -mx-4 pt-3 px-4 sm:px-0">
+            <div class="flex w-full justify-end">
+              <Pagination
+                v-model:page="activeWorkOrderTablePageNumProxy"
+                :items-per-page="activeWorkOrderTablePageSize"
+                :total="activeWorkOrderTableTotal"
+                :sibling-count="1"
+                :disabled="activeWorkOrderTableLoading"
+                show-edges
+                class="w-full justify-end"
+              >
+                <PaginationContent v-slot="{ items }" class="justify-end">
+                  <PaginationFirst />
+                  <PaginationPrevious />
+
+                  <template
+                    v-for="(item, index) in items"
+                    :key="`${item.type}-${item.type === 'page' ? item.value : index}`"
+                  >
+                    <PaginationItem
+                      v-if="item.type === 'page'"
+                      :value="item.value"
+                      :is-active="item.value === activeWorkOrderTablePageNum"
+                    >
+                      {{ item.value }}
+                    </PaginationItem>
+                    <PaginationEllipsis v-else />
+                  </template>
+
+                  <PaginationNext />
+                  <PaginationLast />
+                </PaginationContent>
+              </Pagination>
+            </div>
           </div>
         </div>
       </template>
