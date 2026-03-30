@@ -489,7 +489,10 @@ const parkBuildingAccordion = computed(() => ({
   title: "园区 / 建筑列表概览",
   count: parkBuildingGroups.value.length,
   emptyText: "暂无园区和建筑数据。",
-  items: parkBuildingGroups.value,
+  items: parkBuildingGroups.value.map((group, index) => ({
+    ...group,
+    defaultOpen: index === 0,
+  })),
 }))
 
 const maintenanceModule = computed<DetailRelationModuleSchema<MaintenanceRecordRow>>(() => {
@@ -3215,8 +3218,21 @@ function toDisplayText(value: unknown, fallback = "未填写") {
                     <TooltipTrigger as-child>
                       <span class="truncate cursor-default">{{ row.location }}</span>
                     </TooltipTrigger>
-                    <TooltipContent side="top" align="start" class="rounded-lg px-3 py-1.5 text-xs">
-                      {{ row.parkName }}
+                    <TooltipContent side="top" align="start" class="rounded-lg px-3 py-2 text-xs">
+                      <div class="space-y-1.5">
+                        <div class="space-y-0.5">
+                          <div class="text-[11px] text-background/72">
+                            园区
+                          </div>
+                          <div>{{ row.parkName }}</div>
+                        </div>
+                        <div class="space-y-0.5">
+                          <div class="text-[11px] text-background/72">
+                            建筑
+                          </div>
+                          <div>{{ row.location }}</div>
+                        </div>
+                      </div>
                     </TooltipContent>
                   </Tooltip>
                 </div>
