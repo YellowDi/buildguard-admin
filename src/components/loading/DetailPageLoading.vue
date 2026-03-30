@@ -16,7 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton"
       </div>
     </div>
 
-    <div class="grid min-h-0 flex-1 grid-cols-1 gap-8 px-0 xl:grid-cols-[minmax(0,1.2fr)_minmax(20rem,0.8fr)]">
+    <div class="grid min-h-0 flex-1 grid-cols-1 gap-4 px-0 xl:grid-cols-[minmax(0,1.2fr)_minmax(20rem,0.8fr)] xl:gap-8">
       <div class="min-w-0">
         <div
           v-for="section in 2"

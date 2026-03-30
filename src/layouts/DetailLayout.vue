@@ -170,7 +170,7 @@ function handleTabSelect(value: unknown) {
           class="detail-layout__divider hidden h-auto bg-border/80"
         />
 
-        <div v-if="hasSecondary" class="detail-layout__secondary flex min-h-0 min-w-0 flex-col pt-8">
+        <div v-if="hasSecondary" class="detail-layout__secondary flex min-h-0 min-w-0 flex-col pt-4">
           <slot name="secondary" />
         </div>
       </div>
