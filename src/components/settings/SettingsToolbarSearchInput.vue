@@ -39,13 +39,19 @@ const shellTransition =
       :class="cn(iconButtonClass, 'shrink-0 transition-colors duration-300 [transition-timing-function:cubic-bezier(0.4,0,0.2,1)]')"
       @click="emit('toggle')"
     >
-      <i :class="expanded ? 'ri-close-line text-[17px]' : 'ri-search-line text-[17px]'" />
+      <i
+        :class="
+          expanded
+            ? 'ri-close-line flex size-[17px] items-center justify-center text-[17px] leading-none'
+            : 'ri-search-line flex size-[17px] items-center justify-center text-[17px] leading-none'
+        "
+      />
     </button>
     <Input
       v-if="expanded"
       :model-value="modelValue"
       :placeholder="placeholder"
-      class="min-h-8 h-8 min-w-0 flex-1 border-0 bg-transparent pl-0 pr-2 text-sm shadow-none focus-visible:border-transparent focus-visible:ring-0"
+      class="min-h-8 h-8 min-w-0 flex-1 border-0 bg-transparent py-0 pl-0 pr-2 text-sm leading-8 shadow-none focus-visible:border-transparent focus-visible:ring-0"
       @update:model-value="emit('update:modelValue', String($event ?? ''))"
     />
   </div>

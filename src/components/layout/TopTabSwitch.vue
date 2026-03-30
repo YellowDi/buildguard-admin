@@ -156,11 +156,11 @@ onBeforeUnmount(() => {
       >
         <i v-if="tab.icon" :class="[tab.icon, 'shrink-0 text-[17px] leading-none']" />
         <span :class="[tab.icon ? 'ml-2' : '', 'flex items-center whitespace-nowrap']">
-          <span>{{ tab.label }}</span>
+          <span class="leading-4">{{ tab.label }}</span>
           <span
             v-if="tab.badge !== undefined"
             :class="[
-              'ml-2 flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-center text-[10px] font-semibold leading-none',
+              'ml-2 flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full px-1 text-center text-[10px] font-semibold leading-none',
               getBadgeClass(tab.id),
             ]"
           >
@@ -189,7 +189,7 @@ onBeforeUnmount(() => {
         ]"
       >
         <span
-          class="top-tab-switch-content flex items-center overflow-hidden whitespace-nowrap"
+          class="top-tab-switch-content flex h-full min-h-0 items-center overflow-hidden whitespace-nowrap"
           :class="props.collapseInactive
             ? (props.modelValue === tab.id
               ? 'ml-0 max-w-[120px] translate-x-0 opacity-100 [transition-delay:110ms]'
@@ -198,7 +198,7 @@ onBeforeUnmount(() => {
         >
           <span
             :class="[
-              'truncate transition-colors duration-160 ease-out',
+              'min-w-0 truncate leading-4 transition-colors duration-160 ease-out',
               getLabelClass(tab.id),
             ]"
           >
@@ -208,7 +208,7 @@ onBeforeUnmount(() => {
           <span
             v-if="tab.badge !== undefined"
             :class="[
-              'top-tab-switch-badge flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-center text-[10px] font-semibold leading-none',
+              'top-tab-switch-badge flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full px-1 text-center text-[10px] font-semibold leading-none',
               getBadgeClass(tab.id),
               props.collapseInactive
                 ? (props.modelValue === tab.id
