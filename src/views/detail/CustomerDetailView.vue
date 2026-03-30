@@ -89,6 +89,9 @@ type MaintenanceRecordRow = {
   workOrderKind: "inspection" | "repair"
   customerUuid: string
   status: "pending" | "processing" | "completed"
+  serviceName: string
+  serviceTooltip: string
+  result: string
   location: string
   parkName: string
   item: string
@@ -512,8 +515,8 @@ const maintenanceModule = computed<DetailRelationModuleSchema<MaintenanceRecordR
       title: "检修工单概览",
       rowKey: "id",
       columns: [
-        { key: "location", label: "位置" },
-        { key: "item", label: "检修项" },
+        { key: "serviceName", label: "检测服务", slot: "inspection-overview-service-cell" },
+        { key: "result", label: "检测结果" },
         { key: "executor", label: "执行人" },
         { key: "deadline", label: "截止时间" },
         { key: "actions", label: "", slot: "maintenance-action-cell", headerClass: "flex justify-end", cellClass: "flex justify-end" },
@@ -532,8 +535,8 @@ const maintenanceModule = computed<DetailRelationModuleSchema<MaintenanceRecordR
     title: "检修工单概览",
     rowKey: "id",
     columns: [
-      { key: "location", label: "位置", slot: "maintenance-status-cell" },
-      { key: "item", label: "检修项" },
+      { key: "serviceName", label: "检测服务", slot: "inspection-overview-service-cell" },
+      { key: "result", label: "检测结果" },
       { key: "executor", label: "执行人" },
       { key: "deadline", label: "截止时间" },
       { key: "actions", label: "", slot: "maintenance-action-cell", headerClass: "flex justify-end", cellClass: "flex justify-end" },
@@ -2289,11 +2292,33 @@ async function loadMaintenanceRecords(uuid: string) {
       return
     }
 
-    maintenanceRecords.value = inspectionResult.list
+    const overviewRows = inspectionResult.list
       .map((item, index) => mapInspectionWorkOrderRow(item, index))
       .sort((left, right) => getMaintenanceRecordSortTime(right) - getMaintenanceRecordSortTime(left))
       .slice(0, 5)
-      .map(mapMaintenanceRecordRow)
+
+    const rowsWithDetailPlanName = await Promise.all(overviewRows.map(async (row) => {
+      if (!row.uuid) {
+        return row
+      }
+
+      try {
+        const detail = await fetchWorkOrderDetail({ Uuid: row.uuid })
+
+        return {
+          ...row,
+          planName: toDisplayText(detail.PlanName, row.planName !== "-" ? row.planName : "未关联计划"),
+        }
+      } catch {
+        return row
+      }
+    }))
+
+    if (requestId !== latestMaintenanceRecordsRequestId) {
+      return
+    }
+
+    maintenanceRecords.value = rowsWithDetailPlanName.map(mapMaintenanceRecordRow)
   } catch (error) {
     if (requestId !== latestMaintenanceRecordsRequestId) {
       return
@@ -2523,6 +2548,9 @@ function mapMaintenanceRecordRow(row: CustomerWorkOrderRow): MaintenanceRecordRo
     workOrderKind: row.workOrderKind,
     customerUuid: row.customerUuid,
     status: mapMaintenanceStatus(row),
+    serviceName: row.packageName !== "-" ? row.packageName : "未设置",
+    serviceTooltip: row.planName !== "-" ? row.planName : "未关联计划",
+    result: row.resultLabel,
     location,
     parkName: row.parkName !== "-" ? row.parkName : "未关联园区",
     item: row.workOrderName !== "-" ? row.workOrderName : row.planName,
@@ -2544,6 +2572,9 @@ function mapRepairOverviewRecordRow(row: CustomerWorkOrderRow): MaintenanceRecor
     workOrderKind: row.workOrderKind,
     customerUuid: row.customerUuid,
     status: mapMaintenanceStatus(row),
+    serviceName: "-",
+    serviceTooltip: "-",
+    result: "-",
     location,
     parkName: row.parkName !== "-" ? row.parkName : "未关联园区",
     item: row.reportTypeLabel !== "-" ? row.reportTypeLabel : "未设置",
@@ -3422,7 +3453,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
                   </Button>
                 </template>
 
-                <template #maintenance-status-cell="{ row }">
+                <template #inspection-overview-service-cell="{ row }">
                   <div class="flex min-w-0 items-center gap-2 text-foreground">
                     <i
                       :class="[
@@ -3436,23 +3467,10 @@ function toDisplayText(value: unknown, fallback = "未填写") {
                     />
                     <Tooltip>
                       <TooltipTrigger as-child>
-                        <span class="truncate cursor-default">{{ row.location }}</span>
+                        <span class="truncate cursor-default">{{ row.serviceName }}</span>
                       </TooltipTrigger>
-                      <TooltipContent side="top" align="start" class="rounded-lg px-3 py-2 text-xs">
-                        <div class="space-y-1.5">
-                          <div class="space-y-0.5">
-                            <div class="text-[11px] text-background/72">
-                              园区
-                            </div>
-                            <div>{{ row.parkName }}</div>
-                          </div>
-                          <div class="space-y-0.5">
-                            <div class="text-[11px] text-background/72">
-                              建筑
-                            </div>
-                            <div>{{ row.location }}</div>
-                          </div>
-                        </div>
+                      <TooltipContent side="top" align="start" class="rounded-lg px-3 py-1.5 text-xs">
+                        {{ row.serviceTooltip }}
                       </TooltipContent>
                     </Tooltip>
                   </div>
