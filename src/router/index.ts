@@ -169,12 +169,12 @@ const router = createRouter({
           component: () => import("@/views/form/WorkOrderCreateView.vue"),
           props: { kind: "inspection" },
           meta: {
-            title: "添加检修工单",
+            title: "添加检测工单",
             loading: "form",
             breadcrumb: [
               { title: "客户", to: "customers" },
               { title: "客户详情" },
-              { title: "添加检修工单" },
+              { title: "添加检测工单" },
             ] satisfies BreadcrumbMetaItem[],
           } satisfies RouteMetaConfig,
         },
@@ -327,7 +327,7 @@ const router = createRouter({
           component: () => import("@/views/list/WorkOrdersListView.vue"),
           props: { kind: "inspection" },
           meta: {
-            title: "检修工单",
+            title: "检测工单",
             loading: "table",
           } satisfies RouteMetaConfig,
         },
@@ -337,11 +337,11 @@ const router = createRouter({
           component: () => import("@/views/form/WorkOrderCreateView.vue"),
           props: { kind: "inspection" },
           meta: {
-            title: "添加检修工单",
+            title: "添加检测工单",
             loading: "form",
             breadcrumb: [
               { title: "工单", to: "inspection-work-orders" },
-              { title: "添加检修工单" },
+              { title: "添加检测工单" },
             ] satisfies BreadcrumbMetaItem[],
           } satisfies RouteMetaConfig,
         },
@@ -351,7 +351,7 @@ const router = createRouter({
           component: () => import("@/views/detail/WorkOrderDetailView.vue"),
           props: { kind: "inspection" },
           meta: {
-            title: "检修工单详情",
+            title: "检测工单详情",
             loading: "detail",
             useDetailBreadcrumbTitle: true,
             breadcrumb: [
@@ -366,11 +366,11 @@ const router = createRouter({
           component: () => import("@/views/form/WorkOrderCreateView.vue"),
           props: { kind: "inspection" },
           meta: {
-            title: "编辑检修工单",
+            title: "编辑检测工单",
             loading: "form",
             breadcrumb: [
               { title: "工单", to: "inspection-work-orders" },
-              { title: "编辑检修工单" },
+              { title: "编辑检测工单" },
             ] satisfies BreadcrumbMetaItem[],
           } satisfies RouteMetaConfig,
         },

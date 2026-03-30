@@ -247,7 +247,7 @@ const statsCards = [
     title: "签约合同总数",
     value: numberFormatter.format(signedContractCount),
     unit: "份",
-    detail: "按已签约客户套餐统计合同总量",
+    detail: "按已签约客户检测服务统计合同总量",
     highlight: `${numberFormatter.format(signedContractCount)} 份合同已完成签约归档`,
   },
   {

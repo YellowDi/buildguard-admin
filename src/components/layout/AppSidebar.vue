@@ -64,7 +64,7 @@ const businessItems = reactive<AppSidebarNavItem[]>([
     open: true,
     children: [
       {
-        label: "检修工单",
+        label: "检测工单",
         path: "/work-orders/inspection",
       },
       {

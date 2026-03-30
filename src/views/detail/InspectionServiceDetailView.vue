@@ -172,7 +172,7 @@ const fieldSections = computed<DetailFieldSection[]>(() => {
         { key: "status", label: "服务状态", value: detail.value.ServiceStatus },
         { key: "expire-at", label: "到期时间", value: detail.value.ExpireAt },
         { key: "customer-name", label: "客户名称", value: detail.value.CustomerName },
-        { key: "inspection-total", label: "套餐总检测次数", value: detail.value.InspectionTotal },
+        { key: "inspection-total", label: "检测服务总检测次数", value: detail.value.InspectionTotal },
         { key: "inspection-remaining", label: "剩余次数", value: detail.value.InspectionRemaining },
         { key: "created-at", label: "创建时间", value: detail.value.CreatedAt },
         { key: "updated-at", label: "更新时间", value: detail.value.UpdatedAt },

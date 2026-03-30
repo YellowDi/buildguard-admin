@@ -19,7 +19,7 @@ export function buildWorkOrderPrimarySections(
         { key: "plan-time", label: "计划时间", value: "-" },
         { key: "deadline", label: "截止时间", value: toText(workOrder.Deadline, "-") },
         { key: "executor", label: "执行人", value: toText(workOrder.Executor, "-") },
-        { key: "package-name", label: "关联套餐", value: toText(workOrder.PackageName, "-") },
+        { key: "package-name", label: "关联检测服务", value: toText(workOrder.PackageName, "-") },
         { key: "plan-name", label: "关联计划", value: toText(workOrder.PlanName, "-") },
       ],
     },

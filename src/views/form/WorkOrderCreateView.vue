@@ -138,10 +138,10 @@ const queryContent = computed(() => typeof route.query.content === "string" ? ro
 const queryReturnTo = computed(() => typeof route.query.returnTo === "string" ? route.query.returnTo.trim() : "")
 const pageTitle = computed(() => {
   if (isEditMode.value) {
-    return "编辑检修工单"
+    return "编辑检测工单"
   }
 
-  return isRepairKind.value ? "添加维修工单" : "添加检修工单"
+  return isRepairKind.value ? "添加维修工单" : "添加检测工单"
 })
 const canSubmit = computed(() => {
   if (isEditMode.value) {
@@ -302,7 +302,7 @@ async function handleInspectionCreateSubmit() {
   }
 
   if (!normalizeText(form.packageName)) {
-    toast.error("请填写套餐名称")
+    toast.error("请填写检测服务名称")
     return
   }
 
@@ -1076,8 +1076,8 @@ watch(
 
             <FormFieldSection
               id="section-package"
-              quick-nav-label="套餐名称"
-              label="套餐名称"
+              quick-nav-label="检测服务名称"
+              label="检测服务名称"
               label-for="work-order-package"
             >
               <Input
@@ -1085,7 +1085,7 @@ watch(
                 v-model="form.packageName"
                 :disabled="isEditMode"
                 :required="!isEditMode"
-                :placeholder="isEditMode ? '-' : '请输入套餐名称'"
+                :placeholder="isEditMode ? '-' : '请输入检测服务名称'"
                 class="w-full"
                 @focus="handleFocus('section-package')"
               />

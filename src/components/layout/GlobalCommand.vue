@@ -197,11 +197,11 @@ const pageSearchItems: SearchItem[] = [
   },
   {
     id: "page-inspection-work-orders",
-    label: "检修工单",
-    subtitle: "查看检修工单列表",
+    label: "检测工单",
+    subtitle: "查看检测工单列表",
     icon: "ri-file-list-3-line",
     type: "页面",
-    value: "检修工单 查看检修工单列表 inspection work order work-order ticket",
+    value: "检测工单 查看检测工单列表 inspection work order work-order ticket",
     to: "/work-orders/inspection",
   },
   {

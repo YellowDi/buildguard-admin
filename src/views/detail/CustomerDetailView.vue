@@ -405,7 +405,7 @@ const activeDetailMobileActionItems = computed(() => {
   }
 
   if (activeDetailTabActions.value.addWorkOrder) {
-    items.push({ key: "add-work-order", label: "添加检修工单", iconClass: "ri-file-add-line" })
+    items.push({ key: "add-work-order", label: "添加检测工单", iconClass: "ri-file-add-line" })
   }
 
   if (activeDetailTabActions.value.addRepairWorkOrder) {
@@ -445,7 +445,7 @@ const activeTableTitle = computed(() => (
   activeTab.value === "building-assets"
     ? "建筑资产"
     : activeTab.value === "work-orders"
-      ? (activeWorkOrderTableTab.value === "inspection" ? "检修工单" : "维修工单")
+      ? (activeWorkOrderTableTab.value === "inspection" ? "检测工单" : "维修工单")
       : activeTab.value === "monitoring"
         ? "监控"
         : "子账号"
@@ -520,7 +520,7 @@ const fieldSections = computed<DetailFieldSection[]>(() => {
     },
     {
       key: "package-info",
-      title: "套餐信息",
+      title: "检测服务信息",
       rows: buildPackageFieldRows(current),
     },
   ]
@@ -538,10 +538,10 @@ const maintenanceModule = computed<DetailRelationModuleSchema<MaintenanceRecordR
   if (!customer.value) {
     return {
       key: "maintenance-records",
-      title: "检修工单概览",
+      title: "检测工单概览",
       emptyState: {
-        title: "暂无检修工单数据",
-        description: "当前客户下暂无可展示的检修工单。",
+        title: "暂无检测工单数据",
+        description: "当前客户下暂无可展示的检测工单。",
         icon: "ri-file-list-3-line",
       },
       rowKey: "id",
@@ -563,10 +563,10 @@ const maintenanceModule = computed<DetailRelationModuleSchema<MaintenanceRecordR
 
   return {
     key: "maintenance-records",
-    title: "检修工单概览",
+    title: "检测工单概览",
     emptyState: {
-      title: "暂无检修工单数据",
-      description: "当前客户下暂无可展示的检修工单。",
+      title: "暂无检测工单数据",
+      description: "当前客户下暂无可展示的检测工单。",
       icon: "ri-file-list-3-line",
     },
     rowKey: "id",
@@ -788,8 +788,8 @@ const inspectionWorkOrdersSchema: TablePageSchema<CustomerWorkOrderRow> = {
   stickyHeader: true,
   wrapperClass: "rounded-none border-0 shadow-none",
   emptyState: {
-    title: "暂无检修工单数据",
-    description: "当前客户下暂无可展示的检修工单。",
+    title: "暂无检测工单数据",
+    description: "当前客户下暂无可展示的检测工单。",
     icon: "ri-file-list-3-line",
   },
   rowActions: [
@@ -820,11 +820,11 @@ const inspectionWorkOrdersSchema: TablePageSchema<CustomerWorkOrderRow> = {
     },
     {
       key: "packageName",
-      label: "套餐名称",
+      label: "检测服务名称",
       filterType: "text",
       filter: {
         type: "text",
-        placeholder: "输入套餐名称",
+        placeholder: "输入检测服务名称",
       },
       sort: true,
     },
@@ -1400,7 +1400,7 @@ const parkDetailSheetSections = computed<DetailFieldSection[]>(() => {
 const workOrderDetailSheetTitle = computed(() => (
   activeWorkOrderDetailKind.value === "repair"
     ? toRepairWorkOrderText(activeRepairWorkOrderDetail.value?.Title, "维修工单详情")
-    : toWorkOrderText(activeInspectionWorkOrderDetail.value?.PackageName, "检修工单详情")
+    : toWorkOrderText(activeInspectionWorkOrderDetail.value?.PackageName, "检测工单详情")
 ))
 
 const workOrderDetailPrimarySections = computed<DetailFieldSection[]>(() => {
@@ -2230,7 +2230,7 @@ async function loadInspectionWorkOrders(uuid: string) {
   if (!uuid) {
     inspectionWorkOrders.value = []
     inspectionWorkOrdersTotal.value = 0
-    inspectionWorkOrdersErrorMessage.value = "客户 Uuid 缺失，无法加载检修工单列表。"
+    inspectionWorkOrdersErrorMessage.value = "客户 Uuid 缺失，无法加载检测工单列表。"
     return
   }
 
@@ -2259,7 +2259,7 @@ async function loadInspectionWorkOrders(uuid: string) {
     inspectionWorkOrdersTotal.value = 0
     inspectionWorkOrdersErrorMessage.value = handleApiError(error, {
       mode: "silent",
-      fallback: "检修工单列表加载失败，请稍后重试。",
+      fallback: "检测工单列表加载失败，请稍后重试。",
     })
   } finally {
     if (requestId === latestInspectionWorkOrdersRequestId) {
@@ -2317,7 +2317,7 @@ async function loadMaintenanceRecords(uuid: string) {
 
   if (!uuid) {
     maintenanceRecords.value = []
-    maintenanceRecordsErrorMessage.value = "客户 Uuid 缺失，无法加载检修工单概览。"
+    maintenanceRecordsErrorMessage.value = "客户 Uuid 缺失，无法加载检测工单概览。"
     return
   }
 
@@ -2370,7 +2370,7 @@ async function loadMaintenanceRecords(uuid: string) {
     maintenanceRecords.value = []
     maintenanceRecordsErrorMessage.value = handleApiError(error, {
       mode: "silent",
-      fallback: "检修工单概览加载失败，请稍后重试。",
+      fallback: "检测工单概览加载失败，请稍后重试。",
     })
   } finally {
     if (requestId === latestMaintenanceRecordsRequestId) {
@@ -2496,7 +2496,7 @@ function buildPackageFieldRows(detail: CustomerDetailResult) {
 
   return [
     { key: "balance", label: "资金余额", value: formatFunds(packageRecord?.remainingFunds ?? null) },
-    { key: "current-package", label: "当前购买套餐信息", value: formatPackageInfo(packageRecord?.packageName ?? "-", packageRecord?.packageCode ?? "") },
+    { key: "current-package", label: "当前购买检测服务信息", value: formatPackageInfo(packageRecord?.packageName ?? "-", packageRecord?.packageCode ?? "") },
     { key: "expire-at", label: "到期时间", value: formatExpireDate(packageRecord?.remainingDays ?? null) },
     { key: "contract-download", label: "合同下载", value: null, action: { label: "下载合同", onClick: handleContractDownload } },
     { key: "remaining-service", label: "剩余服务", value: formatRemainingService(packageRecord), truncate: false, valueClass: "leading-6" },
@@ -2831,7 +2831,7 @@ function mapInspectionWorkOrderRow(item: WorkOrderListItem, index: number): Cust
     id: uuid || fallbackId,
     uuid: uuid || fallbackId,
     workOrderKind: "inspection",
-    workOrderTypeLabel: "检修工单",
+    workOrderTypeLabel: "检测工单",
     customerUuid: toDisplayText(item.CustomerUuid, customerUuid.value),
     planUuid: toDisplayText(item.PlanUuid, ""),
     orderNo: toDisplayText(item.OrderNo, "-"),
@@ -3305,7 +3305,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
             @click="handleAddWorkOrder"
           >
             <i class="ri-file-add-line text-base" />
-            添加检修工单
+            添加检测工单
           </Button>
           <Button
             v-if="activeDetailTabActions.addRepairWorkOrder"
@@ -3393,7 +3393,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
                 <TopTabSwitch
                   v-model="activeWorkOrderTableTab"
                   :tabs="[
-                    { id: 'inspection', label: '检修工单', badge: inspectionWorkOrdersTotal },
+                    { id: 'inspection', label: '检测工单', badge: inspectionWorkOrdersTotal },
                     { id: 'repair', label: '维修工单', badge: repairWorkOrdersTotal },
                   ]"
                   tone="default"

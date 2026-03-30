@@ -152,7 +152,7 @@ const schema: TablePageSchema<InspectionServiceRecord> = {
     },
     {
       key: "InspectionQuota",
-      label: "套餐总检测次数/剩余次数",
+      label: "检测服务总检测次数/剩余次数",
       filterType: "text",
       filter: {
         type: "text",

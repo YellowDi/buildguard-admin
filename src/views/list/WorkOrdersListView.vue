@@ -75,10 +75,10 @@ const total = ref(0)
 const route = useRoute()
 const showInitialLoading = computed(() => loading.value && !workOrders.value.length && !errorMessage.value)
 let latestRequestId = 0
-const pageTitle = computed(() => props.kind === "inspection" ? "检修工单" : "维修工单")
+const pageTitle = computed(() => props.kind === "inspection" ? "检测工单" : "维修工单")
 const pageEmptyStateTitle = computed(() => `暂无${pageTitle.value}数据`)
 const pageEmptyStateDescription = computed(() => props.kind === "inspection"
-  ? "当前接口暂未返回可展示的检修工单。"
+  ? "当前接口暂未返回可展示的检测工单。"
   : "当前接口暂未返回可展示的维修工单。")
 const pageSortStorageKey = computed(() => props.kind === "inspection"
   ? "inspection-work-orders-sort-preferences-created-at-v2"
@@ -89,7 +89,7 @@ const columns = props.kind === "inspection" ? createInspectionColumns() : create
 
 const schema: TablePageSchema<WorkOrderRecord> = {
   title: pageTitle.value,
-  description: props.kind === "inspection" ? "所有客户检修工单列表" : "所有客户维修工单列表",
+  description: props.kind === "inspection" ? "所有客户检测工单列表" : "所有客户维修工单列表",
   rowKey: "uuid",
   data: [],
   primaryActionLabel,
@@ -457,11 +457,11 @@ function createInspectionColumns(): TablePageSchema<WorkOrderRecord>["columns"] 
     },
     {
       key: "packageName",
-      label: "套餐名称",
+      label: "检测服务名称",
       filterType: "text",
       filter: {
         type: "text",
-        placeholder: "输入套餐名称",
+        placeholder: "输入检测服务名称",
       },
       sort: true,
     },

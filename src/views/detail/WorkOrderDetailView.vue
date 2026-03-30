@@ -68,7 +68,7 @@ const pageTitle = computed(() => {
     return toRepairWorkOrderText(repairWorkOrder.value?.Title, "维修工单详情")
   }
 
-  return toText(inspectionWorkOrder.value?.PackageName, "关联套餐") || "关联套餐"
+  return toText(inspectionWorkOrder.value?.PackageName, "关联检测服务") || "关联检测服务"
 })
 
 const pageSubtitle = computed(() => {
