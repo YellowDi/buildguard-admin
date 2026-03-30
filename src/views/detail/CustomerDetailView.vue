@@ -91,6 +91,7 @@ type MaintenanceRecordRow = {
   item: string
   executor: string
   deadline: string
+  deadlineFull?: string
 }
 
 type CustomerBuildingAssetRow = {
@@ -508,7 +509,7 @@ const maintenanceModule = computed<DetailRelationModuleSchema<MaintenanceRecordR
   if (!customer.value) {
     return {
       key: "maintenance-records",
-      title: "检修维护记录概览",
+      title: "检修工单概览",
       rowKey: "id",
       columns: [
         { key: "location", label: "位置" },
@@ -518,8 +519,8 @@ const maintenanceModule = computed<DetailRelationModuleSchema<MaintenanceRecordR
         { key: "actions", label: "", slot: "maintenance-action-cell", headerClass: "flex justify-end", cellClass: "flex justify-end" },
       ],
       groups: [],
-      mobileMinWidth: "44rem",
-      columnTemplateMobile: "minmax(10rem,1.15fr) minmax(9rem,1fr) minmax(7rem,0.8fr) minmax(8rem,0.85fr) 2.5rem",
+      mobileMinWidth: "100%",
+      columnTemplateMobile: "minmax(0,1.2fr) minmax(0,1fr) minmax(0,0.8fr) minmax(0,0.9fr) 2.5rem",
       columnTemplateDesktop: "minmax(10rem,1.15fr) minmax(9rem,1fr) minmax(7rem,0.8fr) minmax(8rem,0.85fr) 2.5rem",
       columnGapMobile: "0.75rem",
       columnGapDesktop: "1rem",
@@ -528,7 +529,7 @@ const maintenanceModule = computed<DetailRelationModuleSchema<MaintenanceRecordR
 
   return {
     key: "maintenance-records",
-    title: "检修维护记录概览",
+    title: "检修工单概览",
     rowKey: "id",
     columns: [
       { key: "location", label: "位置", slot: "maintenance-status-cell" },
@@ -538,8 +539,8 @@ const maintenanceModule = computed<DetailRelationModuleSchema<MaintenanceRecordR
       { key: "actions", label: "", slot: "maintenance-action-cell", headerClass: "flex justify-end", cellClass: "flex justify-end" },
     ],
     groups: buildMaintenanceGroups(maintenanceRecords.value),
-    mobileMinWidth: "44rem",
-    columnTemplateMobile: "minmax(10rem,1.15fr) minmax(9rem,1fr) minmax(7rem,0.8fr) minmax(8rem,0.85fr) 2.5rem",
+    mobileMinWidth: "100%",
+    columnTemplateMobile: "minmax(0,1.2fr) minmax(0,1fr) minmax(0,0.8fr) minmax(0,0.9fr) 2.5rem",
     columnTemplateDesktop: "minmax(10rem,1.15fr) minmax(9rem,1fr) minmax(7rem,0.8fr) minmax(8rem,0.85fr) 2.5rem",
     columnGapMobile: "0.75rem",
     columnGapDesktop: "1rem",
@@ -556,12 +557,12 @@ const repairOverviewModule = computed<DetailRelationModuleSchema<MaintenanceReco
         { key: "location", label: "位置" },
         { key: "item", label: "报修类型" },
         { key: "executor", label: "维修人员" },
-        { key: "deadline", label: "创建时间" },
+        { key: "deadline", label: "创建时间", slot: "repair-overview-deadline-cell" },
         { key: "actions", label: "", slot: "maintenance-action-cell", headerClass: "flex justify-end", cellClass: "flex justify-end" },
       ],
       groups: [],
-      mobileMinWidth: "44rem",
-      columnTemplateMobile: "minmax(10rem,1.15fr) minmax(9rem,1fr) minmax(7rem,0.8fr) minmax(8rem,0.85fr) 2.5rem",
+      mobileMinWidth: "100%",
+      columnTemplateMobile: "minmax(0,1.2fr) minmax(0,1fr) minmax(0,0.8fr) minmax(0,0.9fr) 2.5rem",
       columnTemplateDesktop: "minmax(10rem,1.15fr) minmax(9rem,1fr) minmax(7rem,0.8fr) minmax(8rem,0.85fr) 2.5rem",
       columnGapMobile: "0.75rem",
       columnGapDesktop: "1rem",
@@ -576,12 +577,12 @@ const repairOverviewModule = computed<DetailRelationModuleSchema<MaintenanceReco
       { key: "location", label: "位置", slot: "maintenance-status-cell" },
       { key: "item", label: "报修类型" },
       { key: "executor", label: "维修人员" },
-      { key: "deadline", label: "创建时间" },
+      { key: "deadline", label: "创建时间", slot: "repair-overview-deadline-cell" },
       { key: "actions", label: "", slot: "maintenance-action-cell", headerClass: "flex justify-end", cellClass: "flex justify-end" },
     ],
     groups: buildMaintenanceGroups(repairOverviewRecords.value),
-    mobileMinWidth: "44rem",
-    columnTemplateMobile: "minmax(10rem,1.15fr) minmax(9rem,1fr) minmax(7rem,0.8fr) minmax(8rem,0.85fr) 2.5rem",
+    mobileMinWidth: "100%",
+    columnTemplateMobile: "minmax(0,1.2fr) minmax(0,1fr) minmax(0,0.8fr) minmax(0,0.9fr) 2.5rem",
     columnTemplateDesktop: "minmax(10rem,1.15fr) minmax(9rem,1fr) minmax(7rem,0.8fr) minmax(8rem,0.85fr) 2.5rem",
     columnGapMobile: "0.75rem",
     columnGapDesktop: "1rem",
@@ -2259,7 +2260,7 @@ async function loadMaintenanceRecords(uuid: string) {
 
   if (!uuid) {
     maintenanceRecords.value = []
-    maintenanceRecordsErrorMessage.value = "客户 Uuid 缺失，无法加载检修维护记录概览。"
+    maintenanceRecordsErrorMessage.value = "客户 Uuid 缺失，无法加载检修工单概览。"
     return
   }
 
@@ -2290,7 +2291,7 @@ async function loadMaintenanceRecords(uuid: string) {
     maintenanceRecords.value = []
     maintenanceRecordsErrorMessage.value = handleApiError(error, {
       mode: "silent",
-      fallback: "检修维护记录概览加载失败，请稍后重试。",
+      fallback: "检修工单概览加载失败，请稍后重试。",
     })
   } finally {
     if (requestId === latestMaintenanceRecordsRequestId) {
@@ -2530,7 +2531,8 @@ function mapRepairOverviewRecordRow(row: CustomerWorkOrderRow): MaintenanceRecor
     parkName: row.parkName !== "-" ? row.parkName : "未关联园区",
     item: row.reportTypeLabel !== "-" ? row.reportTypeLabel : "未设置",
     executor: row.executor,
-    deadline: row.createdAt,
+    deadline: formatDateOnly(row.createdAt),
+    deadlineFull: row.createdAt,
   }
 }
 
@@ -2574,6 +2576,30 @@ function parseDateTimeValue(value: string) {
 
   const parsed = Date.parse(normalized.replace(/\./g, "-"))
   return Number.isFinite(parsed) ? parsed : 0
+}
+
+function formatDateOnly(value: string) {
+  const normalized = value.trim()
+
+  if (!normalized || normalized === "-" || normalized === "—") {
+    return "-"
+  }
+
+  const [datePart] = normalized.split(/[ T]/)
+  return datePart || normalized
+}
+
+function hasExplicitTime(value: string | undefined) {
+  if (!value) {
+    return false
+  }
+
+  const normalized = value.trim()
+  if (!normalized || normalized === "-" || normalized === "—") {
+    return false
+  }
+
+  return /(?:\s|T)\d{1,2}:\d{2}(?::\d{2})?/.test(normalized)
 }
 
 function extractDatePart(value: string) {
@@ -3465,6 +3491,18 @@ function toDisplayText(value: unknown, fallback = "未填写") {
                       </TooltipContent>
                     </Tooltip>
                   </div>
+                </template>
+
+                <template #repair-overview-deadline-cell="{ row }">
+                  <Tooltip v-if="hasExplicitTime(row.deadlineFull)">
+                    <TooltipTrigger as-child>
+                      <span class="cursor-default">{{ row.deadline }}</span>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" align="start" class="rounded-lg px-3 py-1.5 text-xs">
+                      {{ row.deadlineFull }}
+                    </TooltipContent>
+                  </Tooltip>
+                  <span v-else>{{ row.deadline }}</span>
                 </template>
 
                 <template #maintenance-action-cell>
