@@ -85,6 +85,9 @@ type ParkBuildingGroup = {
 
 type MaintenanceRecordRow = {
   id: string
+  uuid: string
+  workOrderKind: "inspection" | "repair"
+  customerUuid: string
   status: "pending" | "processing" | "completed"
   location: string
   parkName: string
@@ -551,7 +554,7 @@ const repairOverviewModule = computed<DetailRelationModuleSchema<MaintenanceReco
       title: "维修工单概览",
       rowKey: "id",
       columns: [
-        { key: "location", label: "位置" },
+        { key: "location", label: "位置", slot: "repair-overview-location-cell" },
         { key: "item", label: "报修类型" },
         { key: "executor", label: "维修人员" },
         { key: "deadline", label: "创建时间", slot: "repair-overview-deadline-cell" },
@@ -571,7 +574,7 @@ const repairOverviewModule = computed<DetailRelationModuleSchema<MaintenanceReco
     title: "维修工单概览",
     rowKey: "id",
     columns: [
-      { key: "location", label: "位置", slot: "maintenance-status-cell" },
+      { key: "location", label: "位置", slot: "repair-overview-location-cell" },
       { key: "item", label: "报修类型" },
       { key: "executor", label: "维修人员" },
       { key: "deadline", label: "创建时间", slot: "repair-overview-deadline-cell" },
@@ -1512,6 +1515,17 @@ function goToNextWorkOrderPage() {
 }
 
 function handleViewWorkOrder(row: CustomerWorkOrderRow) {
+  if (!row.uuid) {
+    toast.error("当前工单缺少 Uuid，无法查看详情")
+    return
+  }
+
+  activeWorkOrderDetailKind.value = row.workOrderKind
+  workOrderDetailSheetOpen.value = true
+  void loadWorkOrderDetail(row.workOrderKind, row.uuid, row.customerUuid || customerUuid.value)
+}
+
+function handleOverviewWorkOrderDetail(row: MaintenanceRecordRow) {
   if (!row.uuid) {
     toast.error("当前工单缺少 Uuid，无法查看详情")
     return
@@ -2505,6 +2519,9 @@ function mapMaintenanceRecordRow(row: CustomerWorkOrderRow): MaintenanceRecordRo
 
   return {
     id: `${row.workOrderKind}-${row.uuid || row.id}`,
+    uuid: row.uuid,
+    workOrderKind: row.workOrderKind,
+    customerUuid: row.customerUuid,
     status: mapMaintenanceStatus(row),
     location,
     parkName: row.parkName !== "-" ? row.parkName : "未关联园区",
@@ -2523,6 +2540,9 @@ function mapRepairOverviewRecordRow(row: CustomerWorkOrderRow): MaintenanceRecor
 
   return {
     id: `${row.workOrderKind}-${row.uuid || row.id}`,
+    uuid: row.uuid,
+    workOrderKind: row.workOrderKind,
+    customerUuid: row.customerUuid,
     status: mapMaintenanceStatus(row),
     location,
     parkName: row.parkName !== "-" ? row.parkName : "未关联园区",
@@ -3438,8 +3458,13 @@ function toDisplayText(value: unknown, fallback = "未填写") {
                   </div>
                 </template>
 
-                <template #maintenance-action-cell>
-                  <Button variant="ghost" size="icon-sm" class="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground">
+                <template #maintenance-action-cell="{ row }">
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    class="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground"
+                    @click="handleOverviewWorkOrderDetail(row)"
+                  >
                     <i class="ri-more-line text-[18px]" />
                   </Button>
                 </template>
@@ -3454,7 +3479,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
                   </Button>
                 </template>
 
-                <template #maintenance-status-cell="{ row }">
+                <template #repair-overview-location-cell="{ row }">
                   <div class="flex min-w-0 items-center gap-2 text-foreground">
                     <i
                       :class="[
@@ -3470,21 +3495,8 @@ function toDisplayText(value: unknown, fallback = "未填写") {
                       <TooltipTrigger as-child>
                         <span class="truncate cursor-default">{{ row.location }}</span>
                       </TooltipTrigger>
-                      <TooltipContent side="top" align="start" class="rounded-lg px-3 py-2 text-xs">
-                        <div class="space-y-1.5">
-                          <div class="space-y-0.5">
-                            <div class="text-[11px] text-background/72">
-                              园区
-                            </div>
-                            <div>{{ row.parkName }}</div>
-                          </div>
-                          <div class="space-y-0.5">
-                            <div class="text-[11px] text-background/72">
-                              建筑
-                            </div>
-                            <div>{{ row.location }}</div>
-                          </div>
-                        </div>
+                      <TooltipContent side="top" align="start" class="rounded-lg px-3 py-1.5 text-xs">
+                        {{ row.parkName }}
                       </TooltipContent>
                     </Tooltip>
                   </div>
@@ -3502,8 +3514,13 @@ function toDisplayText(value: unknown, fallback = "未填写") {
                   <span v-else>{{ row.deadline }}</span>
                 </template>
 
-                <template #maintenance-action-cell>
-                  <Button variant="ghost" size="icon-sm" class="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground">
+                <template #maintenance-action-cell="{ row }">
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    class="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground"
+                    @click="handleOverviewWorkOrderDetail(row)"
+                  >
                     <i class="ri-more-line text-[18px]" />
                   </Button>
                 </template>
