@@ -3033,7 +3033,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
 
           <TablePage :page="activeWorkOrderTableTab === 'inspection' ? inspectionWorkOrdersPage : repairWorkOrdersPage" :show-toolbar-actions="false" :list-level-table="false" class="-mt-3 sm:-mx-4 xl:-mx-8">
             <template #controls-prefix>
-              <div class="mr-2 flex items-center gap-2.5">
+              <div class="mr-2 inline-flex shrink-0 items-center gap-2.5 whitespace-nowrap">
                 <TopTabSwitch
                   v-model="activeWorkOrderTableTab"
                   :tabs="[

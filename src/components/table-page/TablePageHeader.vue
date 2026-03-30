@@ -507,9 +507,9 @@ function handleMobileToolbarActionSelect(action: "filters" | "sort" | "export" |
     >
         <div v-if="showControls" class="px-4 py-2 sm:px-8">
           <div class="flex flex-wrap items-center gap-0.5 text-[14px] text-muted-foreground">
-            <slot name="controls-prefix" />
             <div class="flex min-w-0 flex-wrap items-center gap-0.5">
-            <template v-for="field in sortFields" :key="field.key">
+              <slot name="controls-prefix" />
+              <template v-for="field in sortFields" :key="field.key">
               <Popover
                 :open="field.kind === 'sort' && openPopover === 'sort-popover' && sortPopoverSource === 'chip'"
                 @update:open="(nextOpen) => {
@@ -550,7 +550,7 @@ function handleMobileToolbarActionSelect(action: "filters" | "sort" | "export" |
                   />
                 </PopoverContent>
               </Popover>
-            </template>
+              </template>
 
             <template v-for="field in activeFilterFields" :key="field.key">
               <Popover
