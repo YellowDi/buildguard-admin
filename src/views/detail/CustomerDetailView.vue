@@ -773,17 +773,6 @@ const inspectionWorkOrdersSchema: TablePageSchema<CustomerWorkOrderRow> = {
       sort: true,
     },
     {
-      key: "customerName",
-      label: "客户名称",
-      filterType: "text",
-      filter: {
-        type: "text",
-        placeholder: "输入客户名称",
-        defaultVisible: true,
-      },
-      sort: true,
-    },
-    {
       key: "packageName",
       label: "套餐名称",
       filterType: "text",
@@ -968,16 +957,6 @@ const repairWorkOrdersSchema: TablePageSchema<CustomerWorkOrderRow> = {
         type: "text",
         placeholder: "输入报修标题",
         defaultVisible: true,
-      },
-      sort: true,
-    },
-    {
-      key: "customerName",
-      label: "客户名称",
-      filterType: "text",
-      filter: {
-        type: "text",
-        placeholder: "输入客户名称",
       },
       sort: true,
     },
