@@ -317,7 +317,19 @@ const detailTabActionsByTab: Record<CustomerDetailTab, CustomerDetailTabActions>
     back: false,
   },
 }
-const activeDetailTabActions = computed(() => detailTabActionsByTab[activeTab.value])
+const activeDetailTabActions = computed<CustomerDetailTabActions>(() => {
+  const actions = detailTabActionsByTab[activeTab.value]
+
+  if (activeTab.value !== "work-orders") {
+    return actions
+  }
+
+  return {
+    ...actions,
+    addWorkOrder: activeWorkOrderTableTab.value === "inspection",
+    addRepairWorkOrder: activeWorkOrderTableTab.value === "repair",
+  }
+})
 const activeDetailMobileActionItems = computed(() => {
   const items: Array<{
     key: string
