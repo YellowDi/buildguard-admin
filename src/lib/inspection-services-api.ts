@@ -26,6 +26,7 @@ export type InspectionServiceListItem = {
   Id?: number
   Name?: string
   CustomerId?: number
+  CorpName?: string
   CustomerName?: string
   CustomerUuid?: string
   Level?: string

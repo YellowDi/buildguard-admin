@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
+import { toast } from "vue-sonner"
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
@@ -32,9 +33,10 @@ import {
 type InspectionServiceRecord = {
   id: string
   uuid: string
+  customerUuid: string
   Name: string
   Level: string
-  CustomerName: string
+  CorpName: string
   ExpireAt: string
   ServiceStatus: string
   InspectionQuota: string
@@ -119,9 +121,10 @@ const schema: TablePageSchema<InspectionServiceRecord> = {
       sort: true,
     },
     {
-      key: "CustomerName",
+      key: "CorpName",
       label: "客户名称",
       filterType: "text",
+      slot: "cell-CorpName",
       filter: {
         type: "text",
         placeholder: "输入客户名称",
@@ -240,7 +243,7 @@ function buildPageFilterText(row: InspectionServiceRecord) {
   return [
     row.Name,
     row.Level,
-    row.CustomerName,
+    row.CorpName,
     row.ExpireAt,
     row.ServiceStatus,
     row.InspectionQuota,
@@ -310,9 +313,11 @@ function normalizeInspectionServiceRecord(item: InspectionServiceListItem, index
   return {
     id: uuid || fallbackId,
     uuid: uuid || fallbackId,
+    customerUuid: toText(item.CustomerUuid, ""),
     Name: toText(item.Name, "未命名服务"),
     Level: toText(item.Level, "未分级"),
-    CustomerName: toText(item.CustomerName, "未绑定客户"),
+    // 接口字段从 CustomerName 调整为 CorpName
+    CorpName: toText(item.CorpName || item.CustomerName, "未绑定客户"),
     ExpireAt: getFirstText(item, ["ExpireAt", "ExpiredAt", "EndAt", "ServiceEndAt", "PackageExpireAt", "DueAt"], "-"),
     ServiceStatus: getFirstText(item, ["ServiceStatusLabel", "ServiceStatus", "StatusLabel", "StatusName", "Status"], "-"),
     InspectionQuota: formatInspectionQuota(
@@ -335,6 +340,20 @@ function normalizeInspectionServiceRecord(item: InspectionServiceListItem, index
       builds,
     },
   }
+}
+
+function jumpToCustomerDetail(row: Record<string, unknown>) {
+  const nextCustomerUuid = typeof row.customerUuid === "string" ? row.customerUuid : ""
+
+  if (!nextCustomerUuid) {
+    toast.error("当前检测服务缺少客户 Uuid，无法跳转客户详情")
+    return
+  }
+
+  void router.push({
+    name: "customer-detail",
+    params: { id: nextCustomerUuid },
+  })
 }
 
 function cacheInspectionServiceDetail(row: InspectionServiceRecord) {
@@ -468,6 +487,17 @@ function toText(value: unknown, fallback = "") {
 
     <TooltipProvider>
       <TablePage :page="page" @primary-action="handleCreateInspectionService">
+        <template #cell-CorpName="{ row }">
+          <button
+            type="button"
+            class="inline-flex max-w-full items-center gap-1 text-left text-[#2B67F6] transition-colors hover:text-[#1D4ED8]"
+            @click.stop="jumpToCustomerDetail(row)"
+          >
+            <span class="truncate">{{ row.CorpName }}</span>
+            <i class="ri-arrow-right-up-line shrink-0 text-sm" />
+          </button>
+        </template>
+
         <template #cell-ServiceStatus="{ row }">
           <span
             :class="[
