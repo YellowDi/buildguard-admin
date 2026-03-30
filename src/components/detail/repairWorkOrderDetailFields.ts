@@ -28,7 +28,7 @@ export function buildRepairWorkOrderPrimarySections(
       key: "repair-work-order-customer",
       title: "客户信息",
       rows: [
-        { key: "customer-name", label: "客户名称", value: toText(customer?.CorpName, toText(workOrder.CustomerName || workOrder.CorpName, "-")) },
+        { key: "customer-name", label: "客户名称", value: toText(customer?.CorpName, toText(workOrder.CorpName || workOrder.CustomerName, "-")) },
         { key: "park-name", label: "园区名称", value: toText(workOrder.ParkName, "-") },
         {
           key: "address",

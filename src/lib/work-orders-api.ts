@@ -17,6 +17,7 @@ export type WorkOrderListItem = {
   PlanName?: string
   PackageName?: string
   CustomerUuid?: string
+  CorpName?: string
   CustomerName?: string
   ParkName?: string
   BuildName?: string
@@ -394,6 +395,7 @@ function normalizeWorkOrderListItem(value: unknown): WorkOrderListItem {
     PlanName: getFirstText(record, ["PlanName", "planName", "InspectionPlanName", "inspectionPlanName", "Name", "name"]),
     PackageName: getFirstText(record, ["PackageName", "packageName", "ServiceName", "serviceName"]),
     CustomerUuid: getFirstText(record, ["CustomerUuid", "customerUuid"]),
+    CorpName: getFirstText(record, ["CorpName", "corpName", "CompanyName", "companyName", "CustomerName", "customerName"]),
     CustomerName: getFirstText(record, ["CustomerName", "customerName", "CorpName", "corpName", "CompanyName", "companyName"]),
     ParkName: getFirstText(record, ["ParkName", "parkName"]),
     BuildName: getFirstText(record, ["BuildName", "buildName", "BuildingName", "buildingName"]),

@@ -107,6 +107,7 @@ type InspectionServiceWorkOrderItem = {
   PlanName?: string
   PackageName?: string
   CustomerName?: string
+  CorpName?: string
   Deadline?: string
   Executor?: string
   Status?: number
@@ -622,7 +623,8 @@ function normalizeWorkOrderRow(item: InspectionServiceWorkOrderItem, index: numb
     orderNo: toText(item.OrderNo, "-"),
     planName: toText(item.PlanName, "-"),
     packageName: toText(item.PackageName, "-"),
-    customerName: toText(item.CustomerName, "-"),
+    // 接口字段从 CustomerName 调整为 CorpName
+    customerName: toText(item.CorpName || item.CustomerName, "-"),
     deadline: toText(item.Deadline, "-"),
     executor: toText(item.Executor, "-"),
     statusValue,

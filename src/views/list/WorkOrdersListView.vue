@@ -291,7 +291,8 @@ function normalizeInspectionWorkOrderRecord(item: WorkOrderListItem, index: numb
     planUuid: toText(item.PlanUuid),
     orderNo,
     title: "-",
-    customerName: toText(item.CustomerName, "-"),
+    // 接口字段从 CustomerName 调整为 CorpName
+    customerName: toText(item.CorpName || item.CustomerName, "-"),
     parkName: "-",
     packageName,
     planName: toText(item.PlanName, "-"),
@@ -332,7 +333,7 @@ function normalizeRepairWorkOrderRecord(item: RepairWorkOrderListItem, index: nu
     planUuid: "",
     orderNo: toText(item.OrderNo, `RP-${fallbackId}`),
     title: toText(item.Title, "-"),
-    customerName: toText(item.CustomerName || item.CorpName, "-"),
+    customerName: toText(item.CorpName || item.CustomerName, "-"),
     parkName: toText(item.ParkName, "-"),
     packageName: "-",
     planName: "-",

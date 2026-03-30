@@ -1357,7 +1357,7 @@ const parkDetailSheetSections = computed<DetailFieldSection[]>(() => {
 const workOrderDetailSheetTitle = computed(() => (
   activeWorkOrderDetailKind.value === "repair"
     ? toRepairWorkOrderText(activeRepairWorkOrderDetail.value?.Title, "维修工单详情")
-    : toWorkOrderText(activeInspectionWorkOrderDetail.value?.OrderNo, "检修工单详情")
+    : toWorkOrderText(activeInspectionWorkOrderDetail.value?.PackageName, "检修工单详情")
 ))
 
 const workOrderDetailPrimarySections = computed<DetailFieldSection[]>(() => {
@@ -2793,7 +2793,8 @@ function mapInspectionWorkOrderRow(item: WorkOrderListItem, index: number): Cust
     planUuid: toDisplayText(item.PlanUuid, ""),
     orderNo: toDisplayText(item.OrderNo, "-"),
     workOrderName: toDisplayText(item.PackageName, "-"),
-    customerName: toDisplayText(item.CustomerName, toDisplayText(customer.value?.CorpName, "-")),
+    // 接口字段从 CustomerName 调整为 CorpName
+    customerName: toDisplayText(item.CorpName || item.CustomerName, toDisplayText(customer.value?.CorpName, "-")),
     parkName: toDisplayText(item.ParkName, "-"),
     buildingName: toDisplayText(item.BuildName, "-"),
     packageName: toDisplayText(item.PackageName, "-"),
@@ -2839,7 +2840,7 @@ function mapRepairWorkOrderRow(item: RepairWorkOrderListItem, index: number): Cu
     planUuid: "",
     orderNo: toDisplayText(item.OrderNo, "-"),
     workOrderName: toDisplayText(item.Title, "-"),
-    customerName: toDisplayText(item.CustomerName || item.CorpName, toDisplayText(customer.value?.CorpName, "-")),
+    customerName: toDisplayText(item.CorpName || item.CustomerName, toDisplayText(customer.value?.CorpName, "-")),
     parkName: toDisplayText(item.ParkName, "-"),
     buildingName: toDisplayText(item.BuildName, "-"),
     packageName: "-",
