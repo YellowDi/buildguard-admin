@@ -43,6 +43,7 @@ import {
   type TableExportScope,
 } from "@/components/table-page/export-utils"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
 import { useDetailRouteTab } from "@/composables/useDetailRouteTab"
 import DetailLayout from "@/layouts/DetailLayout.vue"
@@ -86,6 +87,7 @@ type MaintenanceRecordRow = {
   id: string
   status: "pending" | "processing" | "completed"
   location: string
+  parkName: string
   item: string
   principal: string
   updatedAt: string
@@ -2319,11 +2321,29 @@ function formatRemainingService(record: CustomerPackageMockRecord | null) {
 }
 
 function buildMaintenanceGroups(current: CustomerDetailResult) {
+  const fallbackLocations = [
+    { parkName: "默认园区", buildingName: "1 号楼" },
+    { parkName: "默认园区", buildingName: "2 号楼" },
+    { parkName: "默认园区", buildingName: "5 号楼" },
+    { parkName: "默认园区", buildingName: "地下车库" },
+  ]
+  const assetLocations = buildingAssets.value
+    .slice(0, fallbackLocations.length)
+    .map(item => ({
+      parkName: toDisplayText(item.parkName, "默认园区"),
+      buildingName: toDisplayText(item.buildingName, "未命名建筑"),
+    }))
+  const locationSources = assetLocations.length ? assetLocations : fallbackLocations
+  const getLocation = (index: number) => {
+    const source = locationSources[index] ?? fallbackLocations[index] ?? fallbackLocations[0]
+    return source
+  }
   const records: MaintenanceRecordRow[] = [
     {
       id: "pending-1",
       status: "pending",
-      location: `${toDisplayText(current.CorpName, "客户")} / 1 号楼`,
+      location: getLocation(0).buildingName,
+      parkName: getLocation(0).parkName,
       item: "消防泵房月检",
       principal: "王工",
       updatedAt: "2026-03-20 14:30",
@@ -2331,7 +2351,8 @@ function buildMaintenanceGroups(current: CustomerDetailResult) {
     {
       id: "processing-1",
       status: "processing",
-      location: `${toDisplayText(current.CorpName, "客户")} / 2 号楼`,
+      location: getLocation(1).buildingName,
+      parkName: getLocation(1).parkName,
       item: "配电室温感排查",
       principal: "刘洋",
       updatedAt: "2026-03-21 09:45",
@@ -2339,7 +2360,8 @@ function buildMaintenanceGroups(current: CustomerDetailResult) {
     {
       id: "completed-1",
       status: "completed",
-      location: `${toDisplayText(current.CorpName, "客户")} / 5 号楼`,
+      location: getLocation(2).buildingName,
+      parkName: getLocation(2).parkName,
       item: "电梯机房巡检",
       principal: "陈峰",
       updatedAt: "2026-03-22 16:10",
@@ -2347,7 +2369,8 @@ function buildMaintenanceGroups(current: CustomerDetailResult) {
     {
       id: "completed-2",
       status: "completed",
-      location: `${toDisplayText(current.CorpName, "客户")} / 地下车库`,
+      location: getLocation(3).buildingName,
+      parkName: getLocation(3).parkName,
       item: "排烟系统复检",
       principal: "赵敏",
       updatedAt: "2026-03-23 11:20",
@@ -3163,29 +3186,38 @@ function toDisplayText(value: unknown, fallback = "未填写") {
 
           <div v-if="customer" class="my-5 h-px bg-border/80" />
 
-          <DetailRelationModule v-if="customer" :schema="maintenanceModule">
-            <template #maintenance-status-cell="{ row }">
-              <div class="flex min-w-0 items-center gap-2 text-foreground">
-                <i
-                  :class="[
-                    'text-[18px]',
-                    row.status === 'pending'
-                      ? 'ri-time-fill text-[#F59E0B]'
-                      : row.status === 'processing'
-                        ? 'ri-loader-4-line text-[#2563EB]'
-                        : 'ri-checkbox-circle-fill text-[#22C55E]',
-                  ]"
-                />
-                <span class="truncate">{{ row.location }}</span>
-              </div>
-            </template>
+          <TooltipProvider v-if="customer">
+            <DetailRelationModule :schema="maintenanceModule">
+              <template #maintenance-status-cell="{ row }">
+                <div class="flex min-w-0 items-center gap-2 text-foreground">
+                  <i
+                    :class="[
+                      'text-[18px]',
+                      row.status === 'pending'
+                        ? 'ri-time-fill text-[#F59E0B]'
+                        : row.status === 'processing'
+                          ? 'ri-loader-4-line text-[#2563EB]'
+                          : 'ri-checkbox-circle-fill text-[#22C55E]',
+                    ]"
+                  />
+                  <Tooltip>
+                    <TooltipTrigger as-child>
+                      <span class="truncate cursor-default">{{ row.location }}</span>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" align="start" class="rounded-lg px-3 py-1.5 text-xs">
+                      {{ row.parkName }}
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+              </template>
 
-            <template #maintenance-action-cell>
-              <Button variant="ghost" size="icon-sm" class="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground">
-                <i class="ri-more-line text-[18px]" />
-              </Button>
-            </template>
-          </DetailRelationModule>
+              <template #maintenance-action-cell>
+                <Button variant="ghost" size="icon-sm" class="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground">
+                  <i class="ri-more-line text-[18px]" />
+                </Button>
+              </template>
+            </DetailRelationModule>
+          </TooltipProvider>
         </div>
       </template>
     </template>
