@@ -84,13 +84,17 @@ function hasNamedSlot(name?: string) {
               {{ displayCount }}
             </Badge>
           </div>
-
           <div
             v-for="column in trailingColumns"
             :key="`${schema.key}-header-${column.key}`"
             :class="cn('whitespace-nowrap text-[12px] text-muted-foreground', column.headerClass)"
           >
-            {{ column.label }}
+            <slot v-if="hasNamedSlot(`${column.key}-header`)" :name="`${column.key}-header`" :column="column">
+              {{ column.label }}
+            </slot>
+            <template v-else>
+              {{ column.label }}
+            </template>
           </div>
         </div>
 

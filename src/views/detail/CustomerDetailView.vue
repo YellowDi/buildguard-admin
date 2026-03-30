@@ -505,7 +505,7 @@ const maintenanceModule = computed<DetailRelationModuleSchema<MaintenanceRecordR
         { key: "item", label: "检修项" },
         { key: "principal", label: "负责人" },
         { key: "updatedAt", label: "更新时间" },
-        { key: "actions", label: "", slot: "maintenance-action-cell", cellClass: "flex justify-end" },
+        { key: "actions", label: "", slot: "maintenance-action-cell", headerClass: "flex justify-end", cellClass: "flex justify-end" },
       ],
       groups: [],
       mobileMinWidth: "44rem",
@@ -525,7 +525,7 @@ const maintenanceModule = computed<DetailRelationModuleSchema<MaintenanceRecordR
       { key: "item", label: "检修项" },
       { key: "principal", label: "负责人" },
       { key: "updatedAt", label: "更新时间" },
-      { key: "actions", label: "", slot: "maintenance-action-cell", cellClass: "flex justify-end" },
+      { key: "actions", label: "", slot: "maintenance-action-cell", headerClass: "flex justify-end", cellClass: "flex justify-end" },
     ],
     groups: buildMaintenanceGroups(current),
     mobileMinWidth: "44rem",
@@ -1748,6 +1748,11 @@ function handleWorkOrderDetailSheetOpenChange(open: boolean) {
     activeRepairWorkOrderDetail.value = null
     activeWorkOrderDetailCustomer.value = null
   }
+}
+
+function showInspectionWorkOrdersTab() {
+  activeWorkOrderTableTab.value = "inspection"
+  setActiveTab("work-orders")
 }
 
 async function loadWorkOrderDetail(kind: "inspection" | "repair", workOrderUuid: string, fallbackCustomerUuid = "") {
@@ -3188,6 +3193,12 @@ function toDisplayText(value: unknown, fallback = "未填写") {
 
           <TooltipProvider v-if="customer">
             <DetailRelationModule :schema="maintenanceModule">
+              <template #actions-header>
+                <Button variant="outline" size="sm" class="h-8 px-3 text-sm" @click="showInspectionWorkOrdersTab">
+                  查看更多
+                </Button>
+              </template>
+
               <template #maintenance-status-cell="{ row }">
                 <div class="flex min-w-0 items-center gap-2 text-foreground">
                   <i
