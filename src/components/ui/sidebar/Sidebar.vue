@@ -30,7 +30,7 @@ const { state, openMobile } = useSidebar()
     :data-state="openMobile ? 'expanded' : 'collapsed'"
     :data-mobile-open="openMobile ? 'true' : 'false'"
     :data-side="side"
-    :class="cn('fixed inset-y-0 left-0 z-30 flex md:hidden', props.class)"
+    :class="cn('fixed inset-y-0 left-0 z-30 flex min-[1000px]:hidden', props.class)"
     :style="{
       '--sidebar-width': SIDEBAR_WIDTH_MOBILE,
     }"
@@ -52,7 +52,7 @@ const { state, openMobile } = useSidebar()
 
   <div
     v-if="collapsible !== 'none'"
-    class="group peer hidden md:block"
+    class="group peer hidden min-[1000px]:block"
     :data-state="state"
     :data-collapsible="state === 'collapsed' ? collapsible : ''"
     :data-variant="variant"
@@ -71,7 +71,7 @@ const { state, openMobile } = useSidebar()
     />
     <div
       :class="cn(
-        'duration-200 fixed inset-y-0 z-10 hidden h-svh w-[var(--sidebar-width)] transition-[left,right,width] ease-linear md:flex',
+        'duration-200 fixed inset-y-0 z-10 hidden h-svh w-[var(--sidebar-width)] transition-[left,right,width] ease-linear min-[1000px]:flex',
         side === 'left'
           ? 'left-0 group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)]'
           : 'right-0 group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]',

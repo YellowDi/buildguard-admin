@@ -116,9 +116,9 @@ function handleTabSelect(value: unknown) {
               </div>
             </div>
 
-            <div class="hidden min-w-0 overflow-x-auto sm:block">
-              <div class="flex w-max min-w-full items-end gap-6">
-                <nav class="flex shrink-0 items-center text-[14px]" :aria-label="props.tabsAriaLabel">
+            <div class="hidden min-w-0 items-end gap-6 sm:flex">
+              <div class="min-w-0 flex-1 overflow-x-auto">
+                <nav class="flex min-w-max items-center text-[14px]" :aria-label="props.tabsAriaLabel">
                   <button
                     v-for="tab in props.tabs"
                     :key="tab.id"
@@ -141,14 +141,14 @@ function handleTabSelect(value: unknown) {
                     />
                   </button>
                 </nav>
+              </div>
 
-                <div
-                  v-if="hasTabActions"
-                  class="ml-auto flex shrink-0 items-center justify-end pb-2"
-                >
-                  <slot v-if="$slots.tabActions" name="tabActions" />
-                  <slot v-else name="actions" />
-                </div>
+              <div
+                v-if="hasTabActions"
+                class="flex shrink-0 items-center justify-end pb-2"
+              >
+                <slot v-if="$slots.tabActions" name="tabActions" />
+                <slot v-else name="actions" />
               </div>
             </div>
           </div>

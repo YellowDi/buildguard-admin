@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
 import { Separator } from "@/components/ui/separator"
+import { SIDEBAR_MOBILE_BREAKPOINT } from "@/components/ui/sidebar"
 import { RouterLink, useRoute } from "vue-router"
 
 import { detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
@@ -40,7 +41,7 @@ const props = defineProps<{
 
 const route = useRoute()
 const { width } = useWindowSize()
-const isMobile = computed(() => width.value < 768)
+const isMobile = computed(() => width.value < SIDEBAR_MOBILE_BREAKPOINT)
 
 const breadcrumbItems = computed<BreadcrumbItemConfig[]>(() => {
   const metaItems = Array.isArray(route.meta.breadcrumb)
@@ -107,7 +108,7 @@ const visibleTrailingItems = computed(() => {
   >
     <button
       type="button"
-      class="-ml-1 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-foreground transition-colors hover:bg-accent hover:text-accent-foreground md:hidden"
+      class="-ml-1 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-foreground transition-colors hover:bg-accent hover:text-accent-foreground min-[1000px]:hidden"
       aria-label="打开侧边栏"
       @click.stop="props.onToggleMobileSidebar?.()"
     >
@@ -115,7 +116,7 @@ const visibleTrailingItems = computed(() => {
     </button>
     <button
       type="button"
-      class="-ml-1 hidden h-7 w-7 shrink-0 items-center justify-center rounded-md text-foreground transition-colors hover:bg-accent hover:text-accent-foreground md:inline-flex"
+      class="-ml-1 hidden h-7 w-7 shrink-0 items-center justify-center rounded-md text-foreground transition-colors hover:bg-accent hover:text-accent-foreground min-[1000px]:inline-flex"
       aria-label="切换侧边栏"
       @click.stop="props.onToggleDesktopSidebar?.()"
     >

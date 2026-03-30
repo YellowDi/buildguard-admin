@@ -35,13 +35,13 @@ function closeMobileSidebar() {
     <button
       v-if="mobileSidebarOpen"
       type="button"
-      class="fixed inset-0 z-20 hidden bg-transparent opacity-100 max-md:block max-md:touch-none"
+      class="fixed inset-0 z-20 hidden bg-transparent opacity-100 max-[999px]:block max-[999px]:touch-none"
       aria-label="关闭侧边栏"
       @click="closeMobileSidebar"
     />
     <div
       class="relative z-10 flex h-svh min-w-0 flex-1 flex-col overflow-hidden bg-background transition-transform duration-300 ease-out"
-      :class="mobileSidebarOpen ? 'max-md:translate-x-[334px] max-md:pointer-events-none' : ''"
+      :class="mobileSidebarOpen ? 'max-[999px]:translate-x-[334px] max-[999px]:pointer-events-none' : ''"
       @click="mobileSidebarOpen && closeMobileSidebar()"
     >
       <AppHeader
