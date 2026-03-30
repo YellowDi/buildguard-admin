@@ -54,6 +54,7 @@ export const API_PATHS = {
   inspectionServicesList: "/bqi/inspection/service/list",
   inspectionServiceCreate: "/bqi/inspection/service/new",
   inspectionServiceDetail: "/bqi/inspection/service/detail",
+  inspectionServiceUpdate: "/bqi/inspection/service/update",
   inspectionItemCreate: "/bqi/inspection/new",
   inspectionItemDetail: "/bqi/inspection/detail",
   inspectionItemUpdate: "/bqi/inspection/update",

@@ -23,8 +23,10 @@ import { fetchBuildings, type BuildingListItem } from "@/lib/buildings-api"
 import { fetchCustomers, type CustomerListItem } from "@/lib/customers-api"
 import {
   createInspectionService,
+  fetchInspectionServiceDetail,
   fetchInspectionServices,
   type InspectionServiceListItem,
+  updateInspectionService,
 } from "@/lib/inspection-services-api"
 
 type QuickNavItem = {
@@ -80,6 +82,7 @@ const form = reactive<InspectionServiceFormState>(createEmptyForm())
 const initialFormState = ref<InspectionServiceFormState>(createEmptyForm())
 const loadError = ref("")
 const submitting = ref(false)
+const loadingDetail = ref(false)
 const customerLoading = ref(false)
 const templateLoading = ref(false)
 const buildingLoading = ref(false)
@@ -90,13 +93,16 @@ const loadedBuildingsCustomerUuid = ref("")
 const anchorItems = ref<QuickNavItem[]>([])
 const activeNavId = ref("")
 const formSectionsRef = ref<HTMLElement | null>(null)
+const suppressCustomerWatch = ref(false)
 const STICKY_HEADER_OFFSET = 112
 let observer: IntersectionObserver | null = null
 let observerActive = false
 
 const queryCustomerUuid = computed(() => typeof route.query.customerUuid === "string" ? route.query.customerUuid.trim() : "")
 const queryCustomerName = computed(() => typeof route.query.customerName === "string" ? route.query.customerName.trim() : "")
-const pageTitle = "添加检测服务"
+const inspectionServiceUuid = computed(() => typeof route.params.id === "string" ? route.params.id.trim() : "")
+const isEditMode = computed(() => route.name === "inspection-service-edit" && Boolean(inspectionServiceUuid.value))
+const pageTitle = computed(() => isEditMode.value ? "编辑检测服务" : "添加检测服务")
 const selectedCustomerName = computed(() =>
   customerOptions.value.find(item => item.uuid === form.customerUuid)?.name
   || queryCustomerName.value
@@ -144,12 +150,23 @@ const canSubmit = computed(() =>
     && normalizeText(form.templateUuid)
     && form.buildUuids.length > 0
     && !submitting.value
+    && !loadingDetail.value
     && !customerLoading.value
     && !templateLoading.value
     && !buildingLoading.value,
   ),
 )
-const submitButtonLabel = computed(() => submitting.value ? "提交中..." : "添加检测服务")
+const submitButtonLabel = computed(() => {
+  if (loadingDetail.value) {
+    return "加载中..."
+  }
+
+  if (submitting.value) {
+    return isEditMode.value ? "保存中..." : "提交中..."
+  }
+
+  return isEditMode.value ? "保存检测服务" : "添加检测服务"
+})
 const inspectionLevelsCache = ref<string[]>([])
 
 function handleFocus(sectionId: string) {
@@ -157,6 +174,14 @@ function handleFocus(sectionId: string) {
 }
 
 function goBack() {
+  if (isEditMode.value && inspectionServiceUuid.value) {
+    void router.push({
+      name: "inspection-service-detail",
+      params: { id: inspectionServiceUuid.value },
+    })
+    return
+  }
+
   router.back()
 }
 
@@ -196,6 +221,10 @@ function scrollToSection(id: string) {
 }
 
 async function handleSubmit() {
+  if (loadingDetail.value) {
+    return
+  }
+
   if (!normalizeText(form.customerUuid)) {
     toast.error("请选择所属客户")
     return
@@ -239,6 +268,26 @@ async function handleSubmit() {
       BuildUuids: dedupeText(form.buildUuids),
       Remark: getOptionalText(form.remark),
     }
+
+    if (isEditMode.value) {
+      const result = await updateInspectionService({
+        Uuid: inspectionServiceUuid.value,
+        ...payload,
+      })
+
+      toast.success("检测服务已更新", {
+        description: result.Uuid
+          ? `服务 UUID：${result.Uuid}`
+          : `${selectedCustomerName.value || "当前客户"}的检测服务信息已保存。`,
+      })
+
+      await router.push({
+        name: "inspection-service-detail",
+        params: { id: result.Uuid || inspectionServiceUuid.value },
+      })
+      return
+    }
+
     const result = await createInspectionService(payload)
 
     toast.success("检测服务已创建", {
@@ -250,8 +299,8 @@ async function handleSubmit() {
     await router.push({ name: "inspection-services" })
   } catch (error) {
     handleApiError(error, {
-      title: "检测服务创建失败",
-      fallback: "检测服务创建失败，请稍后重试。",
+      title: isEditMode.value ? "检测服务更新失败" : "检测服务创建失败",
+      fallback: isEditMode.value ? "检测服务更新失败，请稍后重试。" : "检测服务创建失败，请稍后重试。",
     })
   } finally {
     submitting.value = false
@@ -290,18 +339,22 @@ async function loadInitialOptions() {
       form.customerUuid = preferredCustomerUuid
     }
 
-    initialFormState.value = {
-      ...createEmptyForm(),
-      customerUuid: form.customerUuid,
-    }
+    if (isEditMode.value) {
+      await loadInspectionServiceForEdit(inspectionServiceUuid.value)
+    } else {
+      initialFormState.value = {
+        ...createEmptyForm(),
+        customerUuid: form.customerUuid,
+      }
 
-    if (form.customerUuid) {
-      await loadBuildingsForCustomer(form.customerUuid)
+      if (form.customerUuid) {
+        await loadBuildingsForCustomer(form.customerUuid)
+      }
     }
   } catch (error) {
     loadError.value = handleApiError(error, {
       mode: "silent",
-      fallback: "检测服务表单初始化失败，请稍后重试。",
+      fallback: isEditMode.value ? "检测服务编辑页初始化失败，请稍后重试。" : "检测服务表单初始化失败，请稍后重试。",
     })
   } finally {
     customerLoading.value = false
@@ -309,8 +362,9 @@ async function loadInitialOptions() {
   }
 }
 
-async function loadBuildingsForCustomer(customerUuid: string) {
+async function loadBuildingsForCustomer(customerUuid: string, selectedBuildUuids: string[] = []) {
   if (customerUuid && loadedBuildingsCustomerUuid.value === customerUuid && buildingOptions.value.length) {
+    form.buildUuids = dedupeText(selectedBuildUuids.length ? selectedBuildUuids : form.buildUuids)
     return
   }
 
@@ -331,10 +385,13 @@ async function loadBuildingsForCustomer(customerUuid: string) {
       .map(mapBuildOption)
       .filter(item => item.uuid)
     loadedBuildingsCustomerUuid.value = customerUuid
+    form.buildUuids = dedupeText(
+      selectedBuildUuids.filter(buildUuid => buildingOptions.value.some(option => option.uuid === buildUuid)),
+    )
     initialFormState.value = {
       ...initialFormState.value,
       customerUuid,
-      buildUuids: [],
+      buildUuids: [...form.buildUuids],
     }
   } catch (error) {
     loadError.value = handleApiError(error, {
@@ -458,6 +515,60 @@ async function fetchAllBuildings(customerUuid: string) {
   return dedupeByUuid(allItems)
 }
 
+async function loadInspectionServiceForEdit(uuid: string) {
+  if (!uuid) {
+    loadError.value = "检测服务 Uuid 缺失，无法加载编辑资料。"
+    return
+  }
+
+  loadingDetail.value = true
+  loadError.value = ""
+
+  try {
+    const detail = await fetchInspectionServiceDetail({ Uuid: uuid })
+    const nextCustomerUuid = normalizeText(detail.CustomerUuid)
+    const nextBuildUuids = dedupeText(
+      (Array.isArray(detail.Builds) ? detail.Builds : []).map(item => normalizeText(item.BuildUuid)),
+    )
+
+    suppressCustomerWatch.value = true
+
+    Object.assign(form, {
+      customerUuid: nextCustomerUuid,
+      name: normalizeText(detail.Name),
+      level: normalizeText(detail.Level),
+      managerName: normalizeText(detail.ManagerName),
+      managerPhone: normalizeText(detail.ManagerPhone),
+      templateUuid: normalizeText(detail.TemplateUuid),
+      buildUuids: [],
+      remark: normalizeText(detail.Remark),
+    })
+
+    if (nextCustomerUuid) {
+      await loadBuildingsForCustomer(nextCustomerUuid, nextBuildUuids)
+    }
+
+    initialFormState.value = {
+      customerUuid: nextCustomerUuid,
+      name: normalizeText(detail.Name),
+      level: normalizeText(detail.Level),
+      managerName: normalizeText(detail.ManagerName),
+      managerPhone: normalizeText(detail.ManagerPhone),
+      templateUuid: normalizeText(detail.TemplateUuid),
+      buildUuids: [...form.buildUuids],
+      remark: normalizeText(detail.Remark),
+    }
+  } catch (error) {
+    loadError.value = handleApiError(error, {
+      mode: "silent",
+      fallback: "检测服务资料加载失败，请稍后重试。",
+    })
+  } finally {
+    suppressCustomerWatch.value = false
+    loadingDetail.value = false
+  }
+}
+
 function mapCustomerOption(item: CustomerListItem): CustomerOption {
   return {
     uuid: normalizeText(item.Uuid),
@@ -528,6 +639,7 @@ function getOptionalText(value: unknown) {
 
 function resetLocalStateForRoute() {
   loadError.value = ""
+  loadingDetail.value = false
   customerOptions.value = []
   templateOptions.value = []
   buildingOptions.value = []
@@ -595,7 +707,7 @@ onUnmounted(() => {
 watch(
   () => form.customerUuid,
   (customerUuid, previousCustomerUuid) => {
-    if (customerUuid === previousCustomerUuid) {
+    if (suppressCustomerWatch.value || customerUuid === previousCustomerUuid) {
       return
     }
 
@@ -604,7 +716,7 @@ watch(
 )
 
 watch(
-  () => [route.query.customerUuid, route.query.customerName] as const,
+  () => [route.name, route.params.id, route.query.customerUuid, route.query.customerName] as const,
   () => {
     resetLocalStateForRoute()
     void loadInitialOptions()
@@ -616,16 +728,16 @@ watch(
   <section class="mx-auto flex w-full max-w-4xl min-w-0 flex-col gap-6 pb-8">
     <FormHeader
       :title="pageTitle"
-      :primary-action="{ label: submitButtonLabel, icon: 'ri-add-line', disabled: !canSubmit }"
+      :primary-action="{ label: submitButtonLabel, icon: isEditMode ? 'ri-save-line' : 'ri-add-line', disabled: !canSubmit }"
       :secondary-actions="[{ key: 'reset', label: '重置表单' }]"
-      :reset-dialog="{ description: '当前已填写的检测服务信息都会被清空，此操作不可撤销。' }"
+      :reset-dialog="{ description: isEditMode ? '当前已修改的检测服务信息将恢复为最近一次加载的内容，此操作不可撤销。' : '当前已填写的检测服务信息都会被清空，此操作不可撤销。' }"
       @back="goBack"
       @reset="handleReset"
       @submit="handleSubmit"
     />
 
     <Alert v-if="loadError" variant="destructive">
-      <AlertTitle>检测服务表单初始化失败</AlertTitle>
+      <AlertTitle>{{ isEditMode ? "检测服务资料加载失败" : "检测服务表单初始化失败" }}</AlertTitle>
       <AlertDescription class="flex flex-wrap items-center gap-3">
         <span>{{ loadError }}</span>
         <Button size="sm" variant="outline" @click="loadInitialOptions">
@@ -642,7 +754,7 @@ watch(
             quick-nav-label="所属客户"
             label="所属客户"
           >
-            <Select v-model="form.customerUuid" :disabled="customerLoading || !customerOptions.length">
+            <Select v-model="form.customerUuid" :disabled="loadingDetail || customerLoading || !customerOptions.length">
               <SelectTrigger id="inspection-service-customer" class="w-full" @focus="handleFocus('section-customer')">
                 <SelectValue :placeholder="customerLoading ? '正在加载客户...' : '请选择所属客户'" />
               </SelectTrigger>
@@ -666,6 +778,7 @@ watch(
               required
               placeholder="请输入服务名称"
               class="w-full"
+              :disabled="loadingDetail"
               @focus="handleFocus('section-name')"
             />
           </FormFieldSection>
@@ -685,6 +798,7 @@ watch(
                 required
                 placeholder="请输入服务等级，例如 A级、S级"
                 class="w-full"
+                :disabled="loadingDetail"
                 @focus="handleFocus('section-level')"
               />
               <datalist id="inspection-service-level-options">
@@ -708,6 +822,7 @@ watch(
                 required
                 :placeholder="templateLoading ? '正在加载模板候选...' : '请输入检测模板 UUID'"
                 class="w-full"
+                :disabled="loadingDetail"
                 @focus="handleFocus('section-template')"
               />
               <datalist id="inspection-service-template-options">
@@ -732,6 +847,7 @@ watch(
                 required
                 placeholder="请输入负责人姓名"
                 class="w-full"
+                :disabled="loadingDetail"
                 @focus="handleFocus('section-manager')"
               />
               <Input
@@ -741,6 +857,7 @@ watch(
                 inputmode="tel"
                 placeholder="请输入负责人电话"
                 class="w-full"
+                :disabled="loadingDetail"
                 @focus="handleFocus('section-manager')"
               />
             </div>
@@ -789,6 +906,7 @@ watch(
                     >
                       <Checkbox
                         :model-value="isBuildChecked(build.uuid)"
+                        :disabled="loadingDetail"
                         class="mt-0.5"
                         @update:model-value="updateBuildChecked(build.uuid, $event)"
                       />
@@ -820,6 +938,7 @@ watch(
               v-model="form.remark"
               placeholder="请输入备注"
               class="min-h-[120px] w-full resize-y"
+              :disabled="loadingDetail"
               @focus="handleFocus('section-remark')"
             />
           </FormFieldSection>

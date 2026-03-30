@@ -229,6 +229,20 @@ const router = createRouter({
           } satisfies RouteMetaConfig,
         },
         {
+          path: "inspection-services/:id/edit",
+          name: "inspection-service-edit",
+          component: () => import("@/views/form/InspectionServiceCreateView.vue"),
+          meta: {
+            title: "编辑检测服务",
+            loading: "form",
+            breadcrumb: [
+              { title: "检测服务", to: "inspection-services" },
+              { title: "详情" },
+              { title: "编辑检测服务" },
+            ] satisfies BreadcrumbMetaItem[],
+          } satisfies RouteMetaConfig,
+        },
+        {
           path: "inspection-plans",
           name: "inspection-plans",
           component: () => import("@/views/list/InspectionPlansListView.vue"),

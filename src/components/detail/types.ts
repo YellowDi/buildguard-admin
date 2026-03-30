@@ -21,6 +21,10 @@ export type DetailFieldAction = {
   onClick: () => void
 }
 
+export type DetailFieldLinkAction = {
+  onClick: () => void
+}
+
 export type DetailFieldRow = {
   key: string
   label: string
@@ -30,6 +34,8 @@ export type DetailFieldRow = {
   action?: DetailFieldAction
   /** 与 value 同格展示在右侧（如地址后的操作按钮） */
   suffixAction?: DetailFieldAction
+  /** 将文本值渲染为可点击链接样式（与 suffixAction 二选一） */
+  linkAction?: DetailFieldLinkAction
   truncate?: boolean
   valueClass?: string
 }

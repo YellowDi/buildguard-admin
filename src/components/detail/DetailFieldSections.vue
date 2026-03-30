@@ -66,7 +66,7 @@ function isStatusValue(value: DetailFieldValue): value is DetailStatusValue {
             )"
           >
             <div class="detail-field-row__label">{{ row.label }}</div>
-            <div :class="cn('detail-field-row__value', row.truncate !== false && 'truncate', !row.action && !row.suffixAction && isEmptyLikeValue(row.value) && 'detail-field-row__value--empty', row.valueClass)">
+            <div :class="cn('detail-field-row__value', row.truncate !== false && 'truncate', !row.action && !row.suffixAction && !row.linkAction && isEmptyLikeValue(row.value) && 'detail-field-row__value--empty', row.valueClass)">
               <template v-if="isContactValue(row.value) && row.suffixAction">
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
                   <div class="min-w-0 flex-1">
@@ -115,6 +115,16 @@ function isStatusValue(value: DetailFieldValue): value is DetailStatusValue {
                     class="detail-field-row__image object-contain"
                   >
                 </div>
+              </template>
+              <template v-else-if="row.linkAction">
+                <button
+                  type="button"
+                  class="inline-flex max-w-full min-w-0 items-center gap-1 text-left text-[#2B67F6] transition-colors hover:text-[#1D4ED8]"
+                  @click="row.linkAction.onClick"
+                >
+                  <span class="truncate">{{ displayValue(row.value) }}</span>
+                  <i class="ri-arrow-right-up-line shrink-0 text-sm" />
+                </button>
               </template>
               <template v-else-if="row.suffixAction">
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
