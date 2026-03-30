@@ -89,8 +89,8 @@ type MaintenanceRecordRow = {
   location: string
   parkName: string
   item: string
-  principal: string
-  updatedAt: string
+  executor: string
+  deadline: string
 }
 
 type CustomerBuildingAssetRow = {
@@ -122,6 +122,7 @@ type CustomerWorkOrderRow = {
   workOrderName: string
   customerName: string
   parkName: string
+  buildingName: string
   packageName: string
   planName: string
   executor: string
@@ -200,6 +201,12 @@ const parkBuildingGroups = ref<ParkBuildingGroup[]>([])
 const buildingAssets = ref<CustomerBuildingAssetRow[]>([])
 const buildingAssetsLoading = ref(false)
 const buildingAssetsErrorMessage = ref("")
+const maintenanceRecords = ref<MaintenanceRecordRow[]>([])
+const maintenanceRecordsLoading = ref(false)
+const maintenanceRecordsErrorMessage = ref("")
+const repairOverviewRecords = ref<MaintenanceRecordRow[]>([])
+const repairOverviewRecordsLoading = ref(false)
+const repairOverviewRecordsErrorMessage = ref("")
 const activeWorkOrderTableTab = ref<"inspection" | "repair">("inspection")
 const inspectionWorkOrders = ref<CustomerWorkOrderRow[]>([])
 const inspectionWorkOrdersLoading = ref(false)
@@ -234,6 +241,8 @@ let latestRelationsRequestId = 0
 let latestBuildingAssetsRequestId = 0
 let latestInspectionWorkOrdersRequestId = 0
 let latestRepairWorkOrdersRequestId = 0
+let latestMaintenanceRecordsRequestId = 0
+let latestRepairOverviewRecordsRequestId = 0
 let latestParkDetailRequestId = 0
 let latestWorkOrderDetailRequestId = 0
 
@@ -496,9 +505,7 @@ const parkBuildingAccordion = computed(() => ({
 }))
 
 const maintenanceModule = computed<DetailRelationModuleSchema<MaintenanceRecordRow>>(() => {
-  const current = customer.value
-
-  if (!current) {
+  if (!customer.value) {
     return {
       key: "maintenance-records",
       title: "检修维护记录概览",
@@ -506,8 +513,8 @@ const maintenanceModule = computed<DetailRelationModuleSchema<MaintenanceRecordR
       columns: [
         { key: "location", label: "位置" },
         { key: "item", label: "检修项" },
-        { key: "principal", label: "负责人" },
-        { key: "updatedAt", label: "更新时间" },
+        { key: "executor", label: "执行人" },
+        { key: "deadline", label: "截止时间" },
         { key: "actions", label: "", slot: "maintenance-action-cell", headerClass: "flex justify-end", cellClass: "flex justify-end" },
       ],
       groups: [],
@@ -526,11 +533,53 @@ const maintenanceModule = computed<DetailRelationModuleSchema<MaintenanceRecordR
     columns: [
       { key: "location", label: "位置", slot: "maintenance-status-cell" },
       { key: "item", label: "检修项" },
-      { key: "principal", label: "负责人" },
-      { key: "updatedAt", label: "更新时间" },
+      { key: "executor", label: "执行人" },
+      { key: "deadline", label: "截止时间" },
       { key: "actions", label: "", slot: "maintenance-action-cell", headerClass: "flex justify-end", cellClass: "flex justify-end" },
     ],
-    groups: buildMaintenanceGroups(current),
+    groups: buildMaintenanceGroups(maintenanceRecords.value),
+    mobileMinWidth: "44rem",
+    columnTemplateMobile: "minmax(10rem,1.15fr) minmax(9rem,1fr) minmax(7rem,0.8fr) minmax(8rem,0.85fr) 2.5rem",
+    columnTemplateDesktop: "minmax(10rem,1.15fr) minmax(9rem,1fr) minmax(7rem,0.8fr) minmax(8rem,0.85fr) 2.5rem",
+    columnGapMobile: "0.75rem",
+    columnGapDesktop: "1rem",
+  }
+})
+
+const repairOverviewModule = computed<DetailRelationModuleSchema<MaintenanceRecordRow>>(() => {
+  if (!customer.value) {
+    return {
+      key: "repair-overview-records",
+      title: "维修工单概览",
+      rowKey: "id",
+      columns: [
+        { key: "location", label: "位置" },
+        { key: "item", label: "报修类型" },
+        { key: "executor", label: "维修人员" },
+        { key: "deadline", label: "创建时间" },
+        { key: "actions", label: "", slot: "maintenance-action-cell", headerClass: "flex justify-end", cellClass: "flex justify-end" },
+      ],
+      groups: [],
+      mobileMinWidth: "44rem",
+      columnTemplateMobile: "minmax(10rem,1.15fr) minmax(9rem,1fr) minmax(7rem,0.8fr) minmax(8rem,0.85fr) 2.5rem",
+      columnTemplateDesktop: "minmax(10rem,1.15fr) minmax(9rem,1fr) minmax(7rem,0.8fr) minmax(8rem,0.85fr) 2.5rem",
+      columnGapMobile: "0.75rem",
+      columnGapDesktop: "1rem",
+    }
+  }
+
+  return {
+    key: "repair-overview-records",
+    title: "维修工单概览",
+    rowKey: "id",
+    columns: [
+      { key: "location", label: "位置", slot: "maintenance-status-cell" },
+      { key: "item", label: "报修类型" },
+      { key: "executor", label: "维修人员" },
+      { key: "deadline", label: "创建时间" },
+      { key: "actions", label: "", slot: "maintenance-action-cell", headerClass: "flex justify-end", cellClass: "flex justify-end" },
+    ],
+    groups: buildMaintenanceGroups(repairOverviewRecords.value),
     mobileMinWidth: "44rem",
     columnTemplateMobile: "minmax(10rem,1.15fr) minmax(9rem,1fr) minmax(7rem,0.8fr) minmax(8rem,0.85fr) 2.5rem",
     columnTemplateDesktop: "minmax(10rem,1.15fr) minmax(9rem,1fr) minmax(7rem,0.8fr) minmax(8rem,0.85fr) 2.5rem",
@@ -1326,6 +1375,10 @@ watch(customer, current => {
 watch(customerUuid, (uuid) => {
   buildingAssets.value = []
   buildingAssetsErrorMessage.value = ""
+  maintenanceRecords.value = []
+  maintenanceRecordsErrorMessage.value = ""
+  repairOverviewRecords.value = []
+  repairOverviewRecordsErrorMessage.value = ""
   inspectionWorkOrders.value = []
   inspectionWorkOrdersErrorMessage.value = ""
   inspectionWorkOrdersTotal.value = 0
@@ -1337,6 +1390,8 @@ watch(customerUuid, (uuid) => {
   handleWorkOrderDetailSheetOpenChange(false)
   void loadCustomerDetail(uuid)
   void loadBuildingAssets(uuid)
+  void loadMaintenanceRecords(uuid)
+  void loadRepairOverviewRecords(uuid)
   void loadInspectionWorkOrders(uuid)
   void loadRepairWorkOrders(uuid)
   void loadParkBuildings(uuid)
@@ -1755,6 +1810,11 @@ function handleWorkOrderDetailSheetOpenChange(open: boolean) {
 
 function showInspectionWorkOrdersTab() {
   activeWorkOrderTableTab.value = "inspection"
+  setActiveTab("work-orders")
+}
+
+function showRepairWorkOrdersTab() {
+  activeWorkOrderTableTab.value = "repair"
   setActiveTab("work-orders")
 }
 
@@ -2194,6 +2254,96 @@ async function loadRepairWorkOrders(uuid: string) {
   }
 }
 
+async function loadMaintenanceRecords(uuid: string) {
+  const requestId = ++latestMaintenanceRecordsRequestId
+
+  if (!uuid) {
+    maintenanceRecords.value = []
+    maintenanceRecordsErrorMessage.value = "客户 Uuid 缺失，无法加载检修维护记录概览。"
+    return
+  }
+
+  maintenanceRecordsLoading.value = true
+  maintenanceRecordsErrorMessage.value = ""
+
+  try {
+    const inspectionResult = await fetchWorkOrders({
+      CustomerUuid: uuid,
+      PageNum: 1,
+      PageSize: 5,
+    })
+
+    if (requestId !== latestMaintenanceRecordsRequestId) {
+      return
+    }
+
+    maintenanceRecords.value = inspectionResult.list
+      .map((item, index) => mapInspectionWorkOrderRow(item, index))
+      .sort((left, right) => getMaintenanceRecordSortTime(right) - getMaintenanceRecordSortTime(left))
+      .slice(0, 5)
+      .map(mapMaintenanceRecordRow)
+  } catch (error) {
+    if (requestId !== latestMaintenanceRecordsRequestId) {
+      return
+    }
+
+    maintenanceRecords.value = []
+    maintenanceRecordsErrorMessage.value = handleApiError(error, {
+      mode: "silent",
+      fallback: "检修维护记录概览加载失败，请稍后重试。",
+    })
+  } finally {
+    if (requestId === latestMaintenanceRecordsRequestId) {
+      maintenanceRecordsLoading.value = false
+    }
+  }
+}
+
+async function loadRepairOverviewRecords(uuid: string) {
+  const requestId = ++latestRepairOverviewRecordsRequestId
+
+  if (!uuid) {
+    repairOverviewRecords.value = []
+    repairOverviewRecordsErrorMessage.value = "客户 Uuid 缺失，无法加载维修工单概览。"
+    return
+  }
+
+  repairOverviewRecordsLoading.value = true
+  repairOverviewRecordsErrorMessage.value = ""
+
+  try {
+    const repairResult = await fetchRepairWorkOrders({
+      CustomerUuid: uuid,
+      PageNum: 1,
+      PageSize: 5,
+    })
+
+    if (requestId !== latestRepairOverviewRecordsRequestId) {
+      return
+    }
+
+    repairOverviewRecords.value = repairResult.list
+      .map((item, index) => mapRepairWorkOrderRow(item, index))
+      .sort((left, right) => getMaintenanceRecordSortTime(right) - getMaintenanceRecordSortTime(left))
+      .slice(0, 5)
+      .map(mapRepairOverviewRecordRow)
+  } catch (error) {
+    if (requestId !== latestRepairOverviewRecordsRequestId) {
+      return
+    }
+
+    repairOverviewRecords.value = []
+    repairOverviewRecordsErrorMessage.value = handleApiError(error, {
+      mode: "silent",
+      fallback: "维修工单概览加载失败，请稍后重试。",
+    })
+  } finally {
+    if (requestId === latestRepairOverviewRecordsRequestId) {
+      repairOverviewRecordsLoading.value = false
+    }
+  }
+}
+
 async function fetchAllBuildingAssets(uuid: string) {
   const pageSize = 200
   const allItems: BuildingListItem[] = []
@@ -2328,63 +2478,7 @@ function formatRemainingService(record: CustomerPackageMockRecord | null) {
   return `${record.inspectionTimes} 次巡检，${record.inspectionCycle}`
 }
 
-function buildMaintenanceGroups(current: CustomerDetailResult) {
-  const fallbackLocations = [
-    { parkName: "默认园区", buildingName: "1 号楼" },
-    { parkName: "默认园区", buildingName: "2 号楼" },
-    { parkName: "默认园区", buildingName: "5 号楼" },
-    { parkName: "默认园区", buildingName: "地下车库" },
-  ]
-  const assetLocations = buildingAssets.value
-    .slice(0, fallbackLocations.length)
-    .map(item => ({
-      parkName: toDisplayText(item.parkName, "默认园区"),
-      buildingName: toDisplayText(item.buildingName, "未命名建筑"),
-    }))
-  const locationSources = assetLocations.length ? assetLocations : fallbackLocations
-  const getLocation = (index: number) => {
-    const source = locationSources[index] ?? fallbackLocations[index] ?? fallbackLocations[0]
-    return source
-  }
-  const records: MaintenanceRecordRow[] = [
-    {
-      id: "pending-1",
-      status: "pending",
-      location: getLocation(0).buildingName,
-      parkName: getLocation(0).parkName,
-      item: "消防泵房月检",
-      principal: "王工",
-      updatedAt: "2026-03-20 14:30",
-    },
-    {
-      id: "processing-1",
-      status: "processing",
-      location: getLocation(1).buildingName,
-      parkName: getLocation(1).parkName,
-      item: "配电室温感排查",
-      principal: "刘洋",
-      updatedAt: "2026-03-21 09:45",
-    },
-    {
-      id: "completed-1",
-      status: "completed",
-      location: getLocation(2).buildingName,
-      parkName: getLocation(2).parkName,
-      item: "电梯机房巡检",
-      principal: "陈峰",
-      updatedAt: "2026-03-22 16:10",
-    },
-    {
-      id: "completed-2",
-      status: "completed",
-      location: getLocation(3).buildingName,
-      parkName: getLocation(3).parkName,
-      item: "排烟系统复检",
-      principal: "赵敏",
-      updatedAt: "2026-03-23 11:20",
-    },
-  ]
-
+function buildMaintenanceGroups(records: MaintenanceRecordRow[]) {
   return [
     {
       key: "pending",
@@ -2402,6 +2496,84 @@ function buildMaintenanceGroups(current: CustomerDetailResult) {
       rows: records.filter(record => record.status === "completed"),
     },
   ].filter(group => group.rows.length)
+}
+
+function mapMaintenanceRecordRow(row: CustomerWorkOrderRow): MaintenanceRecordRow {
+  const location = row.buildingName !== "-"
+    ? row.buildingName
+    : row.parkName !== "-"
+      ? row.parkName
+      : "未关联建筑"
+
+  return {
+    id: `${row.workOrderKind}-${row.uuid || row.id}`,
+    status: mapMaintenanceStatus(row),
+    location,
+    parkName: row.parkName !== "-" ? row.parkName : "未关联园区",
+    item: row.workOrderName !== "-" ? row.workOrderName : row.planName,
+    executor: row.executor,
+    deadline: row.deadline,
+  }
+}
+
+function mapRepairOverviewRecordRow(row: CustomerWorkOrderRow): MaintenanceRecordRow {
+  const location = row.buildingName !== "-"
+    ? row.buildingName
+    : row.parkName !== "-"
+      ? row.parkName
+      : "未关联建筑"
+
+  return {
+    id: `${row.workOrderKind}-${row.uuid || row.id}`,
+    status: mapMaintenanceStatus(row),
+    location,
+    parkName: row.parkName !== "-" ? row.parkName : "未关联园区",
+    item: row.reportTypeLabel !== "-" ? row.reportTypeLabel : "未设置",
+    executor: row.executor,
+    deadline: row.createdAt,
+  }
+}
+
+function mapMaintenanceStatus(row: CustomerWorkOrderRow): MaintenanceRecordRow["status"] {
+  if (row.statusValue === 5) {
+    return "completed"
+  }
+
+  if (row.statusValue === 3 || row.statusValue === 4) {
+    return "processing"
+  }
+
+  return "pending"
+}
+
+function getMaintenanceRecordSortTime(row: CustomerWorkOrderRow) {
+  return parseDateTimeValue(firstNonEmptyText([
+    row.updatedAt,
+    row.createdEndAt,
+    row.createdAt,
+    row.createdStartAt,
+  ], ""))
+}
+
+function firstNonEmptyText(values: string[], fallback: string) {
+  for (const value of values) {
+    if (value && value !== "-" && value !== "—") {
+      return value
+    }
+  }
+
+  return fallback
+}
+
+function parseDateTimeValue(value: string) {
+  const normalized = value.trim()
+
+  if (!normalized) {
+    return 0
+  }
+
+  const parsed = Date.parse(normalized.replace(/\./g, "-"))
+  return Number.isFinite(parsed) ? parsed : 0
 }
 
 function extractDatePart(value: string) {
@@ -2548,7 +2720,8 @@ function mapInspectionWorkOrderRow(item: WorkOrderListItem, index: number): Cust
     orderNo: toDisplayText(item.OrderNo, "-"),
     workOrderName: toDisplayText(item.PackageName, "-"),
     customerName: toDisplayText(item.CustomerName, toDisplayText(customer.value?.CorpName, "-")),
-    parkName: "-",
+    parkName: toDisplayText(item.ParkName, "-"),
+    buildingName: toDisplayText(item.BuildName, "-"),
     packageName: toDisplayText(item.PackageName, "-"),
     planName: toDisplayText(item.PlanName, "-"),
     executor: toDisplayText(item.Executor, "-"),
@@ -2580,6 +2753,8 @@ function mapRepairWorkOrderRow(item: RepairWorkOrderListItem, index: number): Cu
   const reportTypeValue = toNullableNumber(item.ReportType)
   const createdStartAt = toDisplayText(item.CreatedStartAt, "-")
   const createdEndAt = toDisplayText(item.CreatedEndAt, "-")
+  const createdAt = toDisplayText(item.CreatedAt, createdStartAt !== "-" ? createdStartAt : "-")
+  const updatedAt = toDisplayText(item.UpdatedAt, createdEndAt !== "-" ? createdEndAt : "-")
 
   return {
     id: uuid || fallbackId,
@@ -2592,6 +2767,7 @@ function mapRepairWorkOrderRow(item: RepairWorkOrderListItem, index: number): Cu
     workOrderName: toDisplayText(item.Title, "-"),
     customerName: toDisplayText(item.CustomerName || item.CorpName, toDisplayText(customer.value?.CorpName, "-")),
     parkName: toDisplayText(item.ParkName, "-"),
+    buildingName: toDisplayText(item.BuildName, "-"),
     packageName: "-",
     planName: "-",
     executor: toDisplayText(item.UserName, "-"),
@@ -2608,8 +2784,8 @@ function mapRepairWorkOrderRow(item: RepairWorkOrderListItem, index: number): Cu
     scoreLabel: formatRepairImportantLabel(importantValue),
     deadline: "-",
     remark: toDisplayText(item.RepairContent || item.Content, "-"),
-    createdAt: "-",
-    updatedAt: "-",
+    createdAt,
+    updatedAt,
     createdStartAt,
     createdEndAt,
   }
@@ -3195,55 +3371,109 @@ function toDisplayText(value: unknown, fallback = "未填写") {
           <div v-if="customer" class="my-5 h-px bg-border/80" />
 
           <TooltipProvider v-if="customer">
-            <DetailRelationModule :schema="maintenanceModule">
-              <template #actions-header>
-                <Button variant="outline" size="sm" class="h-8 px-3 text-sm" @click="showInspectionWorkOrdersTab">
-                  查看更多
-                </Button>
-              </template>
+            <div class="space-y-5">
+              <DetailRelationModule :schema="maintenanceModule">
+                <template #actions-header>
+                  <Button variant="outline" size="sm" class="h-8 px-3 text-sm" @click="showInspectionWorkOrdersTab">
+                    查看更多
+                  </Button>
+                </template>
 
-              <template #maintenance-status-cell="{ row }">
-                <div class="flex min-w-0 items-center gap-2 text-foreground">
-                  <i
-                    :class="[
-                      'text-[18px]',
-                      row.status === 'pending'
-                        ? 'ri-time-fill text-[#F59E0B]'
-                        : row.status === 'processing'
-                          ? 'ri-loader-4-line text-[#2563EB]'
-                          : 'ri-checkbox-circle-fill text-[#22C55E]',
-                    ]"
-                  />
-                  <Tooltip>
-                    <TooltipTrigger as-child>
-                      <span class="truncate cursor-default">{{ row.location }}</span>
-                    </TooltipTrigger>
-                    <TooltipContent side="top" align="start" class="rounded-lg px-3 py-2 text-xs">
-                      <div class="space-y-1.5">
-                        <div class="space-y-0.5">
-                          <div class="text-[11px] text-background/72">
-                            园区
+                <template #maintenance-status-cell="{ row }">
+                  <div class="flex min-w-0 items-center gap-2 text-foreground">
+                    <i
+                      :class="[
+                        'text-[18px]',
+                        row.status === 'pending'
+                          ? 'ri-time-fill text-[#F59E0B]'
+                          : row.status === 'processing'
+                            ? 'ri-loader-4-line text-[#2563EB]'
+                            : 'ri-checkbox-circle-fill text-[#22C55E]',
+                      ]"
+                    />
+                    <Tooltip>
+                      <TooltipTrigger as-child>
+                        <span class="truncate cursor-default">{{ row.location }}</span>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" align="start" class="rounded-lg px-3 py-2 text-xs">
+                        <div class="space-y-1.5">
+                          <div class="space-y-0.5">
+                            <div class="text-[11px] text-background/72">
+                              园区
+                            </div>
+                            <div>{{ row.parkName }}</div>
                           </div>
-                          <div>{{ row.parkName }}</div>
-                        </div>
-                        <div class="space-y-0.5">
-                          <div class="text-[11px] text-background/72">
-                            建筑
+                          <div class="space-y-0.5">
+                            <div class="text-[11px] text-background/72">
+                              建筑
+                            </div>
+                            <div>{{ row.location }}</div>
                           </div>
-                          <div>{{ row.location }}</div>
                         </div>
-                      </div>
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
-              </template>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                </template>
 
-              <template #maintenance-action-cell>
-                <Button variant="ghost" size="icon-sm" class="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground">
-                  <i class="ri-more-line text-[18px]" />
-                </Button>
-              </template>
-            </DetailRelationModule>
+                <template #maintenance-action-cell>
+                  <Button variant="ghost" size="icon-sm" class="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground">
+                    <i class="ri-more-line text-[18px]" />
+                  </Button>
+                </template>
+              </DetailRelationModule>
+
+              <div class="h-px bg-border/80" />
+
+              <DetailRelationModule :schema="repairOverviewModule">
+                <template #actions-header>
+                  <Button variant="outline" size="sm" class="h-8 px-3 text-sm" @click="showRepairWorkOrdersTab">
+                    查看更多
+                  </Button>
+                </template>
+
+                <template #maintenance-status-cell="{ row }">
+                  <div class="flex min-w-0 items-center gap-2 text-foreground">
+                    <i
+                      :class="[
+                        'text-[18px]',
+                        row.status === 'pending'
+                          ? 'ri-time-fill text-[#F59E0B]'
+                          : row.status === 'processing'
+                            ? 'ri-loader-4-line text-[#2563EB]'
+                            : 'ri-checkbox-circle-fill text-[#22C55E]',
+                      ]"
+                    />
+                    <Tooltip>
+                      <TooltipTrigger as-child>
+                        <span class="truncate cursor-default">{{ row.location }}</span>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" align="start" class="rounded-lg px-3 py-2 text-xs">
+                        <div class="space-y-1.5">
+                          <div class="space-y-0.5">
+                            <div class="text-[11px] text-background/72">
+                              园区
+                            </div>
+                            <div>{{ row.parkName }}</div>
+                          </div>
+                          <div class="space-y-0.5">
+                            <div class="text-[11px] text-background/72">
+                              建筑
+                            </div>
+                            <div>{{ row.location }}</div>
+                          </div>
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                </template>
+
+                <template #maintenance-action-cell>
+                  <Button variant="ghost" size="icon-sm" class="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground">
+                    <i class="ri-more-line text-[18px]" />
+                  </Button>
+                </template>
+              </DetailRelationModule>
+            </div>
           </TooltipProvider>
         </div>
       </template>

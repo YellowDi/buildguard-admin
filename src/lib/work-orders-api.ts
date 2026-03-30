@@ -18,6 +18,8 @@ export type WorkOrderListItem = {
   PackageName?: string
   CustomerUuid?: string
   CustomerName?: string
+  ParkName?: string
+  BuildName?: string
   Deadline?: string
   Executor?: string
   Status?: number
@@ -79,6 +81,7 @@ export type RepairWorkOrderListItem = {
   CustomerName?: string
   ParkUuid?: string
   ParkName?: string
+  BuildName?: string
   UserUuid?: string
   UserName?: string
   Important?: number
@@ -392,6 +395,8 @@ function normalizeWorkOrderListItem(value: unknown): WorkOrderListItem {
     PackageName: getFirstText(record, ["PackageName", "packageName", "ServiceName", "serviceName"]),
     CustomerUuid: getFirstText(record, ["CustomerUuid", "customerUuid"]),
     CustomerName: getFirstText(record, ["CustomerName", "customerName", "CorpName", "corpName", "CompanyName", "companyName"]),
+    ParkName: getFirstText(record, ["ParkName", "parkName"]),
+    BuildName: getFirstText(record, ["BuildName", "buildName", "BuildingName", "buildingName"]),
     Deadline: getFirstText(record, ["Deadline", "deadline", "ExpireAt", "expireAt", "DueAt", "dueAt"]),
     Executor: getFirstText(record, ["Executor", "executor", "PrincipalName", "principalName", "Assignee", "assignee"]),
     Status: getFirstNumber(record, ["Status", "status", "WorkOrderStatus", "workOrderStatus"]),
@@ -422,6 +427,7 @@ function normalizeRepairWorkOrderListItem(value: unknown): RepairWorkOrderListIt
     CustomerName: getFirstText(record, ["CustomerName", "customerName", "CorpName", "corpName"]),
     ParkUuid: getFirstText(record, ["ParkUuid", "parkUuid"]),
     ParkName: getFirstText(record, ["ParkName", "parkName"]),
+    BuildName: getFirstText(record, ["BuildName", "buildName", "BuildingName", "buildingName"]),
     UserUuid: getFirstText(record, ["UserUuid", "userUuid"]),
     UserName: getFirstText(record, ["UserName", "userName"]),
     Important: getFirstNumber(record, ["Important", "important"]),
