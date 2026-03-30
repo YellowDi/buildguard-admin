@@ -554,8 +554,8 @@ const maintenanceModule = computed<DetailRelationModuleSchema<MaintenanceRecordR
       ],
       groups: [],
       mobileMinWidth: "100%",
-      columnTemplateMobile: "minmax(0,1.2fr) minmax(0,1fr) minmax(0,0.8fr) minmax(0,0.9fr) 2.5rem",
-      columnTemplateDesktop: "minmax(10rem,1.15fr) minmax(9rem,1fr) minmax(7rem,0.8fr) minmax(8rem,0.85fr) 2.5rem",
+      columnTemplateMobile: "minmax(0,1.2fr) minmax(0,1fr) minmax(0,0.8fr) minmax(0,0.9fr) minmax(5rem,0.35fr)",
+      columnTemplateDesktop: "minmax(0,1.2fr) minmax(0,1fr) minmax(0,0.8fr) minmax(0,0.9fr) minmax(5rem,0.35fr)",
       columnGapMobile: "0.75rem",
       columnGapDesktop: "1rem",
     }
@@ -579,8 +579,8 @@ const maintenanceModule = computed<DetailRelationModuleSchema<MaintenanceRecordR
     ],
     groups: buildMaintenanceGroups(maintenanceRecords.value),
     mobileMinWidth: "100%",
-    columnTemplateMobile: "minmax(0,1.2fr) minmax(0,1fr) minmax(0,0.8fr) minmax(0,0.9fr) 2.5rem",
-    columnTemplateDesktop: "minmax(10rem,1.15fr) minmax(9rem,1fr) minmax(7rem,0.8fr) minmax(8rem,0.85fr) 2.5rem",
+    columnTemplateMobile: "minmax(0,1.2fr) minmax(0,1fr) minmax(0,0.8fr) minmax(0,0.9fr) minmax(5rem,0.35fr)",
+    columnTemplateDesktop: "minmax(0,1.2fr) minmax(0,1fr) minmax(0,0.8fr) minmax(0,0.9fr) minmax(5rem,0.35fr)",
     columnGapMobile: "0.75rem",
     columnGapDesktop: "1rem",
   }
@@ -606,8 +606,8 @@ const repairOverviewModule = computed<DetailRelationModuleSchema<MaintenanceReco
       ],
       groups: [],
       mobileMinWidth: "100%",
-      columnTemplateMobile: "minmax(0,1.2fr) minmax(0,1fr) minmax(0,0.8fr) minmax(0,0.9fr) 2.5rem",
-      columnTemplateDesktop: "minmax(10rem,1.15fr) minmax(9rem,1fr) minmax(7rem,0.8fr) minmax(8rem,0.85fr) 2.5rem",
+      columnTemplateMobile: "minmax(0,1.2fr) minmax(0,1fr) minmax(0,0.8fr) minmax(0,0.9fr) minmax(5rem,0.35fr)",
+      columnTemplateDesktop: "minmax(0,1.2fr) minmax(0,1fr) minmax(0,0.8fr) minmax(0,0.9fr) minmax(5rem,0.35fr)",
       columnGapMobile: "0.75rem",
       columnGapDesktop: "1rem",
     }
@@ -631,8 +631,8 @@ const repairOverviewModule = computed<DetailRelationModuleSchema<MaintenanceReco
     ],
     groups: buildMaintenanceGroups(repairOverviewRecords.value),
     mobileMinWidth: "100%",
-    columnTemplateMobile: "minmax(0,1.2fr) minmax(0,1fr) minmax(0,0.8fr) minmax(0,0.9fr) 2.5rem",
-    columnTemplateDesktop: "minmax(10rem,1.15fr) minmax(9rem,1fr) minmax(7rem,0.8fr) minmax(8rem,0.85fr) 2.5rem",
+    columnTemplateMobile: "minmax(0,1.2fr) minmax(0,1fr) minmax(0,0.8fr) minmax(0,0.9fr) minmax(5rem,0.35fr)",
+    columnTemplateDesktop: "minmax(0,1.2fr) minmax(0,1fr) minmax(0,0.8fr) minmax(0,0.9fr) minmax(5rem,0.35fr)",
     columnGapMobile: "0.75rem",
     columnGapDesktop: "1rem",
   }
@@ -3534,7 +3534,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
           <div v-if="customer" class="my-5 h-px bg-border/80" />
 
           <TooltipProvider v-if="customer">
-            <div class="space-y-5">
+            <div class="w-full min-w-0 space-y-5">
               <DetailRelationModule :schema="maintenanceModule">
                 <template #actions-header>
                   <Button variant="outline" size="sm" class="h-8 px-3 text-sm" @click="showInspectionWorkOrdersTab">

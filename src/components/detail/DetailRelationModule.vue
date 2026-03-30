@@ -18,7 +18,6 @@ const props = defineProps<{
 const slots = useSlots()
 
 const moduleStyle = computed(() => ({
-  "--detail-relation-min-width": props.schema.mobileMinWidth ?? "100%",
   "--detail-relation-columns-mobile": props.schema.columnTemplateMobile,
   "--detail-relation-columns-desktop": props.schema.columnTemplateDesktop ?? props.schema.columnTemplateMobile,
   "--detail-relation-grid-gap-mobile": props.schema.columnGapMobile ?? "0.75rem",
@@ -72,7 +71,7 @@ function hasNamedSlot(name?: string) {
 </script>
 
 <template>
-  <section class="detail-relation-module min-w-0" :style="moduleStyle">
+  <section class="detail-relation-module w-full min-w-0 max-w-full" :style="moduleStyle">
     <div class="detail-table-scroll">
       <div class="detail-table-frame detail-relation-frame">
         <div class="detail-table-heading-row detail-table-grid detail-relation-grid detail-section-inset items-center">
@@ -123,8 +122,8 @@ function hasNamedSlot(name?: string) {
 
         <div v-else class="detail-group-stack">
           <div v-for="group in schema.groups" :key="group.key">
-            <div class="detail-group-divider-row detail-section-inset flex items-center gap-3">
-              <div class="shrink-0 text-[14px] font-medium text-muted-foreground">{{ group.title }}</div>
+            <div class="detail-group-divider-row detail-section-inset flex min-w-0 items-center gap-3">
+              <div class="min-w-0 truncate text-[14px] font-medium text-muted-foreground">{{ group.title }}</div>
               <div class="h-px flex-1 bg-border/80" />
               <slot
                 v-if="hasNamedSlot('group-actions')"

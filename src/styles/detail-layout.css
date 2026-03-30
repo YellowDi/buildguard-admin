@@ -4,12 +4,20 @@
 }
 
 .detail-table-scroll {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
 
 .detail-table-frame {
-  min-width: 100%;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  /* 与 100% 不同：避免与内部 grid 的亚像素舍入叠加后比滚动容器宽 1px */
+  min-width: 0;
 }
 
 .detail-table-grid {
@@ -136,14 +144,22 @@
   vertical-align: middle;
 }
 
+/* 始终占满横向滚动容器，由内部 grid 产生溢出；勿用 max-content，否则整块（表头/空态/分组）会一起撑破父级宽度 */
 .detail-relation-frame {
-  width: max-content;
-  min-width: var(--detail-relation-min-width, 100%);
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .detail-relation-grid {
   grid-template-columns: var(--detail-relation-columns-mobile);
   column-gap: var(--detail-relation-grid-gap-mobile, 0.75rem);
+}
+
+/* grid 子项默认 min-width:auto，会按内容最小宽度参与布局，易产生亚像素横向溢出 */
+.detail-relation-grid > * {
+  min-width: 0;
 }
 
 .detail-relation-row {
@@ -154,9 +170,25 @@
   color: var(--muted-foreground);
 }
 
+/* 关联模块最外层再裁一刀，防止内部 border/阴影/舍入比父级宽 1px */
+.detail-relation-module {
+  overflow-x: clip;
+}
+
+/* 双列骨架：fr 列默认 min 为 auto，舍入后常比容器宽几像素，必须用 minmax(0, fr) */
+.detail-layout__content {
+  width: 100%;
+  min-width: 0;
+}
+
+/* flex 子项默认 min-width:auto，会被宽表格撑开；允许侧栏随列宽收缩，内部由 .detail-table-scroll 横向滚动 */
+.detail-layout__secondary > * {
+  min-width: 0;
+}
+
 @container detail-layout (min-width: 68rem) {
   .detail-layout__content {
-    grid-template-columns: 0.88fr 1px 1.12fr;
+    grid-template-columns: minmax(0, 0.88fr) 1px minmax(0, 1.12fr);
   }
 
   .detail-layout__primary {
@@ -216,11 +248,6 @@
 
   .detail-field-row__value {
     padding-right: 1.25rem;
-  }
-
-  .detail-relation-frame {
-    width: 100%;
-    min-width: 100%;
   }
 
   .detail-relation-grid {
