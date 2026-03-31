@@ -1,8 +1,9 @@
 import { ref } from "vue"
+import type { RouteLocationRaw } from "vue-router"
 
 type DetailBreadcrumbItem = {
   title: string
-  to?: string
+  to?: string | RouteLocationRaw
 }
 
 /**

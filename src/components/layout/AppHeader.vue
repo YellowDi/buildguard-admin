@@ -24,12 +24,13 @@ import { cn } from "@/lib/utils"
 import { Separator } from "@/components/ui/separator"
 import { SIDEBAR_MOBILE_BREAKPOINT } from "@/components/ui/sidebar"
 import { RouterLink, useRoute } from "vue-router"
+import type { RouteLocationRaw } from "vue-router"
 
 import { detailBreadcrumbItems, detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
 
 type BreadcrumbItemConfig = {
   title: string
-  to?: string
+  to?: string | RouteLocationRaw
   isCurrent: boolean
 }
 
@@ -59,7 +60,7 @@ const breadcrumbItems = computed<BreadcrumbItemConfig[]>(() => {
     : null
 
   const list = metaItems
-    .filter((item): item is { title: string; to?: string } => typeof item === "object" && item !== null && typeof item.title === "string")
+    .filter((item): item is { title: string; to?: string | RouteLocationRaw } => typeof item === "object" && item !== null && typeof item.title === "string")
     .map((item, index) => ({
       ...item,
       title: index === metaItems.length - 1 && overrideTitle
@@ -70,6 +71,10 @@ const breadcrumbItems = computed<BreadcrumbItemConfig[]>(() => {
 
   return list
 })
+
+function resolveBreadcrumbTo(to: string | RouteLocationRaw) {
+  return typeof to === "string" ? { name: to } : to
+}
 
 const visibleLeadingItems = computed(() => {
   const items = breadcrumbItems.value
@@ -98,7 +103,7 @@ const visibleTrailingItems = computed(() => {
     return items.length <= 1 ? [] : items.slice(-1)
   }
 
-  return items.length <= 3 ? [] : items.slice(-1)
+  return items.length <= 1 ? [] : items.slice(-1)
 })
 </script>
 
@@ -153,7 +158,7 @@ const visibleTrailingItems = computed(() => {
           >
             <BreadcrumbPage v-if="item.isCurrent" class="block truncate">{{ item.title }}</BreadcrumbPage>
             <BreadcrumbLink v-else-if="item.to" as-child class="block truncate">
-              <RouterLink :to="{ name: item.to }">
+              <RouterLink :to="resolveBreadcrumbTo(item.to)">
                 {{ item.title }}
               </RouterLink>
             </BreadcrumbLink>
@@ -181,7 +186,7 @@ const visibleTrailingItems = computed(() => {
                     as-child
                   >
                     <RouterLink
-                      :to="{ name: item.to }"
+                      :to="resolveBreadcrumbTo(item.to)"
                       class="w-full"
                     >
                       {{ item.title }}
@@ -210,7 +215,7 @@ const visibleTrailingItems = computed(() => {
           >
             <BreadcrumbPage v-if="item.isCurrent" class="block truncate">{{ item.title }}</BreadcrumbPage>
             <BreadcrumbLink v-else-if="item.to" as-child class="block truncate">
-              <RouterLink :to="{ name: item.to }">
+              <RouterLink :to="resolveBreadcrumbTo(item.to)">
                 {{ item.title }}
               </RouterLink>
             </BreadcrumbLink>

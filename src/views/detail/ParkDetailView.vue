@@ -125,7 +125,17 @@ watch(park, (current) => {
 
   detailBreadcrumbItems.value = [
     { title: "客户", to: "customers" },
-    { title: toText(current.CorpName, "客户详情") || "客户详情" },
+    {
+      title: toText(current.CorpName, "客户详情") || "客户详情",
+      ...(customerUuid.value
+        ? {
+            to: {
+              name: "customer-detail",
+              params: { id: customerUuid.value },
+            },
+          }
+        : {}),
+    },
     { title: toText(current.Name, "园区详情") || "园区详情" },
   ]
 })
