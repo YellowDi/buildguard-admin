@@ -7,8 +7,8 @@ import InspectionItemPicker from "@/components/inspection/InspectionItemPicker.v
 import FormFieldSection from "@/components/form/FormFieldSection.vue"
 import FormHeader from "@/components/form/FormHeader.vue"
 import FormQuickNav from "@/components/form/FormQuickNav.vue"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -83,6 +83,13 @@ type BuildOption = {
   parkName: string
 }
 
+type BuildGroup = {
+  key: string
+  parkName: string
+  selectedCount: number
+  builds: BuildOption[]
+}
+
 const DEFAULT_LEVEL_OPTIONS = ["S级", "A级", "B级", "C级"] as const
 
 function createEmptyForm(): InspectionServiceFormState {
@@ -122,6 +129,7 @@ const inspectionPickerError = ref("")
 const inspectionItemOptions = ref<InspectionItemOption[]>([])
 const inspectionSelectionMode = ref<"template" | "custom">("template")
 const initialInspectionSelectionMode = ref<"template" | "custom">("template")
+const expandedBuildGroupKey = ref("")
 const loadedBuildingsCustomerUuid = ref("")
 const anchorItems = ref<QuickNavItem[]>([])
 const activeNavId = ref("")
@@ -176,7 +184,7 @@ const levelOptions = computed(() => {
 
   return Array.from(new Set(values.map(value => value.trim()).filter(Boolean)))
 })
-const groupedBuildings = computed(() => {
+const groupedBuildings = computed<BuildGroup[]>(() => {
   const groups = new Map<string, BuildOption[]>()
 
   for (const item of buildingOptions.value) {
@@ -187,7 +195,11 @@ const groupedBuildings = computed(() => {
   }
 
   return Array.from(groups.entries()).map(([parkName, builds]) => ({
+    key: `park-${parkName}`,
     parkName,
+    selectedCount: builds.reduce((count, build) => (
+      form.buildUuids.includes(build.uuid) ? count + 1 : count
+    ), 0),
     builds,
   }))
 })
@@ -768,6 +780,23 @@ function updateBuildChecked(buildUuid: string, checked: boolean | "indeterminate
   form.buildUuids = form.buildUuids.filter(item => item !== buildUuid)
 }
 
+watch(
+  groupedBuildings,
+  (groups) => {
+    if (!groups.length) {
+      expandedBuildGroupKey.value = ""
+      return
+    }
+
+    if (groups.some(group => group.key === expandedBuildGroupKey.value)) {
+      return
+    }
+
+    expandedBuildGroupKey.value = groups[0]?.key ?? ""
+  },
+  { immediate: true },
+)
+
 function dedupeByUuid<T extends { Uuid?: unknown }>(items: T[]) {
   const seen = new Set<string>()
 
@@ -1100,60 +1129,60 @@ watch(
                   </p>
                 </template>
 
-                <div v-if="groupedBuildings.length" class="space-y-6">
-                  <div
+                <Accordion
+                  v-if="groupedBuildings.length"
+                  v-model="expandedBuildGroupKey"
+                  type="single"
+                  collapsible
+                  class="space-y-3"
+                >
+                  <AccordionItem
                     v-for="group in groupedBuildings"
-                    :key="group.parkName"
-                    class="space-y-3"
+                    :key="group.key"
+                    :value="group.key"
+                    class="overflow-hidden rounded-md border border-border/55 bg-background/95 shadow-xs"
                   >
-                    <div class="flex flex-wrap items-center gap-2 sm:justify-between">
+                    <AccordionTrigger class="px-3.5 py-3 text-left hover:no-underline">
                       <div class="flex min-w-0 items-center gap-2">
-                        <span
-                          class="inline-flex size-2 shrink-0 rounded-full bg-[color:var(--theme-primary)] ring-2 ring-[color:var(--theme-primary)]/20"
-                          aria-hidden="true"
-                        />
-                        <span class="truncate text-sm font-semibold tracking-tight text-foreground">
-                          {{ group.parkName }}
+                        <span class="truncate text-sm font-semibold text-foreground">{{ group.parkName }}</span>
+                        <span class="shrink-0 text-xs text-muted-foreground">
+                          已选 {{ group.selectedCount }} / {{ group.builds.length }} 栋
                         </span>
                       </div>
-                      <span
-                        class="inline-flex shrink-0 items-center rounded-md border border-border/60 bg-background/80 px-2 py-0.5 text-xs tabular-nums text-muted-foreground"
-                      >
-                        {{ group.builds.length }} 个建筑
-                      </span>
-                    </div>
-
-                    <div class="grid gap-2.5 sm:grid-cols-2 sm:gap-3">
-                      <label
-                        v-for="build in group.builds"
-                        :key="build.uuid"
-                        :class="buildingPickCardClass(isBuildChecked(build.uuid), loadingDetail)"
-                        @click="handleFocus('section-builds')"
-                      >
-                        <Checkbox
-                          :model-value="isBuildChecked(build.uuid)"
-                          :disabled="loadingDetail"
-                          class="mt-0.5"
-                          @update:model-value="updateBuildChecked(build.uuid, $event)"
-                        />
-                        <div class="min-w-0 flex-1">
-                          <div class="line-clamp-2 text-sm font-medium leading-snug text-foreground">
-                            {{ build.name }}
+                    </AccordionTrigger>
+                    <AccordionContent class="px-3.5">
+                      <div class="grid gap-2.5 pb-3 sm:grid-cols-2 sm:gap-3">
+                        <label
+                          v-for="build in group.builds"
+                          :key="build.uuid"
+                          :class="buildingPickCardClass(isBuildChecked(build.uuid), loadingDetail)"
+                          @click="handleFocus('section-builds')"
+                        >
+                          <Checkbox
+                            :model-value="isBuildChecked(build.uuid)"
+                            :disabled="loadingDetail"
+                            class="mt-0.5"
+                            @update:model-value="updateBuildChecked(build.uuid, $event)"
+                          />
+                          <div class="min-w-0 flex-1">
+                            <div class="line-clamp-2 text-sm font-medium leading-snug text-foreground">
+                              {{ build.name }}
+                            </div>
+                            <p
+                              class="mt-2 flex flex-col gap-0.5 border-t border-border/40 pt-2"
+                              :title="build.uuid"
+                            >
+                              <span class="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/80">UUID</span>
+                              <span class="break-all font-mono text-[11px] leading-relaxed text-muted-foreground select-all">
+                                {{ build.uuid }}
+                              </span>
+                            </p>
                           </div>
-                          <p
-                            class="mt-2 flex flex-col gap-0.5 border-t border-border/40 pt-2"
-                            :title="build.uuid"
-                          >
-                            <span class="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/80">UUID</span>
-                            <span class="break-all font-mono text-[11px] leading-relaxed text-muted-foreground select-all">
-                              {{ build.uuid }}
-                            </span>
-                          </p>
-                        </div>
-                      </label>
-                    </div>
-                  </div>
-                </div>
+                        </label>
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
               </div>
             </FieldSet>
           </div>
