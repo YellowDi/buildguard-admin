@@ -83,12 +83,6 @@ type BuildOption = {
   parkName: string
 }
 
-type InspectionPreviewItem = {
-  uuid: string
-  name: string
-  categoryName: string
-}
-
 const DEFAULT_LEVEL_OPTIONS = ["S级", "A级", "B级", "C级"] as const
 
 function createEmptyForm(): InspectionServiceFormState {
@@ -201,34 +195,6 @@ const selectedTemplateInspectionUuids = computed(() => dedupeText(
   (selectedTemplateOption.value?.inspections ?? []).map(inspection => inspection.inspectionUuid),
 ))
 const selectedInspectionCount = computed(() => form.inspectionUuids.length)
-const selectedInspectionPreviewItems = computed<InspectionPreviewItem[]>(() => {
-  const inspectionOptionMap = new Map(inspectionItemOptions.value.map(item => [item.uuid, item]))
-  const templateInspectionMap = new Map(
-    (selectedTemplateOption.value?.inspections ?? [])
-      .filter(item => normalizeText(item.inspectionUuid))
-      .map(item => [normalizeText(item.inspectionUuid), item] as const),
-  )
-
-  return dedupeText(form.inspectionUuids).map((uuid) => {
-    const option = inspectionOptionMap.get(uuid)
-
-    if (option) {
-      return {
-        uuid,
-        name: option.name || "未命名检测项",
-        categoryName: option.categoryName || "未分类",
-      }
-    }
-
-    const templateInspection = templateInspectionMap.get(uuid)
-
-    return {
-      uuid,
-      name: normalizeText(templateInspection?.inspectionName) || "未命名检测项",
-      categoryName: normalizeText(templateInspection?.categoryName) || "未分类",
-    }
-  })
-})
 const inspectionSelectionHint = computed(() => {
   if (selectedInspectionCount.value > 0) {
     return inspectionSelectionMode.value === "custom"
@@ -1039,9 +1005,6 @@ watch(
                   <FieldDescription>
                     {{ inspectionSelectionHint }}
                   </FieldDescription>
-                  <FieldDescription v-if="selectedTemplateName" class="mt-1">
-                    当前使用模板：{{ selectedTemplateName }}
-                  </FieldDescription>
                 </FieldGroup>
                 <div class="flex shrink-0 items-center justify-end">
                   <Button
@@ -1052,37 +1015,9 @@ watch(
                     @click="handleUseBuildingTemplate"
                     @focus="handleFocus('section-inspections')"
                   >
-                    使用模板
+                    {{ selectedTemplateName ? `当前使用模板：${selectedTemplateName}` : "使用模板" }}
                   </Button>
                 </div>
-              </div>
-
-              <div v-if="selectedInspectionCount" class="mt-4 rounded-xl border border-border/60 bg-muted/20 p-3">
-                <div class="flex flex-wrap items-center justify-between gap-2">
-                  <p class="text-sm font-medium text-foreground">
-                    已选择 {{ selectedInspectionCount }} 个检测项
-                  </p>
-                  <span class="text-xs text-muted-foreground">
-                    {{ inspectionSelectionMode === "custom" ? "手动选择" : "来自模板" }}
-                  </span>
-                </div>
-                <div class="mt-2 space-y-2">
-                  <div
-                    v-for="inspection in selectedInspectionPreviewItems.slice(0, 4)"
-                    :key="inspection.uuid"
-                    class="rounded-lg border border-border/50 bg-background/90 px-3 py-2"
-                  >
-                    <div class="text-sm font-medium text-foreground">
-                      {{ inspection.name || "未命名检测项" }}
-                    </div>
-                    <div class="mt-1 text-xs text-muted-foreground">
-                      {{ inspection.categoryName || "未分类" }}
-                    </div>
-                  </div>
-                </div>
-                <p v-if="selectedInspectionCount > 4" class="mt-2 text-xs text-muted-foreground">
-                  其余 {{ selectedInspectionCount - 4 }} 个检测项可在下方列表中查看。
-                </p>
               </div>
 
               <div class="mt-4 overflow-hidden rounded-xl border border-border/60 bg-background">
