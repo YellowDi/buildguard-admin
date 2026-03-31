@@ -74,10 +74,20 @@ const pageTitle = computed(() => {
 
 const pageSubtitle = computed(() => {
   if (props.kind === "repair") {
-    return toRepairWorkOrderText(repairWorkOrder.value?.OrderNo, "工单编号") || "工单编号"
+    return toRepairWorkOrderText(
+      repairWorkOrder.value?.CustomerName
+      ?? repairWorkOrder.value?.CorpName
+      ?? customer.value?.CorpName,
+      "CustomerName",
+    ) || "CustomerName"
   }
 
-  return toText(inspectionWorkOrder.value?.OrderNo, "工单编号") || "工单编号"
+  return toText(
+    inspectionWorkOrder.value?.CustomerName
+    ?? inspectionWorkOrder.value?.CorpName
+    ?? customer.value?.CorpName,
+    "CustomerName",
+  ) || "CustomerName"
 })
 
 const hasWorkOrder = computed(() => (

@@ -15,12 +15,12 @@ export function buildWorkOrderPrimarySections(
       key: "work-order-basic",
       title: "基本信息",
       rows: [
-        { key: "work-order-id", label: "工单ID", value: toText(workOrder.Uuid, toText(workOrder.Id, "-")) },
-        { key: "plan-time", label: "计划时间", value: "-" },
+        { key: "order-no", label: "工单标号", value: toText(workOrder.OrderNo, "-") },
+        { key: "package-name", label: "检测服务", value: toText(workOrder.PackageName, "-") },
+        { key: "plan-name", label: "检测计划", value: toText(workOrder.PlanName, "-") },
         { key: "deadline", label: "截止时间", value: toText(workOrder.Deadline, "-") },
-        { key: "executor", label: "执行人", value: toText(workOrder.Executor, "-") },
-        { key: "package-name", label: "关联检测服务", value: toText(workOrder.PackageName, "-") },
-        { key: "plan-name", label: "关联计划", value: toText(workOrder.PlanName, "-") },
+        { key: "created-at", label: "创建时间", value: toText(workOrder.CreatedAt, "-") },
+        { key: "updated-at", label: "更新时间", value: toText(workOrder.UpdatedAt, "-") },
       ],
     },
     {
