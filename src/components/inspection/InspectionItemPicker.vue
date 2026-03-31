@@ -155,7 +155,7 @@ function updateInspectionSelected(uuid: string, checked: boolean | "indeterminat
           </div>
         </AccordionTrigger>
         <AccordionContent class="px-3.5">
-          <div class="grid gap-3 sm:grid-cols-2">
+          <div class="grid gap-3 pt-1 sm:grid-cols-2">
             <label
               v-for="item in group.items"
               :key="item.uuid"
