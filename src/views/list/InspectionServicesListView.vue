@@ -6,6 +6,8 @@ import { toast } from "vue-sonner"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Progress } from "@/components/ui/progress"
+import TableStatusChip from "@/components/table-page/TableStatusChip.vue"
 import TablePageLoading from "@/components/loading/TablePageLoading.vue"
 import TablePage from "@/components/table-page/TablePage.vue"
 import { createTablePageDefinition, useTablePage } from "@/components/table-page/useTablePage"
@@ -54,6 +56,7 @@ type InspectionServiceRecord = {
     templateName: string
     remark: string
     builds: NonNullable<InspectionServiceListItem["Builds"]>
+    status: number
   }
 }
 
@@ -136,6 +139,7 @@ const schema: TablePageSchema<InspectionServiceRecord> = {
       key: "ExpireAt",
       label: "到期时间",
       filterType: "time",
+      slot: "cell-ExpireAt",
       format: "numeric",
       filter: {
         type: "date",
@@ -215,8 +219,8 @@ const schema: TablePageSchema<InspectionServiceRecord> = {
     mode: "enum",
     all: { label: "全部", value: "all" },
     field: "ServiceStatus",
-    options: ["待签署", "已签署", "进行中", "已结单"],
-    order: ["待签署", "已签署", "进行中", "已结单"],
+    options: ["待签署", "进行中", "已逾期", "已结单"],
+    order: ["待签署", "进行中", "已逾期", "已结单"],
   },
 }
 
@@ -318,8 +322,8 @@ function normalizeInspectionServiceRecord(item: InspectionServiceListItem, index
     Level: toText(item.Level, "未分级"),
     // 接口字段从 CustomerName 调整为 CorpName
     CorpName: toText(item.CorpName || item.CustomerName, "未绑定客户"),
-    ExpireAt: getFirstText(item, ["ExpireAt", "ExpiredAt", "EndAt", "ServiceEndAt", "PackageExpireAt", "DueAt"], "-"),
-    ServiceStatus: getFirstText(item, ["ServiceStatusLabel", "ServiceStatus", "StatusLabel", "StatusName", "Status"], "-"),
+    ExpireAt: toText(item.ContractEndTime, "-"),
+    ServiceStatus: formatServiceStatus(item.Status),
     InspectionQuota: formatInspectionQuota(
       getFirstText(item, ["TotalInspectionCount", "InspectionTotalCount", "PackageTotalInspectionCount", "TotalCount"]),
       getFirstText(item, ["RemainInspectionCount", "RemainingInspectionCount", "PackageRemainInspectionCount", "RemainCount"]),
@@ -338,6 +342,7 @@ function normalizeInspectionServiceRecord(item: InspectionServiceListItem, index
       templateName: toText(item.TemplateName, "未配置模板"),
       remark: toText(item.Remark, ""),
       builds,
+      status: typeof item.Status === "number" && Number.isFinite(item.Status) ? item.Status : -1,
     },
   }
 }
@@ -395,6 +400,93 @@ function formatInspectionQuota(total: string, remaining: string) {
   return `${total || "-"} / ${remaining || "-"}`
 }
 
+function getExpireDateValue(row: InspectionServiceRecord) {
+  return toText(row.ExpireAt, "")
+}
+
+function parseDateTime(value: string) {
+  if (!value) {
+    return null
+  }
+
+  const normalized = value.includes("T") ? value : value.replace(" ", "T")
+  const date = new Date(normalized)
+  if (Number.isNaN(date.getTime())) {
+    return null
+  }
+
+  return date
+}
+
+function getRemainingDaysLabel(row: InspectionServiceRecord) {
+  const expireAt = parseDateTime(getExpireDateValue(row))
+  if (!expireAt) {
+    return "-"
+  }
+
+  const now = new Date()
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+  const startOfExpireDay = new Date(expireAt.getFullYear(), expireAt.getMonth(), expireAt.getDate()).getTime()
+  const diffDays = Math.floor((startOfExpireDay - startOfToday) / (1000 * 60 * 60 * 24))
+
+  if (diffDays < 0) {
+    return `逾期 ${Math.abs(diffDays)} 天`
+  }
+
+  return `剩余 ${diffDays} 天`
+}
+
+function getExpireProgressValue(row: InspectionServiceRecord) {
+  const expireAt = parseDateTime(getExpireDateValue(row))
+  if (!expireAt) {
+    return 0
+  }
+
+  const now = new Date()
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+  const startOfExpireDay = new Date(expireAt.getFullYear(), expireAt.getMonth(), expireAt.getDate()).getTime()
+  const diffDays = Math.floor((startOfExpireDay - startOfToday) / (1000 * 60 * 60 * 24))
+  const windowDays = 365
+  const progress = (Math.max(0, Math.min(windowDays, diffDays)) / windowDays) * 100
+
+  return Math.round(progress)
+}
+
+function getExpireProgressClass(row: InspectionServiceRecord) {
+  const expireAt = parseDateTime(getExpireDateValue(row))
+  if (!expireAt) {
+    return "[&_[data-slot=progress-indicator]]:bg-muted-foreground/40"
+  }
+
+  const now = new Date()
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+  const startOfExpireDay = new Date(expireAt.getFullYear(), expireAt.getMonth(), expireAt.getDate()).getTime()
+  const diffDays = Math.floor((startOfExpireDay - startOfToday) / (1000 * 60 * 60 * 24))
+
+  if (diffDays < 0) {
+    return "[&_[data-slot=progress-indicator]]:bg-destructive/70"
+  }
+
+  if (diffDays <= 30) {
+    return "[&_[data-slot=progress-indicator]]:bg-orange-500/80"
+  }
+
+  return "[&_[data-slot=progress-indicator]]:bg-[#2383E2]"
+}
+
+function formatServiceStatus(status: unknown) {
+  const normalized = typeof status === "number" && Number.isFinite(status)
+    ? status
+    : Number(toText(status, ""))
+
+  if (normalized === 1) return "待签署"
+  if (normalized === 2) return "进行中"
+  if (normalized === 3) return "已逾期"
+  if (normalized === 4) return "已结单"
+
+  return "-"
+}
+
 function getParkBuildCount(row: unknown, index: number) {
   if (!row || typeof row !== "object" || !("ParkBuildCounts" in row) || !Array.isArray(row.ParkBuildCounts)) {
     return 0
@@ -440,19 +532,28 @@ function countUniqueBuildsByPark(builds: NonNullable<InspectionServiceListItem["
   ).length
 }
 
-const serviceStatusMap = {
-  待签署: { tone: "gray", icon: "clock" },
-  已签署: { tone: "blue", icon: "check" },
-  进行中: { tone: "orange", icon: "clock" },
-  已结单: { tone: "green", icon: "check" },
+const serviceStatusRenderer = {
+  kind: "status",
+  map: {
+    "1": { label: "待签署", tone: "yellow", icon: "clock" },
+    "2": { label: "进行中", tone: "blue", icon: "clock" },
+    "3": { label: "已逾期", tone: "orange", icon: "alert" },
+    "4": { label: "已结单", tone: "gray", icon: "minus" },
+  },
+  fallback: {
+    label: "未知状态",
+    tone: "gray",
+    icon: "minus",
+  },
 } as const
 
-function getServiceStatusTone(status: string) {
-  return serviceStatusMap[status as keyof typeof serviceStatusMap]?.tone ?? "gray"
-}
+function getRowServiceStatusCode(row: unknown) {
+  if (!row || typeof row !== "object" || !("raw" in row) || !row.raw || typeof row.raw !== "object" || !("status" in row.raw)) {
+    return -1
+  }
 
-function getServiceStatusIcon(status: string) {
-  return serviceStatusMap[status as keyof typeof serviceStatusMap]?.icon ?? "minus"
+  const value = (row.raw as { status?: unknown }).status
+  return typeof value === "number" && Number.isFinite(value) ? value : -1
 }
 
 function toText(value: unknown, fallback = "") {
@@ -499,22 +600,27 @@ function toText(value: unknown, fallback = "") {
         </template>
 
         <template #cell-ServiceStatus="{ row }">
-          <span
-            :class="[
-              'inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
-              getRowServiceStatus(row) === '待签署'
-                ? 'bg-slate-100 text-slate-700'
-                : getRowServiceStatus(row) === '已签署'
-                  ? 'bg-blue-100 text-blue-700'
-                  : getRowServiceStatus(row) === '进行中'
-                    ? 'bg-orange-100 text-orange-700'
-                    : getRowServiceStatus(row) === '已结单'
-                      ? 'bg-green-100 text-green-700'
-                      : 'bg-muted text-muted-foreground',
-            ]"
-          >
-            {{ getRowServiceStatus(row) }}
-          </span>
+          <TableStatusChip :value="String(getRowServiceStatusCode(row))" :renderer="serviceStatusRenderer" />
+        </template>
+
+        <template #cell-ExpireAt="{ row }">
+          <Tooltip>
+            <TooltipTrigger as-child>
+              <div class="flex min-w-[180px] items-center gap-2">
+                <Progress
+                  :model-value="getExpireProgressValue(row)"
+                  class="h-1.5 max-w-[120px] bg-[#E9EDF2] [&_[data-slot=progress-indicator]]:transition-all"
+                  :class="getExpireProgressClass(row)"
+                />
+                <span class="shrink-0 text-xs text-muted-foreground">
+                  {{ getRemainingDaysLabel(row) }}
+                </span>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent side="top" align="start">
+              到期时间：{{ row.ExpireAt || "-" }}
+            </TooltipContent>
+          </Tooltip>
         </template>
 
         <template #cell-ParkName="{ row }">
