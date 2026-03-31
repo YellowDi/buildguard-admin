@@ -154,7 +154,13 @@ const calendarItems: AppSidebarCalendarItem[] = [
 const selectedTopTab = ref<AppSidebarTopTabId>("home")
 const isSearchDialogOpen = ref(false)
 
-const activePath = computed(() => route.path)
+const activePath = computed(() => {
+  const navActivePath = typeof route.meta.navActivePath === "string"
+    ? route.meta.navActivePath.trim()
+    : ""
+
+  return navActivePath || route.path
+})
 const topTabItems = computed(() =>
   topTabs.map(tab => ({
     ...tab,

@@ -14,6 +14,7 @@ type RouteMetaConfig = {
   loading: RouteLoadingKind
   breadcrumb?: BreadcrumbMetaItem[]
   useDetailBreadcrumbTitle?: boolean
+  navActivePath?: string
 }
 
 const router = createRouter({
@@ -185,6 +186,7 @@ const router = createRouter({
           meta: {
             title: "编辑建筑",
             loading: "form",
+            navActivePath: "/customers",
             breadcrumb: [
               { title: "客户", to: "customers" },
               { title: "客户详情" },
@@ -199,6 +201,7 @@ const router = createRouter({
           meta: {
             title: "编辑园区",
             loading: "form",
+            navActivePath: "/customers",
             breadcrumb: [
               { title: "客户", to: "customers" },
               { title: "客户详情" },
@@ -286,6 +289,7 @@ const router = createRouter({
             title: "园区详情",
             loading: "detail",
             useDetailBreadcrumbTitle: true,
+            navActivePath: "/customers",
             breadcrumb: [
               { title: "客户", to: "customers" },
               { title: "客户详情" },
@@ -301,6 +305,7 @@ const router = createRouter({
             title: "建筑详情",
             loading: "detail",
             useDetailBreadcrumbTitle: true,
+            navActivePath: "/customers",
             breadcrumb: [
               { title: "客户", to: "customers" },
               { title: "客户详情" },
