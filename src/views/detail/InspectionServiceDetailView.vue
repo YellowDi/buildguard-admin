@@ -575,8 +575,14 @@ function readFileAsDataUrl(file: File) {
     @back="goBack"
   >
     <template #headerActions>
-      <Button variant="outline" size="sm" @click="goToEdit">
-        编辑
+      <Button
+        variant="outline"
+        size="sm"
+        class="h-8 gap-1 border-border/80 bg-background px-3 text-[14px] font-medium shadow-none"
+        @click="goToEdit"
+      >
+        <i class="ri-edit-line text-base" />
+        修改检测服务信息
       </Button>
     </template>
 
@@ -661,7 +667,7 @@ function readFileAsDataUrl(file: File) {
                       :value="`${group.key}-${item.id}`"
                       class="mb-2 overflow-hidden rounded-md border border-border/55 bg-background/95 shadow-xs last:mb-0"
                     >
-                      <AccordionTrigger class="bg-[#FAFAFA] px-3.5 py-3 text-left hover:no-underline data-[state=open]:border-b data-[state=open]:border-border/60">
+                      <AccordionTrigger class="bg-muted px-3.5 py-3 text-left hover:no-underline data-[state=open]:border-b data-[state=open]:border-border/60">
                         <div class="min-w-0">
                           <div class="truncate text-sm font-semibold text-foreground">
                             {{ item.name }}
