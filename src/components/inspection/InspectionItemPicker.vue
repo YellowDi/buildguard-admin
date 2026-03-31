@@ -108,7 +108,7 @@ function updateInspectionSelected(uuid: string, checked: boolean | "indeterminat
 </script>
 
 <template>
-  <div class="min-h-0 flex-1 overflow-y-auto">
+  <div class="min-h-0 flex-1">
     <div class="mb-4">
       <Input
         id="inspection-item-picker-search"

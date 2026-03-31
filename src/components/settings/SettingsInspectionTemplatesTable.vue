@@ -494,7 +494,7 @@ defineExpose({
         </DialogHeader>
 
         <div class="flex max-h-[75vh] flex-col overflow-hidden">
-          <div class="space-y-4 border-b border-border/60 px-4 pb-4 pt-0">
+          <div class="flex min-h-0 flex-1 flex-col space-y-4 px-4 pb-0 pt-0">
             <div class="space-y-2">
               <label class="text-sm font-medium text-foreground" for="settings-inspection-template-name">模板名称</label>
               <Input
@@ -504,27 +504,26 @@ defineExpose({
                 :disabled="createSubmitting || editDetailLoading"
               />
             </div>
-          </div>
-
-          <div v-if="editDetailLoading" class="min-h-0 flex-1 overflow-y-auto bg-[#FAFAFA] p-4">
-            <div class="space-y-3">
-              <div v-for="slot in 4" :key="`template-detail-skeleton-${slot}`" class="h-20 rounded-2xl border border-border/60 bg-muted/15" />
+            <div v-if="editDetailLoading" class="min-h-0 flex-1 overflow-y-auto bg-muted p-4">
+              <div class="space-y-3">
+                <div v-for="slot in 4" :key="`template-detail-skeleton-${slot}`" class="h-20 rounded-2xl border border-border/60 bg-muted/15" />
+              </div>
             </div>
+            <InspectionItemPicker
+              v-else
+              :open="createDialogOpen"
+              :model-value="createSelectedInspectionUuids"
+              :options="inspectionItemOptions"
+              :loading="createLoading"
+              :error-message="createErrorMessage"
+              :disabled="createSubmitting || editDetailLoading"
+              @update:model-value="createSelectedInspectionUuids = $event"
+            />
           </div>
-          <InspectionItemPicker
-            v-else
-            :open="createDialogOpen"
-            :model-value="createSelectedInspectionUuids"
-            :options="inspectionItemOptions"
-            :loading="createLoading"
-            :error-message="createErrorMessage"
-            :disabled="createSubmitting || editDetailLoading"
-            @update:model-value="createSelectedInspectionUuids = $event"
-          />
         </div>
 
         <DialogFooter
-          class="border-t border-border/60 p-4"
+          class="p-4"
           :class="editingTemplateUuid ? 'sm:justify-between' : 'sm:justify-end'"
         >
           <Button
