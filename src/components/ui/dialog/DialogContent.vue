@@ -16,25 +16,32 @@ defineOptions({
   inheritAttrs: false,
 })
 
-const props = withDefaults(defineProps<DialogContentProps & { class?: HTMLAttributes["class"], showCloseButton?: boolean }>(), {
+const props = withDefaults(defineProps<DialogContentProps & {
+  class?: HTMLAttributes["class"]
+  showCloseButton?: boolean
+  /** 高于 TablePageTable 吸顶克隆表头 (z-[60])，用于设置浮窗等场景下的嵌套弹窗 */
+  stackAboveStickyHeader?: boolean
+}>(), {
   showCloseButton: true,
+  stackAboveStickyHeader: false,
 })
 const emits = defineEmits<DialogContentEmits>()
 
-const delegatedProps = reactiveOmit(props, "class")
+const delegatedProps = reactiveOmit(props, "class", "stackAboveStickyHeader")
 
 const forwarded = useForwardPropsEmits(delegatedProps, emits)
 </script>
 
 <template>
   <DialogPortal>
-    <DialogOverlay />
+    <DialogOverlay :class="props.stackAboveStickyHeader ? 'z-[70]' : undefined" />
     <DialogContent
       data-slot="dialog-content"
       v-bind="{ ...$attrs, ...forwarded }"
       :class="
         cn(
-          'dialog-panel-float fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-2xl bg-background p-4 shadow-[var(--shadow-card)] sm:max-w-lg',
+          'dialog-panel-float fixed top-[50%] left-[50%] grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-2xl bg-background p-4 shadow-[var(--shadow-card)] sm:max-w-lg',
+          props.stackAboveStickyHeader ? 'z-[70]' : 'z-50',
           props.class,
         )"
     >
