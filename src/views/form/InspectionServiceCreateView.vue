@@ -295,7 +295,7 @@ function buildingPickCardClass(checked: boolean, disabled: boolean) {
     disabled && "cursor-not-allowed opacity-55",
     checked
       ? "border-[color:var(--theme-primary)]/50 bg-[color:var(--theme-primary)]/10 shadow-sm ring-1 ring-[color:var(--theme-primary)]/15"
-      : "border-border/55 bg-background/95 hover:border-[color:var(--theme-primary)]/35 hover:bg-muted/45 hover:shadow-sm",
+      : "border-border/55 bg-white hover:border-[color:var(--theme-primary)]/35 hover:bg-white hover:shadow-sm",
   )
 }
 
@@ -1051,7 +1051,7 @@ watch(
                 </div>
               </div>
 
-              <div class="mt-4 overflow-hidden rounded-xl border border-border/60 bg-background">
+              <div class="mt-4 overflow-hidden rounded-xl border border-border/60 bg-muted">
                 <InspectionItemPicker
                   :model-value="form.inspectionUuids"
                   :options="inspectionItemOptions"
@@ -1140,7 +1140,7 @@ watch(
                     v-for="group in groupedBuildings"
                     :key="group.key"
                     :value="group.key"
-                    class="overflow-hidden rounded-md border border-border/55 bg-background/95 shadow-xs data-[state=open]:bg-[#FAFAFA]"
+                    class="overflow-hidden rounded-md border border-border/55 bg-muted shadow-xs data-[state=open]:bg-muted"
                   >
                     <AccordionTrigger class="px-3.5 py-3 text-left hover:no-underline">
                       <div class="flex min-w-0 items-center gap-2">
