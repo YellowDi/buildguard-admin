@@ -29,6 +29,8 @@ export type DetailFieldRow = {
   key: string
   label: string
   value: DetailFieldValue
+  suffixHint?: string
+  suffixHintClass?: string
   imageUrl?: string | null
   /** 仅展示按钮，不展示 value */
   action?: DetailFieldAction

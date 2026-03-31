@@ -91,7 +91,12 @@ const fieldSections = computed<DetailFieldSection[]>(() => {
             : undefined,
         },
         { key: "template-name", label: "模板名称", value: toText(current.TemplateName, "-") },
-        { key: "contract-end-time", label: "合同到期时间", value: toText(current.ContractEndTime, "-") },
+        {
+          key: "contract-end-time",
+          label: "合同到期时间",
+          value: toText(current.ContractEndTime, "-"),
+          suffixHint: getRemainingDaysHint(current.ContractEndTime),
+        },
         {
           key: "contract-file",
           label: "合同文件",
@@ -511,6 +516,30 @@ function toText(value: unknown, fallback = "") {
 function toOptionalText(value: unknown) {
   const nextValue = toText(value, "")
   return nextValue || null
+}
+
+function getRemainingDaysHint(value: unknown) {
+  const dateText = toText(value, "")
+  if (!dateText) {
+    return ""
+  }
+
+  const normalized = dateText.includes("T") ? dateText : dateText.replace(" ", "T")
+  const expireDate = new Date(normalized)
+  if (Number.isNaN(expireDate.getTime())) {
+    return ""
+  }
+
+  const now = new Date()
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+  const startOfExpireDay = new Date(expireDate.getFullYear(), expireDate.getMonth(), expireDate.getDate()).getTime()
+  const diffDays = Math.floor((startOfExpireDay - startOfToday) / (1000 * 60 * 60 * 24))
+
+  if (diffDays < 0) {
+    return `逾期 ${Math.abs(diffDays)} 天`
+  }
+
+  return `剩余 ${diffDays} 天`
 }
 
 function readFileAsDataUrl(file: File) {
