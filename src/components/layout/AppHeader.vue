@@ -83,7 +83,7 @@ const visibleLeadingItems = computed(() => {
     return items.length <= 1 ? items : []
   }
 
-  return items.length <= 3 ? items.slice(0, -1) : items.slice(0, 1)
+  return items.length <= 4 ? items.slice(0, -1) : items.slice(0, 1)
 })
 
 const collapsedItems = computed(() => {
@@ -93,7 +93,7 @@ const collapsedItems = computed(() => {
     return items.length <= 1 ? [] : items.slice(0, -1)
   }
 
-  return items.length <= 3 ? [] : items.slice(1, -1)
+  return items.length <= 4 ? [] : items.slice(1, -1)
 })
 
 const visibleTrailingItems = computed(() => {
