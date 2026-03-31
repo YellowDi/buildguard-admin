@@ -1051,7 +1051,7 @@ watch(
                 </div>
               </div>
 
-              <div class="mt-4 overflow-hidden rounded-xl border border-border/60 bg-muted">
+              <div class="mt-4">
                 <InspectionItemPicker
                   :model-value="form.inspectionUuids"
                   :options="inspectionItemOptions"
