@@ -11,7 +11,7 @@ import MapLocationDialog from "@/components/map/MapLocationDialog.vue"
 import type { DetailFieldSection, DetailRelationModuleSchema } from "@/components/detail/types"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
-import { detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
+import { detailBreadcrumbItems, detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
 import DetailLayout from "@/layouts/DetailLayout.vue"
 import { handleApiError } from "@/lib/api-errors"
 import { fetchBuildings, type BuildingListItem } from "@/lib/buildings-api"
@@ -43,11 +43,13 @@ const fieldSections = computed<DetailFieldSection[]>(() => {
   })
 })
 
-const relatedCustomerUuid = computed(() => (
-  customerUuid.value
-  || toText(building.value?.CustomerUuid, "")
-  || toText(building.value?.CorpUuid, "")
-))
+const relatedCustomerUuid = computed(() => {
+  const current = building.value as (BuildingListItem & { CustomerUuid?: unknown; CorpUuid?: unknown }) | null
+
+  return customerUuid.value
+    || toText(current?.CustomerUuid, "")
+    || toText(current?.CorpUuid, "")
+})
 
 const inspectionModule = computed<DetailRelationModuleSchema<BuildingRecordRow>>(() => ({
   key: "building-inspection-records",
@@ -109,6 +111,43 @@ const repairModule = computed<DetailRelationModuleSchema<BuildingRecordRow>>(() 
 
 watch(building, (current) => {
   detailBreadcrumbTitle.value = toOptionalText(current?.Name)
+
+  if (!current) {
+    detailBreadcrumbItems.value = null
+    return
+  }
+
+  const currentCustomerName = toText((current as BuildingListItem & { CorpName?: unknown; CustomerName?: unknown }).CorpName
+    || (current as BuildingListItem & { CorpName?: unknown; CustomerName?: unknown }).CustomerName, "客户详情")
+  const currentParkName = toText(current.ParkName, "园区详情")
+
+  detailBreadcrumbItems.value = [
+    { title: "客户", to: "customers" },
+    {
+      title: currentCustomerName || "客户详情",
+      ...(relatedCustomerUuid.value
+        ? {
+            to: {
+              name: "customer-detail",
+              params: { id: relatedCustomerUuid.value },
+            },
+          }
+        : {}),
+    },
+    ...(parkUuid.value
+      ? [{
+          title: currentParkName || "园区详情",
+          to: {
+            name: "park-detail",
+            params: { id: parkUuid.value },
+            query: relatedCustomerUuid.value ? { customerUuid: relatedCustomerUuid.value } : undefined,
+          },
+        }]
+      : [{
+          title: currentParkName || "园区详情",
+        }]),
+    { title: toText(current.Name, "建筑详情") || "建筑详情" },
+  ]
 })
 
 watch([buildingUuid, parkUuid], ([nextBuildingUuid, nextParkUuid]) => {
@@ -117,6 +156,7 @@ watch([buildingUuid, parkUuid], ([nextBuildingUuid, nextParkUuid]) => {
 
 onUnmounted(() => {
   detailBreadcrumbTitle.value = null
+  detailBreadcrumbItems.value = null
 })
 
 function goBack() {
