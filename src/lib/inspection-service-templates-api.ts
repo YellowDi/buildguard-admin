@@ -36,8 +36,23 @@ export type ListInspectionServiceTemplatesPayload = {
   [property: string]: unknown
 }
 
+export type CreateInspectionServiceTemplatePayload = {
+  Name?: string
+  InspectionUuids?: string[]
+  [property: string]: unknown
+}
+
+export type CreateInspectionServiceTemplateResult = {
+  Id?: number
+  Uuid?: string
+  Name?: string
+  [property: string]: unknown
+}
+
 const INSPECTION_SERVICE_TEMPLATES_API_URL = buildApiUrl(API_PATHS.inspectionServiceTemplatesList)
+const INSPECTION_SERVICE_TEMPLATE_CREATE_API_URL = buildApiUrl(API_PATHS.inspectionServiceTemplateCreate)
 const INSPECTION_SERVICE_TEMPLATES_LOAD_ERROR_MESSAGE = "检测服务模板列表加载失败，请稍后重试。"
+const INSPECTION_SERVICE_TEMPLATE_CREATE_ERROR_MESSAGE = "检测服务模板创建失败，请稍后重试。"
 
 export async function fetchInspectionServiceTemplates(
   payload: ListInspectionServiceTemplatesPayload = {},
@@ -69,6 +84,32 @@ export async function fetchInspectionServiceTemplates(
     list,
     total: extractTotal(responsePayload, list.length),
   }
+}
+
+export async function createInspectionServiceTemplate(
+  payload: CreateInspectionServiceTemplatePayload,
+): Promise<CreateInspectionServiceTemplateResult> {
+  const normalizedPayload = {
+    Name: getRequiredString(payload.Name, "Name"),
+    InspectionUuids: getRequiredStringArray(payload.InspectionUuids, "InspectionUuids"),
+  }
+
+  const response = await fetch(INSPECTION_SERVICE_TEMPLATE_CREATE_API_URL, {
+    method: "POST",
+    headers: buildApiHeaders({
+      "Content-Type": "application/json",
+    }),
+    body: JSON.stringify(normalizedPayload),
+  })
+  const responsePayload = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responsePayload, INSPECTION_SERVICE_TEMPLATE_CREATE_ERROR_MESSAGE)
+  }
+
+  assertApiSuccess(responsePayload, INSPECTION_SERVICE_TEMPLATE_CREATE_ERROR_MESSAGE)
+
+  return extractCreateResult(responsePayload)
 }
 
 function extractList(payload: InspectionServiceTemplatesListEnvelope | unknown[]) {
@@ -164,6 +205,24 @@ function normalizeInspectionItems(value: unknown) {
   })
 }
 
+function extractCreateResult(payload: unknown): CreateInspectionServiceTemplateResult {
+  const directRecord = asRecord(payload)
+
+  if (!directRecord) {
+    return {}
+  }
+
+  const nestedRecord = asRecord(directRecord.data)
+  const source = nestedRecord ?? directRecord
+
+  return {
+    ...source,
+    Id: getOptionalNumber(source.Id, "Id"),
+    Uuid: getOptionalString(source.Uuid),
+    Name: getOptionalString(source.Name),
+  }
+}
+
 function asRecord(value: unknown): Record<string, unknown> | null {
   return value !== null && typeof value === "object" ? value as Record<string, unknown> : null
 }
@@ -193,4 +252,30 @@ function getOptionalNumber(value: unknown, fieldName: string) {
   }
 
   return numeric
+}
+
+function getRequiredString(value: unknown, fieldName: string) {
+  const normalized = getOptionalString(value)
+
+  if (!normalized) {
+    throw new TypeError(`${fieldName} is required`)
+  }
+
+  return normalized
+}
+
+function getRequiredStringArray(value: unknown, fieldName: string) {
+  if (!Array.isArray(value)) {
+    throw new TypeError(`${fieldName} must be an array`)
+  }
+
+  const normalized = value
+    .map(item => getOptionalString(item))
+    .filter((item): item is string => Boolean(item))
+
+  if (!normalized.length) {
+    throw new TypeError(`${fieldName} must contain at least one value`)
+  }
+
+  return Array.from(new Set(normalized))
 }

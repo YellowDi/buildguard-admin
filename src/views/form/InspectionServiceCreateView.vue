@@ -234,6 +234,7 @@ function applyTemplate(template: TemplateOption) {
   })
 }
 
+
 function buildingPickCardClass(checked: boolean, disabled: boolean) {
   return cn(
     "relative flex cursor-pointer items-start gap-3 rounded-xl border px-3.5 py-3.5 shadow-xs transition-all duration-200",
@@ -565,6 +566,7 @@ async function loadTemplateOptions() {
     templateLibraryLoading.value = false
   }
 }
+
 
 async function fetchAllBuildings(customerUuid: string) {
   const pageSize = 200
@@ -1135,7 +1137,7 @@ watch(
             />
           </div>
 
-          <div class="min-h-0 flex-1 overflow-y-auto px-6 py-4">
+          <div class="min-h-0 flex-1 overflow-y-auto px-6 pt-4 pb-0">
             <div v-if="templateLibraryError" class="rounded-xl border border-destructive/30 bg-destructive/5 p-4">
               <p class="text-sm font-medium text-destructive">
                 检测模板加载失败

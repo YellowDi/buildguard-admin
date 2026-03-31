@@ -5,6 +5,7 @@ import TopTabSwitch from "@/components/layout/TopTabSwitch.vue"
 import SettingsRightPanelLayout from "@/components/settings/SettingsRightPanelLayout.vue"
 import SettingsInspectionCategoriesTable from "@/components/settings/SettingsInspectionCategoriesTable.vue"
 import SettingsInspectionItemsTable from "@/components/settings/SettingsInspectionItemsTable.vue"
+import SettingsInspectionTemplatesTable from "@/components/settings/SettingsInspectionTemplatesTable.vue"
 import SettingsToolbarRow from "@/components/settings/SettingsToolbarRow.vue"
 import SettingsToolbarRefreshSlot from "@/components/settings/SettingsToolbarRefreshSlot.vue"
 import SettingsToolbarSearchInput from "@/components/settings/SettingsToolbarSearchInput.vue"
@@ -25,6 +26,7 @@ const props = defineProps<{
 const activeTab = ref<InspectionHubTabKey>("items")
 const itemsCount = ref(0)
 const categoriesCount = ref(0)
+const templatesCount = ref(0)
 const searchExpanded = ref(false)
 const searchQueries = ref<Record<InspectionHubTabKey, string>>({
   items: "",
@@ -33,11 +35,12 @@ const searchQueries = ref<Record<InspectionHubTabKey, string>>({
 })
 const itemsTableRef = ref<ExposedActions | null>(null)
 const categoriesTableRef = ref<ExposedActions | null>(null)
+const templatesTableRef = ref<ExposedActions | null>(null)
 
 const tabs = computed(() => [
   { id: "items", label: "检测项", badge: itemsCount.value },
   { id: "categories", label: "分类", badge: categoriesCount.value },
-  { id: "templates", label: "模板", badge: 0 },
+  { id: "templates", label: "模板", badge: templatesCount.value },
 ])
 
 const currentSearchQuery = computed({
@@ -56,7 +59,7 @@ const currentSearchPlaceholder = computed(() => {
     return "搜索分类名称、ID 或 Uuid"
   }
 
-  return "搜索模板"
+  return "搜索模板名称、UUID、检测项"
 })
 
 const actionLabel = computed(() => {
@@ -68,11 +71,11 @@ const actionLabel = computed(() => {
     return "添加分类"
   }
 
-  return ""
+  return "添加模板"
 })
 
-const showPrimaryAction = computed(() => activeTab.value !== "templates")
-const refreshDisabled = computed(() => activeTab.value === "templates")
+const showPrimaryAction = computed(() => true)
+const refreshDisabled = computed(() => false)
 
 function toggleSearch() {
   if (searchExpanded.value && currentSearchQuery.value) {
@@ -91,7 +94,10 @@ function triggerPrimaryAction() {
 
   if (activeTab.value === "categories") {
     categoriesTableRef.value?.openCreateDialog()
+    return
   }
+
+  templatesTableRef.value?.openCreateDialog()
 }
 
 async function refreshCurrentTab() {
@@ -102,7 +108,10 @@ async function refreshCurrentTab() {
 
   if (activeTab.value === "categories") {
     await categoriesTableRef.value?.refreshData()
+    return
   }
+
+  await templatesTableRef.value?.refreshData()
 }
 </script>
 
@@ -173,20 +182,14 @@ async function refreshCurrentTab() {
       />
     </div>
 
-    <section
-      v-show="activeTab === 'templates'"
-      class="flex min-h-[360px] flex-col items-center justify-center rounded-2xl border border-dashed border-border/70 bg-muted/15 px-6 py-12 text-center"
-    >
-      <div class="flex h-11 w-11 items-center justify-center rounded-full bg-background text-muted-foreground shadow-sm">
-        <i class="ri-layout-grid-line text-[20px]" />
-      </div>
-      <h3 class="mt-4 text-base font-semibold text-foreground">
-        检测项模板
-      </h3>
-      <p class="mt-2 max-w-md text-sm leading-6 text-muted-foreground">
-        模板功能入口已预留，后续接入接口后可在这里统一维护模板内容。
-      </p>
-    </section>
+    <div v-show="activeTab === 'templates'">
+      <SettingsInspectionTemplatesTable
+        ref="templatesTableRef"
+        :hide-toolbar="true"
+        :search-query="searchQueries.templates"
+        @count-change="templatesCount = $event"
+      />
+    </div>
     </section>
   </SettingsRightPanelLayout>
 </template>
