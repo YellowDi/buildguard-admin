@@ -290,7 +290,7 @@ function updateInspectionSelection(values: string[]) {
 
 function buildingPickCardClass(checked: boolean, disabled: boolean) {
   return cn(
-    "relative flex cursor-pointer items-start gap-3 rounded-xl border px-3.5 py-3.5 shadow-xs transition-all duration-200",
+    "relative flex cursor-pointer items-start gap-3 rounded-md border px-3.5 py-3 shadow-xs transition-all duration-200",
     "outline-none focus-within:ring-2 focus-within:ring-[color:var(--theme-primary)]/25",
     disabled && "cursor-not-allowed opacity-55",
     checked
@@ -1099,13 +1099,11 @@ watch(
                 <FieldGroup class="min-w-0 flex-1 gap-1">
                   <FieldLegend>服务建筑</FieldLegend>
                   <FieldDescription>
-                    {{ selectedCustomerName ? `当前客户：${selectedCustomerName}，已选择 ${selectedBuildCount} 个建筑。` : '请先选择所属客户。' }}
-                  </FieldDescription>
-                  <FieldDescription
-                    v-if="form.customerUuid && groupedBuildings.length && !buildingLoading"
-                    class="mt-1"
-                  >
-                    勾选要纳入当前检测服务的建筑。
+                    {{
+                      selectedCustomerName
+                        ? `当前客户：${selectedCustomerName}，已选择 ${selectedBuildCount} 个建筑。${form.customerUuid && groupedBuildings.length && !buildingLoading ? " 勾选要纳入当前检测服务的建筑。" : ""}`
+                        : "请先选择所属客户。"
+                    }}
                   </FieldDescription>
                 </FieldGroup>
               </div>
@@ -1140,7 +1138,7 @@ watch(
                     v-for="group in groupedBuildings"
                     :key="group.key"
                     :value="group.key"
-                    class="overflow-hidden rounded-md border border-border/55 bg-background/95 shadow-xs"
+                    class="overflow-hidden rounded-md border border-border/55 bg-background/95 shadow-xs data-[state=open]:bg-[#FAFAFA]"
                   >
                     <AccordionTrigger class="px-3.5 py-3 text-left hover:no-underline">
                       <div class="flex min-w-0 items-center gap-2">
@@ -1151,7 +1149,7 @@ watch(
                       </div>
                     </AccordionTrigger>
                     <AccordionContent class="px-3.5">
-                      <div class="grid gap-2.5 pb-3 sm:grid-cols-2 sm:gap-3">
+                      <div class="grid gap-2.5 pt-1 sm:grid-cols-2 sm:gap-3">
                         <label
                           v-for="build in group.builds"
                           :key="build.uuid"
@@ -1168,15 +1166,6 @@ watch(
                             <div class="line-clamp-2 text-sm font-medium leading-snug text-foreground">
                               {{ build.name }}
                             </div>
-                            <p
-                              class="mt-2 flex flex-col gap-0.5 border-t border-border/40 pt-2"
-                              :title="build.uuid"
-                            >
-                              <span class="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/80">UUID</span>
-                              <span class="break-all font-mono text-[11px] leading-relaxed text-muted-foreground select-all">
-                                {{ build.uuid }}
-                              </span>
-                            </p>
                           </div>
                         </label>
                       </div>
