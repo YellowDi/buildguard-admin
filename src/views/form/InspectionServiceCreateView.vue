@@ -8,6 +8,7 @@ import FormFieldSection from "@/components/form/FormFieldSection.vue"
 import FormHeader from "@/components/form/FormHeader.vue"
 import FormQuickNav from "@/components/form/FormQuickNav.vue"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -121,6 +122,7 @@ const templateLibraryOpen = ref(false)
 const templateLibraryLoading = ref(false)
 const templateLibraryError = ref("")
 const templateKeyword = ref("")
+const templateExpandedUuid = ref("")
 const inspectionPickerLoading = ref(false)
 const inspectionPickerError = ref("")
 const inspectionItemOptions = ref<InspectionItemOption[]>([])
@@ -239,6 +241,12 @@ const inspectionSelectionHint = computed(() => {
   }
 
   return "请先选择检测模板，再按需调整检测项。"
+})
+
+watch(templateLibraryOpen, (open) => {
+  if (open) {
+    templateExpandedUuid.value = ""
+  }
 })
 const selectedBuildCount = computed(() => form.buildUuids.length)
 const canSubmit = computed(() =>
@@ -1245,25 +1253,25 @@ watch(
     </div>
 
     <Dialog v-model:open="templateLibraryOpen">
-      <DialogContent class="max-w-4xl p-0">
-        <DialogHeader class="border-b border-border/60 px-6 pt-6 pb-4">
+      <DialogContent class="max-w-4xl gap-0 p-0">
+        <DialogHeader class="p-4">
           <DialogTitle>选择检测模板</DialogTitle>
           <DialogDescription>
-            模板数据来自接口 `/bqi/inspection/service/template/list`。选中后会回填模板 UUID，并展示模板内检测项。
+            从下方列表中选择一个检测模板，系统会自动带出模板内的检测项，您可以在保存前继续增删和调整。
           </DialogDescription>
         </DialogHeader>
 
         <div class="flex max-h-[70vh] flex-col overflow-hidden">
-          <div class="border-b border-border/60 px-6 py-4">
-            <Input
-              v-model="templateKeyword"
-              placeholder="搜索模板名称、UUID、检测项名称或分类"
-              class="w-full"
-              :disabled="templateLibraryLoading"
-            />
-          </div>
+          <div class="min-h-0 flex-1 overflow-y-auto px-4 pb-4 pt-1">
+            <div class="mb-4">
+              <Input
+                v-model="templateKeyword"
+                placeholder="搜索模板名称或检测项名称"
+                class="w-full"
+                :disabled="templateLibraryLoading"
+              />
+            </div>
 
-          <div class="min-h-0 flex-1 overflow-y-auto px-6 pt-4 pb-0">
             <div v-if="templateLibraryError" class="rounded-xl border border-destructive/30 bg-destructive/5 p-4">
               <p class="text-sm font-medium text-destructive">
                 检测模板加载失败
@@ -1281,68 +1289,76 @@ watch(
               没有匹配的模板。
             </div>
 
-            <div v-else class="space-y-4">
-              <div
+            <Accordion
+              v-else
+              v-model="templateExpandedUuid"
+              type="single"
+              collapsible
+              class="space-y-3"
+            >
+              <AccordionItem
                 v-for="template in filteredTemplateOptions"
                 :key="template.uuid"
+                :value="template.uuid"
                 :class="cn(
-                  'rounded-2xl border p-4 transition-colors',
+                  'overflow-hidden rounded-md border bg-background/95 shadow-xs',
                   template.uuid === normalizeText(form.templateUuid)
                     ? 'border-[color:var(--theme-primary)]/45 bg-[color:var(--theme-primary)]/8'
-                    : 'border-border/60 bg-background',
+                    : 'border-border/55',
                 )"
               >
-                <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div class="min-w-0 flex-1">
-                    <p class="text-sm font-semibold text-foreground">
-                      {{ template.name || "未命名模板" }}
-                    </p>
-                    <p class="mt-1 break-all font-mono text-[12px] text-muted-foreground">
-                      {{ template.uuid }}
-                    </p>
-                    <p class="mt-2 text-xs text-muted-foreground">
-                      共 {{ template.inspections.length }} 个检测项
-                    </p>
-                  </div>
+                <div class="flex items-center justify-between gap-3 px-3.5 py-3">
+                  <AccordionTrigger class="min-w-0 flex-1 justify-start py-0 text-left hover:no-underline">
+                    <div class="flex min-w-0 items-center gap-2">
+                      <span class="truncate text-sm font-semibold text-foreground">
+                        {{ template.name || "未命名模板" }}
+                      </span>
+                      <span class="shrink-0 text-xs text-muted-foreground">
+                        共 {{ template.inspections.length }} 个检测项
+                      </span>
+                    </div>
+                  </AccordionTrigger>
                   <Button
                     type="button"
                     size="sm"
+                    class="shrink-0"
                     :variant="template.uuid === normalizeText(form.templateUuid) ? 'default' : 'outline'"
-                    @click="applyTemplate(template)"
+                    @click.stop="applyTemplate(template)"
                   >
                     {{ template.uuid === normalizeText(form.templateUuid) ? "当前已选" : "使用此模板" }}
                   </Button>
                 </div>
 
-                <div v-if="template.inspections.length" class="mt-4 space-y-2">
-                  <div
-                    v-for="inspection in template.inspections"
-                    :key="`${template.uuid}-${inspection.inspectionUuid}-${inspection.inspectionName}`"
-                    class="flex flex-col gap-1 rounded-xl border border-border/50 bg-muted/15 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between"
-                  >
-                    <div class="min-w-0">
-                      <p class="text-sm font-medium text-foreground">
-                        {{ inspection.inspectionName || "未命名检测项" }}
-                      </p>
-                      <p class="text-xs text-muted-foreground">
-                        {{ inspection.categoryName || "未分类" }}
-                      </p>
+                <AccordionContent class="px-3.5">
+                  <div v-if="template.inspections.length" class="pb-3 pt-1">
+                    <div class="space-y-2">
+                    <div
+                      v-for="inspection in template.inspections"
+                      :key="`${template.uuid}-${inspection.inspectionUuid}-${inspection.inspectionName}`"
+                      class="flex flex-col gap-1 rounded-md border border-border/50 bg-muted/15 px-3 py-2.5"
+                    >
+                      <div class="min-w-0">
+                        <p class="text-sm font-medium text-foreground">
+                          {{ inspection.inspectionName || "未命名检测项" }}
+                        </p>
+                        <p class="text-xs text-muted-foreground">
+                          {{ inspection.categoryName || "未分类" }}
+                        </p>
+                      </div>
                     </div>
-                    <p class="break-all font-mono text-[11px] text-muted-foreground sm:max-w-[48%] sm:text-right">
-                      {{ inspection.inspectionUuid || "-" }}
-                    </p>
                   </div>
-                </div>
+                  </div>
 
-                <p v-else class="mt-4 text-sm text-muted-foreground">
-                  该模板下暂无检测项。
-                </p>
-              </div>
-            </div>
+                  <p v-else class="pb-3 pt-1 text-sm text-muted-foreground">
+                    该模板下暂无检测项。
+                  </p>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
           </div>
         </div>
 
-        <DialogFooter class="border-t border-border/60 px-6 py-4">
+        <DialogFooter class="border-t border-border/60 p-4">
           <Button type="button" variant="outline" @click="templateLibraryOpen = false">
             关闭
           </Button>

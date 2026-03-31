@@ -154,7 +154,7 @@ function updateInspectionSelected(uuid: string, checked: boolean | "indeterminat
             <span class="shrink-0 text-xs text-muted-foreground">已选 {{ group.selectedCount }} / {{ group.items.length }} 项</span>
           </div>
         </AccordionTrigger>
-        <AccordionContent class="px-3.5">
+        <AccordionContent class="px-3.5 pt-1">
           <div class="grid gap-3 sm:grid-cols-2">
             <label
               v-for="item in group.items"
