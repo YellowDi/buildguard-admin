@@ -52,6 +52,7 @@ export const API_PATHS = {
   inspectionCategoryUpdate: "/bqi/sys/category/update",
   inspectionCategoryDelete: "/bqi/sys/category/del",
   inspectionPlansList: "/bqi/inspection/plan/list",
+  inspectionPlanCreate: "/bqi/inspection/plan/new",
   inspectionServicesList: "/bqi/inspection/service/list",
   inspectionServiceTemplatesList: "/bqi/inspection/service/template/list",
   inspectionServiceTemplateCreate: "/bqi/inspection/service/template/new",

@@ -37,6 +37,22 @@ export type InspectionPlansResult = {
   total: number
 }
 
+export type InspectionPlanCreatePayload = {
+  CustomerUuid: string
+  CycleType: string
+  Duration: number
+  EndTime?: string
+  FirstTime: string
+  Name: string
+  ServiceUuid: string
+}
+
+export type InspectionPlanCreateResult = {
+  Id?: number
+  Uuid?: string
+  [property: string]: unknown
+}
+
 export type ListInspectionPlansPayload = {
   CustomerUuid?: string
   PageNum?: number
@@ -45,7 +61,9 @@ export type ListInspectionPlansPayload = {
 }
 
 const INSPECTION_PLANS_API_URL = buildApiUrl(API_PATHS.inspectionPlansList)
+const INSPECTION_PLAN_CREATE_API_URL = buildApiUrl(API_PATHS.inspectionPlanCreate)
 const INSPECTION_PLANS_LOAD_ERROR_MESSAGE = "检测计划列表加载失败，请稍后重试。"
+const INSPECTION_PLAN_CREATE_ERROR_MESSAGE = "检测计划创建失败，请稍后重试。"
 
 export async function fetchInspectionPlans(
   payload: ListInspectionPlansPayload = {},
@@ -77,6 +95,37 @@ export async function fetchInspectionPlans(
     list: list.map(item => normalizeInspectionPlan(item)),
     total: extractTotal(responsePayload, list.length),
   }
+}
+
+export async function createInspectionPlan(
+  payload: InspectionPlanCreatePayload,
+): Promise<InspectionPlanCreateResult> {
+  const normalizedPayload = {
+    CustomerUuid: getRequiredString(payload.CustomerUuid, "CustomerUuid"),
+    CycleType: getRequiredString(payload.CycleType, "CycleType"),
+    Duration: getRequiredNumber(payload.Duration, "Duration"),
+    EndTime: getOptionalString(payload.EndTime),
+    FirstTime: getRequiredString(payload.FirstTime, "FirstTime"),
+    Name: getRequiredString(payload.Name, "Name"),
+    ServiceUuid: getRequiredString(payload.ServiceUuid, "ServiceUuid"),
+  }
+
+  const response = await fetch(INSPECTION_PLAN_CREATE_API_URL, {
+    method: "POST",
+    headers: buildApiHeaders({
+      "Content-Type": "application/json",
+    }),
+    body: JSON.stringify(normalizedPayload),
+  })
+  const responseBody = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responseBody, INSPECTION_PLAN_CREATE_ERROR_MESSAGE)
+  }
+
+  assertApiSuccess(responseBody, INSPECTION_PLAN_CREATE_ERROR_MESSAGE)
+
+  return extractCreateResult(responseBody)
 }
 
 function extractList(payload: InspectionPlansEnvelope | unknown[]) {
@@ -143,6 +192,20 @@ function normalizeInspectionPlan(value: unknown): InspectionPlanListItem {
   return {}
 }
 
+function extractCreateResult(value: unknown) {
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>
+
+    if (record.data && typeof record.data === "object") {
+      return record.data as InspectionPlanCreateResult
+    }
+
+    return record as InspectionPlanCreateResult
+  }
+
+  return {}
+}
+
 function getOptionalNumber(value: unknown, fieldName: string) {
   if (value === undefined || value === null || value === "") {
     return undefined
@@ -153,6 +216,16 @@ function getOptionalNumber(value: unknown, fieldName: string) {
   }
 
   return value
+}
+
+function getRequiredNumber(value: unknown, fieldName: string) {
+  const normalized = getOptionalNumber(value, fieldName)
+
+  if (normalized === undefined) {
+    throw new TypeError(`${fieldName} is required.`)
+  }
+
+  return normalized
 }
 
 function getOptionalString(value: unknown) {
@@ -170,4 +243,14 @@ function getOptionalString(value: unknown) {
   }
 
   throw new TypeError("String field must be a string or number.")
+}
+
+function getRequiredString(value: unknown, fieldName: string) {
+  const normalized = getOptionalString(value)
+
+  if (!normalized) {
+    throw new TypeError(`${fieldName} is required.`)
+  }
+
+  return normalized
 }

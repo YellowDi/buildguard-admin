@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue"
-import { useRoute } from "vue-router"
+import { useRoute, useRouter } from "vue-router"
 
 import TablePageLoading from "@/components/loading/TablePageLoading.vue"
 import TablePage from "@/components/table-page/TablePage.vue"
@@ -31,6 +31,7 @@ const inspectionPlanEnableStatusMap = {
 const schema: TablePageSchema<InspectionPlanRecord> = {
   title: "检测计划",
   description: "检测计划列表",
+  primaryActionLabel: "添加检测计划",
   rowKey: "id",
   data: [],
   showIndex: true,
@@ -238,6 +239,7 @@ const page = useTablePage({
   rows: inspectionPlans,
 })
 const route = useRoute()
+const router = useRouter()
 const showInitialLoading = computed(() => loading.value && !inspectionPlans.value.length && !errorMessage.value)
 
 useRouteTableSearch(page, route)
@@ -260,6 +262,10 @@ async function loadInspectionPlans() {
   } finally {
     loading.value = false
   }
+}
+
+function handleCreateInspectionPlan() {
+  void router.push({ name: "inspection-plan-create" })
 }
 
 function extractDatePart(value: string) {
@@ -297,6 +303,6 @@ function buildPageFilterText(row: InspectionPlanRecord) {
     </Alert>
 
     <TablePageLoading v-if="showInitialLoading" />
-    <TablePage v-else :page="page" />
+    <TablePage v-else :page="page" @primary-action="handleCreateInspectionPlan" />
   </div>
 </template>
