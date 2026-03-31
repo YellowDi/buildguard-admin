@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from "vue"
+import { computed, onMounted, ref } from "vue"
 import { toast } from "vue-sonner"
 
+import InspectionItemPicker from "@/components/inspection/InspectionItemPicker.vue"
 import {
   Alert,
   AlertDescription,
@@ -17,9 +18,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
 import {
   Dialog,
   DialogContent,
@@ -44,7 +43,7 @@ import {
   updateInspectionServiceTemplate,
   type InspectionServiceTemplateRecord,
 } from "@/lib/inspection-service-templates-api"
-import { fetchInspectionItems, type InspectionItemRecord } from "@/lib/inspection-items-api"
+import { fetchAllInspectionItemOptions, type InspectionItemOption } from "@/lib/inspection-item-options"
 
 const props = withDefaults(defineProps<{
   hideCreateButton?: boolean
@@ -68,20 +67,6 @@ type TemplateRow = {
   inspectionSummary: string
 }
 
-type InspectionItemOption = {
-  id: number
-  uuid: string
-  name: string
-  categoryName: string
-}
-
-type InspectionItemCategoryGroup = {
-  key: string
-  categoryName: string
-  selectedCount: number
-  items: InspectionItemOption[]
-}
-
 const TEMPLATE_LOAD_ERROR_MESSAGE = "检测模板列表加载失败，请稍后重试。"
 const rows = ref<TemplateRow[]>([])
 const loading = ref(false)
@@ -97,10 +82,8 @@ const deleteConfirmOpen = ref(false)
 const editingTemplateUuid = ref("")
 const createErrorMessage = ref("")
 const createTemplateName = ref("")
-const createItemSearchQuery = ref("")
 const createSelectedInspectionUuids = ref<string[]>([])
 const inspectionItemOptions = ref<InspectionItemOption[]>([])
-const createExpandedCategoryKey = ref("")
 
 const columns: TableColumn[] = [
   {
@@ -146,45 +129,6 @@ const filteredRows = computed(() => {
     row.uuid,
     row.inspectionSummary,
   ].some(field => field.toLowerCase().includes(query)))
-})
-
-const filteredInspectionItemOptions = computed(() => {
-  const query = createItemSearchQuery.value.trim().toLowerCase()
-
-  if (!query) {
-    return inspectionItemOptions.value
-  }
-
-  return inspectionItemOptions.value.filter(item => [
-    item.name,
-    item.uuid,
-    item.categoryName,
-  ].some(field => field.toLowerCase().includes(query)))
-})
-
-const groupedInspectionItemOptions = computed<InspectionItemCategoryGroup[]>(() => {
-  const bucket = new Map<string, InspectionItemOption[]>()
-
-  filteredInspectionItemOptions.value.forEach((item) => {
-    const categoryName = item.categoryName || "未分类"
-
-    if (!bucket.has(categoryName)) {
-      bucket.set(categoryName, [])
-    }
-
-    bucket.get(categoryName)?.push(item)
-  })
-
-  return Array.from(bucket.entries())
-    .sort((left, right) => left[0].localeCompare(right[0], "zh-Hans-CN"))
-    .map(([categoryName, items]) => ({
-      key: `category-${categoryName}`,
-      categoryName,
-      selectedCount: items.reduce((count, item) => (
-        createSelectedInspectionUuids.value.includes(item.uuid) ? count + 1 : count
-      ), 0),
-      items,
-    }))
 })
 
 const tableEmptyState = computed<TablePageEmptyState>(() => {
@@ -266,32 +210,8 @@ async function loadInspectionItemOptions() {
   createLoading.value = true
   createErrorMessage.value = ""
 
-  const pageSize = 200
-  const allItems: InspectionItemRecord[] = []
-  let pageNum = 1
-  let total = 0
-
   try {
-    while (pageNum <= 20) {
-      const result = await fetchInspectionItems({
-        PageNum: pageNum,
-        PageSize: pageSize,
-      })
-
-      if (pageNum === 1) {
-        total = result.total
-      }
-
-      allItems.push(...result.list)
-
-      if (!result.list.length || (total > 0 && allItems.length >= total)) {
-        break
-      }
-
-      pageNum += 1
-    }
-
-    inspectionItemOptions.value = dedupeInspectionItems(allItems).map(normalizeInspectionItemOption)
+    inspectionItemOptions.value = await fetchAllInspectionItemOptions()
   } catch (error) {
     createErrorMessage.value = handleApiError(error, {
       title: "检测项接口加载失败",
@@ -323,7 +243,6 @@ async function openCreateDialog() {
   if (!inspectionItemOptions.value.length) {
     await loadInspectionItemOptions()
   }
-  createExpandedCategoryKey.value = ""
 }
 
 async function openEditDialog(row: TemplateRow) {
@@ -345,7 +264,6 @@ async function openEditDialog(row: TemplateRow) {
     createSelectedInspectionUuids.value = (Array.isArray(detail.Inspections) ? detail.Inspections : [])
       .map(inspection => toText(inspection.InspectionUuid))
       .filter(Boolean)
-    createExpandedCategoryKey.value = ""
   } catch (error) {
     createErrorMessage.value = handleApiError(error, {
       title: "模板详情加载失败",
@@ -360,35 +278,10 @@ async function openEditDialog(row: TemplateRow) {
 function resetCreateDialog() {
   editingTemplateUuid.value = ""
   createTemplateName.value = ""
-  createItemSearchQuery.value = ""
   createSelectedInspectionUuids.value = []
-  createExpandedCategoryKey.value = ""
   createErrorMessage.value = ""
   editDetailLoading.value = false
   deleteConfirmOpen.value = false
-}
-
-watch(createItemSearchQuery, () => {
-  if (!createDialogOpen.value) {
-    return
-  }
-})
-
-function isInspectionSelected(uuid: string) {
-  return createSelectedInspectionUuids.value.includes(uuid)
-}
-
-function updateInspectionSelected(uuid: string, checked: boolean | "indeterminate") {
-  if (checked === "indeterminate") {
-    return
-  }
-
-  if (checked) {
-    createSelectedInspectionUuids.value = Array.from(new Set([...createSelectedInspectionUuids.value, uuid]))
-    return
-  }
-
-  createSelectedInspectionUuids.value = createSelectedInspectionUuids.value.filter(item => item !== uuid)
 }
 
 function closeDialog() {
@@ -490,31 +383,7 @@ function normalizeTemplateRow(item: InspectionServiceTemplateRecord, index: numb
   }
 }
 
-function normalizeInspectionItemOption(item: InspectionItemRecord): InspectionItemOption {
-  return {
-    id: toNumber(item.Id) ?? 0,
-    uuid: toText(item.Uuid),
-    name: toText(item.Name, `检测项 ${toNumber(item.Id) ?? "-"}`),
-    categoryName: toText(item.CategoryName, "未分类"),
-  }
-}
-
 function dedupeTemplates(items: InspectionServiceTemplateRecord[]) {
-  const seen = new Set<string>()
-
-  return items.filter((item) => {
-    const uuid = toText(item.Uuid)
-
-    if (!uuid || seen.has(uuid)) {
-      return false
-    }
-
-    seen.add(uuid)
-    return true
-  })
-}
-
-function dedupeInspectionItems(items: InspectionItemRecord[]) {
   const seen = new Set<string>()
 
   return items.filter((item) => {
@@ -637,81 +506,21 @@ defineExpose({
             </div>
           </div>
 
-          <div class="min-h-0 flex-1 overflow-y-auto bg-[#FAFAFA] p-4">
-            <div class="mb-4">
-              <Input
-                id="settings-inspection-template-search"
-                v-model="createItemSearchQuery"
-                placeholder="搜索检测项名称、分类"
-                :disabled="createLoading || createSubmitting || editDetailLoading"
-              />
-            </div>
-
-            <div v-if="editDetailLoading" class="space-y-3">
+          <div v-if="editDetailLoading" class="min-h-0 flex-1 overflow-y-auto bg-[#FAFAFA] p-4">
+            <div class="space-y-3">
               <div v-for="slot in 4" :key="`template-detail-skeleton-${slot}`" class="h-20 rounded-2xl border border-border/60 bg-muted/15" />
             </div>
-
-            <div v-if="createErrorMessage" class="rounded-xl border border-destructive/30 bg-destructive/5 p-4">
-              <p class="text-sm font-medium text-destructive">
-                检测项加载失败
-              </p>
-              <p class="mt-1 text-sm text-muted-foreground">
-                {{ createErrorMessage }}
-              </p>
-            </div>
-
-            <div v-else-if="createLoading" class="space-y-3">
-              <div v-for="slot in 5" :key="`template-create-skeleton-${slot}`" class="h-20 rounded-2xl border border-border/60 bg-muted/15" />
-            </div>
-
-            <div v-else-if="!filteredInspectionItemOptions.length" class="rounded-xl border border-border/60 bg-muted/20 p-6 text-sm text-muted-foreground">
-              没有匹配的检测项。
-            </div>
-
-            <Accordion
-              v-else
-              v-model="createExpandedCategoryKey"
-              type="single"
-              collapsible
-              class="space-y-3"
-            >
-              <AccordionItem
-                v-for="group in groupedInspectionItemOptions"
-                :key="group.key"
-                :value="group.key"
-                class="overflow-hidden rounded-md border border-border/55 bg-background/95 shadow-xs"
-              >
-                <AccordionTrigger class="px-3.5 py-3 text-left hover:no-underline">
-                  <div class="flex min-w-0 items-center gap-2">
-                    <span class="truncate text-sm font-semibold text-foreground">{{ group.categoryName }}</span>
-                    <span class="shrink-0 text-xs text-muted-foreground">已选 {{ group.selectedCount }} / {{ group.items.length }} 项</span>
-                  </div>
-                </AccordionTrigger>
-                <AccordionContent class="px-3.5">
-                  <div class="grid gap-3 sm:grid-cols-2">
-                    <label
-                      v-for="item in group.items"
-                      :key="item.uuid"
-                      class="relative flex cursor-pointer items-start gap-3 rounded-md border border-border/55 bg-background/95 px-3.5 py-3.5 shadow-xs transition-all duration-200 hover:border-[color:var(--theme-primary)]/35 hover:bg-muted/45 hover:shadow-sm"
-                      :class="isInspectionSelected(item.uuid) ? 'border-[color:var(--theme-primary)]/50 bg-[color:var(--theme-primary)]/10 shadow-sm ring-1 ring-[color:var(--theme-primary)]/15' : ''"
-                    >
-                      <Checkbox
-                        :model-value="isInspectionSelected(item.uuid)"
-                        :disabled="createSubmitting || editDetailLoading"
-                        class="mt-0.5"
-                        @update:model-value="updateInspectionSelected(item.uuid, $event)"
-                      />
-                      <div class="min-w-0 flex-1">
-                        <div class="line-clamp-2 text-sm font-medium leading-snug text-foreground">
-                          {{ item.name }}
-                        </div>
-                      </div>
-                    </label>
-                  </div>
-                </AccordionContent>
-              </AccordionItem>
-            </Accordion>
           </div>
+          <InspectionItemPicker
+            v-else
+            :open="createDialogOpen"
+            :model-value="createSelectedInspectionUuids"
+            :options="inspectionItemOptions"
+            :loading="createLoading"
+            :error-message="createErrorMessage"
+            :disabled="createSubmitting || editDetailLoading"
+            @update:model-value="createSelectedInspectionUuids = $event"
+          />
         </div>
 
         <DialogFooter

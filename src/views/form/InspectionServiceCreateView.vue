@@ -3,6 +3,7 @@ import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from
 import { useRoute, useRouter } from "vue-router"
 import { toast } from "vue-sonner"
 
+import InspectionItemPicker from "@/components/inspection/InspectionItemPicker.vue"
 import FormFieldSection from "@/components/form/FormFieldSection.vue"
 import FormHeader from "@/components/form/FormHeader.vue"
 import FormQuickNav from "@/components/form/FormQuickNav.vue"
@@ -41,6 +42,7 @@ import {
   fetchInspectionServiceDetail,
   updateInspectionService,
 } from "@/lib/inspection-services-api"
+import { fetchAllInspectionItemOptions, type InspectionItemOption } from "@/lib/inspection-item-options"
 
 type QuickNavItem = {
   id: string
@@ -54,6 +56,7 @@ type InspectionServiceFormState = {
   managerName: string
   managerPhone: string
   templateUuid: string
+  inspectionUuids: string[]
   buildUuids: string[]
   remark: string
 }
@@ -79,6 +82,12 @@ type BuildOption = {
   parkName: string
 }
 
+type InspectionPreviewItem = {
+  uuid: string
+  name: string
+  categoryName: string
+}
+
 const DEFAULT_LEVEL_OPTIONS = ["S级", "A级", "B级", "C级"] as const
 
 function createEmptyForm(): InspectionServiceFormState {
@@ -89,6 +98,7 @@ function createEmptyForm(): InspectionServiceFormState {
     managerName: "",
     managerPhone: "",
     templateUuid: "",
+    inspectionUuids: [],
     buildUuids: [],
     remark: "",
   }
@@ -111,6 +121,11 @@ const templateLibraryOpen = ref(false)
 const templateLibraryLoading = ref(false)
 const templateLibraryError = ref("")
 const templateKeyword = ref("")
+const inspectionPickerLoading = ref(false)
+const inspectionPickerError = ref("")
+const inspectionItemOptions = ref<InspectionItemOption[]>([])
+const inspectionSelectionMode = ref<"template" | "custom">("template")
+const initialInspectionSelectionMode = ref<"template" | "custom">("template")
 const loadedBuildingsCustomerUuid = ref("")
 const anchorItems = ref<QuickNavItem[]>([])
 const activeNavId = ref("")
@@ -180,6 +195,51 @@ const groupedBuildings = computed(() => {
     builds,
   }))
 })
+const selectedTemplateInspectionUuids = computed(() => dedupeText(
+  (selectedTemplateOption.value?.inspections ?? []).map(inspection => inspection.inspectionUuid),
+))
+const selectedInspectionCount = computed(() => form.inspectionUuids.length)
+const selectedInspectionPreviewItems = computed<InspectionPreviewItem[]>(() => {
+  const inspectionOptionMap = new Map(inspectionItemOptions.value.map(item => [item.uuid, item]))
+  const templateInspectionMap = new Map(
+    (selectedTemplateOption.value?.inspections ?? [])
+      .filter(item => normalizeText(item.inspectionUuid))
+      .map(item => [normalizeText(item.inspectionUuid), item] as const),
+  )
+
+  return dedupeText(form.inspectionUuids).map((uuid) => {
+    const option = inspectionOptionMap.get(uuid)
+
+    if (option) {
+      return {
+        uuid,
+        name: option.name || "未命名检测项",
+        categoryName: option.categoryName || "未分类",
+      }
+    }
+
+    const templateInspection = templateInspectionMap.get(uuid)
+
+    return {
+      uuid,
+      name: normalizeText(templateInspection?.inspectionName) || "未命名检测项",
+      categoryName: normalizeText(templateInspection?.categoryName) || "未分类",
+    }
+  })
+})
+const inspectionSelectionHint = computed(() => {
+  if (selectedInspectionCount.value > 0) {
+    return inspectionSelectionMode.value === "custom"
+      ? `当前已手动选择 ${selectedInspectionCount.value} 个检测项。`
+      : `已同步当前模板的 ${selectedInspectionCount.value} 个检测项，可继续手动调整。`
+  }
+
+  if (normalizeText(form.templateUuid)) {
+    return "当前模板暂无检测项，或模板候选尚未同步完成。"
+  }
+
+  return "请先选择检测模板，再按需调整检测项。"
+})
 const selectedBuildCount = computed(() => form.buildUuids.length)
 const canSubmit = computed(() =>
   Boolean(
@@ -188,7 +248,7 @@ const canSubmit = computed(() =>
     && normalizeText(form.level)
     && normalizeText(form.managerName)
     && normalizeText(form.managerPhone)
-    && normalizeText(form.templateUuid)
+    && form.inspectionUuids.length > 0
     && form.buildUuids.length > 0
     && !submitting.value
     && !loadingDetail.value
@@ -222,16 +282,23 @@ async function handleUseBuildingTemplate() {
   }
 }
 
-function handleSelectInspectionItems() {
-  toast.info("选择检测项功能即将上线")
-}
-
 function applyTemplate(template: TemplateOption) {
   form.templateUuid = template.uuid
+  syncInspectionSelectionFromTemplate(template)
   templateLibraryOpen.value = false
   toast.success("检测模板已选中", {
     description: template.name || template.uuid,
   })
+}
+
+function syncInspectionSelectionFromTemplate(template = selectedTemplateOption.value) {
+  inspectionSelectionMode.value = "template"
+  form.inspectionUuids = dedupeText((template?.inspections ?? []).map(item => item.inspectionUuid))
+}
+
+function updateInspectionSelection(values: string[]) {
+  inspectionSelectionMode.value = "custom"
+  form.inspectionUuids = dedupeText(values)
 }
 
 
@@ -322,8 +389,8 @@ async function handleSubmit() {
     return
   }
 
-  if (!normalizeText(form.templateUuid)) {
-    toast.error("请填写检测模板 UUID")
+  if (!form.inspectionUuids.length) {
+    toast.error("请至少选择一个检测项")
     return
   }
 
@@ -342,6 +409,7 @@ async function handleSubmit() {
       ManagerName: normalizeText(form.managerName),
       ManagerPhone: normalizeText(form.managerPhone),
       TemplateUuid: normalizeText(form.templateUuid),
+      InspectionUuids: dedupeText(form.inspectionUuids),
       BuildUuids: dedupeText(form.buildUuids),
       Remark: getOptionalText(form.remark),
     }
@@ -385,8 +453,10 @@ async function handleSubmit() {
 }
 
 function handleReset() {
+  inspectionSelectionMode.value = initialInspectionSelectionMode.value
   Object.assign(form, {
     ...initialFormState.value,
+    inspectionUuids: [...initialFormState.value.inspectionUuids],
     buildUuids: [...initialFormState.value.buildUuids],
   })
 }
@@ -402,6 +472,12 @@ async function loadInitialOptions() {
       await loadTemplateOptions()
     } catch {
       templateOptions.value = []
+    }
+
+    try {
+      await loadInspectionItemOptions()
+    } catch {
+      inspectionItemOptions.value = []
     }
 
     customerOptions.value = customers
@@ -567,6 +643,24 @@ async function loadTemplateOptions() {
   }
 }
 
+async function loadInspectionItemOptions() {
+  inspectionPickerLoading.value = true
+  inspectionPickerError.value = ""
+
+  try {
+    inspectionItemOptions.value = await fetchAllInspectionItemOptions()
+  } catch (error) {
+    inspectionPickerError.value = handleApiError(error, {
+      mode: "silent",
+      title: "检测项接口加载失败",
+      fallback: "检测项列表加载失败，请稍后重试。",
+    })
+    throw error
+  } finally {
+    inspectionPickerLoading.value = false
+  }
+}
+
 
 async function fetchAllBuildings(customerUuid: string) {
   const pageSize = 200
@@ -609,6 +703,10 @@ async function loadInspectionServiceForEdit(uuid: string) {
   try {
     const detail = await fetchInspectionServiceDetail({ Uuid: uuid })
     const nextCustomerUuid = normalizeText(detail.CustomerUuid)
+    const nextInspectionUuids = dedupeText([
+      ...((Array.isArray(detail.InspectionUuids) ? detail.InspectionUuids : []).map(item => normalizeText(item))),
+      ...((Array.isArray(detail.Inspections) ? detail.Inspections : []).map(item => normalizeText(item.InspectionUuid))),
+    ])
     const nextBuildUuids = dedupeText(
       (Array.isArray(detail.Builds) ? detail.Builds : []).map(item => normalizeText(item.BuildUuid)),
     )
@@ -622,12 +720,23 @@ async function loadInspectionServiceForEdit(uuid: string) {
       managerName: normalizeText(detail.ManagerName),
       managerPhone: normalizeText(detail.ManagerPhone),
       templateUuid: normalizeText(detail.TemplateUuid),
+      inspectionUuids: [...nextInspectionUuids],
       buildUuids: [],
       remark: normalizeText(detail.Remark),
     })
 
+    inspectionSelectionMode.value = nextInspectionUuids.length ? "custom" : "template"
+
     if (nextCustomerUuid) {
       await loadBuildingsForCustomer(nextCustomerUuid, nextBuildUuids)
+    }
+
+    if (!inspectionItemOptions.value.length && nextInspectionUuids.length) {
+      try {
+        await loadInspectionItemOptions()
+      } catch {
+        // Keep the page interactive; selected UUIDs can still be previewed from template data when available.
+      }
     }
 
     initialFormState.value = {
@@ -637,9 +746,11 @@ async function loadInspectionServiceForEdit(uuid: string) {
       managerName: normalizeText(detail.ManagerName),
       managerPhone: normalizeText(detail.ManagerPhone),
       templateUuid: normalizeText(detail.TemplateUuid),
+      inspectionUuids: [...form.inspectionUuids],
       buildUuids: [...form.buildUuids],
       remark: normalizeText(detail.Remark),
     }
+    initialInspectionSelectionMode.value = inspectionSelectionMode.value
   } catch (error) {
     loadError.value = handleApiError(error, {
       mode: "silent",
@@ -725,6 +836,11 @@ function resetLocalStateForRoute() {
   templateLibraryOpen.value = false
   templateLibraryError.value = ""
   templateKeyword.value = ""
+  inspectionPickerLoading.value = false
+  inspectionPickerError.value = ""
+  inspectionItemOptions.value = []
+  inspectionSelectionMode.value = "template"
+  initialInspectionSelectionMode.value = "template"
   customerOptions.value = []
   templateOptions.value = []
   buildingOptions.value = []
@@ -797,6 +913,18 @@ watch(
 
     void loadBuildingsForCustomer(customerUuid)
   },
+)
+
+watch(
+  selectedTemplateInspectionUuids,
+  (inspectionUuids) => {
+    if (inspectionSelectionMode.value !== "template") {
+      return
+    }
+
+    form.inspectionUuids = [...inspectionUuids]
+  },
+  { immediate: true },
 )
 
 watch(
@@ -891,56 +1019,76 @@ watch(
             </div>
           </FormFieldSection>
 
-          <FormFieldSection
-            id="section-template"
-            quick-nav-label="检测模板"
-            label="检测模板 UUID"
-            :description="templateOptions.length ? '可直接输入模板 UUID，输入时会匹配下方已有模板候选。' : '当前未加载到模板候选，请直接输入模板 UUID。'"
-            label-for="inspection-service-template"
+          <div
+            id="section-inspections"
+            data-quick-nav-label="检测项"
+            class="scroll-mt-28 border-b border-dashed border-border py-5"
           >
-            <div class="space-y-3">
-              <Input
-                id="inspection-service-template"
-                v-model="form.templateUuid"
-                list="inspection-service-template-options"
-                required
-                :placeholder="templateLoading ? '正在加载模板候选...' : '请输入检测模板 UUID'"
-                class="w-full"
-                :disabled="loadingDetail"
-                @focus="handleFocus('section-template')"
-              />
-              <datalist id="inspection-service-template-options">
-                <option v-for="template in templateOptions" :key="template.uuid" :value="template.uuid">
-                  {{ template.name }}
-                </option>
-              </datalist>
-              <p v-if="selectedTemplateName" class="text-sm text-muted-foreground">
-                当前匹配模板：{{ selectedTemplateName }}
-              </p>
-              <div v-if="selectedTemplateOption?.inspections.length" class="rounded-xl border border-border/60 bg-muted/20 p-3">
-                <p class="text-sm font-medium text-foreground">
-                  当前模板包含 {{ selectedTemplateOption.inspections.length }} 个检测项
-                </p>
+            <FieldSet>
+              <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
+                <FieldGroup class="min-w-0 flex-1 gap-1">
+                  <FieldLegend>检测项</FieldLegend>
+                  <FieldDescription>
+                    {{ inspectionSelectionHint }}
+                  </FieldDescription>
+                  <FieldDescription v-if="selectedTemplateName" class="mt-1">
+                    当前使用模板：{{ selectedTemplateName }}
+                  </FieldDescription>
+                </FieldGroup>
+                <div class="flex shrink-0 items-center justify-end">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    type="button"
+                    :disabled="loadingDetail"
+                    @click="handleUseBuildingTemplate"
+                    @focus="handleFocus('section-inspections')"
+                  >
+                    使用模板
+                  </Button>
+                </div>
+              </div>
+
+              <div v-if="selectedInspectionCount" class="mt-4 rounded-xl border border-border/60 bg-muted/20 p-3">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <p class="text-sm font-medium text-foreground">
+                    已选择 {{ selectedInspectionCount }} 个检测项
+                  </p>
+                  <span class="text-xs text-muted-foreground">
+                    {{ inspectionSelectionMode === "custom" ? "手动选择" : "来自模板" }}
+                  </span>
+                </div>
                 <div class="mt-2 space-y-2">
                   <div
-                    v-for="inspection in selectedTemplateOption.inspections.slice(0, 4)"
-                    :key="`${inspection.inspectionUuid}-${inspection.inspectionName}`"
+                    v-for="inspection in selectedInspectionPreviewItems.slice(0, 4)"
+                    :key="inspection.uuid"
                     class="rounded-lg border border-border/50 bg-background/90 px-3 py-2"
                   >
                     <div class="text-sm font-medium text-foreground">
-                      {{ inspection.inspectionName || "未命名检测项" }}
+                      {{ inspection.name || "未命名检测项" }}
                     </div>
                     <div class="mt-1 text-xs text-muted-foreground">
                       {{ inspection.categoryName || "未分类" }}
                     </div>
                   </div>
                 </div>
-                <p v-if="selectedTemplateOption.inspections.length > 4" class="mt-2 text-xs text-muted-foreground">
-                  其余 {{ selectedTemplateOption.inspections.length - 4 }} 个检测项可在模板浮窗中查看。
+                <p v-if="selectedInspectionCount > 4" class="mt-2 text-xs text-muted-foreground">
+                  其余 {{ selectedInspectionCount - 4 }} 个检测项可在下方列表中查看。
                 </p>
               </div>
-            </div>
-          </FormFieldSection>
+
+              <div class="mt-4 overflow-hidden rounded-xl border border-border/60 bg-background">
+                <InspectionItemPicker
+                  :model-value="form.inspectionUuids"
+                  :options="inspectionItemOptions"
+                  :loading="inspectionPickerLoading"
+                  :error-message="inspectionPickerError"
+                  :disabled="submitting || loadingDetail"
+                  @update:model-value="updateInspectionSelection"
+                />
+              </div>
+            </FieldSet>
+          </div>
 
           <FormFieldSection
             id="section-manager"
@@ -988,28 +1136,6 @@ watch(
                     勾选要纳入当前检测服务的建筑。
                   </FieldDescription>
                 </FieldGroup>
-                <div class="flex shrink-0 flex-wrap items-center justify-end gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    type="button"
-                    :disabled="loadingDetail"
-                    @click="handleUseBuildingTemplate"
-                    @focus="handleFocus('section-builds')"
-                  >
-                    使用模板
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    type="button"
-                    :disabled="loadingDetail"
-                    @click="handleSelectInspectionItems"
-                    @focus="handleFocus('section-builds')"
-                  >
-                    选择检测项
-                  </Button>
-                </div>
               </div>
 
               <div class="mt-3 w-full min-w-0">

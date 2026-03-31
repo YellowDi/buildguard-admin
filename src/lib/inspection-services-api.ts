@@ -21,6 +21,13 @@ type InspectionServiceBuildItem = {
   [property: string]: unknown
 }
 
+type InspectionServiceInspectionItem = {
+  InspectionUuid?: string
+  InspectionName?: string
+  CategoryName?: string
+  [property: string]: unknown
+}
+
 export type InspectionServiceListItem = {
   Uuid?: string
   Id?: number
@@ -36,6 +43,8 @@ export type InspectionServiceListItem = {
   TemplateId?: number
   TemplateUuid?: string
   TemplateName?: string
+  InspectionUuids?: string[]
+  Inspections?: InspectionServiceInspectionItem[]
   Builds?: InspectionServiceBuildItem[]
   Remark?: string
   CreatedAt?: string
@@ -54,7 +63,8 @@ export type InspectionServiceCreatePayload = {
   Level: string
   ManagerName: string
   ManagerPhone: string
-  TemplateUuid: string
+  TemplateUuid?: string
+  InspectionUuids?: string[]
   BuildUuids: string[]
   Remark?: string
 }
@@ -140,7 +150,8 @@ export async function createInspectionService(
     Level: getRequiredString(payload.Level, "Level"),
     ManagerName: getRequiredString(payload.ManagerName, "ManagerName"),
     ManagerPhone: getRequiredString(payload.ManagerPhone, "ManagerPhone"),
-    TemplateUuid: getRequiredString(payload.TemplateUuid, "TemplateUuid"),
+    TemplateUuid: getOptionalString(payload.TemplateUuid),
+    InspectionUuids: getOptionalStringArray(payload.InspectionUuids),
     BuildUuids: getRequiredStringArray(payload.BuildUuids, "BuildUuids"),
     Remark: getOptionalString(payload.Remark),
   }
@@ -173,7 +184,8 @@ export async function updateInspectionService(
     Level: getRequiredString(payload.Level, "Level"),
     ManagerName: getRequiredString(payload.ManagerName, "ManagerName"),
     ManagerPhone: getRequiredString(payload.ManagerPhone, "ManagerPhone"),
-    TemplateUuid: getRequiredString(payload.TemplateUuid, "TemplateUuid"),
+    TemplateUuid: getOptionalString(payload.TemplateUuid),
+    InspectionUuids: getOptionalStringArray(payload.InspectionUuids),
     BuildUuids: getRequiredStringArray(payload.BuildUuids, "BuildUuids"),
     Remark: getOptionalString(payload.Remark),
   }
@@ -335,6 +347,10 @@ function normalizeInspectionServiceListItem(value: unknown): InspectionServiceLi
 
   return {
     ...record,
+    InspectionUuids: getOptionalStringArray(record.InspectionUuids),
+    Inspections: Array.isArray(record.Inspections)
+      ? record.Inspections.filter(item => item && typeof item === "object") as InspectionServiceInspectionItem[]
+      : [],
     Builds: Array.isArray(record.Builds)
       ? record.Builds.filter(item => item && typeof item === "object") as InspectionServiceBuildItem[]
       : [],
@@ -422,6 +438,18 @@ function getRequiredStringArray(value: unknown, fieldName: string) {
   }
 
   return normalized
+}
+
+function getOptionalStringArray(value: unknown) {
+  if (!Array.isArray(value)) {
+    return undefined
+  }
+
+  const normalized = value
+    .map(item => getOptionalString(item))
+    .filter((item): item is string => Boolean(item))
+
+  return normalized.length ? Array.from(new Set(normalized)) : undefined
 }
 
 function getMockInspectionServices() {
