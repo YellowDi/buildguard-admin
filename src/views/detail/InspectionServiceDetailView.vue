@@ -5,6 +5,7 @@ import { toast } from "vue-sonner"
 
 import { Badge } from "@/components/ui/badge"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
+import BuildingDetailSheet from "@/components/detail/BuildingDetailSheet.vue"
 import DetailFieldSections from "@/components/detail/DetailFieldSections.vue"
 import FormDatePicker from "@/components/form/FormDatePicker.vue"
 import DetailRelationModule from "@/components/detail/DetailRelationModule.vue"
@@ -55,6 +56,9 @@ const expandedInspectionItemKey = ref("")
 const uploadContractDialogOpen = ref(false)
 const uploadingContract = ref(false)
 const uploadContractFileInputRef = ref<HTMLInputElement | null>(null)
+const buildingDetailSheetOpen = ref(false)
+const activeBuildingUuid = ref("")
+const activeParkUuid = ref("")
 const uploadContractForm = ref({
   contractEndTime: "",
   contractFile: "",
@@ -181,15 +185,17 @@ function goToBuildingDetail(row: InspectionServiceBuildingRow) {
   if (!row.buildUuid || !row.parkUuid) {
     return
   }
+  activeBuildingUuid.value = row.buildUuid
+  activeParkUuid.value = row.parkUuid
+  buildingDetailSheetOpen.value = true
+}
 
-  void router.push({
-    name: "building-detail",
-    params: { id: row.buildUuid },
-    query: {
-      parkUuid: row.parkUuid,
-      ...(customerUuid.value ? { customerUuid: customerUuid.value } : {}),
-    },
-  })
+function handleBuildingDetailSheetOpenChange(open: boolean) {
+  buildingDetailSheetOpen.value = open
+  if (!open) {
+    activeBuildingUuid.value = ""
+    activeParkUuid.value = ""
+  }
 }
 
 function goToEdit() {
@@ -595,12 +601,13 @@ function readFileAsDataUrl(file: File) {
           <template #building-action-cell="{ row }">
             <Button
               variant="ghost"
-              size="sm"
-              class="h-7 px-2 text-xs"
+              size="icon-sm"
+              class="h-7 w-7 rounded-md text-muted-foreground hover:text-foreground"
               :disabled="!row.buildUuid || !row.parkUuid"
               @click="goToBuildingDetail(row)"
             >
-              详情
+              <i class="ri-more-line text-[18px]" />
+              <span class="sr-only">建筑详情</span>
             </Button>
           </template>
         </DetailRelationModule>
@@ -759,4 +766,12 @@ function readFileAsDataUrl(file: File) {
       </DialogFooter>
     </DialogContent>
   </Dialog>
+
+  <BuildingDetailSheet
+    :open="buildingDetailSheetOpen"
+    :building-uuid="activeBuildingUuid"
+    :park-uuid="activeParkUuid"
+    :customer-uuid="customerUuid"
+    @update:open="handleBuildingDetailSheetOpenChange"
+  />
 </template>
