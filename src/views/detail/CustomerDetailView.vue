@@ -1422,7 +1422,7 @@ const workOrderDetailSecondarySections = computed<DetailFieldSection[]>(() => {
 })
 
 watch(customer, current => {
-  detailBreadcrumbTitle.value = current?.CorpName?.trim() || null
+  detailBreadcrumbTitle.value = current ? "客户详情" : null
 })
 
 watch(customerUuid, (uuid) => {

@@ -116,7 +116,7 @@ const buildingModule = computed<DetailRelationModuleSchema<BuildingRow>>(() => (
 }))
 
 watch(park, (current) => {
-  detailBreadcrumbTitle.value = toOptionalText(current?.Name)
+  detailBreadcrumbTitle.value = current ? "园区详情" : null
 
   if (!current) {
     detailBreadcrumbItems.value = null
@@ -126,7 +126,7 @@ watch(park, (current) => {
   detailBreadcrumbItems.value = [
     { title: "客户", to: "customers" },
     {
-      title: toText(current.CorpName, "客户详情") || "客户详情",
+      title: "客户详情",
       ...(customerUuid.value
         ? {
             to: {
@@ -136,7 +136,7 @@ watch(park, (current) => {
           }
         : {}),
     },
-    { title: toText(current.Name, "园区详情") || "园区详情" },
+    { title: "园区详情" },
   ]
 })
 

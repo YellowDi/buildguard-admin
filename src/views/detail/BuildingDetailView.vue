@@ -110,21 +110,17 @@ const repairModule = computed<DetailRelationModuleSchema<BuildingRecordRow>>(() 
 }))
 
 watch(building, (current) => {
-  detailBreadcrumbTitle.value = toOptionalText(current?.Name)
+  detailBreadcrumbTitle.value = current ? "建筑详情" : null
 
   if (!current) {
     detailBreadcrumbItems.value = null
     return
   }
 
-  const currentCustomerName = toText((current as BuildingListItem & { CorpName?: unknown; CustomerName?: unknown }).CorpName
-    || (current as BuildingListItem & { CorpName?: unknown; CustomerName?: unknown }).CustomerName, "客户详情")
-  const currentParkName = toText(current.ParkName, "园区详情")
-
   detailBreadcrumbItems.value = [
     { title: "客户", to: "customers" },
     {
-      title: currentCustomerName || "客户详情",
+      title: "客户详情",
       ...(relatedCustomerUuid.value
         ? {
             to: {
@@ -136,7 +132,7 @@ watch(building, (current) => {
     },
     ...(parkUuid.value
       ? [{
-          title: currentParkName || "园区详情",
+          title: "园区详情",
           to: {
             name: "park-detail",
             params: { id: parkUuid.value },
@@ -144,9 +140,9 @@ watch(building, (current) => {
           },
         }]
       : [{
-          title: currentParkName || "园区详情",
+          title: "园区详情",
         }]),
-    { title: toText(current.Name, "建筑详情") || "建筑详情" },
+    { title: "建筑详情" },
   ]
 })
 
