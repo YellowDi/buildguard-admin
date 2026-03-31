@@ -23,6 +23,7 @@ type BuildingRow = {
   id: string
   name: string
   address: string
+  status: "一切正常" | "需重点关注" | "存在风险"
 }
 
 const route = useRoute()
@@ -73,7 +74,7 @@ const buildingModule = computed<DetailRelationModuleSchema<BuildingRow>>(() => (
   count: buildings.value.length,
   rowKey: "id",
   columns: [
-    { key: "name", label: "名称", cellClass: "truncate" },
+    { key: "name", label: "建筑名称", slot: "building-name-cell" },
     { key: "address", label: "地址", cellClass: "truncate text-muted-foreground" },
     { key: "actions", label: "", slot: "building-action-cell", cellClass: "flex justify-end" },
   ],
@@ -84,9 +85,16 @@ const buildingModule = computed<DetailRelationModuleSchema<BuildingRow>>(() => (
       rows: buildings.value,
     },
   ],
-  mobileMinWidth: "32rem",
-  columnTemplateMobile: "minmax(10rem,1.2fr) minmax(14rem,1.8fr)",
-  columnTemplateDesktop: "minmax(10rem,1.2fr) minmax(14rem,1.8fr)",
+  emptyState: {
+    title: "暂无建筑",
+    description: "当前园区还没有配置建筑信息。",
+    icon: "ri-building-line",
+  },
+  mobileMinWidth: "40rem",
+  columnTemplateMobile: "minmax(10rem,1.1fr) minmax(14rem,1.8fr) 6rem",
+  columnTemplateDesktop: "minmax(10rem,1.1fr) minmax(14rem,1.8fr) 6rem",
+  columnGapMobile: "0.75rem",
+  columnGapDesktop: "1rem",
 }))
 
 watch(park, (current) => {
@@ -162,6 +170,8 @@ async function loadParkDetail(nextParkUuid: string) {
       id: toText(item.Uuid, `${nextParkUuid}-${index + 1}`) || `${nextParkUuid}-${index + 1}`,
       name: toText(item.Name, "未命名建筑") || "未命名建筑",
       address: toText(item.Address, "-") || "-",
+      // 接口暂未返回建筑风险状态，先统一按正常展示，后续可直接替换成真实字段映射。
+      status: "一切正常",
     }))
   } catch (error) {
     if (requestId !== latestRequestId) {
@@ -258,6 +268,22 @@ function buildContactValue(name: string | null, phone?: string | null): DetailCo
 
       <div v-else-if="park" class="pb-5">
         <DetailRelationModule :schema="buildingModule">
+          <template #building-name-cell="{ row }">
+            <div class="flex min-w-0 items-center gap-2 text-foreground">
+              <i
+                :class="[
+                  'text-[18px]',
+                  row.status === '存在风险'
+                    ? 'ri-close-circle-fill text-[#EF4444]'
+                    : row.status === '需重点关注'
+                      ? 'ri-time-fill text-[#F97316]'
+                      : 'ri-checkbox-circle-fill text-[#22C55E]',
+                ]"
+              />
+              <span class="truncate">{{ row.name }}</span>
+            </div>
+          </template>
+
           <template #building-action-cell="{ row }">
             <Button
               variant="ghost"
