@@ -8,6 +8,7 @@ import FormHeader from "@/components/form/FormHeader.vue"
 import FormQuickNav from "@/components/form/FormQuickNav.vue"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
+import { FieldDescription, FieldGroup, FieldLegend, FieldSet } from "@/components/ui/field"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
@@ -169,6 +170,10 @@ const submitButtonLabel = computed(() => {
   return isEditMode.value ? "保存检测服务" : "添加检测服务"
 })
 const inspectionLevelsCache = ref<string[]>([])
+
+function handleUseBuildingTemplate() {
+  toast.info("使用模板功能即将上线")
+}
 
 function handleFocus(sectionId: string) {
   activeNavId.value = sectionId
@@ -864,82 +869,102 @@ watch(
             </div>
           </FormFieldSection>
 
-          <FormFieldSection
+          <div
             id="section-builds"
-            quick-nav-label="服务建筑"
-            label="服务建筑"
-            :description="selectedCustomerName ? `当前客户：${selectedCustomerName}，已选择 ${selectedBuildCount} 个建筑。` : '请先选择所属客户。'"
-            align="start"
+            data-quick-nav-label="服务建筑"
+            class="scroll-mt-28 border-b border-dashed border-border py-5"
           >
-            <div class="rounded-xl border border-border bg-card">
-              <div class="border-b border-dashed border-border px-4 py-3">
-                <template v-if="buildingLoading">
-                  <div class="space-y-3">
-                    <Skeleton class="h-4 w-52 max-w-full" />
-                    <div class="grid gap-3 sm:grid-cols-2">
-                      <Skeleton
-                        v-for="slot in 4"
-                        :key="`building-pick-skeleton-${slot}`"
-                        class="h-16 w-full rounded-lg"
-                      />
-                    </div>
-                  </div>
-                </template>
-                <template v-else-if="!form.customerUuid">
-                  <p class="text-sm text-muted-foreground">
-                    请先选择所属客户。
-                  </p>
-                </template>
-                <template v-else-if="!groupedBuildings.length">
-                  <p class="text-sm text-muted-foreground">
-                    当前客户下暂无可选建筑。
-                  </p>
-                </template>
-                <template v-else>
-                  <p class="text-sm text-muted-foreground">
-                    勾选要纳入当前检测服务的建筑。
-                  </p>
-                </template>
+            <FieldSet>
+              <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
+                <FieldGroup class="min-w-0 flex-1 gap-1">
+                  <FieldLegend>服务建筑</FieldLegend>
+                  <FieldDescription>
+                    {{ selectedCustomerName ? `当前客户：${selectedCustomerName}，已选择 ${selectedBuildCount} 个建筑。` : '请先选择所属客户。' }}
+                  </FieldDescription>
+                </FieldGroup>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  type="button"
+                  class="shrink-0"
+                  :disabled="loadingDetail"
+                  @click="handleUseBuildingTemplate"
+                  @focus="handleFocus('section-builds')"
+                >
+                  使用模板
+                </Button>
               </div>
 
-              <div v-if="groupedBuildings.length" class="divide-y divide-dashed divide-border">
-                <section v-for="group in groupedBuildings" :key="group.parkName" class="px-4 py-4">
-                  <div class="mb-3 flex items-center justify-between gap-3">
-                    <div class="text-sm font-medium text-foreground">
-                      {{ group.parkName }}
-                    </div>
-                    <div class="text-xs text-muted-foreground">
-                      {{ group.builds.length }} 个建筑
-                    </div>
-                  </div>
-
-                  <div class="grid gap-3 sm:grid-cols-2">
-                    <label
-                      v-for="build in group.builds"
-                      :key="build.uuid"
-                      class="flex items-start gap-3 rounded-lg border border-border bg-background px-3 py-3 transition-colors hover:border-[#2B67F6]/40 hover:bg-accent/40"
-                      @click="handleFocus('section-builds')"
-                    >
-                      <Checkbox
-                        :model-value="isBuildChecked(build.uuid)"
-                        :disabled="loadingDetail"
-                        class="mt-0.5"
-                        @update:model-value="updateBuildChecked(build.uuid, $event)"
-                      />
-                      <div class="min-w-0">
-                        <div class="truncate text-sm font-medium text-foreground">
-                          {{ build.name }}
-                        </div>
-                        <div class="mt-1 text-xs text-muted-foreground">
-                          建筑 UUID：{{ build.uuid }}
-                        </div>
+              <div class="mt-3 w-full min-w-0 rounded-xl border border-border bg-card">
+                <div class="border-b border-dashed border-border px-4 py-3">
+                  <template v-if="buildingLoading">
+                    <div class="space-y-3">
+                      <Skeleton class="h-4 w-52 max-w-full" />
+                      <div class="grid gap-3 sm:grid-cols-2">
+                        <Skeleton
+                          v-for="slot in 4"
+                          :key="`building-pick-skeleton-${slot}`"
+                          class="h-16 w-full rounded-lg"
+                        />
                       </div>
-                    </label>
-                  </div>
-                </section>
+                    </div>
+                  </template>
+                  <template v-else-if="!form.customerUuid">
+                    <p class="text-sm text-muted-foreground">
+                      请先选择所属客户。
+                    </p>
+                  </template>
+                  <template v-else-if="!groupedBuildings.length">
+                    <p class="text-sm text-muted-foreground">
+                      当前客户下暂无可选建筑。
+                    </p>
+                  </template>
+                  <template v-else>
+                    <p class="text-sm text-muted-foreground">
+                      勾选要纳入当前检测服务的建筑。
+                    </p>
+                  </template>
+                </div>
+
+                <div v-if="groupedBuildings.length" class="divide-y divide-dashed divide-border">
+                  <section v-for="group in groupedBuildings" :key="group.parkName" class="px-4 py-4">
+                    <div class="mb-3 flex items-center justify-between gap-3">
+                      <div class="text-sm font-medium text-foreground">
+                        {{ group.parkName }}
+                      </div>
+                      <div class="text-xs text-muted-foreground">
+                        {{ group.builds.length }} 个建筑
+                      </div>
+                    </div>
+
+                    <div class="grid gap-3 sm:grid-cols-2">
+                      <label
+                        v-for="build in group.builds"
+                        :key="build.uuid"
+                        class="flex items-start gap-3 rounded-lg border border-border bg-background px-3 py-3 transition-colors hover:border-[#2B67F6]/40 hover:bg-accent/40"
+                        @click="handleFocus('section-builds')"
+                      >
+                        <Checkbox
+                          :model-value="isBuildChecked(build.uuid)"
+                          :disabled="loadingDetail"
+                          class="mt-0.5"
+                          @update:model-value="updateBuildChecked(build.uuid, $event)"
+                        />
+                        <div class="min-w-0">
+                          <div class="truncate text-sm font-medium text-foreground">
+                            {{ build.name }}
+                          </div>
+                          <div class="mt-1 text-xs text-muted-foreground">
+                            建筑 UUID：{{ build.uuid }}
+                          </div>
+                        </div>
+                      </label>
+                    </div>
+                  </section>
+                </div>
               </div>
-            </div>
-          </FormFieldSection>
+            </FieldSet>
+          </div>
 
           <FormFieldSection
             id="section-remark"
