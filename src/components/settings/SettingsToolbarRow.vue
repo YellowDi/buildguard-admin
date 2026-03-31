@@ -1,13 +1,13 @@
 <template>
-  <div class="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+  <div class="flex min-w-0 items-center justify-between gap-3 overflow-hidden">
     <div
       v-if="$slots.leading"
-      class="min-w-0 overflow-x-auto"
+      class="min-w-0 flex-1 overflow-x-auto"
     >
       <slot name="leading" />
     </div>
 
-    <div class="flex min-w-0 flex-nowrap items-center justify-end gap-2 overflow-x-auto">
+    <div class="min-w-0 shrink-0 overflow-x-auto">
       <slot />
     </div>
   </div>

@@ -8,6 +8,14 @@ import FormHeader from "@/components/form/FormHeader.vue"
 import FormQuickNav from "@/components/form/FormQuickNav.vue"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { FieldDescription, FieldGroup, FieldLegend, FieldSet } from "@/components/ui/field"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -25,10 +33,12 @@ import { cn } from "@/lib/utils"
 import { fetchBuildings, type BuildingListItem } from "@/lib/buildings-api"
 import { fetchCustomers, type CustomerListItem } from "@/lib/customers-api"
 import {
+  fetchInspectionServiceTemplates,
+  type InspectionServiceTemplateRecord,
+} from "@/lib/inspection-service-templates-api"
+import {
   createInspectionService,
   fetchInspectionServiceDetail,
-  fetchInspectionServices,
-  type InspectionServiceListItem,
   updateInspectionService,
 } from "@/lib/inspection-services-api"
 
@@ -56,6 +66,11 @@ type CustomerOption = {
 type TemplateOption = {
   uuid: string
   name: string
+  inspections: {
+    categoryName: string
+    inspectionName: string
+    inspectionUuid: string
+  }[]
 }
 
 type BuildOption = {
@@ -92,6 +107,10 @@ const buildingLoading = ref(false)
 const customerOptions = ref<CustomerOption[]>([])
 const templateOptions = ref<TemplateOption[]>([])
 const buildingOptions = ref<BuildOption[]>([])
+const templateLibraryOpen = ref(false)
+const templateLibraryLoading = ref(false)
+const templateLibraryError = ref("")
+const templateKeyword = ref("")
 const loadedBuildingsCustomerUuid = ref("")
 const anchorItems = ref<QuickNavItem[]>([])
 const activeNavId = ref("")
@@ -114,6 +133,25 @@ const selectedCustomerName = computed(() =>
 const selectedTemplateName = computed(() =>
   templateOptions.value.find(item => item.uuid === normalizeText(form.templateUuid))?.name || "",
 )
+const selectedTemplateOption = computed(() =>
+  templateOptions.value.find(item => item.uuid === normalizeText(form.templateUuid)) ?? null,
+)
+const filteredTemplateOptions = computed(() => {
+  const keyword = normalizeText(templateKeyword.value).toLowerCase()
+
+  if (!keyword) {
+    return templateOptions.value
+  }
+
+  return templateOptions.value.filter((item) => {
+    return item.name.toLowerCase().includes(keyword)
+      || item.uuid.toLowerCase().includes(keyword)
+      || item.inspections.some(inspection =>
+        inspection.inspectionName.toLowerCase().includes(keyword)
+        || inspection.categoryName.toLowerCase().includes(keyword),
+      )
+  })
+})
 const levelOptions = computed(() => {
   const detected = new Set<string>()
   const values: string[] = [...DEFAULT_LEVEL_OPTIONS]
@@ -172,12 +210,28 @@ const submitButtonLabel = computed(() => {
 })
 const inspectionLevelsCache = ref<string[]>([])
 
-function handleUseBuildingTemplate() {
-  toast.info("使用模板功能即将上线")
+async function handleUseBuildingTemplate() {
+  templateLibraryOpen.value = true
+
+  if (!templateOptions.value.length && !templateLibraryLoading.value) {
+    try {
+      await loadTemplateOptions()
+    } catch {
+      // Error state is rendered inside the dialog; keep the dialog open.
+    }
+  }
 }
 
 function handleSelectInspectionItems() {
   toast.info("选择检测项功能即将上线")
+}
+
+function applyTemplate(template: TemplateOption) {
+  form.templateUuid = template.uuid
+  templateLibraryOpen.value = false
+  toast.success("检测模板已选中", {
+    description: template.name || template.uuid,
+  })
 }
 
 function buildingPickCardClass(checked: boolean, disabled: boolean) {
@@ -339,19 +393,19 @@ function handleReset() {
 async function loadInitialOptions() {
   loadError.value = ""
   customerLoading.value = true
-  templateLoading.value = true
 
   try {
-    const [customers, templates] = await Promise.all([
-      fetchAllCustomers(),
-      fetchAllInspectionServiceTemplates(),
-    ])
+    const customers = await fetchAllCustomers()
+
+    try {
+      await loadTemplateOptions()
+    } catch {
+      templateOptions.value = []
+    }
 
     customerOptions.value = customers
       .map(mapCustomerOption)
       .filter(item => item.uuid)
-    templateOptions.value = templates.options
-    inspectionLevelsCache.value = templates.levels
 
     if (!form.customerUuid) {
       const preferredCustomerUuid = customerOptions.value.some(item => item.uuid === queryCustomerUuid.value)
@@ -380,7 +434,6 @@ async function loadInitialOptions() {
     })
   } finally {
     customerLoading.value = false
-    templateLoading.value = false
   }
 }
 
@@ -453,58 +506,63 @@ async function fetchAllCustomers() {
   return dedupeByUuid(allItems)
 }
 
-async function fetchAllInspectionServiceTemplates() {
+async function loadTemplateOptions() {
+  templateLoading.value = true
+  templateLibraryLoading.value = true
+  templateLibraryError.value = ""
+
   const pageSize = 200
-  const allItems: InspectionServiceListItem[] = []
+  const allItems: InspectionServiceTemplateRecord[] = []
   let pageNum = 1
   let total = 0
 
-  while (pageNum <= 20) {
-    const result = await fetchInspectionServices({
-      PageNum: pageNum,
-      PageSize: pageSize,
+  try {
+    while (pageNum <= 20) {
+      const result = await fetchInspectionServiceTemplates({
+        PageNum: pageNum,
+        PageSize: pageSize,
+      })
+
+      if (pageNum === 1) {
+        total = result.total
+      }
+
+      allItems.push(...result.list)
+
+      if (!result.list.length || (total > 0 && pageNum * pageSize >= total)) {
+        break
+      }
+
+      pageNum += 1
+    }
+
+    const options = dedupeText(allItems.map(item => normalizeText(item.Uuid))).map((uuid) => {
+      const current = allItems.find(item => normalizeText(item.Uuid) === uuid)
+
+      return {
+        uuid,
+        name: normalizeText(current?.Name) || `模板 ${normalizeText(current?.Id) || uuid || "-"}`,
+        inspections: Array.isArray(current?.Inspections)
+          ? current.Inspections.map(inspection => ({
+              categoryName: normalizeText(inspection.CategoryName),
+              inspectionName: normalizeText(inspection.InspectionName),
+              inspectionUuid: normalizeText(inspection.InspectionUuid),
+            }))
+          : [],
+      }
     })
 
-    if (pageNum === 1) {
-      total = result.total
-    }
-
-    allItems.push(...result.list)
-
-    if (!result.list.length || (total > 0 && pageNum * pageSize >= total)) {
-      break
-    }
-
-    pageNum += 1
-  }
-
-  const options: TemplateOption[] = []
-  const seenTemplateUuids = new Set<string>()
-  const levels: string[] = []
-
-  for (const item of allItems) {
-    const templateUuid = normalizeText(item.TemplateUuid)
-    const templateName = normalizeText(item.TemplateName) || `模板 ${normalizeText(item.TemplateId) || templateUuid || "-"}`
-    const level = normalizeText(item.Level)
-
-    if (level) {
-      levels.push(level)
-    }
-
-    if (!templateUuid || seenTemplateUuids.has(templateUuid)) {
-      continue
-    }
-
-    seenTemplateUuids.add(templateUuid)
-    options.push({
-      uuid: templateUuid,
-      name: templateName,
+    templateOptions.value = options
+    return options
+  } catch (error) {
+    templateLibraryError.value = handleApiError(error, {
+      mode: "silent",
+      fallback: "检测模板列表加载失败，请稍后重试。",
     })
-  }
-
-  return {
-    options,
-    levels: dedupeText(levels),
+    throw error
+  } finally {
+    templateLoading.value = false
+    templateLibraryLoading.value = false
   }
 }
 
@@ -662,11 +720,13 @@ function getOptionalText(value: unknown) {
 function resetLocalStateForRoute() {
   loadError.value = ""
   loadingDetail.value = false
+  templateLibraryOpen.value = false
+  templateLibraryError.value = ""
+  templateKeyword.value = ""
   customerOptions.value = []
   templateOptions.value = []
   buildingOptions.value = []
   loadedBuildingsCustomerUuid.value = ""
-  inspectionLevelsCache.value = []
   Object.assign(form, createEmptyForm())
 
   if (queryCustomerUuid.value) {
@@ -855,6 +915,28 @@ watch(
               <p v-if="selectedTemplateName" class="text-sm text-muted-foreground">
                 当前匹配模板：{{ selectedTemplateName }}
               </p>
+              <div v-if="selectedTemplateOption?.inspections.length" class="rounded-xl border border-border/60 bg-muted/20 p-3">
+                <p class="text-sm font-medium text-foreground">
+                  当前模板包含 {{ selectedTemplateOption.inspections.length }} 个检测项
+                </p>
+                <div class="mt-2 space-y-2">
+                  <div
+                    v-for="inspection in selectedTemplateOption.inspections.slice(0, 4)"
+                    :key="`${inspection.inspectionUuid}-${inspection.inspectionName}`"
+                    class="rounded-lg border border-border/50 bg-background/90 px-3 py-2"
+                  >
+                    <div class="text-sm font-medium text-foreground">
+                      {{ inspection.inspectionName || "未命名检测项" }}
+                    </div>
+                    <div class="mt-1 text-xs text-muted-foreground">
+                      {{ inspection.categoryName || "未分类" }}
+                    </div>
+                  </div>
+                </div>
+                <p v-if="selectedTemplateOption.inspections.length > 4" class="mt-2 text-xs text-muted-foreground">
+                  其余 {{ selectedTemplateOption.inspections.length - 4 }} 个检测项可在模板浮窗中查看。
+                </p>
+              </div>
             </div>
           </FormFieldSection>
 
@@ -1033,5 +1115,111 @@ watch(
         @select="scrollToSection"
       />
     </div>
+
+    <Dialog v-model:open="templateLibraryOpen">
+      <DialogContent class="max-w-4xl p-0">
+        <DialogHeader class="border-b border-border/60 px-6 pt-6 pb-4">
+          <DialogTitle>选择检测模板</DialogTitle>
+          <DialogDescription>
+            模板数据来自接口 `/bqi/inspection/service/template/list`。选中后会回填模板 UUID，并展示模板内检测项。
+          </DialogDescription>
+        </DialogHeader>
+
+        <div class="flex max-h-[70vh] flex-col overflow-hidden">
+          <div class="border-b border-border/60 px-6 py-4">
+            <Input
+              v-model="templateKeyword"
+              placeholder="搜索模板名称、UUID、检测项名称或分类"
+              class="w-full"
+              :disabled="templateLibraryLoading"
+            />
+          </div>
+
+          <div class="min-h-0 flex-1 overflow-y-auto px-6 py-4">
+            <div v-if="templateLibraryError" class="rounded-xl border border-destructive/30 bg-destructive/5 p-4">
+              <p class="text-sm font-medium text-destructive">
+                检测模板加载失败
+              </p>
+              <p class="mt-1 text-sm text-muted-foreground">
+                {{ templateLibraryError }}
+              </p>
+            </div>
+
+            <div v-else-if="templateLibraryLoading" class="space-y-3">
+              <Skeleton v-for="slot in 4" :key="`template-library-skeleton-${slot}`" class="h-28 w-full rounded-2xl" />
+            </div>
+
+            <div v-else-if="!filteredTemplateOptions.length" class="rounded-xl border border-border/60 bg-muted/20 p-6 text-sm text-muted-foreground">
+              没有匹配的模板。
+            </div>
+
+            <div v-else class="space-y-4">
+              <div
+                v-for="template in filteredTemplateOptions"
+                :key="template.uuid"
+                :class="cn(
+                  'rounded-2xl border p-4 transition-colors',
+                  template.uuid === normalizeText(form.templateUuid)
+                    ? 'border-[color:var(--theme-primary)]/45 bg-[color:var(--theme-primary)]/8'
+                    : 'border-border/60 bg-background',
+                )"
+              >
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div class="min-w-0 flex-1">
+                    <p class="text-sm font-semibold text-foreground">
+                      {{ template.name || "未命名模板" }}
+                    </p>
+                    <p class="mt-1 break-all font-mono text-[12px] text-muted-foreground">
+                      {{ template.uuid }}
+                    </p>
+                    <p class="mt-2 text-xs text-muted-foreground">
+                      共 {{ template.inspections.length }} 个检测项
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    size="sm"
+                    :variant="template.uuid === normalizeText(form.templateUuid) ? 'default' : 'outline'"
+                    @click="applyTemplate(template)"
+                  >
+                    {{ template.uuid === normalizeText(form.templateUuid) ? "当前已选" : "使用此模板" }}
+                  </Button>
+                </div>
+
+                <div v-if="template.inspections.length" class="mt-4 space-y-2">
+                  <div
+                    v-for="inspection in template.inspections"
+                    :key="`${template.uuid}-${inspection.inspectionUuid}-${inspection.inspectionName}`"
+                    class="flex flex-col gap-1 rounded-xl border border-border/50 bg-muted/15 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between"
+                  >
+                    <div class="min-w-0">
+                      <p class="text-sm font-medium text-foreground">
+                        {{ inspection.inspectionName || "未命名检测项" }}
+                      </p>
+                      <p class="text-xs text-muted-foreground">
+                        {{ inspection.categoryName || "未分类" }}
+                      </p>
+                    </div>
+                    <p class="break-all font-mono text-[11px] text-muted-foreground sm:max-w-[48%] sm:text-right">
+                      {{ inspection.inspectionUuid || "-" }}
+                    </p>
+                  </div>
+                </div>
+
+                <p v-else class="mt-4 text-sm text-muted-foreground">
+                  该模板下暂无检测项。
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <DialogFooter class="border-t border-border/60 px-6 py-4">
+          <Button type="button" variant="outline" @click="templateLibraryOpen = false">
+            关闭
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   </section>
 </template>
