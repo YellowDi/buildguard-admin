@@ -5,20 +5,26 @@ import { shouldUseMockData } from "@/lib/data-source"
 
 export type InspectionPlanRecord = {
   id: string
+  uuid: string
+  code: string
+  contractCode: string
   planName: string
   serviceName: string
   customerName: string
-  inspectionScope: string
   cycle: string
-  owner: string
+  firstExecutionAt: string
+  latestExecutionAt: string
+  latestOrderNo: string
   nextExecutionAt: string
-  status: string
-  note: string
+  creator: string
+  createdAt: string
+  planStatus: string
+  enableStatus: string
 }
 
 export async function listInspectionPlanRecords() {
   if (shouldUseMockData("inspection-plans")) {
-    return inspectionPlansData as InspectionPlanRecord[]
+    return (inspectionPlansData as unknown[]).map(normalizeInspectionPlanRecord)
   }
 
   const pageSize = 200
@@ -50,25 +56,32 @@ export async function listInspectionPlanRecords() {
 
 function normalizeInspectionPlanRecord(value: unknown): InspectionPlanRecord {
   const record = asRecord(value)
-  const serviceName = getString(record?.ServiceName, "-")
+  const serviceName = getString(record?.ServiceName ?? record?.serviceName, "-")
   const duration = getNumber(record?.Duration)
   const cycleType = getString(record?.CycleType)
+  const fallbackId = getString(record?.id, "-")
 
   return {
-    id: getString(record?.Uuid ?? record?.Id, "-"),
-    planName: getString(record?.PlanName ?? record?.Name, serviceName === "-" ? "检测计划" : `${serviceName}计划`),
+    id: getString(record?.Uuid ?? record?.Id ?? record?.Code, fallbackId),
+    uuid: getString(record?.Uuid, "-"),
+    code: getString(record?.Code ?? record?.code, fallbackId),
+    contractCode: getString(record?.ContractCode ?? record?.contractCode, "-"),
+    planName: getString(record?.PlanName ?? record?.Name ?? record?.planName, serviceName === "-" ? "检测计划" : `${serviceName}计划`),
     serviceName,
-    customerName: getString(record?.CorpName ?? record?.CustomerName, "-"),
-    inspectionScope: getString(record?.InspectionScope ?? record?.Scope, serviceName),
-    cycle: buildCycleLabel(cycleType, duration),
-    owner: getString(record?.OwnerName ?? record?.PrincipalName ?? record?.CreatorName, "-"),
+    customerName: getString(record?.CorpName ?? record?.CustomerName ?? record?.customerName, "-"),
+    cycle: buildCycleLabel(cycleType, duration, getString(record?.cycle)),
+    firstExecutionAt: getString(record?.FirstTime ?? record?.firstExecutionAt, "-"),
+    latestExecutionAt: getString(record?.LastestTime ?? record?.latestExecutionAt, "-"),
+    latestOrderNo: getString(record?.LastestOrderNo ?? record?.latestOrderNo, "-"),
     nextExecutionAt: getString(record?.NextTime ?? record?.NextExecutionAt, "-"),
-    status: normalizePlanStatus(record?.PlanStatus ?? record?.Status),
-    note: getString(record?.Remark ?? record?.Note, ""),
+    creator: getString(record?.Creator ?? record?.OwnerName ?? record?.PrincipalName ?? record?.CreatorName ?? record?.owner, "-"),
+    createdAt: getString(record?.CreatedAt ?? record?.createdAt, "-"),
+    planStatus: normalizePlanStatus(record?.PlanStatus ?? record?.status),
+    enableStatus: normalizeEnableStatus(record?.Status ?? record?.enableStatus),
   }
 }
 
-function buildCycleLabel(cycleType: string, duration: number | undefined) {
+function buildCycleLabel(cycleType: string, duration: number | undefined, fallback = "") {
   if (cycleType && duration) {
     return `${duration}${cycleType}`
   }
@@ -81,10 +94,15 @@ function buildCycleLabel(cycleType: string, duration: number | undefined) {
     return `${duration}天`
   }
 
-  return "-"
+  return fallback || "-"
 }
 
 function normalizePlanStatus(value: unknown) {
+  if (typeof value === "string") {
+    const normalized = value.trim()
+    return normalized || "-"
+  }
+
   if (typeof value === "number") {
     if (value === 1) {
       return "进行中"
@@ -95,7 +113,19 @@ function normalizePlanStatus(value: unknown) {
     }
   }
 
-  return getString(value, "未开始")
+  return "-"
+}
+
+function normalizeEnableStatus(value: unknown) {
+  if (value === 1 || value === "1" || value === "启用") {
+    return "启用"
+  }
+
+  if (value === 2 || value === "2" || value === 0 || value === "0" || value === "禁用" || value === "停用") {
+    return "禁用"
+  }
+
+  return "-"
 }
 
 function getString(value: unknown, fallback = "") {

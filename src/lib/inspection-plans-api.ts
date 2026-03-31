@@ -10,17 +10,25 @@ type InspectionPlansEnvelope = {
 }
 
 export type InspectionPlanListItem = {
+  Code?: string
+  ContractCode?: string
   Id?: number
-  Uuid?: string
-  CustomerUuid?: string
   CorpName?: string
+  CreatedAt?: string
+  Creator?: string
+  CustomerUuid?: string
   ServiceName?: string
   CycleType?: string
   Duration?: number
+  FirstTime?: string
+  LastestOrderNo?: string
   NextTime?: string
   LastestTime?: string
+  Name?: string
   PlanStatus?: string
+  ServiceUuid?: string
   Status?: number
+  Uuid?: string
   [property: string]: unknown
 }
 

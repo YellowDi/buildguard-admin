@@ -400,7 +400,11 @@ function formatInspectionQuota(total: string, remaining: string) {
   return `${total || "-"} / ${remaining || "-"}`
 }
 
-function getExpireDateValue(row: InspectionServiceRecord) {
+function getExpireDateValue(row: unknown) {
+  if (!row || typeof row !== "object" || !("ExpireAt" in row)) {
+    return ""
+  }
+
   return toText(row.ExpireAt, "")
 }
 
@@ -418,7 +422,7 @@ function parseDateTime(value: string) {
   return date
 }
 
-function getRemainingDaysLabel(row: InspectionServiceRecord) {
+function getRemainingDaysLabel(row: unknown) {
   const expireAt = parseDateTime(getExpireDateValue(row))
   if (!expireAt) {
     return "-"
@@ -436,7 +440,7 @@ function getRemainingDaysLabel(row: InspectionServiceRecord) {
   return `剩余 ${diffDays} 天`
 }
 
-function getExpireProgressValue(row: InspectionServiceRecord) {
+function getExpireProgressValue(row: unknown) {
   const expireAt = parseDateTime(getExpireDateValue(row))
   if (!expireAt) {
     return 0
@@ -452,7 +456,7 @@ function getExpireProgressValue(row: InspectionServiceRecord) {
   return Math.round(progress)
 }
 
-function getExpireProgressClass(row: InspectionServiceRecord) {
+function getExpireProgressClass(row: unknown) {
   const expireAt = parseDateTime(getExpireDateValue(row))
   if (!expireAt) {
     return "[&_[data-slot=progress-indicator]]:bg-muted-foreground/40"

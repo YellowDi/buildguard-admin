@@ -4,7 +4,6 @@ import { useRoute } from "vue-router"
 
 import TablePageLoading from "@/components/loading/TablePageLoading.vue"
 import TablePage from "@/components/table-page/TablePage.vue"
-import { processStatusMap } from "@/components/table-page/statusPresets"
 import { createTablePageDefinition, useTablePage } from "@/components/table-page/useTablePage"
 import type { TablePageSchema } from "@/components/table-page/types"
 import { useRouteTableSearch } from "@/composables/useRouteTableSearch"
@@ -16,6 +15,19 @@ const inspectionPlans = ref<InspectionPlanRecord[]>([])
 const loading = ref(false)
 const errorMessage = ref("")
 
+const inspectionPlanStatusMap = {
+  未开始: { tone: "gray", icon: "dot" },
+  进行中: { tone: "green", icon: "clock" },
+  待审核: { tone: "orange", icon: "clock" },
+  已暂停: { tone: "gray", icon: "minus" },
+  已完成: { tone: "green", icon: "check" },
+} as const
+
+const inspectionPlanEnableStatusMap = {
+  启用: { tone: "green", icon: "check" },
+  禁用: { tone: "gray", icon: "minus" },
+} as const
+
 const schema: TablePageSchema<InspectionPlanRecord> = {
   title: "检测计划",
   description: "检测计划列表",
@@ -23,6 +35,11 @@ const schema: TablePageSchema<InspectionPlanRecord> = {
   data: [],
   showIndex: true,
   stickyHeader: true,
+  emptyState: {
+    title: "暂无检测计划数据",
+    description: "当前接口暂未返回可展示的检测计划列表。",
+    icon: "ri-calendar-schedule-line",
+  },
   rowActions: [
     {
       key: "view-detail",
@@ -31,6 +48,16 @@ const schema: TablePageSchema<InspectionPlanRecord> = {
     },
   ],
   columns: [
+    {
+      key: "code",
+      label: "计划编号",
+      filterType: "text",
+      filter: {
+        type: "text",
+        placeholder: "输入计划编号",
+      },
+      sort: true,
+    },
     {
       key: "planName",
       label: "计划名称",
@@ -45,19 +72,18 @@ const schema: TablePageSchema<InspectionPlanRecord> = {
       sort: true,
     },
     {
-      key: "serviceName",
-      label: "关联服务",
+      key: "contractCode",
+      label: "合同编号",
       filterType: "text",
       filter: {
         type: "text",
-        placeholder: "输入服务名称",
-        defaultVisible: true,
+        placeholder: "输入合同编号",
       },
       sort: true,
     },
     {
       key: "customerName",
-      label: "所属客户",
+      label: "客户名称",
       filterType: "text",
       filter: {
         type: "text",
@@ -67,33 +93,56 @@ const schema: TablePageSchema<InspectionPlanRecord> = {
       sort: true,
     },
     {
-      key: "inspectionScope",
-      label: "检测范围",
+      key: "serviceName",
+      label: "服务名称",
       filterType: "text",
-      width: "fill",
       filter: {
         type: "text",
-        placeholder: "输入检测范围",
-      },
-      sort: true,
-    },
-    {
-      key: "cycle",
-      label: "执行周期",
-      filterType: "tag",
-      filter: {
-        type: "tag",
+        placeholder: "输入服务名称",
         defaultVisible: true,
       },
       sort: true,
     },
     {
-      key: "owner",
-      label: "负责人",
+      key: "cycle",
+      label: "执行频率",
       filterType: "text",
       filter: {
         type: "text",
-        placeholder: "输入负责人",
+        defaultVisible: true,
+        placeholder: "输入执行频率",
+      },
+      sort: true,
+    },
+    {
+      key: "firstExecutionAt",
+      label: "首次执行时间",
+      filterType: "time",
+      format: "numeric",
+      filter: {
+        type: "date",
+        value: row => extractDatePart(row.firstExecutionAt),
+      },
+      sort: true,
+    },
+    {
+      key: "latestExecutionAt",
+      label: "最近执行时间",
+      filterType: "time",
+      format: "numeric",
+      filter: {
+        type: "date",
+        value: row => extractDatePart(row.latestExecutionAt),
+      },
+      sort: true,
+    },
+    {
+      key: "latestOrderNo",
+      label: "最近执行订单号",
+      filterType: "text",
+      filter: {
+        type: "text",
+        placeholder: "输入最近执行订单号",
       },
       sort: true,
     },
@@ -110,13 +159,33 @@ const schema: TablePageSchema<InspectionPlanRecord> = {
       sort: true,
     },
     {
-      key: "status",
-      label: "状态",
+      key: "creator",
+      label: "创建人",
+      filterType: "text",
+      filter: {
+        type: "text",
+        placeholder: "输入创建人",
+      },
+      sort: true,
+    },
+    {
+      key: "createdAt",
+      label: "创建时间",
+      filterType: "time",
+      format: "numeric",
+      filter: {
+        type: "date",
+        value: row => extractDatePart(row.createdAt),
+      },
+      sort: true,
+    },
+    {
+      key: "planStatus",
+      label: "计划状态",
       filterType: "tag",
-      tone: "warning",
       cellRenderer: {
         kind: "status",
-        map: processStatusMap,
+        map: inspectionPlanStatusMap,
         fallback: { tone: "gray", icon: "dot" },
       },
       filter: {
@@ -126,14 +195,19 @@ const schema: TablePageSchema<InspectionPlanRecord> = {
       sort: true,
     },
     {
-      key: "note",
-      label: "备注",
-      filterType: "none",
-      variant: "note",
-      format: "note",
-      tone: "muted",
-      width: "fill",
-      cellRenderer: { kind: "note" },
+      key: "enableStatus",
+      label: "启用状态",
+      filterType: "tag",
+      cellRenderer: {
+        kind: "status",
+        map: inspectionPlanEnableStatusMap,
+        fallback: { tone: "gray", icon: "minus" },
+      },
+      filter: {
+        type: "tag",
+        defaultVisible: true,
+      },
+      sort: true,
     },
   ],
   filters: [
@@ -154,8 +228,8 @@ const schema: TablePageSchema<InspectionPlanRecord> = {
   tabs: {
     mode: "enum",
     all: { label: "全部", value: "all" },
-    field: "status",
-    order: ["未开始", "进行中", "待审核", "已暂停", "已完成"],
+    field: "enableStatus",
+    order: ["启用", "禁用"],
   },
 }
 
@@ -196,15 +270,21 @@ function extractDatePart(value: string) {
 function buildPageFilterText(row: InspectionPlanRecord) {
   return [
     row.id,
+    row.uuid,
+    row.code,
+    row.contractCode,
     row.planName,
     row.serviceName,
     row.customerName,
-    row.inspectionScope,
     row.cycle,
-    row.owner,
+    row.firstExecutionAt,
+    row.latestExecutionAt,
+    row.latestOrderNo,
     row.nextExecutionAt,
-    row.status,
-    row.note,
+    row.creator,
+    row.createdAt,
+    row.planStatus,
+    row.enableStatus,
   ].join(" ")
 }
 </script>
