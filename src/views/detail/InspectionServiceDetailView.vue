@@ -6,6 +6,7 @@ import { toast } from "vue-sonner"
 import { Badge } from "@/components/ui/badge"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import DetailFieldSections from "@/components/detail/DetailFieldSections.vue"
+import FormDatePicker from "@/components/form/FormDatePicker.vue"
 import DetailRelationModule from "@/components/detail/DetailRelationModule.vue"
 import DetailFieldsSkeleton from "@/components/loading/DetailFieldsSkeleton.vue"
 import DetailRelationSkeleton from "@/components/loading/DetailRelationSkeleton.vue"
@@ -13,11 +14,13 @@ import type { DetailContactValue, DetailFieldSection, DetailRelationModuleSchema
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
 import { detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
 import DetailLayout from "@/layouts/DetailLayout.vue"
 import { buildApiRequestUrl } from "@/lib/api"
 import { handleApiError } from "@/lib/api-errors"
-import { fetchInspectionServiceDetail, type InspectionServiceListItem } from "@/lib/inspection-services-api"
+import { fetchInspectionServiceDetail, type InspectionServiceListItem, updateInspectionServiceContract } from "@/lib/inspection-services-api"
 
 type InspectionServiceBuildingRow = {
   id: string
@@ -49,6 +52,14 @@ const detail = ref<InspectionServiceListItem | null>(null)
 const loading = ref(false)
 const errorMessage = ref("")
 const expandedInspectionItemKey = ref("")
+const uploadContractDialogOpen = ref(false)
+const uploadingContract = ref(false)
+const uploadContractFileInputRef = ref<HTMLInputElement | null>(null)
+const uploadContractForm = ref({
+  contractEndTime: "",
+  contractFile: "",
+  contractFileName: "",
+})
 let latestRequestId = 0
 
 const inspectionServiceUuid = computed(() => typeof route.params.id === "string" ? route.params.id.trim() : "")
@@ -84,10 +95,10 @@ const fieldSections = computed<DetailFieldSection[]>(() => {
         {
           key: "contract-file",
           label: "合同文件",
-          value: getContractFileLabel(current.ContractFile),
-          linkAction: resolveFileUrl(current.ContractFile)
-            ? { onClick: () => openContractFile(current.ContractFile) }
-            : undefined,
+          value: "",
+          action: resolveFileUrl(current.ContractFile)
+            ? { label: "下载合同", onClick: () => downloadContractFile(current.ContractFile) }
+            : { label: "上传合同", onClick: openUploadContractDialog },
         },
         { key: "created-at", label: "创建时间", value: toText(current.CreatedAt, "-") },
         { key: "updated-at", label: "更新时间", value: toText(current.UpdatedAt, "-") },
@@ -198,6 +209,114 @@ function openContractFile(file: unknown) {
 
   if (typeof window !== "undefined") {
     window.open(fileUrl, "_blank", "noopener,noreferrer")
+  }
+}
+
+async function downloadContractFile(file: unknown) {
+  const fileUrl = resolveFileUrl(file)
+
+  if (!fileUrl) {
+    toast.error("当前检测服务暂无合同文件")
+    return
+  }
+
+  const fileName = getContractFileLabel(file)
+
+  try {
+    const response = await fetch(fileUrl)
+
+    if (!response.ok) {
+      throw new Error(`下载失败: ${response.status}`)
+    }
+
+    const blob = await response.blob()
+    const objectUrl = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.href = objectUrl
+    link.download = fileName || "合同文件"
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    URL.revokeObjectURL(objectUrl)
+  } catch {
+    // 回退为新标签打开，避免跨域下载限制导致无法获取 blob。
+    openContractFile(file)
+  }
+}
+
+function openUploadContractDialog() {
+  if (!inspectionServiceUuid.value) {
+    toast.error("当前检测服务缺少 Uuid，无法上传合同")
+    return
+  }
+
+  uploadContractForm.value = {
+    contractEndTime: toText(detail.value?.ContractEndTime, ""),
+    contractFile: "",
+    contractFileName: "",
+  }
+  uploadContractDialogOpen.value = true
+}
+
+function triggerSelectContractFile() {
+  uploadContractFileInputRef.value?.click()
+}
+
+async function handleContractFileChange(event: Event) {
+  const input = event.target as HTMLInputElement | null
+  const file = input?.files?.[0]
+
+  if (!file) {
+    return
+  }
+
+  try {
+    const fileBase64 = await readFileAsDataUrl(file)
+    uploadContractForm.value.contractFile = fileBase64
+    uploadContractForm.value.contractFileName = file.name
+  } catch {
+    toast.error("合同文件读取失败，请重新选择文件")
+  } finally {
+    if (input) {
+      input.value = ""
+    }
+  }
+}
+
+async function submitUploadContract() {
+  if (!inspectionServiceUuid.value) {
+    toast.error("当前检测服务缺少 Uuid，无法上传合同")
+    return
+  }
+
+  if (!uploadContractForm.value.contractEndTime) {
+    toast.error("请填写合同到期时间")
+    return
+  }
+
+  if (!uploadContractForm.value.contractFile) {
+    toast.error("请先上传合同文件")
+    return
+  }
+
+  uploadingContract.value = true
+
+  try {
+    await updateInspectionServiceContract({
+      Uuid: inspectionServiceUuid.value,
+      ContractEndTime: uploadContractForm.value.contractEndTime,
+      ContractFile: uploadContractForm.value.contractFile,
+    })
+
+    toast.success("合同信息已更新")
+    uploadContractDialogOpen.value = false
+    await loadInspectionServiceDetail(inspectionServiceUuid.value)
+  } catch (error) {
+    handleApiError(error, {
+      fallback: "合同上传失败，请稍后重试。",
+    })
+  } finally {
+    uploadingContract.value = false
   }
 }
 
@@ -393,6 +512,23 @@ function toOptionalText(value: unknown) {
   const nextValue = toText(value, "")
   return nextValue || null
 }
+
+function readFileAsDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader()
+
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        resolve(reader.result)
+        return
+      }
+
+      reject(new Error("文件内容解析失败"))
+    }
+    reader.onerror = () => reject(reader.error ?? new Error("文件读取失败"))
+    reader.readAsDataURL(file)
+  })
+}
 </script>
 
 <template>
@@ -529,4 +665,69 @@ function toOptionalText(value: unknown) {
       </div>
     </template>
   </DetailLayout>
+
+  <Dialog v-model:open="uploadContractDialogOpen">
+    <DialogContent class="sm:max-w-[520px]">
+      <DialogHeader>
+        <DialogTitle>上传合同</DialogTitle>
+        <DialogDescription>
+          请填写合同到期时间并上传合同文件。
+        </DialogDescription>
+      </DialogHeader>
+
+      <div class="space-y-4">
+        <div class="space-y-2">
+          <p class="text-sm text-foreground">合同到期时间</p>
+            <FormDatePicker
+              id="inspection-service-contract-end-time"
+              v-model="uploadContractForm.contractEndTime"
+              :disabled="uploadingContract"
+              placeholder="请选择合同到期时间"
+            />
+        </div>
+
+        <div class="space-y-2">
+          <p class="text-sm text-foreground">合同文件</p>
+          <input
+            ref="uploadContractFileInputRef"
+            type="file"
+            class="hidden"
+            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp"
+            @change="handleContractFileChange"
+          >
+          <div class="flex items-center gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              :disabled="uploadingContract"
+              @click="triggerSelectContractFile"
+            >
+              选择文件
+            </Button>
+            <span class="min-w-0 truncate text-sm text-muted-foreground">
+              {{ uploadContractForm.contractFileName || "未选择文件" }}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <DialogFooter>
+        <Button
+          type="button"
+          variant="outline"
+          :disabled="uploadingContract"
+          @click="uploadContractDialogOpen = false"
+        >
+          取消
+        </Button>
+        <Button
+          type="button"
+          :disabled="uploadingContract"
+          @click="submitUploadContract"
+        >
+          {{ uploadingContract ? "提交中..." : "确认上传" }}
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
 </template>
