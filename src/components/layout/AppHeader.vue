@@ -25,7 +25,7 @@ import { Separator } from "@/components/ui/separator"
 import { SIDEBAR_MOBILE_BREAKPOINT } from "@/components/ui/sidebar"
 import { RouterLink, useRoute } from "vue-router"
 
-import { detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
+import { detailBreadcrumbItems, detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
 
 type BreadcrumbItemConfig = {
   title: string
@@ -44,11 +44,16 @@ const { width } = useWindowSize()
 const isMobile = computed(() => width.value < SIDEBAR_MOBILE_BREAKPOINT)
 
 const breadcrumbItems = computed<BreadcrumbItemConfig[]>(() => {
-  const metaItems = Array.isArray(route.meta.breadcrumb)
+  const overriddenItems = Array.isArray(detailBreadcrumbItems.value)
+    ? detailBreadcrumbItems.value
+    : null
+  const metaItems = overriddenItems ?? (
+    Array.isArray(route.meta.breadcrumb)
     ? route.meta.breadcrumb
     : typeof route.meta.title === "string"
       ? [{ title: route.meta.title }]
       : []
+  )
   const overrideTitle = route.meta.useDetailBreadcrumbTitle && detailBreadcrumbTitle.value
     ? detailBreadcrumbTitle.value
     : null

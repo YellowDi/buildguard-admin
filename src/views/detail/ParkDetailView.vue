@@ -12,7 +12,7 @@ import type { DetailContactValue, DetailFieldSection, DetailRelationModuleSchema
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-import { detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
+import { detailBreadcrumbItems, detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
 import DetailLayout from "@/layouts/DetailLayout.vue"
 import { handleApiError } from "@/lib/api-errors"
 import { hasValidLatLng } from "@/lib/map-coordinates"
@@ -117,6 +117,17 @@ const buildingModule = computed<DetailRelationModuleSchema<BuildingRow>>(() => (
 
 watch(park, (current) => {
   detailBreadcrumbTitle.value = toOptionalText(current?.Name)
+
+  if (!current) {
+    detailBreadcrumbItems.value = null
+    return
+  }
+
+  detailBreadcrumbItems.value = [
+    { title: "客户", to: "customers" },
+    { title: toText(current.CorpName, "客户详情") || "客户详情" },
+    { title: toText(current.Name, "园区详情") || "园区详情" },
+  ]
 })
 
 watch(parkUuid, (nextParkUuid) => {
@@ -125,6 +136,7 @@ watch(parkUuid, (nextParkUuid) => {
 
 onUnmounted(() => {
   detailBreadcrumbTitle.value = null
+  detailBreadcrumbItems.value = null
 })
 
 function goBack() {
