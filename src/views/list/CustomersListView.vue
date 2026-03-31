@@ -77,7 +77,7 @@ const schema: TablePageSchema<CustomerRecord> = {
   stickyHeader: true,
   emptyState: {
     title: "暂无客户数据",
-    description: "当前接口暂未返回可展示的客户列表。",
+    description: "暂时还没有客户数据，您可以先添加一个客户。",
     icon: "ri-customer-service-2-line",
   },
   rowActions: [

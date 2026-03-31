@@ -432,7 +432,7 @@ const tableEmptyState = computed<TablePageEmptyState>(() => {
   if (activeView.value === "buttons") {
     return {
       title: "暂无按钮数据",
-      description: "按钮资源表入口已预留，接入按钮列表接口后会展示在这里。",
+      description: "暂时还没有按钮数据。",
       icon: "ri-cursor-line",
     }
   }
@@ -440,14 +440,14 @@ const tableEmptyState = computed<TablePageEmptyState>(() => {
   if (activeView.value === "apis") {
     return {
       title: "暂无 API 数据",
-      description: "API 资源表入口已预留，接入接口后会展示在这里。",
+      description: "暂时还没有 API 数据。",
       icon: "ri-code-box-line",
     }
   }
 
   return {
     title: "还没有菜单数据",
-    description: "接口返回为空时，会在这里显示空状态。",
+    description: "暂时还没有菜单数据，您可以先添加一个菜单。",
     icon: "ri-menu-line",
   }
 })

@@ -83,7 +83,7 @@ const schema: TablePageSchema<InspectionServiceRecord> = {
   stickyHeader: true,
   emptyState: {
     title: "暂无检测服务数据",
-    description: "当前接口暂未返回可展示的检测服务列表。",
+    description: "暂时还没有检测服务，您可以先添加一条检测服务。",
     icon: "ri-shield-check-line",
   },
   rowActions: [

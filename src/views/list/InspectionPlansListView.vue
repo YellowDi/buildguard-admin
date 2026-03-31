@@ -38,7 +38,7 @@ const schema: TablePageSchema<InspectionPlanRecord> = {
   stickyHeader: true,
   emptyState: {
     title: "暂无检测计划数据",
-    description: "当前接口暂未返回可展示的检测计划列表。",
+    description: "暂时还没有检测计划，您可以先添加一条检测计划。",
     icon: "ri-calendar-schedule-line",
   },
   rowActions: [

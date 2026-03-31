@@ -78,8 +78,8 @@ let latestRequestId = 0
 const pageTitle = computed(() => props.kind === "inspection" ? "检测工单" : "维修工单")
 const pageEmptyStateTitle = computed(() => `暂无${pageTitle.value}数据`)
 const pageEmptyStateDescription = computed(() => props.kind === "inspection"
-  ? "当前接口暂未返回可展示的检测工单。"
-  : "当前接口暂未返回可展示的维修工单。")
+  ? "暂时还没有检测工单，您可以先添加一条工单。"
+  : "暂时还没有维修工单，您可以先添加一条工单。")
 const pageSortStorageKey = computed(() => props.kind === "inspection"
   ? "inspection-work-orders-sort-preferences-created-at-v2"
   : "repair-work-orders-sort-preferences-created-start-at-v3")

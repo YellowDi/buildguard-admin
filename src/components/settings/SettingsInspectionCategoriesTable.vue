@@ -151,7 +151,7 @@ const tableEmptyState = computed<TablePageEmptyState>(() => {
 
   return {
     title: "还没有检测项分类",
-    description: "接口返回为空时，会在这里显示空状态。",
+    description: "暂时还没有检测项分类，您可以先添加一个分类。",
     icon: "ri-table-line",
   }
 })

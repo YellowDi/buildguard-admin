@@ -521,7 +521,7 @@ const tableEmptyState = computed<TablePageEmptyState>(() => {
   if (activeView.value === "roles") {
     return {
       title: "暂无角色数据",
-      description: "角色接口暂未返回可展示的角色列表。",
+      description: "暂时还没有角色，您可以先添加一个角色。",
       icon: "ri-shield-user-line",
     }
   }
@@ -536,7 +536,7 @@ const tableEmptyState = computed<TablePageEmptyState>(() => {
 
   return {
     title: "暂无成员数据",
-    description: "当前接口暂未返回可展示的成员列表。",
+    description: "暂时还没有成员，您可以先添加一个成员。",
     icon: "ri-team-line",
   }
 })
