@@ -179,14 +179,14 @@ function handleConfirm() {
       class="max-w-[min(96vw,52rem)] gap-0 overflow-hidden p-0"
       :show-close-button="!isExporting"
     >
-      <DialogHeader class="px-6 pt-6">
+      <DialogHeader class="px-4 pt-4 pb-0">
         <DialogTitle>导出数据</DialogTitle>
         <DialogDescription>
           导出当前表格中的记录，可选择已选数据或当前筛选结果。
         </DialogDescription>
       </DialogHeader>
 
-      <div class="space-y-4 px-6 py-5">
+      <div class="space-y-4 p-4">
         <div class="flex flex-wrap items-start justify-between gap-x-4 gap-y-3 sm:flex-nowrap">
           <section class="min-w-fit flex-none space-y-2">
             <Label class="text-sm font-medium text-foreground">导出范围</Label>
@@ -260,7 +260,7 @@ function handleConfirm() {
         </section>
       </div>
 
-      <DialogFooter class="border-t border-border/70 px-6 py-4 sm:justify-end">
+      <DialogFooter class="border-t border-border/70 p-4 sm:justify-end">
         <Button
           variant="outline"
           class="h-9 px-4"
