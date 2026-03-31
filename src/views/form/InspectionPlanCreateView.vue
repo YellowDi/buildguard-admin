@@ -3,6 +3,7 @@ import { computed, nextTick, onMounted, onUnmounted, reactive, ref, watch } from
 import { useRoute, useRouter } from "vue-router"
 import { toast } from "vue-sonner"
 
+import FormDatePicker from "@/components/form/FormDatePicker.vue"
 import FormFieldSection from "@/components/form/FormFieldSection.vue"
 import FormHeader from "@/components/form/FormHeader.vue"
 import FormQuickNav from "@/components/form/FormQuickNav.vue"
@@ -425,10 +426,14 @@ function toApiDateTime(value: string) {
     return `${normalized}:00`
   }
 
+  if (/^\d{4}-\d{2}-\d{2}$/.test(normalized)) {
+    return `${normalized} 00:00:00`
+  }
+
   return normalized
 }
 
-function toDateTimeLocalInput(value: string) {
+function toDatePickerInput(value: string) {
   const normalized = normalizeText(value)
 
   if (!normalized) {
@@ -440,10 +445,14 @@ function toDateTimeLocalInput(value: string) {
   }
 
   if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(normalized)) {
-    return normalized.replace(" ", "T")
+    return normalized.slice(0, 10)
   }
 
-  return normalized
+  if (/^\d{4}-\d{2}-\d{2}$/.test(normalized)) {
+    return normalized
+  }
+
+  return ""
 }
 
 function resetLocalStateForRoute() {
@@ -458,8 +467,8 @@ function resetLocalStateForRoute() {
     name: queryName.value,
     cycleType: queryCycleType.value,
     duration: queryDuration.value,
-    firstTime: toDateTimeLocalInput(queryFirstTime.value),
-    endTime: toDateTimeLocalInput(queryEndTime.value),
+    firstTime: toDatePickerInput(queryFirstTime.value),
+    endTime: toDatePickerInput(queryEndTime.value),
   })
   initialFormState.value = { ...form }
 }
@@ -674,12 +683,10 @@ watch(
             label="首次执行时间"
             label-for="inspection-plan-first-time"
           >
-            <Input
+            <FormDatePicker
               id="inspection-plan-first-time"
               v-model="form.firstTime"
-              required
-              type="datetime-local"
-              class="w-full"
+              placeholder="请选择首次执行时间"
               @focus="handleFocus('section-first-time')"
             />
           </FormFieldSection>
@@ -692,11 +699,10 @@ watch(
             label-for="inspection-plan-end-time"
             last
           >
-            <Input
+            <FormDatePicker
               id="inspection-plan-end-time"
               v-model="form.endTime"
-              type="datetime-local"
-              class="w-full"
+              placeholder="请选择计划结束时间"
               @focus="handleFocus('section-end-time')"
             />
           </FormFieldSection>
