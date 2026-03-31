@@ -691,7 +691,9 @@ async function loadInspectionServiceForEdit(uuid: string) {
     const nextCustomerUuid = normalizeText(detail.CustomerUuid)
     const nextInspectionUuids = dedupeText([
       ...((Array.isArray(detail.InspectionUuids) ? detail.InspectionUuids : []).map(item => normalizeText(item))),
-      ...((Array.isArray(detail.Inspections) ? detail.Inspections : []).map(item => normalizeText(item.InspectionUuid))),
+      ...((Array.isArray(detail.Inspections) ? detail.Inspections : []).map(item => (
+        normalizeText(item.InspectionUuid) || normalizeText(item.Uuid)
+      ))),
     ])
     const nextBuildUuids = dedupeText(
       (Array.isArray(detail.Builds) ? detail.Builds : []).map(item => normalizeText(item.BuildUuid)),

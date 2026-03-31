@@ -22,9 +22,20 @@ type InspectionServiceBuildItem = {
 }
 
 type InspectionServiceInspectionItem = {
+  Id?: number
+  CategoryId?: number
+  CategoryUuid?: string
   InspectionUuid?: string
   InspectionName?: string
   CategoryName?: string
+  Content?: string
+  IsForcePhoto?: number
+  IsMeasureRecord?: number
+  Standard?: string
+  CreatedAt?: string
+  UpdatedAt?: string
+  Uuid?: string
+  Name?: string
   [property: string]: unknown
 }
 
@@ -33,6 +44,8 @@ export type InspectionServiceListItem = {
   Id?: number
   Name?: string
   Status?: number
+  ContractEndTime?: string
+  ContractFile?: string
   CustomerId?: number
   CorpName?: string
   CustomerName?: string
@@ -343,14 +356,29 @@ function normalizeInspectionServiceListItem(value: unknown): InspectionServiceLi
     return {}
   }
 
-  const record = value as InspectionServiceListItem
+  const record = value as Record<string, unknown>
+  const customerName = getOptionalString(record.CustomerName)
+  const corpName = getOptionalString(record.CorpName) ?? customerName
+  const contractEndTime = getOptionalString(record.ContractEndTime)
+    ?? getOptionalString(record.ExpireAt)
+    ?? getOptionalString(record.ExpiredAt)
+    ?? getOptionalString(record.EndAt)
+    ?? getOptionalString(record.ServiceEndAt)
+    ?? getOptionalString(record.PackageExpireAt)
+    ?? getOptionalString(record.DueAt)
+  const status = normalizeOptionalNumberLike(record.Status)
 
   return {
     ...record,
-    InspectionUuids: getOptionalStringArray(record.InspectionUuids),
-    Inspections: Array.isArray(record.Inspections)
-      ? record.Inspections.filter(item => item && typeof item === "object") as InspectionServiceInspectionItem[]
-      : [],
+    Status: status,
+    ContractEndTime: contractEndTime,
+    ContractFile: getOptionalString(record.ContractFile),
+    CustomerId: normalizeOptionalNumberLike(record.CustomerId),
+    CorpName: corpName,
+    CustomerName: customerName,
+    CustomerUuid: getOptionalString(record.CustomerUuid),
+    InspectionUuids: normalizeOptionalStringList(record.InspectionUuids),
+    Inspections: normalizeInspectionServiceInspectionItems(record.Inspections),
     Builds: Array.isArray(record.Builds)
       ? record.Builds.filter(item => item && typeof item === "object") as InspectionServiceBuildItem[]
       : [],
@@ -450,6 +478,101 @@ function getOptionalStringArray(value: unknown) {
     .filter((item): item is string => Boolean(item))
 
   return normalized.length ? Array.from(new Set(normalized)) : undefined
+}
+
+function normalizeOptionalStringList(value: unknown) {
+  if (Array.isArray(value)) {
+    const normalized = value
+      .map(item => getOptionalString(item))
+      .filter((item): item is string => Boolean(item))
+
+    return normalized.length ? Array.from(new Set(normalized)) : undefined
+  }
+
+  const normalized = getOptionalString(value)
+
+  if (!normalized) {
+    return undefined
+  }
+
+  const list = normalized
+    .split(/[，,]/)
+    .map(item => item.trim())
+    .filter(Boolean)
+
+  return list.length ? Array.from(new Set(list)) : [normalized]
+}
+
+function normalizeInspectionServiceInspectionItems(value: unknown): InspectionServiceInspectionItem[] {
+  if (!Array.isArray(value)) {
+    return []
+  }
+
+  return value
+    .filter(item => item && typeof item === "object")
+    .map((item) => {
+      const record = item as Record<string, unknown>
+      const uuid = getOptionalString(record.InspectionUuid) ?? getOptionalString(record.Uuid)
+      const name = getOptionalString(record.InspectionName) ?? getOptionalString(record.Name)
+      const categoryName = getOptionalString(record.CategoryName)
+
+      return {
+        ...record,
+        Id: normalizeOptionalNumberLike(record.Id),
+        CategoryId: normalizeOptionalNumberLike(record.CategoryId),
+        CategoryUuid: getOptionalString(record.CategoryUuid),
+        InspectionUuid: uuid,
+        InspectionName: name,
+        CategoryName: categoryName,
+        Content: getOptionalString(record.Content),
+        IsForcePhoto: normalizeInspectionFlag(record.IsForcePhoto),
+        IsMeasureRecord: normalizeInspectionFlag(record.IsMeasureRecord),
+        Standard: getOptionalString(record.Standard),
+        CreatedAt: getOptionalString(record.CreatedAt),
+        UpdatedAt: getOptionalString(record.UpdatedAt),
+        Uuid: getOptionalString(record.Uuid),
+        Name: getOptionalString(record.Name),
+      }
+    })
+}
+
+function normalizeInspectionFlag(value: unknown) {
+  if (value === undefined || value === null || value === "") {
+    return undefined
+  }
+
+  if (value === 1 || value === "1" || value === true) {
+    return 1
+  }
+
+  if (value === 2 || value === "2" || value === false) {
+    return 2
+  }
+
+  return undefined
+}
+
+function normalizeOptionalNumberLike(value: unknown) {
+  if (value === undefined || value === null || value === "") {
+    return undefined
+  }
+
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value
+  }
+
+  if (typeof value === "string") {
+    const normalized = value.trim()
+
+    if (!normalized) {
+      return undefined
+    }
+
+    const nextValue = Number(normalized)
+    return Number.isFinite(nextValue) ? nextValue : undefined
+  }
+
+  return undefined
 }
 
 function getMockInspectionServices() {

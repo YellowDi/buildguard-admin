@@ -12,6 +12,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
 import DetailLayout from "@/layouts/DetailLayout.vue"
+import { buildApiRequestUrl } from "@/lib/api"
 import { handleApiError } from "@/lib/api-errors"
 import { fetchInspectionServiceDetail, type InspectionServiceListItem } from "@/lib/inspection-services-api"
 
@@ -20,6 +21,15 @@ type InspectionServiceBuildingRow = {
   buildUuid: string
   parkUuid: string
   name: string
+}
+
+type InspectionServiceInspectionRow = {
+  id: string
+  name: string
+  content: string
+  standard: string
+  forcePhoto: string
+  measureRecord: string
 }
 
 const route = useRoute()
@@ -59,6 +69,15 @@ const fieldSections = computed<DetailFieldSection[]>(() => {
             : undefined,
         },
         { key: "template-name", label: "模板名称", value: toText(current.TemplateName, "-") },
+        { key: "contract-end-time", label: "合同到期时间", value: toText(current.ContractEndTime, "-") },
+        {
+          key: "contract-file",
+          label: "合同文件",
+          value: getContractFileLabel(current.ContractFile),
+          linkAction: resolveFileUrl(current.ContractFile)
+            ? { onClick: () => openContractFile(current.ContractFile) }
+            : undefined,
+        },
         { key: "created-at", label: "创建时间", value: toText(current.CreatedAt, "-") },
         { key: "updated-at", label: "更新时间", value: toText(current.UpdatedAt, "-") },
         { key: "remark", label: "备注", value: toText(current.Remark, "-"), truncate: false, valueClass: "leading-6" },
@@ -77,6 +96,29 @@ const fieldSections = computed<DetailFieldSection[]>(() => {
     },
   ]
 })
+
+const inspectionModule = computed<DetailRelationModuleSchema<InspectionServiceInspectionRow>>(() => ({
+  key: "inspection-service-inspections",
+  title: "检测项",
+  count: Array.isArray(detail.value?.Inspections) ? detail.value.Inspections.length : 0,
+  rowKey: "id",
+  columns: [
+    { key: "name", label: "检测项名称", cellClass: "truncate" },
+    { key: "content", label: "检测内容", cellClass: "whitespace-pre-wrap break-words leading-6" },
+    { key: "standard", label: "检测标准", cellClass: "whitespace-pre-wrap break-words leading-6" },
+    { key: "forcePhoto", label: "强制拍照", cellClass: "whitespace-nowrap" },
+    { key: "measureRecord", label: "测量记录", cellClass: "whitespace-nowrap" },
+  ],
+  groups: buildInspectionGroups(detail.value?.Inspections),
+  emptyState: {
+    title: "暂无检测项",
+    description: "当前检测服务还没有配置检测项。",
+    icon: "ri-task-line",
+  },
+  mobileMinWidth: "64rem",
+  columnTemplateMobile: "minmax(10rem,1.1fr) minmax(12rem,1.2fr) minmax(12rem,1.2fr) 5.5rem 5.5rem",
+  columnTemplateDesktop: "minmax(10rem,1.1fr) minmax(12rem,1.2fr) minmax(12rem,1.2fr) 5.5rem 5.5rem",
+}))
 
 const buildingModule = computed<DetailRelationModuleSchema<InspectionServiceBuildingRow>>(() => ({
   key: "inspection-service-buildings",
@@ -153,6 +195,19 @@ function goToEdit() {
   })
 }
 
+function openContractFile(file: unknown) {
+  const fileUrl = resolveFileUrl(file)
+
+  if (!fileUrl) {
+    toast.error("当前检测服务暂无合同文件")
+    return
+  }
+
+  if (typeof window !== "undefined") {
+    window.open(fileUrl, "_blank", "noopener,noreferrer")
+  }
+}
+
 async function loadInspectionServiceDetail(uuid: string) {
   const requestId = ++latestRequestId
 
@@ -220,6 +275,36 @@ function buildParkGroups(builds: InspectionServiceListItem["Builds"]) {
   }))
 }
 
+function buildInspectionGroups(inspections: InspectionServiceListItem["Inspections"]) {
+  if (!Array.isArray(inspections) || !inspections.length) {
+    return []
+  }
+
+  const categoryMap = new Map<string, InspectionServiceInspectionRow[]>()
+
+  inspections.forEach((inspection, index) => {
+    const categoryName = toText(inspection.CategoryName, "未分类")
+    const rows = categoryMap.get(categoryName) ?? []
+
+    rows.push({
+      id: toText(inspection.InspectionUuid || inspection.Uuid, `${categoryName}-${index + 1}`),
+      name: toText(inspection.InspectionName || inspection.Name, `检测项 ${index + 1}`),
+      content: toText(inspection.Content, "-"),
+      standard: toText(inspection.Standard, "-"),
+      forcePhoto: formatInspectionFlag(inspection.IsForcePhoto),
+      measureRecord: formatInspectionFlag(inspection.IsMeasureRecord),
+    })
+
+    categoryMap.set(categoryName, rows)
+  })
+
+  return Array.from(categoryMap.entries()).map(([categoryName, rows]) => ({
+    key: categoryName,
+    title: categoryName,
+    rows,
+  }))
+}
+
 function buildStatusValue(status: unknown): DetailStatusValue {
   const normalizedStatus = typeof status === "number" && Number.isFinite(status) ? String(status) : "-1"
 
@@ -230,8 +315,8 @@ function buildStatusValue(status: unknown): DetailStatusValue {
       kind: "status",
       map: {
         "1": { label: "待签署", tone: "yellow", icon: "clock" },
-        "2": { label: "已签署", tone: "blue", icon: "check" },
-        "3": { label: "进行中", tone: "green", icon: "check" },
+        "2": { label: "进行中", tone: "blue", icon: "clock" },
+        "3": { label: "已逾期", tone: "orange", icon: "alert" },
         "4": { label: "已结单", tone: "gray", icon: "minus" },
       },
       fallback: {
@@ -248,6 +333,53 @@ function buildContactValue(name: string, phone?: string): DetailContactValue {
     kind: "contact",
     name,
     phone,
+  }
+}
+
+function formatInspectionFlag(value: unknown) {
+  if (value === 1 || value === "1" || value === true) {
+    return "是"
+  }
+
+  if (value === 2 || value === "2" || value === false) {
+    return "否"
+  }
+
+  return "-"
+}
+
+function resolveFileUrl(value: unknown) {
+  const normalized = toText(value, "")
+
+  if (!normalized) {
+    return ""
+  }
+
+  if (/^[a-z][a-z\d+.-]*:/i.test(normalized)) {
+    return normalized
+  }
+
+  try {
+    return new URL(normalized, buildApiRequestUrl("/").toString()).toString()
+  } catch {
+    return normalized
+  }
+}
+
+function getContractFileLabel(value: unknown) {
+  const fileUrl = resolveFileUrl(value)
+
+  if (!fileUrl) {
+    return "无合同文件"
+  }
+
+  try {
+    const pathname = new URL(fileUrl).pathname
+    const fileName = decodeURIComponent(pathname.split("/").pop() ?? "").trim()
+
+    return fileName || "查看合同文件"
+  } catch {
+    return "查看合同文件"
   }
 }
 
@@ -299,7 +431,7 @@ function toOptionalText(value: unknown) {
         <DetailRelationSkeleton :two-data-columns="false" :rows-per-group="3" />
       </div>
 
-      <div v-else-if="detail" class="pb-5">
+      <div v-else-if="detail" class="space-y-5 pb-5">
         <DetailRelationModule :schema="buildingModule">
           <template #building-action-cell="{ row }">
             <Button
@@ -313,6 +445,8 @@ function toOptionalText(value: unknown) {
             </Button>
           </template>
         </DetailRelationModule>
+
+        <DetailRelationModule :schema="inspectionModule" />
       </div>
     </template>
   </DetailLayout>
