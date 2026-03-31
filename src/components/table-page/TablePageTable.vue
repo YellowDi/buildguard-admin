@@ -35,6 +35,8 @@ type ActionRowMetric = {
   height: number
 }
 const HORIZONTAL_SCROLL_HINT_MESSAGE = "可按住 Shift + 鼠标滚轮进行横向移动。"
+/** 同一路由在本次浏览器会话内只提示一次，避免布局抖动或重复挂载反复弹出 */
+const HORIZONTAL_SCROLL_HINT_SESSION_PREFIX = "buildguard:table-hscroll-hint:"
 const selectionCheckboxClass = "border-[#B7C4E0] bg-white data-[state=checked]:border-[#2B67F6] data-[state=checked]:bg-[#2B67F6] data-[state=indeterminate]:border-[#2B67F6] data-[state=indeterminate]:bg-[#2B67F6] focus-visible:ring-[#2B67F6]/20"
 
 const props = withDefaults(defineProps<{
@@ -168,6 +170,7 @@ const stickyTableStyle = computed(() => ({
 }))
 const route = useRoute()
 const horizontalScrollHintId = computed(() => `table-page-horizontal-scroll-hint:${route.path}`)
+const prevHorizontalOverflow = ref(false)
 
 let scrollRoot: ScrollRoot | null = null
 let resizeObserver: ResizeObserver | null = null
@@ -181,10 +184,40 @@ function getRowKey(row: Record<string, unknown>, index: number) {
   return typeof value === "string" || typeof value === "number" ? value : index
 }
 
+function hasSeenHorizontalScrollHintThisSession(path: string): boolean {
+  if (typeof sessionStorage === "undefined") {
+    return false
+  }
+
+  try {
+    return sessionStorage.getItem(`${HORIZONTAL_SCROLL_HINT_SESSION_PREFIX}${path}`) === "1"
+  } catch {
+    return false
+  }
+}
+
+function rememberHorizontalScrollHintThisSession(path: string) {
+  if (typeof sessionStorage === "undefined") {
+    return
+  }
+
+  try {
+    sessionStorage.setItem(`${HORIZONTAL_SCROLL_HINT_SESSION_PREFIX}${path}`, "1")
+  } catch {
+    // 隐私模式或配额不足时忽略
+  }
+}
+
 function maybeShowHorizontalScrollHint() {
   if (!horizontalOverflow.value) {
     return
   }
+
+  if (hasSeenHorizontalScrollHintThisSession(route.path)) {
+    return
+  }
+
+  rememberHorizontalScrollHintThisSession(route.path)
 
   toast.info(HORIZONTAL_SCROLL_HINT_MESSAGE, {
     id: horizontalScrollHintId.value,
@@ -921,13 +954,12 @@ watch(() => [props.rows, props.selectedRowKeys] as const, ([rows, selectedKeys])
     focusedRowKey.value = null
   }
 }, { deep: true })
-watch(() => horizontalOverflow.value, overflow => {
-  if (overflow) {
+watch(() => horizontalOverflow.value, (overflow) => {
+  const wasOverflow = prevHorizontalOverflow.value
+  prevHorizontalOverflow.value = overflow
+  if (overflow && !wasOverflow) {
     maybeShowHorizontalScrollHint()
   }
-})
-watch(() => route.path, () => {
-  maybeShowHorizontalScrollHint()
 })
 
 onMounted(() => {
@@ -936,9 +968,6 @@ onMounted(() => {
   window.addEventListener("resize", scheduleStickySync, { passive: true })
   observeStickyLayout()
   scheduleStickySync()
-  void nextTick(() => {
-    maybeShowHorizontalScrollHint()
-  })
 })
 
 onBeforeUnmount(() => {
