@@ -50,6 +50,24 @@ const fieldSections = computed<DetailFieldSection[]>(() => {
     return []
   }
 
+  const addressRow: DetailFieldSection["rows"][number] = {
+    key: "address",
+    label: "地址",
+    value: toText(current.Address, "-"),
+    truncate: false,
+    valueClass: "leading-6",
+    ...(hasValidLatLng(current.Latitude, current.Longitude)
+      ? {
+          suffixAction: {
+            label: "在地图中查看",
+            onClick: () => {
+              mapDialogOpen.value = true
+            },
+          },
+        }
+      : {}),
+  }
+
   return [
     {
       key: "park-info",
@@ -62,7 +80,7 @@ const fieldSections = computed<DetailFieldSection[]>(() => {
         { key: "contact", label: "联系人", value: buildContactValue(toText(current.Contact, "未填写"), toText(current.ContactPhone, "-")) },
         { key: "latitude", label: "纬度", value: toText(current.Latitude, "-") },
         { key: "longitude", label: "经度", value: toText(current.Longitude, "-") },
-        { key: "address", label: "地址", value: toText(current.Address, "-"), truncate: false, valueClass: "leading-6" },
+        addressRow,
       ],
     },
   ]
@@ -247,17 +265,6 @@ function buildContactValue(name: string | null, phone?: string | null): DetailCo
 
       <div v-else-if="park" class="space-y-4">
         <DetailFieldSections :sections="fieldSections" />
-        <Button
-          v-if="hasValidLatLng(park.Latitude, park.Longitude)"
-          type="button"
-          variant="outline"
-          size="sm"
-          class="h-9 w-full sm:w-auto"
-          @click="mapDialogOpen = true"
-        >
-          <i class="ri-map-pin-line mr-1.5 text-base" />
-          在地图中查看
-        </Button>
       </div>
     </template>
 
