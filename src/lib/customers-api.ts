@@ -83,7 +83,6 @@ export type CustomerCreatePayload = {
 export type CustomerUpdatePayload = {
   People: CustomerPrincipalPayload[]
   Business: string
-  Status: number
   Usci: string
   UsciFile: string
   CorpName: string
@@ -91,6 +90,11 @@ export type CustomerUpdatePayload = {
   Invoice: string
   Level: number
   Uuid?: string
+}
+
+export type UpdateCustomerStatusPayload = {
+  Uuid?: string
+  Status?: number
 }
 
 export type CustomerCreateResult = {
@@ -113,6 +117,7 @@ const CUSTOMERS_API_URL = buildApiUrl(API_PATHS.customersList)
 const CUSTOMER_CREATE_API_URL = buildApiUrl(API_PATHS.customerCreate)
 const CUSTOMER_DETAIL_API_URL = buildApiUrl(API_PATHS.customerDetail)
 const CUSTOMER_UPDATE_API_URL = buildApiUrl(API_PATHS.customerUpdate)
+const CUSTOMER_STATUS_UPDATE_API_URL = buildApiUrl(API_PATHS.customerStatusUpdate)
 const CUSTOMER_DELETE_API_URL = buildApiUrl(API_PATHS.customerDelete)
 const CUSTOMERS_LOAD_ERROR_MESSAGE = "客户列表加载失败，请稍后重试。"
 const CUSTOMER_CREATE_ERROR_MESSAGE = "客户创建失败，请稍后重试。"
@@ -184,7 +189,6 @@ export async function updateCustomer(payload: CustomerUpdatePayload): Promise<Cu
     Uuid: getRequiredString(payload.Uuid, "Uuid"),
     People: getRequiredPrincipals(payload.People),
     Business: getUpdateString(payload.Business),
-    Status: getRequiredNumber(payload.Status, "Status"),
     Usci: getUpdateString(payload.Usci),
     UsciFile: getUpdateString(payload.UsciFile),
     CorpName: getUpdateString(payload.CorpName),
@@ -209,6 +213,28 @@ export async function updateCustomer(payload: CustomerUpdatePayload): Promise<Cu
   assertApiSuccess(responseBody, CUSTOMER_UPDATE_ERROR_MESSAGE)
 
   return extractCreateResult(responseBody)
+}
+
+export async function updateCustomerStatus(payload: UpdateCustomerStatusPayload) {
+  const normalizedPayload = {
+    Uuid: getRequiredString(payload.Uuid, "Uuid"),
+    Status: getRequiredNumber(payload.Status, "Status"),
+  }
+
+  const response = await fetch(CUSTOMER_STATUS_UPDATE_API_URL, {
+    method: "POST",
+    headers: buildApiHeaders({
+      "Content-Type": "application/json",
+    }),
+    body: JSON.stringify(normalizedPayload),
+  })
+  const responseBody = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responseBody, CUSTOMER_UPDATE_ERROR_MESSAGE)
+  }
+
+  assertApiSuccess(responseBody, CUSTOMER_UPDATE_ERROR_MESSAGE)
 }
 
 export async function fetchCustomerDetail(payload: CustomerDetailPayload): Promise<CustomerDetailResult> {

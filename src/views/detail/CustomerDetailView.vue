@@ -532,6 +532,11 @@ const parkBuildingAccordion = computed(() => ({
   title: "园区 / 建筑列表概览",
   count: parkBuildingGroups.value.length,
   emptyText: "暂无园区和建筑数据。",
+  emptyState: {
+    title: "暂无园区和建筑数据",
+    description: "当前客户下暂无可展示的园区和建筑。",
+    icon: "ri-building-2-line",
+  },
   items: parkBuildingGroups.value,
 }))
 
@@ -2463,14 +2468,22 @@ function resolveContactRole(isMain: unknown, index: number) {
   return index === 0 ? "责任人" : "协同联系人"
 }
 
+function hasPrincipalContent(person: CustomerDetailPerson) {
+  const name = typeof person.Name === "string" ? person.Name.trim() : ""
+  const phone = typeof person.Phone === "string" ? person.Phone.trim() : ""
+  return Boolean(name || phone)
+}
+
 function buildContactFieldRows(people: CustomerDetailResult["People"]) {
-  if (!Array.isArray(people) || !people.length) {
+  const filled = Array.isArray(people) ? people.filter(hasPrincipalContent) : []
+
+  if (!filled.length) {
     return [
       { key: "contact-empty", label: "联系人", value: "未填写" },
     ]
   }
 
-  return people.map((person, index) => createContactFieldRow(person, index))
+  return filled.map((person, index) => createContactFieldRow(person, index))
 }
 
 function createContactFieldRow(person: CustomerDetailPerson, index: number) {
@@ -3473,7 +3486,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
 
           <CustomerDetailContentLoading v-if="loading || relationsLoading" variant="basic-info-secondary" />
 
-          <template v-else-if="customer && parkBuildingGroups.length">
+          <template v-else-if="customer">
             <DetailAccordionModule :schema="parkBuildingAccordion">
               <template #item-actions="{ item }">
                 <div class="flex items-center gap-2">
@@ -3524,13 +3537,6 @@ function toDisplayText(value: unknown, fallback = "未填写") {
               </template>
             </DetailAccordionModule>
           </template>
-
-          <div
-            v-else-if="customer"
-            class="rounded-lg border border-border/70 px-4 py-5 text-sm text-muted-foreground"
-          >
-            暂无园区和建筑数据。
-          </div>
 
           <div v-if="customer" class="my-5 h-px bg-border/80" />
 

@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { createCustomer, fetchCustomerDetail, updateCustomer, type CustomerDetailResult } from "@/lib/customers-api"
+import { createCustomer, fetchCustomerDetail, updateCustomer, updateCustomerStatus, type CustomerDetailResult } from "@/lib/customers-api"
 import { handleApiError } from "@/lib/api-errors"
 
 type CustomerFormState = {
@@ -270,11 +270,11 @@ async function handleSubmit() {
     }
 
     if (isEditMode.value) {
+      const nextCustomerUuid = editCustomerUuid.value
       const result = await updateCustomer({
-        Uuid: editCustomerUuid.value,
+        Uuid: nextCustomerUuid,
         People: people,
         Business: normalizeText(form.business),
-        Status: getRequiredInteger(form.status),
         Usci: normalizeText(form.usci),
         UsciFile: normalizeText(form.usciFile),
         CorpName: normalizeText(form.corpName),
@@ -283,10 +283,15 @@ async function handleSubmit() {
         Level: getRequiredInteger(form.level),
       })
 
-      const refreshedCustomer = await fetchCustomerDetail({ Uuid: editCustomerUuid.value })
+      await updateCustomerStatus({
+        Uuid: result.Uuid || nextCustomerUuid,
+        Status: getRequiredInteger(form.status),
+      })
 
-      if (!didCustomerUpdatePersist(refreshedCustomer, payload, people)) {
-        throw new Error("客户资料提交成功，但刷新后未发现更新结果。请核对 /bqi/customer/update 的字段要求。")
+      const refreshedCustomer = await fetchCustomerDetail({ Uuid: result.Uuid || nextCustomerUuid })
+
+      if (!didCustomerUpdatePersist(refreshedCustomer, payload, people, getRequiredInteger(form.status))) {
+        throw new Error("客户资料提交成功，但刷新后未发现更新结果。请核对 /bqi/customer/update 与 /bqi/customer/status/update 的字段要求。")
       }
 
       toast.success("客户信息已更新", {
@@ -502,11 +507,26 @@ function buildPrincipalsFromDetail(detail: CustomerDetailResult) {
     return [createPrincipal(1, true)]
   }
 
-  return detail.People.map((person, index) => ({
+  const filled = detail.People.filter(
+    person => normalizeText(person.Name) || normalizeText(person.Phone),
+  ).map((person, index) => ({
     id: index + 1,
     name: normalizeText(person.Name),
     phone: normalizeText(person.Phone),
     isMain: Number(person.IsMain) === 1,
+  }))
+
+  if (!filled.length) {
+    return [createPrincipal(1, true)]
+  }
+
+  const mainIndex = filled.findIndex(principal => principal.isMain)
+  const resolvedMain = mainIndex >= 0 ? mainIndex : 0
+
+  return filled.map((principal, index) => ({
+    ...principal,
+    id: index + 1,
+    isMain: index === resolvedMain,
   }))
 }
 
@@ -515,7 +535,6 @@ function didCustomerUpdatePersist(
   payload: {
     CorpName?: string
     Business?: string
-    Status?: number
     Usci?: string
     UsciFile?: string
     Address?: string
@@ -523,6 +542,7 @@ function didCustomerUpdatePersist(
     Level?: number
   },
   people: Array<{ Name: string; Phone: string; IsMain: number }>,
+  status?: number,
 ) {
   const expectedPeople = normalizePeopleForCompare(people)
   const actualPeople = normalizePeopleForCompare(
@@ -535,7 +555,7 @@ function didCustomerUpdatePersist(
 
   return normalizeText(detail.CorpName) === normalizeText(payload.CorpName)
     && normalizeText(detail.Business) === normalizeText(payload.Business)
-    && normalizeText(detail.Status) === normalizeText(payload.Status)
+    && normalizeText(detail.Status) === normalizeText(status)
     && normalizeText(detail.Usci) === normalizeText(payload.Usci)
     && normalizeText(detail.UsciFile) === normalizeText(payload.UsciFile)
     && normalizeText(detail.Address) === normalizeText(payload.Address)

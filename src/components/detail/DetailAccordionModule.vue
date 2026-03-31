@@ -3,6 +3,7 @@ import { computed, useSlots } from "vue"
 
 import { Badge } from "@/components/ui/badge"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 
 type AccordionColumn = {
   key: string
@@ -24,6 +25,11 @@ const props = withDefaults(defineProps<{
     title: string
     count?: number
     emptyText?: string
+    emptyState?: {
+      title?: string
+      description?: string
+      icon?: string
+    }
     columns?: AccordionColumn[]
     items: AccordionItem[]
   }
@@ -103,9 +109,24 @@ const hasExpandedContent = computed(() => Boolean(slots["expanded-content"]))
 
     <div
       v-else
-      class="py-4 text-sm text-muted-foreground"
+      class="flex min-h-[min(160px,30vh)] w-full min-w-0 flex-col items-center justify-center px-0 py-4"
     >
-      {{ schema.emptyText }}
+      <Empty class="w-full max-w-md flex-none border-0 bg-transparent shadow-none !p-6 md:!p-8">
+        <EmptyHeader class="max-w-md">
+          <EmptyMedia variant="icon">
+            <i
+              :class="[
+                schema.emptyState?.icon ?? 'ri-inbox-line',
+                'text-[18px]',
+              ]"
+            />
+          </EmptyMedia>
+          <EmptyTitle>{{ schema.emptyState?.title ?? "暂无数据" }}</EmptyTitle>
+          <EmptyDescription>
+            {{ schema.emptyState?.description ?? schema.emptyText ?? "当前暂无可展示的数据。" }}
+          </EmptyDescription>
+        </EmptyHeader>
+      </Empty>
     </div>
   </section>
 </template>
