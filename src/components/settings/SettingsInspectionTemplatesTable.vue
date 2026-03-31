@@ -323,8 +323,7 @@ async function openCreateDialog() {
   if (!inspectionItemOptions.value.length) {
     await loadInspectionItemOptions()
   }
-
-  createExpandedCategoryKey.value = groupedInspectionItemOptions.value[0]?.key ?? ""
+  createExpandedCategoryKey.value = ""
 }
 
 async function openEditDialog(row: TemplateRow) {
@@ -346,7 +345,7 @@ async function openEditDialog(row: TemplateRow) {
     createSelectedInspectionUuids.value = (Array.isArray(detail.Inspections) ? detail.Inspections : [])
       .map(inspection => toText(inspection.InspectionUuid))
       .filter(Boolean)
-    createExpandedCategoryKey.value = groupedInspectionItemOptions.value[0]?.key ?? ""
+    createExpandedCategoryKey.value = ""
   } catch (error) {
     createErrorMessage.value = handleApiError(error, {
       title: "模板详情加载失败",
@@ -373,15 +372,6 @@ watch(createItemSearchQuery, () => {
   if (!createDialogOpen.value) {
     return
   }
-
-  const groups = groupedInspectionItemOptions.value
-  if (!groups.length) {
-    createExpandedCategoryKey.value = ""
-    return
-  }
-
-  const hasCurrent = groups.some(group => group.key === createExpandedCategoryKey.value)
-  createExpandedCategoryKey.value = hasCurrent ? createExpandedCategoryKey.value : groups[0].key
 })
 
 function isInspectionSelected(uuid: string) {
