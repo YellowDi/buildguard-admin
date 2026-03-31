@@ -7,6 +7,16 @@ import {
   AlertDescription,
   AlertTitle,
 } from "@/components/ui/alert"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import {
@@ -27,7 +37,10 @@ import type { TableColumn, TablePageEmptyState } from "@/components/table-page/t
 import { handleApiError } from "@/lib/api-errors"
 import {
   createInspectionServiceTemplate,
+  deleteInspectionServiceTemplate,
   fetchInspectionServiceTemplates,
+  getInspectionServiceTemplateDetail,
+  updateInspectionServiceTemplate,
   type InspectionServiceTemplateRecord,
 } from "@/lib/inspection-service-templates-api"
 import { fetchInspectionItems, type InspectionItemRecord } from "@/lib/inspection-items-api"
@@ -70,6 +83,10 @@ const searchQuery = ref("")
 const createDialogOpen = ref(false)
 const createSubmitting = ref(false)
 const createLoading = ref(false)
+const editDetailLoading = ref(false)
+const deleteSubmitting = ref(false)
+const deleteConfirmOpen = ref(false)
+const editingTemplateUuid = ref("")
 const createErrorMessage = ref("")
 const createTemplateName = ref("")
 const createItemSearchQuery = ref("")
@@ -97,6 +114,13 @@ const columns: TableColumn[] = [
     filterType: "text",
     tone: "muted",
     width: "fill",
+  },
+  {
+    key: "actions",
+    label: "",
+    filterType: "none",
+    slot: "cell-actions",
+    cellClass: "text-right",
   },
 ]
 
@@ -259,7 +283,7 @@ async function refreshData() {
 }
 
 async function openCreateDialog() {
-  resetCreateDialog()
+  closeDialog()
   createDialogOpen.value = true
 
   if (!inspectionItemOptions.value.length) {
@@ -267,11 +291,44 @@ async function openCreateDialog() {
   }
 }
 
+async function openEditDialog(row: TemplateRow) {
+  closeDialog()
+  editingTemplateUuid.value = row.uuid
+  createDialogOpen.value = true
+  editDetailLoading.value = true
+
+  try {
+    if (!inspectionItemOptions.value.length) {
+      await loadInspectionItemOptions()
+    }
+
+    const detail = await getInspectionServiceTemplateDetail({
+      Uuid: row.uuid,
+    })
+
+    createTemplateName.value = toText(detail.Name, row.name)
+    createSelectedInspectionUuids.value = (Array.isArray(detail.Inspections) ? detail.Inspections : [])
+      .map(inspection => toText(inspection.InspectionUuid))
+      .filter(Boolean)
+  } catch (error) {
+    createErrorMessage.value = handleApiError(error, {
+      title: "模板详情加载失败",
+      fallback: "检测模板详情加载失败，请稍后重试。",
+      mode: "silent",
+    })
+  } finally {
+    editDetailLoading.value = false
+  }
+}
+
 function resetCreateDialog() {
+  editingTemplateUuid.value = ""
   createTemplateName.value = ""
   createItemSearchQuery.value = ""
   createSelectedInspectionUuids.value = []
   createErrorMessage.value = ""
+  editDetailLoading.value = false
+  deleteConfirmOpen.value = false
 }
 
 function isInspectionSelected(uuid: string) {
@@ -291,8 +348,14 @@ function updateInspectionSelected(uuid: string, checked: boolean | "indeterminat
   createSelectedInspectionUuids.value = createSelectedInspectionUuids.value.filter(item => item !== uuid)
 }
 
+function closeDialog() {
+  createDialogOpen.value = false
+  resetCreateDialog()
+}
+
 async function submitCreate() {
   const name = createTemplateName.value.trim()
+  const isEditing = Boolean(editingTemplateUuid.value)
 
   if (!name) {
     toast.error("请填写模板名称")
@@ -307,23 +370,61 @@ async function submitCreate() {
   createSubmitting.value = true
 
   try {
-    await createInspectionServiceTemplate({
-      Name: name,
-      InspectionUuids: createSelectedInspectionUuids.value,
-    })
+    if (editingTemplateUuid.value) {
+      await updateInspectionServiceTemplate({
+        Uuid: editingTemplateUuid.value,
+        Name: name,
+        InspectionUuids: createSelectedInspectionUuids.value,
+      })
+    } else {
+      await createInspectionServiceTemplate({
+        Name: name,
+        InspectionUuids: createSelectedInspectionUuids.value,
+      })
+    }
 
-    createDialogOpen.value = false
+    closeDialog()
     await loadTemplates()
-    toast.success("模板已创建", {
+    toast.success(isEditing ? "模板已更新" : "模板已创建", {
       description: `${name} 已加入当前列表。`,
     })
   } catch (error) {
     handleApiError(error, {
-      title: "模板创建失败",
-      fallback: "检测模板创建失败，请稍后重试。",
+      title: isEditing ? "模板更新失败" : "模板创建失败",
+      fallback: isEditing ? "检测模板更新失败，请稍后重试。" : "检测模板创建失败，请稍后重试。",
     })
   } finally {
     createSubmitting.value = false
+  }
+}
+
+function promptDelete() {
+  deleteConfirmOpen.value = true
+}
+
+async function confirmDelete() {
+  if (!editingTemplateUuid.value || deleteSubmitting.value) {
+    return
+  }
+
+  deleteSubmitting.value = true
+
+  try {
+    await deleteInspectionServiceTemplate({
+      Uuid: editingTemplateUuid.value,
+    })
+
+    deleteConfirmOpen.value = false
+    closeDialog()
+    await loadTemplates()
+    toast.success("模板已删除")
+  } catch (error) {
+    handleApiError(error, {
+      title: "模板删除失败",
+      fallback: "检测模板删除失败，请稍后重试。",
+    })
+  } finally {
+    deleteSubmitting.value = false
   }
 }
 
@@ -453,26 +554,38 @@ defineExpose({
       row-key="id"
       :table-class="SETTINGS_TABLE_PAGE_CLASS"
       :empty-state="tableEmptyState"
-    />
+    >
+      <template #cell-actions="{ row }">
+        <Button
+          variant="outline"
+          size="sm"
+          class="ml-auto h-8 gap-1 rounded-md px-2.5 text-[13px]"
+          @click="openEditDialog(row as TemplateRow)"
+        >
+          <i class="ri-edit-line text-base" />
+          <span>编辑</span>
+        </Button>
+      </template>
+    </TablePageTable>
 
-    <Dialog :open="createDialogOpen" @update:open="($event ? (createDialogOpen = true) : (createDialogOpen = false))">
+    <Dialog :open="createDialogOpen" @update:open="($event ? (createDialogOpen = true) : closeDialog())">
       <DialogContent class="max-w-4xl gap-0 p-0">
         <DialogHeader class="border-b border-border/60 px-6 pt-6 pb-4">
-          <DialogTitle>添加检测模板</DialogTitle>
+          <DialogTitle>{{ editingTemplateUuid ? "编辑检测模板" : "添加检测模板" }}</DialogTitle>
           <DialogDescription>
-            输入模板名称后，从检测项列表中选择多条检测项并保存。
+            {{ editingTemplateUuid ? "已根据模板详情自动回填内容，可直接修改并保存。" : "输入模板名称后，从检测项列表中选择多条检测项并保存。" }}
           </DialogDescription>
         </DialogHeader>
 
         <div class="flex max-h-[75vh] flex-col overflow-hidden">
-          <div class="space-y-4 border-b border-border/60 px-6 pt-0 pb-3">
+          <div class="space-y-4 border-b border-border/60 px-6 pt-4 pb-3">
             <div class="space-y-2">
               <label class="text-sm font-medium text-foreground" for="settings-inspection-template-name">模板名称</label>
               <Input
                 id="settings-inspection-template-name"
                 v-model="createTemplateName"
                 placeholder="请输入模板名称"
-                :disabled="createSubmitting"
+                :disabled="createSubmitting || editDetailLoading"
               />
             </div>
             <div class="space-y-2">
@@ -481,7 +594,7 @@ defineExpose({
                 id="settings-inspection-template-search"
                 v-model="createItemSearchQuery"
                 placeholder="搜索检测项名称、分类"
-                :disabled="createLoading || createSubmitting"
+                :disabled="createLoading || createSubmitting || editDetailLoading"
               />
               <p class="text-xs text-muted-foreground">
                 已选择 {{ createSelectedInspectionUuids.length }} 个检测项
@@ -489,7 +602,11 @@ defineExpose({
             </div>
           </div>
 
-          <div class="min-h-0 flex-1 overflow-y-auto px-6 py-6">
+          <div class="min-h-0 flex-1 overflow-y-auto bg-[#FAFAFA] px-6 py-6">
+            <div v-if="editDetailLoading" class="space-y-3">
+              <div v-for="slot in 4" :key="`template-detail-skeleton-${slot}`" class="h-20 rounded-2xl border border-border/60 bg-muted/15" />
+            </div>
+
             <div v-if="createErrorMessage" class="rounded-xl border border-destructive/30 bg-destructive/5 p-4">
               <p class="text-sm font-medium text-destructive">
                 检测项加载失败
@@ -516,7 +633,7 @@ defineExpose({
               >
                 <Checkbox
                   :model-value="isInspectionSelected(item.uuid)"
-                  :disabled="createSubmitting"
+                  :disabled="createSubmitting || editDetailLoading"
                   class="mt-0.5"
                   @update:model-value="updateInspectionSelected(item.uuid, $event)"
                 />
@@ -533,15 +650,50 @@ defineExpose({
           </div>
         </div>
 
-        <DialogFooter class="border-t border-border/60 px-6 py-4">
-          <Button type="button" variant="outline" :disabled="createSubmitting" @click="createDialogOpen = false">
-            取消
+        <DialogFooter class="border-t border-border/60 px-6 py-4 sm:justify-between">
+          <Button
+            v-if="editingTemplateUuid"
+            type="button"
+            variant="outline"
+            class="border-destructive/30 bg-background font-medium text-destructive shadow-none hover:bg-destructive/5 hover:text-destructive"
+            :disabled="createSubmitting || deleteSubmitting || editDetailLoading"
+            @click="promptDelete"
+          >
+            {{ deleteSubmitting ? "删除中..." : "删除检测项模板" }}
           </Button>
-          <Button type="button" :disabled="createSubmitting || createLoading" @click="submitCreate">
-            {{ createSubmitting ? "创建中..." : "创建模板" }}
-          </Button>
+          <div class="flex items-center justify-end gap-2">
+            <Button type="button" variant="outline" :disabled="createSubmitting || deleteSubmitting" @click="closeDialog">
+              取消
+            </Button>
+            <Button type="button" :disabled="createSubmitting || createLoading || editDetailLoading || deleteSubmitting" @click="submitCreate">
+              {{ createSubmitting ? (editingTemplateUuid ? "保存中..." : "创建中...") : (editingTemplateUuid ? "保存" : "创建模板") }}
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    <AlertDialog :open="deleteConfirmOpen" @update:open="deleteConfirmOpen = $event">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>确认删除检测项模板？</AlertDialogTitle>
+          <AlertDialogDescription>
+            该操作会删除当前模板，且不可撤销。确认后将立即提交删除请求。
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel :disabled="deleteSubmitting">
+            取消
+          </AlertDialogCancel>
+          <AlertDialogAction
+            class="bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:bg-destructive/60 dark:focus-visible:ring-destructive/40"
+            :disabled="deleteSubmitting"
+            @click="confirmDelete"
+          >
+            {{ deleteSubmitting ? "删除中..." : "确认删除" }}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   </section>
 </template>

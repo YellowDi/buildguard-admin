@@ -1,5 +1,5 @@
 import { assertApiSuccess, createHttpError, readResponseBody } from "@/lib/api-errors"
-import { API_PATHS, buildApiHeaders, buildApiUrl } from "@/lib/api"
+import { API_PATHS, buildApiHeaders, buildApiRequestUrl, buildApiUrl } from "@/lib/api"
 
 type InspectionServiceTemplatesListEnvelope = {
   Total?: number
@@ -42,6 +42,20 @@ export type CreateInspectionServiceTemplatePayload = {
   [property: string]: unknown
 }
 
+export type UpdateInspectionServiceTemplatePayload = CreateInspectionServiceTemplatePayload & {
+  Uuid?: string
+}
+
+export type InspectionServiceTemplateDetailPayload = {
+  Uuid?: string
+  [property: string]: unknown
+}
+
+export type DeleteInspectionServiceTemplatePayload = {
+  Uuid?: string
+  [property: string]: unknown
+}
+
 export type CreateInspectionServiceTemplateResult = {
   Id?: number
   Uuid?: string
@@ -51,8 +65,12 @@ export type CreateInspectionServiceTemplateResult = {
 
 const INSPECTION_SERVICE_TEMPLATES_API_URL = buildApiUrl(API_PATHS.inspectionServiceTemplatesList)
 const INSPECTION_SERVICE_TEMPLATE_CREATE_API_URL = buildApiUrl(API_PATHS.inspectionServiceTemplateCreate)
+const INSPECTION_SERVICE_TEMPLATE_UPDATE_API_URL = buildApiUrl(API_PATHS.inspectionServiceTemplateUpdate)
 const INSPECTION_SERVICE_TEMPLATES_LOAD_ERROR_MESSAGE = "检测服务模板列表加载失败，请稍后重试。"
+const INSPECTION_SERVICE_TEMPLATE_DETAIL_ERROR_MESSAGE = "检测服务模板详情加载失败，请稍后重试。"
 const INSPECTION_SERVICE_TEMPLATE_CREATE_ERROR_MESSAGE = "检测服务模板创建失败，请稍后重试。"
+const INSPECTION_SERVICE_TEMPLATE_UPDATE_ERROR_MESSAGE = "检测服务模板更新失败，请稍后重试。"
+const INSPECTION_SERVICE_TEMPLATE_DELETE_ERROR_MESSAGE = "检测服务模板删除失败，请稍后重试。"
 
 export async function fetchInspectionServiceTemplates(
   payload: ListInspectionServiceTemplatesPayload = {},
@@ -110,6 +128,73 @@ export async function createInspectionServiceTemplate(
   assertApiSuccess(responsePayload, INSPECTION_SERVICE_TEMPLATE_CREATE_ERROR_MESSAGE)
 
   return extractCreateResult(responsePayload)
+}
+
+export async function getInspectionServiceTemplateDetail(
+  payload: InspectionServiceTemplateDetailPayload,
+): Promise<InspectionServiceTemplateRecord> {
+  const url = buildApiRequestUrl(API_PATHS.inspectionServiceTemplateDetail)
+  url.searchParams.set("Uuid", getRequiredString(payload.Uuid, "Uuid"))
+
+  const response = await fetch(url.toString(), {
+    method: "GET",
+    headers: buildApiHeaders(),
+  })
+  const responsePayload = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responsePayload, INSPECTION_SERVICE_TEMPLATE_DETAIL_ERROR_MESSAGE)
+  }
+
+  assertApiSuccess(responsePayload, INSPECTION_SERVICE_TEMPLATE_DETAIL_ERROR_MESSAGE)
+
+  return normalizeTemplateRecord(extractDetailRecord(responsePayload))
+}
+
+export async function updateInspectionServiceTemplate(
+  payload: UpdateInspectionServiceTemplatePayload,
+): Promise<CreateInspectionServiceTemplateResult> {
+  const normalizedPayload = {
+    Uuid: getRequiredString(payload.Uuid, "Uuid"),
+    Name: getRequiredString(payload.Name, "Name"),
+    InspectionUuids: getRequiredStringArray(payload.InspectionUuids, "InspectionUuids"),
+  }
+
+  const response = await fetch(INSPECTION_SERVICE_TEMPLATE_UPDATE_API_URL, {
+    method: "POST",
+    headers: buildApiHeaders({
+      "Content-Type": "application/json",
+    }),
+    body: JSON.stringify(normalizedPayload),
+  })
+  const responsePayload = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responsePayload, INSPECTION_SERVICE_TEMPLATE_UPDATE_ERROR_MESSAGE)
+  }
+
+  assertApiSuccess(responsePayload, INSPECTION_SERVICE_TEMPLATE_UPDATE_ERROR_MESSAGE)
+
+  return extractCreateResult(responsePayload)
+}
+
+export async function deleteInspectionServiceTemplate(
+  payload: DeleteInspectionServiceTemplatePayload,
+) {
+  const url = buildApiRequestUrl(API_PATHS.inspectionServiceTemplateDelete)
+  url.searchParams.set("Uuid", getRequiredString(payload.Uuid, "Uuid"))
+
+  const response = await fetch(url.toString(), {
+    method: "GET",
+    headers: buildApiHeaders(),
+  })
+  const responsePayload = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responsePayload, INSPECTION_SERVICE_TEMPLATE_DELETE_ERROR_MESSAGE)
+  }
+
+  assertApiSuccess(responsePayload, INSPECTION_SERVICE_TEMPLATE_DELETE_ERROR_MESSAGE)
 }
 
 function extractList(payload: InspectionServiceTemplatesListEnvelope | unknown[]) {
@@ -221,6 +306,17 @@ function extractCreateResult(payload: unknown): CreateInspectionServiceTemplateR
     Uuid: getOptionalString(source.Uuid),
     Name: getOptionalString(source.Name),
   }
+}
+
+function extractDetailRecord(payload: unknown) {
+  const directRecord = asRecord(payload)
+
+  if (!directRecord) {
+    return {}
+  }
+
+  const nestedRecord = asRecord(directRecord.data)
+  return nestedRecord ?? directRecord
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {
