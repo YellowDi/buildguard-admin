@@ -3,7 +3,7 @@ import { computed, onUnmounted, ref, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { toast } from "vue-sonner"
 
-import type { DetailFieldSection, DetailStatusValue } from "@/components/detail/types"
+import type { DetailFieldSection } from "@/components/detail/types"
 import DetailFieldSections from "@/components/detail/DetailFieldSections.vue"
 import DetailFieldsSkeleton from "@/components/loading/DetailFieldsSkeleton.vue"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -56,14 +56,6 @@ const fieldSections = computed<DetailFieldSection[]>(() => {
         { key: "next-time", label: "下次执行时间", value: toText(current.NextTime, "-") },
         { key: "lastest-time", label: "最近执行时间", value: toText(current.LastestTime, "-") },
         { key: "lastest-order-no", label: "最近执行订单号", value: toText(current.LastestOrderNo, "-") },
-      ],
-    },
-    {
-      key: "inspection-plan-meta",
-      title: "状态信息",
-      rows: [
-        { key: "plan-status", label: "计划状态", value: buildPlanStatusValue(current.PlanStatus) },
-        { key: "enable-status", label: "启用状态", value: buildEnableStatusValue(current.Status) },
         { key: "creator", label: "创建人", value: toText(current.Creator, "-") },
         { key: "created-at", label: "创建时间", value: toText(current.CreatedAt, "-") },
       ],
@@ -186,49 +178,6 @@ function formatDayValue(value: unknown) {
   return normalized === null ? "-" : `${normalized}天`
 }
 
-function buildPlanStatusValue(value: unknown): DetailStatusValue {
-  const normalized = toText(value, "-")
-
-  return {
-    kind: "status",
-    value: normalized,
-    renderer: {
-      kind: "status",
-      map: {
-        未开始: { tone: "gray", icon: "dot" },
-        进行中: { tone: "green", icon: "clock" },
-        待审核: { tone: "orange", icon: "clock" },
-        已暂停: { tone: "gray", icon: "minus" },
-        已完成: { tone: "green", icon: "check" },
-      },
-      fallback: {
-        tone: "gray",
-        icon: "dot",
-      },
-    },
-  }
-}
-
-function buildEnableStatusValue(value: unknown): DetailStatusValue {
-  const normalized = toFiniteNumber(value)
-  const status = normalized === 1 ? "启用" : normalized === 2 ? "禁用" : "-"
-
-  return {
-    kind: "status",
-    value: status,
-    renderer: {
-      kind: "status",
-      map: {
-        启用: { tone: "green", icon: "check" },
-        禁用: { tone: "gray", icon: "minus" },
-      },
-      fallback: {
-        tone: "gray",
-        icon: "minus",
-      },
-    },
-  }
-}
 </script>
 
 <template>
