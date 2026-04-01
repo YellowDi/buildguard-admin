@@ -116,91 +116,6 @@ const schema: TablePageSchema<InspectionPlanRecord> = {
       sort: true,
     },
     {
-      key: "cycleDays",
-      label: "执行频率",
-      filterType: "number",
-      variant: "metric",
-      format: "numeric",
-      cellRenderer: {
-        kind: "metric-unit",
-        unit: "天",
-      },
-      filter: {
-        type: "number",
-        defaultVisible: true,
-        placeholder: "输入执行频率",
-      },
-      sort: {
-        kind: "metric",
-      },
-    },
-    {
-      key: "nextExecutionAt",
-      label: "下次执行时间",
-      filterType: "time",
-      slot: "cell-nextExecutionAt",
-      format: "numeric",
-      filter: {
-        type: "date",
-        defaultVisible: true,
-        value: row => extractDatePart(row.nextExecutionAt),
-      },
-      sort: true,
-    },
-    {
-      key: "firstExecutionAt",
-      label: "首次执行时间",
-      filterType: "time",
-      format: "numeric",
-      filter: {
-        type: "date",
-        value: row => extractDatePart(row.firstExecutionAt),
-      },
-      sort: true,
-    },
-    {
-      key: "latestExecutionAt",
-      label: "最近执行时间",
-      filterType: "time",
-      format: "numeric",
-      filter: {
-        type: "date",
-        value: row => extractDatePart(row.latestExecutionAt),
-      },
-      sort: true,
-    },
-    {
-      key: "latestOrderNo",
-      label: "最近执行订单号",
-      filterType: "text",
-      filter: {
-        type: "text",
-        placeholder: "输入最近执行订单号",
-      },
-      sort: true,
-    },
-    {
-      key: "creator",
-      label: "创建人",
-      filterType: "text",
-      filter: {
-        type: "text",
-        placeholder: "输入创建人",
-      },
-      sort: true,
-    },
-    {
-      key: "createdAt",
-      label: "创建时间",
-      filterType: "time",
-      format: "numeric",
-      filter: {
-        type: "date",
-        value: row => extractDatePart(row.createdAt),
-      },
-      sort: true,
-    },
-    {
       key: "planStatus",
       label: "计划状态",
       filterType: "tag",
@@ -227,6 +142,91 @@ const schema: TablePageSchema<InspectionPlanRecord> = {
       filter: {
         type: "tag",
         defaultVisible: true,
+      },
+      sort: true,
+    },
+    {
+      key: "nextExecutionAt",
+      label: "下次执行时间",
+      filterType: "time",
+      slot: "cell-nextExecutionAt",
+      format: "numeric",
+      filter: {
+        type: "date",
+        defaultVisible: true,
+        value: row => extractDatePart(row.nextExecutionAt),
+      },
+      sort: true,
+    },
+    {
+      key: "cycleDays",
+      label: "执行频率",
+      filterType: "number",
+      variant: "metric",
+      format: "numeric",
+      cellRenderer: {
+        kind: "metric-unit",
+        unit: "天",
+      },
+      filter: {
+        type: "number",
+        defaultVisible: true,
+        placeholder: "输入执行频率",
+      },
+      sort: {
+        kind: "metric",
+      },
+    },
+    {
+      key: "latestExecutionAt",
+      label: "最近执行时间",
+      filterType: "time",
+      format: "numeric",
+      filter: {
+        type: "date",
+        value: row => extractDatePart(row.latestExecutionAt),
+      },
+      sort: true,
+    },
+    {
+      key: "latestOrderNo",
+      label: "最近执行订单号",
+      filterType: "text",
+      filter: {
+        type: "text",
+        placeholder: "输入最近执行订单号",
+      },
+      sort: true,
+    },
+    {
+      key: "firstExecutionAt",
+      label: "首次执行时间",
+      filterType: "time",
+      format: "numeric",
+      filter: {
+        type: "date",
+        value: row => extractDatePart(row.firstExecutionAt),
+      },
+      sort: true,
+    },
+    {
+      key: "creator",
+      label: "创建人",
+      filterType: "text",
+      filter: {
+        type: "text",
+        placeholder: "输入创建人",
+      },
+      sort: true,
+    },
+    {
+      key: "createdAt",
+      label: "创建时间",
+      filterType: "time",
+      format: "numeric",
+      filter: {
+        type: "date",
+        value: row => extractDatePart(row.createdAt),
       },
       sort: true,
     },
