@@ -131,6 +131,11 @@ const schema: TablePageSchema<WorkOrderRecord> = {
       ]
     : [
         {
+          key: "assign",
+          label: "指派",
+          onClick: row => handleAssign(row as WorkOrderRecord),
+        },
+        {
           key: "view-detail",
           label: "查看详情",
           onClick: row => handleViewDetail(row as WorkOrderRecord),

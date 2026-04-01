@@ -35,6 +35,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import CustomerDetailContentLoading from "@/components/loading/CustomerDetailContentLoading.vue"
 import DetailFieldsSkeleton from "@/components/loading/DetailFieldsSkeleton.vue"
 import TopTabSwitch from "@/components/layout/TopTabSwitch.vue"
@@ -67,6 +69,7 @@ import { detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
 import { useDetailRouteTab } from "@/composables/useDetailRouteTab"
 import DetailLayout from "@/layouts/DetailLayout.vue"
 import { handleApiError } from "@/lib/api-errors"
+import { fetchMembers } from "@/lib/members-api"
 import { hasValidLatLng } from "@/lib/map-coordinates"
 import { averageBuildingScoresByInspectionCategory } from "@/lib/customer-inspection-category-scores"
 import { fetchBuildings, type BuildingListItem } from "@/lib/buildings-api"
@@ -74,6 +77,7 @@ import { fetchInspectionCategories, type InspectionCategoryRecord } from "@/lib/
 import { readCustomerSubAccountLocalRecords } from "@/lib/customer-sub-accounts-api"
 import { deleteCustomer, fetchCustomerDetail, type CustomerDetailPerson, type CustomerDetailResult } from "@/lib/customers-api"
 import {
+  dispatchWorkOrder,
   fetchRepairWorkOrderDetail,
   fetchWorkOrderDetail,
   fetchRepairWorkOrders,
@@ -266,6 +270,17 @@ const activeWorkOrderDetailKind = ref<"inspection" | "repair">("inspection")
 const activeInspectionWorkOrderDetail = ref<WorkOrderDetailResult | null>(null)
 const activeRepairWorkOrderDetail = ref<RepairWorkOrderDetailResult | null>(null)
 const activeWorkOrderDetailCustomer = ref<CustomerDetailResult | null>(null)
+type AssignableUserOption = {
+  uuid: string
+  name: string
+}
+const assignDialogOpen = ref(false)
+const assignUserUuid = ref("")
+const assignTargetWorkOrder = ref<CustomerWorkOrderRow | null>(null)
+const assignableUsers = ref<AssignableUserOption[]>([])
+const assignableUsersLoading = ref(false)
+const assignableUsersLoaded = ref(false)
+const assignSubmitting = ref(false)
 const buildingDetailSheetOpen = ref(false)
 const activeBuildingUuid = ref("")
 const activeBuildingParkUuid = ref("")
@@ -1038,6 +1053,11 @@ const repairWorkOrdersSchema: TablePageSchema<CustomerWorkOrderRow> = {
   },
   rowActions: [
     {
+      key: "assign-work-order",
+      label: "指派",
+      onClick: row => handleAssignWorkOrder(row as CustomerWorkOrderRow),
+    },
+    {
       key: "view-work-order",
       label: "查看详情",
       onClick: row => handleViewWorkOrder(row as CustomerWorkOrderRow),
@@ -1689,12 +1709,104 @@ function handleOverviewWorkOrderDetail(row: MaintenanceRecordRow) {
 }
 
 function handleAssignWorkOrder(row: CustomerWorkOrderRow) {
-  if (row.workOrderKind === "repair") {
-    toast.info(`报修工单「${row.orderNo || row.uuid}」指派功能暂未接入`)
+  assignTargetWorkOrder.value = row
+  assignUserUuid.value = ""
+  assignDialogOpen.value = true
+  void loadAssignableUsers()
+}
+
+function closeAssignDialog() {
+  if (assignSubmitting.value) {
     return
   }
 
-  toast.info(`工单「${row.orderNo || row.uuid}」指派功能暂未接入`)
+  assignDialogOpen.value = false
+}
+
+async function loadAssignableUsers() {
+  if (assignableUsersLoading.value || assignableUsersLoaded.value) {
+    return
+  }
+
+  assignableUsersLoading.value = true
+
+  try {
+    const result = await fetchMembers({
+      PageNum: 1,
+      PageSize: 200,
+      Status: 1,
+    })
+
+    const normalizedOptions = result.list
+      .map((item) => {
+        const record = item as Record<string, unknown>
+        const uuid = toDisplayText(record.Uuid ?? record.uuid, "")
+        const name = toDisplayText(record.Name ?? record.name, uuid)
+
+        if (!uuid) {
+          return null
+        }
+
+        return { uuid, name }
+      })
+      .filter((item): item is AssignableUserOption => item !== null)
+
+    assignableUsers.value = normalizedOptions
+    assignableUsersLoaded.value = true
+  } catch (error) {
+    assignableUsers.value = []
+    toast.error(handleApiError(error, {
+      mode: "silent",
+      fallback: "指派人员列表加载失败，请稍后重试。",
+    }))
+  } finally {
+    assignableUsersLoading.value = false
+  }
+}
+
+async function submitCustomerWorkOrderAssign() {
+  const currentTarget = assignTargetWorkOrder.value
+  const cid = customerUuid.value
+
+  if (!currentTarget?.uuid) {
+    toast.error("当前工单缺少 Uuid，无法指派")
+    return
+  }
+
+  if (!assignUserUuid.value) {
+    toast.error("请先选择指派用户")
+    return
+  }
+
+  if (!cid) {
+    toast.error("客户 Uuid 缺失，无法刷新列表")
+    return
+  }
+
+  assignSubmitting.value = true
+
+  try {
+    await dispatchWorkOrder({
+      Uuid: currentTarget.uuid,
+      UserUuid: assignUserUuid.value,
+    })
+
+    toast.success("指派成功")
+    assignDialogOpen.value = false
+
+    if (currentTarget.workOrderKind === "repair") {
+      await loadRepairWorkOrders(cid)
+    } else {
+      await loadInspectionWorkOrders(cid)
+    }
+  } catch (error) {
+    toast.error(handleApiError(error, {
+      mode: "silent",
+      fallback: "指派失败，请稍后重试。",
+    }))
+  } finally {
+    assignSubmitting.value = false
+  }
 }
 
 function handleAddMonitoring() {
@@ -3792,6 +3904,44 @@ function toDisplayText(value: unknown, fallback = "未填写") {
       </template>
     </template>
   </DetailLayout>
+
+  <Dialog v-model:open="assignDialogOpen">
+    <DialogContent class="sm:max-w-[420px]">
+      <DialogHeader>
+        <DialogTitle>指派工单</DialogTitle>
+        <DialogDescription>
+          请选择要指派的用户并确认提交。
+        </DialogDescription>
+      </DialogHeader>
+
+      <div class="space-y-2">
+        <p class="text-sm text-foreground">指派用户</p>
+        <Select v-model="assignUserUuid" :disabled="assignableUsersLoading || assignSubmitting">
+          <SelectTrigger class="w-full">
+            <SelectValue :placeholder="assignableUsersLoading ? '正在加载用户...' : '请选择用户'" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem v-for="user in assignableUsers" :key="user.uuid" :value="user.uuid">
+              {{ user.name }}
+            </SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <DialogFooter>
+        <Button type="button" variant="outline" class="gap-2" :disabled="assignSubmitting" @click="closeAssignDialog">
+          <i class="ri-close-line text-sm" />
+          取消
+        </Button>
+        <Button type="button" class="gap-2" :disabled="assignSubmitting || !assignUserUuid" @click="submitCustomerWorkOrderAssign">
+          <i
+            :class="assignSubmitting ? 'ri-loader-4-line animate-spin text-sm' : 'ri-send-plane-line text-sm'"
+          />
+          {{ assignSubmitting ? "提交中..." : "确认指派" }}
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
 
   <Sheet :open="workOrderDetailSheetOpen" @update:open="handleWorkOrderDetailSheetOpenChange">
     <SheetContent side="right" class="overflow-hidden max-sm:w-[calc(100vw-1rem)] sm:max-w-xl">
