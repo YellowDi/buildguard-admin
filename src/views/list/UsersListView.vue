@@ -137,6 +137,7 @@ const schema: TablePageSchema<PractitionerRecord> = {
       key: "joinedAt",
       label: "入职日期",
       filterType: "time",
+      tone: "muted",
       format: "numeric",
       filter: {
         type: "date",

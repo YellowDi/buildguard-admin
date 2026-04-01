@@ -28,6 +28,7 @@ export const API_PATHS = {
   workOrderCreate: "/bqi/work-order/new",
   workOrderDetail: "/bqi/work-order/detail",
   workOrderUpdate: "/bqi/work-order/update",
+  workOrderDispatch: "/bqi/work-order/dispatch",
   membersList: "/bqi/user/list",
   memberCreate: "/bqi/user/new",
   memberDetail: "/bqi/user/detail",

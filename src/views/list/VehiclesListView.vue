@@ -317,6 +317,7 @@ const inspectionSchema: TablePageSchema<InspectionVehicleRecord> = {
       key: "annualCheck",
       label: "年检日期",
       filterType: "time",
+      tone: "muted",
       format: "numeric",
       filter: {
         type: "date",
@@ -328,6 +329,7 @@ const inspectionSchema: TablePageSchema<InspectionVehicleRecord> = {
       key: "maintenance",
       label: "最近维保",
       filterType: "time",
+      tone: "muted",
       format: "numeric",
       filter: {
         type: "date",
@@ -338,7 +340,7 @@ const inspectionSchema: TablePageSchema<InspectionVehicleRecord> = {
       key: "nextReview",
       label: "下次复核",
       filterType: "time",
-      tone: "accent",
+      tone: "muted",
       format: "numeric",
       filter: {
         type: "date",

@@ -98,6 +98,7 @@ const schema: TablePageSchema<AlarmArchiveRecord> = {
       key: "archivedAt",
       label: "归档时间",
       filterType: "time",
+      tone: "muted",
       format: "numeric",
       filter: {
         type: "date",

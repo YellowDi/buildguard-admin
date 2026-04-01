@@ -87,6 +87,7 @@ const schema: TablePageSchema<AlarmQueryRecord> = {
       key: "alarmTime",
       label: "报警时间",
       filterType: "time",
+      tone: "muted",
       format: "numeric",
       filter: {
         type: "date",

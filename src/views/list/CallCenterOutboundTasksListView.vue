@@ -76,6 +76,7 @@ const schema: TablePageSchema<OutboundTaskRecord> = {
       key: "plannedAt",
       label: "计划时间",
       filterType: "time",
+      tone: "muted",
       format: "numeric",
       filter: {
         type: "date",

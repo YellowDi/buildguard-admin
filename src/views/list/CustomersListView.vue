@@ -305,6 +305,7 @@ const schema: TablePageSchema<CustomerRecord> = {
       key: "createdAt",
       label: "创建时间",
       filterType: "time",
+      tone: "muted",
       format: "numeric",
       filter: {
         type: "date",

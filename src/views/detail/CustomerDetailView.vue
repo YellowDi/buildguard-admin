@@ -809,6 +809,7 @@ const buildingAssetsSchema: TablePageSchema<CustomerBuildingAssetRow> = {
       key: "updatedAt",
       label: "更新时间",
       filterType: "time",
+      tone: "muted",
       format: "numeric",
       filter: {
         type: "date",
@@ -959,6 +960,7 @@ const inspectionWorkOrdersSchema: TablePageSchema<CustomerWorkOrderRow> = {
       key: "deadline",
       label: "截止时间",
       filterType: "time",
+      tone: "muted",
       format: "numeric",
       filter: {
         type: "date",
@@ -980,6 +982,7 @@ const inspectionWorkOrdersSchema: TablePageSchema<CustomerWorkOrderRow> = {
       key: "createdStartAt",
       label: "创建开始时间",
       filterType: "time",
+      tone: "muted",
       format: "numeric",
       filter: {
         type: "date",
@@ -991,6 +994,7 @@ const inspectionWorkOrdersSchema: TablePageSchema<CustomerWorkOrderRow> = {
       key: "createdEndAt",
       label: "创建结束时间",
       filterType: "time",
+      tone: "muted",
       format: "numeric",
       filter: {
         type: "date",
@@ -1145,6 +1149,7 @@ const repairWorkOrdersSchema: TablePageSchema<CustomerWorkOrderRow> = {
       key: "createdStartAt",
       label: "创建开始时间",
       filterType: "time",
+      tone: "muted",
       format: "numeric",
       filter: {
         type: "date",
@@ -1156,6 +1161,7 @@ const repairWorkOrdersSchema: TablePageSchema<CustomerWorkOrderRow> = {
       key: "createdEndAt",
       label: "创建结束时间",
       filterType: "time",
+      tone: "muted",
       format: "numeric",
       filter: {
         type: "date",

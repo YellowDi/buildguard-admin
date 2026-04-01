@@ -66,6 +66,11 @@ export type UpdateWorkOrderPayload = {
   Remark?: string
 }
 
+export type DispatchWorkOrderPayload = {
+  Uuid: string
+  UserUuid: string
+}
+
 export type WorkOrderDetailPayload = {
   Uuid: string
 }
@@ -126,11 +131,13 @@ const REPAIR_WORK_ORDER_CREATE_API_URL = buildApiUrl(API_PATHS.workOrderReportCr
 const WORK_ORDER_CREATE_API_URL = buildApiUrl(API_PATHS.workOrderCreate)
 const WORK_ORDER_DETAIL_API_URL = API_PATHS.workOrderDetail
 const WORK_ORDER_UPDATE_API_URL = buildApiUrl(API_PATHS.workOrderUpdate)
+const WORK_ORDER_DISPATCH_API_URL = buildApiUrl(API_PATHS.workOrderDispatch)
 const WORK_ORDERS_LOAD_ERROR_MESSAGE = "工单列表加载失败，请稍后重试。"
 const WORK_ORDER_CREATE_ERROR_MESSAGE = "工单创建失败，请稍后重试。"
 const REPAIR_WORK_ORDER_CREATE_ERROR_MESSAGE = "维修工单创建失败，请稍后重试。"
 const WORK_ORDER_DETAIL_ERROR_MESSAGE = "工单详情加载失败，请稍后重试。"
 const WORK_ORDER_UPDATE_ERROR_MESSAGE = "工单更新失败，请稍后重试。"
+const WORK_ORDER_DISPATCH_ERROR_MESSAGE = "工单指派失败，请稍后重试。"
 
 export async function fetchWorkOrders(payload: ListWorkOrdersPayload = {}): Promise<WorkOrdersListResult> {
   const normalizedPayload = {
@@ -287,6 +294,30 @@ export async function updateWorkOrder(payload: UpdateWorkOrderPayload): Promise<
   }
 
   assertApiSuccess(responseBody, WORK_ORDER_UPDATE_ERROR_MESSAGE)
+
+  return extractCreateResult(responseBody)
+}
+
+export async function dispatchWorkOrder(payload: DispatchWorkOrderPayload): Promise<CreateWorkOrderResult> {
+  const normalizedPayload = {
+    Uuid: getRequiredString(payload.Uuid, "Uuid"),
+    UserUuid: getRequiredString(payload.UserUuid, "UserUuid"),
+  }
+
+  const response = await fetch(WORK_ORDER_DISPATCH_API_URL, {
+    method: "POST",
+    headers: buildApiHeaders({
+      "Content-Type": "application/json",
+    }),
+    body: JSON.stringify(normalizedPayload),
+  })
+  const responseBody = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responseBody, WORK_ORDER_DISPATCH_ERROR_MESSAGE)
+  }
+
+  assertApiSuccess(responseBody, WORK_ORDER_DISPATCH_ERROR_MESSAGE)
 
   return extractCreateResult(responseBody)
 }

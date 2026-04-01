@@ -5,6 +5,7 @@ import { toast } from "vue-sonner"
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import TablePageLoading from "@/components/loading/TablePageLoading.vue"
 import TablePage from "@/components/table-page/TablePage.vue"
 import { workOrderStatusMap } from "@/components/table-page/statusPresets"
@@ -12,7 +13,10 @@ import { createTablePageDefinition, useTablePage } from "@/components/table-page
 import type { TablePageSchema } from "@/components/table-page/types"
 import { useRouteTableSearch } from "@/composables/useRouteTableSearch"
 import { handleApiError } from "@/lib/api-errors"
+import { fetchMembers } from "@/lib/members-api"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
+  dispatchWorkOrder,
   fetchRepairWorkOrders,
   fetchWorkOrders,
   type RepairWorkOrderListItem,
@@ -62,6 +66,11 @@ type WorkOrderRecord = {
   createdEndAt: string
 }
 
+type AssignableUserOption = {
+  uuid: string
+  name: string
+}
+
 const props = defineProps<{
   kind: WorkOrderPageKind
 }>()
@@ -75,6 +84,13 @@ const total = ref(0)
 const route = useRoute()
 const showInitialLoading = computed(() => loading.value && !workOrders.value.length && !errorMessage.value)
 let latestRequestId = 0
+const assignDialogOpen = ref(false)
+const assignUserUuid = ref("")
+const assignTargetWorkOrder = ref<WorkOrderRecord | null>(null)
+const assignableUsers = ref<AssignableUserOption[]>([])
+const assignableUsersLoading = ref(false)
+const assignableUsersLoaded = ref(false)
+const assignSubmitting = ref(false)
 const pageTitle = computed(() => props.kind === "inspection" ? "检测工单" : "维修工单")
 const pageEmptyStateTitle = computed(() => `暂无${pageTitle.value}数据`)
 const pageEmptyStateDescription = computed(() => props.kind === "inspection"
@@ -215,7 +231,93 @@ function handleViewDetail(row: WorkOrderRecord) {
 }
 
 function handleAssign(row: WorkOrderRecord) {
-  toast.info(`工单「${row.orderNo || row.uuid}」指派功能暂未接入`)
+  assignTargetWorkOrder.value = row
+  assignUserUuid.value = ""
+  assignDialogOpen.value = true
+  void loadAssignableUsers()
+}
+
+function closeAssignDialog() {
+  if (assignSubmitting.value) {
+    return
+  }
+
+  assignDialogOpen.value = false
+}
+
+async function loadAssignableUsers() {
+  if (assignableUsersLoading.value || assignableUsersLoaded.value) {
+    return
+  }
+
+  assignableUsersLoading.value = true
+
+  try {
+    const result = await fetchMembers({
+      PageNum: 1,
+      PageSize: 200,
+      Status: 1,
+    })
+
+    const normalizedOptions = result.list
+      .map((item) => {
+        const record = item as Record<string, unknown>
+        const uuid = toText(record.Uuid ?? record.uuid)
+        const name = toText(record.Name ?? record.name, uuid)
+
+        if (!uuid) {
+          return null
+        }
+
+        return { uuid, name }
+      })
+      .filter((item): item is AssignableUserOption => item !== null)
+
+    assignableUsers.value = normalizedOptions
+    assignableUsersLoaded.value = true
+  } catch (error) {
+    assignableUsers.value = []
+    toast.error(handleApiError(error, {
+      mode: "silent",
+      fallback: "指派人员列表加载失败，请稍后重试。",
+    }))
+  } finally {
+    assignableUsersLoading.value = false
+  }
+}
+
+async function submitAssign() {
+  const currentTarget = assignTargetWorkOrder.value
+
+  if (!currentTarget?.uuid) {
+    toast.error("当前工单缺少 Uuid，无法指派")
+    return
+  }
+
+  if (!assignUserUuid.value) {
+    toast.error("请先选择指派用户")
+    return
+  }
+
+  assignSubmitting.value = true
+
+  try {
+    await dispatchWorkOrder({
+      Uuid: currentTarget.uuid,
+      UserUuid: assignUserUuid.value,
+    })
+
+    toast.success("指派成功")
+    assignDialogOpen.value = false
+    await loadWorkOrders()
+  } catch (error) {
+    toast.error(handleApiError(error, {
+      mode: "silent",
+      fallback: "指派失败，请稍后重试。",
+    }))
+  } finally {
+    assignSubmitting.value = false
+  }
 }
 
 async function loadWorkOrders() {
@@ -799,6 +901,40 @@ function jumpToCustomerDetail(row: Record<string, unknown>) {
         </button>
       </template>
     </TablePage>
+
+    <Dialog v-model:open="assignDialogOpen">
+      <DialogContent class="sm:max-w-[420px]">
+        <DialogHeader>
+          <DialogTitle>指派工单</DialogTitle>
+          <DialogDescription>
+            请选择要指派的用户并确认提交。
+          </DialogDescription>
+        </DialogHeader>
+
+        <div class="space-y-2">
+          <p class="text-sm text-foreground">指派用户</p>
+          <Select v-model="assignUserUuid" :disabled="assignableUsersLoading || assignSubmitting">
+            <SelectTrigger class="w-full">
+              <SelectValue :placeholder="assignableUsersLoading ? '正在加载用户...' : '请选择用户'" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem v-for="user in assignableUsers" :key="user.uuid" :value="user.uuid">
+                {{ user.name }}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <DialogFooter>
+          <Button type="button" variant="outline" :disabled="assignSubmitting" @click="closeAssignDialog">
+            取消
+          </Button>
+          <Button type="button" :disabled="assignSubmitting || !assignUserUuid" @click="submitAssign">
+            {{ assignSubmitting ? "提交中..." : "确认指派" }}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
 
     <div class="-mx-4 pt-3">
       <div class="flex w-full justify-end px-4">

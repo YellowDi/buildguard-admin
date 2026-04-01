@@ -139,6 +139,7 @@ const schema: TablePageSchema<InspectionServiceRecord> = {
       key: "ExpireAt",
       label: "到期时间",
       filterType: "time",
+      tone: "muted",
       slot: "cell-ExpireAt",
       format: "numeric",
       filter: {
@@ -183,6 +184,7 @@ const schema: TablePageSchema<InspectionServiceRecord> = {
       key: "CreatedAt",
       label: "创建时间",
       filterType: "time",
+      tone: "muted",
       format: "numeric",
       filter: {
         type: "date",
@@ -193,6 +195,7 @@ const schema: TablePageSchema<InspectionServiceRecord> = {
       key: "UpdatedAt",
       label: "更新时间",
       filterType: "time",
+      tone: "muted",
       format: "numeric",
       filter: {
         type: "date",

@@ -160,6 +160,7 @@ const schema: TablePageSchema<CompanyRecord> = {
       key: "startDate",
       label: "开始日期",
       filterType: "time",
+      tone: "muted",
       format: "numeric",
       filter: {
         type: "date",
@@ -170,6 +171,7 @@ const schema: TablePageSchema<CompanyRecord> = {
       key: "endDate",
       label: "结束日期",
       filterType: "time",
+      tone: "muted",
       format: "numeric",
       filter: {
         type: "date",

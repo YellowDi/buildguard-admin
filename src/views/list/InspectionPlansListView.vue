@@ -106,6 +106,7 @@ const schema: TablePageSchema<InspectionPlanRecord> = {
       key: "nextExecutionAt",
       label: "下次执行时间",
       filterType: "time",
+      tone: "muted",
       slot: "cell-nextExecutionAt",
       format: "numeric",
       filter: {
@@ -138,6 +139,7 @@ const schema: TablePageSchema<InspectionPlanRecord> = {
       key: "latestExecutionAt",
       label: "最近执行时间",
       filterType: "time",
+      tone: "muted",
       format: "numeric",
       filter: {
         type: "date",
@@ -159,6 +161,7 @@ const schema: TablePageSchema<InspectionPlanRecord> = {
       key: "firstExecutionAt",
       label: "首次执行时间",
       filterType: "time",
+      tone: "muted",
       format: "numeric",
       filter: {
         type: "date",
@@ -180,6 +183,7 @@ const schema: TablePageSchema<InspectionPlanRecord> = {
       key: "createdAt",
       label: "创建时间",
       filterType: "time",
+      tone: "muted",
       format: "numeric",
       filter: {
         type: "date",
