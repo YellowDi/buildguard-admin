@@ -796,7 +796,7 @@ function syncActionRailState() {
     return Math.ceil(Math.max(element.getBoundingClientRect().width, element.scrollWidth))
   })
   const measuredActionWidth = Math.max(72, ...actionSizerWidths)
-  actionHeaderHeight.value = Math.round(actionHeaderCell.getBoundingClientRect().height) || 41
+  actionHeaderHeight.value = actionHeaderCell.getBoundingClientRect().height || 41
 
   if (!bodyRows.length) {
     actionColumnWidth.value = measuredActionWidth
@@ -809,11 +809,13 @@ function syncActionRailState() {
     const rowElement = row as HTMLElement
     const rowRect = rowElement.getBoundingClientRect()
 
-      return {
+    return {
       rowKey: getRowKey(props.rows[index] ?? {}, index),
       rowIndex: index,
-      top: Math.round(rowRect.top - shellRect.top),
-      height: Math.round(rowRect.height),
+      // 保留小数像素，避免行高/位置四舍五入后在长表格中累积误差
+      // （表现为某些行操作按钮贴边，看起来“没有下边距”）。
+      top: rowRect.top - shellRect.top,
+      height: rowRect.height,
     }
   })
 }
