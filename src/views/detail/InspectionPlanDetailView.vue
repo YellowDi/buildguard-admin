@@ -49,7 +49,7 @@ const fieldSections = computed<DetailFieldSection[]>(() => {
       title: "计划信息",
       rows: [
         { key: "name", label: "计划名称", value: toText(current.Name, "未命名计划") },
-        { key: "code", label: "计划编号", value: toText(current.Code, "-") },
+        { key: "code", label: "计划编号", value: toText(current.Code, "-"), valueClass: "text-muted-foreground" },
         { key: "contract-code", label: "合同编号", value: toText(current.ContractCode, "-") },
         {
           key: "customer-name",
@@ -65,11 +65,31 @@ const fieldSections = computed<DetailFieldSection[]>(() => {
         },
         { key: "duration", label: "执行频率", value: formatDayValue(current.Duration) },
         { key: "work-order-duration", label: "工单时长", value: formatDayValue(current.WorkOrderDuration) },
-        { key: "first-time", label: "首次执行时间", value: toText(current.FirstTime, "-") },
-        { key: "next-time", label: "下次执行时间", value: toText(current.NextTime, "-") },
-        { key: "end-time", label: "计划结束时间", value: toText(current.EndTime, "-") },
-        { key: "lastest-time", label: "最近执行时间", value: toText(current.LastestTime, "-") },
-        { key: "lastest-order-no", label: "最近执行订单号", value: toText(current.LastestOrderNo, "-") },
+        {
+          key: "first-time",
+          label: "首次执行时间",
+          value: toText(current.FirstTime, "-"),
+          suffixHint: getElapsedDaysHint(current.FirstTime),
+        },
+        {
+          key: "next-time",
+          label: "下次执行时间",
+          value: toText(current.NextTime, "-"),
+          suffixHint: getRemainingDaysHint(current.NextTime),
+        },
+        {
+          key: "end-time",
+          label: "计划结束时间",
+          value: toText(current.EndTime, "-"),
+          suffixHint: getRemainingDaysHint(current.EndTime),
+        },
+        {
+          key: "lastest-time",
+          label: "最近执行时间",
+          value: toText(current.LastestTime, "-"),
+          suffixHint: getElapsedDaysHint(current.LastestTime),
+        },
+        { key: "lastest-order-no", label: "最近执行订单号", value: toText(current.LastestOrderNo, "-"), valueClass: "text-muted-foreground" },
         { key: "creator", label: "创建人", value: toText(current.Creator, "-") },
         { key: "created-at", label: "创建时间", value: toText(current.CreatedAt, "-") },
       ],
@@ -223,6 +243,63 @@ function toFiniteNumber(value: unknown) {
 function formatDayValue(value: unknown) {
   const normalized = toFiniteNumber(value)
   return normalized === null ? "-" : `${normalized}天`
+}
+
+function parseDateText(value: unknown) {
+  const text = toText(value, "")
+
+  if (!text) {
+    return null
+  }
+
+  const normalized = text.includes("T") ? text : text.replace(" ", "T")
+  const parsed = new Date(normalized)
+
+  if (Number.isNaN(parsed.getTime())) {
+    return null
+  }
+
+  return parsed
+}
+
+function calculateDateDiffDays(target: Date) {
+  const now = new Date()
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+  const startOfTarget = new Date(target.getFullYear(), target.getMonth(), target.getDate()).getTime()
+
+  return Math.floor((startOfTarget - startOfToday) / (1000 * 60 * 60 * 24))
+}
+
+function getElapsedDaysHint(value: unknown) {
+  const parsed = parseDateText(value)
+
+  if (!parsed) {
+    return ""
+  }
+
+  const diffDays = calculateDateDiffDays(parsed)
+
+  if (diffDays <= 0) {
+    return `已过去 ${Math.abs(diffDays)} 天`
+  }
+
+  return `还有 ${diffDays} 天`
+}
+
+function getRemainingDaysHint(value: unknown) {
+  const parsed = parseDateText(value)
+
+  if (!parsed) {
+    return ""
+  }
+
+  const diffDays = calculateDateDiffDays(parsed)
+
+  if (diffDays < 0) {
+    return `已过去 ${Math.abs(diffDays)} 天`
+  }
+
+  return `还有 ${diffDays} 天`
 }
 
 </script>

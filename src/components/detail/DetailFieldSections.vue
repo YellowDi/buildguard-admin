@@ -157,9 +157,9 @@ function isStatusValue(value: DetailFieldValue): value is DetailStatusValue {
                 <span>{{ displayValue(row.value) }}</span>
                 <span
                   v-if="row.suffixHint"
-                  :class="cn('ml-2 text-xs text-muted-foreground', row.suffixHintClass)"
+                  :class="cn('ml-2 inline-flex items-center gap-1 align-middle text-xs text-muted-foreground', row.suffixHintClass)"
                 >
-                  {{ row.suffixHint }}
+                  <span>{{ row.suffixHint }}</span>
                 </span>
               </template>
             </div>
