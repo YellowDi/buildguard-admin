@@ -67,25 +67,25 @@ const fieldSections = computed<DetailFieldSection[]>(() => {
         {
           key: "first-time",
           label: "首次执行时间",
-          value: toText(current.FirstTime, "-"),
+          value: formatDateOnly(toText(current.FirstTime, "-")),
           suffixHint: getElapsedDaysHint(current.FirstTime),
         },
         {
           key: "next-time",
           label: "下次执行时间",
-          value: toText(current.NextTime, "-"),
+          value: formatDateOnly(toText(current.NextTime, "-")),
           suffixHint: getRemainingDaysHint(current.NextTime),
         },
         {
           key: "end-time",
           label: "计划结束时间",
-          value: toText(current.EndTime, "-"),
+          value: formatDateOnly(toText(current.EndTime, "-")),
           suffixHint: getRemainingDaysHint(current.EndTime),
         },
         {
           key: "lastest-time",
           label: "最近执行时间",
-          value: toText(current.LastestTime, "-"),
+          value: formatDateOnly(toText(current.LastestTime, "-")),
           suffixHint: getElapsedDaysHint(current.LastestTime),
         },
         { key: "lastest-order-no", label: "最近执行订单号", value: toText(current.LastestOrderNo, "-"), valueClass: "text-muted-foreground" },
@@ -242,6 +242,16 @@ function toFiniteNumber(value: unknown) {
 function formatDayValue(value: unknown) {
   const normalized = toFiniteNumber(value)
   return normalized === null ? "-" : `${normalized}天`
+}
+
+function formatDateOnly(value: string) {
+  const normalized = value.trim()
+  if (!normalized || normalized === "-" || normalized === "—") {
+    return "-"
+  }
+
+  const [datePart] = normalized.split(/[ T]/)
+  return datePart || normalized
 }
 
 function parseDateText(value: unknown) {

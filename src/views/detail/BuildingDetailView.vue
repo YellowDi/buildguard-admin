@@ -268,7 +268,7 @@ async function loadBuildingRecords(currentBuilding: BuildingListItem) {
         serviceName: recordText(item.PackageName || item.PlanName, "未命名检测工单"),
         item: "-",
         executor: recordText(item.Executor, "-"),
-        deadline: recordText(item.Deadline, "-"),
+        deadline: formatDateOnly(recordText(item.Deadline, "-")),
         sortTime: resolveRecordSortTime(item.UpdatedAt, item.CreatedAt, item.Deadline),
       }))
       .sort((left, right) => right.sortTime - left.sortTime)
@@ -361,6 +361,16 @@ function resolveRecordSortTime(...values: Array<unknown>) {
   }
 
   return 0
+}
+
+function formatDateOnly(value: string) {
+  const normalized = value.trim()
+  if (!normalized || normalized === "-" || normalized === "—") {
+    return "-"
+  }
+
+  const [datePart] = normalized.split(/[ T]/)
+  return datePart || normalized
 }
 
 type BuildingRecordRow = {

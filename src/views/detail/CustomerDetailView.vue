@@ -2997,7 +2997,7 @@ function mapInspectionWorkOrderRow(item: WorkOrderListItem, index: number): Cust
     resultLabel: formatWorkOrderResult(resultValue),
     score,
     scoreLabel: formatWorkOrderScore(score),
-    deadline: toDisplayText(item.Deadline, "-"),
+    deadline: formatDateOnly(toDisplayText(item.Deadline, "-")),
     remark: toDisplayText(item.Remark, "-"),
     createdAt: toDisplayText(item.CreatedAt, "-"),
     updatedAt: toDisplayText(item.UpdatedAt, "-"),

@@ -179,6 +179,16 @@ function extractDatePart(value: string) {
   return datePart ?? ""
 }
 
+function formatDateOnly(value: string) {
+  const normalized = toText(value, "").trim()
+  if (!normalized || normalized === "-" || normalized === "—") {
+    return "-"
+  }
+
+  const [datePart] = normalized.split(/[ T]/)
+  return datePart || normalized
+}
+
 function buildPageFilterText(row: WorkOrderRecord) {
   if (props.kind === "repair") {
     return [
@@ -410,7 +420,7 @@ function normalizeInspectionWorkOrderRecord(item: WorkOrderListItem, index: numb
     resultLabel: formatResultLabel(resultValue, props.kind),
     score,
     scoreLabel: formatScoreLabel(score, props.kind),
-    deadline: toText(item.Deadline, "-"),
+    deadline: formatDateOnly(toText(item.Deadline, "-")),
     remark,
     createdAt: toText(item.CreatedAt, "-"),
     updatedAt: toText(item.UpdatedAt, "-"),

@@ -18,7 +18,7 @@ export function buildWorkOrderPrimarySections(
         { key: "order-no", label: "工单标号", value: toText(workOrder.OrderNo, "-") },
         { key: "package-name", label: "检测服务", value: toText(workOrder.PackageName, "-") },
         { key: "plan-name", label: "检测计划", value: toText(workOrder.PlanName, "-") },
-        { key: "deadline", label: "截止时间", value: toText(workOrder.Deadline, "-") },
+        { key: "deadline", label: "截止时间", value: formatDateOnly(toText(workOrder.Deadline, "-")) },
         { key: "created-at", label: "创建时间", value: toText(workOrder.CreatedAt, "-") },
         { key: "updated-at", label: "更新时间", value: toText(workOrder.UpdatedAt, "-") },
       ],
@@ -84,6 +84,16 @@ export function toText(value: unknown, fallback = "") {
   }
 
   return fallback
+}
+
+function formatDateOnly(value: string) {
+  const normalized = value.trim()
+  if (!normalized || normalized === "-" || normalized === "—") {
+    return "-"
+  }
+
+  const [datePart] = normalized.split(/[ T]/)
+  return datePart || normalized
 }
 
 function formatWorkOrderStatus(value: unknown) {

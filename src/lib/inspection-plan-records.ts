@@ -67,15 +67,25 @@ function normalizeInspectionPlanRecord(value: unknown): InspectionPlanRecord {
     cycleDays: duration ?? null,
     cycle: buildCycleLabel(duration, getString(record?.cycle)),
     workOrderDuration: workOrderDuration === undefined ? "-" : `${workOrderDuration}天`,
-    firstExecutionAt: getString(record?.FirstTime ?? record?.firstExecutionAt, "-"),
-    latestExecutionAt: getString(record?.LastestTime ?? record?.latestExecutionAt, "-"),
+    firstExecutionAt: formatDateOnly(getString(record?.FirstTime ?? record?.firstExecutionAt, "-")),
+    latestExecutionAt: formatDateOnly(getString(record?.LastestTime ?? record?.latestExecutionAt, "-")),
     latestOrderNo: getString(record?.LastestOrderNo ?? record?.latestOrderNo, "-"),
-    nextExecutionAt: getString(record?.NextTime ?? record?.NextExecutionAt, "-"),
+    nextExecutionAt: formatDateOnly(getString(record?.NextTime ?? record?.NextExecutionAt, "-")),
     creator: getString(record?.Creator ?? record?.OwnerName ?? record?.PrincipalName ?? record?.CreatorName ?? record?.owner, "-"),
     createdAt: getString(record?.CreatedAt ?? record?.createdAt, "-"),
     planStatus: normalizePlanStatus(record?.PlanStatus ?? record?.status),
     enableStatus: normalizeEnableStatus(record?.Status ?? record?.enableStatus),
   }
+}
+
+function formatDateOnly(value: string) {
+  const normalized = value.trim()
+  if (!normalized || normalized === "-" || normalized === "—") {
+    return "-"
+  }
+
+  const [datePart] = normalized.split(/[ T]/)
+  return datePart || normalized
 }
 
 function buildCycleLabel(duration: number | undefined, fallback = "") {
