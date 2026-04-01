@@ -54,6 +54,8 @@ const schema: TablePageSchema<InspectionPlanRecord> = {
       key: "code",
       label: "计划编号",
       filterType: "text",
+      emphasis: "default",
+      tone: "muted",
       filter: {
         type: "text",
         placeholder: "输入计划编号",
