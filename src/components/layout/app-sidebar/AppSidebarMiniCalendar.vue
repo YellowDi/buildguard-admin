@@ -188,7 +188,7 @@ function getEventDotClass(date: AppSidebarCalendarDate) {
                 v-for="weekDate in weekDates"
                 :key="weekDate.toString()"
                 :date="weekDate"
-                class="relative flex h-8.5 items-center justify-center"
+                class="relative flex h-8.5 items-center justify-center [&:has([data-selected])]:rounded-none [&:has([data-selected])]:bg-transparent"
               >
                 <RekaCalendarCellTrigger
                   :day="weekDate"
@@ -198,9 +198,9 @@ function getEventDotClass(date: AppSidebarCalendarDate) {
                     'relative flex size-7 items-center justify-center rounded-[9px] border-0 bg-transparent p-0 text-[11px] font-medium leading-none text-foreground outline-none shadow-none transition-colors appearance-none',
                     'focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-offset-0',
                     'hover:bg-[hsl(39.43deg_26.32%_26.08%_/_8%)]',
-                    'data-[selected]:bg-accent data-[selected]:text-foreground',
+                    'data-[selected]:bg-white data-[selected]:text-foreground data-[selected]:shadow-[var(--shadow-card)]',
                     'data-[outside-view]:text-muted-foreground/60 data-[outside-view]:hover:bg-transparent',
-                    'data-[today]:bg-[#f54a3d] data-[today]:text-white data-[today]:hover:bg-[#f54a3d]',
+                    'data-[today]:bg-[#f54a3d] data-[today]:text-white data-[today]:shadow-none data-[today]:hover:bg-[#f54a3d]',
                   )"
                 >
                   <span class="pointer-events-none flex size-full items-center justify-center">
