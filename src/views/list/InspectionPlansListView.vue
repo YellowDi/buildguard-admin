@@ -368,6 +368,10 @@ function buildPageFilterText(row: InspectionPlanRecord) {
     row.createdAt,
   ].join(" ")
 }
+
+function asInspectionPlanRecord(row: Record<string, unknown>): InspectionPlanRecord {
+  return row as InspectionPlanRecord
+}
 </script>
 
 <template>
@@ -384,7 +388,7 @@ function buildPageFilterText(row: InspectionPlanRecord) {
           <button
             type="button"
             class="inline-flex max-w-full items-center gap-1 text-left text-[#2B67F6] transition-colors hover:text-[#1D4ED8]"
-            @click.stop="jumpToCustomerDetail(row)"
+            @click.stop="jumpToCustomerDetail(asInspectionPlanRecord(row))"
           >
             <span class="truncate">{{ row.customerName }}</span>
             <i class="ri-arrow-right-up-line shrink-0 text-sm" />
@@ -396,12 +400,12 @@ function buildPageFilterText(row: InspectionPlanRecord) {
             <TooltipTrigger as-child>
               <div class="flex min-w-[180px] items-center gap-2">
                 <Progress
-                  :model-value="getNextExecutionProgressValue(row)"
+                  :model-value="getNextExecutionProgressValue(asInspectionPlanRecord(row))"
                   class="h-1.5 max-w-[120px] bg-[#E9EDF2] [&_[data-slot=progress-indicator]]:transition-all"
-                  :class="getNextExecutionProgressClass(row)"
+                  :class="getNextExecutionProgressClass(asInspectionPlanRecord(row))"
                 />
                 <span class="shrink-0 text-xs text-muted-foreground">
-                  {{ getRemainingDaysLabel(row) }}
+                  {{ getRemainingDaysLabel(asInspectionPlanRecord(row)) }}
                 </span>
               </div>
             </TooltipTrigger>
