@@ -40,7 +40,7 @@ const schema: TablePageSchema<InspectionPlanRecord> = {
     {
       key: "view-detail",
       label: "查看详情",
-      onClick: row => console.info("查看检测计划详情", row),
+      onClick: row => handleViewDetail(row as InspectionPlanRecord),
     },
   ],
   columns: [
@@ -237,6 +237,18 @@ async function loadInspectionPlans() {
 
 function handleCreateInspectionPlan() {
   void router.push({ name: "inspection-plan-create" })
+}
+
+function handleViewDetail(row: InspectionPlanRecord) {
+  if (!row.uuid || row.uuid === "-") {
+    toast.error("当前检测计划缺少 Uuid，无法查看详情")
+    return
+  }
+
+  void router.push({
+    name: "inspection-plan-detail",
+    params: { id: row.uuid },
+  })
 }
 
 function jumpToCustomerDetail(row: InspectionPlanRecord) {

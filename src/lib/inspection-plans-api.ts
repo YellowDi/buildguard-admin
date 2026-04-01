@@ -1,5 +1,5 @@
 import { assertApiSuccess, createHttpError, readResponseBody } from "@/lib/api-errors"
-import { API_PATHS, buildApiHeaders, buildApiUrl } from "@/lib/api"
+import { API_PATHS, buildApiHeaders, buildApiRequestUrl, buildApiUrl } from "@/lib/api"
 
 type InspectionPlansEnvelope = {
   Total?: number
@@ -53,6 +53,11 @@ export type InspectionPlanCreateResult = {
   [property: string]: unknown
 }
 
+export type InspectionPlanDetailPayload = {
+  Uuid?: string
+  [property: string]: unknown
+}
+
 export type ListInspectionPlansPayload = {
   CustomerUuid?: string
   PageNum?: number
@@ -64,6 +69,7 @@ const INSPECTION_PLANS_API_URL = buildApiUrl(API_PATHS.inspectionPlansList)
 const INSPECTION_PLAN_CREATE_API_URL = buildApiUrl(API_PATHS.inspectionPlanCreate)
 const INSPECTION_PLANS_LOAD_ERROR_MESSAGE = "检测计划列表加载失败，请稍后重试。"
 const INSPECTION_PLAN_CREATE_ERROR_MESSAGE = "检测计划创建失败，请稍后重试。"
+const INSPECTION_PLAN_DETAIL_ERROR_MESSAGE = "检测计划详情加载失败，请稍后重试。"
 
 export async function fetchInspectionPlans(
   payload: ListInspectionPlansPayload = {},
@@ -126,6 +132,29 @@ export async function createInspectionPlan(
   assertApiSuccess(responseBody, INSPECTION_PLAN_CREATE_ERROR_MESSAGE)
 
   return extractCreateResult(responseBody)
+}
+
+export async function fetchInspectionPlanDetail(
+  payload: InspectionPlanDetailPayload,
+): Promise<InspectionPlanListItem> {
+  const url = buildApiRequestUrl(API_PATHS.inspectionPlanDetail)
+  const uuid = getRequiredString(payload.Uuid, "Uuid")
+
+  url.searchParams.set("Uuid", uuid)
+
+  const response = await fetch(url.toString(), {
+    method: "GET",
+    headers: buildApiHeaders(),
+  })
+  const responseBody = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responseBody, INSPECTION_PLAN_DETAIL_ERROR_MESSAGE)
+  }
+
+  assertApiSuccess(responseBody, INSPECTION_PLAN_DETAIL_ERROR_MESSAGE)
+
+  return normalizeInspectionPlan(extractDetailRecord(responseBody))
 }
 
 function extractList(payload: InspectionPlansEnvelope | unknown[]) {
@@ -201,6 +230,20 @@ function extractCreateResult(value: unknown) {
     }
 
     return record as InspectionPlanCreateResult
+  }
+
+  return {}
+}
+
+function extractDetailRecord(value: unknown) {
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>
+
+    if (record.data && typeof record.data === "object") {
+      return record.data
+    }
+
+    return record
   }
 
   return {}
