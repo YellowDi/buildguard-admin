@@ -26,6 +26,17 @@ const selectedDateLabel = computed(() => {
   return `${d.month}月${d.day}日安排`
 })
 
+function getEventTypeText(event: { type: string, title: string }) {
+  const [prefix] = event.title.split(/[:：]/, 1)
+  if (prefix?.trim()) return prefix.trim()
+  return event.type === "work-order" ? "工单截止" : "计划执行"
+}
+
+function getEventTitleText(event: { title: string }) {
+  const parts = event.title.split(/[:：]\s*/, 2)
+  return parts[1]?.trim() || event.title
+}
+
 function navigateToDetail(event: { type: string, uuid: string }) {
   if (!event.uuid) return
   if (event.type === "work-order") {
@@ -68,19 +79,24 @@ onMounted(() => {
           class="cursor-pointer px-3 py-3 transition-colors hover:bg-accent/50"
           @click="navigateToDetail(event)"
         >
-          <div class="flex items-start gap-2">
-            <div class="min-w-0 flex-1">
-              <p class="truncate text-sm font-medium text-foreground">{{ event.title }}</p>
-              <p v-if="event.meta" class="mt-0.5 truncate text-xs text-muted-foreground">{{ event.meta }}</p>
-            </div>
+          <div class="flex items-start justify-between gap-2">
+            <p class="truncate text-xs font-medium text-muted-foreground">{{ getEventTypeText(event) }}</p>
             <span
-              class="mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium"
+              class="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium"
               :class="event.type === 'work-order'
                 ? 'bg-orange-100 text-orange-700 dark:bg-orange-950/50 dark:text-orange-400'
                 : 'bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-400'"
             >
               {{ event.type === "work-order" ? "工单" : "计划" }}
             </span>
+          </div>
+          <div class="mt-1.5 min-w-0">
+            <p class="truncate text-sm font-medium text-foreground">{{ getEventTitleText(event) }}</p>
+            <p v-if="event.meta || event.time" class="mt-0.5 truncate text-xs text-muted-foreground">
+              <span v-if="event.time">{{ event.time }}</span>
+              <span v-if="event.time && event.meta" class="mx-1">·</span>
+              <span v-if="event.meta">{{ event.meta }}</span>
+            </p>
           </div>
         </article>
       </div>
