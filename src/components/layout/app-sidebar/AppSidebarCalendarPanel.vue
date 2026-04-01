@@ -29,7 +29,9 @@ const selectedDateLabel = computed(() => {
 function getEventTypeText(event: { type: string, title: string }) {
   const [prefix] = event.title.split(/[:：]/, 1)
   if (prefix?.trim()) return prefix.trim()
-  return event.type === "work-order" ? "工单截止" : "计划执行"
+  if (event.type === "work-order") return "工单截止"
+  if (event.type === "inspection-service") return "合同到期"
+  return "计划执行"
 }
 
 function getEventTitleText(event: { title: string }) {
@@ -44,6 +46,9 @@ function navigateToDetail(event: { type: string, uuid: string }) {
   }
   else if (event.type === "inspection-plan") {
     router.push({ name: "inspection-plan-detail", params: { id: event.uuid } })
+  }
+  else if (event.type === "inspection-service") {
+    router.push({ name: "inspection-service-detail", params: { id: event.uuid } })
   }
 }
 
@@ -85,9 +90,11 @@ onMounted(() => {
               class="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium"
               :class="event.type === 'work-order'
                 ? 'bg-orange-100 text-orange-700 dark:bg-orange-950/50 dark:text-orange-400'
-                : 'bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-400'"
+                : event.type === 'inspection-service'
+                  ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400'
+                  : 'bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-400'"
             >
-              {{ event.type === "work-order" ? "工单" : "计划" }}
+              {{ event.type === "work-order" ? "工单" : event.type === "inspection-service" ? "服务" : "计划" }}
             </span>
           </div>
           <div class="mt-1.5 min-w-0">

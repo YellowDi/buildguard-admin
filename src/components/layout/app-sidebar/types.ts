@@ -40,7 +40,7 @@ export type AppSidebarCalendarItem = {
   time: string
   title: string
   meta: string
-  type: "work-order" | "inspection-plan"
+  type: "work-order" | "inspection-plan" | "inspection-service"
   uuid: string
   dateKey: string
 }

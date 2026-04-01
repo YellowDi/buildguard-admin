@@ -1,6 +1,7 @@
 import { computed, ref } from "vue"
 import { fetchWorkOrders } from "@/lib/work-orders-api"
 import { fetchInspectionPlans } from "@/lib/inspection-plans-api"
+import { fetchInspectionServices } from "@/lib/inspection-services-api"
 import type { AppSidebarCalendarDate, AppSidebarCalendarItem } from "@/components/layout/app-sidebar/types"
 
 function toDateKey(dateStr: string | undefined): string | null {
@@ -42,9 +43,10 @@ export function useCalendarEvents() {
   async function refresh() {
     loading.value = true
     try {
-      const [woResult, planResult] = await Promise.all([
+      const [woResult, planResult, serviceResult] = await Promise.all([
         fetchWorkOrders({ PageNum: 1, PageSize: 200 }).catch(() => ({ list: [], total: 0 })),
         fetchInspectionPlans({ PageNum: 1, PageSize: 200 }).catch(() => ({ list: [], total: 0 })),
+        fetchInspectionServices({ PageNum: 1, PageSize: 200 }).catch(() => ({ list: [], total: 0 })),
       ])
 
       const events: AppSidebarCalendarItem[] = []
@@ -72,6 +74,19 @@ export function useCalendarEvents() {
           meta: plan.CorpName || "",
           type: "inspection-plan",
           uuid: plan.Uuid || "",
+        })
+      }
+
+      for (const service of serviceResult.list) {
+        const dateKey = toDateKey(service.ContractEndTime)
+        if (!dateKey) continue
+        events.push({
+          dateKey,
+          time: formatTime(service.ContractEndTime),
+          title: `合同到期: ${service.Name || "未命名检测服务"}`,
+          meta: service.CorpName || service.CustomerName || "",
+          type: "inspection-service",
+          uuid: service.Uuid || "",
         })
       }
 
