@@ -1467,9 +1467,48 @@ const workOrderDetailSheetTitle = computed(() => (
     : toWorkOrderText(activeInspectionWorkOrderDetail.value?.PackageName, "检测工单详情")
 ))
 
+function openRepairWorkOrderCustomerDetail() {
+  const targetCustomerUuid = toRepairWorkOrderText(activeRepairWorkOrderDetail.value?.CustomerUuid)
+
+  if (!targetCustomerUuid) {
+    return
+  }
+
+  handleWorkOrderDetailSheetOpenChange(false)
+
+  if (targetCustomerUuid === customerUuid.value) {
+    return
+  }
+
+  void router.push({
+    name: "customer-detail",
+    params: { id: targetCustomerUuid },
+  })
+}
+
+function openRepairWorkOrderParkDetail() {
+  const targetParkUuid = toRepairWorkOrderText(activeRepairWorkOrderDetail.value?.ParkUuid)
+
+  if (!targetParkUuid) {
+    return
+  }
+
+  const targetCustomerUuid = toRepairWorkOrderText(activeRepairWorkOrderDetail.value?.CustomerUuid) || customerUuid.value
+  handleWorkOrderDetailSheetOpenChange(false)
+
+  void router.push({
+    name: "park-detail",
+    params: { id: targetParkUuid },
+    query: targetCustomerUuid ? { customerUuid: targetCustomerUuid } : undefined,
+  })
+}
+
 const workOrderDetailPrimarySections = computed<DetailFieldSection[]>(() => {
   return activeWorkOrderDetailKind.value === "repair"
-    ? buildRepairWorkOrderPrimarySections(activeRepairWorkOrderDetail.value, activeWorkOrderDetailCustomer.value)
+    ? buildRepairWorkOrderPrimarySections(activeRepairWorkOrderDetail.value, activeWorkOrderDetailCustomer.value, {
+      onOpenCustomer: openRepairWorkOrderCustomerDetail,
+      onOpenPark: openRepairWorkOrderParkDetail,
+    })
     : buildWorkOrderPrimarySections(activeInspectionWorkOrderDetail.value, activeWorkOrderDetailCustomer.value)
 })
 

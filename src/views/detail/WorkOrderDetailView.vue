@@ -50,7 +50,10 @@ const queryReturnTo = computed(() => typeof route.query.returnTo === "string" ? 
 
 const primarySections = computed<DetailFieldSection[]>(() => {
   if (props.kind === "repair") {
-    return buildRepairWorkOrderPrimarySections(repairWorkOrder.value, customer.value)
+    return buildRepairWorkOrderPrimarySections(repairWorkOrder.value, customer.value, {
+      onOpenCustomer: openRepairCustomerDetail,
+      onOpenPark: openRepairParkDetail,
+    })
   }
 
   return buildWorkOrderPrimarySections(inspectionWorkOrder.value, customer.value)
@@ -65,6 +68,35 @@ const secondarySections = computed<DetailFieldSection[]>(() => {
 })
 
 const secondarySkeletonSectionCount = computed(() => props.kind === "repair" ? 1 : 2)
+
+function openRepairCustomerDetail() {
+  const targetCustomerUuid = toRepairWorkOrderText(repairWorkOrder.value?.CustomerUuid) || customerUuid.value
+
+  if (!targetCustomerUuid) {
+    return
+  }
+
+  void router.push({
+    name: "customer-detail",
+    params: { id: targetCustomerUuid },
+  })
+}
+
+function openRepairParkDetail() {
+  const targetParkUuid = toRepairWorkOrderText(repairWorkOrder.value?.ParkUuid)
+
+  if (!targetParkUuid) {
+    return
+  }
+
+  const targetCustomerUuid = toRepairWorkOrderText(repairWorkOrder.value?.CustomerUuid) || customerUuid.value
+
+  void router.push({
+    name: "park-detail",
+    params: { id: targetParkUuid },
+    query: targetCustomerUuid ? { customerUuid: targetCustomerUuid } : undefined,
+  })
+}
 
 const pageTitle = computed(() => {
   if (props.kind === "repair") {

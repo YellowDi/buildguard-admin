@@ -5,6 +5,10 @@ import type { RepairWorkOrderDetailResult } from "@/lib/work-orders-api"
 export function buildRepairWorkOrderPrimarySections(
   workOrder: RepairWorkOrderDetailResult | null,
   customer: CustomerDetailResult | null,
+  options?: {
+    onOpenCustomer?: () => void
+    onOpenPark?: () => void
+  },
 ): DetailFieldSection[] {
   if (!workOrder) {
     return []
@@ -15,7 +19,6 @@ export function buildRepairWorkOrderPrimarySections(
       key: "repair-work-order-basic",
       title: "基本信息",
       rows: [
-        { key: "work-order-id", label: "工单ID", value: toText(workOrder.Uuid, toText(workOrder.Id, "-")) },
         { key: "order-no", label: "工单编号", value: toText(workOrder.OrderNo, "-") },
         { key: "title", label: "报修标题", value: toText(workOrder.Title, "-") },
         { key: "report-type", label: "报修类型", value: formatRepairReportTypeLabel(workOrder.ReportType) },
@@ -37,8 +40,22 @@ export function buildRepairWorkOrderPrimarySections(
       key: "repair-work-order-customer",
       title: "客户信息",
       rows: [
-        { key: "customer-name", label: "客户名称", value: toText(customer?.CorpName, toText(workOrder.CorpName || workOrder.CustomerName, "-")) },
-        { key: "park-name", label: "园区名称", value: toText(workOrder.ParkName, "-") },
+        {
+          key: "customer-name",
+          label: "客户名称",
+          value: toText(customer?.CorpName, toText(workOrder.CorpName || workOrder.CustomerName, "-")),
+          ...(options?.onOpenCustomer
+            ? { linkAction: { onClick: options.onOpenCustomer } }
+            : {}),
+        },
+        {
+          key: "park-name",
+          label: "园区名称",
+          value: toText(workOrder.ParkName, "-"),
+          ...(options?.onOpenPark
+            ? { linkAction: { onClick: options.onOpenPark } }
+            : {}),
+        },
         {
           key: "address",
           label: "地址",
