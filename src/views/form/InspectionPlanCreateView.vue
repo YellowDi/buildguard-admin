@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/select"
 import { handleApiError } from "@/lib/api-errors"
 import { fetchCustomers, type CustomerListItem } from "@/lib/customers-api"
-import { createInspectionPlan } from "@/lib/inspection-plans-api"
+import { createInspectionPlan, fetchInspectionPlanDetail, updateInspectionPlan } from "@/lib/inspection-plans-api"
 import { fetchInspectionServices, type InspectionServiceListItem } from "@/lib/inspection-services-api"
 
 type QuickNavItem = {
@@ -86,6 +86,8 @@ const queryDuration = computed(() => typeof route.query.duration === "string" ? 
 const queryWorkOrderDuration = computed(() => typeof route.query.workOrderDuration === "string" ? route.query.workOrderDuration.trim() : "")
 const queryFirstTime = computed(() => typeof route.query.firstTime === "string" ? route.query.firstTime.trim() : "")
 const queryEndTime = computed(() => typeof route.query.endTime === "string" ? route.query.endTime.trim() : "")
+const editingPlanUuid = computed(() => typeof route.params.id === "string" ? route.params.id.trim() : "")
+const isEditMode = computed(() => Boolean(editingPlanUuid.value))
 
 const selectedCustomerName = computed(() =>
   customerOptions.value.find(item => item.uuid === form.customerUuid)?.name ?? "",
@@ -106,7 +108,13 @@ const canSubmit = computed(() =>
     && !serviceLoading.value,
   ),
 )
-const submitButtonLabel = computed(() => submitting.value ? "提交中..." : "添加检测计划")
+const submitButtonLabel = computed(() => {
+  if (submitting.value) {
+    return isEditMode.value ? "保存中..." : "提交中..."
+  }
+  return isEditMode.value ? "保存检测计划" : "添加检测计划"
+})
+const formHeaderTitle = computed(() => isEditMode.value ? "编辑检测计划" : "添加检测计划")
 
 function handleFocus(sectionId: string) {
   activeNavId.value = sectionId
@@ -193,7 +201,7 @@ async function handleSubmit() {
   submitting.value = true
 
   try {
-    const result = await createInspectionPlan({
+    const payload = {
       CustomerUuid: normalizeText(form.customerUuid),
       ServiceUuid: normalizeText(form.serviceUuid),
       Name: normalizeText(form.name),
@@ -201,9 +209,15 @@ async function handleSubmit() {
       WorkOrderDuration: workOrderDuration,
       FirstTime: firstTime,
       EndTime: endTime,
-    })
+    }
+    const result = isEditMode.value
+      ? await updateInspectionPlan({
+          Uuid: editingPlanUuid.value,
+          ...payload,
+        })
+      : await createInspectionPlan(payload)
 
-    toast.success("检测计划已创建", {
+    toast.success(isEditMode.value ? "检测计划已更新" : "检测计划已创建", {
       description: result.Uuid
         ? `计划 UUID：${result.Uuid}`
         : `${selectedCustomerName.value || "当前客户"}的${selectedServiceName.value || "检测"}计划已提交到接口。`,
@@ -212,8 +226,8 @@ async function handleSubmit() {
     await router.push({ name: "inspection-plans" })
   } catch (error) {
     handleApiError(error, {
-      title: "检测计划创建失败",
-      fallback: "检测计划创建失败，请稍后重试。",
+      title: isEditMode.value ? "检测计划更新失败" : "检测计划创建失败",
+      fallback: isEditMode.value ? "检测计划更新失败，请稍后重试。" : "检测计划创建失败，请稍后重试。",
     })
   } finally {
     submitting.value = false
@@ -249,8 +263,12 @@ async function loadInitialOptions() {
       form.serviceUuid = queryServiceUuid.value
     }
 
-    initialFormState.value = {
-      ...form,
+    if (isEditMode.value) {
+      await loadEditDetail()
+    } else {
+      initialFormState.value = {
+        ...form,
+      }
     }
   } catch (error) {
     loadError.value = handleApiError(error, {
@@ -260,6 +278,33 @@ async function loadInitialOptions() {
   } finally {
     suppressCustomerWatch = false
     customerLoading.value = false
+  }
+}
+
+async function loadEditDetail() {
+  const detail = await fetchInspectionPlanDetail({
+    Uuid: editingPlanUuid.value,
+  })
+  const detailCustomerUuid = normalizeText(detail.CustomerUuid)
+  const detailServiceUuid = normalizeText(detail.ServiceUuid)
+
+  if (detailCustomerUuid) {
+    form.customerUuid = detailCustomerUuid
+    await loadServicesForCustomer(detailCustomerUuid)
+  }
+
+  if (detailServiceUuid && serviceOptions.value.some(item => item.uuid === detailServiceUuid)) {
+    form.serviceUuid = detailServiceUuid
+  }
+
+  form.name = normalizeText(detail.Name)
+  form.duration = normalizeText(detail.Duration)
+  form.workOrderDuration = normalizeText(detail.WorkOrderDuration)
+  form.firstTime = toDatePickerInput(normalizeText(detail.FirstTime))
+  form.endTime = toDatePickerInput(normalizeText(detail.EndTime))
+
+  initialFormState.value = {
+    ...form,
   }
 }
 
@@ -549,7 +594,16 @@ watch(
 )
 
 watch(
-  () => [route.query.customerUuid, route.query.serviceUuid, route.query.name, route.query.duration, route.query.workOrderDuration, route.query.firstTime, route.query.endTime] as const,
+  () => [
+    route.params.id,
+    route.query.customerUuid,
+    route.query.serviceUuid,
+    route.query.name,
+    route.query.duration,
+    route.query.workOrderDuration,
+    route.query.firstTime,
+    route.query.endTime,
+  ] as const,
   () => {
     suppressCustomerWatch = true
     resetLocalStateForRoute()
@@ -563,8 +617,8 @@ watch(
 <template>
   <section class="mx-auto flex w-full max-w-4xl min-w-0 flex-col gap-6 pb-8">
     <FormHeader
-      title="添加检测计划"
-      :primary-action="{ label: submitButtonLabel, icon: 'ri-add-line', disabled: !canSubmit }"
+      :title="formHeaderTitle"
+      :primary-action="{ label: submitButtonLabel, icon: isEditMode ? 'ri-save-line' : 'ri-add-line', disabled: !canSubmit }"
       :secondary-actions="[{ key: 'reset', label: '重置表单' }]"
       :reset-dialog="{ description: '当前已填写的检测计划信息都会被清空，此操作不可撤销。' }"
       @back="goBack"

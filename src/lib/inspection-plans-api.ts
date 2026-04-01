@@ -21,6 +21,7 @@ export type InspectionPlanListItem = {
   Duration?: number
   WorkOrderDuration?: number
   FirstTime?: string
+  EndTime?: string
   LastestOrderNo?: string
   NextTime?: string
   LastestTime?: string
@@ -47,6 +48,10 @@ export type InspectionPlanCreatePayload = {
   ServiceUuid: string
 }
 
+export type InspectionPlanUpdatePayload = InspectionPlanCreatePayload & {
+  Uuid: string
+}
+
 export type InspectionPlanCreateResult = {
   Id?: number
   Uuid?: string
@@ -67,8 +72,10 @@ export type ListInspectionPlansPayload = {
 
 const INSPECTION_PLANS_API_URL = buildApiUrl(API_PATHS.inspectionPlansList)
 const INSPECTION_PLAN_CREATE_API_URL = buildApiUrl(API_PATHS.inspectionPlanCreate)
+const INSPECTION_PLAN_UPDATE_API_URL = buildApiUrl(API_PATHS.inspectionPlanUpdate)
 const INSPECTION_PLANS_LOAD_ERROR_MESSAGE = "检测计划列表加载失败，请稍后重试。"
 const INSPECTION_PLAN_CREATE_ERROR_MESSAGE = "检测计划创建失败，请稍后重试。"
+const INSPECTION_PLAN_UPDATE_ERROR_MESSAGE = "检测计划更新失败，请稍后重试。"
 const INSPECTION_PLAN_DETAIL_ERROR_MESSAGE = "检测计划详情加载失败，请稍后重试。"
 
 export async function fetchInspectionPlans(
@@ -130,6 +137,38 @@ export async function createInspectionPlan(
   }
 
   assertApiSuccess(responseBody, INSPECTION_PLAN_CREATE_ERROR_MESSAGE)
+
+  return extractCreateResult(responseBody)
+}
+
+export async function updateInspectionPlan(
+  payload: InspectionPlanUpdatePayload,
+): Promise<InspectionPlanCreateResult> {
+  const normalizedPayload = {
+    Uuid: getRequiredString(payload.Uuid, "Uuid"),
+    CustomerUuid: getRequiredString(payload.CustomerUuid, "CustomerUuid"),
+    Duration: getRequiredNumber(payload.Duration, "Duration"),
+    WorkOrderDuration: getRequiredNumber(payload.WorkOrderDuration, "WorkOrderDuration"),
+    EndTime: getOptionalString(payload.EndTime),
+    FirstTime: getRequiredString(payload.FirstTime, "FirstTime"),
+    Name: getRequiredString(payload.Name, "Name"),
+    ServiceUuid: getRequiredString(payload.ServiceUuid, "ServiceUuid"),
+  }
+
+  const response = await fetch(INSPECTION_PLAN_UPDATE_API_URL, {
+    method: "POST",
+    headers: buildApiHeaders({
+      "Content-Type": "application/json",
+    }),
+    body: JSON.stringify(normalizedPayload),
+  })
+  const responseBody = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responseBody, INSPECTION_PLAN_UPDATE_ERROR_MESSAGE)
+  }
+
+  assertApiSuccess(responseBody, INSPECTION_PLAN_UPDATE_ERROR_MESSAGE)
 
   return extractCreateResult(responseBody)
 }

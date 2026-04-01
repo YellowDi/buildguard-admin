@@ -7,6 +7,7 @@ import type { DetailFieldSection } from "@/components/detail/types"
 import DetailFieldSections from "@/components/detail/DetailFieldSections.vue"
 import DetailFieldsSkeleton from "@/components/loading/DetailFieldsSkeleton.vue"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Button } from "@/components/ui/button"
 import { detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
 import DetailLayout from "@/layouts/DetailLayout.vue"
 import { handleApiError } from "@/lib/api-errors"
@@ -77,6 +78,17 @@ onUnmounted(() => {
 
 function goBack() {
   void router.push({ name: "inspection-plans" })
+}
+
+function goToEdit() {
+  if (!inspectionPlanUuid.value) {
+    return
+  }
+
+  void router.push({
+    name: "inspection-plan-edit",
+    params: { id: inspectionPlanUuid.value },
+  })
 }
 
 function goToCustomerDetail() {
@@ -189,6 +201,18 @@ function formatDayValue(value: unknown) {
     :secondary-visible="false"
     @back="goBack"
   >
+    <template #headerActions>
+      <Button
+        variant="outline"
+        size="sm"
+        class="h-8 gap-1 border-border/80 bg-background px-3 text-[14px] font-medium shadow-none"
+        @click="goToEdit"
+      >
+        <i class="ri-edit-line text-base" />
+        编辑检测计划
+      </Button>
+    </template>
+
     <template #primary>
       <Alert v-if="errorMessage" variant="destructive" class="mb-5">
         <AlertTitle>检测计划详情加载失败</AlertTitle>
