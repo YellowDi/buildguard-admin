@@ -277,8 +277,9 @@ onUnmounted(() => { detailBreadcrumbTitle.value = null })
       <Button
         variant="outline"
         size="sm"
-        class="border-border/80 bg-background font-medium shadow-none"
+        class="gap-1 border-border/80 bg-background font-medium shadow-none"
       >
+        <i class="ri-edit-line text-base" />
         编辑企业资料
       </Button>
     </template>
@@ -310,7 +311,7 @@ onUnmounted(() => { detailBreadcrumbTitle.value = null })
 
             <template #vehicle-action-cell>
               <Button variant="ghost" size="icon-sm" class="h-7 w-7 rounded-md text-muted-foreground hover:text-foreground">
-                <i class="ri-more-line text-[18px]" />
+                <i class="ri-menu-line text-[18px]" />
               </Button>
             </template>
           </DetailRelationModule>
@@ -320,7 +321,7 @@ onUnmounted(() => { detailBreadcrumbTitle.value = null })
           <DetailRelationModule :schema="employeeModule">
             <template #employee-action-cell>
               <Button variant="ghost" size="icon-sm" class="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground">
-                <i class="ri-more-line text-[18px]" />
+                <i class="ri-menu-line text-[18px]" />
               </Button>
             </template>
           </DetailRelationModule>

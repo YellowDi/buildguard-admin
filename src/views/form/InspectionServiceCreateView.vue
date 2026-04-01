@@ -957,7 +957,8 @@ watch(
       <AlertTitle>{{ isEditMode ? "检测服务资料加载失败" : "检测服务表单初始化失败" }}</AlertTitle>
       <AlertDescription class="flex flex-wrap items-center gap-3">
         <span>{{ loadError }}</span>
-        <Button size="sm" variant="outline" @click="loadInitialOptions">
+        <Button size="sm" variant="outline" class="gap-2" @click="loadInitialOptions">
+          <i class="ri-refresh-line text-sm" />
           重试
         </Button>
       </AlertDescription>

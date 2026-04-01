@@ -464,7 +464,8 @@ watch(
       <AlertTitle>建筑表单初始化失败</AlertTitle>
       <AlertDescription class="flex flex-wrap items-center gap-3">
         <span>{{ loadError }}</span>
-        <Button size="sm" variant="outline" @click="loadFormOptions">
+        <Button size="sm" variant="outline" class="gap-2" @click="loadFormOptions">
+          <i class="ri-refresh-line text-sm" />
           重试
         </Button>
       </AlertDescription>

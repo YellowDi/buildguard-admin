@@ -586,7 +586,8 @@ function toText(value: unknown, fallback = "") {
         <AlertTitle>检测服务接口加载失败</AlertTitle>
         <AlertDescription class="flex flex-wrap items-center gap-3">
           <span>{{ errorMessage }}</span>
-          <Button size="sm" variant="outline" @click="loadInspectionServices">
+          <Button size="sm" variant="outline" class="gap-2" @click="loadInspectionServices">
+            <i class="ri-refresh-line text-sm" />
             重试
           </Button>
         </AlertDescription>

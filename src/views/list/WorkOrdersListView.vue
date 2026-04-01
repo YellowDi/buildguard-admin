@@ -897,7 +897,8 @@ function jumpToCustomerDetail(row: Record<string, unknown>) {
         <AlertTitle>{{ pageTitle }}接口加载失败</AlertTitle>
         <AlertDescription class="flex flex-wrap items-center gap-3">
           <span>{{ errorMessage }}</span>
-          <Button size="sm" variant="outline" @click="loadWorkOrders">
+          <Button size="sm" variant="outline" class="gap-2" @click="loadWorkOrders">
+            <i class="ri-refresh-line text-sm" />
             重试
           </Button>
         </AlertDescription>
@@ -941,10 +942,14 @@ function jumpToCustomerDetail(row: Record<string, unknown>) {
         </div>
 
         <DialogFooter>
-          <Button type="button" variant="outline" :disabled="assignSubmitting" @click="closeAssignDialog">
+          <Button type="button" variant="outline" class="gap-2" :disabled="assignSubmitting" @click="closeAssignDialog">
+            <i class="ri-close-line text-sm" />
             取消
           </Button>
-          <Button type="button" :disabled="assignSubmitting || !assignUserUuid" @click="submitAssign">
+          <Button type="button" class="gap-2" :disabled="assignSubmitting || !assignUserUuid" @click="submitAssign">
+            <i
+              :class="assignSubmitting ? 'ri-loader-4-line animate-spin text-sm' : 'ri-send-plane-line text-sm'"
+            />
             {{ assignSubmitting ? "提交中..." : "确认指派" }}
           </Button>
         </DialogFooter>

@@ -15,12 +15,14 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import type { ButtonVariants } from "@/components/ui/button"
+import { remixIconForActionLabel } from "@/lib/actionIcons"
 import { cn } from "@/lib/utils"
 
 type HeaderAction = {
   key: string
   label: string
   variant?: ButtonVariants["variant"]
+  icon?: string
 }
 
 type PrimaryAction = {
@@ -74,6 +76,10 @@ function emitReset() {
   emit("action", "reset")
   emit("reset")
 }
+
+function headerSecondaryIcon(action: HeaderAction) {
+  return action.icon ?? remixIconForActionLabel(action.label)
+}
 </script>
 
 <template>
@@ -105,6 +111,10 @@ function emitReset() {
               class="shrink-0"
               @click="emitSecondaryAction(action.key)"
             >
+              <i
+                v-if="headerSecondaryIcon(action)"
+                :class="cn(headerSecondaryIcon(action), 'mr-2 text-base')"
+              />
               {{ action.label }}
             </Button>
 
@@ -115,6 +125,10 @@ function emitReset() {
                   size="sm"
                   class="shrink-0"
                 >
+                  <i
+                    v-if="headerSecondaryIcon(resetAction)"
+                    :class="cn(headerSecondaryIcon(resetAction), 'mr-2 text-base')"
+                  />
                   {{ resetAction.label }}
                 </Button>
               </AlertDialogTrigger>
@@ -124,8 +138,12 @@ function emitReset() {
                   <AlertDialogDescription>{{ resetDialog.description }}</AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
-                  <AlertDialogCancel>{{ resetDialog.cancelText ?? "取消" }}</AlertDialogCancel>
+                  <AlertDialogCancel>
+                    <i class="ri-close-line mr-2 text-base" />
+                    {{ resetDialog.cancelText ?? "取消" }}
+                  </AlertDialogCancel>
                   <AlertDialogAction @click="emitReset">
+                    <i class="ri-restart-line mr-2 text-base" />
                     {{ resetDialog.confirmText ?? "确认重置" }}
                   </AlertDialogAction>
                 </AlertDialogFooter>

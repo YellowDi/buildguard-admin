@@ -619,7 +619,8 @@ watch(
       <AlertTitle>检测计划表单初始化失败</AlertTitle>
       <AlertDescription class="flex flex-wrap items-center gap-3">
         <span>{{ loadError }}</span>
-        <Button size="sm" variant="outline" @click="loadInitialOptions">
+        <Button size="sm" variant="outline" class="gap-2" @click="loadInitialOptions">
+          <i class="ri-refresh-line text-sm" />
           重试
         </Button>
       </AlertDescription>

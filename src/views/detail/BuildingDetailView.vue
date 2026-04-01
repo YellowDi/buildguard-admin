@@ -425,7 +425,7 @@ type BuildingRecordRow = {
               :disabled="!row.uuid"
               @click="goToRecordDetail(row)"
             >
-              <i class="ri-more-line text-[18px]" />
+              <i class="ri-menu-line text-[18px]" />
               <span class="sr-only">查看工单详情</span>
             </Button>
           </template>
@@ -440,7 +440,7 @@ type BuildingRecordRow = {
               :disabled="!row.uuid"
               @click="goToRecordDetail(row)"
             >
-              <i class="ri-more-line text-[18px]" />
+              <i class="ri-menu-line text-[18px]" />
               <span class="sr-only">查看工单详情</span>
             </Button>
           </template>

@@ -94,7 +94,8 @@ function onAddress(v: string) {
       />
 
       <DialogFooter v-if="pickable" class="gap-2 sm:justify-end">
-        <Button type="button" variant="outline" @click="handleOpen(false)">
+        <Button type="button" variant="outline" class="gap-2" @click="handleOpen(false)">
+          <i class="ri-check-line text-base" />
           完成
         </Button>
       </DialogFooter>

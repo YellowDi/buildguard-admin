@@ -181,7 +181,8 @@ function handleTabSelect(value: unknown) {
         <div class="flex flex-1 items-center justify-center py-16 text-muted-foreground">
           <slot name="empty">
             <p>{{ props.emptyText }}</p>
-            <Button variant="link" class="ml-2" @click="emit('back')">
+            <Button variant="link" class="ml-2 gap-1" @click="emit('back')">
+              <i class="ri-arrow-left-line text-base" />
               {{ props.backLabel }}
             </Button>
           </slot>

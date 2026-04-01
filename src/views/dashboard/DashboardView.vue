@@ -1095,7 +1095,8 @@ function hashText(value: string) {
                   <div class="text-sm text-destructive">
                     {{ buildingRankingError }}
                   </div>
-                  <Button size="sm" variant="outline" @click="loadBuildingRanking">
+                  <Button size="sm" variant="outline" class="gap-2" @click="loadBuildingRanking">
+                    <i class="ri-refresh-line text-sm" />
                     重试
                   </Button>
                 </div>

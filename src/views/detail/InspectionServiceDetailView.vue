@@ -612,7 +612,7 @@ function readFileAsDataUrl(file: File) {
               :disabled="!row.buildUuid || !row.parkUuid"
               @click="goToBuildingDetail(row)"
             >
-              <i class="ri-more-line text-[18px]" />
+              <i class="ri-menu-line text-[18px]" />
               <span class="sr-only">建筑详情</span>
             </Button>
           </template>
@@ -741,9 +741,11 @@ function readFileAsDataUrl(file: File) {
             <Button
               type="button"
               variant="outline"
+              class="gap-2"
               :disabled="uploadingContract"
               @click="triggerSelectContractFile"
             >
+              <i class="ri-file-upload-line text-base" />
               选择文件
             </Button>
             <span class="min-w-0 truncate text-sm text-muted-foreground">
@@ -757,16 +759,22 @@ function readFileAsDataUrl(file: File) {
         <Button
           type="button"
           variant="outline"
+          class="gap-2"
           :disabled="uploadingContract"
           @click="uploadContractDialogOpen = false"
         >
+          <i class="ri-close-line text-sm" />
           取消
         </Button>
         <Button
           type="button"
+          class="gap-2"
           :disabled="uploadingContract"
           @click="submitUploadContract"
         >
+          <i
+            :class="uploadingContract ? 'ri-loader-4-line animate-spin text-sm' : 'ri-upload-2-line text-sm'"
+          />
           {{ uploadingContract ? "提交中..." : "确认上传" }}
         </Button>
       </DialogFooter>

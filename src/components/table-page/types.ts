@@ -100,6 +100,8 @@ export type TableStatusCellRenderer = {
 export type TableRowAction<Row = Record<string, unknown>> = {
   key: string
   label: string
+  /** 未传时按 `label` 从 `remixIconForTableRowAction` 推断 */
+  icon?: string
   onClick?: (row: Row, index: number) => void
 }
 

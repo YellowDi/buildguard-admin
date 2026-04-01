@@ -3373,7 +3373,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
             </Popover>
 
             <button type="button" :class="detailToolbarButtonClass">
-              <i class="ri-more-line text-base" />
+              <i class="ri-menu-line text-base" />
             </button>
 
             <Button
@@ -3406,14 +3406,18 @@ function toDisplayText(value: unknown, fallback = "未填写") {
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel :disabled="deleteSubmitting">
+                <AlertDialogCancel :disabled="deleteSubmitting" class="gap-2">
+                  <i class="ri-close-line text-base" />
                   取消
                 </AlertDialogCancel>
                 <AlertDialogAction
                   :disabled="deleteSubmitting"
-                  class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  class="gap-2 bg-destructive text-destructive-foreground hover:bg-destructive/90"
                   @click="handleDeleteCustomer"
                 >
+                  <i
+                    :class="deleteSubmitting ? 'ri-loader-4-line animate-spin text-base' : 'ri-delete-bin-line text-base'"
+                  />
                   {{ deleteSubmitting ? "删除中..." : "确认删除" }}
                 </AlertDialogAction>
               </AlertDialogFooter>
@@ -3660,7 +3664,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
                         class="h-7 w-7 rounded-md text-muted-foreground hover:text-foreground"
                         @click="goToBuildingDetail(getRowUuid(row), getRowParkUuid(row))"
                       >
-                        <i class="ri-more-line text-[18px]" />
+                        <i class="ri-menu-line text-[18px]" />
                       </Button>
                     </template>
                   </DetailRelationModule>
@@ -3722,7 +3726,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
                     class="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground"
                     @click="handleOverviewWorkOrderDetail(row)"
                   >
-                    <i class="ri-more-line text-[18px]" />
+                    <i class="ri-menu-line text-[18px]" />
                   </Button>
                 </template>
               </DetailRelationModule>
@@ -3778,7 +3782,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
                     class="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground"
                     @click="handleOverviewWorkOrderDetail(row)"
                   >
-                    <i class="ri-more-line text-[18px]" />
+                    <i class="ri-menu-line text-[18px]" />
                   </Button>
                 </template>
               </DetailRelationModule>
@@ -3864,19 +3868,23 @@ function toDisplayText(value: unknown, fallback = "未填写") {
               <Button
                 variant="outline"
                 size="sm"
-                class="h-8 rounded-md border-destructive/40 text-destructive hover:border-destructive/60 hover:bg-destructive/5 hover:text-destructive"
+                class="h-8 gap-1 rounded-md border-destructive/40 text-destructive hover:border-destructive/60 hover:bg-destructive/5 hover:text-destructive"
                 :disabled="parkDeleteSubmitting"
                 @click="promptDeletePark"
               >
+                <i
+                  :class="parkDeleteSubmitting ? 'ri-loader-4-line animate-spin text-base' : 'ri-delete-bin-line text-base'"
+                />
                 {{ parkDeleteSubmitting ? "删除中..." : "删除园区" }}
               </Button>
               <Button
                 variant="outline"
                 size="sm"
-                class="h-8 rounded-md"
+                class="h-8 gap-1 rounded-md"
                 :disabled="parkDeleteSubmitting"
                 @click="goToParkEdit(activeParkDetail.Uuid, activeParkDetail.CustomerUuid || customer?.Uuid || '')"
               >
+                <i class="ri-edit-line text-base" />
                 编辑园区
               </Button>
             </div>
@@ -3919,14 +3927,18 @@ function toDisplayText(value: unknown, fallback = "未填写") {
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
-        <AlertDialogCancel :disabled="parkDeleteSubmitting">
+        <AlertDialogCancel :disabled="parkDeleteSubmitting" class="gap-2">
+          <i class="ri-close-line text-base" />
           取消
         </AlertDialogCancel>
         <AlertDialogAction
-          class="bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:bg-destructive/60 dark:focus-visible:ring-destructive/40"
+          class="gap-2 bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:bg-destructive/60 dark:focus-visible:ring-destructive/40"
           :disabled="parkDeleteSubmitting"
           @click="confirmDeletePark"
         >
+          <i
+            :class="parkDeleteSubmitting ? 'ri-loader-4-line animate-spin text-base' : 'ri-delete-bin-line text-base'"
+          />
           {{ parkDeleteSubmitting ? "删除中..." : "确认删除" }}
         </AlertDialogAction>
       </AlertDialogFooter>

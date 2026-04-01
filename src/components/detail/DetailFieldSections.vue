@@ -5,6 +5,7 @@ import TableStatusChip from "@/components/table-page/TableStatusChip.vue"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import type { DetailContactValue, DetailFieldSection, DetailFieldValue, DetailStatusValue } from "@/components/detail/types"
+import { remixIconForDetailFieldAction } from "@/lib/actionIcons"
 import { cn } from "@/lib/utils"
 
 // 左侧“普通字段详情”模块。
@@ -80,6 +81,7 @@ function isStatusValue(value: DetailFieldValue): value is DetailStatusValue {
                     class="h-7 shrink-0 self-start rounded-md px-2.5 text-xs leading-5"
                     @click="row.suffixAction.onClick"
                   >
+                    <i :class="remixIconForDetailFieldAction(row.suffixAction.label, row.suffixAction.icon)" />
                     {{ row.suffixAction.label }}
                   </Button>
                 </div>
@@ -100,6 +102,7 @@ function isStatusValue(value: DetailFieldValue): value is DetailStatusValue {
                     class="h-7 shrink-0 self-start rounded-md px-2.5 text-xs leading-5"
                     @click="row.suffixAction.onClick"
                   >
+                    <i :class="remixIconForDetailFieldAction(row.suffixAction.label, row.suffixAction.icon)" />
                     {{ row.suffixAction.label }}
                   </Button>
                 </div>
@@ -138,6 +141,7 @@ function isStatusValue(value: DetailFieldValue): value is DetailStatusValue {
                     class="h-7 shrink-0 self-start rounded-md px-2.5 text-xs leading-5"
                     @click="row.suffixAction.onClick"
                   >
+                    <i :class="remixIconForDetailFieldAction(row.suffixAction.label, row.suffixAction.icon)" />
                     {{ row.suffixAction.label }}
                   </Button>
                 </div>
@@ -150,6 +154,7 @@ function isStatusValue(value: DetailFieldValue): value is DetailStatusValue {
                   class="detail-field-row__action h-7 min-h-0 rounded-md px-2.5 text-xs leading-5"
                   @click="row.action.onClick"
                 >
+                  <i :class="remixIconForDetailFieldAction(row.action.label, row.action.icon)" />
                   {{ row.action.label }}
                 </Button>
               </template>

@@ -263,10 +263,11 @@ function handleConfirm() {
       <DialogFooter class="border-t border-border/70 p-4 sm:justify-end">
         <Button
           variant="outline"
-          class="h-9 px-4"
+          class="h-9 gap-2 px-4"
           :disabled="isExporting"
           @click="updateOpen(false)"
         >
+          <i class="ri-close-line text-[15px]" />
           取消
         </Button>
         <Button

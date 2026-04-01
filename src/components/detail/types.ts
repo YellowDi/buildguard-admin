@@ -19,6 +19,8 @@ export type DetailFieldValue = string | number | DetailContactValue | DetailStat
 export type DetailFieldAction = {
   label: string
   onClick: () => void
+  /** 未传时按 `label` 从 `remixIconForDetailFieldAction` 推断 */
+  icon?: string
 }
 
 export type DetailFieldLinkAction = {

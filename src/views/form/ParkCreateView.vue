@@ -366,7 +366,8 @@ watch(
       <AlertTitle>{{ isEditMode ? "园区信息加载失败" : "所属客户信息缺失" }}</AlertTitle>
       <AlertDescription class="flex flex-wrap items-center gap-3">
         <span>{{ customerLoadError }}</span>
-        <Button size="sm" variant="outline" @click="loadCustomerOptions">
+        <Button size="sm" variant="outline" class="gap-2" @click="loadCustomerOptions">
+          <i class="ri-refresh-line text-sm" />
           重试
         </Button>
       </AlertDescription>

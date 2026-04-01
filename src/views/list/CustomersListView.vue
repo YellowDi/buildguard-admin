@@ -1103,7 +1103,8 @@ function handleCreateCustomer() {
         <AlertTitle>客户接口加载失败</AlertTitle>
         <AlertDescription class="flex flex-wrap items-center gap-3">
           <span>{{ errorMessage }}</span>
-          <Button size="sm" variant="outline" @click="loadCustomers">
+          <Button size="sm" variant="outline" class="gap-2" @click="loadCustomers">
+            <i class="ri-refresh-line text-sm" />
             重试
           </Button>
         </AlertDescription>

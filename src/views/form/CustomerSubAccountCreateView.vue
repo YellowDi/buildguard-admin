@@ -311,7 +311,8 @@ watch(
       <AlertTitle>所属客户信息加载失败</AlertTitle>
       <AlertDescription class="flex flex-wrap items-center gap-3">
         <span>{{ contextError }}</span>
-        <Button size="sm" variant="outline" @click="loadCustomerContext">
+        <Button size="sm" variant="outline" class="gap-2" @click="loadCustomerContext">
+          <i class="ri-refresh-line text-sm" />
           重试
         </Button>
       </AlertDescription>

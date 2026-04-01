@@ -23,6 +23,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty"
+import { remixIconForTableRowAction } from "@/lib/actionIcons"
 import { cn } from "@/lib/utils"
 
 type ScrollRoot = HTMLElement | Window
@@ -1310,6 +1311,7 @@ onBeforeUnmount(() => {
                 class="border-border/80 bg-background/95 shadow-sm"
                 tabindex="-1"
               >
+                <i :class="remixIconForTableRowAction(action.label, action.icon)" />
                 {{ action.label }}
               </Button>
             </div>
@@ -1348,6 +1350,7 @@ onBeforeUnmount(() => {
               :class="tableTheme.actionButton"
               @click="handleRowActionClick(action, rows[metric.rowIndex] ?? {}, metric.rowIndex)"
             >
+              <i :class="remixIconForTableRowAction(action.label, action.icon)" />
               {{ action.label }}
             </Button>
           </div>

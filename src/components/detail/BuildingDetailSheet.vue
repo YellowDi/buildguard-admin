@@ -270,14 +270,18 @@ function resetState() {
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
-        <AlertDialogCancel :disabled="deleteSubmitting">
+        <AlertDialogCancel :disabled="deleteSubmitting" class="gap-2">
+          <i class="ri-close-line text-base" />
           取消
         </AlertDialogCancel>
         <AlertDialogAction
-          class="bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60"
+          class="gap-2 bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60"
           :disabled="deleteSubmitting"
           @click="confirmDeleteBuilding"
         >
+          <i
+            :class="deleteSubmitting ? 'ri-loader-4-line animate-spin text-base' : 'ri-delete-bin-line text-base'"
+          />
           {{ deleteSubmitting ? "删除中..." : "确认删除" }}
         </AlertDialogAction>
       </AlertDialogFooter>
