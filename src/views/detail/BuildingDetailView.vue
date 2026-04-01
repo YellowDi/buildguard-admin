@@ -228,7 +228,7 @@ async function loadBuildingDetail(nextBuildingUuid: string, nextParkUuid: string
 async function loadBuildingRecords(currentBuilding: BuildingListItem) {
   const requestId = ++latestRecordsRequestId
   const currentCustomerUuid = relatedCustomerUuid.value
-  const currentBuildingName = toText(currentBuilding.Name, "")
+  const currentBuildingName = recordText(currentBuilding.Name, "")
 
   if (!currentCustomerUuid || !currentBuildingName) {
     inspectionRecords.value = []
@@ -260,30 +260,30 @@ async function loadBuildingRecords(currentBuilding: BuildingListItem) {
 
     const normalizedBuildingName = normalizeText(currentBuildingName)
     inspectionRecords.value = inspectionResult.list
-      .filter(item => normalizeText(toText(item.BuildName, "")) === normalizedBuildingName)
+      .filter(item => normalizeText(recordText(item.BuildName, "")) === normalizedBuildingName)
       .map((item, index) => ({
-        id: toText(item.Uuid, `inspection-${index + 1}`),
-        uuid: toText(item.Uuid, ""),
-        kind: "inspection",
-        serviceName: toText(item.PackageName || item.PlanName, "未命名检测工单"),
+        id: recordText(item.Uuid, `inspection-${index + 1}`),
+        uuid: recordText(item.Uuid, ""),
+        kind: "inspection" as const,
+        serviceName: recordText(item.PackageName || item.PlanName, "未命名检测工单"),
         item: "-",
-        executor: toText(item.Executor, "-"),
-        deadline: toText(item.Deadline, "-"),
+        executor: recordText(item.Executor, "-"),
+        deadline: recordText(item.Deadline, "-"),
         sortTime: resolveRecordSortTime(item.UpdatedAt, item.CreatedAt, item.Deadline),
       }))
       .sort((left, right) => right.sortTime - left.sortTime)
       .slice(0, 5)
 
     repairRecords.value = repairResult.list
-      .filter(item => normalizeText(toText(item.BuildName, "")) === normalizedBuildingName)
+      .filter(item => normalizeText(recordText(item.BuildName, "")) === normalizedBuildingName)
       .map((item, index) => ({
-        id: toText(item.Uuid, `repair-${index + 1}`),
-        uuid: toText(item.Uuid, ""),
-        kind: "repair",
+        id: recordText(item.Uuid, `repair-${index + 1}`),
+        uuid: recordText(item.Uuid, ""),
+        kind: "repair" as const,
         serviceName: "-",
-        item: toText(item.Title || item.Content, "未命名维修工单"),
-        executor: toText(item.UserName, "-"),
-        deadline: toText(item.CreatedAt, "-"),
+        item: recordText(item.Title || item.Content, "未命名维修工单"),
+        executor: recordText(item.UserName, "-"),
+        deadline: recordText(item.CreatedAt, "-"),
         sortTime: resolveRecordSortTime(item.UpdatedAt, item.CreatedAt),
       }))
       .sort((left, right) => right.sortTime - left.sortTime)
@@ -343,9 +343,13 @@ function normalizeText(value: string) {
   return value.trim().toLowerCase()
 }
 
+function recordText(value: unknown, fallback: string): string {
+  return toText(value, fallback) ?? fallback
+}
+
 function resolveRecordSortTime(...values: Array<unknown>) {
   for (const value of values) {
-    const text = toText(value, "")
+    const text = recordText(value, "")
     if (!text) {
       continue
     }
