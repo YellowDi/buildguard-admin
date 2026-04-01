@@ -110,7 +110,7 @@ function getEventDotClass(date: AppSidebarCalendarDate) {
   >
     <template #default="{ grid }">
       <div class="flex min-h-6 items-center justify-between">
-        <div class="min-h-6 pl-2 text-[12px] font-semibold leading-6 tracking-normal text-foreground">
+        <div class="min-h-6 pl-2 text-sm font-semibold leading-6 tracking-normal text-foreground">
           <span v-if="!isViewingCurrentMonth">{{ visibleMonthLabel }}</span>
         </div>
 
