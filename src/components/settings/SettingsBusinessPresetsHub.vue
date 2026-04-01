@@ -13,6 +13,8 @@ type BusinessPresetsHubTabKey = "industry"
 
 type ExposedActions = {
   openCreateDialog: () => void
+  openCreateMajorDialog: () => void
+  openCreateCategoryDialog: () => void
   refreshData: () => void | Promise<void>
 }
 
@@ -40,9 +42,7 @@ const currentSearchQuery = computed({
   },
 })
 
-const currentSearchPlaceholder = computed(() => "搜索排序或行业名称")
-
-const actionLabel = computed(() => "添加行业")
+const currentSearchPlaceholder = computed(() => "搜索行业大类、行业名称或国标代码")
 
 function toggleSearch() {
   if (searchExpanded.value && currentSearchQuery.value) {
@@ -53,8 +53,12 @@ function toggleSearch() {
   searchExpanded.value = !searchExpanded.value
 }
 
-function triggerPrimaryAction() {
-  industryTableRef.value?.openCreateDialog()
+function triggerAddMajor() {
+  industryTableRef.value?.openCreateMajorDialog()
+}
+
+function triggerAddCategory() {
+  industryTableRef.value?.openCreateCategoryDialog()
 }
 
 async function refreshCurrentTab() {
@@ -101,9 +105,21 @@ async function refreshCurrentTab() {
             </Button>
           </SettingsToolbarRefreshSlot>
 
-          <Button class="h-8 gap-1 rounded-md px-3 text-[14px]" @click="triggerPrimaryAction">
+          <Button
+            variant="outline"
+            class="h-8 gap-1 rounded-md px-3 text-[14px]"
+            @click="triggerAddMajor"
+          >
+            <i class="ri-folder-add-line text-base" />
+            <span>添加行业大类</span>
+          </Button>
+
+          <Button
+            class="h-8 gap-1 rounded-md px-3 text-[14px]"
+            @click="triggerAddCategory"
+          >
             <i class="ri-add-line text-base" />
-            <span>{{ actionLabel }}</span>
+            <span>添加行业分类</span>
           </Button>
         </div>
       </SettingsToolbarRow>
