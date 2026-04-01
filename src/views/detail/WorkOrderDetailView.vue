@@ -66,7 +66,7 @@ const secondarySections = computed<DetailFieldSection[]>(() => {
 
 const pageTitle = computed(() => {
   if (props.kind === "repair") {
-    return toRepairWorkOrderText(repairWorkOrder.value?.Title, "维修工单详情")
+    return toRepairWorkOrderText(repairWorkOrder.value?.Title, "报修工单详情")
   }
 
   return toText(inspectionWorkOrder.value?.PackageName, "关联检测服务") || "关联检测服务"

@@ -53,7 +53,7 @@ const relatedCustomerUuid = computed(() => {
 
 const inspectionModule = computed<DetailRelationModuleSchema<BuildingRecordRow>>(() => ({
   key: "building-inspection-records",
-  title: "检修记录",
+  title: "检测记录",
   rowKey: "id",
   columns: [
     { key: "serviceName", label: "检测服务", cellClass: "truncate" },
@@ -69,7 +69,7 @@ const inspectionModule = computed<DetailRelationModuleSchema<BuildingRecordRow>>
     },
   ],
   emptyState: {
-    title: "暂无检修记录",
+    title: "暂无检测记录",
     description: "当前建筑还没有可展示的检测工单记录。",
     icon: "ri-file-list-3-line",
   },
@@ -82,24 +82,24 @@ const inspectionModule = computed<DetailRelationModuleSchema<BuildingRecordRow>>
 
 const repairModule = computed<DetailRelationModuleSchema<BuildingRecordRow>>(() => ({
   key: "building-repair-records",
-  title: "维修记录",
+  title: "报修记录",
   rowKey: "id",
   columns: [
     { key: "item", label: "报修类型", cellClass: "truncate" },
-    { key: "executor", label: "维修人员", cellClass: "truncate text-muted-foreground" },
+    { key: "executor", label: "执行人", cellClass: "truncate text-muted-foreground" },
     { key: "deadline", label: "创建时间", cellClass: "truncate text-muted-foreground" },
     { key: "actions", label: "", slot: "record-action-cell", cellClass: "flex justify-end" },
   ],
   groups: [
     {
       key: "repair",
-      title: "维修工单",
+      title: "报修工单",
       rows: repairRecords.value,
     },
   ],
   emptyState: {
-    title: "暂无维修记录",
-    description: "当前建筑还没有可展示的维修工单记录。",
+    title: "暂无报修记录",
+    description: "当前建筑还没有可展示的报修工单记录。",
     icon: "ri-hammer-line",
   },
   mobileMinWidth: "100%",
@@ -281,7 +281,7 @@ async function loadBuildingRecords(currentBuilding: BuildingListItem) {
         uuid: recordText(item.Uuid, ""),
         kind: "repair" as const,
         serviceName: "-",
-        item: recordText(item.Title || item.Content, "未命名维修工单"),
+        item: recordText(item.Title || item.Content, "未命名报修工单"),
         executor: recordText(item.UserName, "-"),
         deadline: recordText(item.CreatedAt, "-"),
         sortTime: resolveRecordSortTime(item.UpdatedAt, item.CreatedAt),

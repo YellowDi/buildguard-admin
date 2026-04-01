@@ -141,7 +141,7 @@ const pageTitle = computed(() => {
     return "编辑检测工单"
   }
 
-  return isRepairKind.value ? "添加维修工单" : "添加检测工单"
+  return isRepairKind.value ? "添加报修工单" : "添加检测工单"
 })
 const canSubmit = computed(() => {
   if (isEditMode.value) {
@@ -179,7 +179,7 @@ const submitButtonLabel = computed(() => {
   }
 
   if (isEditMode.value) return "保存备注"
-  return isRepairKind.value ? "添加维修工单" : "添加工单"
+  return isRepairKind.value ? "添加报修工单" : "添加工单"
 })
 const resetDialogDescription = computed(() =>
   isEditMode.value
@@ -398,10 +398,10 @@ async function handleRepairCreateSubmit() {
     }
     const result = await createRepairWorkOrder(payload)
 
-    toast.success("维修工单已创建", {
+    toast.success("报修工单已创建", {
       description: result.Uuid
         ? `工单 UUID：${result.Uuid}`
-        : "维修工单信息已提交到接口。",
+        : "报修工单信息已提交到接口。",
     })
 
     if (queryReturnTo.value === "repair-work-orders") {
@@ -412,8 +412,8 @@ async function handleRepairCreateSubmit() {
     await router.push({ name: "repair-work-orders" })
   } catch (error) {
     handleApiError(error, {
-      title: "维修工单创建失败",
-      fallback: "维修工单创建失败，请稍后重试。",
+      title: "报修工单创建失败",
+      fallback: "报修工单创建失败，请稍后重试。",
     })
   } finally {
     submitting.value = false

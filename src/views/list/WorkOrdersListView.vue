@@ -91,11 +91,11 @@ const assignableUsers = ref<AssignableUserOption[]>([])
 const assignableUsersLoading = ref(false)
 const assignableUsersLoaded = ref(false)
 const assignSubmitting = ref(false)
-const pageTitle = computed(() => props.kind === "inspection" ? "检测工单" : "维修工单")
+const pageTitle = computed(() => props.kind === "inspection" ? "检测工单" : "报修工单")
 const pageEmptyStateTitle = computed(() => `暂无${pageTitle.value}数据`)
 const pageEmptyStateDescription = computed(() => props.kind === "inspection"
   ? "暂时还没有检测工单，您可以先添加一条工单。"
-  : "暂时还没有维修工单，您可以先添加一条工单。")
+  : "暂时还没有报修工单，您可以先添加一条工单。")
 const pageSortStorageKey = computed(() => props.kind === "inspection"
   ? "inspection-work-orders-sort-preferences-created-at-v2"
   : "repair-work-orders-sort-preferences-created-start-at-v3")
@@ -105,7 +105,7 @@ const columns = props.kind === "inspection" ? createInspectionColumns() : create
 
 const schema: TablePageSchema<WorkOrderRecord> = {
   title: pageTitle.value,
-  description: props.kind === "inspection" ? "所有客户检测工单列表" : "所有客户维修工单列表",
+  description: props.kind === "inspection" ? "所有客户检测工单列表" : "所有客户报修工单列表",
   rowKey: "uuid",
   data: [],
   primaryActionLabel,
@@ -734,11 +734,11 @@ function createRepairColumns(): TablePageSchema<WorkOrderRecord>["columns"] {
     },
     {
       key: "executor",
-      label: "维修人员",
+      label: "执行人",
       filterType: "text",
       filter: {
         type: "text",
-        placeholder: "输入维修人员",
+        placeholder: "输入执行人",
       },
       sort: true,
     },

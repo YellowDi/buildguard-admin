@@ -206,11 +206,11 @@ const pageSearchItems: SearchItem[] = [
   },
   {
     id: "page-repair-work-orders",
-    label: "维修工单",
-    subtitle: "查看维修工单列表",
+    label: "报修工单",
+    subtitle: "查看报修工单列表",
     icon: "ri-tools-line",
     type: "页面",
-    value: "维修工单 查看维修工单列表 repair work order work-order ticket",
+    value: "报修工单 查看报修工单列表 repair work order work-order ticket",
     to: "/work-orders/repair",
   },
   {

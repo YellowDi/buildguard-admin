@@ -21,7 +21,7 @@ export function buildRepairWorkOrderPrimarySections(
         { key: "status", label: "状态", value: formatRepairWorkOrderStatus(workOrder.Status) },
         { key: "created-start-at", label: "创建开始时间", value: toText(workOrder.CreatedStartAt, "-") },
         { key: "created-end-at", label: "创建结束时间", value: toText(workOrder.CreatedEndAt, "-") },
-        { key: "user-name", label: "维修人员", value: toText(workOrder.UserName, "-") },
+        { key: "user-name", label: "执行人", value: toText(workOrder.UserName, "-") },
       ],
     },
     {
@@ -64,7 +64,7 @@ export function buildRepairWorkOrderSecondarySections(workOrder: RepairWorkOrder
         { key: "important", label: "重要程度", value: formatRepairImportantLabel(workOrder.Important) },
         {
           key: "content",
-          label: "报修内容",
+          label: "维修内容",
           value: toText(workOrder.Content, "-"),
           truncate: false,
           valueClass: "leading-6",

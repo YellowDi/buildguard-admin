@@ -440,7 +440,7 @@ const router = createRouter({
           component: () => import("@/views/list/WorkOrdersListView.vue"),
           props: { kind: "repair" },
           meta: {
-            title: "维修工单",
+            title: "报修工单",
             loading: "table",
           } satisfies RouteMetaConfig,
         },
@@ -450,11 +450,11 @@ const router = createRouter({
           component: () => import("@/views/form/WorkOrderCreateView.vue"),
           props: { kind: "repair" },
           meta: {
-            title: "添加维修工单",
+            title: "添加报修工单",
             loading: "form",
             breadcrumb: [
               { title: "工单", to: "repair-work-orders" },
-              { title: "添加维修工单" },
+              { title: "添加报修工单" },
             ] satisfies BreadcrumbMetaItem[],
           } satisfies RouteMetaConfig,
         },
@@ -464,7 +464,7 @@ const router = createRouter({
           component: () => import("@/views/detail/WorkOrderDetailView.vue"),
           props: { kind: "repair" },
           meta: {
-            title: "维修工单详情",
+            title: "报修工单详情",
             loading: "detail",
             useDetailBreadcrumbTitle: true,
             breadcrumb: [
