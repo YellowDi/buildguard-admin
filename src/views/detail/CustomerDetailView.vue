@@ -3785,7 +3785,10 @@ function toDisplayText(value: unknown, fallback = "未填写") {
 
         <div v-if="workOrderDetailLoading" class="space-y-5">
           <DetailFieldsSkeleton :sections="2" :rows-per-section="4" />
-          <DetailFieldsSkeleton :sections="2" :rows-per-section="3" />
+          <DetailFieldsSkeleton
+            :sections="activeWorkOrderDetailKind === 'repair' ? 1 : 2"
+            :rows-per-section="3"
+          />
         </div>
 
         <template v-else-if="activeWorkOrderDetailKind === 'repair' ? activeRepairWorkOrderDetail : activeInspectionWorkOrderDetail">

@@ -64,6 +64,8 @@ const secondarySections = computed<DetailFieldSection[]>(() => {
   return buildWorkOrderSecondarySections(inspectionWorkOrder.value)
 })
 
+const secondarySkeletonSectionCount = computed(() => props.kind === "repair" ? 1 : 2)
+
 const pageTitle = computed(() => {
   if (props.kind === "repair") {
     return toRepairWorkOrderText(repairWorkOrder.value?.Title, "报修工单详情")
@@ -236,7 +238,7 @@ function toOptionalText(value: unknown) {
 
     <template #secondary>
       <div v-if="loading" class="pb-5">
-        <DetailFieldsSkeleton :sections="2" :rows-per-section="3" />
+        <DetailFieldsSkeleton :sections="secondarySkeletonSectionCount" :rows-per-section="3" />
       </div>
 
       <div v-else-if="!loading && hasWorkOrder" class="pb-5">

@@ -18,6 +18,15 @@ export function buildRepairWorkOrderPrimarySections(
         { key: "work-order-id", label: "工单ID", value: toText(workOrder.Uuid, toText(workOrder.Id, "-")) },
         { key: "order-no", label: "工单编号", value: toText(workOrder.OrderNo, "-") },
         { key: "title", label: "报修标题", value: toText(workOrder.Title, "-") },
+        { key: "report-type", label: "报修类型", value: formatRepairReportTypeLabel(workOrder.ReportType) },
+        { key: "important", label: "重要程度", value: formatRepairImportantLabel(workOrder.Important) },
+        {
+          key: "content",
+          label: "报修内容",
+          value: toText(workOrder.Content, "-"),
+          truncate: false,
+          valueClass: "leading-6",
+        },
         { key: "status", label: "状态", value: formatRepairWorkOrderStatus(workOrder.Status) },
         { key: "created-start-at", label: "创建开始时间", value: toText(workOrder.CreatedStartAt, "-") },
         { key: "created-end-at", label: "创建结束时间", value: toText(workOrder.CreatedEndAt, "-") },
@@ -56,21 +65,6 @@ export function buildRepairWorkOrderSecondarySections(workOrder: RepairWorkOrder
   }
 
   return [
-    {
-      key: "repair-work-order-report",
-      title: "报修信息",
-      rows: [
-        { key: "report-type", label: "报修类型", value: formatRepairReportTypeLabel(workOrder.ReportType) },
-        { key: "important", label: "重要程度", value: formatRepairImportantLabel(workOrder.Important) },
-        {
-          key: "content",
-          label: "报修内容",
-          value: toText(workOrder.Content, "-"),
-          truncate: false,
-          valueClass: "leading-6",
-        },
-      ],
-    },
     {
       key: "repair-work-order-repair",
       title: "维修记录",
