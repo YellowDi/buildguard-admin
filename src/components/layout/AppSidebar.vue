@@ -13,7 +13,6 @@ import AppSidebarHomeNav from "@/components/layout/app-sidebar/AppSidebarHomeNav
 import AppSidebarInboxPanel from "@/components/layout/app-sidebar/AppSidebarInboxPanel.vue"
 import AppSidebarTopBar from "@/components/layout/app-sidebar/AppSidebarTopBar.vue"
 import type {
-  AppSidebarCalendarItem,
   AppSidebarInboxGroup,
   AppSidebarNavItem,
   AppSidebarTopTabId,
@@ -133,24 +132,6 @@ const inboxAttentionCount = inboxGroups.reduce(
   (total, group) => total + group.items.filter((item) => item.severity !== "info").length,
   0,
 )
-const calendarItems: AppSidebarCalendarItem[] = [
-  {
-    time: "09:30",
-    title: "重点企业回访",
-    meta: "余姚安泰危货运输有限公司",
-  },
-  {
-    time: "14:00",
-    title: "车辆报警复核",
-    meta: "粤B88231 · 鹏程危运",
-  },
-  {
-    time: "16:30",
-    title: "证照资料催办",
-    meta: "北仑盛安危险品运输有限公司",
-  },
-]
-
 const selectedTopTab = ref<AppSidebarTopTabId>("home")
 const isSearchDialogOpen = ref(false)
 
@@ -234,7 +215,6 @@ watch(() => route.fullPath, () => {
         />
         <AppSidebarCalendarPanel
           v-else
-          :items="calendarItems"
         />
       </div>
 
@@ -268,7 +248,6 @@ watch(() => route.fullPath, () => {
       />
       <AppSidebarCalendarPanel
         v-else
-        :items="calendarItems"
         class="p-2"
       />
     </SidebarContent>

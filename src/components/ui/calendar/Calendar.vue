@@ -153,6 +153,7 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
                 :day="weekDate"
                 :month="month.value"
               />
+              <slot name="day-cell" :date="weekDate" :month="month.value" />
             </CalendarCell>
           </CalendarGridRow>
         </CalendarGridBody>
