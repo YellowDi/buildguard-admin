@@ -64,7 +64,7 @@ export function buildRepairWorkOrderSecondarySections(workOrder: RepairWorkOrder
         { key: "important", label: "重要程度", value: formatRepairImportantLabel(workOrder.Important) },
         {
           key: "content",
-          label: "维修内容",
+          label: "报修内容",
           value: toText(workOrder.Content, "-"),
           truncate: false,
           valueClass: "leading-6",
