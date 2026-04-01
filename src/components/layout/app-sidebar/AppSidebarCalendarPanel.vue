@@ -72,11 +72,11 @@ onMounted(() => {
         <p class="text-sm text-muted-foreground">暂无安排</p>
       </div>
 
-      <div v-else class="divide-y divide-border">
+      <div v-else class="space-y-1 px-2">
         <article
           v-for="event in eventsForSelectedDate"
           :key="`${event.type}-${event.uuid}`"
-          class="cursor-pointer px-3 py-3 transition-colors hover:bg-sidebar-hover"
+          class="cursor-pointer rounded-xl px-3 py-3 transition-colors hover:bg-sidebar-hover"
           @click="navigateToDetail(event)"
         >
           <div class="flex items-start justify-between gap-2">
