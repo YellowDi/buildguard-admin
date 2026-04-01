@@ -31,8 +31,8 @@ type InspectionPlanFormState = {
   customerUuid: string
   serviceUuid: string
   name: string
-  cycleType: string
   duration: string
+  workOrderDuration: string
   firstTime: string
   endTime: string
 }
@@ -47,13 +47,6 @@ type ServiceOption = {
   name: string
 }
 
-const CYCLE_TYPE_OPTIONS = [
-  { value: "1", label: "天" },
-  { value: "2", label: "季" },
-  { value: "3", label: "月" },
-  { value: "4", label: "半年" },
-  { value: "5", label: "年" },
-] as const
 const STICKY_HEADER_OFFSET = 112
 
 function createEmptyForm(): InspectionPlanFormState {
@@ -61,8 +54,8 @@ function createEmptyForm(): InspectionPlanFormState {
     customerUuid: "",
     serviceUuid: "",
     name: "",
-    cycleType: "",
     duration: "",
+    workOrderDuration: "",
     firstTime: "",
     endTime: "",
   }
@@ -89,8 +82,8 @@ let suppressCustomerWatch = false
 const queryCustomerUuid = computed(() => typeof route.query.customerUuid === "string" ? route.query.customerUuid.trim() : "")
 const queryServiceUuid = computed(() => typeof route.query.serviceUuid === "string" ? route.query.serviceUuid.trim() : "")
 const queryName = computed(() => typeof route.query.name === "string" ? route.query.name.trim() : "")
-const queryCycleType = computed(() => typeof route.query.cycleType === "string" ? route.query.cycleType.trim() : "")
 const queryDuration = computed(() => typeof route.query.duration === "string" ? route.query.duration.trim() : "")
+const queryWorkOrderDuration = computed(() => typeof route.query.workOrderDuration === "string" ? route.query.workOrderDuration.trim() : "")
 const queryFirstTime = computed(() => typeof route.query.firstTime === "string" ? route.query.firstTime.trim() : "")
 const queryEndTime = computed(() => typeof route.query.endTime === "string" ? route.query.endTime.trim() : "")
 
@@ -105,8 +98,8 @@ const canSubmit = computed(() =>
     normalizeText(form.customerUuid)
     && normalizeText(form.serviceUuid)
     && normalizeText(form.name)
-    && normalizeText(form.cycleType)
     && parsePositiveInteger(form.duration) !== null
+    && parsePositiveInteger(form.workOrderDuration) !== null
     && normalizeText(form.firstTime)
     && !submitting.value
     && !customerLoading.value
@@ -114,7 +107,6 @@ const canSubmit = computed(() =>
   ),
 )
 const submitButtonLabel = computed(() => submitting.value ? "提交中..." : "添加检测计划")
-const cycleTypeLabelByValue = new Map(CYCLE_TYPE_OPTIONS.map(item => [item.value, item.label]))
 
 function handleFocus(sectionId: string) {
   activeNavId.value = sectionId
@@ -175,22 +167,17 @@ async function handleSubmit() {
     return
   }
 
-  if (!normalizeText(form.cycleType)) {
-    toast.error("请选择周期类型")
-    return
-  }
-
-  const cycleType = parseCycleType(form.cycleType)
-
-  if (cycleType === null) {
-    toast.error("周期类型不合法")
-    return
-  }
-
   const duration = parsePositiveInteger(form.duration)
 
   if (duration === null) {
     toast.error("请填写有效的执行频率")
+    return
+  }
+
+  const workOrderDuration = parsePositiveInteger(form.workOrderDuration)
+
+  if (workOrderDuration === null) {
+    toast.error("请填写有效的工单时长")
     return
   }
 
@@ -210,8 +197,8 @@ async function handleSubmit() {
       CustomerUuid: normalizeText(form.customerUuid),
       ServiceUuid: normalizeText(form.serviceUuid),
       Name: normalizeText(form.name),
-      CycleType: cycleType,
       Duration: duration,
+      WorkOrderDuration: workOrderDuration,
       FirstTime: firstTime,
       EndTime: endTime,
     })
@@ -421,22 +408,6 @@ function parsePositiveInteger(value: unknown) {
   return parsed
 }
 
-function parseCycleType(value: unknown) {
-  const normalized = normalizeText(value)
-
-  if (!normalized) {
-    return null
-  }
-
-  const parsed = Number(normalized)
-
-  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 5) {
-    return null
-  }
-
-  return parsed
-}
-
 function toApiDateTime(value: string) {
   const normalized = normalizeText(value)
 
@@ -495,35 +466,12 @@ function resetLocalStateForRoute() {
     customerUuid: queryCustomerUuid.value,
     serviceUuid: queryServiceUuid.value,
     name: queryName.value,
-    cycleType: normalizeCycleTypeInput(queryCycleType.value),
     duration: queryDuration.value,
+    workOrderDuration: queryWorkOrderDuration.value,
     firstTime: toDatePickerInput(queryFirstTime.value),
     endTime: toDatePickerInput(queryEndTime.value),
   })
   initialFormState.value = { ...form }
-}
-
-function normalizeCycleTypeInput(value: string) {
-  const normalized = normalizeText(value)
-
-  if (!normalized) {
-    return ""
-  }
-
-  if (cycleTypeLabelByValue.has(normalized)) {
-    return normalized
-  }
-
-  const legacyValueByLabel: Record<string, string> = {
-    天: "1",
-    季: "2",
-    季度: "2",
-    月: "3",
-    半年: "4",
-    年: "5",
-  }
-
-  return legacyValueByLabel[normalized] ?? ""
 }
 
 onMounted(() => {
@@ -601,7 +549,7 @@ watch(
 )
 
 watch(
-  () => [route.query.customerUuid, route.query.serviceUuid, route.query.name, route.query.cycleType, route.query.duration, route.query.firstTime, route.query.endTime] as const,
+  () => [route.query.customerUuid, route.query.serviceUuid, route.query.name, route.query.duration, route.query.workOrderDuration, route.query.firstTime, route.query.endTime] as const,
   () => {
     suppressCustomerWatch = true
     resetLocalStateForRoute()
@@ -688,27 +636,10 @@ watch(
           </FormFieldSection>
 
           <FormFieldSection
-            id="section-cycle-type"
-            quick-nav-label="周期类型"
-            label="周期类型"
-          >
-            <Select v-model="form.cycleType">
-              <SelectTrigger id="inspection-plan-cycle-type" class="w-full" @focus="handleFocus('section-cycle-type')">
-                <SelectValue placeholder="请选择周期类型" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem v-for="cycleType in CYCLE_TYPE_OPTIONS" :key="cycleType.value" :value="cycleType.value">
-                  {{ cycleType.label }}
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </FormFieldSection>
-
-          <FormFieldSection
             id="section-duration"
             quick-nav-label="执行频率"
             label="执行频率"
-            description="请输入正整数，和周期类型一起组成执行规则。"
+            description="请输入执行频率天数（正整数）。"
             label-for="inspection-plan-duration"
           >
             <Input
@@ -718,9 +649,29 @@ watch(
               type="number"
               min="1"
               step="1"
-              placeholder="请输入执行频率"
+              placeholder="请输入执行频率天数"
               class="w-full"
               @focus="handleFocus('section-duration')"
+            />
+          </FormFieldSection>
+
+          <FormFieldSection
+            id="section-work-order-duration"
+            quick-nav-label="工单时长"
+            label="工单时长"
+            description="请设定工单持续多少天（正整数）。"
+            label-for="inspection-plan-work-order-duration"
+          >
+            <Input
+              id="inspection-plan-work-order-duration"
+              v-model="form.workOrderDuration"
+              required
+              type="number"
+              min="1"
+              step="1"
+              placeholder="请输入工单持续天数"
+              class="w-full"
+              @focus="handleFocus('section-work-order-duration')"
             />
           </FormFieldSection>
 

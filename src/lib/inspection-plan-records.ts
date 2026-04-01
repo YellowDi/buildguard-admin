@@ -1,7 +1,4 @@
-import inspectionPlansData from "@/mocks/inspection-plans.json"
-
 import { fetchInspectionPlans } from "@/lib/inspection-plans-api"
-import { shouldUseMockData } from "@/lib/data-source"
 
 export type InspectionPlanRecord = {
   id: string
@@ -12,6 +9,7 @@ export type InspectionPlanRecord = {
   serviceName: string
   customerName: string
   cycle: string
+  workOrderDuration: string
   firstExecutionAt: string
   latestExecutionAt: string
   latestOrderNo: string
@@ -23,10 +21,6 @@ export type InspectionPlanRecord = {
 }
 
 export async function listInspectionPlanRecords() {
-  if (shouldUseMockData("inspection-plans")) {
-    return (inspectionPlansData as unknown[]).map(normalizeInspectionPlanRecord)
-  }
-
   const pageSize = 200
   const allItems: unknown[] = []
   let pageNum = 1
@@ -58,7 +52,7 @@ function normalizeInspectionPlanRecord(value: unknown): InspectionPlanRecord {
   const record = asRecord(value)
   const serviceName = getString(record?.ServiceName ?? record?.serviceName, "-")
   const duration = getNumber(record?.Duration)
-  const cycleType = getString(record?.CycleType)
+  const workOrderDuration = getNumber(record?.WorkOrderDuration ?? record?.workOrderDuration)
   const fallbackId = getString(record?.id, "-")
 
   return {
@@ -69,7 +63,8 @@ function normalizeInspectionPlanRecord(value: unknown): InspectionPlanRecord {
     planName: getString(record?.PlanName ?? record?.Name ?? record?.planName, serviceName === "-" ? "检测计划" : `${serviceName}计划`),
     serviceName,
     customerName: getString(record?.CorpName ?? record?.CustomerName ?? record?.customerName, "-"),
-    cycle: buildCycleLabel(cycleType, duration, getString(record?.cycle)),
+    cycle: buildCycleLabel(duration, getString(record?.cycle)),
+    workOrderDuration: workOrderDuration === undefined ? "-" : `${workOrderDuration}天`,
     firstExecutionAt: getString(record?.FirstTime ?? record?.firstExecutionAt, "-"),
     latestExecutionAt: getString(record?.LastestTime ?? record?.latestExecutionAt, "-"),
     latestOrderNo: getString(record?.LastestOrderNo ?? record?.latestOrderNo, "-"),
@@ -81,15 +76,7 @@ function normalizeInspectionPlanRecord(value: unknown): InspectionPlanRecord {
   }
 }
 
-function buildCycleLabel(cycleType: string, duration: number | undefined, fallback = "") {
-  if (cycleType && duration) {
-    return `${duration}${cycleType}`
-  }
-
-  if (cycleType) {
-    return cycleType
-  }
-
+function buildCycleLabel(duration: number | undefined, fallback = "") {
   if (duration) {
     return `${duration}天`
   }

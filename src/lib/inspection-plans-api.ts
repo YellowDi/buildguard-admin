@@ -18,8 +18,8 @@ export type InspectionPlanListItem = {
   Creator?: string
   CustomerUuid?: string
   ServiceName?: string
-  CycleType?: string
   Duration?: number
+  WorkOrderDuration?: number
   FirstTime?: string
   LastestOrderNo?: string
   NextTime?: string
@@ -39,8 +39,8 @@ export type InspectionPlansResult = {
 
 export type InspectionPlanCreatePayload = {
   CustomerUuid: string
-  CycleType: number
   Duration: number
+  WorkOrderDuration: number
   EndTime?: string
   FirstTime: string
   Name: string
@@ -102,8 +102,8 @@ export async function createInspectionPlan(
 ): Promise<InspectionPlanCreateResult> {
   const normalizedPayload = {
     CustomerUuid: getRequiredString(payload.CustomerUuid, "CustomerUuid"),
-    CycleType: getRequiredString(payload.CycleType, "CycleType"),
     Duration: getRequiredNumber(payload.Duration, "Duration"),
+    WorkOrderDuration: getRequiredNumber(payload.WorkOrderDuration, "WorkOrderDuration"),
     EndTime: getOptionalString(payload.EndTime),
     FirstTime: getRequiredString(payload.FirstTime, "FirstTime"),
     Name: getRequiredString(payload.Name, "Name"),

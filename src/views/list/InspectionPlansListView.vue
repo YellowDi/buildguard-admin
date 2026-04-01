@@ -283,6 +283,7 @@ function buildPageFilterText(row: InspectionPlanRecord) {
     row.serviceName,
     row.customerName,
     row.cycle,
+    row.workOrderDuration,
     row.firstExecutionAt,
     row.latestExecutionAt,
     row.latestOrderNo,

@@ -29,12 +29,12 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { fetchBuildings, type BuildingListItem } from "@/lib/buildings-api"
+import { fetchInspectionPlans, type InspectionPlanListItem } from "@/lib/inspection-plans-api"
 import { fetchWorkOrders, type WorkOrderListItem } from "@/lib/work-orders-api"
 import { handleApiError } from "@/lib/api-errors"
 import alarmArchivesData from "@/mocks/alarm-archives.json"
 import alarmQueriesData from "@/mocks/alarm-queries.json"
 import customersData from "@/mocks/customers.json"
-import inspectionPlansData from "@/mocks/inspection-plans.json"
 import parksData from "@/mocks/parks.json"
 import usersData from "@/mocks/users.json"
 
@@ -64,10 +64,6 @@ type ParkRecord = {
   buildingCount: number
 }
 
-type InspectionPlanRecord = {
-  status: string
-}
-
 type BuildingRiskTab = "high-risk" | "rectification" | "excellent"
 
 type BuildingRankingItem = {
@@ -83,7 +79,6 @@ type BuildingRankingItem = {
 }
 
 const customerRecords = customersData as CustomerRecord[]
-const inspectionPlanRecords = inspectionPlansData as InspectionPlanRecord[]
 const parkRecords = parksData as ParkRecord[]
 const userRecords = usersData as UserRecord[]
 const alarmQueryRecords = alarmQueriesData as AlarmQueryRecord[]
@@ -227,9 +222,10 @@ const numberFormatter = new Intl.NumberFormat("zh-CN")
 const totalParkCount = parkRecords.length
 const totalBuildingCount = parkRecords.reduce((sum, item) => sum + item.buildingCount, 0)
 const signedContractCount = customerRecords.filter(item => item.packageCode).length
-const activeInspectionPlanCount = inspectionPlanRecords.filter(item => item.status === "进行中").length
+const totalInspectionPlanCount = ref(0)
+const activeInspectionPlanCount = ref(0)
 
-const statsCards = [
+const statsCards = computed(() => [
   {
     title: "平台客户总数",
     value: numberFormatter.format(customerRecords.length),
@@ -253,12 +249,12 @@ const statsCards = [
   },
   {
     title: "检测计划（执行中）",
-    value: numberFormatter.format(activeInspectionPlanCount),
+    value: numberFormatter.format(activeInspectionPlanCount.value),
     unit: "个",
     detail: "当前状态为进行中的检测计划数量",
-    highlight: `${numberFormatter.format(inspectionPlanRecords.length)} 个检测计划已纳入排期`,
+    highlight: `${numberFormatter.format(totalInspectionPlanCount.value)} 个检测计划已纳入排期`,
   },
-] as const
+])
 
 const chartShellClass = "group flex h-full min-w-0 w-full flex-col gap-2 rounded-xl p-0 transition-colors hover:bg-surface-tertiary sm:p-2"
 const chartCardClass = "flex h-full min-w-0 w-full flex-col gap-0 overflow-hidden border-border/60 bg-surface-tertiary py-0 shadow-none transition-[background-color,box-shadow] group-hover:bg-card group-hover:shadow-sm"
@@ -299,6 +295,7 @@ const activeBuildingList = computed(() => buildingRankedGroups.value[activeBuild
 onMounted(() => {
   void loadWorkOrderHistory()
   void loadBuildingRanking()
+  void loadInspectionPlanSummary()
 })
 
 function formatShortDate(date: number | Date, locale = "zh-CN") {
@@ -406,6 +403,45 @@ async function fetchAllWorkOrders() {
 
   while (pageNum <= 20) {
     const result = await fetchWorkOrders({
+      PageNum: pageNum,
+      PageSize: pageSize,
+    })
+
+    if (pageNum === 1) {
+      total = result.total
+    }
+
+    allItems.push(...result.list)
+
+    if (!result.list.length || (total > 0 && allItems.length >= total)) {
+      break
+    }
+
+    pageNum += 1
+  }
+
+  return allItems
+}
+
+async function loadInspectionPlanSummary() {
+  try {
+    const plans = await fetchAllInspectionPlans()
+    totalInspectionPlanCount.value = plans.length
+    activeInspectionPlanCount.value = plans.filter(plan => toText(plan.PlanStatus) === "进行中").length
+  } catch {
+    totalInspectionPlanCount.value = 0
+    activeInspectionPlanCount.value = 0
+  }
+}
+
+async function fetchAllInspectionPlans() {
+  const pageSize = 200
+  const allItems: InspectionPlanListItem[] = []
+  let pageNum = 1
+  let total = 0
+
+  while (pageNum <= 20) {
+    const result = await fetchInspectionPlans({
       PageNum: pageNum,
       PageSize: pageSize,
     })

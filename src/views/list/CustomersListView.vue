@@ -945,13 +945,18 @@ function getPrimaryPackageCode(item: CustomerListItem, plans: InspectionPlanList
 }
 
 function getInspectionCycle(plans: InspectionPlanListItem[]) {
-  const cycleTypes = uniqueText(plans.map(plan => toText(plan.CycleType)).filter(Boolean))
+  const durations = uniqueText(
+    plans
+      .map(plan => toNumber(plan.Duration))
+      .filter((value): value is number => value !== null)
+      .map(value => `${value}天`),
+  )
 
-  if (!cycleTypes.length) {
+  if (!durations.length) {
     return "-"
   }
 
-  return cycleTypes.join("、")
+  return durations.join("、")
 }
 
 function getRemainingDays(plans: InspectionPlanListItem[]) {
