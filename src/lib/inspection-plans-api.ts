@@ -39,7 +39,7 @@ export type InspectionPlansResult = {
 
 export type InspectionPlanCreatePayload = {
   CustomerUuid: string
-  CycleType: string
+  CycleType: number
   Duration: number
   EndTime?: string
   FirstTime: string

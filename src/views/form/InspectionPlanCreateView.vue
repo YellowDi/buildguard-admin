@@ -47,7 +47,13 @@ type ServiceOption = {
   name: string
 }
 
-const CYCLE_TYPE_OPTIONS = ["天", "周", "月", "季度", "年"] as const
+const CYCLE_TYPE_OPTIONS = [
+  { value: "1", label: "天" },
+  { value: "2", label: "季" },
+  { value: "3", label: "月" },
+  { value: "4", label: "半年" },
+  { value: "5", label: "年" },
+] as const
 const STICKY_HEADER_OFFSET = 112
 
 function createEmptyForm(): InspectionPlanFormState {
@@ -108,6 +114,7 @@ const canSubmit = computed(() =>
   ),
 )
 const submitButtonLabel = computed(() => submitting.value ? "提交中..." : "添加检测计划")
+const cycleTypeLabelByValue = new Map(CYCLE_TYPE_OPTIONS.map(item => [item.value, item.label]))
 
 function handleFocus(sectionId: string) {
   activeNavId.value = sectionId
@@ -169,7 +176,14 @@ async function handleSubmit() {
   }
 
   if (!normalizeText(form.cycleType)) {
-    toast.error("请填写周期类型")
+    toast.error("请选择周期类型")
+    return
+  }
+
+  const cycleType = parseCycleType(form.cycleType)
+
+  if (cycleType === null) {
+    toast.error("周期类型不合法")
     return
   }
 
@@ -196,7 +210,7 @@ async function handleSubmit() {
       CustomerUuid: normalizeText(form.customerUuid),
       ServiceUuid: normalizeText(form.serviceUuid),
       Name: normalizeText(form.name),
-      CycleType: normalizeText(form.cycleType),
+      CycleType: cycleType,
       Duration: duration,
       FirstTime: firstTime,
       EndTime: endTime,
@@ -407,6 +421,22 @@ function parsePositiveInteger(value: unknown) {
   return parsed
 }
 
+function parseCycleType(value: unknown) {
+  const normalized = normalizeText(value)
+
+  if (!normalized) {
+    return null
+  }
+
+  const parsed = Number(normalized)
+
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 5) {
+    return null
+  }
+
+  return parsed
+}
+
 function toApiDateTime(value: string) {
   const normalized = normalizeText(value)
 
@@ -465,12 +495,35 @@ function resetLocalStateForRoute() {
     customerUuid: queryCustomerUuid.value,
     serviceUuid: queryServiceUuid.value,
     name: queryName.value,
-    cycleType: queryCycleType.value,
+    cycleType: normalizeCycleTypeInput(queryCycleType.value),
     duration: queryDuration.value,
     firstTime: toDatePickerInput(queryFirstTime.value),
     endTime: toDatePickerInput(queryEndTime.value),
   })
   initialFormState.value = { ...form }
+}
+
+function normalizeCycleTypeInput(value: string) {
+  const normalized = normalizeText(value)
+
+  if (!normalized) {
+    return ""
+  }
+
+  if (cycleTypeLabelByValue.has(normalized)) {
+    return normalized
+  }
+
+  const legacyValueByLabel: Record<string, string> = {
+    天: "1",
+    季: "2",
+    季度: "2",
+    月: "3",
+    半年: "4",
+    年: "5",
+  }
+
+  return legacyValueByLabel[normalized] ?? ""
 }
 
 onMounted(() => {
@@ -638,23 +691,17 @@ watch(
             id="section-cycle-type"
             quick-nav-label="周期类型"
             label="周期类型"
-            description="支持直接输入，也可使用常见周期类型。"
-            label-for="inspection-plan-cycle-type"
           >
-            <div class="space-y-3">
-              <Input
-                id="inspection-plan-cycle-type"
-                v-model="form.cycleType"
-                list="inspection-plan-cycle-type-options"
-                required
-                placeholder="请输入周期类型，例如 月、季度、年"
-                class="w-full"
-                @focus="handleFocus('section-cycle-type')"
-              />
-              <datalist id="inspection-plan-cycle-type-options">
-                <option v-for="cycleType in CYCLE_TYPE_OPTIONS" :key="cycleType" :value="cycleType" />
-              </datalist>
-            </div>
+            <Select v-model="form.cycleType">
+              <SelectTrigger id="inspection-plan-cycle-type" class="w-full" @focus="handleFocus('section-cycle-type')">
+                <SelectValue placeholder="请选择周期类型" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem v-for="cycleType in CYCLE_TYPE_OPTIONS" :key="cycleType.value" :value="cycleType.value">
+                  {{ cycleType.label }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
           </FormFieldSection>
 
           <FormFieldSection
