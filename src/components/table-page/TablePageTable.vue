@@ -325,17 +325,27 @@ function updateAllRowsSelection(checked: unknown) {
 }
 
 function getRowClass(row: Record<string, unknown>, index: number) {
+  const rowKey = getRowKey(row, index)
   return cn(
     tableTheme.row,
-    isRowSelected(row, index) ? "bg-[#EBF1FF] hover:bg-[#EBF1FF]" : "",
+    isRowSelected(row, index)
+      ? "bg-[#EBF1FF] hover:bg-[#EBF1FF]"
+      : isRowKeyHighlighted(rowKey)
+        ? "bg-surface-tertiary"
+        : "",
   )
 }
 
 function getActionCellClass(row: Record<string, unknown>, index: number) {
+  const rowKey = getRowKey(row, index)
   return cn(
     tableTheme.actionCell,
     "relative bg-background transition-colors group-hover:bg-surface-tertiary",
-    isRowSelected(row, index) ? "!bg-[#EBF1FF] group-hover:!bg-[#EBF1FF]" : "",
+    isRowSelected(row, index)
+      ? "!bg-[#EBF1FF] group-hover:!bg-[#EBF1FF]"
+      : isRowKeyHighlighted(rowKey)
+        ? "!bg-surface-tertiary"
+        : "",
   )
 }
 
@@ -374,9 +384,14 @@ function getActionRailSpacerClass(rowKey: RowSelectionKey) {
 }
 
 function getEndSpacerCellClass(row: Record<string, unknown>, index: number) {
+  const rowKey = getRowKey(row, index)
   return cn(
     tableTheme.endSpacerCell,
-    isRowSelected(row, index) ? "bg-[#EBF1FF]" : "",
+    isRowSelected(row, index)
+      ? "bg-[#EBF1FF]"
+      : isRowKeyHighlighted(rowKey)
+        ? "bg-surface-tertiary"
+        : "",
   )
 }
 
