@@ -76,7 +76,7 @@ onMounted(() => {
         <article
           v-for="event in eventsForSelectedDate"
           :key="`${event.type}-${event.uuid}`"
-          class="cursor-pointer px-3 py-3 transition-colors hover:bg-accent/50"
+          class="cursor-pointer px-3 py-3 transition-colors hover:bg-sidebar-hover"
           @click="navigateToDetail(event)"
         >
           <div class="flex items-start justify-between gap-2">
