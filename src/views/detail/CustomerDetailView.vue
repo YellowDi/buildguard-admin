@@ -8,6 +8,7 @@ import MapLocationDialog from "@/components/map/MapLocationDialog.vue"
 import DetailAccordionModule from "@/components/detail/DetailAccordionModule.vue"
 import DetailTabActionsGroup from "@/components/detail/DetailTabActionsGroup.vue"
 import DetailFieldSections from "@/components/detail/DetailFieldSections.vue"
+import CustomerInspectionCategoryRadar from "@/components/detail/CustomerInspectionCategoryRadar.vue"
 import DetailRelationModule from "@/components/detail/DetailRelationModule.vue"
 import {
   buildRepairWorkOrderPrimarySections,
@@ -61,7 +62,9 @@ import { useDetailRouteTab } from "@/composables/useDetailRouteTab"
 import DetailLayout from "@/layouts/DetailLayout.vue"
 import { handleApiError } from "@/lib/api-errors"
 import { hasValidLatLng } from "@/lib/map-coordinates"
+import { averageBuildingScoresByInspectionCategory } from "@/lib/customer-inspection-category-scores"
 import { fetchBuildings, type BuildingListItem } from "@/lib/buildings-api"
+import { fetchInspectionCategories, type InspectionCategoryRecord } from "@/lib/inspection-categories-api"
 import { readCustomerSubAccountLocalRecords } from "@/lib/customer-sub-accounts-api"
 import { deleteCustomer, fetchCustomerDetail, type CustomerDetailPerson, type CustomerDetailResult } from "@/lib/customers-api"
 import {
@@ -219,8 +222,11 @@ const relationsLoading = ref(false)
 const relationErrorMessage = ref("")
 const parkBuildingGroups = ref<ParkBuildingGroup[]>([])
 const buildingAssets = ref<CustomerBuildingAssetRow[]>([])
+const buildingListRaw = ref<BuildingListItem[]>([])
 const buildingAssetsLoading = ref(false)
 const buildingAssetsErrorMessage = ref("")
+const inspectionCategoriesList = ref<InspectionCategoryRecord[]>([])
+const inspectionCategoriesLoading = ref(false)
 const maintenanceRecords = ref<MaintenanceRecordRow[]>([])
 const maintenanceRecordsLoading = ref(false)
 const maintenanceRecordsErrorMessage = ref("")
@@ -525,6 +531,46 @@ const fieldSections = computed<DetailFieldSection[]>(() => {
       rows: buildPackageFieldRows(current),
     },
   ]
+})
+
+/**
+ * 雷达图分数来源：
+ * - `false`：`averageBuildingScoresByInspectionCategory` 根据客户 `buildingListRaw` 与检测项分类聚合（建筑综合分或接口返回的分类分）。
+ * - `true`：暂不请求建筑数据参与计算，使用 `buildMockInspectionCategoryRadarScores` 稳定占位分。
+ */
+const INSPECTION_CATEGORY_RADAR_USE_MOCK_SCORES = true
+
+function buildMockInspectionCategoryRadarScores(count: number) {
+  if (count <= 0) {
+    return []
+  }
+
+  return Array.from({ length: count }, (_, i) => {
+    const v = 68 + ((i * 11 + 7) % 29)
+    return Math.min(100, Math.max(0, v))
+  })
+}
+
+const inspectionCategoryRadarLabels = computed(() => (
+  inspectionCategoriesList.value.map(cat => toDisplayText(cat.Name, "未命名分类"))
+))
+
+const inspectionCategoryRadarValues = computed(() => {
+  const categories = inspectionCategoriesList.value
+
+  if (INSPECTION_CATEGORY_RADAR_USE_MOCK_SCORES) {
+    return buildMockInspectionCategoryRadarScores(categories.length)
+  }
+
+  return averageBuildingScoresByInspectionCategory(categories, buildingListRaw.value)
+})
+
+const inspectionCategoryRadarLoading = computed(() => {
+  if (INSPECTION_CATEGORY_RADAR_USE_MOCK_SCORES) {
+    return inspectionCategoriesLoading.value
+  }
+
+  return inspectionCategoriesLoading.value || buildingAssetsLoading.value
 })
 
 const parkBuildingAccordion = computed(() => ({
@@ -1427,7 +1473,9 @@ watch(customer, current => {
 
 watch(customerUuid, (uuid) => {
   buildingAssets.value = []
+  buildingListRaw.value = []
   buildingAssetsErrorMessage.value = ""
+  inspectionCategoriesList.value = []
   maintenanceRecords.value = []
   maintenanceRecordsErrorMessage.value = ""
   repairOverviewRecords.value = []
@@ -1443,6 +1491,7 @@ watch(customerUuid, (uuid) => {
   handleWorkOrderDetailSheetOpenChange(false)
   void loadCustomerDetail(uuid)
   void loadBuildingAssets(uuid)
+  void loadInspectionCategoriesList()
   void loadMaintenanceRecords(uuid)
   void loadRepairOverviewRecords(uuid)
   void loadInspectionWorkOrders(uuid)
@@ -2193,11 +2242,25 @@ async function loadParkBuildings(uuid: string) {
   }
 }
 
+async function loadInspectionCategoriesList() {
+  inspectionCategoriesLoading.value = true
+
+  try {
+    const result = await fetchInspectionCategories()
+    inspectionCategoriesList.value = result.list
+  } catch {
+    inspectionCategoriesList.value = []
+  } finally {
+    inspectionCategoriesLoading.value = false
+  }
+}
+
 async function loadBuildingAssets(uuid: string) {
   const requestId = ++latestBuildingAssetsRequestId
 
   if (!uuid) {
     buildingAssets.value = []
+    buildingListRaw.value = []
     buildingAssetsErrorMessage.value = "客户 Uuid 缺失，无法加载建筑资产。"
     return
   }
@@ -2212,12 +2275,14 @@ async function loadBuildingAssets(uuid: string) {
       return
     }
 
+    buildingListRaw.value = list
     buildingAssets.value = list.map(item => mapBuildingAssetRow(item, uuid))
   } catch (error) {
     if (requestId !== latestBuildingAssetsRequestId) {
       return
     }
 
+    buildingListRaw.value = []
     buildingAssets.value = []
     buildingAssetsErrorMessage.value = handleApiError(error, {
       mode: "silent",
@@ -3472,7 +3537,9 @@ function toDisplayText(value: unknown, fallback = "未填写") {
 
       <div v-else class="space-y-5 pb-5">
         <CustomerDetailContentLoading v-if="loading" variant="basic-info-primary" />
-        <DetailFieldSections v-else-if="customer" :sections="fieldSections" />
+        <template v-else-if="customer">
+          <DetailFieldSections :sections="fieldSections" />
+        </template>
       </div>
     </template>
 
@@ -3536,6 +3603,18 @@ function toDisplayText(value: unknown, fallback = "未填写") {
                 </div>
               </template>
             </DetailAccordionModule>
+
+            <div class="my-5 h-px bg-border/80" />
+
+            <div class="min-w-0">
+              <CustomerInspectionCategoryRadar
+                :labels="inspectionCategoryRadarLabels"
+                :values="inspectionCategoryRadarValues"
+                :loading="inspectionCategoryRadarLoading"
+                :has-buildings="INSPECTION_CATEGORY_RADAR_USE_MOCK_SCORES ? true : buildingListRaw.length > 0"
+                empty-text="暂无检测项分类数据"
+              />
+            </div>
           </template>
 
           <div v-if="customer" class="my-5 h-px bg-border/80" />
