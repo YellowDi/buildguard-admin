@@ -6,12 +6,22 @@ import { toast } from "vue-sonner"
 import type { DetailFieldSection } from "@/components/detail/types"
 import DetailFieldSections from "@/components/detail/DetailFieldSections.vue"
 import DetailFieldsSkeleton from "@/components/loading/DetailFieldsSkeleton.vue"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
 import DetailLayout from "@/layouts/DetailLayout.vue"
 import { handleApiError } from "@/lib/api-errors"
-import { fetchInspectionPlanDetail, type InspectionPlanListItem } from "@/lib/inspection-plans-api"
+import { deleteInspectionPlan, fetchInspectionPlanDetail, type InspectionPlanListItem } from "@/lib/inspection-plans-api"
 
 const route = useRoute()
 const router = useRouter()
@@ -19,6 +29,8 @@ const router = useRouter()
 const detail = ref<InspectionPlanListItem | null>(null)
 const loading = ref(false)
 const errorMessage = ref("")
+const deleteConfirmOpen = ref(false)
+const deleteSubmitting = ref(false)
 let latestRequestId = 0
 
 const inspectionPlanUuid = computed(() => typeof route.params.id === "string" ? route.params.id.trim() : "")
@@ -89,6 +101,28 @@ function goToEdit() {
     name: "inspection-plan-edit",
     params: { id: inspectionPlanUuid.value },
   })
+}
+
+async function confirmDelete() {
+  if (!inspectionPlanUuid.value || deleteSubmitting.value) {
+    return
+  }
+
+  deleteSubmitting.value = true
+
+  try {
+    await deleteInspectionPlan({ Uuid: inspectionPlanUuid.value })
+    toast.success("检测计划已删除")
+    deleteConfirmOpen.value = false
+    await router.push({ name: "inspection-plans" })
+  } catch (error) {
+    handleApiError(error, {
+      title: "检测计划删除失败",
+      fallback: "检测计划删除失败，请稍后重试。",
+    })
+  } finally {
+    deleteSubmitting.value = false
+  }
 }
 
 function goToCustomerDetail() {
@@ -202,15 +236,49 @@ function formatDayValue(value: unknown) {
     @back="goBack"
   >
     <template #headerActions>
-      <Button
-        variant="outline"
-        size="sm"
-        class="h-8 gap-1 border-border/80 bg-background px-3 text-[14px] font-medium shadow-none"
-        @click="goToEdit"
-      >
-        <i class="ri-edit-line text-base" />
-        编辑检测计划
-      </Button>
+      <div class="flex items-center gap-2">
+        <AlertDialog :open="deleteConfirmOpen" @update:open="deleteConfirmOpen = $event">
+          <Button
+            variant="outline"
+            size="sm"
+            class="h-8 gap-1 border-destructive/50 bg-background px-3 text-[14px] font-medium text-destructive shadow-none hover:bg-destructive/10 hover:text-destructive"
+            @click="deleteConfirmOpen = true"
+          >
+            <i class="ri-delete-bin-line text-base" />
+            删除检测计划
+          </Button>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>确认删除当前检测计划？</AlertDialogTitle>
+              <AlertDialogDescription>
+                删除后将无法恢复，该操作会移除当前检测计划及关联调度信息。
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel :disabled="deleteSubmitting">
+                取消
+              </AlertDialogCancel>
+              <AlertDialogAction
+                :disabled="deleteSubmitting"
+                class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                @click="confirmDelete"
+              >
+                {{ deleteSubmitting ? "删除中..." : "确认删除" }}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <Button
+          variant="outline"
+          size="sm"
+          class="h-8 gap-1 border-border/80 bg-background px-3 text-[14px] font-medium shadow-none"
+          @click="goToEdit"
+        >
+          <i class="ri-edit-line text-base" />
+          编辑检测计划
+        </Button>
+      </div>
     </template>
 
     <template #primary>

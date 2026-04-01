@@ -63,6 +63,11 @@ export type InspectionPlanDetailPayload = {
   [property: string]: unknown
 }
 
+export type InspectionPlanDeletePayload = {
+  Uuid?: string
+  [property: string]: unknown
+}
+
 export type ListInspectionPlansPayload = {
   CustomerUuid?: string
   PageNum?: number
@@ -73,10 +78,12 @@ export type ListInspectionPlansPayload = {
 const INSPECTION_PLANS_API_URL = buildApiUrl(API_PATHS.inspectionPlansList)
 const INSPECTION_PLAN_CREATE_API_URL = buildApiUrl(API_PATHS.inspectionPlanCreate)
 const INSPECTION_PLAN_UPDATE_API_URL = buildApiUrl(API_PATHS.inspectionPlanUpdate)
+const INSPECTION_PLAN_DELETE_API_URL = buildApiUrl(API_PATHS.inspectionPlanDelete)
 const INSPECTION_PLANS_LOAD_ERROR_MESSAGE = "检测计划列表加载失败，请稍后重试。"
 const INSPECTION_PLAN_CREATE_ERROR_MESSAGE = "检测计划创建失败，请稍后重试。"
 const INSPECTION_PLAN_UPDATE_ERROR_MESSAGE = "检测计划更新失败，请稍后重试。"
 const INSPECTION_PLAN_DETAIL_ERROR_MESSAGE = "检测计划详情加载失败，请稍后重试。"
+const INSPECTION_PLAN_DELETE_ERROR_MESSAGE = "检测计划删除失败，请稍后重试。"
 
 export async function fetchInspectionPlans(
   payload: ListInspectionPlansPayload = {},
@@ -194,6 +201,25 @@ export async function fetchInspectionPlanDetail(
   assertApiSuccess(responseBody, INSPECTION_PLAN_DETAIL_ERROR_MESSAGE)
 
   return normalizeInspectionPlan(extractDetailRecord(responseBody))
+}
+
+export async function deleteInspectionPlan(payload: InspectionPlanDeletePayload) {
+  const url = buildApiRequestUrl(API_PATHS.inspectionPlanDelete)
+  const uuid = getRequiredString(payload.Uuid, "Uuid")
+
+  url.searchParams.set("Uuid", uuid)
+
+  const response = await fetch(url.toString(), {
+    method: "GET",
+    headers: buildApiHeaders(),
+  })
+  const responseBody = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responseBody, INSPECTION_PLAN_DELETE_ERROR_MESSAGE)
+  }
+
+  assertApiSuccess(responseBody, INSPECTION_PLAN_DELETE_ERROR_MESSAGE)
 }
 
 function extractList(payload: InspectionPlansEnvelope | unknown[]) {
