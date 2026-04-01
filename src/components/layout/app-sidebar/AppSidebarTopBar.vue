@@ -24,7 +24,7 @@ const emit = defineEmits<{
   <div class="p-2">
     <RouterLink
       to="/"
-      class="flex items-center gap-3 rounded-lg px-2 py-1.5 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+      class="flex items-center gap-3 rounded-lg px-2 py-1.5 transition-colors hover:bg-sidebar-hover hover:text-sidebar-accent-foreground"
     >
       <BrandLogo />
       <i class="ri-arrow-down-s-line text-base" />

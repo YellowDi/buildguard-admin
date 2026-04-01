@@ -82,7 +82,7 @@ function handleOpenSettings() {
     <DropdownMenuTrigger as-child>
       <button
         type="button"
-        class="flex w-full items-center gap-3 rounded-lg px-1 py-1 text-left transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+        class="flex w-full items-center gap-3 rounded-lg px-1 py-1 text-left transition-colors hover:bg-sidebar-hover hover:text-sidebar-accent-foreground"
       >
         <div class="flex min-w-0 flex-1 items-center gap-2">
           <Avatar class="size-[22px] rounded-sm">

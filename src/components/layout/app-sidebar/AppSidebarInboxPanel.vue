@@ -74,7 +74,7 @@ function buildInboxTime(groupLabel: string, date: string) {
         v-for="(item, index) in filteredInboxEntries"
         :key="item.id"
         :class="[
-          'group px-4 py-4 transition-colors hover:bg-accent/60',
+          'group px-4 py-4 transition-colors hover:bg-sidebar-hover',
           index !== filteredInboxEntries.length - 1 ? 'border-b border-border' : '',
         ]"
       >
