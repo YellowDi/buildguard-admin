@@ -317,7 +317,7 @@ function scorePillClass(score: number) {
         <div
           v-for="item in labelOverlays"
           :key="item.key"
-          class="pointer-events-none absolute z-10 flex w-max flex-col items-center gap-1 text-center"
+          class="pointer-events-none absolute z-0 flex w-max flex-col items-center gap-1 text-center"
           :style="{
             left: `${item.leftPct}%`,
             top: `${item.topPct}%`,
