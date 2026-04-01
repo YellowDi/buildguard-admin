@@ -3,9 +3,9 @@
  * 未命中时由调用方决定兜底（表格行操作默认 `ri-arrow-right-s-line`）。
  */
 const LABEL_TO_ICON: Record<string, string> = {
-  查看详情: "ri-menu-line",
-  查看更多: "ri-menu-line",
-  查看: "ri-menu-line",
+  查看详情: "ri-more-2-line",
+  查看更多: "ri-more-2-line",
+  查看: "ri-more-2-line",
   查看归档: "ri-archive-line",
   编辑: "ri-edit-line",
   指派: "ri-user-shared-line",

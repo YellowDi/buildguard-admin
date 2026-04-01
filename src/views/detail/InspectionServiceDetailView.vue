@@ -612,7 +612,7 @@ function readFileAsDataUrl(file: File) {
               :disabled="!row.buildUuid || !row.parkUuid"
               @click="goToBuildingDetail(row)"
             >
-              <i class="ri-menu-line text-[18px]" />
+              <i class="ri-more-2-line text-[18px]" />
               <span class="sr-only">建筑详情</span>
             </Button>
           </template>

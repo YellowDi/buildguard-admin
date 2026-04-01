@@ -320,7 +320,7 @@ function buildContactValue(name: string | null, phone?: string | null): DetailCo
               class="h-7 w-7 rounded-md text-muted-foreground hover:text-foreground"
               @click="goToBuildingDetail(row.id)"
             >
-              <i class="ri-menu-line text-[18px]" />
+              <i class="ri-more-2-line text-[18px]" />
             </Button>
           </template>
         </DetailRelationModule>

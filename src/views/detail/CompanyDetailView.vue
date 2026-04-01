@@ -311,7 +311,7 @@ onUnmounted(() => { detailBreadcrumbTitle.value = null })
 
             <template #vehicle-action-cell>
               <Button variant="ghost" size="icon-sm" class="h-7 w-7 rounded-md text-muted-foreground hover:text-foreground">
-                <i class="ri-menu-line text-[18px]" />
+                <i class="ri-more-2-line text-[18px]" />
               </Button>
             </template>
           </DetailRelationModule>
@@ -321,7 +321,7 @@ onUnmounted(() => { detailBreadcrumbTitle.value = null })
           <DetailRelationModule :schema="employeeModule">
             <template #employee-action-cell>
               <Button variant="ghost" size="icon-sm" class="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground">
-                <i class="ri-menu-line text-[18px]" />
+                <i class="ri-more-2-line text-[18px]" />
               </Button>
             </template>
           </DetailRelationModule>

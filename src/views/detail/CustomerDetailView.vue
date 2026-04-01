@@ -3485,7 +3485,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
             </Popover>
 
             <button type="button" :class="detailToolbarButtonClass">
-              <i class="ri-menu-line text-base" />
+              <i class="ri-more-2-line text-base" />
             </button>
 
             <Button
@@ -3776,7 +3776,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
                         class="h-7 w-7 rounded-md text-muted-foreground hover:text-foreground"
                         @click="goToBuildingDetail(getRowUuid(row), getRowParkUuid(row))"
                       >
-                        <i class="ri-menu-line text-[18px]" />
+                        <i class="ri-more-2-line text-[18px]" />
                       </Button>
                     </template>
                   </DetailRelationModule>
@@ -3838,7 +3838,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
                     class="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground"
                     @click="handleOverviewWorkOrderDetail(row)"
                   >
-                    <i class="ri-menu-line text-[18px]" />
+                    <i class="ri-more-2-line text-[18px]" />
                   </Button>
                 </template>
               </DetailRelationModule>
@@ -3894,7 +3894,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
                     class="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground"
                     @click="handleOverviewWorkOrderDetail(row)"
                   >
-                    <i class="ri-menu-line text-[18px]" />
+                    <i class="ri-more-2-line text-[18px]" />
                   </Button>
                 </template>
               </DetailRelationModule>
