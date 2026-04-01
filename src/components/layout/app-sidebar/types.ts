@@ -27,6 +27,15 @@ export type AppSidebarInboxGroup = {
   items: AppSidebarInboxItem[]
 }
 
+export type AppSidebarCalendarDate = {
+  year: number
+  month: number
+  day: number
+  copy: () => AppSidebarCalendarDate
+  cycle: (field: "month", amount: number) => AppSidebarCalendarDate
+  toString: () => string
+}
+
 export type AppSidebarCalendarItem = {
   time: string
   title: string

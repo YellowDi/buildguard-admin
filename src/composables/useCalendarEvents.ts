@@ -1,8 +1,7 @@
 import { computed, ref } from "vue"
-import type { DateValue } from "reka-ui"
 import { fetchWorkOrders } from "@/lib/work-orders-api"
 import { fetchInspectionPlans } from "@/lib/inspection-plans-api"
-import type { AppSidebarCalendarItem } from "@/components/layout/app-sidebar/types"
+import type { AppSidebarCalendarDate, AppSidebarCalendarItem } from "@/components/layout/app-sidebar/types"
 
 function toDateKey(dateStr: string | undefined): string | null {
   if (!dateStr) return null
@@ -21,7 +20,7 @@ function formatTime(dateStr: string | undefined): string {
   return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`
 }
 
-export function dateValueToKey(date: DateValue): string {
+export function dateValueToKey(date: AppSidebarCalendarDate): string {
   return `${date.year}-${String(date.month).padStart(2, "0")}-${String(date.day).padStart(2, "0")}`
 }
 
@@ -31,12 +30,12 @@ export function useCalendarEvents() {
   const allEvents = ref<AppSidebarCalendarItem[]>([])
   const eventDateKeys = computed(() => new Set(allEvents.value.map(e => e.dateKey)))
 
-  function getEventsForDate(date: DateValue): AppSidebarCalendarItem[] {
+  function getEventsForDate(date: AppSidebarCalendarDate): AppSidebarCalendarItem[] {
     const key = dateValueToKey(date)
     return allEvents.value.filter(e => e.dateKey === key)
   }
 
-  function hasEventsOnDate(date: DateValue): boolean {
+  function hasEventsOnDate(date: AppSidebarCalendarDate): boolean {
     return eventDateKeys.value.has(dateValueToKey(date))
   }
 

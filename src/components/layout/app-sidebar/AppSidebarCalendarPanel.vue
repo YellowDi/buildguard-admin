@@ -1,21 +1,25 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue"
 import { useRouter } from "vue-router"
-import type { DateValue } from "reka-ui"
 import { getLocalTimeZone, today } from "@internationalized/date"
-import { Calendar } from "@/components/ui/calendar"
+import AppSidebarMiniCalendar from "@/components/layout/app-sidebar/AppSidebarMiniCalendar.vue"
+import type { AppSidebarCalendarDate } from "@/components/layout/app-sidebar/types"
 import { useCalendarEvents } from "@/composables/useCalendarEvents"
 
 const router = useRouter()
 const { loading, getEventsForDate, hasEventsOnDate, refresh } = useCalendarEvents()
 
-const selectedDate = ref<DateValue>(today(getLocalTimeZone()))
+function getTodayDate(): AppSidebarCalendarDate {
+  return today(getLocalTimeZone()) as unknown as AppSidebarCalendarDate
+}
+
+const selectedDate = ref<AppSidebarCalendarDate>(getTodayDate())
 
 const eventsForSelectedDate = computed(() => getEventsForDate(selectedDate.value))
 
 const selectedDateLabel = computed(() => {
   const d = selectedDate.value
-  const t = today(getLocalTimeZone())
+  const t = getTodayDate()
   if (d.year === t.year && d.month === t.month && d.day === t.day) {
     return "今日安排"
   }
@@ -39,19 +43,10 @@ onMounted(() => {
 
 <template>
   <div class="flex h-full min-h-0 flex-col overflow-hidden">
-    <Calendar
+    <AppSidebarMiniCalendar
       v-model="selectedDate"
-      locale="zh-CN"
-      layout="month-and-year"
-      class="w-full max-w-full p-0"
-    >
-      <template #day-cell="{ date }">
-        <span
-          v-if="hasEventsOnDate(date)"
-          class="absolute bottom-0 left-1/2 size-1 -translate-x-1/2 rounded-full bg-primary"
-        />
-      </template>
-    </Calendar>
+      :has-event-on-date="hasEventsOnDate"
+    />
 
     <div class="mt-3 min-h-0 flex-1 overflow-y-auto">
       <div class="flex items-center justify-between px-3 py-2.5">
