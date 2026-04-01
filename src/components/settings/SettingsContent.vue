@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
+import SettingsBusinessPresetsHub from "@/components/settings/SettingsBusinessPresetsHub.vue"
 import SettingsGlobalBranding from "@/components/settings/SettingsGlobalBranding.vue"
 import SettingsInspectionHub from "@/components/settings/SettingsInspectionHub.vue"
 import SettingsMenusTable from "@/components/settings/SettingsMenusTable.vue"
@@ -68,6 +69,11 @@ function getBooleanValue(key: keyof SettingsState) {
   />
   <SettingsMenusTable
     v-else-if="props.category.key === 'developer'"
+    :page-title="props.category.pageTitle ?? props.category.label"
+    :page-description="props.category.pageDescription ?? props.category.description"
+  />
+  <SettingsBusinessPresetsHub
+    v-else-if="props.category.key === 'business-presets'"
     :page-title="props.category.pageTitle ?? props.category.label"
     :page-description="props.category.pageDescription ?? props.category.description"
   />

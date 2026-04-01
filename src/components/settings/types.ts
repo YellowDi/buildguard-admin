@@ -9,6 +9,7 @@ export type SettingsCategoryKey =
   | "members"
   | "developer"
   | "system"
+  | "business-presets"
   | "inspection-items"
   | "notifications"
   | "security"
