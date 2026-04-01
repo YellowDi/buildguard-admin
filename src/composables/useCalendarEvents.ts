@@ -56,7 +56,7 @@ export function useCalendarEvents() {
         events.push({
           dateKey,
           time: formatTime(order.Deadline),
-          title: `工单截止: ${order.OrderNo || order.PlanName || "未命名"}`,
+          title: `工单截止: ${order.PlanName || order.PackageName || "检测工单"}`,
           meta: order.CorpName || order.CustomerName || "",
           type: "work-order",
           uuid: order.Uuid || "",

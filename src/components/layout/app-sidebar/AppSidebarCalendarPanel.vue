@@ -73,8 +73,7 @@ onMounted(() => {
           class="cursor-pointer px-3 py-3 transition-colors hover:bg-accent/50"
           @click="navigateToDetail(event)"
         >
-          <div class="flex items-start gap-3">
-            <span class="w-11 shrink-0 text-xs font-medium tabular-nums text-muted-foreground">{{ event.time }}</span>
+          <div class="flex items-start gap-2">
             <div class="min-w-0 flex-1">
               <p class="truncate text-sm font-medium text-foreground">{{ event.title }}</p>
               <p v-if="event.meta" class="mt-0.5 truncate text-xs text-muted-foreground">{{ event.meta }}</p>
