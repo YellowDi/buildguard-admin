@@ -486,19 +486,8 @@ function toDatePickerInput(value: string) {
     return ""
   }
 
-  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(normalized)) {
-    return normalized.slice(0, 16).replace(" ", "T")
-  }
-
-  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/.test(normalized)) {
-    return normalized.slice(0, 10)
-  }
-
-  if (/^\d{4}-\d{2}-\d{2}$/.test(normalized)) {
-    return normalized
-  }
-
-  return ""
+  const match = normalized.match(/^(\d{4}-\d{2}-\d{2})(?:[ T].*)?$/)
+  return match?.[1] ?? ""
 }
 
 function resetLocalStateForRoute() {

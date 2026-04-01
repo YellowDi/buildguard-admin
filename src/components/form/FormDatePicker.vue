@@ -26,8 +26,16 @@ const emit = defineEmits<{
 
 const dateFormatter = new DateFormatter("zh-CN", { dateStyle: "long" })
 
+function parseCalendarDate(value: string) {
+  try {
+    return parseDate(value)
+  } catch {
+    return undefined
+  }
+}
+
 const calendarValue = computed({
-  get: () => (props.modelValue ? parseDate(props.modelValue) : undefined),
+  get: () => (props.modelValue ? parseCalendarDate(props.modelValue) : undefined),
   set: (value: { toString: () => string } | undefined) => {
     emit("update:modelValue", value?.toString() ?? "")
   },
@@ -38,7 +46,13 @@ const displayValue = computed(() => {
     return props.placeholder
   }
 
-  return dateFormatter.format(parseDate(props.modelValue).toDate(getLocalTimeZone()))
+  const parsed = parseCalendarDate(props.modelValue)
+
+  if (!parsed) {
+    return props.placeholder
+  }
+
+  return dateFormatter.format(parsed.toDate(getLocalTimeZone()))
 })
 </script>
 
