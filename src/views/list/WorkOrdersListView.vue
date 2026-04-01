@@ -640,6 +640,7 @@ function createInspectionColumns(): TablePageSchema<WorkOrderRecord>["columns"] 
       key: "deadline",
       label: "截止时间",
       filterType: "time",
+      tone: "muted",
       format: "numeric",
       filter: {
         type: "date",
@@ -661,6 +662,7 @@ function createInspectionColumns(): TablePageSchema<WorkOrderRecord>["columns"] 
       key: "createdAt",
       label: "创建时间",
       filterType: "time",
+      tone: "muted",
       format: "numeric",
       filter: {
         type: "date",
@@ -672,6 +674,7 @@ function createInspectionColumns(): TablePageSchema<WorkOrderRecord>["columns"] 
       key: "updatedAt",
       label: "更新时间",
       filterType: "time",
+      tone: "muted",
       format: "numeric",
       filter: {
         type: "date",
@@ -800,6 +803,7 @@ function createRepairColumns(): TablePageSchema<WorkOrderRecord>["columns"] {
       key: "createdStartAt",
       label: "创建开始时间",
       filterType: "time",
+      tone: "muted",
       format: "numeric",
       filter: {
         type: "date",
@@ -812,6 +816,7 @@ function createRepairColumns(): TablePageSchema<WorkOrderRecord>["columns"] {
       key: "createdEndAt",
       label: "创建结束时间",
       filterType: "time",
+      tone: "muted",
       format: "numeric",
       filter: {
         type: "date",
