@@ -23,19 +23,6 @@ const inspectionPlans = ref<InspectionPlanRecord[]>([])
 const loading = ref(false)
 const errorMessage = ref("")
 
-const inspectionPlanStatusMap = {
-  未开始: { tone: "gray", icon: "dot" },
-  进行中: { tone: "green", icon: "clock" },
-  待审核: { tone: "orange", icon: "clock" },
-  已暂停: { tone: "gray", icon: "minus" },
-  已完成: { tone: "green", icon: "check" },
-} as const
-
-const inspectionPlanEnableStatusMap = {
-  启用: { tone: "green", icon: "check" },
-  禁用: { tone: "gray", icon: "minus" },
-} as const
-
 const schema: TablePageSchema<InspectionPlanRecord> = {
   title: "检测计划",
   description: "检测计划列表",
@@ -111,36 +98,6 @@ const schema: TablePageSchema<InspectionPlanRecord> = {
       filter: {
         type: "text",
         placeholder: "输入服务名称",
-        defaultVisible: true,
-      },
-      sort: true,
-    },
-    {
-      key: "planStatus",
-      label: "计划状态",
-      filterType: "tag",
-      cellRenderer: {
-        kind: "status",
-        map: inspectionPlanStatusMap,
-        fallback: { tone: "gray", icon: "dot" },
-      },
-      filter: {
-        type: "tag",
-        defaultVisible: true,
-      },
-      sort: true,
-    },
-    {
-      key: "enableStatus",
-      label: "启用状态",
-      filterType: "tag",
-      cellRenderer: {
-        kind: "status",
-        map: inspectionPlanEnableStatusMap,
-        fallback: { tone: "gray", icon: "minus" },
-      },
-      filter: {
-        type: "tag",
         defaultVisible: true,
       },
       sort: true,
@@ -245,12 +202,6 @@ const schema: TablePageSchema<InspectionPlanRecord> = {
     storageKey: "inspection-plans-sort-preferences",
     initialField: "nextExecutionAt",
     initialDirection: "asc",
-  },
-  tabs: {
-    mode: "enum",
-    all: { label: "全部", value: "all" },
-    field: "enableStatus",
-    order: ["启用", "禁用"],
   },
 }
 
@@ -410,8 +361,6 @@ function buildPageFilterText(row: InspectionPlanRecord) {
     row.nextExecutionAt,
     row.creator,
     row.createdAt,
-    row.planStatus,
-    row.enableStatus,
   ].join(" ")
 }
 </script>
