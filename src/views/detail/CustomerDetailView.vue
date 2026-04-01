@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onUnmounted, ref, watch } from "vue"
+import { computed, defineAsyncComponent, onUnmounted, ref, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { toast } from "vue-sonner"
 
@@ -8,8 +8,14 @@ import MapLocationDialog from "@/components/map/MapLocationDialog.vue"
 import DetailAccordionModule from "@/components/detail/DetailAccordionModule.vue"
 import DetailTabActionsGroup from "@/components/detail/DetailTabActionsGroup.vue"
 import DetailFieldSections from "@/components/detail/DetailFieldSections.vue"
-import CustomerInspectionCategoryRadar from "@/components/detail/CustomerInspectionCategoryRadar.vue"
+import CustomerInspectionCategoryRadarPlaceholder from "@/components/detail/CustomerInspectionCategoryRadarPlaceholder.vue"
 import DetailRelationModule from "@/components/detail/DetailRelationModule.vue"
+
+const CustomerInspectionCategoryRadar = defineAsyncComponent({
+  loader: () => import("@/components/detail/CustomerInspectionCategoryRadar.vue"),
+  loadingComponent: CustomerInspectionCategoryRadarPlaceholder,
+  delay: 180,
+})
 import {
   buildRepairWorkOrderPrimarySections,
   buildRepairWorkOrderSecondarySections,
@@ -1491,7 +1497,7 @@ watch(customerUuid, (uuid) => {
   handleWorkOrderDetailSheetOpenChange(false)
   void loadCustomerDetail(uuid)
   void loadBuildingAssets(uuid)
-  void loadInspectionCategoriesList()
+  scheduleInspectionCategoriesLoad()
   void loadMaintenanceRecords(uuid)
   void loadRepairOverviewRecords(uuid)
   void loadInspectionWorkOrders(uuid)
@@ -2239,6 +2245,19 @@ async function loadParkBuildings(uuid: string) {
     if (requestId === latestRelationsRequestId) {
       relationsLoading.value = false
     }
+  }
+}
+
+/** 延后请求检测项分类，避免与客户详情、园区/建筑等首屏关键接口争抢主线程与连接 */
+function scheduleInspectionCategoriesLoad() {
+  const run = () => {
+    void loadInspectionCategoriesList()
+  }
+  if (typeof requestIdleCallback !== "undefined") {
+    requestIdleCallback(run, { timeout: 2500 })
+  }
+  else {
+    setTimeout(run, 0)
   }
 }
 
