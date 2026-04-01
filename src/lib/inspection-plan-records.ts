@@ -3,11 +3,13 @@ import { fetchInspectionPlans } from "@/lib/inspection-plans-api"
 export type InspectionPlanRecord = {
   id: string
   uuid: string
+  customerUuid: string
   code: string
   contractCode: string
   planName: string
   serviceName: string
   customerName: string
+  cycleDays: number | null
   cycle: string
   workOrderDuration: string
   firstExecutionAt: string
@@ -58,11 +60,13 @@ function normalizeInspectionPlanRecord(value: unknown): InspectionPlanRecord {
   return {
     id: getString(record?.Uuid ?? record?.Id ?? record?.Code, fallbackId),
     uuid: getString(record?.Uuid, "-"),
+    customerUuid: getString(record?.CustomerUuid, ""),
     code: getString(record?.Code ?? record?.code, fallbackId),
     contractCode: getString(record?.ContractCode ?? record?.contractCode, "-"),
     planName: getString(record?.PlanName ?? record?.Name ?? record?.planName, serviceName === "-" ? "检测计划" : `${serviceName}计划`),
     serviceName,
     customerName: getString(record?.CorpName ?? record?.CustomerName ?? record?.customerName, "-"),
+    cycleDays: duration ?? null,
     cycle: buildCycleLabel(duration, getString(record?.cycle)),
     workOrderDuration: workOrderDuration === undefined ? "-" : `${workOrderDuration}天`,
     firstExecutionAt: getString(record?.FirstTime ?? record?.firstExecutionAt, "-"),

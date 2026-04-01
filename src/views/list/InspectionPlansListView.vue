@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue"
 import { useRoute, useRouter } from "vue-router"
+import { toast } from "vue-sonner"
 
 import TablePageLoading from "@/components/loading/TablePageLoading.vue"
 import TablePage from "@/components/table-page/TablePage.vue"
@@ -86,6 +87,7 @@ const schema: TablePageSchema<InspectionPlanRecord> = {
       key: "customerName",
       label: "客户名称",
       filterType: "text",
+      slot: "cell-customerName",
       filter: {
         type: "text",
         placeholder: "输入客户名称",
@@ -105,15 +107,23 @@ const schema: TablePageSchema<InspectionPlanRecord> = {
       sort: true,
     },
     {
-      key: "cycle",
+      key: "cycleDays",
       label: "执行频率",
-      filterType: "text",
+      filterType: "number",
+      variant: "metric",
+      format: "numeric",
+      cellRenderer: {
+        kind: "metric-unit",
+        unit: "天",
+      },
       filter: {
-        type: "text",
+        type: "number",
         defaultVisible: true,
         placeholder: "输入执行频率",
       },
-      sort: true,
+      sort: {
+        kind: "metric",
+      },
     },
     {
       key: "firstExecutionAt",
@@ -268,6 +278,18 @@ function handleCreateInspectionPlan() {
   void router.push({ name: "inspection-plan-create" })
 }
 
+function jumpToCustomerDetail(row: InspectionPlanRecord) {
+  if (!row.customerUuid) {
+    toast.error("当前检测计划缺少客户 Uuid，无法跳转客户详情")
+    return
+  }
+
+  void router.push({
+    name: "customer-detail",
+    params: { id: row.customerUuid },
+  })
+}
+
 function extractDatePart(value: string) {
   const [datePart] = value.split(" ")
   return datePart ?? ""
@@ -282,6 +304,8 @@ function buildPageFilterText(row: InspectionPlanRecord) {
     row.planName,
     row.serviceName,
     row.customerName,
+    row.customerUuid,
+    row.cycleDays ?? "",
     row.cycle,
     row.workOrderDuration,
     row.firstExecutionAt,
@@ -304,6 +328,17 @@ function buildPageFilterText(row: InspectionPlanRecord) {
     </Alert>
 
     <TablePageLoading v-if="showInitialLoading" />
-    <TablePage v-else :page="page" @primary-action="handleCreateInspectionPlan" />
+    <TablePage v-else :page="page" @primary-action="handleCreateInspectionPlan">
+      <template #cell-customerName="{ row }">
+        <button
+          type="button"
+          class="inline-flex max-w-full items-center gap-1 text-left text-[#2B67F6] transition-colors hover:text-[#1D4ED8]"
+          @click.stop="jumpToCustomerDetail(row)"
+        >
+          <span class="truncate">{{ row.customerName }}</span>
+          <i class="ri-arrow-right-up-line shrink-0 text-sm" />
+        </button>
+      </template>
+    </TablePage>
   </div>
 </template>
