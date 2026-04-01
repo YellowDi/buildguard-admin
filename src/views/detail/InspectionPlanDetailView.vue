@@ -67,6 +67,7 @@ const fieldSections = computed<DetailFieldSection[]>(() => {
         { key: "work-order-duration", label: "工单时长", value: formatDayValue(current.WorkOrderDuration) },
         { key: "first-time", label: "首次执行时间", value: toText(current.FirstTime, "-") },
         { key: "next-time", label: "下次执行时间", value: toText(current.NextTime, "-") },
+        { key: "end-time", label: "计划结束时间", value: toText(current.EndTime, "-") },
         { key: "lastest-time", label: "最近执行时间", value: toText(current.LastestTime, "-") },
         { key: "lastest-order-no", label: "最近执行订单号", value: toText(current.LastestOrderNo, "-") },
         { key: "creator", label: "创建人", value: toText(current.Creator, "-") },
