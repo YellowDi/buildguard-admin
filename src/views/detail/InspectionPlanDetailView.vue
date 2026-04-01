@@ -50,7 +50,6 @@ const fieldSections = computed<DetailFieldSection[]>(() => {
       rows: [
         { key: "name", label: "计划名称", value: toText(current.Name, "未命名计划") },
         { key: "code", label: "计划编号", value: toText(current.Code, "-"), valueClass: "text-muted-foreground" },
-        { key: "contract-code", label: "合同编号", value: toText(current.ContractCode, "-") },
         {
           key: "customer-name",
           label: "所属客户",

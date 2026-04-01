@@ -11,7 +11,6 @@ type InspectionPlansEnvelope = {
 
 export type InspectionPlanListItem = {
   Code?: string
-  ContractCode?: string
   Id?: number
   CorpName?: string
   CreatedAt?: string

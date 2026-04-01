@@ -70,16 +70,6 @@ const schema: TablePageSchema<InspectionPlanRecord> = {
       sort: true,
     },
     {
-      key: "contractCode",
-      label: "合同编号",
-      filterType: "text",
-      filter: {
-        type: "text",
-        placeholder: "输入合同编号",
-      },
-      sort: true,
-    },
-    {
       key: "customerName",
       label: "客户名称",
       filterType: "text",
@@ -363,7 +353,6 @@ function buildPageFilterText(row: InspectionPlanRecord) {
     row.id,
     row.uuid,
     row.code,
-    row.contractCode,
     row.planName,
     row.serviceName,
     row.customerName,
