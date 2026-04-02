@@ -295,7 +295,7 @@ function buildingPickCardClass(checked: boolean, disabled: boolean) {
     disabled && "cursor-not-allowed opacity-55",
     checked
       ? "border-[color:var(--theme-primary)]/50 bg-[color:var(--theme-primary)]/10 shadow-sm ring-1 ring-[color:var(--theme-primary)]/15"
-      : "border-border/55 bg-white dark:bg-card hover:border-[color:var(--theme-primary)]/35 hover:bg-white dark:hover:bg-muted/60 hover:shadow-sm",
+      : "border-border/55 bg-white dark:bg-muted hover:border-[color:var(--theme-primary)]/35 hover:bg-white dark:hover:bg-muted/75 hover:shadow-sm",
   )
 }
 
@@ -1141,7 +1141,7 @@ watch(
                     v-for="group in groupedBuildings"
                     :key="group.key"
                     :value="group.key"
-                    class="overflow-hidden rounded-md border border-border/55 bg-muted shadow-xs data-[state=open]:bg-muted"
+                    class="overflow-hidden rounded-md border border-border/55 bg-muted shadow-xs data-[state=open]:bg-muted dark:bg-card dark:data-[state=open]:bg-card"
                   >
                     <AccordionTrigger class="px-3.5 py-3 text-left hover:no-underline">
                       <div class="flex min-w-0 items-center gap-2">

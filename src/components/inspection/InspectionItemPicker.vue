@@ -146,7 +146,7 @@ function updateInspectionSelected(uuid: string, checked: boolean | "indeterminat
         v-for="group in groupedInspectionItemOptions"
         :key="group.key"
         :value="group.key"
-        class="overflow-hidden rounded-md border border-border/55 bg-muted shadow-xs"
+        class="overflow-hidden rounded-md border border-border/55 bg-muted shadow-xs data-[state=open]:bg-muted dark:bg-card dark:data-[state=open]:bg-card"
       >
         <AccordionTrigger class="px-3.5 py-3 text-left hover:no-underline">
           <div class="flex min-w-0 items-center gap-2">
@@ -159,7 +159,7 @@ function updateInspectionSelected(uuid: string, checked: boolean | "indeterminat
             <label
               v-for="item in group.items"
               :key="item.uuid"
-              class="relative flex cursor-pointer items-start gap-3 rounded-md border border-border/55 bg-white px-3.5 py-3.5 shadow-xs transition-all duration-200 hover:border-[color:var(--theme-primary)]/35 hover:bg-white dark:bg-card dark:hover:bg-muted/60 hover:shadow-sm"
+              class="relative flex cursor-pointer items-start gap-3 rounded-md border border-border/55 bg-white px-3.5 py-3.5 shadow-xs transition-all duration-200 hover:border-[color:var(--theme-primary)]/35 hover:bg-white dark:bg-muted dark:hover:bg-muted/75 hover:shadow-sm"
               :class="isInspectionSelected(item.uuid) ? 'border-[color:var(--theme-primary)]/50 bg-[color:var(--theme-primary)]/10 shadow-sm ring-1 ring-[color:var(--theme-primary)]/15' : ''"
             >
               <Checkbox

@@ -22,7 +22,7 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
     data-slot="checkbox"
     :class="
       cn(
-        'peer group border-input dark:bg-input/30 data-[state=checked]:border-[#2B67F6] data-[state=checked]:bg-[#2B67F6] data-[state=checked]:text-white data-[state=indeterminate]:border-[#2B67F6] data-[state=indeterminate]:bg-[#2B67F6] data-[state=indeterminate]:text-white size-4 shrink-0 rounded-[4px] border shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-[#2B67F6] focus-visible:ring-[#2B67F6]/20 focus-visible:ring-[3px] aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 disabled:cursor-not-allowed disabled:opacity-50',
+        'peer group border-input bg-transparent dark:border-muted-foreground/50 dark:bg-foreground/[0.06] data-[state=checked]:border-[#2B67F6] data-[state=checked]:bg-[#2B67F6] data-[state=checked]:text-white data-[state=indeterminate]:border-[#2B67F6] data-[state=indeterminate]:bg-[#2B67F6] data-[state=indeterminate]:text-white size-4 shrink-0 rounded-[4px] border shadow-xs transition-[color,box-shadow] outline-none focus-visible:border-[#2B67F6] focus-visible:ring-[#2B67F6]/20 focus-visible:ring-[3px] aria-invalid:border-destructive aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 disabled:cursor-not-allowed disabled:opacity-50',
         props.class,
       )
     "
