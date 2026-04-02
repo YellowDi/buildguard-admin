@@ -9,7 +9,7 @@ import SettingsToolbarRefreshSlot from "@/components/settings/SettingsToolbarRef
 import SettingsToolbarSearchInput from "@/components/settings/SettingsToolbarSearchInput.vue"
 import { Button } from "@/components/ui/button"
 
-type BusinessPresetsHubTabKey = "industry"
+type BusinessPresetsHubTabKey = "industry" | "customerLevel" | "serviceLevel"
 
 type ExposedActions = {
   openCreateDialog: () => void
@@ -28,11 +28,15 @@ const industryCategoryCount = ref(0)
 const searchExpanded = ref(false)
 const searchQueries = ref<Record<BusinessPresetsHubTabKey, string>>({
   industry: "",
+  customerLevel: "",
+  serviceLevel: "",
 })
 const industryTableRef = ref<ExposedActions | null>(null)
 
 const tabs = computed(() => [
   { id: "industry", label: "行业分类", badge: industryCategoryCount.value },
+  { id: "customerLevel", label: "客户等级" },
+  { id: "serviceLevel", label: "服务等级" },
 ])
 
 const currentSearchQuery = computed({
@@ -42,7 +46,14 @@ const currentSearchQuery = computed({
   },
 })
 
-const currentSearchPlaceholder = computed(() => "搜索行业大类、行业名称或国标代码")
+const currentSearchPlaceholder = computed(() => {
+  if (activeTab.value === "industry") {
+    return "搜索行业大类、行业名称或国标代码"
+  }
+  return ""
+})
+
+const showIndustryToolbar = computed(() => activeTab.value === "industry")
 
 function toggleSearch() {
   if (searchExpanded.value && currentSearchQuery.value) {
@@ -81,7 +92,10 @@ async function refreshCurrentTab() {
           />
         </template>
 
-        <div class="flex flex-nowrap items-center justify-end gap-2">
+        <div
+          v-if="showIndustryToolbar"
+          class="flex flex-nowrap items-center justify-end gap-2"
+        >
           <SettingsToolbarSearchInput
             v-model="currentSearchQuery"
             :expanded="searchExpanded"
@@ -121,6 +135,10 @@ async function refreshCurrentTab() {
           @count-change="industryCategoryCount = $event"
         />
       </div>
+
+      <div v-show="activeTab === 'customerLevel'" />
+
+      <div v-show="activeTab === 'serviceLevel'" />
     </section>
   </SettingsRightPanelLayout>
 </template>
