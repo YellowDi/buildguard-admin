@@ -213,9 +213,8 @@ const memberColumns: TableColumn[] = [
     key: "departmentName",
     label: "部门",
     filterType: "tag",
-    emphasis: "strong",
-    tone: "primary",
-    cellClass: "font-medium text-foreground",
+    tone: "muted",
+    cellClass: "text-muted-foreground",
   },
   {
     key: "position",
