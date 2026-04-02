@@ -71,7 +71,7 @@ function normalizeScorePreset(preset: InspectionCategoryScorePreset): Inspection
   return {
     normal: clampDeductionScore(preset.normal),
     attention: clampDeductionScore(preset.attention),
-    risk: 20,
+    risk: clampDeductionScore(preset.risk),
   }
 }
 

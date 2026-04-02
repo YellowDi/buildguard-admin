@@ -99,8 +99,7 @@ const SCORE_PRESET_FIELDS: Array<{
   {
     key: "riskScore",
     label: "存在风险",
-    placeholder: "固定扣 20 分",
-    readonly: true,
+    placeholder: "例如 20",
   },
 ]
 
@@ -440,9 +439,9 @@ function createDefaultScorePreset(): InspectionCategoryScorePreset {
 function parseInspectionCategoryScorePresetForm(form: InspectionCategoryForm): InspectionCategoryScorePreset | null {
   const normal = parseScoreFieldValue(form.normalScore)
   const attention = parseScoreFieldValue(form.attentionScore)
-  const risk = 20
+  const risk = parseScoreFieldValue(form.riskScore)
 
-  if (normal === null || attention === null) {
+  if (normal === null || attention === null || risk === null) {
     return null
   }
 
@@ -586,7 +585,7 @@ defineExpose({
           <div class="grid gap-2">
             <div class="flex items-center justify-between gap-3">
               <label class="text-sm font-medium text-foreground">计分预设</label>
-              <span class="text-xs text-muted-foreground">扣分范围 0-20，存在风险固定扣 20 分</span>
+              <span class="text-xs text-muted-foreground">扣分范围 0-20，存在风险默认扣 20 分</span>
             </div>
             <div class="min-w-0 max-w-full overflow-x-auto overflow-y-hidden rounded-md border border-border">
               <table class="w-full min-w-[420px] border-separate border-spacing-0 text-sm">
@@ -620,7 +619,6 @@ defineExpose({
                         max="20"
                         step="1"
                         :placeholder="field.placeholder"
-                        :disabled="field.readonly"
                         class="h-9 min-w-0"
                       />
                     </td>
@@ -669,7 +667,7 @@ defineExpose({
           <div class="grid gap-2">
             <div class="flex items-center justify-between gap-3">
               <label class="text-sm font-medium text-foreground">计分预设</label>
-              <span class="text-xs text-muted-foreground">扣分范围 0-20，存在风险固定扣 20 分</span>
+              <span class="text-xs text-muted-foreground">扣分范围 0-20，存在风险默认扣 20 分</span>
             </div>
             <div class="min-w-0 max-w-full overflow-x-auto overflow-y-hidden rounded-md border border-border">
               <table class="w-full min-w-[420px] border-separate border-spacing-0 text-sm">
@@ -703,7 +701,6 @@ defineExpose({
                         max="20"
                         step="1"
                         :placeholder="field.placeholder"
-                        :disabled="field.readonly"
                         class="h-9 min-w-0"
                       />
                     </td>
