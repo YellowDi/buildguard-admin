@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue"
 import { useRoute } from "vue-router"
+import { toast } from "vue-sonner"
 
 import TablePageLoading from "@/components/loading/TablePageLoading.vue"
 import TablePage from "@/components/table-page/TablePage.vue"
@@ -45,6 +46,7 @@ const schema: TablePageSchema<MonitoringRecord> = {
   description: "园区与建筑监控设备列表",
   rowKey: "id",
   data: [],
+  primaryActionLabel: "添加监控",
   showIndex: true,
   stickyHeader: true,
   emptyState: {
@@ -205,6 +207,10 @@ onMounted(() => {
   void loadMonitoring()
 })
 
+function handleCreateMonitoring() {
+  toast.info("监控创建页暂未接入，请先在客户详情中维护监控设备。")
+}
+
 async function loadMonitoring() {
   loading.value = true
   errorMessage.value = ""
@@ -329,6 +335,6 @@ function toText(value: unknown, fallback = "") {
       <AlertDescription>{{ errorMessage }}</AlertDescription>
     </Alert>
 
-    <TablePage v-else :page="page" />
+    <TablePage v-else :page="page" @primary-action="handleCreateMonitoring" />
   </div>
 </template>

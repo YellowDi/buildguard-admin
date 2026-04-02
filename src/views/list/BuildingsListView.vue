@@ -45,6 +45,7 @@ const schema: TablePageSchema<BuildingRecord> = {
   description: "所有客户建筑资产列表",
   rowKey: "uuid",
   data: [],
+  primaryActionLabel: "添加建筑",
   showIndex: true,
   stickyHeader: true,
   emptyState: {
@@ -224,6 +225,10 @@ onMounted(() => {
   void loadBuildings()
 })
 
+function handleCreateBuilding() {
+  void router.push({ name: "building-create" })
+}
+
 async function loadBuildings() {
   loading.value = true
   errorMessage.value = ""
@@ -335,6 +340,6 @@ function toText(value: unknown, fallback = "") {
       <AlertDescription>{{ errorMessage }}</AlertDescription>
     </Alert>
 
-    <TablePage v-else :page="page" />
+    <TablePage v-else :page="page" @primary-action="handleCreateBuilding" />
   </div>
 </template>

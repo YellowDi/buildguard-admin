@@ -43,6 +43,7 @@ const schema: TablePageSchema<ParkRecord> = {
   description: "所有客户园区资产列表",
   rowKey: "uuid",
   data: [],
+  primaryActionLabel: "添加园区",
   showIndex: true,
   stickyHeader: true,
   emptyState: {
@@ -225,6 +226,10 @@ onMounted(() => {
   void loadParks()
 })
 
+function handleCreatePark() {
+  void router.push({ name: "park-create" })
+}
+
 async function loadParks() {
   loading.value = true
   errorMessage.value = ""
@@ -334,6 +339,6 @@ function toText(value: unknown, fallback = "") {
       <AlertDescription>{{ errorMessage }}</AlertDescription>
     </Alert>
 
-    <TablePage v-else :page="page" />
+    <TablePage v-else :page="page" @primary-action="handleCreatePark" />
   </div>
 </template>

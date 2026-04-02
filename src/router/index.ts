@@ -180,6 +180,34 @@ const router = createRouter({
           } satisfies RouteMetaConfig,
         },
         {
+          path: "parks/create",
+          name: "park-create",
+          component: () => import("@/views/form/ParkCreateView.vue"),
+          meta: {
+            title: "添加园区",
+            loading: "form",
+            navActivePath: "/parks",
+            breadcrumb: [
+              { title: "园区", to: "parks" },
+              { title: "添加园区" },
+            ] satisfies BreadcrumbMetaItem[],
+          } satisfies RouteMetaConfig,
+        },
+        {
+          path: "buildings/create",
+          name: "building-create",
+          component: () => import("@/views/form/BuildingCreateView.vue"),
+          meta: {
+            title: "添加建筑",
+            loading: "form",
+            navActivePath: "/buildings",
+            breadcrumb: [
+              { title: "建筑", to: "buildings" },
+              { title: "添加建筑" },
+            ] satisfies BreadcrumbMetaItem[],
+          } satisfies RouteMetaConfig,
+        },
+        {
           path: "customers/:id/sub-accounts/create",
           name: "customer-sub-account-create",
           component: () => import("@/views/form/CustomerSubAccountCreateView.vue"),

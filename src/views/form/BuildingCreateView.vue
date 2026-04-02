@@ -22,6 +22,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { handleApiError } from "@/lib/api-errors"
 import { hasValidLatLng } from "@/lib/map-coordinates"
 import { createBuilding, fetchBuildings, updateBuilding } from "@/lib/buildings-api"
+import { fetchCustomers } from "@/lib/customers-api"
 import { fetchParks, type ParkListItem } from "@/lib/parks-api"
 
 type QuickNavItem = {
@@ -44,6 +45,11 @@ type BuildingFormState = {
 }
 
 type ParkOption = {
+  uuid: string
+  name: string
+}
+
+type CustomerOption = {
   uuid: string
   name: string
 }
@@ -71,6 +77,8 @@ const initialFormState = ref<BuildingFormState>(createEmptyForm())
 const submitting = ref(false)
 const loadError = ref("")
 const customerName = ref("")
+const customerOptions = ref<CustomerOption[]>([])
+const customerLoading = ref(false)
 const parkOptions = ref<ParkOption[]>([])
 const parkLoading = ref(false)
 const anchorItems = ref<QuickNavItem[]>([])
@@ -86,8 +94,9 @@ const buildingUuid = computed(() => isEditMode.value && typeof route.params.id =
 const customerUuid = computed(() => (
   isEditMode.value
     ? typeof route.query.customerUuid === "string" ? route.query.customerUuid.trim() : ""
-    : typeof route.params.id === "string" ? route.params.id.trim() : ""
+    : (typeof route.params.id === "string" ? route.params.id.trim() : "") || form.customerUuid
 ))
+const routeCustomerUuid = computed(() => !isEditMode.value && typeof route.params.id === "string" ? route.params.id.trim() : "")
 const queryCustomerName = computed(() => typeof route.query.customerName === "string" ? route.query.customerName.trim() : "")
 const queryParkUuid = computed(() => typeof route.query.parkUuid === "string" ? route.query.parkUuid.trim() : "")
 const pageTitle = computed(() => isEditMode.value ? "编辑建筑" : "添加建筑")
@@ -227,6 +236,41 @@ function handleReset() {
 async function loadFormOptions() {
   loadError.value = ""
   parkOptions.value = []
+  const isStandaloneCreate = !isEditMode.value && !routeCustomerUuid.value
+
+  if (isStandaloneCreate && !customerOptions.value.length) {
+    customerLoading.value = true
+
+    try {
+      const result = await fetchCustomers({ PageNum: 1, PageSize: 1000 })
+      const options = result.list
+        .map(item => ({
+          uuid: normalizeText(item.Uuid),
+          name: normalizeText(item.CorpName) || "未命名客户",
+        }))
+        .filter(item => item.uuid)
+
+      customerOptions.value = options
+
+      if (!options.length) {
+        loadError.value = "暂无客户数据，无法创建建筑。"
+        initialFormState.value = createEmptyForm()
+        return
+      }
+
+      if (!options.some(item => item.uuid === form.customerUuid)) {
+        form.customerUuid = options[0]?.uuid ?? ""
+      }
+    } catch (error) {
+      loadError.value = handleApiError(error, {
+        mode: "silent",
+        fallback: "客户列表加载失败，请稍后重试。",
+      })
+      return
+    } finally {
+      customerLoading.value = false
+    }
+  }
 
   if (!customerUuid.value) {
     loadError.value = isEditMode.value ? "所属客户信息缺失，无法编辑建筑。" : "所属客户信息缺失，无法创建建筑。"
@@ -239,7 +283,9 @@ async function loadFormOptions() {
   }
 
   form.customerUuid = customerUuid.value
-  customerName.value = queryCustomerName.value || "当前客户"
+  customerName.value = isStandaloneCreate
+    ? customerOptions.value.find(item => item.uuid === customerUuid.value)?.name ?? ""
+    : queryCustomerName.value || "当前客户"
   parkLoading.value = true
 
   try {
@@ -376,6 +422,7 @@ function getOptionalText(value: unknown) {
 function resetLocalStateForRoute() {
   customerName.value = ""
   loadError.value = ""
+  customerOptions.value = []
   parkOptions.value = []
   Object.assign(form, createEmptyForm())
 
@@ -446,6 +493,18 @@ watch(
     void loadFormOptions()
   },
 )
+
+watch(
+  () => form.customerUuid,
+  (nextCustomerUuid, previousCustomerUuid) => {
+    if (isEditMode.value || routeCustomerUuid.value || !nextCustomerUuid || nextCustomerUuid === previousCustomerUuid) {
+      return
+    }
+
+    customerName.value = customerOptions.value.find(item => item.uuid === nextCustomerUuid)?.name ?? ""
+    void loadFormOptions()
+  },
+)
 </script>
 
 <template>
@@ -481,12 +540,23 @@ watch(
             label-for="building-customer"
           >
             <Input
+              v-if="routeCustomerUuid || isEditMode"
               id="building-customer"
               :model-value="customerName || '当前客户'"
               disabled
               class="w-full"
               @focus="handleFocus('section-customer')"
             />
+            <Select v-else v-model="form.customerUuid" :disabled="customerLoading || !customerOptions.length">
+              <SelectTrigger id="building-customer" class="w-full" @focus="handleFocus('section-customer')">
+                <SelectValue :placeholder="customerLoading ? '正在加载客户...' : '请选择所属客户'" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem v-for="customer in customerOptions" :key="customer.uuid" :value="customer.uuid">
+                  {{ customer.name }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
           </FormFieldSection>
 
           <FormFieldSection

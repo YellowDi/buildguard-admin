@@ -11,14 +11,27 @@ import MapLocationDialog from "@/components/map/MapLocationDialog.vue"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { handleApiError } from "@/lib/api-errors"
 import { hasValidLatLng } from "@/lib/map-coordinates"
+import { fetchCustomers } from "@/lib/customers-api"
 import { createPark, fetchParkDetail, updatePark } from "@/lib/parks-api"
 
 type QuickNavItem = {
   id: string
   label: string
+}
+
+type CustomerOption = {
+  uuid: string
+  name: string
 }
 
 type ParkFormState = {
@@ -56,6 +69,8 @@ const initialFormState = ref<ParkFormState>(createEmptyForm())
 const submitting = ref(false)
 const customerLoadError = ref("")
 const customerName = ref("")
+const customerOptions = ref<CustomerOption[]>([])
+const customerOptionsLoading = ref(false)
 const anchorItems = ref<QuickNavItem[]>([])
 const activeNavId = ref("")
 const formSectionsRef = ref<HTMLElement | null>(null)
@@ -91,6 +106,13 @@ const resetDialogDescription = computed(() =>
 const canSubmit = computed(() =>
   Boolean(normalizeText(form.customerUuid) && normalizeText(form.name) && !submitting.value),
 )
+const selectedCustomerName = computed(() => {
+  if (routeCustomerUuid.value || isEditMode.value) {
+    return customerName.value || "当前客户"
+  }
+
+  return customerOptions.value.find(item => item.uuid === form.customerUuid)?.name ?? "请选择客户"
+})
 
 const parkFormCoordinateLine = computed(() => {
   if (!hasValidLatLng(form.latitude, form.longitude)) {
@@ -203,6 +225,7 @@ function handleReset() {
 
 async function loadCustomerOptions() {
   customerLoadError.value = ""
+  customerOptions.value = []
 
   if (isEditMode.value) {
     await loadParkFormDetail()
@@ -220,7 +243,41 @@ async function loadCustomerOptions() {
     return
   }
 
-  customerLoadError.value = "所属客户信息缺失，无法创建园区。"
+  customerOptionsLoading.value = true
+
+  try {
+    const result = await fetchCustomers({ PageNum: 1, PageSize: 1000 })
+    const options = result.list
+      .map(item => ({
+        uuid: normalizeText(item.Uuid),
+        name: normalizeText(item.CorpName) || "未命名客户",
+      }))
+      .filter(item => item.uuid)
+
+    customerOptions.value = options
+
+    if (!options.length) {
+      customerLoadError.value = "暂无客户数据，无法创建园区。"
+      initialFormState.value = createEmptyForm()
+      return
+    }
+
+    if (!options.some(item => item.uuid === form.customerUuid)) {
+      form.customerUuid = options[0]?.uuid ?? ""
+    }
+
+    initialFormState.value = {
+      ...createEmptyForm(),
+      customerUuid: form.customerUuid,
+    }
+  } catch (error) {
+    customerLoadError.value = handleApiError(error, {
+      mode: "silent",
+      fallback: "客户列表加载失败，请稍后重试。",
+    })
+  } finally {
+    customerOptionsLoading.value = false
+  }
 }
 
 async function loadParkFormDetail() {
@@ -279,6 +336,7 @@ function getOptionalText(value: unknown) {
 function resetLocalStateForRoute() {
   customerName.value = ""
   customerLoadError.value = ""
+  customerOptions.value = []
   Object.assign(form, createEmptyForm())
 
   if (routeCustomerUuid.value) {
@@ -383,12 +441,23 @@ watch(
             label-for="park-customer"
           >
             <Input
+              v-if="routeCustomerUuid || isEditMode"
               id="park-customer"
-              :model-value="customerName || '当前客户'"
+              :model-value="selectedCustomerName"
               disabled
               class="w-full"
               @focus="handleFocus('section-customer')"
             />
+            <Select v-else v-model="form.customerUuid" :disabled="customerOptionsLoading || !customerOptions.length">
+              <SelectTrigger id="park-customer" class="w-full" @focus="handleFocus('section-customer')">
+                <SelectValue :placeholder="customerOptionsLoading ? '正在加载客户...' : '请选择所属客户'" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem v-for="customer in customerOptions" :key="customer.uuid" :value="customer.uuid">
+                  {{ customer.name }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
           </FormFieldSection>
 
           <FormFieldSection
