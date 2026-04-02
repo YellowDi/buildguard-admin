@@ -699,10 +699,10 @@ function saveScorePresetDraft(buildUuid: string) {
   target.categoryScorePresetByCategoryUuid = nextScorePresetMap
   closeScorePresetPopover()
 
-  toast.success("分类积分策略已更新", {
+  toast.success("计分预设已更新", {
     description: Object.keys(nextScorePresetMap).length
-      ? `${target.buildName} 已配置 ${Object.keys(nextScorePresetMap).length} 个分类的服务内积分策略。`
-      : `${target.buildName} 已恢复为默认分类积分策略。`,
+      ? `${target.buildName} 已配置 ${Object.keys(nextScorePresetMap).length} 个分类的服务内计分预设。`
+      : `${target.buildName} 已恢复为默认计分预设。`,
   })
 }
 
@@ -716,8 +716,8 @@ function clearScorePresetOverrides(buildUuid: string) {
   target.categoryScorePresetByCategoryUuid = {}
   closeScorePresetPopover()
 
-  toast.success("已恢复默认分类积分", {
-    description: `${target.buildName} 当前不再使用服务内自定义积分策略。`,
+  toast.success("已恢复默认计分预设", {
+    description: `${target.buildName} 当前不再使用服务内自定义计分预设。`,
   })
 }
 
@@ -1357,7 +1357,7 @@ function getBuildingScorePresetSummary(config: InspectionServiceBuildingConfig) 
   const categoryUuids = Object.keys(config.categoryScorePresetByCategoryUuid)
 
   if (!categoryUuids.length) {
-    return "使用默认分类积分。"
+    return "使用默认计分预设"
   }
 
   const previewNames = categoryUuids
@@ -1368,7 +1368,7 @@ function getBuildingScorePresetSummary(config: InspectionServiceBuildingConfig) 
     return `${previewNames.join("、")} 等 ${categoryUuids.length} 个分类已自定义。`
   }
 
-  return `${previewNames.join("、")} 已使用服务内积分策略。`
+  return `${previewNames.join("、")} 已使用服务内计分预设。`
 }
 
 function getConfiguredCategoryPresetCount(config: InspectionServiceBuildingConfig) {
@@ -1755,7 +1755,7 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
             <div v-if="!sortedBuildingConfigs.length" class="border border-dashed border-border/60 px-4 py-8 text-center">
               <p class="text-sm font-medium text-foreground">还没有选中建筑</p>
               <p class="mt-2 text-sm leading-6 text-muted-foreground">
-                勾选建筑后，这里会列出对应的配置卡片，便于逐栋编辑检测项和分类积分策略。
+                勾选建筑后，这里会列出对应的配置卡片，便于逐栋编辑检测项和计分预设。
               </p>
             </div>
 
@@ -1774,17 +1774,106 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
                       {{ config.parkName }}
                     </p>
                   </div>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    type="button"
-                    class="h-7 shrink-0 gap-1 px-2 text-xs"
-                    :disabled="Boolean(legacyMultiParkMessage)"
-                    @click="openBuildingEditor(config)"
-                  >
-                    <i class="ri-edit-line text-[13px]" />
-                    编辑检测项
-                  </Button>
+                  <div class="flex shrink-0 items-center gap-1">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      type="button"
+                      class="h-7 gap-1 px-2 text-xs"
+                      :disabled="Boolean(legacyMultiParkMessage)"
+                      @click="openBuildingEditor(config)"
+                    >
+                      <i class="ri-edit-line text-[13px]" />
+                      编辑检测项
+                    </Button>
+
+                    <Popover
+                      :open="activeScorePresetBuildUuid === config.buildUuid"
+                      @update:open="handleScorePresetPopoverOpenChange(config.buildUuid, $event)"
+                    >
+                      <PopoverTrigger as-child>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          type="button"
+                          class="size-7 px-0"
+                          :disabled="Boolean(categoryPresetFeatureDisabledReason) || Boolean(legacyMultiParkMessage)"
+                          :title="categoryPresetFeatureDisabledReason || '配置计分预设'"
+                        >
+                          <i class="ri-settings-3-line text-[13px]" />
+                          <span class="sr-only">计分预设</span>
+                        </Button>
+                      </PopoverTrigger>
+
+                      <PopoverContent class="w-[min(100vw-2rem,28rem)] p-0" align="end">
+                        <div class="border-b border-border/60 px-4 py-3">
+                          <p class="text-sm font-semibold text-foreground">计分预设</p>
+                          <p class="mt-1 text-xs leading-5 text-muted-foreground">
+                            未改动时会使用默认计分预设。
+                          </p>
+                        </div>
+
+                        <div class="max-h-[26rem] space-y-3 overflow-y-auto px-4 py-4">
+                          <div
+                            v-for="category in inspectionCategoryOptions"
+                            :key="`${config.buildUuid}-${category.uuid}`"
+                            class="rounded-md border border-border/60 px-3 py-3"
+                          >
+                            <p class="text-sm font-medium text-foreground">{{ category.name }}</p>
+                            <div class="mt-3 grid gap-3 sm:grid-cols-3">
+                              <label class="space-y-1">
+                                <span class="text-xs text-muted-foreground">一切正常</span>
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  max="20"
+                                  inputmode="numeric"
+                                  :model-value="scorePresetDraftForms[category.uuid]?.normal ?? ''"
+                                  @update:model-value="updateScorePresetField(category.uuid, 'normal', $event)"
+                                />
+                              </label>
+                              <label class="space-y-1">
+                                <span class="text-xs text-muted-foreground">需重点关注</span>
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  max="20"
+                                  inputmode="numeric"
+                                  :model-value="scorePresetDraftForms[category.uuid]?.attention ?? ''"
+                                  @update:model-value="updateScorePresetField(category.uuid, 'attention', $event)"
+                                />
+                              </label>
+                              <label class="space-y-1">
+                                <span class="text-xs text-muted-foreground">存在风险</span>
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  max="20"
+                                  inputmode="numeric"
+                                  :model-value="scorePresetDraftForms[category.uuid]?.risk ?? ''"
+                                  @update:model-value="updateScorePresetField(category.uuid, 'risk', $event)"
+                                />
+                              </label>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div class="flex flex-wrap items-center justify-between gap-2 border-t border-border/60 px-4 py-3">
+                          <Button size="sm" variant="ghost" type="button" @click="resetScorePresetDraft">
+                            恢复初始
+                          </Button>
+                          <div class="flex flex-wrap gap-2">
+                            <Button size="sm" variant="outline" type="button" @click="clearScorePresetOverrides(config.buildUuid)">
+                              清空自定义
+                            </Button>
+                            <Button size="sm" type="button" @click="saveScorePresetDraft(config.buildUuid)">
+                              保存策略
+                            </Button>
+                          </div>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  </div>
                 </div>
 
                 <div class="mt-3 space-y-2">
@@ -1800,7 +1889,7 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
 
                   <div class="rounded-md border border-border/60 px-2.5 py-2">
                     <div class="flex items-center justify-between gap-3">
-                      <span class="text-[11px] text-muted-foreground">分类积分</span>
+                      <span class="text-[11px] text-muted-foreground">计分预设</span>
                       <span class="text-xs font-medium text-foreground">{{ getConfiguredCategoryPresetCount(config) }} 个分类</span>
                     </div>
                     <p class="mt-1 text-xs leading-5 text-muted-foreground">
@@ -1809,94 +1898,6 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
                   </div>
                 </div>
 
-                <div class="mt-3 flex items-center gap-2">
-                  <Popover
-                    :open="activeScorePresetBuildUuid === config.buildUuid"
-                    @update:open="handleScorePresetPopoverOpenChange(config.buildUuid, $event)"
-                  >
-                    <PopoverTrigger as-child>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        type="button"
-                        class="size-8 px-0"
-                        :disabled="Boolean(categoryPresetFeatureDisabledReason) || Boolean(legacyMultiParkMessage)"
-                        :title="categoryPresetFeatureDisabledReason || '配置分类积分策略'"
-                      >
-                        <i class="ri-settings-3-line text-sm" />
-                        <span class="sr-only">分类计分</span>
-                      </Button>
-                    </PopoverTrigger>
-
-                    <PopoverContent class="w-[min(100vw-2rem,28rem)] p-0" align="end">
-                      <div class="border-b border-border/60 px-4 py-3">
-                        <p class="text-sm font-semibold text-foreground">分类积分策略</p>
-                        <p class="mt-1 text-xs leading-5 text-muted-foreground">
-                          未改动的分类会沿用全局默认积分预设。
-                        </p>
-                      </div>
-
-                      <div class="max-h-[26rem] space-y-3 overflow-y-auto px-4 py-4">
-                        <div
-                          v-for="category in inspectionCategoryOptions"
-                          :key="`${config.buildUuid}-${category.uuid}`"
-                          class="rounded-md border border-border/60 px-3 py-3"
-                        >
-                          <p class="text-sm font-medium text-foreground">{{ category.name }}</p>
-                          <div class="mt-3 grid gap-3 sm:grid-cols-3">
-                            <label class="space-y-1">
-                              <span class="text-xs text-muted-foreground">一切正常</span>
-                              <Input
-                                type="number"
-                                min="0"
-                                max="20"
-                                inputmode="numeric"
-                                :model-value="scorePresetDraftForms[category.uuid]?.normal ?? ''"
-                                @update:model-value="updateScorePresetField(category.uuid, 'normal', $event)"
-                              />
-                            </label>
-                            <label class="space-y-1">
-                              <span class="text-xs text-muted-foreground">需重点关注</span>
-                              <Input
-                                type="number"
-                                min="0"
-                                max="20"
-                                inputmode="numeric"
-                                :model-value="scorePresetDraftForms[category.uuid]?.attention ?? ''"
-                                @update:model-value="updateScorePresetField(category.uuid, 'attention', $event)"
-                              />
-                            </label>
-                            <label class="space-y-1">
-                              <span class="text-xs text-muted-foreground">存在风险</span>
-                              <Input
-                                type="number"
-                                min="0"
-                                max="20"
-                                inputmode="numeric"
-                                :model-value="scorePresetDraftForms[category.uuid]?.risk ?? ''"
-                                @update:model-value="updateScorePresetField(category.uuid, 'risk', $event)"
-                              />
-                            </label>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div class="flex flex-wrap items-center justify-between gap-2 border-t border-border/60 px-4 py-3">
-                        <Button size="sm" variant="ghost" type="button" @click="resetScorePresetDraft">
-                          恢复初始
-                        </Button>
-                        <div class="flex flex-wrap gap-2">
-                          <Button size="sm" variant="outline" type="button" @click="clearScorePresetOverrides(config.buildUuid)">
-                            清空自定义
-                          </Button>
-                          <Button size="sm" type="button" @click="saveScorePresetDraft(config.buildUuid)">
-                            保存策略
-                          </Button>
-                        </div>
-                      </div>
-                    </PopoverContent>
-                  </Popover>
-                </div>
               </article>
             </div>
           </div>
