@@ -22,6 +22,7 @@
   --destructive-foreground: hsl(0 0% 98%);
   --border: hsl(0 0% 89.8%);
   --input: hsl(0 0% 89.8%);
+  --border-hover: hsl(0 0% 78%);
   --ring: hsl(0 0% 63.9%);
   --theme-primary: #335CFF;
   --radius: 0.65rem;
@@ -85,8 +86,11 @@
   --accent-foreground: hsl(0 0% 98%);
   --destructive: hsl(0 62.8% 30.6%);
   --destructive-foreground: hsl(0 0% 98%);
-  --border: hsl(0 0% 14.9%);
-  --input: hsl(0 0% 14.9%);
+  /* Surfaces (cards, layout containers): subtle outline */
+  --border: rgba(255, 255, 255, 0.08);
+  /* Form controls & interactive control chrome */
+  --input: rgba(255, 255, 255, 0.12);
+  --border-hover: rgba(255, 255, 255, 0.16);
   --ring: hsl(0 0% 63.9%);
   --theme-primary: #335CFF;
   --surface-primary: hsl(0 0% 3.9%);
@@ -107,10 +111,12 @@
   --sidebar-primary-foreground: hsl(0 0% 100%);
   --sidebar-accent: hsl(0 0% 100% / 0.055);
   --sidebar-accent-foreground: hsl(240 4.8% 95.9%);
-  --sidebar-border: hsl(240 3.7% 15.9%);
+  --sidebar-border: rgba(255, 255, 255, 0.08);
   --sidebar-ring: hsl(217.2 91.2% 59.8%);
   --sidebar-active-surface: rgb(255 255 235 / 0.102);
-  --shadow-card: none;
+  --shadow-card:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 24px 60px rgba(0, 0, 0, 0.36);
   --link: var(--theme-primary);
   --link-foreground: hsl(0 0% 100%);
   --selection: hsl(214 52% 25%);
@@ -144,6 +150,7 @@
   --color-destructive-foreground: var(--destructive-foreground);
   --color-border: var(--border);
   --color-input: var(--input);
+  --color-border-hover: var(--border-hover);
   --color-ring: var(--ring);
   --color-theme-primary: var(--theme-primary);
   --color-surface-primary: var(--surface-primary);
@@ -361,6 +368,64 @@
   .sidebar-nav-hover-fill {
     background: var(--sidebar-hover);
   }
+
+  /**
+   * `border-border/55` softens outlines in light mode.
+   * In dark mode `--border` is rgba(255,255,255,0.08); the /55 multiplier makes container edges nearly invisible.
+   * Use the full semantic border token for accordion / surface cards using this utility.
+   */
+  .dark .border-border\/55 {
+    border-color: var(--border);
+  }
+
+  /*
+   * Dark mode: surface hover outline on cards (shadow uses --shadow-card on Card / popovers).
+   * Control borders / hover / transitions: see @layer utilities .dark rules below.
+   */
+  .dark [data-slot="card"]:hover {
+    border-color: var(--border-hover);
+  }
+
+  .dark [data-slot="select-trigger"]:not([data-disabled]):hover:not(:focus-visible),
+  .dark [data-slot="checkbox"]:not([data-disabled]):hover:not(:focus-visible),
+  .dark [data-slot="radio-group-item"]:not([data-disabled]):hover:not(:focus-visible),
+  .dark [data-slot="input-group"]:hover:not(:has([data-slot="input-group-control"]:focus-visible)) {
+    border-color: var(--border-hover);
+  }
+
+  .dark
+    :is(input, textarea, select):not(:disabled):not([aria-invalid="true"]):hover:not(:focus-visible) {
+    border-color: var(--border-hover);
+  }
+
+  .dark [data-slot="button"][data-variant="outline"]:hover,
+  .dark [data-slot="button"][data-variant="outline"]:focus-visible {
+    border-color: var(--border-hover);
+  }
+
+  .dark .border-input:hover:not(:disabled):not([aria-invalid="true"]):not(:focus-visible) {
+    border-color: var(--border-hover);
+  }
+}
+
+@layer utilities {
+  /* Overrides component transition-* utilities in dark mode (design token). */
+  .dark [data-slot="card"],
+  .dark [data-slot="button"],
+  .dark [data-slot="select-trigger"],
+  .dark [data-slot="checkbox"],
+  .dark [data-slot="radio-group-item"],
+  .dark [data-slot="input-group"],
+  .dark [data-slot="input"],
+  .dark [data-slot="switch"],
+  .dark input:not([type="hidden"]),
+  .dark textarea,
+  .dark select {
+    transition:
+      transform 180ms ease,
+      border-color 180ms ease,
+      background 180ms ease !important;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -376,6 +441,20 @@
   .top-tab-switch-icon-button,
   .top-tab-switch-content,
   .top-tab-switch-badge {
+    transition: none !important;
+  }
+
+  .dark [data-slot="card"],
+  .dark [data-slot="button"],
+  .dark [data-slot="select-trigger"],
+  .dark [data-slot="checkbox"],
+  .dark [data-slot="radio-group-item"],
+  .dark [data-slot="input-group"],
+  .dark [data-slot="input"],
+  .dark [data-slot="switch"],
+  .dark input:not([type="hidden"]),
+  .dark textarea,
+  .dark select {
     transition: none !important;
   }
 }

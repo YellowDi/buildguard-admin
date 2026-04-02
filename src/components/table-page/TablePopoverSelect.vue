@@ -55,7 +55,7 @@ const triggerClasses = computed(() => {
 
 const contentClasses = computed(() => {
   return cn(
-    "absolute top-[calc(100%+6px)] z-50 min-w-[8rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-sm",
+    "absolute top-[calc(100%+6px)] z-50 min-w-[8rem] overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-[var(--shadow-card)]",
     props.align === "right" ? "right-0" : "left-0",
     props.contentClass,
   )

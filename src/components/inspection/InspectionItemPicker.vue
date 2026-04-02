@@ -146,7 +146,7 @@ function updateInspectionSelected(uuid: string, checked: boolean | "indeterminat
         v-for="group in groupedInspectionItemOptions"
         :key="group.key"
         :value="group.key"
-        class="overflow-hidden rounded-md border border-border/55 bg-muted shadow-xs data-[state=open]:bg-muted dark:bg-card dark:data-[state=open]:bg-card"
+        class="overflow-hidden rounded-md border border-border/55 bg-muted shadow-xs data-[state=open]:bg-muted dark:shadow-[var(--shadow-card)] dark:bg-card dark:data-[state=open]:bg-card"
       >
         <AccordionTrigger class="px-3.5 py-3 text-left hover:no-underline">
           <div class="flex min-w-0 items-center gap-2">

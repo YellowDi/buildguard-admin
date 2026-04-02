@@ -665,7 +665,7 @@ function readFileAsDataUrl(file: File) {
                       v-for="item in group.rows"
                       :key="`${group.key}-${item.id}`"
                       :value="`${group.key}-${item.id}`"
-                      class="mb-2 overflow-hidden rounded-md border border-border/55 bg-background/95 shadow-xs last:mb-0"
+                      class="mb-2 overflow-hidden rounded-md border border-border/55 bg-background/95 shadow-xs last:mb-0 dark:shadow-[var(--shadow-card)]"
                     >
                       <AccordionTrigger class="bg-muted px-3.5 py-3 text-left hover:no-underline data-[state=open]:border-b data-[state=open]:border-border/60">
                         <div class="min-w-0">

@@ -287,7 +287,7 @@ watch(
 <template>
   <div
     ref="rootRef"
-    class="w-[300px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-border bg-popover shadow-lg"
+    class="w-[300px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-border bg-popover shadow-[var(--shadow-card)]"
     data-list-popover
   >
     <div class="p-2.5">
@@ -327,7 +327,7 @@ watch(
 
           <div
             v-if="openActionMenu"
-            class="absolute left-[calc(100%+6px)] top-1/2 z-40 min-w-[104px] -translate-y-1/2 rounded-md border border-border bg-popover p-1 shadow-lg"
+            class="absolute left-[calc(100%+6px)] top-1/2 z-40 min-w-[104px] -translate-y-1/2 rounded-md border border-border bg-popover p-1 shadow-[var(--shadow-card)]"
             data-list-popover
           >
             <button

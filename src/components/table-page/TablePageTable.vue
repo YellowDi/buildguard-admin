@@ -1325,7 +1325,7 @@ onBeforeUnmount(() => {
                 :key="`sizer-${action.key}`"
                 variant="outline"
                 size="sm"
-                class="border-border/80 bg-background/95 shadow-sm"
+                class="border-border/80 bg-background/95 shadow-sm dark:shadow-[var(--shadow-card)]"
                 tabindex="-1"
               >
                 <i :class="remixIconForTableRowAction(action.label, action.icon)" />

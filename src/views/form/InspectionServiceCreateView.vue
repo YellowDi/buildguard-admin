@@ -1141,7 +1141,7 @@ watch(
                     v-for="group in groupedBuildings"
                     :key="group.key"
                     :value="group.key"
-                    class="overflow-hidden rounded-md border border-border/55 bg-muted shadow-xs data-[state=open]:bg-muted dark:bg-card dark:data-[state=open]:bg-card"
+                    class="overflow-hidden rounded-md border border-border/55 bg-muted shadow-xs data-[state=open]:bg-muted dark:shadow-[var(--shadow-card)] dark:bg-card dark:data-[state=open]:bg-card"
                   >
                     <AccordionTrigger class="px-3.5 py-3 text-left hover:no-underline">
                       <div class="flex min-w-0 items-center gap-2">
@@ -1260,7 +1260,7 @@ watch(
                   'overflow-hidden rounded-md border bg-background/95 shadow-xs',
                   template.uuid === normalizeText(form.templateUuid)
                     ? 'border-[color:var(--theme-primary)]/45 bg-[color:var(--theme-primary)]/8'
-                    : 'border-border/55',
+                    : 'border-border/55 dark:shadow-[var(--shadow-card)]',
                 )"
               >
                 <div class="flex items-center justify-between gap-3 px-3.5 py-3">
