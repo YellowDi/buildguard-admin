@@ -1371,10 +1371,6 @@ function getBuildingScorePresetSummary(config: InspectionServiceBuildingConfig) 
   return `${previewNames.join("、")} 已使用服务内计分预设。`
 }
 
-function getConfiguredCategoryPresetCount(config: InspectionServiceBuildingConfig) {
-  return Object.keys(config.categoryScorePresetByCategoryUuid).length
-}
-
 function getDefaultCategoryScorePreset(categoryUuid: string): InspectionCategoryScorePreset {
   return cloneScorePreset(globalCategoryScorePresets.value[categoryUuid] ?? DEFAULT_CATEGORY_SCORE_PRESET)
 }
@@ -1876,22 +1872,16 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
                   </div>
                 </div>
 
-                <div class="mt-3 space-y-2">
-                  <div class="rounded-md border border-border/60 px-2.5 py-2">
-                    <div class="flex items-center justify-between gap-3">
-                      <span class="text-[11px] text-muted-foreground">检测项</span>
-                      <span class="text-xs font-medium text-foreground">{{ config.inspectionUuids.length }} 项</span>
-                    </div>
+                <div class="mt-3 space-y-3">
+                  <div>
+                    <span class="text-[11px] text-muted-foreground">检测项</span>
                     <p class="mt-1 text-xs leading-5 text-muted-foreground">
                       {{ getBuildingInspectionSummary(config) }}
                     </p>
                   </div>
 
-                  <div class="rounded-md border border-border/60 px-2.5 py-2">
-                    <div class="flex items-center justify-between gap-3">
-                      <span class="text-[11px] text-muted-foreground">计分预设</span>
-                      <span class="text-xs font-medium text-foreground">{{ getConfiguredCategoryPresetCount(config) }} 个分类</span>
-                    </div>
+                  <div>
+                    <span class="text-[11px] text-muted-foreground">计分预设</span>
                     <p class="mt-1 text-xs leading-5 text-muted-foreground">
                       {{ getBuildingScorePresetSummary(config) }}
                     </p>
