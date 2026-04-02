@@ -51,7 +51,6 @@ import {
 } from "@/components/ui/select"
 import { handleApiError } from "@/lib/api-errors"
 import {
-  bindMemberRoles,
   createMember as requestMemberCreate,
   deleteMember as requestMemberDelete,
   fetchMembers,
@@ -79,7 +78,6 @@ type MemberViewKey = "members" | "roles" | "permission-groups"
 
 type PermissionOption = {
   label: string
-  uuid?: string
 }
 
 type MemberRow = {
@@ -92,6 +90,7 @@ type MemberRow = {
   position: string
   permissionGroup: string
   permissionOptions: PermissionOption[]
+  userType?: number
   status: string
   source: "remote" | "local"
 }
@@ -149,12 +148,16 @@ type MemberActionKey =
 const MEMBERS_LOAD_ERROR_MESSAGE = "成员列表加载失败，请稍后重试。"
 const MEMBER_STATUS_UPDATE_ERROR_MESSAGE = "成员状态更新失败，请稍后重试。"
 const MEMBER_UPDATE_ERROR_MESSAGE = "成员信息更新失败，请稍后重试。"
-const MEMBER_ROLE_BIND_ERROR_MESSAGE = "成员角色绑定失败，请稍后重试。"
 const memberStatusMap = {
   正常: { tone: "green", icon: "check" },
   离职: { tone: "gray", icon: "minus" },
   未知状态: { tone: "gray", icon: "alert" },
 } as const
+const MEMBER_USER_TYPE_OPTIONS = [
+  { label: "后台", value: 1 },
+  { label: "检修", value: 2 },
+  { label: "维修", value: 3 },
+] as const
 
 const rows = ref<MemberRow[]>([])
 const roleRows = ref<RoleRow[]>([])
@@ -183,13 +186,9 @@ const deleteConfirmOpen = ref(false)
 const editPermissionGroupOptions = ref<PermissionOption[]>([])
 const searchExpanded = ref(false)
 const searchQuery = ref("")
-const globalPermissionOptions = computed(() => buildPermissionOptions([
-  ...roleRows.value.map(role => ({
-    label: role.name,
-    uuid: role.uuid,
-  })),
-  ...rows.value.flatMap(row => row.permissionOptions),
-]))
+const globalPermissionOptions = computed(() => buildPermissionOptions(MEMBER_USER_TYPE_OPTIONS.map(option => ({
+  label: option.label,
+}))))
 const availablePermissionGroups = computed(() => globalPermissionOptions.value.map(option => option.label))
 const manualMemberForm = ref(createManualMemberForm())
 const roleForm = ref(createRoleForm())
@@ -558,8 +557,10 @@ const currentErrorMessage = computed(() => (
 ))
 
 async function loadAllData() {
-  await loadRoles()
-  await loadMembers()
+  await Promise.allSettled([
+    loadMembers(),
+    loadRoles(),
+  ])
 }
 
 async function loadMembers() {
@@ -602,7 +603,8 @@ async function loadRoles() {
 
 function normalizeMemberRow(raw: unknown, index: number): MemberRow {
   const record = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>
-  const permissionOptions = extractMemberRoleOptions(record)
+  const userType = normalizeUserType(record.UserType)
+  const permissionOptions = buildPermissionOptions(getUserTypeOption(userType))
   const initialPermissionGroup = permissionOptions[0]?.label ?? "未分配"
 
   return {
@@ -615,6 +617,7 @@ function normalizeMemberRow(raw: unknown, index: number): MemberRow {
     position: toText(record.Position, "未设置职位"),
     permissionGroup: initialPermissionGroup,
     permissionOptions,
+    userType,
     status: normalizeStatus(record.Status),
     source: "remote",
   }
@@ -643,7 +646,8 @@ async function hydrateMemberRolesFromDetail(memberRows: MemberRow[]) {
       return
     }
 
-    const permissionOptions = extractRoleOptions(result.value.detail.Roles)
+    const userType = normalizeUserType(result.value.detail.UserType)
+    const permissionOptions = buildPermissionOptions(getUserTypeOption(userType))
 
     if (permissionOptions.length === 0) {
       return
@@ -651,6 +655,7 @@ async function hydrateMemberRolesFromDetail(memberRows: MemberRow[]) {
 
     result.value.row.permissionOptions = permissionOptions
     result.value.row.permissionGroup = permissionOptions[0]?.label ?? "未分配"
+    result.value.row.userType = userType
   })
 }
 
@@ -665,46 +670,6 @@ function normalizeRoleRow(raw: unknown, index: number): RoleRow {
     createdAt: toText(record.CreatedAt, record.createdAt, "-"),
     updatedAt: toText(record.UpdatedAt, record.updatedAt, "-"),
   }
-}
-
-function extractRoleOptions(value: unknown) {
-  if (!Array.isArray(value)) {
-    return []
-  }
-
-  return buildPermissionOptions(value.map((item) => {
-    const roleRecord = (item && typeof item === "object" ? item : {}) as Record<string, unknown>
-    return {
-      label: toText(roleRecord.RoleName, roleRecord.Name),
-      uuid: toText(roleRecord.Uuid, roleRecord.RoleUuid),
-    }
-  }))
-}
-
-function extractMemberRoleOptions(record: Record<string, unknown>) {
-  const nestedRoleOptions = extractRoleOptions(record.Roles)
-
-  if (nestedRoleOptions.length > 0) {
-    return nestedRoleOptions
-  }
-
-  const roleUuids = getTextArray(record.RoleUuids, record.roleUuids, record.RoleUUIDs, record.roleUUIDs)
-  const roleNames = getTextArray(record.RoleNames, record.roleNames, record.RoleName, record.roleName, record.Roles)
-  const maxLength = Math.max(roleUuids.length, roleNames.length)
-
-  if (maxLength === 0) {
-    return []
-  }
-
-  return buildPermissionOptions(Array.from({ length: maxLength }, (_, index) => {
-    const uuid = roleUuids[index] ?? ""
-    const label = roleNames[index] ?? getRoleLabelByUuid(uuid) ?? ""
-
-    return {
-      label,
-      uuid: uuid || undefined,
-    }
-  }))
 }
 
 function buildPermissionOptions(options: PermissionOption[]) {
@@ -722,16 +687,8 @@ function buildPermissionOptions(options: PermissionOption[]) {
     if (!current) {
       deduped.set(label, {
         label,
-        uuid: option.uuid?.trim() || undefined,
       })
       return
-    }
-
-    if (!current.uuid && option.uuid?.trim()) {
-      deduped.set(label, {
-        label,
-        uuid: option.uuid.trim(),
-      })
     }
   })
 
@@ -804,47 +761,23 @@ function toText(...values: unknown[]) {
   return ""
 }
 
-function getTextArray(...values: unknown[]) {
-  for (const value of values) {
-    if (Array.isArray(value)) {
-      const items = value.flatMap((item) => {
-        if (typeof item === "string" && item.trim()) {
-          return [item.trim()]
-        }
+function normalizeUserType(value: unknown) {
+  const parsed = typeof value === "string" ? Number(value.trim()) : value
 
-        if (typeof item === "number" && Number.isFinite(item)) {
-          return [String(item)]
-        }
-
-        return []
-      })
-
-      if (items.length > 0) {
-        return items
-      }
-    }
-
-    if (typeof value === "string" && value.trim()) {
-      return value
-        .split(/[,\uff0c]/)
-        .map(item => item.trim())
-        .filter(Boolean)
-    }
+  if (parsed === 1 || parsed === 2 || parsed === 3) {
+    return parsed
   }
 
-  return []
+  return undefined
 }
 
-function getRoleLabelByUuid(uuid: string) {
-  if (!uuid) {
-    return ""
-  }
-
-  return roleRows.value.find(role => role.uuid === uuid)?.name ?? ""
+function getUserTypeOption(value: number | undefined): PermissionOption[] {
+  const matched = MEMBER_USER_TYPE_OPTIONS.find(option => option.value === value)
+  return matched ? [{ label: matched.label }] : []
 }
 
-function getPermissionOption(member: MemberRow, groupLabel: string) {
-  return getAssignablePermissionOptions(member).find(option => option.label === groupLabel)
+function getUserTypeValueByLabel(label: string) {
+  return MEMBER_USER_TYPE_OPTIONS.find(option => option.label === label)?.value
 }
 
 function getAssignablePermissionOptions(member: MemberRow) {
@@ -852,7 +785,7 @@ function getAssignablePermissionOptions(member: MemberRow) {
     ...globalPermissionOptions.value,
     ...member.permissionOptions,
     ...(member.permissionGroup && member.permissionGroup !== "未分配"
-      ? [{ label: member.permissionGroup, uuid: member.permissionOptions.find(option => option.label === member.permissionGroup)?.uuid }]
+      ? [{ label: member.permissionGroup }]
       : []),
   ])
 }
@@ -867,14 +800,6 @@ function getDepartmentMatch(departmentName: string) {
   return rows.value.find(row => row.departmentName === normalizedName) ?? null
 }
 
-function getPermissionOptionByLabel(groupLabel: string) {
-  if (!groupLabel || groupLabel === "未分配") {
-    return null
-  }
-
-  return globalPermissionOptions.value.find(option => option.label === groupLabel) ?? null
-}
-
 function toggleSearch() {
   if (searchExpanded.value) {
     searchQuery.value = ""
@@ -886,8 +811,6 @@ function toggleSearch() {
 }
 
 function buildMemberUpdatePayload(member: MemberRow, nextPermissionGroup = member.permissionGroup) {
-  const nextOption = getPermissionOption(member, nextPermissionGroup)
-
   return {
     Uuid: member.uuid || undefined,
     DepartmentUuid: member.departmentUuid || undefined,
@@ -895,24 +818,9 @@ function buildMemberUpdatePayload(member: MemberRow, nextPermissionGroup = membe
     Phone: member.phone === "-" ? "" : member.phone,
     Position: member.position === "未设置职位" ? "" : member.position,
     Status: toStatusValue(member.status),
-    RoleUuids: nextPermissionGroup === "未分配"
-      ? []
-      : nextOption?.uuid
-        ? [nextOption.uuid]
-        : [],
-  }
-}
-
-function buildMemberRoleBindPayload(member: MemberRow, nextPermissionGroup = member.permissionGroup) {
-  const nextOption = getPermissionOption(member, nextPermissionGroup)
-
-  return {
-    Uuid: member.uuid || undefined,
-    RoleUuids: nextPermissionGroup === "未分配"
-      ? []
-      : nextOption?.uuid
-        ? [nextOption.uuid]
-        : [],
+    UserType: nextPermissionGroup === "未分配"
+      ? undefined
+      : getUserTypeValueByLabel(nextPermissionGroup),
   }
 }
 
@@ -934,9 +842,9 @@ async function updatePermissionGroup(memberId: number, nextGroup: string) {
     return
   }
 
-  if (nextGroup !== "未分配" && !getPermissionOption(member, nextGroup)?.uuid) {
+  if (nextGroup !== "未分配" && !getUserTypeValueByLabel(nextGroup)) {
     toast.error("成员信息更新失败", {
-      description: `${nextGroup} 缺少角色 UUID，无法提交更新。`,
+      description: `${nextGroup} 不是有效角色，无法提交更新。`,
     })
     return
   }
@@ -945,28 +853,20 @@ async function updatePermissionGroup(memberId: number, nextGroup: string) {
 
   try {
     await requestMemberUpdate(buildMemberUpdatePayload(member, nextGroup))
-    await bindMemberRoles(buildMemberRoleBindPayload(member, nextGroup))
 
     member.permissionGroup = nextGroup
+    member.userType = nextGroup === "未分配" ? undefined : getUserTypeValueByLabel(nextGroup)
     member.permissionOptions = buildPermissionOptions([
       ...member.permissionOptions,
-      ...(nextGroup === "未分配" ? [] : [{
-        label: nextGroup,
-        uuid: getPermissionOption(member, nextGroup)?.uuid,
-      }]),
+      ...(nextGroup === "未分配" ? [] : [{ label: nextGroup }]),
     ])
     toast.success("角色已更新", {
       description: `${member.name} 已切换到 ${nextGroup}。`,
     })
   } catch (error) {
-    const message = handleApiError(error, {
-      fallback: MEMBER_UPDATE_ERROR_MESSAGE,
-      mode: "silent",
-    })
-
     handleApiError(error, {
-      title: message.includes(MEMBER_ROLE_BIND_ERROR_MESSAGE) ? "成员角色绑定失败" : "成员信息更新失败",
-      fallback: message.includes(MEMBER_ROLE_BIND_ERROR_MESSAGE) ? MEMBER_ROLE_BIND_ERROR_MESSAGE : MEMBER_UPDATE_ERROR_MESSAGE,
+      title: "成员信息更新失败",
+      fallback: MEMBER_UPDATE_ERROR_MESSAGE,
     })
   } finally {
     permissionUpdatingMemberIds.value = permissionUpdatingMemberIds.value.filter(id => id !== memberId)
@@ -1088,7 +988,7 @@ function createManualMemberForm(): ManualMemberForm {
     phone: "",
     departmentName: "",
     position: "",
-    permissionGroup: availablePermissionGroups.value[0] ?? "",
+    permissionGroup: "未分配",
   }
 }
 
@@ -1182,11 +1082,11 @@ async function submitManualMember() {
   }
 
   const permissionGroup = manualMemberForm.value.permissionGroup.trim() || "未分配"
-  const permissionOption = getPermissionOptionByLabel(permissionGroup)
+  const userType = permissionGroup === "未分配" ? undefined : getUserTypeValueByLabel(permissionGroup)
 
-  if (permissionGroup !== "未分配" && !permissionOption?.uuid) {
+  if (permissionGroup !== "未分配" && !userType) {
     toast.error("成员创建失败", {
-      description: `${permissionGroup} 缺少权限组 UUID，无法提交创建请求。`,
+      description: `${permissionGroup} 不是有效角色，无法提交创建请求。`,
     })
     return
   }
@@ -1194,26 +1094,13 @@ async function submitManualMember() {
   manualSubmitting.value = true
 
   try {
-    const result = await requestMemberCreate({
+    await requestMemberCreate({
       DepartmentUuid: departmentMatch?.departmentUuid || undefined,
       Name: name,
       Phone: manualMemberForm.value.phone.trim() || undefined,
       Position: manualMemberForm.value.position.trim() || undefined,
-      RoleUuids: permissionOption?.uuid ? [permissionOption.uuid] : undefined,
+      UserType: userType,
     })
-
-    if (permissionOption?.uuid) {
-      const memberUuid = typeof result.Uuid === "string" ? result.Uuid.trim() : ""
-
-      if (!memberUuid) {
-        throw new Error("成员创建成功，但返回结果缺少 Uuid，无法完成角色绑定。")
-      }
-
-      await bindMemberRoles({
-        Uuid: memberUuid,
-        RoleUuids: [permissionOption.uuid],
-      })
-    }
 
     manualDialogOpen.value = false
     manualMemberForm.value = createManualMemberForm()
@@ -1407,11 +1294,10 @@ async function submitEditMember() {
   }
 
   const nextPermissionGroup = editMemberForm.value.permissionGroup.trim() || "未分配"
-  const nextPermissionOption = editPermissionGroupOptions.value.find(option => option.label === nextPermissionGroup)
 
-  if (nextPermissionGroup !== "未分配" && !nextPermissionOption?.uuid) {
+  if (nextPermissionGroup !== "未分配" && !getUserTypeValueByLabel(nextPermissionGroup)) {
     toast.error("成员信息更新失败", {
-      description: `${nextPermissionGroup} 缺少权限组 UUID，无法提交更新。`,
+      description: `${nextPermissionGroup} 不是有效角色，无法提交更新。`,
     })
     return
   }
@@ -1426,17 +1312,17 @@ async function submitEditMember() {
       departmentName: editMemberForm.value.departmentName.trim() || "未分组",
       position: editMemberForm.value.position.trim() || "未设置职位",
       permissionGroup: nextPermissionGroup,
+      userType: nextPermissionGroup === "未分配" ? undefined : getUserTypeValueByLabel(nextPermissionGroup),
       status: editMemberForm.value.status || member.status,
       permissionOptions: nextPermissionGroup === "未分配"
         ? member.permissionOptions
         : buildPermissionOptions([
             ...member.permissionOptions,
-            { label: nextPermissionGroup, uuid: nextPermissionOption?.uuid },
+            { label: nextPermissionGroup },
           ]),
     }
 
     await requestMemberUpdate(buildMemberUpdatePayload(nextMember, nextPermissionGroup))
-    await bindMemberRoles(buildMemberRoleBindPayload(nextMember, nextPermissionGroup))
 
     member.name = nextMember.name
     member.phone = nextMember.phone
@@ -1444,19 +1330,15 @@ async function submitEditMember() {
     member.position = nextMember.position
     member.permissionGroup = nextMember.permissionGroup
     member.permissionOptions = nextMember.permissionOptions
+    member.userType = nextMember.userType
     closeEditDialog()
     toast.success("成员信息已更新", {
       description: `${member.name} 的信息已保存。`,
     })
   } catch (error) {
-    const message = handleApiError(error, {
-      fallback: MEMBER_UPDATE_ERROR_MESSAGE,
-      mode: "silent",
-    })
-
     handleApiError(error, {
-      title: message.includes(MEMBER_ROLE_BIND_ERROR_MESSAGE) ? "成员角色绑定失败" : "成员信息更新失败",
-      fallback: message.includes(MEMBER_ROLE_BIND_ERROR_MESSAGE) ? MEMBER_ROLE_BIND_ERROR_MESSAGE : MEMBER_UPDATE_ERROR_MESSAGE,
+      title: "成员信息更新失败",
+      fallback: MEMBER_UPDATE_ERROR_MESSAGE,
     })
   } finally {
     editSubmitting.value = false
@@ -1470,7 +1352,7 @@ function applyEditMemberSnapshot(member: MemberRow) {
     phone: member.phone === "-" ? "" : member.phone,
     departmentName: member.departmentName === "未分组" ? "" : member.departmentName,
     position: member.position === "未设置职位" ? "" : member.position,
-    permissionGroup: member.permissionGroup === "未分配" ? "" : member.permissionGroup,
+    permissionGroup: member.permissionGroup,
     status: member.status,
   }
 }
@@ -1489,7 +1371,8 @@ async function loadEditMemberDetail(member: MemberRow) {
       return
     }
 
-    const permissionOptions = extractRoleOptions(detail.Roles)
+    const userType = normalizeUserType(detail.UserType)
+    const permissionOptions = buildPermissionOptions(getUserTypeOption(userType))
     const permissionGroup = permissionOptions[0]?.label ?? "未分配"
 
     member.uuid = toText(detail.Uuid, member.uuid)
@@ -1500,6 +1383,7 @@ async function loadEditMemberDetail(member: MemberRow) {
     member.position = toText(detail.Position, member.position) || "未设置职位"
     member.permissionOptions = permissionOptions
     member.permissionGroup = permissionGroup
+    member.userType = userType
     member.status = normalizeStatus(detail.Status ?? member.status)
 
     applyEditMemberSnapshot(member)
@@ -1696,6 +1580,9 @@ function asRoleRow(row: Record<string, unknown>) {
               :model-value="asMemberRow(rawRow).permissionGroup"
               @update:model-value="updatePermissionGroup(asMemberRow(rawRow).id, String($event))"
             >
+              <DropdownMenuRadioItem value="未分配" class="rounded-lg py-2 pr-2 pl-8">
+                未分配
+              </DropdownMenuRadioItem>
               <DropdownMenuItem
                 v-if="getAssignablePermissionOptions(asMemberRow(rawRow)).length === 0"
                 disabled
@@ -1705,7 +1592,7 @@ function asRoleRow(row: Record<string, unknown>) {
               </DropdownMenuItem>
               <DropdownMenuRadioItem
                 v-for="option in getAssignablePermissionOptions(asMemberRow(rawRow))"
-                :key="`${asMemberRow(rawRow).id}-${option.uuid ?? option.label}`"
+                :key="`${asMemberRow(rawRow).id}-${option.label}`"
                 :value="option.label"
                 class="rounded-lg py-2 pr-2 pl-8"
               >
@@ -1779,6 +1666,9 @@ function asRoleRow(row: Record<string, unknown>) {
                 <SelectValue placeholder="选择角色" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="未分配">
+                  未分配
+                </SelectItem>
                 <SelectItem v-if="availablePermissionGroups.length === 0" value="__no_permission_group__" disabled>
                   暂无可用角色
                 </SelectItem>
@@ -1903,7 +1793,7 @@ function asRoleRow(row: Record<string, unknown>) {
                   </SelectItem>
                   <SelectItem
                     v-for="option in editPermissionGroupOptions"
-                    :key="option.uuid ?? option.label"
+                    :key="option.label"
                     :value="option.label"
                   >
                     {{ option.label }}

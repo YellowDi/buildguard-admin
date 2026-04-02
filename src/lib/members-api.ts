@@ -21,8 +21,8 @@ export type ListMembersPayload = {
   PageSize?: number
   Phone?: string
   Position?: string
-  RoleUuids?: string[]
   Status?: number
+  UserType?: number
   [property: string]: unknown
 }
 
@@ -31,7 +31,7 @@ export type CreateMemberPayload = {
   Name?: string
   Phone?: string
   Position?: string
-  RoleUuids?: string[]
+  UserType?: number
   [property: string]: unknown
 }
 
@@ -66,6 +66,7 @@ export type MemberDetailResult = {
   Roles?: MemberDetailRole[]
   Status?: number
   Uuid?: string
+  UserType?: number
   [property: string]: unknown
 }
 
@@ -76,7 +77,7 @@ export type UpdateMemberPayload = {
   Phone: string
   Position: string
   Status: number
-  RoleUuids: string[]
+  UserType?: number
 }
 
 export type BindMemberRolesPayload = {
@@ -121,8 +122,8 @@ export async function fetchMembers(payload: ListMembersPayload = {}): Promise<Me
     PageSize: getOptionalNumber(payload.PageSize, "PageSize"),
     Phone: getOptionalString(payload.Phone),
     Position: getOptionalString(payload.Position),
-    RoleUuids: getOptionalStringArray(payload.RoleUuids, "RoleUuids"),
     Status: getOptionalStatus(payload.Status, "Status"),
+    UserType: getOptionalUserType(payload.UserType, "UserType"),
   }
 
   const response = await fetch(MEMBERS_API_URL, {
@@ -152,7 +153,7 @@ export async function createMember(payload: CreateMemberPayload): Promise<Create
     Name: getRequiredString(payload.Name, "Name"),
     Phone: getOptionalString(payload.Phone),
     Position: getOptionalString(payload.Position),
-    RoleUuids: getOptionalStringArray(payload.RoleUuids, "RoleUuids"),
+    UserType: getOptionalUserType(payload.UserType, "UserType"),
   }
 
   const response = await fetch(MEMBER_CREATE_API_URL, {
@@ -204,7 +205,7 @@ export async function updateMember(payload: UpdateMemberPayload) {
     Phone: getOptionalString(payload.Phone) ?? "",
     Position: getOptionalString(payload.Position) ?? "",
     Status: getRequiredNumber(payload.Status, "Status"),
-    RoleUuids: getStringArray(payload.RoleUuids, "RoleUuids"),
+    UserType: getOptionalUserType(payload.UserType, "UserType"),
   }
 
   const response = await fetch(MEMBER_UPDATE_API_URL, {
@@ -413,6 +414,24 @@ function getOptionalNumber(value: unknown, field: string) {
   }
 
   return getRequiredNumber(value, field)
+}
+
+function getOptionalUserType(value: unknown, field: string) {
+  if (value === undefined || value === null || value === "") {
+    return undefined
+  }
+
+  const normalized = getOptionalNumber(value, field)
+
+  if (normalized === undefined) {
+    return undefined
+  }
+
+  if (normalized === 1 || normalized === 2 || normalized === 3) {
+    return normalized
+  }
+
+  throw new ApiError(`请求参数校验失败：${field} 仅支持 1、2、3。`)
 }
 
 function getStringArray(value: unknown, field: string) {
