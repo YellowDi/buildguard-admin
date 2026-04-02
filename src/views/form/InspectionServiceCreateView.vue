@@ -1724,7 +1724,7 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
       <Separator orientation="vertical" class="hidden h-auto bg-border/80 xl:block" />
 
       <div class="min-w-0 xl:max-w-[460px] xl:pl-6">
-        <section class="border-b border-border/80 pb-5">
+        <section class="border-b border-border/80 pt-5 pb-5">
           <div class="flex items-center justify-between gap-3">
             <h3 class="text-sm font-semibold text-foreground">
               已选 {{ selectedBuildCount }} 栋建筑
