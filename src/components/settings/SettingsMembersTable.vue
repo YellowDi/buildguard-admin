@@ -345,7 +345,7 @@ const permissionGroupRows = computed<PermissionGroupRow[]>(() => {
   const grouped = new Map<string, MemberRow[]>()
 
   for (const row of rows.value) {
-    const key = row.permissionGroup || "未分配"
+    const key = row.permissionGroup || "后台"
     const current = grouped.get(key) ?? []
     current.push(row)
     grouped.set(key, current)
@@ -605,7 +605,7 @@ function normalizeMemberRow(raw: unknown, index: number): MemberRow {
   const record = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>
   const userType = normalizeUserType(record.UserType)
   const permissionOptions = buildPermissionOptions(getUserTypeOption(userType))
-  const initialPermissionGroup = permissionOptions[0]?.label ?? "未分配"
+  const initialPermissionGroup = permissionOptions[0]?.label ?? "后台"
 
   return {
     id: toNumber(record.Id, index + 1),
@@ -654,7 +654,7 @@ async function hydrateMemberRolesFromDetail(memberRows: MemberRow[]) {
     }
 
     result.value.row.permissionOptions = permissionOptions
-    result.value.row.permissionGroup = permissionOptions[0]?.label ?? "未分配"
+    result.value.row.permissionGroup = permissionOptions[0]?.label ?? "后台"
     result.value.row.userType = userType
   })
 }
@@ -768,7 +768,7 @@ function normalizeUserType(value: unknown) {
     return parsed
   }
 
-  return undefined
+  return 1
 }
 
 function getUserTypeOption(value: number | undefined): PermissionOption[] {
@@ -784,7 +784,7 @@ function getAssignablePermissionOptions(member: MemberRow) {
   return buildPermissionOptions([
     ...globalPermissionOptions.value,
     ...member.permissionOptions,
-    ...(member.permissionGroup && member.permissionGroup !== "未分配"
+    ...(member.permissionGroup
       ? [{ label: member.permissionGroup }]
       : []),
   ])
@@ -818,9 +818,7 @@ function buildMemberUpdatePayload(member: MemberRow, nextPermissionGroup = membe
     Phone: member.phone === "-" ? "" : member.phone,
     Position: member.position === "未设置职位" ? "" : member.position,
     Status: toStatusValue(member.status),
-    UserType: nextPermissionGroup === "未分配"
-      ? undefined
-      : getUserTypeValueByLabel(nextPermissionGroup),
+    UserType: getUserTypeValueByLabel(nextPermissionGroup) ?? 1,
   }
 }
 
@@ -842,7 +840,7 @@ async function updatePermissionGroup(memberId: number, nextGroup: string) {
     return
   }
 
-  if (nextGroup !== "未分配" && !getUserTypeValueByLabel(nextGroup)) {
+  if (!getUserTypeValueByLabel(nextGroup)) {
     toast.error("成员信息更新失败", {
       description: `${nextGroup} 不是有效角色，无法提交更新。`,
     })
@@ -855,10 +853,10 @@ async function updatePermissionGroup(memberId: number, nextGroup: string) {
     await requestMemberUpdate(buildMemberUpdatePayload(member, nextGroup))
 
     member.permissionGroup = nextGroup
-    member.userType = nextGroup === "未分配" ? undefined : getUserTypeValueByLabel(nextGroup)
+    member.userType = getUserTypeValueByLabel(nextGroup) ?? 1
     member.permissionOptions = buildPermissionOptions([
       ...member.permissionOptions,
-      ...(nextGroup === "未分配" ? [] : [{ label: nextGroup }]),
+      { label: nextGroup },
     ])
     toast.success("角色已更新", {
       description: `${member.name} 已切换到 ${nextGroup}。`,
@@ -988,7 +986,7 @@ function createManualMemberForm(): ManualMemberForm {
     phone: "",
     departmentName: "",
     position: "",
-    permissionGroup: "未分配",
+    permissionGroup: "后台",
   }
 }
 
@@ -1005,7 +1003,7 @@ function createEditMemberForm(): EditMemberForm {
     phone: "",
     departmentName: "",
     position: "",
-    permissionGroup: "未分配",
+    permissionGroup: "后台",
     status: "",
   }
 }
@@ -1081,10 +1079,10 @@ async function submitManualMember() {
     return
   }
 
-  const permissionGroup = manualMemberForm.value.permissionGroup.trim() || "未分配"
-  const userType = permissionGroup === "未分配" ? undefined : getUserTypeValueByLabel(permissionGroup)
+  const permissionGroup = manualMemberForm.value.permissionGroup.trim() || "后台"
+  const userType = getUserTypeValueByLabel(permissionGroup)
 
-  if (permissionGroup !== "未分配" && !userType) {
+  if (!userType) {
     toast.error("成员创建失败", {
       description: `${permissionGroup} 不是有效角色，无法提交创建请求。`,
     })
@@ -1293,9 +1291,9 @@ async function submitEditMember() {
     return
   }
 
-  const nextPermissionGroup = editMemberForm.value.permissionGroup.trim() || "未分配"
+  const nextPermissionGroup = editMemberForm.value.permissionGroup.trim() || "后台"
 
-  if (nextPermissionGroup !== "未分配" && !getUserTypeValueByLabel(nextPermissionGroup)) {
+  if (!getUserTypeValueByLabel(nextPermissionGroup)) {
     toast.error("成员信息更新失败", {
       description: `${nextPermissionGroup} 不是有效角色，无法提交更新。`,
     })
@@ -1312,14 +1310,12 @@ async function submitEditMember() {
       departmentName: editMemberForm.value.departmentName.trim() || "未分组",
       position: editMemberForm.value.position.trim() || "未设置职位",
       permissionGroup: nextPermissionGroup,
-      userType: nextPermissionGroup === "未分配" ? undefined : getUserTypeValueByLabel(nextPermissionGroup),
+      userType: getUserTypeValueByLabel(nextPermissionGroup) ?? 1,
       status: editMemberForm.value.status || member.status,
-      permissionOptions: nextPermissionGroup === "未分配"
-        ? member.permissionOptions
-        : buildPermissionOptions([
-            ...member.permissionOptions,
-            { label: nextPermissionGroup },
-          ]),
+      permissionOptions: buildPermissionOptions([
+        ...member.permissionOptions,
+        { label: nextPermissionGroup },
+      ]),
     }
 
     await requestMemberUpdate(buildMemberUpdatePayload(nextMember, nextPermissionGroup))
@@ -1373,7 +1369,7 @@ async function loadEditMemberDetail(member: MemberRow) {
 
     const userType = normalizeUserType(detail.UserType)
     const permissionOptions = buildPermissionOptions(getUserTypeOption(userType))
-    const permissionGroup = permissionOptions[0]?.label ?? "未分配"
+    const permissionGroup = permissionOptions[0]?.label ?? "后台"
 
     member.uuid = toText(detail.Uuid, member.uuid)
     member.name = toText(detail.Name, member.name)
@@ -1580,9 +1576,6 @@ function asRoleRow(row: Record<string, unknown>) {
               :model-value="asMemberRow(rawRow).permissionGroup"
               @update:model-value="updatePermissionGroup(asMemberRow(rawRow).id, String($event))"
             >
-              <DropdownMenuRadioItem value="未分配" class="rounded-lg py-2 pr-2 pl-8">
-                未分配
-              </DropdownMenuRadioItem>
               <DropdownMenuItem
                 v-if="getAssignablePermissionOptions(asMemberRow(rawRow)).length === 0"
                 disabled
@@ -1666,9 +1659,6 @@ function asRoleRow(row: Record<string, unknown>) {
                 <SelectValue placeholder="选择角色" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="未分配">
-                  未分配
-                </SelectItem>
                 <SelectItem v-if="availablePermissionGroups.length === 0" value="__no_permission_group__" disabled>
                   暂无可用角色
                 </SelectItem>
@@ -1788,9 +1778,6 @@ function asRoleRow(row: Record<string, unknown>) {
                 <SelectValue placeholder="选择角色" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="未分配">
-                    未分配
-                  </SelectItem>
                   <SelectItem
                     v-for="option in editPermissionGroupOptions"
                     :key="option.label"
