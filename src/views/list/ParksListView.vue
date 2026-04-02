@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
+import { toast } from "vue-sonner"
 
 import TablePageLoading from "@/components/loading/TablePageLoading.vue"
 import TablePage from "@/components/table-page/TablePage.vue"
@@ -96,6 +97,7 @@ const schema: TablePageSchema<ParkRecord> = {
       key: "customerName",
       label: "所属客户",
       filterType: "text",
+      slot: "cell-customerName",
       filter: {
         type: "text",
         placeholder: "输入客户名称",
@@ -249,6 +251,20 @@ function handleCreatePark() {
   void router.push({ name: "park-create" })
 }
 
+function handleOpenCustomerDetail(row: unknown) {
+  const currentRow = row as ParkRecord
+
+  if (!currentRow.customerUuid) {
+    toast.error("当前园区缺少所属客户信息，无法打开详情")
+    return
+  }
+
+  void router.push({
+    name: "customer-detail",
+    params: { id: currentRow.customerUuid },
+  })
+}
+
 async function loadParks() {
   const requestId = ++latestRequestId
 
@@ -387,7 +403,18 @@ function toText(value: unknown, fallback = "") {
       </Alert>
     </div>
 
-    <TablePage :page="page" @primary-action="handleCreatePark" />
+    <TablePage :page="page" @primary-action="handleCreatePark">
+      <template #cell-customerName="{ row }">
+        <button
+          type="button"
+          class="inline-flex max-w-full items-center gap-1 text-left text-[#2B67F6] transition-colors hover:text-[#1D4ED8]"
+          @click="handleOpenCustomerDetail(row)"
+        >
+          <span class="truncate">{{ row.customerName }}</span>
+          <i class="ri-arrow-right-up-line shrink-0 text-sm" />
+        </button>
+      </template>
+    </TablePage>
 
     <div class="-mx-4 pt-3">
       <div class="flex w-full justify-end px-4">

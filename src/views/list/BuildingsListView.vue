@@ -104,6 +104,7 @@ const schema: TablePageSchema<BuildingRecord> = {
       key: "customerName",
       label: "所属客户",
       filterType: "text",
+      slot: "cell-customerName",
       filter: {
         type: "text",
         placeholder: "输入客户名称",
@@ -115,6 +116,7 @@ const schema: TablePageSchema<BuildingRecord> = {
       key: "parkName",
       label: "所属园区",
       filterType: "text",
+      slot: "cell-parkName",
       filter: {
         type: "text",
         placeholder: "输入园区名称",
@@ -246,6 +248,35 @@ watch([pageNum, pageSize], ([nextPageNum, nextPageSize], [previousPageNum, previ
 
 function handleCreateBuilding() {
   void router.push({ name: "building-create" })
+}
+
+function handleOpenCustomerDetail(row: unknown) {
+  const currentRow = row as BuildingRecord
+
+  if (!currentRow.customerUuid) {
+    toast.error("当前建筑缺少所属客户信息，无法打开详情")
+    return
+  }
+
+  void router.push({
+    name: "customer-detail",
+    params: { id: currentRow.customerUuid },
+  })
+}
+
+function handleOpenParkDetail(row: unknown) {
+  const currentRow = row as BuildingRecord
+
+  if (!currentRow.parkUuid) {
+    toast.error("当前建筑缺少所属园区信息，无法打开详情")
+    return
+  }
+
+  void router.push({
+    name: "park-detail",
+    params: { id: currentRow.parkUuid },
+    query: currentRow.customerUuid ? { customerUuid: currentRow.customerUuid } : undefined,
+  })
 }
 
 async function loadBuildings() {
@@ -388,7 +419,29 @@ function toText(value: unknown, fallback = "") {
       </Alert>
     </div>
 
-    <TablePage :page="page" @primary-action="handleCreateBuilding" />
+    <TablePage :page="page" @primary-action="handleCreateBuilding">
+      <template #cell-customerName="{ row }">
+        <button
+          type="button"
+          class="inline-flex max-w-full items-center gap-1 text-left text-[#2B67F6] transition-colors hover:text-[#1D4ED8]"
+          @click="handleOpenCustomerDetail(row)"
+        >
+          <span class="truncate">{{ row.customerName }}</span>
+          <i class="ri-arrow-right-up-line shrink-0 text-sm" />
+        </button>
+      </template>
+
+      <template #cell-parkName="{ row }">
+        <button
+          type="button"
+          class="inline-flex max-w-full items-center gap-1 text-left text-[#2B67F6] transition-colors hover:text-[#1D4ED8]"
+          @click="handleOpenParkDetail(row)"
+        >
+          <span class="truncate">{{ row.parkName }}</span>
+          <i class="ri-arrow-right-up-line shrink-0 text-sm" />
+        </button>
+      </template>
+    </TablePage>
 
     <div class="-mx-4 pt-3">
       <div class="flex w-full justify-end px-4">
