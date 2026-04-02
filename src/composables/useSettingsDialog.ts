@@ -235,7 +235,7 @@ const categories = computed<SettingsCategory[]>(() => [
     key: "members",
     group: "workspace",
     label: "成员",
-    description: "按部门管理成员、切换权限组并处理成员接入。",
+    description: "按部门管理成员、切换角色并处理成员接入。",
     icon: "ri-team-line",
     sections: [
       {

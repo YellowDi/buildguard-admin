@@ -51,6 +51,7 @@ import {
 } from "@/components/ui/select"
 import { handleApiError } from "@/lib/api-errors"
 import {
+  bindMemberRoles,
   createMember as requestMemberCreate,
   deleteMember as requestMemberDelete,
   fetchMembers,
@@ -148,6 +149,7 @@ type MemberActionKey =
 const MEMBERS_LOAD_ERROR_MESSAGE = "成员列表加载失败，请稍后重试。"
 const MEMBER_STATUS_UPDATE_ERROR_MESSAGE = "成员状态更新失败，请稍后重试。"
 const MEMBER_UPDATE_ERROR_MESSAGE = "成员信息更新失败，请稍后重试。"
+const MEMBER_ROLE_BIND_ERROR_MESSAGE = "成员角色绑定失败，请稍后重试。"
 const memberStatusMap = {
   正常: { tone: "green", icon: "check" },
   离职: { tone: "gray", icon: "minus" },
@@ -223,7 +225,7 @@ const memberColumns: TableColumn[] = [
   },
   {
     key: "permissionGroup",
-    label: "权限组",
+    label: "角色",
     filterType: "tag",
     slot: "cell-permission",
   },
@@ -790,6 +792,19 @@ function buildMemberUpdatePayload(member: MemberRow, nextPermissionGroup = membe
   }
 }
 
+function buildMemberRoleBindPayload(member: MemberRow, nextPermissionGroup = member.permissionGroup) {
+  const nextOption = getPermissionOption(member, nextPermissionGroup)
+
+  return {
+    Uuid: member.uuid || undefined,
+    RoleUuids: nextPermissionGroup === "未分配"
+      ? []
+      : nextOption?.uuid
+        ? [nextOption.uuid]
+        : [],
+  }
+}
+
 function isMemberPermissionUpdating(memberId: number) {
   return permissionUpdatingMemberIds.value.includes(memberId)
 }
@@ -810,7 +825,7 @@ async function updatePermissionGroup(memberId: number, nextGroup: string) {
 
   if (nextGroup !== "未分配" && !getPermissionOption(member, nextGroup)?.uuid) {
     toast.error("成员信息更新失败", {
-      description: `${nextGroup} 缺少权限组 UUID，无法提交更新。`,
+      description: `${nextGroup} 缺少角色 UUID，无法提交更新。`,
     })
     return
   }
@@ -819,6 +834,7 @@ async function updatePermissionGroup(memberId: number, nextGroup: string) {
 
   try {
     await requestMemberUpdate(buildMemberUpdatePayload(member, nextGroup))
+    await bindMemberRoles(buildMemberRoleBindPayload(member, nextGroup))
 
     member.permissionGroup = nextGroup
     member.permissionOptions = buildPermissionOptions([
@@ -828,13 +844,18 @@ async function updatePermissionGroup(memberId: number, nextGroup: string) {
         uuid: getPermissionOption(member, nextGroup)?.uuid,
       }]),
     ])
-    toast.success("权限组已更新", {
+    toast.success("角色已更新", {
       description: `${member.name} 已切换到 ${nextGroup}。`,
     })
   } catch (error) {
-    handleApiError(error, {
-      title: "成员信息更新失败",
+    const message = handleApiError(error, {
       fallback: MEMBER_UPDATE_ERROR_MESSAGE,
+      mode: "silent",
+    })
+
+    handleApiError(error, {
+      title: message.includes(MEMBER_ROLE_BIND_ERROR_MESSAGE) ? "成员角色绑定失败" : "成员信息更新失败",
+      fallback: message.includes(MEMBER_ROLE_BIND_ERROR_MESSAGE) ? MEMBER_ROLE_BIND_ERROR_MESSAGE : MEMBER_UPDATE_ERROR_MESSAGE,
     })
   } finally {
     permissionUpdatingMemberIds.value = permissionUpdatingMemberIds.value.filter(id => id !== memberId)
@@ -1291,6 +1312,7 @@ async function submitEditMember() {
     }
 
     await requestMemberUpdate(buildMemberUpdatePayload(nextMember, nextPermissionGroup))
+    await bindMemberRoles(buildMemberRoleBindPayload(nextMember, nextPermissionGroup))
 
     member.name = nextMember.name
     member.phone = nextMember.phone
@@ -1303,9 +1325,14 @@ async function submitEditMember() {
       description: `${member.name} 的信息已保存。`,
     })
   } catch (error) {
-    handleApiError(error, {
-      title: "成员信息更新失败",
+    const message = handleApiError(error, {
       fallback: MEMBER_UPDATE_ERROR_MESSAGE,
+      mode: "silent",
+    })
+
+    handleApiError(error, {
+      title: message.includes(MEMBER_ROLE_BIND_ERROR_MESSAGE) ? "成员角色绑定失败" : "成员信息更新失败",
+      fallback: message.includes(MEMBER_ROLE_BIND_ERROR_MESSAGE) ? MEMBER_ROLE_BIND_ERROR_MESSAGE : MEMBER_UPDATE_ERROR_MESSAGE,
     })
   } finally {
     editSubmitting.value = false
@@ -1539,7 +1566,7 @@ function asRoleRow(row: Record<string, unknown>) {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" class="w-[190px] rounded-xl p-1.5">
             <DropdownMenuLabel class="px-2 pb-1 text-xs font-medium text-muted-foreground">
-              切换权限组
+              切换角色
             </DropdownMenuLabel>
             <DropdownMenuRadioGroup
               :model-value="asMemberRow(rawRow).permissionGroup"
@@ -1550,7 +1577,7 @@ function asRoleRow(row: Record<string, unknown>) {
                 disabled
                 class="rounded-lg px-2.5 py-2 text-muted-foreground"
               >
-                暂无可用权限组
+                暂无可用角色
               </DropdownMenuItem>
               <DropdownMenuRadioItem
                 v-for="option in getAssignablePermissionOptions(asMemberRow(rawRow))"
@@ -1622,14 +1649,14 @@ function asRoleRow(row: Record<string, unknown>) {
           </div>
 
           <div class="grid gap-2">
-            <label class="text-sm font-medium text-foreground" for="manual-member-permission-group">权限组</label>
+            <label class="text-sm font-medium text-foreground" for="manual-member-permission-group">角色</label>
             <Select v-model="manualMemberForm.permissionGroup">
               <SelectTrigger id="manual-member-permission-group" class="w-full">
-                <SelectValue placeholder="选择权限组" />
+                <SelectValue placeholder="选择角色" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem v-if="availablePermissionGroups.length === 0" value="__no_permission_group__" disabled>
-                  暂无可用权限组
+                  暂无可用角色
                 </SelectItem>
                 <SelectItem
                   v-for="option in availablePermissionGroups"
@@ -1741,10 +1768,10 @@ function asRoleRow(row: Record<string, unknown>) {
 
           <div class="grid gap-4 sm:grid-cols-2">
             <div class="grid gap-2">
-              <label class="text-sm font-medium text-foreground" for="edit-member-permission-group">权限组</label>
+            <label class="text-sm font-medium text-foreground" for="edit-member-permission-group">角色</label>
               <Select v-model="editMemberForm.permissionGroup" :disabled="editDetailLoading">
                 <SelectTrigger id="edit-member-permission-group" class="w-full">
-                  <SelectValue placeholder="选择权限组" />
+                <SelectValue placeholder="选择角色" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="未分配">
