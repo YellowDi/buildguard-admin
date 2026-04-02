@@ -283,7 +283,7 @@ const viewTabs = computed(() => [
   },
   {
     id: "roles",
-    label: "角色",
+    label: "权限组",
     badge: roleRows.value.length,
   },
 ])
@@ -1376,7 +1376,7 @@ function asRoleRow(row: Record<string, unknown>) {
             @click="handlePrimaryAction"
           >
             <i class="ri-add-line text-base" />
-            <span>添加角色</span>
+            <span>添加权限组</span>
           </Button>
         </div>
       </SettingsToolbarRow>
@@ -1538,25 +1538,25 @@ function asRoleRow(row: Record<string, unknown>) {
     <Dialog :open="roleDialogOpen" @update:open="($event ? (roleDialogOpen = true) : closeRoleDialog())">
       <DialogContent class="sm:max-w-[520px]">
         <DialogHeader>
-          <DialogTitle>{{ editingRoleId === null ? "添加角色" : "编辑角色" }}</DialogTitle>
+          <DialogTitle>{{ editingRoleId === null ? "添加权限组" : "编辑权限组" }}</DialogTitle>
           <DialogDescription>
-            {{ editingRoleId === null ? "填写角色名称和备注后，将调用角色新建接口保存。" : "修改角色名称和备注后，保存时会调用角色更新接口。" }}
+            {{ editingRoleId === null ? "填写权限组名称和备注后，将调用权限组新建接口保存。" : "修改权限组名称和备注后，保存时会调用权限组更新接口。" }}
           </DialogDescription>
         </DialogHeader>
 
         <form class="grid gap-4" @submit.prevent="submitRole">
           <p v-if="roleDetailLoading" class="text-sm text-muted-foreground">
-            正在加载角色详情并回填表单...
+            正在加载权限组详情并回填表单...
           </p>
 
           <div class="grid gap-2">
-            <label class="text-sm font-medium text-foreground" for="role-name">角色名称</label>
-            <Input id="role-name" v-model="roleForm.name" :disabled="roleDetailLoading" placeholder="请输入角色名称" />
+            <label class="text-sm font-medium text-foreground" for="role-name">权限组名称</label>
+            <Input id="role-name" v-model="roleForm.name" :disabled="roleDetailLoading" placeholder="请输入权限组名称" />
           </div>
 
           <div class="grid gap-2">
             <label class="text-sm font-medium text-foreground" for="role-remark">备注</label>
-            <Input id="role-remark" v-model="roleForm.remark" :disabled="roleDetailLoading" placeholder="请输入角色备注" />
+            <Input id="role-remark" v-model="roleForm.remark" :disabled="roleDetailLoading" placeholder="请输入权限组备注" />
           </div>
 
           <DialogFooter :class="editingRoleId === null ? 'pt-2' : 'pt-2 sm:justify-between'">
@@ -1568,14 +1568,14 @@ function asRoleRow(row: Record<string, unknown>) {
               :disabled="roleDetailLoading || roleSubmitting || roleDeleteSubmitting"
               @click="promptDeleteEditingRole"
             >
-              {{ roleDeleteSubmitting ? "删除中..." : "删除角色" }}
+              {{ roleDeleteSubmitting ? "删除中..." : "删除权限组" }}
             </Button>
             <div class="flex items-center justify-end gap-2">
               <Button type="button" variant="outline" :disabled="roleDetailLoading || roleSubmitting || roleDeleteSubmitting" @click="closeRoleDialog">
                 取消
               </Button>
               <Button type="submit" :disabled="roleDetailLoading || roleSubmitting || roleDeleteSubmitting || !roleForm.name.trim()">
-                {{ roleSubmitting ? "保存中..." : editingRoleId === null ? "添加角色" : "保存" }}
+                {{ roleSubmitting ? "保存中..." : editingRoleId === null ? "添加权限组" : "保存" }}
               </Button>
             </div>
           </DialogFooter>
@@ -1709,9 +1709,9 @@ function asRoleRow(row: Record<string, unknown>) {
     <AlertDialog :open="roleDeleteConfirmOpen" @update:open="roleDeleteConfirmOpen = $event">
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>确认删除角色？</AlertDialogTitle>
+          <AlertDialogTitle>确认删除权限组？</AlertDialogTitle>
           <AlertDialogDescription>
-            该操作会删除当前角色，且不可撤销。确认后将立即提交删除请求。
+            该操作会删除当前权限组，且不可撤销。确认后将立即提交删除请求。
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
