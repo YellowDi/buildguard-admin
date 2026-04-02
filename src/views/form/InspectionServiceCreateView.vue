@@ -1911,7 +1911,7 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
         </DialogHeader>
 
         <div class="flex max-h-[70vh] flex-col overflow-hidden">
-          <div class="min-h-0 flex-1 overflow-y-auto px-4 pb-4 pt-1">
+          <div class="min-h-0 flex-1 overflow-y-auto px-4 pt-1">
             <div class="mb-4">
               <Input
                 v-model="templateKeyword"
@@ -2005,7 +2005,7 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
           </div>
         </div>
 
-        <DialogFooter class="border-t border-border/60 p-4">
+        <DialogFooter class="p-4">
           <Button type="button" variant="outline" @click="templateLibraryOpen = false">
             关闭
           </Button>
