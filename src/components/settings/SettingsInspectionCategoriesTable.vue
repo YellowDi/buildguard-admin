@@ -26,6 +26,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import InspectionCategoryScorePresetInline from "@/components/inspection/InspectionCategoryScorePresetInline.vue"
 import SettingsToolbarRow from "@/components/settings/SettingsToolbarRow.vue"
 import SettingsToolbarRefreshSlot from "@/components/settings/SettingsToolbarRefreshSlot.vue"
 import SettingsToolbarSearchInput from "@/components/settings/SettingsToolbarSearchInput.vue"
@@ -34,6 +35,12 @@ import { SETTINGS_TABLE_PAGE_CLASS } from "@/components/settings/settingsTablePa
 import TablePageTable from "@/components/table-page/TablePageTable.vue"
 import type { TableColumn, TablePageEmptyState } from "@/components/table-page/types"
 import { handleApiError } from "@/lib/api-errors"
+import {
+  readInspectionCategoryScorePresets,
+  removeInspectionCategoryScorePreset,
+  writeInspectionCategoryScorePreset,
+  type InspectionCategoryScorePreset,
+} from "@/lib/inspection-category-score-presets"
 import {
   createInspectionCategory,
   deleteInspectionCategory,
@@ -60,11 +67,42 @@ type InspectionCategoryRow = {
   id: number
   uuid: string
   name: string
+  scorePreset: InspectionCategoryScorePreset
+  scorePresetSearchText: string
 }
 
 type InspectionCategoryForm = {
   name: string
+  normalScore: string
+  attentionScore: string
+  riskScore: string
 }
+
+type InspectionCategoryScorePresetFormKey = "normalScore" | "attentionScore" | "riskScore"
+
+const SCORE_PRESET_FIELDS: Array<{
+  key: InspectionCategoryScorePresetFormKey
+  label: string
+  placeholder: string
+  readonly?: boolean
+}> = [
+  {
+    key: "normalScore",
+    label: "一切正常",
+    placeholder: "例如 0",
+  },
+  {
+    key: "attentionScore",
+    label: "需重点关注",
+    placeholder: "例如 10",
+  },
+  {
+    key: "riskScore",
+    label: "存在风险",
+    placeholder: "固定扣 20 分",
+    readonly: true,
+  },
+]
 
 const INSPECTION_CATEGORIES_LOAD_ERROR_MESSAGE = "检测项分类列表加载失败，请稍后重试。"
 const rows = ref<InspectionCategoryRow[]>([])
@@ -84,6 +122,9 @@ const editingCategoryId = ref<number | null>(null)
 const createForm = ref(createInspectionCategoryForm())
 const editForm = ref(createInspectionCategoryForm())
 
+const createFormValid = computed(() => isInspectionCategoryFormValid(createForm.value))
+const editFormValid = computed(() => isInspectionCategoryFormValid(editForm.value))
+
 const columns: TableColumn[] = [
   {
     key: "id",
@@ -100,12 +141,19 @@ const columns: TableColumn[] = [
     cellClass: "font-medium text-foreground",
   },
   {
+    key: "scorePresetDisplay",
+    label: "计分预设",
+    filterType: "none",
+    tone: "muted",
+    slot: "cell-score-preset",
+    width: "fill",
+  },
+  {
     key: "uuid",
     label: "Uuid",
     filterType: "text",
     tone: "muted",
     cellClass: "font-mono text-[12px] text-muted-foreground",
-    width: "fill",
   },
   {
     key: "actions",
@@ -128,6 +176,7 @@ const filteredRows = computed(() => {
   return rows.value.filter(row => [
     String(row.id),
     row.name,
+    row.scorePresetSearchText,
     row.uuid,
   ].some(field => field.toLowerCase().includes(query)))
 })
@@ -166,7 +215,8 @@ async function loadInspectionCategories() {
 
   try {
     const result = await fetchInspectionCategories()
-    rows.value = result.list.map((item, index) => normalizeInspectionCategory(item, index))
+    const scorePresets = readInspectionCategoryScorePresets()
+    rows.value = result.list.map((item, index) => normalizeInspectionCategory(item, index, scorePresets))
     emit("countChange", rows.value.length)
   } catch (error) {
     errorMessage.value = handleApiError(error, {
@@ -198,7 +248,11 @@ function openEditDialog(row: InspectionCategoryRow) {
   editingCategoryId.value = row.id
   editForm.value = {
     name: row.name,
+    normalScore: String(row.scorePreset.normal),
+    attentionScore: String(row.scorePreset.attention),
+    riskScore: String(row.scorePreset.risk),
   }
+  editSubmitArmed.value = false
   editDialogOpen.value = true
 }
 
@@ -218,6 +272,13 @@ async function submitCreate() {
     return
   }
 
+  const nextPreset = parseInspectionCategoryScorePresetForm(createForm.value)
+
+  if (!nextPreset) {
+    createSubmitArmed.value = false
+    return
+  }
+
   createSubmitArmed.value = false
   createSubmitting.value = true
 
@@ -227,13 +288,17 @@ async function submitCreate() {
     })
 
     const nextId = Number.isFinite(Number(response.Id)) ? Number(response.Id) : createLocalId()
+    const nextUuid = toText(response.Uuid, `category-${nextId}`)
     const nextRow = normalizeInspectionCategory({
       ...response,
       Id: nextId,
       Name: createForm.value.name.trim(),
-      Uuid: toText(response.Uuid, `category-${nextId}`),
-    }, rows.value.length)
+      Uuid: nextUuid,
+    }, rows.value.length, {
+      [nextUuid]: nextPreset,
+    })
 
+    writeInspectionCategoryScorePreset(nextRow.uuid, nextPreset)
     rows.value = [nextRow, ...rows.value]
     emit("countChange", rows.value.length)
     createDialogOpen.value = false
@@ -256,6 +321,13 @@ async function submitEdit() {
     return
   }
 
+  const nextPreset = parseInspectionCategoryScorePresetForm(editForm.value)
+
+  if (!nextPreset) {
+    editSubmitArmed.value = false
+    return
+  }
+
   editSubmitArmed.value = false
   const currentRow = rows.value.find(row => row.id === editingCategoryId.value)
 
@@ -272,9 +344,12 @@ async function submitEdit() {
     })
 
     currentRow.name = editForm.value.name.trim()
+    currentRow.scorePreset = nextPreset
+    currentRow.scorePresetSearchText = buildScorePresetSearchText(nextPreset)
+    writeInspectionCategoryScorePreset(currentRow.uuid, nextPreset)
     closeEditDialog()
     toast.success("检测项分类已更新", {
-      description: `${currentRow.name} 的名称已保存。`,
+      description: `${currentRow.name} 的名称与计分预设已保存。`,
     })
   } catch (error) {
     handleApiError(error, {
@@ -311,6 +386,7 @@ async function confirmDeleteEditingCategory() {
     })
 
     rows.value = rows.value.filter(row => row.id !== currentRow.id)
+    removeInspectionCategoryScorePreset(currentRow.uuid)
     emit("countChange", rows.value.length)
     deleteConfirmOpen.value = false
     closeEditDialog()
@@ -327,13 +403,21 @@ async function confirmDeleteEditingCategory() {
   }
 }
 
-function normalizeInspectionCategory(item: InspectionCategoryRecord, index: number): InspectionCategoryRow {
+function normalizeInspectionCategory(
+  item: InspectionCategoryRecord,
+  index: number,
+  scorePresets: Record<string, InspectionCategoryScorePreset>,
+): InspectionCategoryRow {
   const id = Number.isFinite(Number(item.Id)) ? Number(item.Id) : index + 1
+  const uuid = toText(item.Uuid, `category-${id}`)
+  const scorePreset = scorePresets[uuid] ?? createDefaultScorePreset()
 
   return {
     id,
-    uuid: toText(item.Uuid, `category-${id}`),
+    uuid,
     name: toText(item.Name, `分类 ${id}`),
+    scorePreset,
+    scorePresetSearchText: buildScorePresetSearchText(scorePreset),
   }
 }
 
@@ -342,9 +426,67 @@ function toText(value: unknown, fallback = "") {
 }
 
 function createInspectionCategoryForm(): InspectionCategoryForm {
+  const defaultScorePreset = createDefaultScorePreset()
+
   return {
     name: "",
+    normalScore: String(defaultScorePreset.normal),
+    attentionScore: String(defaultScorePreset.attention),
+    riskScore: String(defaultScorePreset.risk),
   }
+}
+
+function createDefaultScorePreset(): InspectionCategoryScorePreset {
+  return {
+    normal: 0,
+    attention: 10,
+    risk: 20,
+  }
+}
+
+function parseInspectionCategoryScorePresetForm(form: InspectionCategoryForm): InspectionCategoryScorePreset | null {
+  const normal = parseScoreFieldValue(form.normalScore)
+  const attention = parseScoreFieldValue(form.attentionScore)
+  const risk = 20
+
+  if (normal === null || attention === null) {
+    return null
+  }
+
+  return {
+    normal,
+    attention,
+    risk,
+  }
+}
+
+function parseScoreFieldValue(value: string) {
+  if (!value.trim()) {
+    return null
+  }
+
+  const parsed = Number(value)
+
+  if (!Number.isInteger(parsed) || parsed < 0 || parsed > 20) {
+    return null
+  }
+
+  return parsed
+}
+
+function isInspectionCategoryFormValid(form: InspectionCategoryForm) {
+  return Boolean(form.name.trim()) && parseInspectionCategoryScorePresetForm(form) !== null
+}
+
+function buildScorePresetSearchText(scorePreset: InspectionCategoryScorePreset) {
+  return [
+    "一切正常",
+    String(scorePreset.normal),
+    "需重点关注",
+    String(scorePreset.attention),
+    "存在风险",
+    String(scorePreset.risk),
+  ].join(" ")
 }
 
 function createLocalId() {
@@ -369,7 +511,7 @@ defineExpose({
         <SettingsToolbarSearchInput
           v-model="searchQuery"
           :expanded="searchExpanded"
-          placeholder="搜索分类名称、ID 或 Uuid"
+          placeholder="搜索分类名称、ID、Uuid 或计分预设"
           @toggle="toggleSearch"
         />
 
@@ -412,6 +554,10 @@ defineExpose({
       :table-class="SETTINGS_TABLE_PAGE_CLASS"
       :empty-state="tableEmptyState"
     >
+      <template #cell-score-preset="{ row: rawRow }">
+        <InspectionCategoryScorePresetInline :preset="asInspectionCategoryRow(rawRow).scorePreset" />
+      </template>
+
       <template #cell-actions="{ row: rawRow }">
         <Button
           variant="outline"
@@ -426,11 +572,11 @@ defineExpose({
     </TablePageTable>
 
     <Dialog :open="createDialogOpen" @update:open="createDialogOpen = $event">
-      <DialogContent class="sm:max-w-[520px]">
+      <DialogContent class="sm:max-w-[640px]">
         <DialogHeader>
           <DialogTitle>添加检测项分类</DialogTitle>
           <DialogDescription>
-            添加一个检测项分类，便于后续统一归类和筛选检测项。
+            添加一个检测项分类，并为不同结果状态设置默认扣分值。
           </DialogDescription>
         </DialogHeader>
 
@@ -444,13 +590,60 @@ defineExpose({
             />
           </div>
 
+          <div class="grid gap-2">
+            <div class="flex items-center justify-between gap-3">
+              <label class="text-sm font-medium text-foreground">计分预设</label>
+              <span class="text-xs text-muted-foreground">扣分范围 0-20，存在风险固定扣 20 分</span>
+            </div>
+            <div class="min-w-0 max-w-full overflow-x-auto overflow-y-hidden rounded-md border border-border">
+              <table class="w-full min-w-[420px] border-separate border-spacing-0 text-sm">
+                <thead>
+                  <tr>
+                    <th
+                      v-for="(field, index) in SCORE_PRESET_FIELDS"
+                      :key="`create-score-header-${field.key}`"
+                      :class="[
+                        'bg-muted px-4 py-3 text-left text-xs font-medium tracking-wide text-muted-foreground',
+                        index === 0 ? 'rounded-tl-md rounded-bl-md' : '',
+                        index === SCORE_PRESET_FIELDS.length - 1 ? 'rounded-tr-md rounded-br-md' : '',
+                      ]"
+                    >
+                      {{ field.label }}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td
+                      v-for="field in SCORE_PRESET_FIELDS"
+                      :key="`create-score-input-${field.key}`"
+                      class="px-3 py-3 sm:px-4"
+                    >
+                      <Input
+                        v-model="createForm[field.key]"
+                        type="number"
+                        inputmode="numeric"
+                        min="0"
+                        max="20"
+                        step="1"
+                        :placeholder="field.placeholder"
+                        :disabled="field.readonly"
+                        class="h-9 min-w-0"
+                      />
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
           <DialogFooter>
             <Button type="button" variant="outline" :disabled="createSubmitting" @click="createDialogOpen = false">
               取消
             </Button>
             <Button
               type="button"
-              :disabled="createSubmitting || !createForm.name.trim()"
+              :disabled="createSubmitting || !createFormValid"
               @click.stop.prevent="requestCreateSubmit"
             >
               <i v-if="createSubmitting" class="ri-loader-4-line animate-spin text-base" />
@@ -462,11 +655,11 @@ defineExpose({
     </Dialog>
 
     <Dialog :open="editDialogOpen" @update:open="$event ? (editDialogOpen = true) : closeEditDialog()">
-      <DialogContent class="sm:max-w-[520px]">
+      <DialogContent class="sm:max-w-[640px]">
         <DialogHeader>
           <DialogTitle>修改检测项分类</DialogTitle>
           <DialogDescription>
-            更新当前分类名称，调整后会同步应用到分类列表中。
+            更新当前分类名称和默认扣分值，调整后会同步应用到分类列表中。
           </DialogDescription>
         </DialogHeader>
 
@@ -478,6 +671,53 @@ defineExpose({
               v-model="editForm.name"
               placeholder="例如：消防设施"
             />
+          </div>
+
+          <div class="grid gap-2">
+            <div class="flex items-center justify-between gap-3">
+              <label class="text-sm font-medium text-foreground">计分预设</label>
+              <span class="text-xs text-muted-foreground">扣分范围 0-20，存在风险固定扣 20 分</span>
+            </div>
+            <div class="min-w-0 max-w-full overflow-x-auto overflow-y-hidden rounded-md border border-border">
+              <table class="w-full min-w-[420px] border-separate border-spacing-0 text-sm">
+                <thead>
+                  <tr>
+                    <th
+                      v-for="(field, index) in SCORE_PRESET_FIELDS"
+                      :key="`edit-score-header-${field.key}`"
+                      :class="[
+                        'bg-muted px-4 py-3 text-left text-xs font-medium tracking-wide text-muted-foreground',
+                        index === 0 ? 'rounded-tl-md rounded-bl-md' : '',
+                        index === SCORE_PRESET_FIELDS.length - 1 ? 'rounded-tr-md rounded-br-md' : '',
+                      ]"
+                    >
+                      {{ field.label }}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td
+                      v-for="field in SCORE_PRESET_FIELDS"
+                      :key="`edit-score-input-${field.key}`"
+                      class="px-3 py-3 sm:px-4"
+                    >
+                      <Input
+                        v-model="editForm[field.key]"
+                        type="number"
+                        inputmode="numeric"
+                        min="0"
+                        max="20"
+                        step="1"
+                        :placeholder="field.placeholder"
+                        :disabled="field.readonly"
+                        class="h-9 min-w-0"
+                      />
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
 
           <DialogFooter class="flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -498,7 +738,7 @@ defineExpose({
               </Button>
               <Button
                 type="button"
-                :disabled="editSubmitting || deleteSubmitting || !editForm.name.trim()"
+                :disabled="editSubmitting || deleteSubmitting || !editFormValid"
                 @click.stop.prevent="requestEditSubmit"
               >
                 <i v-if="editSubmitting" class="ri-loader-4-line animate-spin text-base" />
