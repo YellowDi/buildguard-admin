@@ -74,7 +74,7 @@ const props = defineProps<{
   pageDescription?: string | null
 }>()
 
-type MemberViewKey = "members" | "roles" | "permission-groups"
+type MemberViewKey = "members" | "roles"
 
 type PermissionOption = {
   label: string
@@ -104,15 +104,6 @@ type RoleRow = {
   updatedAt: string
 }
 
-type PermissionGroupRow = {
-  id: string
-  permissionGroup: string
-  memberCount: number
-  departmentCount: number
-  positionCount: number
-  membersPreview: string
-}
-
 type ManualMemberForm = {
   name: string
   phone: string
@@ -140,7 +131,6 @@ type MemberActionKey =
   | "import-excel"
   | "sync-directory"
   | "create-role"
-  | "create-permission-group"
   | "view"
   | "invite"
   | "disable"
@@ -285,84 +275,6 @@ const roleColumns: TableColumn[] = [
   },
 ]
 
-const permissionGroupColumns: TableColumn[] = [
-  {
-    key: "permissionGroup",
-    label: "权限组",
-    filterType: "text",
-    emphasis: "strong",
-    tone: "primary",
-    cellClass: "font-medium text-foreground",
-  },
-  {
-    key: "memberCount",
-    label: "成员数量",
-    filterType: "number",
-    variant: "metric",
-    cellRenderer: {
-      kind: "metric-unit",
-      unit: "人",
-      valueClass: "tabular-nums text-link",
-      unitClass: "ml-1 text-[12px] text-muted-foreground",
-    },
-  },
-  {
-    key: "departmentCount",
-    label: "覆盖部门",
-    filterType: "number",
-    variant: "metric",
-    cellRenderer: {
-      kind: "metric-unit",
-      unit: "个",
-      valueClass: "tabular-nums text-link",
-      unitClass: "ml-1 text-[12px] text-muted-foreground",
-    },
-  },
-  {
-    key: "positionCount",
-    label: "职位数",
-    filterType: "number",
-    variant: "metric",
-    cellRenderer: {
-      kind: "metric-unit",
-      unit: "个",
-      valueClass: "tabular-nums text-link",
-      unitClass: "ml-1 text-[12px] text-muted-foreground",
-    },
-  },
-  {
-    key: "membersPreview",
-    label: "成员",
-    filterType: "none",
-    variant: "note",
-    format: "note",
-    width: "fill",
-    cellRenderer: { kind: "note" },
-  },
-]
-
-const permissionGroupRows = computed<PermissionGroupRow[]>(() => {
-  const grouped = new Map<string, MemberRow[]>()
-
-  for (const row of rows.value) {
-    const key = row.permissionGroup || "后台"
-    const current = grouped.get(key) ?? []
-    current.push(row)
-    grouped.set(key, current)
-  }
-
-  return Array.from(grouped.entries())
-    .map(([permissionGroup, members]) => ({
-      id: permissionGroup,
-      permissionGroup,
-      memberCount: members.length,
-      departmentCount: new Set(members.map(member => member.departmentName)).size,
-      positionCount: new Set(members.map(member => member.position)).size,
-      membersPreview: members.map(member => member.name).join("、"),
-    }))
-    .sort((left, right) => right.memberCount - left.memberCount || left.permissionGroup.localeCompare(right.permissionGroup, "zh-Hans-CN"))
-})
-
 const viewTabs = computed(() => [
   {
     id: "members",
@@ -373,11 +285,6 @@ const viewTabs = computed(() => [
     id: "roles",
     label: "角色",
     badge: roleRows.value.length,
-  },
-  {
-    id: "permission-groups",
-    label: "权限组",
-    badge: permissionGroupRows.value.length,
   },
 ])
 
@@ -423,34 +330,9 @@ const filteredRoleRows = computed(() => {
   })
 })
 
-const filteredPermissionGroupRows = computed(() => {
-  const keyword = searchQuery.value.trim().toLowerCase()
-
-  return permissionGroupRows.value.filter((row) => {
-    if (!keyword) {
-      return true
-    }
-
-    return [
-      row.permissionGroup,
-      row.memberCount,
-      row.departmentCount,
-      row.positionCount,
-      row.membersPreview,
-    ]
-      .join(" ")
-      .toLowerCase()
-      .includes(keyword)
-  })
-})
-
 const currentColumns = computed(() => {
   if (activeView.value === "roles") {
     return roleColumns
-  }
-
-  if (activeView.value === "permission-groups") {
-    return permissionGroupColumns
   }
 
   return memberColumns
@@ -459,10 +341,6 @@ const currentColumns = computed(() => {
 const currentRows = computed<Record<string, unknown>[]>(() => {
   if (activeView.value === "roles") {
     return filteredRoleRows.value
-  }
-
-  if (activeView.value === "permission-groups") {
-    return filteredPermissionGroupRows.value
   }
 
   return filteredMemberRows.value
@@ -477,20 +355,12 @@ const currentTotalRows = computed(() => {
     return roleRows.value.length
   }
 
-  if (activeView.value === "permission-groups") {
-    return permissionGroupRows.value.length
-  }
-
   return rows.value.length
 })
 
 const currentSearchPlaceholder = computed(() => {
   if (activeView.value === "roles") {
     return "搜索角色名称或备注"
-  }
-
-  if (activeView.value === "permission-groups") {
-    return "搜索权限组或成员"
   }
 
   return "搜索成员、手机号、部门或职位"
@@ -525,14 +395,6 @@ const tableEmptyState = computed<TablePageEmptyState>(() => {
     return {
       title: "暂无角色数据",
       description: "暂时还没有角色，您可以先添加一个角色。",
-      icon: "ri-shield-user-line",
-    }
-  }
-
-  if (activeView.value === "permission-groups") {
-    return {
-      title: "暂无权限组数据",
-      description: "当前成员数据还无法聚合出权限组列表。",
       icon: "ri-shield-user-line",
     }
   }
@@ -941,13 +803,6 @@ function handleMemberAction(actionKey: MemberActionKey, member?: MemberRow) {
     return
   }
 
-  if (actionKey === "create-permission-group") {
-    toast("创建权限组待接入", {
-      description: "后续可接权限组配置抽屉和成员授权流。",
-    })
-    return
-  }
-
   if (!member) {
     return
   }
@@ -972,11 +827,6 @@ function handleMemberAction(actionKey: MemberActionKey, member?: MemberRow) {
 function handlePrimaryAction() {
   if (activeView.value === "roles") {
     handleMemberAction("create-role")
-    return
-  }
-
-  if (activeView.value === "permission-groups") {
-    handleMemberAction("create-permission-group")
   }
 }
 
@@ -1526,7 +1376,7 @@ function asRoleRow(row: Record<string, unknown>) {
             @click="handlePrimaryAction"
           >
             <i class="ri-add-line text-base" />
-            <span>{{ activeView === "roles" ? "添加角色" : "添加权限组" }}</span>
+            <span>添加角色</span>
           </Button>
         </div>
       </SettingsToolbarRow>
