@@ -559,10 +559,8 @@ const currentErrorMessage = computed(() => (
 ))
 
 async function loadAllData() {
-  await Promise.allSettled([
-    loadMembers(),
-    loadRoles(),
-  ])
+  await loadRoles()
+  await loadMembers()
 }
 
 async function loadMembers() {
@@ -571,8 +569,10 @@ async function loadMembers() {
 
   try {
     const result = await fetchMembers()
+    const nextRows = result.list.map((item, index) => normalizeMemberRow(item, index))
 
-    rows.value = result.list.map((item, index) => normalizeMemberRow(item, index))
+    rows.value = nextRows
+    await hydrateMemberRolesFromDetail(nextRows)
   } catch (error) {
     errorMessage.value = handleApiError(error, {
       mode: "silent",
@@ -603,7 +603,7 @@ async function loadRoles() {
 
 function normalizeMemberRow(raw: unknown, index: number): MemberRow {
   const record = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>
-  const permissionOptions = extractRoleOptions(record.Roles)
+  const permissionOptions = extractMemberRoleOptions(record)
   const initialPermissionGroup = permissionOptions[0]?.label ?? "未分配"
 
   return {
@@ -619,6 +619,40 @@ function normalizeMemberRow(raw: unknown, index: number): MemberRow {
     status: normalizeStatus(record.Status),
     source: "remote",
   }
+}
+
+async function hydrateMemberRolesFromDetail(memberRows: MemberRow[]) {
+  const missingRoleRows = memberRows.filter(row => row.uuid && row.permissionOptions.length === 0)
+
+  if (missingRoleRows.length === 0) {
+    return
+  }
+
+  const detailResults = await Promise.allSettled(missingRoleRows.map(async (row) => {
+    const detail = await getMemberDetail({
+      Uuid: row.uuid,
+    })
+
+    return {
+      row,
+      detail,
+    }
+  }))
+
+  detailResults.forEach((result) => {
+    if (result.status !== "fulfilled") {
+      return
+    }
+
+    const permissionOptions = extractRoleOptions(result.value.detail.Roles)
+
+    if (permissionOptions.length === 0) {
+      return
+    }
+
+    result.value.row.permissionOptions = permissionOptions
+    result.value.row.permissionGroup = permissionOptions[0]?.label ?? "未分配"
+  })
 }
 
 function normalizeRoleRow(raw: unknown, index: number): RoleRow {
@@ -648,18 +682,57 @@ function extractRoleOptions(value: unknown) {
   }))
 }
 
+function extractMemberRoleOptions(record: Record<string, unknown>) {
+  const nestedRoleOptions = extractRoleOptions(record.Roles)
+
+  if (nestedRoleOptions.length > 0) {
+    return nestedRoleOptions
+  }
+
+  const roleUuids = getTextArray(record.RoleUuids, record.roleUuids, record.RoleUUIDs, record.roleUUIDs)
+  const roleNames = getTextArray(record.RoleNames, record.roleNames, record.RoleName, record.roleName, record.Roles)
+  const maxLength = Math.max(roleUuids.length, roleNames.length)
+
+  if (maxLength === 0) {
+    return []
+  }
+
+  return buildPermissionOptions(Array.from({ length: maxLength }, (_, index) => {
+    const uuid = roleUuids[index] ?? ""
+    const label = roleNames[index] ?? getRoleLabelByUuid(uuid) ?? ""
+
+    return {
+      label,
+      uuid: uuid || undefined,
+    }
+  }))
+}
+
 function buildPermissionOptions(options: PermissionOption[]) {
   const deduped = new Map<string, PermissionOption>()
 
   options.forEach((option) => {
-    if (!option.label) {
+    const label = option.label.trim()
+
+    if (!label) {
       return
     }
 
-    const key = option.uuid || option.label
+    const current = deduped.get(label)
 
-    if (!deduped.has(key)) {
-      deduped.set(key, option)
+    if (!current) {
+      deduped.set(label, {
+        label,
+        uuid: option.uuid?.trim() || undefined,
+      })
+      return
+    }
+
+    if (!current.uuid && option.uuid?.trim()) {
+      deduped.set(label, {
+        label,
+        uuid: option.uuid.trim(),
+      })
     }
   })
 
@@ -730,6 +803,45 @@ function toText(...values: unknown[]) {
   }
 
   return ""
+}
+
+function getTextArray(...values: unknown[]) {
+  for (const value of values) {
+    if (Array.isArray(value)) {
+      const items = value.flatMap((item) => {
+        if (typeof item === "string" && item.trim()) {
+          return [item.trim()]
+        }
+
+        if (typeof item === "number" && Number.isFinite(item)) {
+          return [String(item)]
+        }
+
+        return []
+      })
+
+      if (items.length > 0) {
+        return items
+      }
+    }
+
+    if (typeof value === "string" && value.trim()) {
+      return value
+        .split(/[,\uff0c]/)
+        .map(item => item.trim())
+        .filter(Boolean)
+    }
+  }
+
+  return []
+}
+
+function getRoleLabelByUuid(uuid: string) {
+  if (!uuid) {
+    return ""
+  }
+
+  return roleRows.value.find(role => role.uuid === uuid)?.name ?? ""
 }
 
 function getPermissionOption(member: MemberRow, groupLabel: string) {
@@ -1083,13 +1195,26 @@ async function submitManualMember() {
   manualSubmitting.value = true
 
   try {
-    await requestMemberCreate({
+    const result = await requestMemberCreate({
       DepartmentUuid: departmentMatch?.departmentUuid || undefined,
       Name: name,
       Phone: manualMemberForm.value.phone.trim() || undefined,
       Position: manualMemberForm.value.position.trim() || undefined,
       RoleUuids: permissionOption?.uuid ? [permissionOption.uuid] : undefined,
     })
+
+    if (permissionOption?.uuid) {
+      const memberUuid = typeof result.Uuid === "string" ? result.Uuid.trim() : ""
+
+      if (!memberUuid) {
+        throw new Error("成员创建成功，但返回结果缺少 Uuid，无法完成角色绑定。")
+      }
+
+      await bindMemberRoles({
+        Uuid: memberUuid,
+        RoleUuids: [permissionOption.uuid],
+      })
+    }
 
     manualDialogOpen.value = false
     manualMemberForm.value = createManualMemberForm()

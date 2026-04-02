@@ -35,6 +35,13 @@ export type CreateMemberPayload = {
   [property: string]: unknown
 }
 
+export type CreateMemberResult = {
+  Id?: number
+  Uuid?: string
+  Name?: string
+  [property: string]: unknown
+}
+
 export type MemberDetailPayload = {
   Uuid?: string
   Remark?: string
@@ -139,7 +146,7 @@ export async function fetchMembers(payload: ListMembersPayload = {}): Promise<Me
   }
 }
 
-export async function createMember(payload: CreateMemberPayload) {
+export async function createMember(payload: CreateMemberPayload): Promise<CreateMemberResult> {
   const normalizedPayload = {
     DepartmentUuid: getOptionalString(payload.DepartmentUuid),
     Name: getRequiredString(payload.Name, "Name"),
@@ -160,6 +167,8 @@ export async function createMember(payload: CreateMemberPayload) {
   if (!response.ok) {
     throw createHttpError(response, responseBody, MEMBER_CREATE_ERROR_MESSAGE)
   }
+
+  return extractCreateResult(responseBody)
 }
 
 export async function getMemberDetail(payload: MemberDetailPayload): Promise<MemberDetailResult> {
@@ -349,6 +358,22 @@ function extractDetailRecord(payload: unknown) {
   }
 
   return directRecord as MemberDetailResult
+}
+
+function extractCreateResult(payload: unknown): CreateMemberResult {
+  const directRecord = asRecord(payload)
+
+  if (!directRecord) {
+    return {}
+  }
+
+  const nestedRecord = asRecord(directRecord.data)
+
+  if (nestedRecord) {
+    return nestedRecord as CreateMemberResult
+  }
+
+  return directRecord as CreateMemberResult
 }
 
 function getRequiredString(value: unknown, field: string) {
