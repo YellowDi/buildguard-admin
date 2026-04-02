@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import type { HTMLAttributes } from "vue"
-import { computed } from "vue"
+import { computed, useSlots } from "vue"
 
 import { Field, FieldContent, FieldDescription, FieldLabel } from "@/components/ui/field"
 import { cn } from "@/lib/utils"
+
+const slots = useSlots()
 
 const props = withDefaults(defineProps<{
   id: string
@@ -53,12 +55,19 @@ const contentClass = computed(() => {
   if (props.layout === "horizontal") return "w-full min-w-0 shrink-0"
   return "w-full min-w-0 md:w-[360px] md:shrink-0"
 })
+
+const hasLabelColumn = computed(() =>
+  Boolean(props.label)
+    || Boolean(props.description)
+    || Boolean(slots.label)
+    || Boolean(slots.description),
+)
 </script>
 
 <template>
   <div :id="id" :data-quick-nav-label="quickNavLabel" :class="sectionClass">
     <Field :class="layoutClass">
-      <div :class="labelWrapClass">
+      <div v-if="hasLabelColumn" :class="labelWrapClass">
         <FieldLabel v-if="$slots.label || label" :for="labelFor">
           <slot name="label">{{ label }}</slot>
         </FieldLabel>

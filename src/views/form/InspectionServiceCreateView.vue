@@ -1554,7 +1554,6 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
         <FormFieldSection
           id="section-service"
           quick-nav-label="服务信息"
-          label="服务信息"
           layout="vertical"
         >
           <div class="grid gap-3 sm:grid-cols-10">
@@ -1759,7 +1758,7 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
               <article
                 v-for="config in sortedBuildingConfigs"
                 :key="config.buildUuid"
-                class="rounded-md border border-border/60 bg-background p-3"
+                class="rounded-md border border-border/60 bg-background p-3 transition-colors hover:bg-accent/30"
               >
                 <div class="flex items-start justify-between gap-2">
                   <div class="min-w-0 flex-1">
