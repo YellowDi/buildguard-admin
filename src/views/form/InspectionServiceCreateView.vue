@@ -1765,8 +1765,8 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
                 :key="config.buildUuid"
                 class="rounded-md border border-border/60 bg-background p-3"
               >
-                <div class="flex items-start justify-between gap-3">
-                  <div class="min-w-0">
+                <div class="flex items-start justify-between gap-2">
+                  <div class="min-w-0 flex-1">
                     <h4 class="line-clamp-2 text-sm font-semibold leading-5 text-foreground">
                       {{ config.buildName }}
                     </h4>
@@ -1774,15 +1774,17 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
                       {{ config.parkName }}
                     </p>
                   </div>
-                  <button
+                  <Button
+                    size="sm"
+                    variant="outline"
                     type="button"
-                    class="inline-flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-destructive"
+                    class="h-7 shrink-0 gap-1 px-2 text-xs"
                     :disabled="Boolean(legacyMultiParkMessage)"
-                    @click="removeBuildingConfig(config.buildUuid)"
+                    @click="openBuildingEditor(config)"
                   >
-                    <i class="ri-delete-bin-line text-base" />
-                    <span class="sr-only">移除建筑</span>
-                  </button>
+                    <i class="ri-edit-line text-[13px]" />
+                    编辑检测项
+                  </Button>
                 </div>
 
                 <div class="mt-3 space-y-2">
@@ -1808,18 +1810,6 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
                 </div>
 
                 <div class="mt-3 flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    type="button"
-                    class="h-8 px-2.5"
-                    :disabled="Boolean(legacyMultiParkMessage)"
-                    @click="openBuildingEditor(config)"
-                  >
-                    <i class="ri-edit-line mr-1.5 text-sm" />
-                    编辑检测项
-                  </Button>
-
                   <Popover
                     :open="activeScorePresetBuildUuid === config.buildUuid"
                     @update:open="handleScorePresetPopoverOpenChange(config.buildUuid, $event)"
