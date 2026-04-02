@@ -13,7 +13,6 @@ type BusinessPresetsHubTabKey = "industry"
 
 type ExposedActions = {
   openCreateDialog: () => void
-  openCreateMajorDialog: () => void
   openCreateCategoryDialog: () => void
   refreshData: () => void | Promise<void>
 }
@@ -51,10 +50,6 @@ function toggleSearch() {
   }
 
   searchExpanded.value = !searchExpanded.value
-}
-
-function triggerAddMajor() {
-  industryTableRef.value?.openCreateMajorDialog()
 }
 
 function triggerAddCategory() {
@@ -104,15 +99,6 @@ async function refreshCurrentTab() {
               <span>刷新列表</span>
             </Button>
           </SettingsToolbarRefreshSlot>
-
-          <Button
-            variant="outline"
-            class="h-8 gap-1 rounded-md px-3 text-[14px]"
-            @click="triggerAddMajor"
-          >
-            <i class="ri-folder-add-line text-base" />
-            <span>添加行业大类</span>
-          </Button>
 
           <Button
             class="h-8 gap-1 rounded-md px-3 text-[14px]"

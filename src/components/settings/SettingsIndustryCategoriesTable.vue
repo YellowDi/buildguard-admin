@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue"
+import { computed, nextTick, onMounted, ref, watch } from "vue"
 import { toast } from "vue-sonner"
 
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -91,6 +92,9 @@ const deletingMajorId = ref<number | null>(null)
 const categoryForm = ref({ majorCategoryId: "" as string, name: "" })
 const editingCategoryId = ref<number | null>(null)
 const deletingCategoryId = ref<number | null>(null)
+
+/** 从分类弹窗跳转添加大类时，关闭大类弹窗后恢复分类弹窗 */
+const resumeCategoryDialog = ref<null | "create" | "edit">(null)
 
 const majorById = computed(() => new Map(majorRows.value.map(m => [m.id, m])))
 
@@ -224,6 +228,24 @@ onMounted(() => {
   emitCategoryCount()
 })
 
+watch(createMajorOpen, (open) => {
+  if (open) {
+    return
+  }
+  const mode = resumeCategoryDialog.value
+  if (!mode) {
+    return
+  }
+  resumeCategoryDialog.value = null
+  void nextTick(() => {
+    if (mode === "create") {
+      createCategoryOpen.value = true
+    } else if (mode === "edit") {
+      editCategoryOpen.value = true
+    }
+  })
+})
+
 function toggleSearch() {
   if (searchExpanded.value && localSearchQuery.value) {
     localSearchQuery.value = ""
@@ -239,6 +261,17 @@ function openCreateMajorDialog() {
     name: "",
   }
   createMajorOpen.value = true
+}
+
+function openCreateMajorBesideCategoryForm() {
+  if (createCategoryOpen.value) {
+    resumeCategoryDialog.value = "create"
+    createCategoryOpen.value = false
+  } else if (editCategoryOpen.value) {
+    resumeCategoryDialog.value = "edit"
+    editCategoryOpen.value = false
+  }
+  openCreateMajorDialog()
 }
 
 function openEditMajor(row: MajorRow) {
@@ -267,6 +300,9 @@ function submitMajorCreate() {
     code,
     name,
   }]
+  if (resumeCategoryDialog.value) {
+    categoryForm.value.majorCategoryId = String(id)
+  }
   createMajorOpen.value = false
   toast.success("已添加行业大类")
 }
@@ -316,13 +352,10 @@ function confirmDeleteMajor() {
 }
 
 function openCreateCategoryDialog() {
-  if (majorRows.value.length === 0) {
-    toast.error("请先添加至少一个行业大类")
-    return
-  }
   editingCategoryId.value = null
+  const first = majorRows.value[0]?.id
   categoryForm.value = {
-    majorCategoryId: String(majorRows.value[0]?.id ?? ""),
+    majorCategoryId: first !== undefined ? String(first) : "",
     name: "",
   }
   createCategoryOpen.value = true
@@ -450,16 +483,6 @@ defineExpose({
 
         <Button
           v-if="!props.hideCreateButton"
-          variant="outline"
-          class="h-8 gap-1 rounded-md px-3 text-[14px]"
-          @click="openCreateMajorDialog"
-        >
-          <i class="ri-folder-add-line text-base" />
-          <span>添加行业大类</span>
-        </Button>
-
-        <Button
-          v-if="!props.hideCreateButton"
           class="h-8 gap-1 rounded-md px-3 text-[14px]"
           @click="openCreateCategoryDialog"
         >
@@ -469,9 +492,13 @@ defineExpose({
       </div>
     </SettingsToolbarRow>
 
-    <p class="text-sm leading-relaxed text-muted-foreground">
-      行业大类仅作列表分组与统计归类，不会在客户等业务表单中作为可选项；建档时仅选择下方「行业名称」对应的行业分类。
-    </p>
+    <Alert class="border-border/60 bg-muted/25">
+      <i class="ri-information-line text-base text-muted-foreground" />
+      <AlertTitle>说明</AlertTitle>
+      <AlertDescription>
+        行业大类仅用于分组与统计，不会在客户等表单中作为选项；建档时请从下方「行业名称」中选择具体行业。
+      </AlertDescription>
+    </Alert>
 
     <div class="space-y-3">
       <h3 class="text-sm font-semibold text-foreground">
@@ -657,20 +684,34 @@ defineExpose({
         <form class="grid gap-4" @submit.prevent>
           <div class="grid gap-2">
             <span class="text-sm font-medium text-foreground">归属行业大类</span>
-            <Select v-model="categoryForm.majorCategoryId">
-              <SelectTrigger class="w-full">
-                <SelectValue placeholder="选择行业大类" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem
-                  v-for="m in majorsOrdered"
-                  :key="m.id"
-                  :value="String(m.id)"
-                >
-                  {{ m.code }} {{ m.name }}
-                </SelectItem>
-              </SelectContent>
-            </Select>
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <div class="min-w-0 flex-1">
+                <Select v-model="categoryForm.majorCategoryId">
+                  <SelectTrigger class="w-full">
+                    <SelectValue placeholder="选择行业大类" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem
+                      v-for="m in majorsOrdered"
+                      :key="m.id"
+                      :value="String(m.id)"
+                    >
+                      {{ m.code }} {{ m.name }}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                class="h-9 shrink-0 gap-1 px-3 sm:self-auto"
+                @click="openCreateMajorBesideCategoryForm"
+              >
+                <i class="ri-folder-add-line text-base" />
+                <span>添加行业大类</span>
+              </Button>
+            </div>
           </div>
           <div class="grid gap-2">
             <label class="text-sm font-medium text-foreground" for="create-cat-name">行业名称</label>
@@ -705,20 +746,34 @@ defineExpose({
         <form class="grid gap-4" @submit.prevent>
           <div class="grid gap-2">
             <span class="text-sm font-medium text-foreground">归属行业大类</span>
-            <Select v-model="categoryForm.majorCategoryId">
-              <SelectTrigger class="w-full">
-                <SelectValue placeholder="选择行业大类" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem
-                  v-for="m in majorsOrdered"
-                  :key="m.id"
-                  :value="String(m.id)"
-                >
-                  {{ m.code }} {{ m.name }}
-                </SelectItem>
-              </SelectContent>
-            </Select>
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <div class="min-w-0 flex-1">
+                <Select v-model="categoryForm.majorCategoryId">
+                  <SelectTrigger class="w-full">
+                    <SelectValue placeholder="选择行业大类" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem
+                      v-for="m in majorsOrdered"
+                      :key="m.id"
+                      :value="String(m.id)"
+                    >
+                      {{ m.code }} {{ m.name }}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                class="h-9 shrink-0 gap-1 px-3 sm:self-auto"
+                @click="openCreateMajorBesideCategoryForm"
+              >
+                <i class="ri-folder-add-line text-base" />
+                <span>添加行业大类</span>
+              </Button>
+            </div>
           </div>
           <div class="grid gap-2">
             <label class="text-sm font-medium text-foreground" for="edit-cat-name">行业名称</label>

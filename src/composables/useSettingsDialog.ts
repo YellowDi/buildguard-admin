@@ -302,10 +302,12 @@ const categories = computed<SettingsCategory[]>(() => [
     key: "business-presets",
     group: "feature",
     label: "业务预设",
-    description: "维护行业分类等业务侧预设选项，供表单选择与统计分析使用。",
+    description:
+      "集中维护行业分类等基础信息与分类项，统一选项口径，便于录入、管理与统计。",
     icon: "ri-stack-line",
     pageTitle: "业务预设",
-    pageDescription: "通过页签切换不同预设类型，统一维护业务基础数据。接口接入后将与列表和客户表单联动。",
+    pageDescription:
+      "在此为业务预先配置基础信息与分类，统一预设选项与展示口径，便于日常管理、对比与统计分析。",
     sections: [],
   },
   {
