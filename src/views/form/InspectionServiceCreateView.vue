@@ -295,7 +295,7 @@ function buildingPickCardClass(checked: boolean, disabled: boolean) {
     disabled && "cursor-not-allowed opacity-55",
     checked
       ? "border-[color:var(--theme-primary)]/50 bg-[color:var(--theme-primary)]/10 shadow-sm ring-1 ring-[color:var(--theme-primary)]/15"
-      : "border-border/55 bg-white hover:border-[color:var(--theme-primary)]/35 hover:bg-white hover:shadow-sm",
+      : "border-border/55 bg-white dark:bg-card hover:border-[color:var(--theme-primary)]/35 hover:bg-white dark:hover:bg-muted/60 hover:shadow-sm",
   )
 }
 
