@@ -19,7 +19,7 @@ const emit = defineEmits<{
 const activeItemClass = "sidebar-nav-active-surface text-sidebar-accent-foreground"
 const { isOpen: isSettingsDialogOpen } = useSettingsDialog()
 
-function isActive(item: AppSidebarNavItem) {
+function isActive(item: AppSidebarNavItem): boolean {
   if (item.action === "open-settings") {
     return isSettingsDialogOpen.value
   }

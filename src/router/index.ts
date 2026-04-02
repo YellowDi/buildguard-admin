@@ -123,12 +123,40 @@ const router = createRouter({
           } satisfies RouteMetaConfig,
         },
         {
+          path: "parks",
+          name: "parks",
+          component: () => import("@/views/list/ParksListView.vue"),
+          meta: {
+            title: "园区",
+            loading: "table",
+          } satisfies RouteMetaConfig,
+        },
+        {
+          path: "buildings",
+          name: "buildings",
+          component: () => import("@/views/list/BuildingsListView.vue"),
+          meta: {
+            title: "建筑",
+            loading: "table",
+          } satisfies RouteMetaConfig,
+        },
+        {
+          path: "monitoring",
+          name: "monitoring",
+          component: () => import("@/views/list/MonitoringListView.vue"),
+          meta: {
+            title: "监控",
+            loading: "table",
+          } satisfies RouteMetaConfig,
+        },
+        {
           path: "customers/:id/parks/create",
           name: "customer-park-create",
           component: () => import("@/views/form/ParkCreateView.vue"),
           meta: {
             title: "添加园区",
             loading: "form",
+            navActivePath: "/parks",
             breadcrumb: [
               { title: "客户", to: "customers" },
               { title: "客户详情" },
@@ -143,6 +171,7 @@ const router = createRouter({
           meta: {
             title: "添加建筑",
             loading: "form",
+            navActivePath: "/buildings",
             breadcrumb: [
               { title: "客户", to: "customers" },
               { title: "客户详情" },
@@ -186,7 +215,7 @@ const router = createRouter({
           meta: {
             title: "编辑建筑",
             loading: "form",
-            navActivePath: "/customers",
+            navActivePath: "/buildings",
             breadcrumb: [
               { title: "客户", to: "customers" },
               { title: "客户详情" },
@@ -201,7 +230,7 @@ const router = createRouter({
           meta: {
             title: "编辑园区",
             loading: "form",
-            navActivePath: "/customers",
+            navActivePath: "/parks",
             breadcrumb: [
               { title: "客户", to: "customers" },
               { title: "客户详情" },
@@ -317,10 +346,9 @@ const router = createRouter({
             title: "园区详情",
             loading: "detail",
             useDetailBreadcrumbTitle: true,
-            navActivePath: "/customers",
+            navActivePath: "/parks",
             breadcrumb: [
-              { title: "客户", to: "customers" },
-              { title: "客户详情" },
+              { title: "园区", to: "parks" },
               { title: "园区详情" },
             ] satisfies BreadcrumbMetaItem[],
           } satisfies RouteMetaConfig,
@@ -333,10 +361,9 @@ const router = createRouter({
             title: "建筑详情",
             loading: "detail",
             useDetailBreadcrumbTitle: true,
-            navActivePath: "/customers",
+            navActivePath: "/buildings",
             breadcrumb: [
-              { title: "客户", to: "customers" },
-              { title: "客户详情" },
+              { title: "建筑", to: "buildings" },
               { title: "建筑详情" },
             ] satisfies BreadcrumbMetaItem[],
           } satisfies RouteMetaConfig,

@@ -58,6 +58,21 @@ const businessItems = reactive<AppSidebarNavItem[]>([
     path: "/customers",
   },
   {
+    label: "园区",
+    icon: "ri-community-line",
+    path: "/parks",
+  },
+  {
+    label: "建筑",
+    icon: "ri-building-line",
+    path: "/buildings",
+  },
+  {
+    label: "监控",
+    icon: "ri-radar-line",
+    path: "/monitoring",
+  },
+  {
     label: "工单",
     icon: "ri-file-list-3-line",
     open: true,
@@ -169,7 +184,7 @@ function handleTopTabUpdate(tabId: string) {
 }
 
 function isBusinessRoute(path: string) {
-  return ["/", "/customers", "/companies", "/inspection-services", "/inspection-plans", "/vehicles", "/work-orders", "/users", "/call-center-tasks", "/alarm-queries", "/alarm-archives"].some(
+  return ["/", "/customers", "/parks", "/buildings", "/monitoring", "/companies", "/inspection-services", "/inspection-plans", "/vehicles", "/work-orders", "/users", "/call-center-tasks", "/alarm-queries", "/alarm-archives"].some(
     prefix => path === prefix || path.startsWith(`${prefix}/`),
   )
 }

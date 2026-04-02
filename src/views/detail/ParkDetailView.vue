@@ -39,10 +39,8 @@ const mapDialogOpen = ref(false)
 let latestRequestId = 0
 
 const parkUuid = computed(() => typeof route.params.id === "string" ? route.params.id.trim() : "")
-const customerUuid = computed(() => {
-  const queryValue = typeof route.query.customerUuid === "string" ? route.query.customerUuid.trim() : ""
-  return queryValue || toText(park.value?.CustomerUuid, "")
-})
+const customerContextUuid = computed(() => typeof route.query.customerUuid === "string" ? route.query.customerUuid.trim() : "")
+const linkedCustomerUuid = computed(() => customerContextUuid.value || toText(park.value?.CustomerUuid, ""))
 
 const fieldSections = computed<DetailFieldSection[]>(() => {
   const current = park.value
@@ -123,21 +121,22 @@ watch(park, (current) => {
     return
   }
 
-  detailBreadcrumbItems.value = [
-    { title: "客户", to: "customers" },
-    {
-      title: "客户详情",
-      ...(customerUuid.value
-        ? {
-            to: {
-              name: "customer-detail",
-              params: { id: customerUuid.value },
-            },
-          }
-        : {}),
-    },
-    { title: "园区详情" },
-  ]
+  detailBreadcrumbItems.value = customerContextUuid.value
+    ? [
+        { title: "客户", to: "customers" },
+        {
+          title: "客户详情",
+          to: {
+            name: "customer-detail",
+            params: { id: customerContextUuid.value },
+          },
+        },
+        { title: "园区详情" },
+      ]
+    : [
+        { title: "园区", to: "parks" },
+        { title: "园区详情" },
+      ]
 })
 
 watch(parkUuid, (nextParkUuid) => {
@@ -150,15 +149,15 @@ onUnmounted(() => {
 })
 
 function goBack() {
-  if (customerUuid.value) {
+  if (customerContextUuid.value) {
     void router.push({
       name: "customer-detail",
-      params: { id: customerUuid.value },
+      params: { id: customerContextUuid.value },
     })
     return
   }
 
-  void router.push({ name: "customers" })
+  void router.push({ name: "parks" })
 }
 
 function goToBuildingDetail(buildingId: string) {
@@ -339,7 +338,7 @@ function buildContactValue(name: string | null, phone?: string | null): DetailCo
     :open="buildingDetailSheetOpen"
     :building-uuid="activeBuildingUuid"
     :park-uuid="parkUuid"
-    :customer-uuid="customerUuid || undefined"
+    :customer-uuid="linkedCustomerUuid || undefined"
     @update:open="handleBuildingDetailSheetOpenChange"
     @deleted="handleBuildingDeleted"
   />

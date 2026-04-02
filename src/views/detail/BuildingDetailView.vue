@@ -117,33 +117,34 @@ watch(building, (current) => {
     return
   }
 
-  detailBreadcrumbItems.value = [
-    { title: "客户", to: "customers" },
-    {
-      title: "客户详情",
-      ...(relatedCustomerUuid.value
-        ? {
-            to: {
-              name: "customer-detail",
-              params: { id: relatedCustomerUuid.value },
-            },
-          }
-        : {}),
-    },
-    ...(parkUuid.value
-      ? [{
-          title: "园区详情",
+  detailBreadcrumbItems.value = customerUuid.value
+    ? [
+        { title: "客户", to: "customers" },
+        {
+          title: "客户详情",
           to: {
-            name: "park-detail",
-            params: { id: parkUuid.value },
-            query: relatedCustomerUuid.value ? { customerUuid: relatedCustomerUuid.value } : undefined,
+            name: "customer-detail",
+            params: { id: customerUuid.value },
           },
-        }]
-      : [{
-          title: "园区详情",
-        }]),
-    { title: "建筑详情" },
-  ]
+        },
+        ...(parkUuid.value
+          ? [{
+              title: "园区详情",
+              to: {
+                name: "park-detail",
+                params: { id: parkUuid.value },
+                query: { customerUuid: customerUuid.value },
+              },
+            }]
+          : [{
+              title: "园区详情",
+            }]),
+        { title: "建筑详情" },
+      ]
+    : [
+        { title: "建筑", to: "buildings" },
+        { title: "建筑详情" },
+      ]
 })
 
 watch([buildingUuid, parkUuid], ([nextBuildingUuid, nextParkUuid]) => {
@@ -156,7 +157,7 @@ onUnmounted(() => {
 })
 
 function goBack() {
-  if (parkUuid.value) {
+  if (parkUuid.value && customerUuid.value) {
     void router.push({
       name: "park-detail",
       params: { id: parkUuid.value },
@@ -173,7 +174,7 @@ function goBack() {
     return
   }
 
-  void router.push({ name: "customers" })
+  void router.push({ name: "buildings" })
 }
 
 async function loadBuildingDetail(nextBuildingUuid: string, nextParkUuid: string) {
