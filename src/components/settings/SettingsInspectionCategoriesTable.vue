@@ -149,13 +149,6 @@ const columns: TableColumn[] = [
     width: "fill",
   },
   {
-    key: "uuid",
-    label: "Uuid",
-    filterType: "text",
-    tone: "muted",
-    cellClass: "font-mono text-[12px] text-muted-foreground",
-  },
-  {
     key: "actions",
     label: "",
     filterType: "none",
@@ -511,7 +504,7 @@ defineExpose({
         <SettingsToolbarSearchInput
           v-model="searchQuery"
           :expanded="searchExpanded"
-          placeholder="搜索分类名称、ID、Uuid 或计分预设"
+          placeholder="搜索分类名称、ID 或计分预设"
           @toggle="toggleSearch"
         />
 
