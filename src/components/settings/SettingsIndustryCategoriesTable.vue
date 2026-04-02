@@ -340,6 +340,18 @@ function promptDeleteMajor(row: MajorRow) {
   deleteMajorOpen.value = true
 }
 
+function promptDeleteEditingMajor() {
+  const id = editingMajorId.value
+  if (id === null) {
+    return
+  }
+  const row = majorRows.value.find(m => m.id === id)
+  if (!row) {
+    return
+  }
+  promptDeleteMajor(row)
+}
+
 function confirmDeleteMajor() {
   const id = deletingMajorId.value
   if (id === null) {
@@ -348,6 +360,8 @@ function confirmDeleteMajor() {
   majorRows.value = majorRows.value.filter(m => m.id !== id)
   deleteMajorOpen.value = false
   deletingMajorId.value = null
+  editMajorOpen.value = false
+  editingMajorId.value = null
   toast.success("已删除行业大类")
 }
 
@@ -426,6 +440,18 @@ function promptDeleteCategory(row: CategoryRow) {
   deleteCategoryOpen.value = true
 }
 
+function promptDeleteEditingCategory() {
+  const id = editingCategoryId.value
+  if (id === null) {
+    return
+  }
+  const row = categoryRows.value.find(c => c.id === id)
+  if (!row) {
+    return
+  }
+  promptDeleteCategory(row)
+}
+
 function confirmDeleteCategory() {
   const id = deletingCategoryId.value
   if (id === null) {
@@ -434,6 +460,8 @@ function confirmDeleteCategory() {
   categoryRows.value = categoryRows.value.filter(c => c.id !== id)
   deleteCategoryOpen.value = false
   deletingCategoryId.value = null
+  editCategoryOpen.value = false
+  editingCategoryId.value = null
   emitCategoryCount()
   toast.success("已删除行业分类")
 }
@@ -514,7 +542,7 @@ defineExpose({
         :empty-state="majorEmptyState"
       >
         <template #cell-major-actions="{ row: rawRow }">
-          <div class="flex justify-end gap-1.5">
+          <div class="flex justify-end">
             <Button
               variant="outline"
               size="sm"
@@ -523,15 +551,6 @@ defineExpose({
             >
               <i class="ri-edit-line text-base" />
               <span>编辑</span>
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              class="h-8 gap-1 rounded-md px-2.5 text-[13px]"
-              @click="promptDeleteMajor(asMajorRow(rawRow))"
-            >
-              <i class="ri-delete-bin-line text-base" />
-              <span>删除</span>
             </Button>
           </div>
         </template>
@@ -552,7 +571,7 @@ defineExpose({
         :empty-state="categoryEmptyState"
       >
         <template #cell-category-actions="{ row: rawRow }">
-          <div class="flex justify-end gap-1.5">
+          <div class="flex justify-end">
             <Button
               variant="outline"
               size="sm"
@@ -561,15 +580,6 @@ defineExpose({
             >
               <i class="ri-edit-line text-base" />
               <span>编辑</span>
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              class="h-8 gap-1 rounded-md px-2.5 text-[13px]"
-              @click="promptDeleteCategory(asCategoryRow(rawRow))"
-            >
-              <i class="ri-delete-bin-line text-base" />
-              <span>删除</span>
             </Button>
           </div>
         </template>
@@ -642,16 +652,28 @@ defineExpose({
               v-model="majorForm.name"
             />
           </div>
-        </form>
 
-        <DialogFooter>
-          <Button type="button" variant="outline" @click="editMajorOpen = false">
-            取消
-          </Button>
-          <Button type="button" @click="submitMajorEdit">
-            保存
-          </Button>
-        </DialogFooter>
+          <DialogFooter class="flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <Button
+              type="button"
+              variant="outline"
+              class="w-full gap-1 border-destructive/30 bg-background font-medium text-destructive shadow-none hover:bg-destructive/5 hover:text-destructive sm:w-auto"
+              @click="promptDeleteEditingMajor"
+            >
+              <i class="ri-delete-bin-line text-base" />
+              <span>删除行业大类</span>
+            </Button>
+
+            <div class="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row">
+              <Button type="button" variant="outline" @click="editMajorOpen = false">
+                取消
+              </Button>
+              <Button type="button" @click="submitMajorEdit">
+                保存
+              </Button>
+            </div>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
 
@@ -782,16 +804,28 @@ defineExpose({
               v-model="categoryForm.name"
             />
           </div>
-        </form>
 
-        <DialogFooter>
-          <Button type="button" variant="outline" @click="editCategoryOpen = false">
-            取消
-          </Button>
-          <Button type="button" @click="submitCategoryEdit">
-            保存
-          </Button>
-        </DialogFooter>
+          <DialogFooter class="flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <Button
+              type="button"
+              variant="outline"
+              class="w-full gap-1 border-destructive/30 bg-background font-medium text-destructive shadow-none hover:bg-destructive/5 hover:text-destructive sm:w-auto"
+              @click="promptDeleteEditingCategory"
+            >
+              <i class="ri-delete-bin-line text-base" />
+              <span>删除行业分类</span>
+            </Button>
+
+            <div class="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row">
+              <Button type="button" variant="outline" @click="editCategoryOpen = false">
+                取消
+              </Button>
+              <Button type="button" @click="submitCategoryEdit">
+                保存
+              </Button>
+            </div>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
 
