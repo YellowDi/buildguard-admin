@@ -23,7 +23,8 @@ const props = defineProps<{
 }>()
 
 const activeTab = ref<BusinessPresetsHubTabKey>("industry")
-const industryCount = ref(0)
+/** 「行业分类」Tab 角标：仅行业分类条数，不含行业大类 */
+const industryCategoryCount = ref(0)
 const searchExpanded = ref(false)
 const searchQueries = ref<Record<BusinessPresetsHubTabKey, string>>({
   industry: "",
@@ -31,7 +32,7 @@ const searchQueries = ref<Record<BusinessPresetsHubTabKey, string>>({
 const industryTableRef = ref<ExposedActions | null>(null)
 
 const tabs = computed(() => [
-  { id: "industry", label: "行业分类", badge: industryCount.value },
+  { id: "industry", label: "行业分类", badge: industryCategoryCount.value },
 ])
 
 const currentSearchQuery = computed({
@@ -117,7 +118,7 @@ async function refreshCurrentTab() {
           ref="industryTableRef"
           :hide-toolbar="true"
           :search-query="searchQueries.industry"
-          @count-change="industryCount = $event"
+          @count-change="industryCategoryCount = $event"
         />
       </div>
     </section>

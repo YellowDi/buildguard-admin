@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, watch } from "vue"
+import { computed, nextTick, ref, watch } from "vue"
 import { toast } from "vue-sonner"
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -220,13 +220,14 @@ const categoryEmptyState = computed<TablePageEmptyState>(() => {
   }
 })
 
-function emitCategoryCount() {
-  emit("countChange", categoryRows.value.length)
-}
-
-onMounted(() => {
-  emitCategoryCount()
-})
+/** 同步到业务预设胶囊角标：仅统计「行业分类」行数，不含「行业大类」 */
+watch(
+  () => categoryRows.value.length,
+  (len) => {
+    emit("countChange", len)
+  },
+  { immediate: true },
+)
 
 watch(createMajorOpen, (open) => {
   if (open) {
@@ -402,7 +403,6 @@ function submitCategoryCreate() {
     name,
   }]
   createCategoryOpen.value = false
-  emitCategoryCount()
   toast.success("已添加行业分类")
 }
 
@@ -462,7 +462,6 @@ function confirmDeleteCategory() {
   deletingCategoryId.value = null
   editCategoryOpen.value = false
   editingCategoryId.value = null
-  emitCategoryCount()
   toast.success("已删除行业分类")
 }
 
