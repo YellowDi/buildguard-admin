@@ -77,7 +77,7 @@ onMounted(() => {
         <p class="text-sm text-muted-foreground">暂无安排</p>
       </div>
 
-      <div v-else class="space-y-1 px-2">
+      <div v-else class="space-y-1">
         <article
           v-for="event in eventsForSelectedDate"
           :key="`${event.type}-${event.uuid}`"
