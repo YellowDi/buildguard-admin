@@ -1509,7 +1509,7 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
 </script>
 
 <template>
-  <section class="mx-auto flex w-full max-w-[1180px] min-w-0 flex-col gap-6 pb-8">
+  <section class="mx-auto flex w-full max-w-[1021px] min-w-0 flex-col gap-6 pb-8">
     <FormHeader
       :title="pageTitle"
       :primary-action="{ label: submitButtonLabel, icon: isEditMode ? 'ri-save-line' : 'ri-add-line', disabled: !canSubmit }"
