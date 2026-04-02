@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue"
+import { computed, ref, watch } from "vue"
 import { useRoute } from "vue-router"
 import { toast } from "vue-sonner"
 
@@ -9,6 +9,17 @@ import { createTablePageDefinition, useTablePage } from "@/components/table-page
 import type { TablePageSchema, TableStatusOption } from "@/components/table-page/types"
 import { useRouteTableSearch } from "@/composables/useRouteTableSearch"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Button } from "@/components/ui/button"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationFirst,
+  PaginationItem,
+  PaginationLast,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
 import { handleApiError } from "@/lib/api-errors"
 import { fetchBuildings } from "@/lib/buildings-api"
 import { fetchCustomers } from "@/lib/customers-api"
@@ -31,6 +42,10 @@ type MonitoringRecord = {
 const monitoringRows = ref<MonitoringRecord[]>([])
 const loading = ref(false)
 const errorMessage = ref("")
+const pageNum = ref(1)
+const pageSize = ref(10)
+const total = ref(0)
+let latestRequestId = 0
 
 const route = useRoute()
 const showInitialLoading = computed(() => loading.value && !monitoringRows.value.length && !errorMessage.value)
@@ -203,24 +218,34 @@ const page = useTablePage({
 
 useRouteTableSearch(page, route)
 
-onMounted(() => {
+watch([pageNum, pageSize], ([nextPageNum, nextPageSize], [previousPageNum, previousPageSize]) => {
+  if (nextPageNum === previousPageNum && nextPageSize === previousPageSize) {
+    return
+  }
+
   void loadMonitoring()
-})
+}, { immediate: true })
 
 function handleCreateMonitoring() {
   toast.info("监控创建页暂未接入，请先在客户详情中维护监控设备。")
 }
 
 async function loadMonitoring() {
+  const requestId = ++latestRequestId
+
   loading.value = true
   errorMessage.value = ""
 
   try {
     const [buildingsResult, parksResult, customersResult] = await Promise.all([
-      fetchBuildings({ PageNum: 1, PageSize: 1000 }),
+      fetchBuildings({ PageNum: pageNum.value, PageSize: pageSize.value }),
       fetchParks({ PageNum: 1, PageSize: 1000 }),
       fetchCustomers({ PageNum: 1, PageSize: 1000 }),
     ])
+
+    if (requestId !== latestRequestId) {
+      return
+    }
 
     const customerNameByUuid = new Map(
       customersResult.list.map(item => [toText(item.Uuid), toText(item.CorpName, "未关联客户")]),
@@ -238,6 +263,7 @@ async function loadMonitoring() {
     const deviceSuffixPool = ["主入口枪机", "消防通道球机", "车库入口枪机"]
     const statusPool = ["在线", "维护中", "在线", "离线"]
 
+    total.value = buildingsResult.total
     monitoringRows.value = buildingsResult.list.map((item, index) => {
       const uuid = toText(item.Uuid, `building-${index + 1}`)
       const parkMeta = parkMetaByUuid.get(toText(item.ParkUuid))
@@ -258,13 +284,27 @@ async function loadMonitoring() {
         note: buildMonitoringNote(status),
       }
     })
+
+    const maxPage = Math.max(1, Math.ceil((buildingsResult.total || 0) / pageSize.value))
+
+    if (pageNum.value > maxPage) {
+      pageNum.value = maxPage
+    }
   } catch (error) {
+    if (requestId !== latestRequestId) {
+      return
+    }
+
+    monitoringRows.value = []
+    total.value = 0
     errorMessage.value = handleApiError(error, {
       mode: "silent",
       fallback: "监控列表加载失败，请稍后重试。",
     })
   } finally {
-    loading.value = false
+    if (requestId === latestRequestId) {
+      loading.value = false
+    }
   }
 }
 
@@ -327,14 +367,58 @@ function toText(value: unknown, fallback = "") {
 </script>
 
 <template>
-  <div class="space-y-4">
-    <TablePageLoading v-if="showInitialLoading" />
+  <TablePageLoading v-if="showInitialLoading" />
 
-    <Alert v-else-if="errorMessage" variant="destructive">
-      <AlertTitle>监控列表加载失败</AlertTitle>
-      <AlertDescription>{{ errorMessage }}</AlertDescription>
-    </Alert>
+  <section v-else class="flex min-h-0 flex-1 flex-col">
+    <div v-if="errorMessage" class="px-4 pb-3 pt-3">
+      <Alert variant="destructive">
+        <AlertTitle>监控列表加载失败</AlertTitle>
+        <AlertDescription class="flex flex-wrap items-center gap-3">
+          <span>{{ errorMessage }}</span>
+          <Button size="sm" variant="outline" class="gap-2" @click="loadMonitoring">
+            <i class="ri-refresh-line text-sm" />
+            重试
+          </Button>
+        </AlertDescription>
+      </Alert>
+    </div>
 
-    <TablePage v-else :page="page" @primary-action="handleCreateMonitoring" />
-  </div>
+    <TablePage :page="page" @primary-action="handleCreateMonitoring" />
+
+    <div class="-mx-4 pt-3">
+      <div class="flex w-full justify-end px-4">
+        <Pagination
+          v-model:page="pageNum"
+          :items-per-page="pageSize"
+          :total="total"
+          :sibling-count="1"
+          :disabled="loading"
+          show-edges
+          class="w-full justify-end"
+        >
+          <PaginationContent v-slot="{ items }" class="justify-end">
+            <PaginationFirst />
+            <PaginationPrevious />
+
+            <template
+              v-for="(item, index) in items"
+              :key="`${item.type}-${item.type === 'page' ? item.value : index}`"
+            >
+              <PaginationItem
+                v-if="item.type === 'page'"
+                :value="item.value"
+                :is-active="item.value === pageNum"
+              >
+                {{ item.value }}
+              </PaginationItem>
+              <PaginationEllipsis v-else />
+            </template>
+
+            <PaginationNext />
+            <PaginationLast />
+          </PaginationContent>
+        </Pagination>
+      </div>
+    </div>
+  </section>
 </template>
