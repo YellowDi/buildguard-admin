@@ -242,7 +242,17 @@ function extractTotal(payload: RolesListEnvelope | unknown[], fallback: number) 
 
 function normalizeRoleRecord(value: unknown): RoleRecord {
   if (value && typeof value === "object") {
-    return value as RoleRecord
+    const record = value as Record<string, unknown>
+
+    return {
+      ...record,
+      Uuid: getFirstText(record, ["Uuid", "uuid", "RoleUuid", "roleUuid"]),
+      Id: getFirstNumber(record, ["Id", "id", "RoleId", "roleId"]),
+      Name: getFirstText(record, ["Name", "name", "RoleName", "roleName"]),
+      Remark: getFirstText(record, ["Remark", "remark"]),
+      CreatedAt: getFirstText(record, ["CreatedAt", "createdAt"]),
+      UpdatedAt: getFirstText(record, ["UpdatedAt", "updatedAt"]),
+    }
   }
 
   return {}
@@ -282,6 +292,35 @@ function extractDetailRecord(payload: unknown): RoleDetailResult {
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   return value !== null && typeof value === "object" ? value as Record<string, unknown> : null
+}
+
+function getFirstText(record: Record<string, unknown>, keys: string[]) {
+  for (const key of keys) {
+    const value = record[key]
+
+    if (typeof value === "string" && value.trim()) {
+      return value.trim()
+    }
+
+    if (typeof value === "number") {
+      return String(value)
+    }
+  }
+
+  return undefined
+}
+
+function getFirstNumber(record: Record<string, unknown>, keys: string[]) {
+  for (const key of keys) {
+    const value = record[key]
+    const parsed = typeof value === "string" ? Number(value.trim()) : value
+
+    if (typeof parsed === "number" && Number.isFinite(parsed)) {
+      return parsed
+    }
+  }
+
+  return undefined
 }
 
 function getRequiredString(value: unknown, field: string) {

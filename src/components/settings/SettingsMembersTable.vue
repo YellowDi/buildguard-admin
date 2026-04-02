@@ -623,12 +623,12 @@ function normalizeRoleRow(raw: unknown, index: number): RoleRow {
   const record = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>
 
   return {
-    id: toNumber(record.Id, index + 1),
-    uuid: toText(record.Uuid),
-    name: toText(record.Name, `角色 ${index + 1}`),
-    remark: toText(record.Remark, "-"),
-    createdAt: toText(record.CreatedAt, "-"),
-    updatedAt: toText(record.UpdatedAt, "-"),
+    id: toNumber(record.Id, record.id, record.RoleId, record.roleId, index + 1),
+    uuid: toText(record.Uuid, record.uuid, record.RoleUuid, record.roleUuid),
+    name: toText(record.Name, record.name, record.RoleName, record.roleName, `角色 ${index + 1}`),
+    remark: toText(record.Remark, record.remark, "-"),
+    createdAt: toText(record.CreatedAt, record.createdAt, "-"),
+    updatedAt: toText(record.UpdatedAt, record.updatedAt, "-"),
   }
 }
 
@@ -702,9 +702,18 @@ function toStatusValue(status: string) {
   return 0
 }
 
-function toNumber(value: unknown, fallback: number) {
-  const parsed = Number(value)
-  return Number.isFinite(parsed) ? parsed : fallback
+function toNumber(...values: unknown[]) {
+  const fallback = typeof values[values.length - 1] === "number" ? values[values.length - 1] as number : 0
+
+  for (const value of values) {
+    const parsed = Number(value)
+
+    if (Number.isFinite(parsed)) {
+      return parsed
+    }
+  }
+
+  return fallback
 }
 
 function toText(...values: unknown[]) {
