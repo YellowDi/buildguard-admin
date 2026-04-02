@@ -62,6 +62,7 @@ import {
   createRole as requestRoleCreate,
   deleteRole as requestRoleDelete,
   fetchRoles,
+  getRoleDetail,
   updateRole as requestRoleUpdate,
 } from "@/lib/roles-api"
 import { SETTINGS_TABLE_PAGE_CLASS } from "@/components/settings/settingsTablePageClass"
@@ -167,8 +168,10 @@ const roleDialogOpen = ref(false)
 const editDialogOpen = ref(false)
 const editingMemberId = ref<number | null>(null)
 const editingRoleId = ref<number | null>(null)
+const editingRoleUuid = ref("")
 const manualSubmitting = ref(false)
 const roleSubmitting = ref(false)
+const roleDetailLoading = ref(false)
 const roleDeleteSubmitting = ref(false)
 const roleDeleteConfirmOpen = ref(false)
 const editDetailLoading = ref(false)
@@ -973,6 +976,8 @@ function openManualMemberDialog() {
 
 function openRoleDialog() {
   editingRoleId.value = null
+  editingRoleUuid.value = ""
+  roleDetailLoading.value = false
   roleDeleteConfirmOpen.value = false
   roleForm.value = createRoleForm()
   roleDialogOpen.value = true
@@ -980,17 +985,22 @@ function openRoleDialog() {
 
 function openEditRoleDialog(role: RoleRow) {
   editingRoleId.value = role.id
+  editingRoleUuid.value = role.uuid
+  roleDetailLoading.value = false
   roleDeleteConfirmOpen.value = false
-  roleForm.value = {
-    name: role.name,
-    remark: role.remark === "-" ? "" : role.remark,
-  }
+  applyRoleSnapshot(role)
   roleDialogOpen.value = true
+
+  if (role.uuid) {
+    void loadEditRoleDetail(role)
+  }
 }
 
 function closeRoleDialog() {
   roleDialogOpen.value = false
   editingRoleId.value = null
+  editingRoleUuid.value = ""
+  roleDetailLoading.value = false
   roleDeleteConfirmOpen.value = false
 }
 
@@ -1079,20 +1089,25 @@ async function submitRole() {
 
   try {
     const editingRole = roleRows.value.find(role => role.id === editingRoleId.value) ?? null
+    const editingRoleUuidValue = editingRoleUuid.value || editingRole?.uuid || ""
 
     if (editingRoleId.value !== null) {
-      if (!editingRole?.uuid) {
+      if (!editingRoleUuidValue) {
         toast.error("角色更新失败", {
           description: `${name} 缺少角色 Uuid，无法提交更新。`,
         })
         return
       }
 
-      await requestRoleUpdate({
-        Uuid: editingRole.uuid,
+      const result = await requestRoleUpdate({
+        Uuid: editingRoleUuidValue,
         Name: name,
         Remark: roleForm.value.remark.trim() || undefined,
       })
+
+      if (result.Uuid) {
+        editingRoleUuid.value = result.Uuid
+      }
 
       closeRoleDialog()
       roleForm.value = createRoleForm()
@@ -1100,10 +1115,14 @@ async function submitRole() {
         description: `${name} 的信息已保存。`,
       })
     } else {
-      await requestRoleCreate({
+      const result = await requestRoleCreate({
         Name: name,
         Remark: roleForm.value.remark.trim() || undefined,
       })
+
+      if (result.Uuid) {
+        editingRoleUuid.value = result.Uuid
+      }
 
       closeRoleDialog()
       roleForm.value = createRoleForm()
@@ -1138,7 +1157,9 @@ async function confirmDeleteEditingRole() {
     return
   }
 
-  if (!role.uuid) {
+  const roleUuid = editingRoleUuid.value || role.uuid
+
+  if (!roleUuid) {
     toast.error("角色删除失败", {
       description: `${role.name} 缺少角色 Uuid，无法提交删除。`,
     })
@@ -1149,7 +1170,7 @@ async function confirmDeleteEditingRole() {
 
   try {
     await requestRoleDelete({
-      Uuid: role.uuid,
+      Uuid: roleUuid,
     })
 
     roleDeleteConfirmOpen.value = false
@@ -1165,6 +1186,47 @@ async function confirmDeleteEditingRole() {
     })
   } finally {
     roleDeleteSubmitting.value = false
+  }
+}
+
+function applyRoleSnapshot(role: RoleRow) {
+  roleForm.value = {
+    name: role.name,
+    remark: role.remark === "-" ? "" : role.remark,
+  }
+}
+
+async function loadEditRoleDetail(role: RoleRow) {
+  const currentEditingId = role.id
+
+  roleDetailLoading.value = true
+
+  try {
+    const detail = await getRoleDetail({
+      Uuid: role.uuid,
+    })
+
+    if (editingRoleId.value !== currentEditingId) {
+      return
+    }
+
+    role.uuid = toText(detail.Uuid, role.uuid)
+    role.name = toText(detail.Name, role.name)
+    role.remark = toText(detail.Remark, role.remark === "-" ? "" : role.remark) || "-"
+    role.createdAt = toText(detail.CreatedAt, role.createdAt) || "-"
+    role.updatedAt = toText(detail.UpdatedAt, role.updatedAt) || "-"
+    editingRoleUuid.value = role.uuid
+
+    applyRoleSnapshot(role)
+  } catch (error) {
+    handleApiError(error, {
+      title: "角色详情加载失败",
+      fallback: "角色详情加载失败，请稍后重试。",
+    })
+  } finally {
+    if (editingRoleId.value === currentEditingId) {
+      roleDetailLoading.value = false
+    }
   }
 }
 
@@ -1593,14 +1655,18 @@ function asRoleRow(row: Record<string, unknown>) {
         </DialogHeader>
 
         <form class="grid gap-4" @submit.prevent="submitRole">
+          <p v-if="roleDetailLoading" class="text-sm text-muted-foreground">
+            正在加载角色详情并回填表单...
+          </p>
+
           <div class="grid gap-2">
             <label class="text-sm font-medium text-foreground" for="role-name">角色名称</label>
-            <Input id="role-name" v-model="roleForm.name" placeholder="请输入角色名称" />
+            <Input id="role-name" v-model="roleForm.name" :disabled="roleDetailLoading" placeholder="请输入角色名称" />
           </div>
 
           <div class="grid gap-2">
             <label class="text-sm font-medium text-foreground" for="role-remark">备注</label>
-            <Input id="role-remark" v-model="roleForm.remark" placeholder="请输入角色备注" />
+            <Input id="role-remark" v-model="roleForm.remark" :disabled="roleDetailLoading" placeholder="请输入角色备注" />
           </div>
 
           <DialogFooter :class="editingRoleId === null ? 'pt-2' : 'pt-2 sm:justify-between'">
@@ -1609,16 +1675,16 @@ function asRoleRow(row: Record<string, unknown>) {
               type="button"
               variant="outline"
               class="border-destructive/30 bg-background font-medium text-destructive shadow-none hover:bg-destructive/5 hover:text-destructive"
-              :disabled="roleSubmitting || roleDeleteSubmitting"
+              :disabled="roleDetailLoading || roleSubmitting || roleDeleteSubmitting"
               @click="promptDeleteEditingRole"
             >
               {{ roleDeleteSubmitting ? "删除中..." : "删除角色" }}
             </Button>
             <div class="flex items-center justify-end gap-2">
-              <Button type="button" variant="outline" :disabled="roleSubmitting || roleDeleteSubmitting" @click="closeRoleDialog">
+              <Button type="button" variant="outline" :disabled="roleDetailLoading || roleSubmitting || roleDeleteSubmitting" @click="closeRoleDialog">
                 取消
               </Button>
-              <Button type="submit" :disabled="roleSubmitting || roleDeleteSubmitting || !roleForm.name.trim()">
+              <Button type="submit" :disabled="roleDetailLoading || roleSubmitting || roleDeleteSubmitting || !roleForm.name.trim()">
                 {{ roleSubmitting ? "保存中..." : editingRoleId === null ? "添加角色" : "保存" }}
               </Button>
             </div>

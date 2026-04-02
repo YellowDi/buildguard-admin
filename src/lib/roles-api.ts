@@ -1,5 +1,5 @@
-import { ApiError, createHttpError, readResponseBody } from "@/lib/api-errors"
-import { API_PATHS, buildApiHeaders, buildApiUrl } from "@/lib/api"
+import { ApiError, assertApiSuccess, createHttpError, readResponseBody } from "@/lib/api-errors"
+import { API_PATHS, buildApiHeaders, buildApiRequestUrl, buildApiUrl } from "@/lib/api"
 
 type RolesListEnvelope = {
   Total?: number
@@ -24,6 +24,13 @@ export type RolesListResult = {
   total: number
 }
 
+export type RoleDetailPayload = {
+  Uuid?: string
+  [property: string]: unknown
+}
+
+export type RoleDetailResult = RoleRecord
+
 export type CreateRolePayload = {
   Name: string
   Remark?: string
@@ -31,6 +38,10 @@ export type CreateRolePayload = {
 
 export type CreateRoleResult = {
   Id?: number
+  Name?: string
+  Remark?: string
+  CreatedAt?: string
+  UpdatedAt?: string
   Uuid?: string
   [property: string]: unknown
 }
@@ -50,6 +61,7 @@ const ROLE_CREATE_API_URL = buildApiUrl(API_PATHS.roleCreate)
 const ROLE_UPDATE_API_URL = buildApiUrl(API_PATHS.roleUpdate)
 const ROLE_DELETE_API_URL = buildApiUrl(API_PATHS.roleDelete)
 const ROLES_LOAD_ERROR_MESSAGE = "角色列表加载失败，请稍后重试。"
+const ROLE_DETAIL_ERROR_MESSAGE = "角色详情加载失败，请稍后重试。"
 const ROLE_CREATE_ERROR_MESSAGE = "角色创建失败，请稍后重试。"
 const ROLE_UPDATE_ERROR_MESSAGE = "角色更新失败，请稍后重试。"
 const ROLE_DELETE_ERROR_MESSAGE = "角色删除失败，请稍后重试。"
@@ -68,12 +80,34 @@ export async function fetchRoles(): Promise<RolesListResult> {
     throw createHttpError(response, responsePayload, ROLES_LOAD_ERROR_MESSAGE)
   }
 
-  const list = extractList(responsePayload)
+  assertApiSuccess(responsePayload, ROLES_LOAD_ERROR_MESSAGE)
+
+  const list = extractList(responsePayload).map(item => normalizeRoleRecord(item))
 
   return {
     list,
     total: extractTotal(responsePayload, list.length),
   }
+}
+
+export async function getRoleDetail(payload: RoleDetailPayload): Promise<RoleDetailResult> {
+  const url = buildApiRequestUrl(API_PATHS.roleDetail)
+
+  url.searchParams.set("Uuid", getRequiredString(payload.Uuid, "Uuid"))
+
+  const response = await fetch(url.toString(), {
+    method: "GET",
+    headers: buildApiHeaders(),
+  })
+  const responsePayload = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responsePayload, ROLE_DETAIL_ERROR_MESSAGE)
+  }
+
+  assertApiSuccess(responsePayload, ROLE_DETAIL_ERROR_MESSAGE)
+
+  return normalizeRoleRecord(extractDetailRecord(responsePayload))
 }
 
 export async function createRole(payload: CreateRolePayload): Promise<CreateRoleResult> {
@@ -95,7 +129,9 @@ export async function createRole(payload: CreateRolePayload): Promise<CreateRole
     throw createHttpError(response, responsePayload, ROLE_CREATE_ERROR_MESSAGE)
   }
 
-  return responsePayload
+  assertApiSuccess(responsePayload, ROLE_CREATE_ERROR_MESSAGE)
+
+  return extractCreateResult(responsePayload)
 }
 
 export async function updateRole(payload: UpdateRolePayload): Promise<CreateRoleResult> {
@@ -118,7 +154,9 @@ export async function updateRole(payload: UpdateRolePayload): Promise<CreateRole
     throw createHttpError(response, responsePayload, ROLE_UPDATE_ERROR_MESSAGE)
   }
 
-  return responsePayload
+  assertApiSuccess(responsePayload, ROLE_UPDATE_ERROR_MESSAGE)
+
+  return extractCreateResult(responsePayload)
 }
 
 export async function deleteRole(payload: DeleteRolePayload) {
@@ -136,6 +174,8 @@ export async function deleteRole(payload: DeleteRolePayload) {
   if (!response.ok) {
     throw createHttpError(response, responsePayload, ROLE_DELETE_ERROR_MESSAGE)
   }
+
+  assertApiSuccess(responsePayload, ROLE_DELETE_ERROR_MESSAGE)
 
   return responsePayload
 }
@@ -198,6 +238,50 @@ function extractTotal(payload: RolesListEnvelope | unknown[], fallback: number) 
   }
 
   return fallback
+}
+
+function normalizeRoleRecord(value: unknown): RoleRecord {
+  if (value && typeof value === "object") {
+    return value as RoleRecord
+  }
+
+  return {}
+}
+
+function extractCreateResult(payload: unknown): CreateRoleResult {
+  const directRecord = asRecord(payload)
+
+  if (!directRecord) {
+    return {}
+  }
+
+  const nestedRecord = asRecord(directRecord.data)
+
+  if (nestedRecord) {
+    return nestedRecord as CreateRoleResult
+  }
+
+  return directRecord as CreateRoleResult
+}
+
+function extractDetailRecord(payload: unknown): RoleDetailResult {
+  const directRecord = asRecord(payload)
+
+  if (!directRecord) {
+    return {}
+  }
+
+  const nestedRecord = asRecord(directRecord.data)
+
+  if (nestedRecord) {
+    return nestedRecord as RoleDetailResult
+  }
+
+  return directRecord as RoleDetailResult
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value !== null && typeof value === "object" ? value as Record<string, unknown> : null
 }
 
 function getRequiredString(value: unknown, field: string) {

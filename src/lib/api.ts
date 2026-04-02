@@ -36,6 +36,7 @@ export const API_PATHS = {
   memberUpdate: "/bqi/user/update",
   memberDelete: "/bqi/user/del",
   rolesList: "/bqi/sys/role/list",
+  roleDetail: "/bqi/sys/role/detail",
   roleCreate: "/bqi/sys/role/new",
   roleUpdate: "/bqi/sys/role/update",
   roleDelete: "/bqi/sys/role/del",
