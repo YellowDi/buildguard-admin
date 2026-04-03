@@ -519,19 +519,114 @@ function extractCreateResult(payload: unknown): CreateWorkOrderResult {
 }
 
 function extractDetailRecord(payload: unknown): WorkOrderDetailResult {
-  const record = asRecord(payload)
+  const record = unwrapWorkOrderDetailRecord(payload)
 
-  if (!record) {
+  if (!record || Array.isArray(record)) {
     return {}
   }
 
-  const nestedRecord = asRecord(record.data)
+  return record as WorkOrderDetailResult
+}
 
-  if (nestedRecord) {
-    return nestedRecord as WorkOrderDetailResult
+function unwrapWorkOrderDetailRecord(value: unknown): Record<string, unknown> | unknown[] | null {
+  if (Array.isArray(value)) {
+    if (value.length === 1) {
+      return unwrapWorkOrderDetailRecord(value[0])
+    }
+
+    return value
   }
 
-  return record as WorkOrderDetailResult
+  const record = asRecord(value)
+
+  if (!record) {
+    return null
+  }
+
+  const nestedCandidates = [
+    record.data,
+    record.Data,
+    record.detail,
+    record.Detail,
+    record.record,
+    record.Record,
+    record.item,
+    record.Item,
+  ]
+
+  for (const candidate of nestedCandidates) {
+    const nestedRecord = unwrapWorkOrderDetailRecord(candidate)
+
+    if (nestedRecord) {
+      return nestedRecord
+    }
+  }
+
+  const listCandidates = [
+    record.List,
+    record.list,
+    record.rows,
+    record.Items,
+    record.items,
+  ]
+
+  for (const candidate of listCandidates) {
+    if (!Array.isArray(candidate) || candidate.length !== 1) {
+      continue
+    }
+
+    const nestedRecord = unwrapWorkOrderDetailRecord(candidate[0])
+
+    if (nestedRecord && !Array.isArray(nestedRecord)) {
+      return nestedRecord
+    }
+  }
+
+  if (!hasDirectWorkOrderFields(record)) {
+    const nestedObjectEntries = Object.entries(record)
+      .filter(([key]) => !DETAIL_META_KEYS.has(key))
+      .map(([, candidate]) => candidate)
+      .filter(candidate => (
+        (candidate !== null && typeof candidate === "object" && !Array.isArray(candidate))
+        || (Array.isArray(candidate) && candidate.length === 1)
+      ))
+
+    if (nestedObjectEntries.length === 1) {
+      const nestedRecord = unwrapWorkOrderDetailRecord(nestedObjectEntries[0])
+
+      if (nestedRecord) {
+        return nestedRecord
+      }
+    }
+  }
+
+  return record
+}
+
+const DETAIL_META_KEYS = new Set([
+  "code",
+  "Code",
+  "message",
+  "Message",
+  "msg",
+  "success",
+  "requestId",
+  "request_id",
+  "traceId",
+  "trace_id",
+  "Total",
+  "total",
+])
+
+function hasDirectWorkOrderFields(record: Record<string, unknown>) {
+  return [
+    "ServiceName",
+    "PlanName",
+    "ParkName",
+    "OrderNo",
+    "Uuid",
+    "CustomerUuid",
+  ].some(key => key in record)
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {

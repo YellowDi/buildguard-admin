@@ -19,7 +19,9 @@ import DetailLayout from "@/layouts/DetailLayout.vue"
 import { handleApiError } from "@/lib/api-errors"
 import { fetchCustomerDetail, type CustomerDetailResult } from "@/lib/customers-api"
 import { getInspectionItemDetail, type InspectionItemRecord } from "@/lib/inspection-items-api"
+import { fetchInspectionPlanDetail, type InspectionPlanListItem } from "@/lib/inspection-plans-api"
 import { fetchMembers } from "@/lib/members-api"
+import { fetchInspectionServiceDetail, type InspectionServiceListItem } from "@/lib/inspection-services-api"
 import {
   dispatchWorkOrder,
   fetchRepairWorkOrderDetail,
@@ -42,6 +44,8 @@ const router = useRouter()
 
 const inspectionWorkOrder = ref<WorkOrderDetailResult | null>(null)
 const repairWorkOrder = ref<RepairWorkOrderDetailResult | null>(null)
+const inspectionPlanDetail = ref<InspectionPlanListItem | null>(null)
+const inspectionServiceDetail = ref<InspectionServiceListItem | null>(null)
 const customer = ref<CustomerDetailResult | null>(null)
 const loading = ref(false)
 const errorMessage = ref("")
@@ -71,6 +75,22 @@ const customerUuid = computed(() => {
 })
 const queryReturnTo = computed(() => typeof route.query.returnTo === "string" ? route.query.returnTo.trim() : "")
 
+const resolvedInspectionWorkOrder = computed<WorkOrderDetailResult | null>(() => {
+  if (!inspectionWorkOrder.value) {
+    return null
+  }
+
+  return {
+    ...inspectionWorkOrder.value,
+    PlanName: toText(inspectionWorkOrder.value.PlanName, toText(inspectionPlanDetail.value?.Name, "")),
+    ServiceName: toText(
+      inspectionWorkOrder.value.ServiceName,
+      toText(inspectionPlanDetail.value?.ServiceName, toText(inspectionServiceDetail.value?.Name, "")),
+    ),
+    ParkName: toText(inspectionWorkOrder.value.ParkName, resolveWorkOrderParkName()),
+  }
+})
+
 const primarySections = computed<DetailFieldSection[]>(() => {
   if (props.kind === "repair") {
     return buildRepairWorkOrderPrimarySections(repairWorkOrder.value, customer.value, {
@@ -79,7 +99,7 @@ const primarySections = computed<DetailFieldSection[]>(() => {
     })
   }
 
-  return buildWorkOrderPrimarySections(inspectionWorkOrder.value, customer.value)
+  return buildWorkOrderPrimarySections(resolvedInspectionWorkOrder.value, customer.value)
 })
 
 const secondarySections = computed<DetailFieldSection[]>(() => {
@@ -90,7 +110,7 @@ const secondarySections = computed<DetailFieldSection[]>(() => {
   return []
 })
 
-const inspectionBuildingCards = computed(() => buildInspectionWorkOrderCards(inspectionWorkOrder.value?.Builds))
+const inspectionBuildingCards = computed(() => buildInspectionWorkOrderCards(resolvedInspectionWorkOrder.value?.Builds))
 
 function openRepairCustomerDetail() {
   const targetCustomerUuid = toRepairWorkOrderText(repairWorkOrder.value?.CustomerUuid) || customerUuid.value
@@ -126,10 +146,7 @@ const pageTitle = computed(() => {
     return toRepairWorkOrderText(repairWorkOrder.value?.Title, "报修工单详情")
   }
 
-  return toText(
-    inspectionWorkOrder.value?.ServiceName,
-    toText(inspectionWorkOrder.value?.PackageName, "关联检测服务"),
-  ) || "关联检测服务"
+  return toText(resolvedInspectionWorkOrder.value?.ServiceName, "关联检测服务") || "关联检测服务"
 })
 
 const pageSubtitle = computed(() => {
@@ -163,8 +180,8 @@ watch([inspectionWorkOrder, repairWorkOrder], () => {
     return
   }
 
-  const current = inspectionWorkOrder.value
-  detailBreadcrumbTitle.value = toOptionalText(current?.ServiceName) || toOptionalText(current?.PackageName) || toOptionalText(current?.OrderNo)
+  const current = resolvedInspectionWorkOrder.value
+  detailBreadcrumbTitle.value = toOptionalText(current?.ServiceName) || toOptionalText(current?.OrderNo)
 })
 
 watch(workOrderUuid, (uuid) => {
@@ -206,6 +223,8 @@ async function loadWorkOrderDetail(uuid: string) {
   if (!uuid) {
     inspectionWorkOrder.value = null
     repairWorkOrder.value = null
+    inspectionPlanDetail.value = null
+    inspectionServiceDetail.value = null
     customer.value = null
     inspectionItemDetailByUuid.value = {}
     errorMessage.value = "工单 Uuid 缺失，无法加载详情。"
@@ -214,6 +233,8 @@ async function loadWorkOrderDetail(uuid: string) {
 
   loading.value = true
   errorMessage.value = ""
+  inspectionPlanDetail.value = null
+  inspectionServiceDetail.value = null
   inspectionItemDetailByUuid.value = {}
 
   try {
@@ -228,11 +249,14 @@ async function loadWorkOrderDetail(uuid: string) {
     if (props.kind === "repair") {
       repairWorkOrder.value = result as RepairWorkOrderDetailResult
       inspectionWorkOrder.value = null
+      inspectionPlanDetail.value = null
+      inspectionServiceDetail.value = null
       inspectionItemDetailByUuid.value = {}
     } else {
       inspectionWorkOrder.value = result as WorkOrderDetailResult
       repairWorkOrder.value = null
       void loadWorkOrderInspectionItemDetails((result as WorkOrderDetailResult).Builds, requestId)
+      void loadInspectionPlanFallback(result as WorkOrderDetailResult, requestId)
     }
 
     const nextCustomerUuid = props.kind === "repair"
@@ -265,6 +289,8 @@ async function loadWorkOrderDetail(uuid: string) {
 
     inspectionWorkOrder.value = null
     repairWorkOrder.value = null
+    inspectionPlanDetail.value = null
+    inspectionServiceDetail.value = null
     customer.value = null
     inspectionItemDetailByUuid.value = {}
     errorMessage.value = handleApiError(error, {
@@ -276,6 +302,88 @@ async function loadWorkOrderDetail(uuid: string) {
       loading.value = false
     }
   }
+}
+
+async function loadInspectionPlanFallback(workOrder: WorkOrderDetailResult, requestId: number) {
+  const planUuid = toText(workOrder.PlanUuid, "")
+  const hasPlanName = Boolean(toText(workOrder.PlanName, ""))
+  const hasServiceName = Boolean(toText(workOrder.ServiceName, ""))
+
+  if (!planUuid) {
+    return
+  }
+
+  try {
+    const planDetail = await fetchInspectionPlanDetail({ Uuid: planUuid })
+
+    if (requestId !== latestRequestId) {
+      return
+    }
+
+    inspectionPlanDetail.value = planDetail
+    await loadInspectionServiceFallback(workOrder, planDetail, requestId)
+  } catch {
+    if (requestId !== latestRequestId) {
+      return
+    }
+
+    inspectionPlanDetail.value = null
+    inspectionServiceDetail.value = null
+  }
+}
+
+async function loadInspectionServiceFallback(
+  workOrder: WorkOrderDetailResult,
+  planDetail: InspectionPlanListItem,
+  requestId: number,
+) {
+  const serviceUuid = toText(planDetail.ServiceUuid, "")
+  const hasServiceName = Boolean(toText(workOrder.ServiceName, "")) || Boolean(toText(planDetail.ServiceName, ""))
+  const hasParkName = Boolean(toText(workOrder.ParkName, ""))
+
+  if (!serviceUuid || (hasServiceName && hasParkName)) {
+    return
+  }
+
+  try {
+    const serviceDetail = await fetchInspectionServiceDetail({ Uuid: serviceUuid })
+
+    if (requestId !== latestRequestId) {
+      return
+    }
+
+    inspectionServiceDetail.value = serviceDetail
+  } catch {
+    if (requestId !== latestRequestId) {
+      return
+    }
+
+    inspectionServiceDetail.value = null
+  }
+}
+
+function resolveWorkOrderParkName() {
+  const currentWorkOrder = inspectionWorkOrder.value
+
+  if (!currentWorkOrder) {
+    return ""
+  }
+
+  const workOrderBuildUuids = new Set(
+    (Array.isArray(currentWorkOrder.Builds) ? currentWorkOrder.Builds : [])
+      .map(build => toText(build.BuildUuid, ""))
+      .filter(Boolean),
+  )
+
+  const serviceBuilds = Array.isArray(inspectionServiceDetail.value?.BuildInfos)
+    ? inspectionServiceDetail.value?.BuildInfos
+    : (Array.isArray(inspectionServiceDetail.value?.Builds) ? inspectionServiceDetail.value?.Builds : [])
+
+  const matchedBuild = serviceBuilds.find(build => (
+    !workOrderBuildUuids.size || workOrderBuildUuids.has(toText(build.BuildUuid, ""))
+  ))
+
+  return toText(matchedBuild?.ParkName, "")
 }
 
 function toOptionalText(value: unknown) {

@@ -16,7 +16,7 @@ export function buildWorkOrderPrimarySections(
       title: "基本信息",
       rows: [
         { key: "order-no", label: "工单标号", value: toText(workOrder.OrderNo, "-") },
-        { key: "package-name", label: "检测服务", value: toText(workOrder.ServiceName, toText(workOrder.PackageName, "-")) },
+        { key: "service-name", label: "检测服务", value: toText(workOrder.ServiceName, "-") },
         { key: "plan-name", label: "检测计划", value: toText(workOrder.PlanName, "-") },
         { key: "deadline", label: "截止时间", value: formatDateOnly(toText(workOrder.Deadline, "-")) },
         { key: "created-at", label: "创建时间", value: toText(workOrder.CreatedAt, "-") },

@@ -208,11 +208,14 @@ function buildInspectionAccordionKey(buildingKey: string, groupKey: string, item
                         <AccordionTrigger
                           class="rounded-none border-0 bg-transparent px-2 py-3 text-left transition-colors hover:bg-muted/50 hover:no-underline"
                         >
-                          <div class="min-w-0">
-                            <div class="truncate text-sm font-semibold text-foreground">
+                          <div class="flex min-w-0 flex-1 items-center gap-3 pr-3">
+                            <div class="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">
                               {{ item.name }}
                             </div>
-                            <div v-if="item.summary" class="mt-1 truncate text-xs text-muted-foreground">
+                            <div
+                              v-if="item.summary"
+                              class="shrink-0 truncate text-xs text-muted-foreground"
+                            >
                               {{ item.summary }}
                             </div>
                           </div>
