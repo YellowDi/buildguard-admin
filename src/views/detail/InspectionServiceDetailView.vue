@@ -847,9 +847,9 @@ function readFileAsDataUrl(file: File) {
                         <div
                           v-for="group in building.inspectionGroups"
                           :key="`${building.key}-${group.key}`"
-                          class="space-y-3 rounded-md bg-background p-2 shadow-[var(--shadow-card)]"
+                          class="space-y-3 overflow-hidden rounded-md bg-background px-0 pb-0 pt-2 shadow-[var(--shadow-card)]"
                         >
-                          <div class="flex min-w-0 items-center gap-3 px-[14px]">
+                          <div class="flex min-w-0 items-center gap-3 px-2">
                             <div class="flex min-w-0 items-center gap-2">
                               <div class="truncate text-sm font-semibold text-foreground">{{ group.title }}</div>
                               <Badge
@@ -878,10 +878,10 @@ function readFileAsDataUrl(file: File) {
                               v-for="item in group.rows"
                               :key="`${building.key}-${group.key}-${item.id}`"
                               :value="`${building.key}-${group.key}-${item.id}`"
-                              class="mb-2 min-w-0 overflow-x-clip rounded-md border border-border/55 bg-background/95 shadow-xs first:border-t-0 last:mb-0 dark:shadow-[var(--shadow-card)]"
+                              class="border-b-0 border-t border-dashed border-border/55 first:border-t-0 min-w-0 overflow-x-clip bg-transparent"
                             >
                               <AccordionTrigger
-                                class="bg-background px-3.5 py-3 text-left transition-colors hover:bg-muted/50 hover:no-underline data-[state=closed]:rounded-md data-[state=open]:rounded-b-none data-[state=open]:rounded-t-md data-[state=open]:border-b data-[state=open]:border-border/60"
+                                class="rounded-none border-0 bg-transparent px-2 py-3 text-left transition-colors hover:bg-muted/50 hover:no-underline data-[state=open]:border-b data-[state=open]:border-border/60"
                               >
                                 <div class="min-w-0">
                                   <div class="truncate text-sm font-semibold text-foreground">
@@ -891,7 +891,7 @@ function readFileAsDataUrl(file: File) {
                               </AccordionTrigger>
 
                               <AccordionContent
-                                class="px-3.5 data-[state=closed]:pb-0 data-[state=closed]:pt-0 data-[state=open]:!overflow-visible data-[state=open]:rounded-b-md data-[state=open]:bg-background data-[state=open]:pb-3 data-[state=open]:pt-3 [&>div]:pb-0 [&>div]:pt-0"
+                                class="rounded-none px-2 data-[state=closed]:pb-0 data-[state=closed]:pt-0 data-[state=open]:!overflow-visible data-[state=open]:bg-background data-[state=open]:pb-3 data-[state=open]:pt-3 [&>div]:pb-0 [&>div]:pt-0"
                               >
                                 <div class="grid gap-3 text-sm">
                                   <div class="grid gap-1">
