@@ -542,7 +542,7 @@ function buildCategoryScoreLimitMap(list: InspectionCategoryRecord[]) {
 }
 
 function resolveInspectionCategoryScoreLimit(item: InspectionCategoryRecord) {
-  const value = item.Score
+  const value: unknown = item.Score
 
   if (typeof value === "number" && Number.isFinite(value) && value >= 0) {
     return Math.round(value)

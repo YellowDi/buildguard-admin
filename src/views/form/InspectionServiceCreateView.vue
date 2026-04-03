@@ -673,7 +673,7 @@ function saveScoreLimitDraft(buildUuid: string) {
   toast.success("分数上限已更新", {
     description: Object.keys(nextScoreLimitMap).length
       ? `${target.buildName} 已配置 ${Object.keys(nextScoreLimitMap).length} 个分类的服务内分数上限。`
-      : `${target.buildName} 已恢复为分类接口分数上限。`,
+      : `${target.buildName} 已恢复为预设分数上限。`,
   })
 }
 
@@ -687,7 +687,7 @@ function clearScoreLimitOverrides(buildUuid: string) {
   target.categoryScoreLimitByCategoryUuid = {}
   closeScoreLimitPopover()
 
-  toast.success("已恢复分类分数上限", {
+  toast.success("已恢复预设分数上限", {
     description: `${target.buildName} 当前不再使用服务内自定义分数上限。`,
   })
 }
@@ -776,7 +776,7 @@ async function handleSubmit() {
     toast.success("检测服务已创建", {
       description: result.Uuid
         ? `服务 UUID：${result.Uuid}`
-        : `${selectedCustomerName.value || "当前客户"}的检测服务已提交到接口。`,
+        : `${selectedCustomerName.value || "当前客户"}的检测服务已创建成功。`,
     })
 
     await router.push({ name: "inspection-services" })
@@ -1145,7 +1145,7 @@ async function loadInspectionItemOptions() {
     inspectionItemOptions.value = []
     inspectionPickerError.value = handleApiError(error, {
       mode: "silent",
-      title: "检测项接口加载失败",
+      title: "检测项加载失败",
       fallback: "检测项列表加载失败，请稍后重试。",
     })
     return []
@@ -1335,7 +1335,7 @@ function getBuildingScoreLimitSummary(config: InspectionServiceBuildingConfig) {
   const categoryUuids = Object.keys(config.categoryScoreLimitByCategoryUuid)
 
   if (!categoryUuids.length) {
-    return "使用分类接口分数上限"
+    return "使用预设分数上限"
   }
 
   const previewNames = categoryUuids
@@ -1356,7 +1356,7 @@ function getDefaultCategoryScoreLimit(categoryUuid: string): InspectionCategoryS
 }
 
 function resolveInspectionCategoryScoreLimit(item: InspectionCategoryRecord) {
-  const value = item.Score
+  const value: unknown = item.Score
 
   if (typeof value === "number" && Number.isFinite(value) && value >= 0) {
     return Math.round(value)
@@ -1788,7 +1788,7 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
                         <div class="border-b border-border/60 px-4 py-3">
                           <p class="text-sm font-semibold text-foreground">分数上限</p>
                           <p class="mt-1 text-xs leading-5 text-muted-foreground">
-                            未改动时会使用分类接口返回的分数上限。
+                            未改动时将使用各分类的预设分数上限。
                           </p>
                         </div>
 
