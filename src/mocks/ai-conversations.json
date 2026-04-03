@@ -1,0 +1,62 @@
+[
+  {
+    "id": "conv-001",
+    "title": "园区巡检台账导出异常排查",
+    "project": "园区管理后台",
+    "model": "GPT-5.4",
+    "updatedAt": "刚刚",
+    "preview": "已定位到导出字段映射缺失，下一步补齐楼栋名称与巡检批次的组合列。",
+    "messageCount": 18,
+    "pinned": true
+  },
+  {
+    "id": "conv-002",
+    "title": "工单详情页性能优化",
+    "project": "工单中心",
+    "model": "GPT-5.4",
+    "updatedAt": "12 分钟前",
+    "preview": "建议先裁剪明细接口返回体，再把附件列表拆成按需加载，避免首屏阻塞。",
+    "messageCount": 27,
+    "pinned": true
+  },
+  {
+    "id": "conv-003",
+    "title": "AI 助手入口交互梳理",
+    "project": "运营工作台",
+    "model": "GPT-5.4-mini",
+    "updatedAt": "34 分钟前",
+    "preview": "顶部入口可以先做纯前端 mock，保留列表、搜索和最近使用状态即可。",
+    "messageCount": 11,
+    "pinned": false
+  },
+  {
+    "id": "conv-004",
+    "title": "企业画像页文案调整",
+    "project": "客户管理",
+    "model": "GPT-5.4-mini",
+    "updatedAt": "昨天",
+    "preview": "文案建议统一成风险提示语气，避免在列表和详情页出现两套表述。",
+    "messageCount": 9,
+    "pinned": false
+  },
+  {
+    "id": "conv-005",
+    "title": "收件箱规则重命名方案",
+    "project": "消息中心",
+    "model": "GPT-5.4",
+    "updatedAt": "昨天",
+    "preview": "将“高优先事项”改为“需关注”，更贴合业务语义，也方便和报警等级区分。",
+    "messageCount": 14,
+    "pinned": false
+  },
+  {
+    "id": "conv-006",
+    "title": "侧边栏日历数据 mock 设计",
+    "project": "基础框架",
+    "model": "GPT-5.4-mini",
+    "updatedAt": "2 天前",
+    "preview": "日历卡片先复用统一日期结构，等接口落地后只替换事件来源，不改渲染层。",
+    "messageCount": 7,
+    "pinned": false
+  }
+]

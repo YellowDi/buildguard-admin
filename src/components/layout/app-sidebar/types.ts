@@ -1,4 +1,4 @@
-export type AppSidebarTopTabId = "home" | "calendar" | "inbox"
+export type AppSidebarTopTabId = "home" | "calendar" | "inbox" | "conversation"
 
 export type AppSidebarNavItem = {
   label: string
@@ -25,6 +25,17 @@ export type AppSidebarInboxItem = {
 export type AppSidebarInboxGroup = {
   label: string
   items: AppSidebarInboxItem[]
+}
+
+export type AppSidebarConversationItem = {
+  id: string
+  title: string
+  project: string
+  model: string
+  updatedAt: string
+  preview: string
+  messageCount: number
+  pinned?: boolean
 }
 
 export type AppSidebarCalendarDate = {

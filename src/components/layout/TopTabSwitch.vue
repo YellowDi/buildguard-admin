@@ -185,7 +185,7 @@ onBeforeUnmount(() => {
       <span
         :class="[
           'absolute inset-y-0 left-0 z-10 flex items-center overflow-hidden whitespace-nowrap pr-2.5',
-          props.collapseInactive && tab.icon ? 'pl-[35px]' : 'px-2.5',
+          props.collapseInactive && tab.icon ? 'pl-[30px]' : 'px-2.5',
         ]"
       >
         <span

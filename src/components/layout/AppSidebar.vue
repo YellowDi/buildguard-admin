@@ -9,10 +9,12 @@ import {
   SidebarRail,
 } from "@/components/ui/sidebar"
 import AppSidebarCalendarPanel from "@/components/layout/app-sidebar/AppSidebarCalendarPanel.vue"
+import AppSidebarConversationPanel from "@/components/layout/app-sidebar/AppSidebarConversationPanel.vue"
 import AppSidebarHomeNav from "@/components/layout/app-sidebar/AppSidebarHomeNav.vue"
 import AppSidebarInboxPanel from "@/components/layout/app-sidebar/AppSidebarInboxPanel.vue"
 import AppSidebarTopBar from "@/components/layout/app-sidebar/AppSidebarTopBar.vue"
 import type {
+  AppSidebarConversationItem,
   AppSidebarInboxGroup,
   AppSidebarNavItem,
   AppSidebarTopTabId,
@@ -20,6 +22,7 @@ import type {
 import GlobalCommand from "@/components/layout/GlobalCommand.vue"
 import UserCardPopover from "@/components/layout/UserCardPopover.vue"
 import { useSettingsDialog } from "@/composables/useSettingsDialog"
+import conversationsData from "@/mocks/ai-conversations.json"
 import inboxData from "@/mocks/inbox.json"
 
 const props = defineProps<{
@@ -38,6 +41,11 @@ const topTabs: Array<{ id: AppSidebarTopTabId, label: string, icon: string }> = 
     id: "home",
     label: "工作台",
     icon: "ri-home-5-line",
+  },
+  {
+    id: "conversation",
+    label: "对话",
+    icon: "ri-message-3-line",
   },
   {
     id: "calendar",
@@ -105,6 +113,7 @@ const businessItems = reactive<AppSidebarNavItem[]>([
 ])
 
 const inboxGroups = inboxData as AppSidebarInboxGroup[]
+const conversationItems = conversationsData as AppSidebarConversationItem[]
 const inboxAttentionCount = inboxGroups.reduce(
   (total, group) => total + group.items.filter((item) => item.severity !== "info").length,
   0,
@@ -186,6 +195,10 @@ watch(() => route.fullPath, () => {
           :active-path="activePath"
           @toggle-item="toggleItem"
         />
+        <AppSidebarConversationPanel
+          v-else-if="selectedTopTab === 'conversation'"
+          :items="conversationItems"
+        />
         <AppSidebarInboxPanel
           v-else-if="selectedTopTab === 'inbox'"
           :groups="inboxGroups"
@@ -218,6 +231,10 @@ watch(() => route.fullPath, () => {
         :active-path="activePath"
         class="p-2"
         @toggle-item="toggleItem"
+      />
+      <AppSidebarConversationPanel
+        v-else-if="selectedTopTab === 'conversation'"
+        :items="conversationItems"
       />
       <AppSidebarInboxPanel
         v-else-if="selectedTopTab === 'inbox'"
