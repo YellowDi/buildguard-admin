@@ -88,6 +88,7 @@ const editDetailLoading = ref(false)
 const deleteConfirmOpen = ref(false)
 const createSubmitArmed = ref(false)
 const editSubmitArmed = ref(false)
+const editFormTouched = ref(false)
 const editingCategoryId = ref<number | null>(null)
 const createForm = ref(createInspectionCategoryForm())
 const editForm = ref(createInspectionCategoryForm())
@@ -212,6 +213,7 @@ async function openEditDialog(row: InspectionCategoryRow) {
     name: row.name,
     scoreLimit: formatScoreLimitFieldValue(row.scoreLimit),
   }
+  editFormTouched.value = false
   editDetailLoading.value = true
   editSubmitArmed.value = false
   editDialogOpen.value = true
@@ -226,7 +228,7 @@ async function openEditDialog(row: InspectionCategoryRow) {
       row,
     )
 
-    if (editingCategoryId.value === row.id) {
+    if (editingCategoryId.value === row.id && !editFormTouched.value) {
       editForm.value = {
         name: detailRow.name,
         scoreLimit: formatScoreLimitFieldValue(detailRow.scoreLimit),
@@ -249,6 +251,7 @@ function closeEditDialog() {
   editingCategoryId.value = null
   editDetailLoading.value = false
   editSubmitArmed.value = false
+  editFormTouched.value = false
   editForm.value = createInspectionCategoryForm()
 }
 
@@ -357,6 +360,14 @@ function requestCreateSubmit() {
 function requestEditSubmit() {
   editSubmitArmed.value = true
   void submitEdit()
+}
+
+function updateEditForm<K extends keyof InspectionCategoryForm>(field: K, value: InspectionCategoryForm[K]) {
+  editFormTouched.value = true
+  editForm.value = {
+    ...editForm.value,
+    [field]: value,
+  }
 }
 
 async function confirmDeleteEditingCategory() {
@@ -605,9 +616,10 @@ defineExpose({
             <label class="text-sm font-medium text-foreground" for="edit-inspection-category-name">分类名称</label>
             <Input
               id="edit-inspection-category-name"
-              v-model="editForm.name"
-              :disabled="editDetailLoading || editSubmitting || deleteSubmitting"
+              :model-value="editForm.name"
+              :disabled="editSubmitting || deleteSubmitting"
               placeholder="例如：消防设施"
+              @update:model-value="updateEditForm('name', String($event))"
             />
           </div>
 
@@ -615,14 +627,15 @@ defineExpose({
             <label class="text-sm font-medium text-foreground" for="edit-inspection-category-score-limit">分数上限</label>
             <Input
               id="edit-inspection-category-score-limit"
-              v-model="editForm.scoreLimit"
-              :disabled="editDetailLoading || editSubmitting || deleteSubmitting"
+              :model-value="editForm.scoreLimit"
+              :disabled="editSubmitting || deleteSubmitting"
               type="number"
               inputmode="numeric"
               min="0"
               step="1"
               placeholder="例如：20"
               class="h-9 min-w-0"
+              @update:model-value="updateEditForm('scoreLimit', String($event))"
             />
           </div>
 
@@ -639,12 +652,12 @@ defineExpose({
             </Button>
 
             <div class="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row">
-              <Button type="button" variant="outline" :disabled="editSubmitting || deleteSubmitting" @click="closeEditDialog">
+              <Button type="button" variant="outline" :disabled="deleteSubmitting" @click="closeEditDialog">
                 取消
               </Button>
               <Button
                 type="button"
-                :disabled="editDetailLoading || editSubmitting || deleteSubmitting || !editFormValid"
+                :disabled="editSubmitting || deleteSubmitting || !editFormValid"
                 @click.stop.prevent="requestEditSubmit"
               >
                 <i v-if="editSubmitting" class="ri-loader-4-line animate-spin text-base" />
