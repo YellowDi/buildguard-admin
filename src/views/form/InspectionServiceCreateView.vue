@@ -1798,8 +1798,8 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
                           </div>
                         </div>
 
-                        <div class="flex flex-wrap items-center justify-between gap-2 border-t border-border/60 px-4 py-3">
-                          <Button size="sm" variant="ghost" type="button" @click="resetScoreLimitDraft">
+                        <div class="flex flex-wrap items-center justify-between gap-2 border-t border-border/60 p-4">
+                          <Button size="sm" variant="outline" type="button" @click="resetScoreLimitDraft">
                             恢复初始
                           </Button>
                           <div class="flex flex-wrap gap-2">
