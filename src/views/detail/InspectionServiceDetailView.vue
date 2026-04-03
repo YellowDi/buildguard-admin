@@ -823,31 +823,33 @@ function readFileAsDataUrl(file: File) {
                     v-for="building in buildingInspectionViews"
                     :key="building.key"
                     :value="building.key"
-                    class="mb-3 overflow-hidden rounded-md border border-border/55 bg-background/95 shadow-xs last:mb-0 dark:shadow-[var(--shadow-card)]"
+                    class="mb-3 min-w-0 overflow-x-clip rounded-md border border-border/55 bg-muted shadow-xs last:mb-0 dark:shadow-[var(--shadow-card)]"
                   >
-                    <AccordionTrigger class="bg-muted px-3.5 py-3 text-left hover:no-underline data-[state=open]:border-b data-[state=open]:border-border/60">
-                      <div class="min-w-0">
-                        <div class="truncate text-sm font-semibold text-foreground">
+                    <AccordionTrigger class="bg-transparent px-3.5 py-3 text-left hover:no-underline">
+                      <div class="flex min-w-0 flex-1 items-center gap-3 pr-3">
+                        <div class="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">
                           {{ building.buildName }}
                         </div>
-                        <div class="mt-1 truncate text-xs text-muted-foreground">
+                        <div class="shrink-0 truncate text-xs text-muted-foreground">
                           {{ building.inspectionGroups.length }} 个检测分类 · {{ inspectionCount }} 个检测项
                         </div>
                       </div>
                     </AccordionTrigger>
 
-                    <AccordionContent class="px-3.5 data-[state=closed]:pb-0 data-[state=closed]:pt-0 data-[state=open]:pb-3 data-[state=open]:pt-3 [&>div]:pb-0">
+                    <AccordionContent
+                      class="bg-transparent data-[state=closed]:p-0 data-[state=open]:!overflow-visible data-[state=open]:px-2 data-[state=open]:pb-2 data-[state=open]:pt-0 [&>div]:pb-0 [&>div]:pt-0"
+                    >
                       <div v-if="building.inspectionGroups.length === 0" class="py-2 text-sm text-muted-foreground">
                         当前建筑暂无绑定检测项。
                       </div>
 
-                      <div v-else class="space-y-4">
+                      <div v-else class="space-y-4 overflow-visible">
                         <div
                           v-for="group in building.inspectionGroups"
                           :key="`${building.key}-${group.key}`"
-                          class="space-y-3"
+                          class="space-y-3 rounded-md bg-background p-2 shadow-[var(--shadow-card)]"
                         >
-                          <div class="flex min-w-0 items-center gap-3">
+                          <div class="flex min-w-0 items-center gap-3 px-[14px]">
                             <div class="flex min-w-0 items-center gap-2">
                               <div class="truncate text-sm font-semibold text-foreground">{{ group.title }}</div>
                               <Badge
@@ -870,15 +872,17 @@ function readFileAsDataUrl(file: File) {
                             v-model="expandedInspectionItemKey"
                             type="single"
                             collapsible
-                            class="pb-1"
+                            class="min-w-0 overflow-visible"
                           >
                             <AccordionItem
                               v-for="item in group.rows"
                               :key="`${building.key}-${group.key}-${item.id}`"
                               :value="`${building.key}-${group.key}-${item.id}`"
-                              class="mb-2 overflow-hidden rounded-md border border-border/55 bg-background/95 shadow-xs last:mb-0 dark:shadow-[var(--shadow-card)]"
+                              class="mb-2 min-w-0 overflow-x-clip rounded-md border border-border/55 bg-background/95 shadow-xs first:border-t-0 last:mb-0 dark:shadow-[var(--shadow-card)]"
                             >
-                              <AccordionTrigger class="bg-background px-3.5 py-3 text-left hover:no-underline data-[state=open]:border-b data-[state=open]:border-border/60">
+                              <AccordionTrigger
+                                class="bg-background px-3.5 py-3 text-left transition-colors hover:bg-muted/50 hover:no-underline data-[state=closed]:rounded-md data-[state=open]:rounded-b-none data-[state=open]:rounded-t-md data-[state=open]:border-b data-[state=open]:border-border/60"
+                              >
                                 <div class="min-w-0">
                                   <div class="truncate text-sm font-semibold text-foreground">
                                     {{ item.name }}
@@ -886,7 +890,9 @@ function readFileAsDataUrl(file: File) {
                                 </div>
                               </AccordionTrigger>
 
-                              <AccordionContent class="px-3.5 data-[state=closed]:pb-0 data-[state=closed]:pt-0 data-[state=open]:pb-3 data-[state=open]:pt-3 [&>div]:pb-0">
+                              <AccordionContent
+                                class="px-3.5 data-[state=closed]:pb-0 data-[state=closed]:pt-0 data-[state=open]:!overflow-visible data-[state=open]:rounded-b-md data-[state=open]:bg-background data-[state=open]:pb-3 data-[state=open]:pt-3 [&>div]:pb-0 [&>div]:pt-0"
+                              >
                                 <div class="grid gap-3 text-sm">
                                   <div class="grid gap-1">
                                     <p class="text-xs text-muted-foreground">检测内容</p>
