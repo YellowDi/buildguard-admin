@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { TooltipWrap } from "@/components/ui/tooltip"
 import {
   Select,
   SelectContent,
@@ -316,34 +317,43 @@ function handleMobileToolbarActionSelect(action: "filters" | "sort" | "export" |
             </DropdownMenu>
 
             <div class="hidden min-w-0 flex-wrap items-center justify-end gap-1 text-muted-foreground sm:flex sm:flex-nowrap">
-              <button
-                type="button"
-                :class="[
-                  ghostIconButtonClass,
-                  showControls ? ghostIconButtonActiveClass : '',
-                ]"
-                @click="emit('toggle-controls')"
-              >
-                <i :class="['ri-filter-3-line text-[17px]', showControls ? 'text-link' : '']" />
-              </button>
-              <div class="relative" data-list-popover>
+              <TooltipWrap content="筛选">
                 <button
                   type="button"
+                  aria-label="筛选"
                   :class="[
                     ghostIconButtonClass,
-                    customSortEnabled ? ghostIconButtonActiveClass : '',
+                    showControls ? ghostIconButtonActiveClass : '',
                   ]"
-                  @click="handleToolbarAddSort"
+                  @click="emit('toggle-controls')"
                 >
-                  <i :class="['ri-sort-asc text-[17px]', customSortEnabled ? 'text-link' : '']" />
+                  <i :class="['ri-filter-3-line text-[17px]', showControls ? 'text-link' : '']" />
                 </button>
+              </TooltipWrap>
+              <div class="relative" data-list-popover>
+                <TooltipWrap content="排序">
+                  <button
+                    type="button"
+                    aria-label="排序"
+                    :class="[
+                      ghostIconButtonClass,
+                      customSortEnabled ? ghostIconButtonActiveClass : '',
+                    ]"
+                    @click="handleToolbarAddSort"
+                  >
+                    <i :class="['ri-sort-asc text-[17px]', customSortEnabled ? 'text-link' : '']" />
+                  </button>
+                </TooltipWrap>
               </div>
-              <button
-                type="button"
-                :class="ghostIconButtonClass"
-              >
-                <i class="ri-more-line text-base" />
-              </button>
+              <TooltipWrap content="更多">
+                <button
+                  type="button"
+                  aria-label="更多"
+                  :class="ghostIconButtonClass"
+                >
+                  <i class="ri-more-line text-base" />
+                </button>
+              </TooltipWrap>
               <Button
                 variant="outline"
                 class="h-8 gap-1 px-3 text-[14px]"
@@ -446,34 +456,43 @@ function handleMobileToolbarActionSelect(action: "filters" | "sort" | "export" |
               v-if="props.showToolbarActions"
               class="flex min-w-0 flex-[0_0_auto] items-center justify-end gap-1 pb-2 text-muted-foreground"
             >
-              <button
-                type="button"
-                :class="[
-                  ghostIconButtonClass,
-                  showControls ? ghostIconButtonActiveClass : '',
-                ]"
-                @click="emit('toggle-controls')"
-              >
-                <i :class="['ri-filter-3-line text-[17px]', showControls ? 'text-link' : '']" />
-              </button>
-              <div class="relative" data-list-popover>
+              <TooltipWrap content="筛选">
                 <button
                   type="button"
+                  aria-label="筛选"
                   :class="[
                     ghostIconButtonClass,
-                    customSortEnabled ? ghostIconButtonActiveClass : '',
+                    showControls ? ghostIconButtonActiveClass : '',
                   ]"
-                  @click="handleToolbarAddSort"
+                  @click="emit('toggle-controls')"
                 >
-                  <i :class="['ri-sort-asc text-[17px]', customSortEnabled ? 'text-link' : '']" />
+                  <i :class="['ri-filter-3-line text-[17px]', showControls ? 'text-link' : '']" />
                 </button>
+              </TooltipWrap>
+              <div class="relative" data-list-popover>
+                <TooltipWrap content="排序">
+                  <button
+                    type="button"
+                    aria-label="排序"
+                    :class="[
+                      ghostIconButtonClass,
+                      customSortEnabled ? ghostIconButtonActiveClass : '',
+                    ]"
+                    @click="handleToolbarAddSort"
+                  >
+                    <i :class="['ri-sort-asc text-[17px]', customSortEnabled ? 'text-link' : '']" />
+                  </button>
+                </TooltipWrap>
               </div>
-              <button
-                type="button"
-                :class="ghostIconButtonClass"
-              >
-                <i class="ri-more-line text-base" />
-              </button>
+              <TooltipWrap content="更多">
+                <button
+                  type="button"
+                  aria-label="更多"
+                  :class="ghostIconButtonClass"
+                >
+                  <i class="ri-more-line text-base" />
+                </button>
+              </TooltipWrap>
               <Button
                 variant="outline"
                 class="h-8 gap-1 px-3 text-[14px]"

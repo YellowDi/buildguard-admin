@@ -7,7 +7,9 @@ import { customerStatusMap } from "@/components/table-page/statusPresets"
 import DetailFieldSections from "@/components/detail/DetailFieldSections.vue"
 import DetailFieldsSkeleton from "@/components/loading/DetailFieldsSkeleton.vue"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { Button } from "@/components/ui/button"
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { TooltipWrap } from "@/components/ui/tooltip"
 import { fetchCustomerDetail, type CustomerDetailResult } from "@/lib/customers-api"
 import { handleApiError } from "@/lib/api-errors"
 import { fetchInspectionPlanDetail, type InspectionPlanListItem } from "@/lib/inspection-plans-api"
@@ -502,21 +504,30 @@ function getServiceRemainingDaysHint(value: unknown) {
         <template #actions>
           <div class="flex items-center justify-between gap-3">
             <div class="flex items-center gap-1">
-              <SheetClose
-                class="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none"
-              >
-                <i class="ri-arrow-right-double-line text-[16px]" />
-                <span class="sr-only">关闭关联详情</span>
-              </SheetClose>
-              <button
-                v-if="!loading"
-                type="button"
-                class="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none"
-                @click="openFullPage"
-              >
-                <i class="ri-fullscreen-line text-[16px]" />
-                <span class="sr-only">打开完整详情页</span>
-              </button>
+              <TooltipWrap content="关闭关联详情" side="right">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  class="h-8 w-8 rounded-md text-muted-foreground hover:text-foreground"
+                  @click="handleOpenChange(false)"
+                >
+                  <i class="ri-arrow-right-double-line text-[16px]" />
+                  <span class="sr-only">关闭关联详情</span>
+                </Button>
+              </TooltipWrap>
+              <TooltipWrap v-if="!loading" content="打开完整详情页">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  class="h-8 w-8 rounded-md text-muted-foreground hover:text-foreground"
+                  @click="openFullPage"
+                >
+                  <i class="ri-fullscreen-line text-[16px]" />
+                  <span class="sr-only">打开完整详情页</span>
+                </Button>
+              </TooltipWrap>
             </div>
           </div>
         </template>

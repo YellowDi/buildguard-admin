@@ -26,6 +26,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { TooltipWrap } from "@/components/ui/tooltip"
 import { detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
 import DetailLayout from "@/layouts/DetailLayout.vue"
 import { buildApiRequestUrl } from "@/lib/api"
@@ -835,16 +836,18 @@ function readFileAsDataUrl(file: File) {
                 <div class="min-w-0 truncate text-foreground">
                   {{ row.name }}
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  class="h-7 w-7 rounded-md text-muted-foreground hover:text-foreground"
-                  :disabled="!row.buildUuid || !row.parkUuid"
-                  @click="goToBuildingDetail(row)"
-                >
-                  <i class="ri-more-2-line text-[18px]" />
-                  <span class="sr-only">建筑详情</span>
-                </Button>
+                <TooltipWrap content="建筑详情" :disabled="!row.buildUuid || !row.parkUuid">
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    class="h-7 w-7 rounded-md text-muted-foreground hover:text-foreground"
+                    :disabled="!row.buildUuid || !row.parkUuid"
+                    @click="goToBuildingDetail(row)"
+                  >
+                    <i class="ri-more-2-line text-[18px]" />
+                    <span class="sr-only">建筑详情</span>
+                  </Button>
+                </TooltipWrap>
               </div>
             </div>
           </div>

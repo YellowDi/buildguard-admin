@@ -24,6 +24,7 @@ import { createYear, createYearRange, toDate } from "reka-ui/date"
 import { computed, toRaw } from "vue"
 
 import { buttonVariants } from "@/components/ui/button"
+import { TooltipWrap } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 import CalendarSelect from "./CalendarSelect.vue"
 
@@ -107,11 +108,14 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
   >
     <RangeCalendarHeader class="pt-0">
       <div class="grid w-full grid-cols-[2rem_minmax(0,1fr)_2rem] items-center gap-1">
-        <RangeCalendarPrev
-          :class="cn(buttonVariants({ variant: 'ghost' }), 'size-8 justify-self-start p-0')"
-        >
-          <ChevronLeftIcon class="size-4" />
-        </RangeCalendarPrev>
+        <TooltipWrap content="切换到上个月">
+          <RangeCalendarPrev
+            aria-label="切换到上个月"
+            :class="cn(buttonVariants({ variant: 'ghost' }), 'size-8 justify-self-start p-0')"
+          >
+            <ChevronLeftIcon class="size-4" />
+          </RangeCalendarPrev>
+        </TooltipWrap>
 
         <div class="flex min-w-0 items-center justify-center">
           <template v-if="layout === 'month-and-year'">
@@ -137,11 +141,14 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
           </template>
         </div>
 
-        <RangeCalendarNext
-          :class="cn(buttonVariants({ variant: 'ghost' }), 'size-8 justify-self-end p-0')"
-        >
-          <ChevronRightIcon class="size-4" />
-        </RangeCalendarNext>
+        <TooltipWrap content="切换到下个月">
+          <RangeCalendarNext
+            aria-label="切换到下个月"
+            :class="cn(buttonVariants({ variant: 'ghost' }), 'size-8 justify-self-end p-0')"
+          >
+            <ChevronRightIcon class="size-4" />
+          </RangeCalendarNext>
+        </TooltipWrap>
       </div>
     </RangeCalendarHeader>
 

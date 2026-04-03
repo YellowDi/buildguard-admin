@@ -52,7 +52,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination"
-import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
 import TablePage from "@/components/table-page/TablePage.vue"
 import SortPopover, { type SortRule } from "@/components/table-page/TableSortPopover.vue"
 import { createTablePageDefinition, useTablePage } from "@/components/table-page/useTablePage"
@@ -64,7 +64,7 @@ import {
   type TableExportScope,
 } from "@/components/table-page/export-utils"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, TooltipWrap } from "@/components/ui/tooltip"
 import { detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
 import { useDetailRouteTab } from "@/composables/useDetailRouteTab"
 import DetailLayout from "@/layouts/DetailLayout.vue"
@@ -3943,21 +3943,33 @@ function toDisplayText(value: unknown, fallback = "未填写") {
         <template #actions>
           <div class="flex items-center justify-between gap-3">
             <div class="flex items-center gap-1">
-              <SheetClose
-                class="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none"
-              >
-                <i class="ri-arrow-right-double-line text-[16px]" />
-                <span class="sr-only">关闭工单详情</span>
-              </SheetClose>
-              <button
+              <TooltipWrap content="关闭工单详情" side="right">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  class="h-8 w-8 rounded-md text-muted-foreground hover:text-foreground"
+                  @click="handleWorkOrderDetailSheetOpenChange(false)"
+                >
+                  <i class="ri-arrow-right-double-line text-[16px]" />
+                  <span class="sr-only">关闭工单详情</span>
+                </Button>
+              </TooltipWrap>
+              <TooltipWrap
                 v-if="activeWorkOrderDetailKind === 'repair' ? activeRepairWorkOrderDetail?.Uuid : activeInspectionWorkOrderDetail?.Uuid"
-                type="button"
-                class="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none"
-                @click="goToWorkOrderFullDetail"
+                content="打开完整工单详情页"
               >
-                <i class="ri-fullscreen-line text-[16px]" />
-                <span class="sr-only">打开完整工单详情页</span>
-              </button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  class="h-8 w-8 rounded-md text-muted-foreground hover:text-foreground"
+                  @click="goToWorkOrderFullDetail"
+                >
+                  <i class="ri-fullscreen-line text-[16px]" />
+                  <span class="sr-only">打开完整工单详情页</span>
+                </Button>
+              </TooltipWrap>
             </div>
           </div>
         </template>
@@ -3992,21 +4004,30 @@ function toDisplayText(value: unknown, fallback = "未填写") {
         <template #actions>
           <div class="flex items-center justify-between gap-3">
             <div class="flex items-center gap-1">
-              <SheetClose
-                class="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none"
-              >
-                <i class="ri-arrow-right-double-line text-[16px]" />
-                <span class="sr-only">关闭园区详情</span>
-              </SheetClose>
-              <button
-                v-if="activeParkDetail?.Uuid"
-                type="button"
-                class="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none"
-                @click="goToParkFullDetail(activeParkDetail.Uuid, activeParkDetail.CustomerUuid || customer?.Uuid || '')"
-              >
-                <i class="ri-fullscreen-line text-[16px]" />
-                <span class="sr-only">打开完整园区详情页</span>
-              </button>
+              <TooltipWrap content="关闭园区详情" side="right">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  class="h-8 w-8 rounded-md text-muted-foreground hover:text-foreground"
+                  @click="handleParkDetailSheetOpenChange(false)"
+                >
+                  <i class="ri-arrow-right-double-line text-[16px]" />
+                  <span class="sr-only">关闭园区详情</span>
+                </Button>
+              </TooltipWrap>
+              <TooltipWrap v-if="activeParkDetail?.Uuid" content="打开完整园区详情页">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  class="h-8 w-8 rounded-md text-muted-foreground hover:text-foreground"
+                  @click="goToParkFullDetail(activeParkDetail.Uuid, activeParkDetail.CustomerUuid || customer?.Uuid || '')"
+                >
+                  <i class="ri-fullscreen-line text-[16px]" />
+                  <span class="sr-only">打开完整园区详情页</span>
+                </Button>
+              </TooltipWrap>
             </div>
             <div v-if="activeParkDetail?.Uuid" class="flex items-center gap-2">
               <Button

@@ -20,7 +20,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
-import { Sheet, SheetClose, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { TooltipWrap } from "@/components/ui/tooltip"
 import { handleApiError } from "@/lib/api-errors"
 import { deleteBuilding, fetchBuildings, type BuildingListItem } from "@/lib/buildings-api"
 
@@ -200,20 +201,30 @@ function resetState() {
         <template #actions>
           <div class="flex items-center justify-between gap-3">
             <div class="flex items-center gap-1">
-              <SheetClose
-                class="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none"
-              >
-                <i class="ri-arrow-right-double-line text-[16px]" />
-                <span class="sr-only">关闭建筑详情</span>
-              </SheetClose>
-              <button
-                type="button"
-                class="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none"
-                @click="goToBuildingFullDetail"
-              >
-                <i class="ri-fullscreen-line text-[16px]" />
-                <span class="sr-only">打开完整建筑详情页</span>
-              </button>
+              <TooltipWrap content="关闭建筑详情" side="right">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  class="h-8 w-8 rounded-md text-muted-foreground hover:text-foreground"
+                  @click="handleOpenChange(false)"
+                >
+                  <i class="ri-arrow-right-double-line text-[16px]" />
+                  <span class="sr-only">关闭建筑详情</span>
+                </Button>
+              </TooltipWrap>
+              <TooltipWrap content="打开完整建筑详情页">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  class="h-8 w-8 rounded-md text-muted-foreground hover:text-foreground"
+                  @click="goToBuildingFullDetail"
+                >
+                  <i class="ri-fullscreen-line text-[16px]" />
+                  <span class="sr-only">打开完整建筑详情页</span>
+                </Button>
+              </TooltipWrap>
             </div>
             <div class="flex items-center gap-2">
               <Button

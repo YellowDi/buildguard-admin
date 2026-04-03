@@ -20,6 +20,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { TooltipWrap } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 import { Separator } from "@/components/ui/separator"
 import { SIDEBAR_MOBILE_BREAKPOINT } from "@/components/ui/sidebar"
@@ -116,35 +117,41 @@ const visibleTrailingItems = computed(() => {
       )
     "
   >
-    <button
-      type="button"
-      class="-ml-1 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-foreground transition-colors hover:bg-accent hover:text-accent-foreground min-[1000px]:hidden"
-      aria-label="打开侧边栏"
-      @click.stop="props.onToggleMobileSidebar?.()"
-    >
-      <ViewVerticalIcon class="h-4 w-4" />
-    </button>
-    <button
-      type="button"
-      class="-ml-1 hidden h-7 w-7 shrink-0 items-center justify-center rounded-md text-foreground transition-colors hover:bg-accent hover:text-accent-foreground min-[1000px]:inline-flex"
-      aria-label="切换侧边栏"
-      @click.stop="props.onToggleDesktopSidebar?.()"
-    >
-      <ViewVerticalIcon class="h-4 w-4" />
-    </button>
+    <TooltipWrap content="打开侧边栏">
+      <button
+        type="button"
+        class="-ml-1 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-foreground transition-colors hover:bg-accent hover:text-accent-foreground min-[1000px]:hidden"
+        aria-label="打开侧边栏"
+        @click.stop="props.onToggleMobileSidebar?.()"
+      >
+        <ViewVerticalIcon class="h-4 w-4" />
+      </button>
+    </TooltipWrap>
+    <TooltipWrap content="切换侧边栏">
+      <button
+        type="button"
+        class="-ml-1 hidden h-7 w-7 shrink-0 items-center justify-center rounded-md text-foreground transition-colors hover:bg-accent hover:text-accent-foreground min-[1000px]:inline-flex"
+        aria-label="切换侧边栏"
+        @click.stop="props.onToggleDesktopSidebar?.()"
+      >
+        <ViewVerticalIcon class="h-4 w-4" />
+      </button>
+    </TooltipWrap>
     <Separator orientation="vertical" class="mr-2 !h-4 self-center shrink-0" />
     <Breadcrumb class="min-w-0 flex-1 overflow-hidden">
       <BreadcrumbList class="flex-nowrap overflow-hidden whitespace-nowrap">
         <BreadcrumbItem class="shrink-0">
-          <BreadcrumbLink as-child>
-            <RouterLink
-              to="/"
-              class="inline-flex rounded-md p-1 text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-              aria-label="返回首页"
-            >
-              <BrandLogo label="" image-class="size-6" />
-            </RouterLink>
-          </BreadcrumbLink>
+          <TooltipWrap content="返回首页">
+            <BreadcrumbLink as-child>
+              <RouterLink
+                to="/"
+                class="inline-flex rounded-md p-1 text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                aria-label="返回首页"
+              >
+                <BrandLogo label="" image-class="size-6" />
+              </RouterLink>
+            </BreadcrumbLink>
+          </TooltipWrap>
         </BreadcrumbItem>
 
         <template v-for="item in visibleLeadingItems" :key="`leading-${item.title}-${item.to ?? 'current'}`">
@@ -170,13 +177,15 @@ const visibleTrailingItems = computed(() => {
         <BreadcrumbItem v-if="collapsedItems.length" class="shrink-0">
           <DropdownMenu>
             <DropdownMenuTrigger as-child>
-              <button
-                type="button"
-                class="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-                aria-label="展开面包屑"
-              >
-                <BreadcrumbEllipsis class="h-8 w-8" />
-              </button>
+              <TooltipWrap content="展开面包屑">
+                <button
+                  type="button"
+                  class="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                  aria-label="展开面包屑"
+                >
+                  <BreadcrumbEllipsis class="h-8 w-8" />
+                </button>
+              </TooltipWrap>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" class="w-52 p-1.5">
               <nav class="flex flex-col">

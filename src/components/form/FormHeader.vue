@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import type { ButtonVariants } from "@/components/ui/button"
+import { TooltipWrap } from "@/components/ui/tooltip"
 import { remixIconForActionLabel } from "@/lib/actionIcons"
 import { cn } from "@/lib/utils"
 
@@ -92,14 +93,16 @@ function headerSecondaryIcon(action: HeaderAction) {
         actions-class="w-full min-w-0 gap-2 overflow-x-auto overflow-y-hidden whitespace-nowrap md:w-auto"
       >
         <template #leading>
-          <button
-            type="button"
-            class="inline-flex size-8 items-center justify-center rounded-md text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-            aria-label="返回"
-            @click="emit('back')"
-          >
-            <i class="ri-arrow-left-line text-[18px]" />
-          </button>
+          <TooltipWrap content="返回">
+            <button
+              type="button"
+              class="inline-flex size-8 items-center justify-center rounded-md text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+              aria-label="返回"
+              @click="emit('back')"
+            >
+              <i class="ri-arrow-left-line text-[18px]" />
+            </button>
+          </TooltipWrap>
         </template>
         <template #actions>
           <template v-if="hasActions">

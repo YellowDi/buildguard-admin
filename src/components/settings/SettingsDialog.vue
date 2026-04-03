@@ -10,6 +10,7 @@ import {
   DialogClose,
   DialogContent,
 } from "@/components/ui/dialog"
+import { TooltipWrap } from "@/components/ui/tooltip"
 
 const {
   activeCategory,
@@ -41,12 +42,14 @@ const {
           @update:active-key="setActiveKey"
         >
           <template #top>
-            <DialogClose
-              class="inline-flex size-9 shrink-0 items-center justify-center rounded-md text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none"
-            >
-              <Cross2Icon class="size-5" />
-              <span class="sr-only">关闭设置</span>
-            </DialogClose>
+            <TooltipWrap content="关闭设置" side="right">
+              <DialogClose
+                class="inline-flex size-9 shrink-0 items-center justify-center rounded-md text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none"
+              >
+                <Cross2Icon class="size-5" />
+                <span class="sr-only">关闭设置</span>
+              </DialogClose>
+            </TooltipWrap>
           </template>
         </SettingsSidebar>
         <SettingsContent

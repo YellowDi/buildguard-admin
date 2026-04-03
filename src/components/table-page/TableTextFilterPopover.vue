@@ -2,6 +2,7 @@
 import { nextTick, onMounted, ref, watch } from "vue"
 
 import { Input } from "@/components/ui/input"
+import { TooltipWrap } from "@/components/ui/tooltip"
 import PopoverSelect from "@/components/table-page/TablePopoverSelect.vue"
 import type { TextFilterOperator, TextFilterState } from "@/components/table-page/types"
 
@@ -114,14 +115,16 @@ watch(() => props.value.operator, () => {
       </div>
 
       <div class="relative shrink-0" data-list-popover>
-        <button
-          type="button"
-          class="inline-flex size-6 items-center justify-center rounded-md text-muted-foreground ring-offset-background transition hover:bg-surface-tertiary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-0"
-          aria-label="删除当前筛选"
-          @click="openActionMenu = !openActionMenu"
-        >
-          <i class="ri-more-line text-[14px]" />
-        </button>
+        <TooltipWrap content="删除当前筛选">
+          <button
+            type="button"
+            class="inline-flex size-6 items-center justify-center rounded-md text-muted-foreground ring-offset-background transition hover:bg-surface-tertiary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-0"
+            aria-label="删除当前筛选"
+            @click="openActionMenu = !openActionMenu"
+          >
+            <i class="ri-more-line text-[14px]" />
+          </button>
+        </TooltipWrap>
 
         <div
           v-if="openActionMenu"
@@ -150,15 +153,16 @@ watch(() => props.value.operator, () => {
         ]"
         @update:model-value="(v) => handleQueryInput(String(v))"
       />
-      <button
-        v-if="operatorNeedsInput(value.operator) && value.query"
-        type="button"
-        class="inline-flex size-4 shrink-0 items-center justify-center rounded-full text-muted-foreground transition hover:bg-surface-tertiary hover:text-foreground"
-        aria-label="清空输入内容"
-        @click="handleClearQuery"
-      >
-        <i class="ri-close-line text-[12px]" />
-      </button>
+      <TooltipWrap v-if="operatorNeedsInput(value.operator) && value.query" content="清空输入内容">
+        <button
+          type="button"
+          class="inline-flex size-4 shrink-0 items-center justify-center rounded-full text-muted-foreground transition hover:bg-surface-tertiary hover:text-foreground"
+          aria-label="清空输入内容"
+          @click="handleClearQuery"
+        >
+          <i class="ri-close-line text-[12px]" />
+        </button>
+      </TooltipWrap>
     </div>
   </div>
 </template>

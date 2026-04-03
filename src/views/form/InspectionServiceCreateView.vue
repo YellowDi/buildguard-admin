@@ -21,6 +21,7 @@ import {
 import { FieldDescription, FieldGroup, FieldLegend, FieldSet } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import {
   Select,
   SelectContent,
@@ -31,13 +32,13 @@ import {
 import { Separator } from "@/components/ui/separator"
 import {
   Sheet,
-  SheetClose,
   SheetContent,
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
+import { TooltipWrap } from "@/components/ui/tooltip"
 import { handleApiError } from "@/lib/api-errors"
 import { fetchBuildings, type BuildingListItem } from "@/lib/buildings-api"
 import { fetchCustomers, type CustomerListItem } from "@/lib/customers-api"
@@ -1944,19 +1945,26 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
                       :open="activeScoreLimitBuildUuid === config.buildUuid"
                       @update:open="handleScoreLimitPopoverOpenChange(config.buildUuid, $event)"
                     >
-                      <PopoverTrigger as-child>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          type="button"
-                          class="size-7 px-0"
-                          :disabled="Boolean(getCategoryScoreLimitActionDisabledReason(config)) || Boolean(legacyMultiParkMessage)"
-                          :title="getCategoryScoreLimitActionDisabledReason(config) || '配置分数上限'"
-                        >
-                          <i class="ri-settings-3-line text-[13px]" />
-                          <span class="sr-only">分数上限</span>
-                        </Button>
-                      </PopoverTrigger>
+                      <Tooltip>
+                        <TooltipTrigger as-child>
+                          <PopoverTrigger as-child>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              type="button"
+                              class="size-7 px-0"
+                              :disabled="Boolean(getCategoryScoreLimitActionDisabledReason(config)) || Boolean(legacyMultiParkMessage)"
+                              aria-label="配置分数上限"
+                            >
+                              <i class="ri-settings-3-line text-[13px]" />
+                              <span class="sr-only">分数上限</span>
+                            </Button>
+                          </PopoverTrigger>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {{ getCategoryScoreLimitActionDisabledReason(config) || "配置分数上限" }}
+                        </TooltipContent>
+                      </Tooltip>
 
                       <PopoverContent class="w-[min(100vw-2rem,28rem)] p-0" align="end">
                         <div class="border-b border-border/60 px-4 py-3">
@@ -2146,13 +2154,18 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
         <SheetHeader>
           <template #actions>
             <div class="flex items-center justify-between gap-3">
-              <SheetClose
-                class="inline-flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none"
-                @click="closeBuildingEditor"
-              >
-                <i class="ri-arrow-right-double-line text-[16px]" />
-                <span class="sr-only">关闭建筑检测项编辑</span>
-              </SheetClose>
+              <TooltipWrap content="关闭建筑检测项编辑" side="right">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  class="h-8 w-8 rounded-md text-muted-foreground hover:text-foreground"
+                  @click="closeBuildingEditor"
+                >
+                  <i class="ri-arrow-right-double-line text-[16px]" />
+                  <span class="sr-only">关闭建筑检测项编辑</span>
+                </Button>
+              </TooltipWrap>
               <Button size="sm" type="button" @click="saveBuildingEditor">
                 保存当前建筑配置
               </Button>

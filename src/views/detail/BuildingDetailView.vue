@@ -11,6 +11,7 @@ import MapLocationDialog from "@/components/map/MapLocationDialog.vue"
 import type { DetailFieldSection, DetailRelationModuleSchema } from "@/components/detail/types"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
+import { TooltipWrap } from "@/components/ui/tooltip"
 import { detailBreadcrumbItems, detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
 import DetailLayout from "@/layouts/DetailLayout.vue"
 import { handleApiError } from "@/lib/api-errors"
@@ -419,31 +420,35 @@ type BuildingRecordRow = {
 
         <DetailRelationModule :schema="inspectionModule">
           <template #record-action-cell="{ row }">
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              class="h-7 w-7 rounded-md text-muted-foreground hover:text-foreground"
-              :disabled="!row.uuid"
-              @click="goToRecordDetail(row)"
-            >
-              <i class="ri-more-2-line text-[18px]" />
-              <span class="sr-only">查看工单详情</span>
-            </Button>
+            <TooltipWrap content="查看工单详情" :disabled="!row.uuid">
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                class="h-7 w-7 rounded-md text-muted-foreground hover:text-foreground"
+                :disabled="!row.uuid"
+                @click="goToRecordDetail(row)"
+              >
+                <i class="ri-more-2-line text-[18px]" />
+                <span class="sr-only">查看工单详情</span>
+              </Button>
+            </TooltipWrap>
           </template>
         </DetailRelationModule>
 
         <DetailRelationModule :schema="repairModule">
           <template #record-action-cell="{ row }">
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              class="h-7 w-7 rounded-md text-muted-foreground hover:text-foreground"
-              :disabled="!row.uuid"
-              @click="goToRecordDetail(row)"
-            >
-              <i class="ri-more-2-line text-[18px]" />
-              <span class="sr-only">查看工单详情</span>
-            </Button>
+            <TooltipWrap content="查看工单详情" :disabled="!row.uuid">
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                class="h-7 w-7 rounded-md text-muted-foreground hover:text-foreground"
+                :disabled="!row.uuid"
+                @click="goToRecordDetail(row)"
+              >
+                <i class="ri-more-2-line text-[18px]" />
+                <span class="sr-only">查看工单详情</span>
+              </Button>
+            </TooltipWrap>
           </template>
         </DetailRelationModule>
       </div>

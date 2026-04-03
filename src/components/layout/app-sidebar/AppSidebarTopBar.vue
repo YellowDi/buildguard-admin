@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import BrandLogo from "@/components/layout/BrandLogo.vue"
 import TopTabSwitch from "@/components/layout/TopTabSwitch.vue"
+import { TooltipWrap } from "@/components/ui/tooltip"
 
 type TopBarTab = {
   id: string
@@ -40,14 +41,16 @@ const emit = defineEmits<{
         @update:model-value="emit('update:modelValue', $event)"
       />
 
-      <button
-        type="button"
-        class="top-tab-switch-icon-button ml-auto flex h-8 w-8 items-center justify-center rounded-full text-sidebar-foreground/52 hover:text-sidebar-accent-foreground"
-        aria-label="搜索"
-        @click="emit('search')"
-      >
-        <i class="ri-search-line relative z-10 text-[17px] leading-none" />
-      </button>
+      <TooltipWrap content="搜索">
+        <button
+          type="button"
+          class="top-tab-switch-icon-button ml-auto flex h-8 w-8 items-center justify-center rounded-full text-sidebar-foreground/52 hover:text-sidebar-accent-foreground"
+          aria-label="搜索"
+          @click="emit('search')"
+        >
+          <i class="ri-search-line relative z-10 text-[17px] leading-none" />
+        </button>
+      </TooltipWrap>
     </div>
   </div>
 </template>

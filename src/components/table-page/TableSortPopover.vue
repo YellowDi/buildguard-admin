@@ -2,6 +2,7 @@
 import { computed, ref } from "vue"
 
 import PopoverSelect from "@/components/table-page/TablePopoverSelect.vue"
+import { TooltipWrap } from "@/components/ui/tooltip"
 
 export type SortField = string
 export type SortFieldOption = {
@@ -182,16 +183,18 @@ function handleDragEnd() {
         @dragover="handleDragOver($event, rule.id)"
         @drop="handleDrop($event, rule.id)"
       >
-        <button
-          type="button"
-          draggable="true"
-          class="mt-0.5 inline-flex h-8 w-6 shrink-0 cursor-grab items-center justify-center rounded-sm text-muted-foreground transition hover:bg-surface-tertiary hover:text-foreground active:cursor-grabbing"
-          aria-label="拖动排序"
-          @dragstart="handleDragStart($event, rule.id)"
-          @dragend="handleDragEnd"
-        >
-          <i class="ri-draggable text-[16px]" />
-        </button>
+        <TooltipWrap content="拖动排序">
+          <button
+            type="button"
+            draggable="true"
+            class="mt-0.5 inline-flex h-8 w-6 shrink-0 cursor-grab items-center justify-center rounded-sm text-muted-foreground transition hover:bg-surface-tertiary hover:text-foreground active:cursor-grabbing"
+            aria-label="拖动排序"
+            @dragstart="handleDragStart($event, rule.id)"
+            @dragend="handleDragEnd"
+          >
+            <i class="ri-draggable text-[16px]" />
+          </button>
+        </TooltipWrap>
 
         <PopoverSelect
           :model-value="rule.field"
@@ -215,14 +218,16 @@ function handleDragEnd() {
           @update:model-value="(direction) => handleDirectionSelect(rule.id, direction as 'asc' | 'desc')"
         />
 
-        <button
-          type="button"
-          class="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition hover:bg-surface-tertiary hover:text-foreground"
-          aria-label="删除当前排序"
-          @click="handleRemoveSort(rule.id)"
-        >
-          <i class="ri-close-line text-[18px]" />
-        </button>
+        <TooltipWrap content="删除当前排序">
+          <button
+            type="button"
+            class="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition hover:bg-surface-tertiary hover:text-foreground"
+            aria-label="删除当前排序"
+            @click="handleRemoveSort(rule.id)"
+          >
+            <i class="ri-close-line text-[18px]" />
+          </button>
+        </TooltipWrap>
       </div>
     </div>
 

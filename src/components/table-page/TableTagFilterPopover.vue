@@ -3,6 +3,7 @@ import { ref } from "vue"
 
 import PopoverSelect from "@/components/table-page/TablePopoverSelect.vue"
 import { Checkbox } from "@/components/ui/checkbox"
+import { TooltipWrap } from "@/components/ui/tooltip"
 import type { TagFilterOperator, TagFilterState } from "@/components/table-page/types"
 
 const props = defineProps<{
@@ -87,14 +88,16 @@ function handleOptionToggle(option: string) {
       </div>
 
       <div class="relative shrink-0" data-list-popover>
-        <button
-          type="button"
-          class="inline-flex size-6 items-center justify-center rounded-md text-muted-foreground ring-offset-background transition hover:bg-surface-tertiary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-0"
-          aria-label="删除当前筛选"
-          @click="openActionMenu = !openActionMenu"
-        >
-          <i class="ri-more-line text-[14px]" />
-        </button>
+        <TooltipWrap content="删除当前筛选">
+          <button
+            type="button"
+            class="inline-flex size-6 items-center justify-center rounded-md text-muted-foreground ring-offset-background transition hover:bg-surface-tertiary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-0"
+            aria-label="删除当前筛选"
+            @click="openActionMenu = !openActionMenu"
+          >
+            <i class="ri-more-line text-[14px]" />
+          </button>
+        </TooltipWrap>
 
         <div
           v-if="openActionMenu"

@@ -4,6 +4,7 @@ import { computed, nextTick, onMounted, ref, watch } from "vue"
 
 import PopoverSelect from "@/components/table-page/TablePopoverSelect.vue"
 import { Calendar, RangeCalendar } from "@/components/ui/calendar"
+import { TooltipWrap } from "@/components/ui/tooltip"
 import type { DateFilterOperator, DateFilterPreset, DateFilterState } from "@/components/table-page/types"
 
 const props = defineProps<{
@@ -316,14 +317,16 @@ watch(
         </div>
 
         <div class="relative shrink-0" data-list-popover>
-          <button
-            type="button"
-            class="inline-flex size-6 items-center justify-center rounded-md text-muted-foreground ring-offset-background transition hover:bg-surface-tertiary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-0"
-            aria-label="删除当前筛选"
-            @click="openActionMenu = !openActionMenu"
-          >
-            <i class="ri-more-line text-[14px]" />
-          </button>
+          <TooltipWrap content="删除当前筛选">
+            <button
+              type="button"
+              class="inline-flex size-6 items-center justify-center rounded-md text-muted-foreground ring-offset-background transition hover:bg-surface-tertiary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-0"
+              aria-label="删除当前筛选"
+              @click="openActionMenu = !openActionMenu"
+            >
+              <i class="ri-more-line text-[14px]" />
+            </button>
+          </TooltipWrap>
 
           <div
             v-if="openActionMenu"
@@ -356,16 +359,17 @@ watch(
               class="w-full border-0 bg-transparent p-0 text-[12px] text-foreground outline-none placeholder:text-muted-foreground"
               @input="handleBetweenDateInput('start', ($event.target as HTMLInputElement).value)"
             >
-            <button
-              v-if="value.startDate"
-              type="button"
-              class="ml-2 inline-flex size-5 shrink-0 items-center justify-center rounded-sm text-muted-foreground transition hover:bg-surface-tertiary hover:text-foreground"
-              aria-label="清空开始日期"
-              @mousedown.prevent.stop
-              @click.stop="clearBetweenDateInput('start')"
-            >
-              <i class="ri-close-line text-[13px]" />
-            </button>
+            <TooltipWrap v-if="value.startDate" content="清空开始日期">
+              <button
+                type="button"
+                class="ml-2 inline-flex size-5 shrink-0 items-center justify-center rounded-sm text-muted-foreground transition hover:bg-surface-tertiary hover:text-foreground"
+                aria-label="清空开始日期"
+                @mousedown.prevent.stop
+                @click.stop="clearBetweenDateInput('start')"
+              >
+                <i class="ri-close-line text-[13px]" />
+              </button>
+            </TooltipWrap>
           </label>
 
           <label
@@ -378,16 +382,17 @@ watch(
               class="w-full border-0 bg-transparent p-0 text-[12px] text-foreground outline-none placeholder:text-muted-foreground"
               @input="handleBetweenDateInput('end', ($event.target as HTMLInputElement).value)"
             >
-            <button
-              v-if="value.endDate"
-              type="button"
-              class="ml-2 inline-flex size-5 shrink-0 items-center justify-center rounded-sm text-muted-foreground transition hover:bg-surface-tertiary hover:text-foreground"
-              aria-label="清空结束日期"
-              @mousedown.prevent.stop
-              @click.stop="clearBetweenDateInput('end')"
-            >
-              <i class="ri-close-line text-[13px]" />
-            </button>
+            <TooltipWrap v-if="value.endDate" content="清空结束日期">
+              <button
+                type="button"
+                class="ml-2 inline-flex size-5 shrink-0 items-center justify-center rounded-sm text-muted-foreground transition hover:bg-surface-tertiary hover:text-foreground"
+                aria-label="清空结束日期"
+                @mousedown.prevent.stop
+                @click.stop="clearBetweenDateInput('end')"
+              >
+                <i class="ri-close-line text-[13px]" />
+              </button>
+            </TooltipWrap>
           </label>
         </div>
 
@@ -411,16 +416,17 @@ watch(
               ]"
               @input="handleDateInput(($event.target as HTMLInputElement).value)"
             >
-            <button
-              v-if="formatDisplayValue()"
-              type="button"
-              class="ml-2 inline-flex size-5 shrink-0 items-center justify-center rounded-sm text-muted-foreground transition hover:bg-surface-tertiary hover:text-foreground"
-              aria-label="清空日期"
-              @mousedown.prevent.stop
-              @click.stop="clearSingleDateInput"
-            >
-              <i class="ri-close-line text-[13px]" />
-            </button>
+            <TooltipWrap v-if="formatDisplayValue()" content="清空日期">
+              <button
+                type="button"
+                class="ml-2 inline-flex size-5 shrink-0 items-center justify-center rounded-sm text-muted-foreground transition hover:bg-surface-tertiary hover:text-foreground"
+                aria-label="清空日期"
+                @mousedown.prevent.stop
+                @click.stop="clearSingleDateInput"
+              >
+                <i class="ri-close-line text-[13px]" />
+              </button>
+            </TooltipWrap>
 
             <PopoverSelect
               v-if="operatorNeedsDateInput(value.operator)"

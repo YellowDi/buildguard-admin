@@ -42,6 +42,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import {
   Select,
   SelectContent,
@@ -1344,14 +1345,19 @@ function asRoleRow(row: Record<string, unknown>) {
               <span>添加成员</span>
             </Button>
             <DropdownMenu>
-              <DropdownMenuTrigger as-child>
-                <Button
-                  class="h-8 w-8 rounded-l-none border-l border-white/15 px-0 text-[14px]"
-                  aria-label="打开成员操作菜单"
-                >
-                  <i class="ri-arrow-down-s-line text-base" />
-                </Button>
-              </DropdownMenuTrigger>
+              <Tooltip>
+                <TooltipTrigger as-child>
+                  <DropdownMenuTrigger as-child>
+                    <Button
+                      class="h-8 w-8 rounded-l-none border-l border-white/15 px-0 text-[14px]"
+                      aria-label="打开成员操作菜单"
+                    >
+                      <i class="ri-arrow-down-s-line text-base" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                </TooltipTrigger>
+                <TooltipContent>打开成员操作菜单</TooltipContent>
+              </Tooltip>
               <DropdownMenuContent align="end" class="w-[220px] rounded-xl p-1.5">
                 <DropdownMenuLabel class="px-2 pb-1 text-xs font-medium text-muted-foreground">
                   成员操作

@@ -10,6 +10,7 @@ import {
   DialogPortal,
   useForwardPropsEmits,
 } from "reka-ui"
+import { TooltipWrap } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
 
 defineOptions({
@@ -47,13 +48,16 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
       >
         <slot />
 
-        <DialogClose
-          type="button"
-          class="absolute top-4 right-4 p-0.5 transition-colors rounded-md hover:bg-secondary"
-        >
-          <Cross2Icon class="w-4 h-4" />
-          <span class="sr-only">Close</span>
-        </DialogClose>
+        <TooltipWrap content="关闭弹窗">
+          <DialogClose
+            aria-label="关闭弹窗"
+            type="button"
+            class="absolute top-4 right-4 rounded-md p-0.5 transition-colors hover:bg-secondary"
+          >
+            <Cross2Icon class="w-4 h-4" />
+            <span class="sr-only">关闭弹窗</span>
+          </DialogClose>
+        </TooltipWrap>
       </DialogContent>
     </DialogOverlay>
   </DialogPortal>
