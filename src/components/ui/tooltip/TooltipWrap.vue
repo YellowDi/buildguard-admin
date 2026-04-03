@@ -2,7 +2,6 @@
 import type { TooltipContentProps } from "reka-ui"
 import type { HTMLAttributes } from "vue"
 import { ref } from "vue"
-import { cn } from "@/lib/utils"
 import Tooltip from "./Tooltip.vue"
 import TooltipContent from "./TooltipContent.vue"
 import TooltipTrigger from "./TooltipTrigger.vue"
@@ -72,7 +71,7 @@ function handleFocus(event: FocusEvent) {
       :side="side"
       :align="align"
       :side-offset="sideOffset"
-      :class="cn('whitespace-nowrap', props.class)"
+      :class="props.class"
     >
       {{ content }}
     </TooltipContent>
