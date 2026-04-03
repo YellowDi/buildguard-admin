@@ -137,9 +137,8 @@ const categories = computed<SettingsCategory[]>(() => [
             options: [
               { label: "工作台", value: "dashboard" },
               { label: "客户列表", value: "customers" },
-              { label: "企业列表", value: "companies" },
-              { label: "车辆列表", value: "vehicles" },
-              { label: "报警查询", value: "alarm-queries" },
+              { label: "检测服务列表", value: "inspection-services" },
+              { label: "检测工单列表", value: "inspection-work-orders" },
             ],
           },
           {

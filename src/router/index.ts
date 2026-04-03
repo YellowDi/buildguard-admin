@@ -114,15 +114,6 @@ const router = createRouter({
           } satisfies RouteMetaConfig,
         },
         {
-          path: "companies",
-          name: "companies",
-          component: () => import("@/views/list/CompaniesListView.vue"),
-          meta: {
-            title: "企业",
-            loading: "table",
-          } satisfies RouteMetaConfig,
-        },
-        {
           path: "parks",
           name: "parks",
           component: () => import("@/views/list/ParksListView.vue"),
@@ -397,42 +388,6 @@ const router = createRouter({
           } satisfies RouteMetaConfig,
         },
         {
-          path: "companies/:id",
-          name: "company-detail",
-          component: () => import("@/views/detail/CompanyDetailView.vue"),
-          meta: {
-            title: "企业详情",
-            loading: "detail",
-            useDetailBreadcrumbTitle: true,
-            breadcrumb: [
-              { title: "企业", to: "companies" },
-              { title: "详情" },
-            ] satisfies BreadcrumbMetaItem[],
-          } satisfies RouteMetaConfig,
-        },
-        {
-          path: "companies/create",
-          name: "company-create",
-          component: () => import("@/views/form/CompanyCreateView.vue"),
-          meta: {
-            title: "添加企业",
-            loading: "form",
-            breadcrumb: [
-              { title: "企业", to: "companies" },
-              { title: "添加企业" },
-            ] satisfies BreadcrumbMetaItem[],
-          } satisfies RouteMetaConfig,
-        },
-        {
-          path: "vehicles",
-          name: "vehicles",
-          component: () => import("@/views/list/VehiclesListView.vue"),
-          meta: {
-            title: "车辆",
-            loading: "table",
-          } satisfies RouteMetaConfig,
-        },
-        {
           path: "work-orders",
           redirect: { name: "inspection-work-orders" },
         },
@@ -525,68 +480,6 @@ const router = createRouter({
             breadcrumb: [
               { title: "工单", to: "repair-work-orders" },
               { title: "详情" },
-            ] satisfies BreadcrumbMetaItem[],
-          } satisfies RouteMetaConfig,
-        },
-        {
-          path: "vehicles/create",
-          name: "vehicle-create",
-          component: () => import("@/views/form/VehicleCreateView.vue"),
-          meta: {
-            title: "添加车辆",
-            loading: "form",
-            breadcrumb: [
-              { title: "车辆", to: "vehicles" },
-              { title: "添加车辆" },
-            ] satisfies BreadcrumbMetaItem[],
-          } satisfies RouteMetaConfig,
-        },
-        {
-          path: "users",
-          name: "users",
-          component: () => import("@/views/list/UsersListView.vue"),
-          meta: {
-            title: "从业人员",
-            loading: "table",
-          } satisfies RouteMetaConfig,
-        },
-        {
-          path: "call-center-tasks",
-          name: "call-center-tasks",
-          component: () => import("@/views/list/CallCenterOutboundTasksListView.vue"),
-          meta: {
-            title: "外呼任务",
-            loading: "table",
-          } satisfies RouteMetaConfig,
-        },
-        {
-          path: "alarm-queries",
-          name: "alarm-queries",
-          component: () => import("@/views/list/AlarmQueriesListView.vue"),
-          meta: {
-            title: "报警查询",
-            loading: "table",
-          } satisfies RouteMetaConfig,
-        },
-        {
-          path: "alarm-archives",
-          name: "alarm-archives",
-          component: () => import("@/views/list/AlarmArchivesListView.vue"),
-          meta: {
-            title: "历史归档",
-            loading: "table",
-          } satisfies RouteMetaConfig,
-        },
-        {
-          path: "users/create",
-          name: "user-create",
-          component: () => import("@/views/form/UserCreateView.vue"),
-          meta: {
-            title: "添加从业人员",
-            loading: "form",
-            breadcrumb: [
-              { title: "从业人员", to: "users" },
-              { title: "添加从业人员" },
             ] satisfies BreadcrumbMetaItem[],
           } satisfies RouteMetaConfig,
         },

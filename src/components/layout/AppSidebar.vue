@@ -102,44 +102,6 @@ const businessItems = reactive<AppSidebarNavItem[]>([
     icon: "ri-settings-3-line",
     action: "open-settings",
   },
-  {
-    kind: "separator",
-    label: "以下为 Demo 案例",
-  },
-  {
-    label: "企业",
-    icon: "ri-building-line",
-    path: "/companies",
-  },
-  {
-    label: "车辆",
-    icon: "ri-truck-line",
-    path: "/vehicles",
-  },
-  {
-    label: "从业人员",
-    icon: "ri-team-line",
-    path: "/users",
-  },
-  {
-    label: "呼叫中心",
-    icon: "ri-customer-service-2-line",
-    open: true,
-    children: [
-      {
-        label: "报警查询",
-        path: "/alarm-queries",
-      },
-      {
-        label: "历史归档",
-        path: "/alarm-archives",
-      },
-      {
-        label: "外呼任务",
-        path: "/call-center-tasks",
-      },
-    ],
-  },
 ])
 
 const inboxGroups = inboxData as AppSidebarInboxGroup[]
@@ -184,7 +146,7 @@ function handleTopTabUpdate(tabId: string) {
 }
 
 function isBusinessRoute(path: string) {
-  return ["/", "/customers", "/parks", "/buildings", "/monitoring", "/companies", "/inspection-services", "/inspection-plans", "/vehicles", "/work-orders", "/users", "/call-center-tasks", "/alarm-queries", "/alarm-archives"].some(
+  return ["/", "/customers", "/parks", "/buildings", "/monitoring", "/inspection-services", "/inspection-plans", "/work-orders"].some(
     prefix => path === prefix || path.startsWith(`${prefix}/`),
   )
 }
