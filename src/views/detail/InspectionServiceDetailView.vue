@@ -8,11 +8,10 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import BuildingDetailSheet from "@/components/detail/BuildingDetailSheet.vue"
 import DetailFieldSections from "@/components/detail/DetailFieldSections.vue"
 import FormDatePicker from "@/components/form/FormDatePicker.vue"
-import DetailRelationModule from "@/components/detail/DetailRelationModule.vue"
 import InspectionCategoryScorePresetInline from "@/components/inspection/InspectionCategoryScorePresetInline.vue"
 import DetailFieldsSkeleton from "@/components/loading/DetailFieldsSkeleton.vue"
 import DetailRelationSkeleton from "@/components/loading/DetailRelationSkeleton.vue"
-import type { DetailContactValue, DetailFieldSection, DetailRelationModuleSchema, DetailStatusValue } from "@/components/detail/types"
+import type { DetailContactValue, DetailFieldSection, DetailStatusValue } from "@/components/detail/types"
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import {
@@ -173,26 +172,8 @@ const inspectionCount = computed(() => (
 const buildingInspectionViews = computed<InspectionServiceBuildingInspectionView[]>(() =>
   buildBuildingInspectionViews(detail.value?.Builds, inspectionGroups.value),
 )
-
-const buildingModule = computed<DetailRelationModuleSchema<InspectionServiceBuildingRow>>(() => ({
-  key: "inspection-service-buildings",
-  title: "服务建筑",
-  count: Array.isArray(detail.value?.Builds) ? detail.value.Builds.length : 0,
-  rowKey: "id",
-  columns: [
-    { key: "name", label: "建筑名称", cellClass: "truncate" },
-    { key: "actions", label: "", slot: "building-action-cell", cellClass: "flex justify-end" },
-  ],
-  groups: buildParkGroups(detail.value?.Builds),
-  emptyState: {
-    title: "暂无关联建筑",
-    description: "当前检测服务还没有配置关联建筑。",
-    icon: "ri-building-line",
-  },
-  mobileMinWidth: "28rem",
-  columnTemplateMobile: "minmax(12rem,1fr) 5rem",
-  columnTemplateDesktop: "minmax(12rem,1fr) 5rem",
-}))
+const buildingGroups = computed(() => buildParkGroups(detail.value?.Builds))
+const buildingCount = computed(() => buildingGroups.value.reduce((sum, group) => sum + group.rows.length, 0))
 
 watch(detail, (current) => {
   detailBreadcrumbTitle.value = toOptionalText(current?.Name)
@@ -759,20 +740,52 @@ function readFileAsDataUrl(file: File) {
       <div v-else-if="detail" class="space-y-5 pb-5">
         <DetailFieldSections :sections="fieldSections" />
 
-        <DetailRelationModule :schema="buildingModule">
-          <template #building-action-cell="{ row }">
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              class="h-7 w-7 rounded-md text-muted-foreground hover:text-foreground"
-              :disabled="!row.buildUuid || !row.parkUuid"
-              @click="goToBuildingDetail(row)"
+        <div class="h-px bg-border/80" />
+
+        <section class="detail-field-section detail-field-section--after-separator">
+          <div class="detail-section-heading-row detail-section-inset flex items-center gap-2">
+            <h2 class="detail-field-section__heading">服务建筑</h2>
+            <Badge
+              variant="secondary"
+              class="min-w-6 justify-center rounded-md px-1.5 py-0.5 text-[12px] font-medium leading-none"
             >
-              <i class="ri-more-2-line text-[18px]" />
-              <span class="sr-only">建筑详情</span>
-            </Button>
-          </template>
-        </DetailRelationModule>
+              {{ buildingCount }}
+            </Badge>
+          </div>
+
+          <div v-if="buildingGroups.length === 0" class="px-1 py-6 text-sm text-muted-foreground">
+            当前检测服务还没有配置关联建筑。
+          </div>
+
+          <div v-else class="detail-group-stack">
+            <div v-for="group in buildingGroups" :key="group.key">
+              <div class="detail-group-divider-row detail-section-inset flex min-w-0 items-center gap-3">
+                <div class="min-w-0 truncate text-[14px] font-medium text-muted-foreground">{{ group.title }}</div>
+                <div class="h-px flex-1 bg-border/80" />
+              </div>
+
+              <div
+                v-for="row in group.rows"
+                :key="`${group.key}-${row.id}`"
+                class="flex min-w-0 items-center justify-between gap-3 px-1 py-2 text-[14px] transition-colors hover:bg-surface-hover-strong"
+              >
+                <div class="min-w-0 truncate text-foreground">
+                  {{ row.name }}
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  class="h-7 w-7 rounded-md text-muted-foreground hover:text-foreground"
+                  :disabled="!row.buildUuid || !row.parkUuid"
+                  @click="goToBuildingDetail(row)"
+                >
+                  <i class="ri-more-2-line text-[18px]" />
+                  <span class="sr-only">建筑详情</span>
+                </Button>
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
     </template>
 
