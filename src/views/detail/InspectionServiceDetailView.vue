@@ -186,6 +186,16 @@ watch(buildingInspectionViews, (views) => {
   }
 }, { immediate: true })
 
+watch(expandedBuildingKey, (nextKey) => {
+  if (!expandedInspectionItemKey.value) {
+    return
+  }
+
+  if (!nextKey || !expandedInspectionItemKey.value.startsWith(`${nextKey}-`)) {
+    expandedInspectionItemKey.value = ""
+  }
+})
+
 watch(inspectionServiceUuid, (nextUuid) => {
   void loadInspectionServiceDetail(nextUuid)
 }, { immediate: true })
