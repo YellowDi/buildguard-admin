@@ -852,13 +852,14 @@ function readFileAsDataUrl(file: File) {
                           v-for="(group, groupIndex) in building.inspectionGroups"
                           :key="`${building.key}-${group.key}`"
                           :class="[
-                            'space-y-3 px-2 py-3',
-                            groupIndex > 0 ? 'border-t border-dashed border-border/55' : '',
+                            'space-y-3 px-2',
+                            groupIndex === 0 ? 'pt-3' : 'pt-2',
+                            groupIndex === building.inspectionGroups.length - 1 ? 'pb-3' : 'pb-2',
                           ]"
                         >
                           <div class="flex min-w-0 items-center gap-3">
                             <div class="flex min-w-0 items-center gap-2">
-                              <div class="truncate text-sm font-semibold text-foreground">{{ group.title }}</div>
+                              <div class="truncate text-sm font-semibold text-muted-foreground">{{ group.title }}</div>
                               <Badge
                                 variant="secondary"
                                 class="min-w-6 justify-center rounded-md px-1.5 py-0.5 text-[12px] font-medium leading-none"
@@ -884,10 +885,10 @@ function readFileAsDataUrl(file: File) {
                               v-for="item in group.rows"
                               :key="`${building.key}-${group.key}-${item.id}`"
                               :value="`${building.key}-${group.key}-${item.id}`"
-                              class="border-b-0 border-t border-dashed border-border/55 first:border-t-0 min-w-0 overflow-x-clip bg-transparent"
+                              class="min-w-0 overflow-x-clip border-0 bg-transparent"
                             >
                               <AccordionTrigger
-                                class="rounded-none border-0 bg-transparent px-0 py-3 text-left transition-colors hover:bg-muted/50 hover:no-underline data-[state=open]:border-b data-[state=open]:border-border/60"
+                                class="rounded-none border-0 bg-transparent px-0 py-3 text-left transition-colors hover:bg-muted/50 hover:no-underline"
                               >
                                 <div class="min-w-0">
                                   <div class="truncate text-sm font-semibold text-foreground">
