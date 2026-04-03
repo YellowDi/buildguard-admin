@@ -31,7 +31,6 @@ import { detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
 import DetailLayout from "@/layouts/DetailLayout.vue"
 import { buildApiRequestUrl } from "@/lib/api"
 import { handleApiError } from "@/lib/api-errors"
-import { fetchInspectionCategories, type InspectionCategoryRecord } from "@/lib/inspection-categories-api"
 import {
   deleteInspectionService,
   fetchInspectionServiceDetail,
@@ -97,7 +96,6 @@ const uploadContractForm = ref({
   contractFileName: "",
 })
 let latestRequestId = 0
-const categoryScoreLimits = ref<Record<string, InspectionCategoryScoreLimit>>({})
 
 const inspectionServiceUuid = computed(() => typeof route.params.id === "string" ? route.params.id.trim() : "")
 const customerUuid = computed(() => {
@@ -161,14 +159,10 @@ const fieldSections = computed<DetailFieldSection[]>(() => {
   ]
 })
 
-const inspectionGroups = computed<InspectionServiceInspectionGroup[]>(() => buildInspectionGroups(detail.value?.Inspections))
-const inspectionCount = computed(() => (
-  inspectionGroups.value.reduce((sum, group) => sum + group.rows.length, 0)
-))
 const buildingInspectionViews = computed<InspectionServiceBuildingInspectionView[]>(() =>
-  buildBuildingInspectionViews(detail.value?.Builds, inspectionGroups.value),
+  buildBuildingInspectionViews(detail.value?.BuildInfos ?? detail.value?.Builds),
 )
-const buildingGroups = computed(() => buildParkGroups(detail.value?.Builds))
+const buildingGroups = computed(() => buildParkGroups(detail.value?.BuildInfos ?? detail.value?.Builds))
 const buildingCount = computed(() => buildingGroups.value.reduce((sum, group) => sum + group.rows.length, 0))
 
 watch(detail, (current) => {
@@ -383,7 +377,6 @@ async function submitUploadContract() {
 
 async function loadInspectionServiceDetail(uuid: string) {
   const requestId = ++latestRequestId
-  categoryScoreLimits.value = {}
 
   if (!uuid) {
     detail.value = null
@@ -395,25 +388,15 @@ async function loadInspectionServiceDetail(uuid: string) {
   errorMessage.value = ""
 
   try {
-    const [detailResult, categoryResult] = await Promise.allSettled([
-      fetchInspectionServiceDetail({
-        Uuid: uuid,
-      }),
-      fetchInspectionCategories(),
-    ])
-
-    if (detailResult.status !== "fulfilled") {
-      throw detailResult.reason
-    }
+    const detailResult = await fetchInspectionServiceDetail({
+      Uuid: uuid,
+    })
 
     if (requestId !== latestRequestId) {
       return
     }
 
-    detail.value = detailResult.value
-    categoryScoreLimits.value = categoryResult.status === "fulfilled"
-      ? buildCategoryScoreLimitMap(categoryResult.value.list)
-      : {}
+    detail.value = detailResult
   } catch (error) {
     if (requestId !== latestRequestId) {
       return
@@ -459,52 +442,42 @@ function buildParkGroups(builds: InspectionServiceListItem["Builds"]) {
   }))
 }
 
-function buildInspectionGroups(inspections: InspectionServiceListItem["Inspections"]) {
-  if (!Array.isArray(inspections) || !inspections.length) {
+function buildInspectionGroups(
+  build: NonNullable<InspectionServiceListItem["Builds"]>[number],
+  buildIndex: number,
+) {
+  const categories = Array.isArray(build.List) ? build.List : []
+
+  if (!categories.length) {
     return []
   }
 
-  const categoryMap = new Map<string, {
-    title: string
-    categoryUuid: string
-    rows: InspectionServiceInspectionRow[]
-  }>()
+  return categories.map((category, categoryIndex) => {
+    const categoryName = toText(category.Name, "未分类")
+    const categoryUuid = toText(category.Uuid, "") || `inspection-category-name:${categoryName}`
+    const items = Array.isArray(category.List) ? category.List : []
 
-  inspections.forEach((inspection, index) => {
-    const categoryName = toText(inspection.CategoryName, "未分类")
-    const categoryUuid = toText(inspection.CategoryUuid, "") || `inspection-category-name:${categoryName}`
-    const current = categoryMap.get(categoryUuid) ?? {
+    return {
+      key: categoryUuid || `inspection-category-${buildIndex + 1}-${categoryIndex + 1}`,
       title: categoryName,
       categoryUuid,
-      rows: [],
+      scoreLimit: normalizeInspectionCategoryScore(category.Score),
+      rows: items.map((item, itemIndex) => ({
+        id: toText(item.Uuid, `${categoryUuid || categoryName}-${itemIndex + 1}`),
+        categoryUuid,
+        categoryName,
+        name: toText(item.Name, `检测项 ${itemIndex + 1}`),
+        content: "-",
+        standard: "-",
+        forcePhoto: "-",
+        isMeasureRecord: "-",
+      })),
     }
-
-    current.rows.push({
-      id: toText(inspection.InspectionUuid || inspection.Uuid, `${categoryName}-${index + 1}`),
-      categoryUuid,
-      categoryName,
-      name: toText(inspection.InspectionName || inspection.Name, `检测项 ${index + 1}`),
-      content: toText(inspection.Content, "-"),
-      standard: toText(inspection.Standard, "-"),
-      forcePhoto: formatInspectionFlag(inspection.IsForcePhoto),
-      isMeasureRecord: formatInspectionFlag(inspection.IsMeasureRecord),
-    })
-
-    categoryMap.set(categoryUuid, current)
   })
-
-  return Array.from(categoryMap.values()).map(group => ({
-    key: group.categoryUuid,
-    title: group.title,
-    categoryUuid: group.categoryUuid,
-    scoreLimit: getCategoryScoreLimit(group.categoryUuid),
-    rows: group.rows,
-  }))
 }
 
 function buildBuildingInspectionViews(
   builds: InspectionServiceListItem["Builds"],
-  groups: InspectionServiceInspectionGroup[],
 ) {
   if (!Array.isArray(builds) || !builds.length) {
     return []
@@ -514,35 +487,19 @@ function buildBuildingInspectionViews(
     const buildUuid = toText(build.BuildUuid, `inspection-service-build-${index + 1}`)
     const buildName = toText(build.BuildName, `建筑 ${index + 1}`)
     const parkName = toText(build.ParkName, "未命名园区")
+    const inspectionGroups = buildInspectionGroups(build, index)
 
     return {
       key: buildUuid || `inspection-service-build-${index + 1}`,
       buildUuid,
       buildName,
       parkName,
-      inspectionGroups: groups,
+      inspectionGroups,
     }
   })
 }
 
-function getCategoryScoreLimit(categoryUuid: string): InspectionCategoryScoreLimit {
-  return categoryUuid in categoryScoreLimits.value
-    ? categoryScoreLimits.value[categoryUuid]
-    : null
-}
-
-function buildCategoryScoreLimitMap(list: InspectionCategoryRecord[]) {
-  return Object.fromEntries(
-    list.map((item, index) => {
-      const name = toText(item.Name, `分类 ${toText(item.Id, String(index + 1))}`)
-      const uuid = toText(item.Uuid, `inspection-category-name:${name}`)
-      return [uuid, resolveInspectionCategoryScoreLimit(item)]
-    }),
-  )
-}
-
-function resolveInspectionCategoryScoreLimit(item: InspectionCategoryRecord) {
-  const value: unknown = item.Score
+function normalizeInspectionCategoryScore(value: unknown) {
 
   if (typeof value === "number" && Number.isFinite(value) && value >= 0) {
     return Math.round(value)
@@ -557,6 +514,10 @@ function resolveInspectionCategoryScoreLimit(item: InspectionCategoryRecord) {
   }
 
   return null
+}
+
+function getBuildingInspectionCount(building: InspectionServiceBuildingInspectionView) {
+  return building.inspectionGroups.reduce((sum, group) => sum + group.rows.length, 0)
 }
 
 function buildStatusValue(status: unknown): DetailStatusValue {
@@ -874,7 +835,7 @@ function readFileAsDataUrl(file: File) {
                           {{ building.buildName }}
                         </div>
                         <div class="shrink-0 truncate text-xs text-muted-foreground">
-                          {{ building.inspectionGroups.length }} 个检测分类 · {{ inspectionCount }} 个检测项
+                          {{ building.inspectionGroups.length }} 个检测分类 · {{ getBuildingInspectionCount(building) }} 个检测项
                         </div>
                       </div>
                     </AccordionTrigger>

@@ -15,9 +15,24 @@ type InspectionServiceBuildItem = {
   BuildUuid?: string
   BuildId?: number
   BuildName?: string
+  List?: InspectionServiceBuildCategoryItem[]
   ParkUuid?: string
   ParkId?: number
   ParkName?: string
+  [property: string]: unknown
+}
+
+type InspectionServiceBuildCategoryItem = {
+  Uuid?: string
+  Name?: string
+  Score?: number
+  List?: InspectionServiceBuildCategoryInspectionItem[]
+  [property: string]: unknown
+}
+
+type InspectionServiceBuildCategoryInspectionItem = {
+  Uuid?: string
+  Name?: string
   [property: string]: unknown
 }
 
@@ -58,6 +73,7 @@ export type InspectionServiceListItem = {
   TemplateName?: string
   InspectionUuids?: string[]
   Inspections?: InspectionServiceInspectionItem[]
+  BuildInfos?: InspectionServiceBuildItem[]
   Builds?: InspectionServiceBuildItem[]
   Remark?: string
   CreatedAt?: string
@@ -70,15 +86,30 @@ export type InspectionServicesListResult = {
   total: number
 }
 
+export type InspectionServiceBuildInfoWriteItem = {
+  BuildUuid: string
+  List?: InspectionServiceBuildCategoryWriteItem[]
+}
+
+export type InspectionServiceBuildCategoryWriteItem = {
+  Uuid?: string
+  Name?: string
+  Score?: number
+  List?: InspectionServiceBuildInspectionWriteItem[]
+}
+
+export type InspectionServiceBuildInspectionWriteItem = {
+  Uuid?: string
+  Name?: string
+}
+
 export type InspectionServiceCreatePayload = {
   Name: string
   CustomerUuid: string
   Level: string
   ManagerName: string
   ManagerPhone: string
-  TemplateUuid?: string
-  InspectionUuids?: string[]
-  BuildUuids: string[]
+  BuildInfos: InspectionServiceBuildInfoWriteItem[]
   Remark?: string
 }
 
@@ -179,9 +210,7 @@ export async function createInspectionService(
     Level: getRequiredString(payload.Level, "Level"),
     ManagerName: getRequiredString(payload.ManagerName, "ManagerName"),
     ManagerPhone: getRequiredString(payload.ManagerPhone, "ManagerPhone"),
-    TemplateUuid: getOptionalString(payload.TemplateUuid),
-    InspectionUuids: getOptionalStringArray(payload.InspectionUuids),
-    BuildUuids: getRequiredStringArray(payload.BuildUuids, "BuildUuids"),
+    BuildInfos: getRequiredBuildInfos(payload.BuildInfos, "BuildInfos"),
     Remark: getOptionalString(payload.Remark),
   }
 
@@ -213,9 +242,7 @@ export async function updateInspectionService(
     Level: getRequiredString(payload.Level, "Level"),
     ManagerName: getRequiredString(payload.ManagerName, "ManagerName"),
     ManagerPhone: getRequiredString(payload.ManagerPhone, "ManagerPhone"),
-    TemplateUuid: getOptionalString(payload.TemplateUuid),
-    InspectionUuids: getOptionalStringArray(payload.InspectionUuids),
-    BuildUuids: getRequiredStringArray(payload.BuildUuids, "BuildUuids"),
+    BuildInfos: getRequiredBuildInfos(payload.BuildInfos, "BuildInfos"),
     Remark: getOptionalString(payload.Remark),
   }
 
@@ -311,13 +338,18 @@ export async function deleteInspectionService(payload: InspectionServiceDeletePa
 }
 
 export function extractInspectionServiceDetailInspectionUuids(
-  detail: Pick<InspectionServiceListItem, "InspectionUuids" | "Inspections"> | null | undefined,
+  detail: Pick<InspectionServiceListItem, "InspectionUuids" | "Inspections" | "BuildInfos" | "Builds"> | null | undefined,
 ) {
   return dedupeStringList([
     ...((Array.isArray(detail?.InspectionUuids) ? detail.InspectionUuids : []).map(item => getOptionalString(item))),
     ...((Array.isArray(detail?.Inspections) ? detail.Inspections : []).map((item) => (
       getOptionalString(item?.InspectionUuid) ?? getOptionalString(item?.Uuid)
     ))),
+    ...extractInspectionUuidsFromBuildItems(
+      Array.isArray(detail?.BuildInfos)
+        ? detail.BuildInfos
+        : (Array.isArray(detail?.Builds) ? detail.Builds : []),
+    ),
   ])
 }
 
@@ -451,10 +483,9 @@ function normalizeInspectionServiceListItem(value: unknown): InspectionServiceLi
     CustomerName: customerName,
     CustomerUuid: getOptionalString(record.CustomerUuid),
     InspectionUuids: normalizeOptionalStringList(record.InspectionUuids),
-    Inspections: normalizeInspectionServiceInspectionItems(record.Inspections),
-    Builds: Array.isArray(record.Builds)
-      ? record.Builds.filter(item => item && typeof item === "object") as InspectionServiceBuildItem[]
-      : [],
+    Inspections: resolveInspectionServiceInspectionItems(record),
+    BuildInfos: normalizeInspectionServiceBuildItems(record.BuildInfos ?? record.Builds),
+    Builds: normalizeInspectionServiceBuildItems(record.BuildInfos ?? record.Builds),
   }
 }
 
@@ -541,16 +572,6 @@ function getRequiredStringArray(value: unknown, fieldName: string) {
   return normalized
 }
 
-function getOptionalStringArray(value: unknown) {
-  if (!Array.isArray(value)) {
-    return undefined
-  }
-
-  const normalized = dedupeStringList(value)
-
-  return normalized.length ? normalized : undefined
-}
-
 function normalizeOptionalStringList(value: unknown) {
   if (Array.isArray(value)) {
     const normalized = dedupeStringList(value)
@@ -578,6 +599,84 @@ function dedupeStringList(value: unknown[]) {
       .map(item => getOptionalString(item))
       .filter((item): item is string => Boolean(item)),
   ))
+}
+
+function getRequiredBuildInfos(value: unknown, fieldName: string): InspectionServiceBuildInfoWriteItem[] {
+  if (!Array.isArray(value)) {
+    throw new TypeError(`${fieldName} must be an array.`)
+  }
+
+  const normalized = value
+    .filter(item => item && typeof item === "object")
+    .map((item, index) => normalizeBuildInfoWriteItem(item, `${fieldName}[${index}]`))
+
+  if (!normalized.length) {
+    throw new TypeError(`${fieldName} must contain at least one item.`)
+  }
+
+  return normalized
+}
+
+function normalizeBuildInfoWriteItem(value: unknown, fieldName: string): InspectionServiceBuildInfoWriteItem {
+  const record = value as Record<string, unknown>
+
+  return {
+    BuildUuid: getRequiredString(record.BuildUuid, `${fieldName}.BuildUuid`),
+    List: normalizeBuildCategoryWriteItems(record.List),
+  }
+}
+
+function normalizeBuildCategoryWriteItems(value: unknown) {
+  if (!Array.isArray(value)) {
+    return undefined
+  }
+
+  const normalized = value
+    .filter(item => item && typeof item === "object")
+    .map((item, index) => {
+      const record = item as Record<string, unknown>
+      const score = normalizeOptionalNumberLike(record.Score)
+
+      return {
+        Uuid: getOptionalString(record.Uuid),
+        Name: getOptionalString(record.Name),
+        Score: score,
+        List: normalizeBuildInspectionWriteItems(record.List, `BuildInfos.List[${index}].List`),
+      } satisfies InspectionServiceBuildCategoryWriteItem
+    })
+    .filter(item => Array.isArray(item.List) && item.List.length)
+
+  return normalized.length ? normalized : undefined
+}
+
+function normalizeBuildInspectionWriteItems(value: unknown, fieldName: string) {
+  if (!Array.isArray(value)) {
+    return undefined
+  }
+
+  const normalized = value
+    .filter(item => item && typeof item === "object")
+    .map((item) => {
+      const record = item as Record<string, unknown>
+      const uuid = getOptionalString(record.Uuid)
+      const name = getOptionalString(record.Name)
+
+      if (!uuid && !name) {
+        return null
+      }
+
+      return {
+        Uuid: uuid,
+        Name: name,
+      } satisfies InspectionServiceBuildInspectionWriteItem
+    })
+    .filter((item): item is InspectionServiceBuildInspectionWriteItem => Boolean(item))
+
+  if (!normalized.length) {
+    throw new TypeError(`${fieldName} must contain at least one item.`)
+  }
+
+  return normalized
 }
 
 function normalizeInspectionServiceInspectionItems(value: unknown): InspectionServiceInspectionItem[] {
@@ -611,6 +710,130 @@ function normalizeInspectionServiceInspectionItems(value: unknown): InspectionSe
         Name: getOptionalString(record.Name),
       }
     })
+}
+
+function resolveInspectionServiceInspectionItems(record: Record<string, unknown>) {
+  const directItems = normalizeInspectionServiceInspectionItems(record.Inspections)
+
+  if (directItems.length) {
+    return directItems
+  }
+
+  return flattenInspectionItemsFromBuildInfos(normalizeInspectionServiceBuildItems(record.BuildInfos ?? record.Builds))
+}
+
+function normalizeInspectionServiceBuildItems(value: unknown): InspectionServiceBuildItem[] {
+  if (!Array.isArray(value)) {
+    return []
+  }
+
+  return value
+    .filter(item => item && typeof item === "object")
+    .map((item) => {
+      const record = item as Record<string, unknown>
+
+      return {
+        ...record,
+        BuildUuid: getOptionalString(record.BuildUuid),
+        BuildId: normalizeOptionalNumberLike(record.BuildId),
+        BuildName: getOptionalString(record.BuildName),
+        ParkUuid: getOptionalString(record.ParkUuid),
+        ParkId: normalizeOptionalNumberLike(record.ParkId),
+        ParkName: getOptionalString(record.ParkName),
+        List: normalizeInspectionServiceBuildCategoryItems(record.List),
+      }
+    })
+}
+
+function normalizeInspectionServiceBuildCategoryItems(value: unknown): InspectionServiceBuildCategoryItem[] {
+  if (!Array.isArray(value)) {
+    return []
+  }
+
+  return value
+    .filter(item => item && typeof item === "object")
+    .map((item) => {
+      const record = item as Record<string, unknown>
+
+      return {
+        ...record,
+        Uuid: getOptionalString(record.Uuid),
+        Name: getOptionalString(record.Name),
+        Score: normalizeOptionalNumberLike(record.Score),
+        List: normalizeInspectionServiceBuildCategoryInspectionItems(record.List),
+      }
+    })
+}
+
+function normalizeInspectionServiceBuildCategoryInspectionItems(value: unknown): InspectionServiceBuildCategoryInspectionItem[] {
+  if (!Array.isArray(value)) {
+    return []
+  }
+
+  return value
+    .filter(item => item && typeof item === "object")
+    .map((item) => {
+      const record = item as Record<string, unknown>
+
+      return {
+        ...record,
+        Uuid: getOptionalString(record.Uuid),
+        Name: getOptionalString(record.Name),
+      }
+    })
+}
+
+function flattenInspectionItemsFromBuildInfos(buildInfos: InspectionServiceBuildItem[]) {
+  const deduped = new Map<string, InspectionServiceInspectionItem>()
+
+  for (const buildInfo of buildInfos) {
+    const categories = Array.isArray(buildInfo.List) ? buildInfo.List : []
+
+    for (const category of categories) {
+      const categoryUuid = getOptionalString(category.Uuid)
+      const categoryName = getOptionalString(category.Name)
+      const items = Array.isArray(category.List) ? category.List : []
+
+      for (const item of items) {
+        const inspectionUuid = getOptionalString(item.Uuid)
+        const inspectionName = getOptionalString(item.Name)
+        const dedupeKey = inspectionUuid || `${categoryUuid || categoryName || "category"}:${inspectionName || "inspection"}`
+
+        if (!dedupeKey || deduped.has(dedupeKey)) {
+          continue
+        }
+
+        deduped.set(dedupeKey, {
+          Uuid: inspectionUuid,
+          InspectionUuid: inspectionUuid,
+          Name: inspectionName,
+          InspectionName: inspectionName,
+          CategoryUuid: categoryUuid,
+          CategoryName: categoryName,
+        })
+      }
+    }
+  }
+
+  return Array.from(deduped.values())
+}
+
+function extractInspectionUuidsFromBuildItems(buildInfos: InspectionServiceBuildItem[]) {
+  const uuids: unknown[] = []
+
+  for (const buildInfo of buildInfos) {
+    const categories = Array.isArray(buildInfo.List) ? buildInfo.List : []
+
+    for (const category of categories) {
+      const items = Array.isArray(category.List) ? category.List : []
+
+      for (const item of items) {
+        uuids.push(item.Uuid)
+      }
+    }
+  }
+
+  return dedupeStringList(uuids)
 }
 
 function normalizeInspectionFlag(value: unknown) {

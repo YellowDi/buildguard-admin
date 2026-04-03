@@ -4,6 +4,7 @@ export type InspectionItemOption = {
   id: number
   uuid: string
   name: string
+  categoryUuid: string
   categoryName: string
 }
 
@@ -40,6 +41,7 @@ function normalizeInspectionItemOption(item: InspectionItemRecord): InspectionIt
     id: toNumber(item.Id) ?? 0,
     uuid: toText(item.Uuid),
     name: toText(item.Name, `检测项 ${toNumber(item.Id) ?? "-"}`),
+    categoryUuid: toText(item.CategoryUuid),
     categoryName: toText(item.CategoryName, "未分类"),
   }
 }

@@ -13,6 +13,7 @@ export type InspectionServiceTemplateInspectionItem = {
   CategoryName?: string
   InspectionName?: string
   InspectionUuid?: string
+  Score?: number
   [property: string]: unknown
 }
 
@@ -286,6 +287,7 @@ function normalizeInspectionItems(value: unknown) {
       CategoryName: getOptionalString(record.CategoryName),
       InspectionName: getOptionalString(record.InspectionName),
       InspectionUuid: getOptionalString(record.InspectionUuid),
+      Score: getOptionalNumber(record.Score, "Score"),
     }
   })
 }

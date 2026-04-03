@@ -48,7 +48,6 @@ import {
 } from "@/lib/inspection-service-templates-api"
 import {
   createInspectionService,
-  extractInspectionServiceDetailInspectionUuids,
   fetchInspectionServiceDetail,
   updateInspectionService,
 } from "@/lib/inspection-services-api"
@@ -95,6 +94,7 @@ type TemplateOption = {
     categoryName: string
     inspectionName: string
     inspectionUuid: string
+    score: InspectionCategoryScoreLimit
   }[]
 }
 
@@ -251,8 +251,14 @@ const filteredTemplateOptions = computed(() => {
 const inspectionItemNameByUuid = computed(() => new Map(
   inspectionItemOptions.value.map(item => [item.uuid, item.name] as const),
 ))
+const inspectionItemByUuid = computed(() => new Map(
+  inspectionItemOptions.value.map(item => [item.uuid, item] as const),
+))
 const inspectionCategoryNameByUuid = computed(() => new Map(
   inspectionCategoryOptions.value.map(item => [item.uuid, item.name] as const),
+))
+const inspectionCategoryByName = computed(() => new Map(
+  inspectionCategoryOptions.value.map(item => [item.name, item] as const),
 ))
 const levelOptions = computed(() => Array.from(new Set(
   [...DEFAULT_LEVEL_OPTIONS, normalizeText(form.level)].filter(Boolean),
@@ -467,6 +473,7 @@ async function handleUseBuildingTemplate() {
 
 function applyTemplate(template: TemplateOption) {
   const nextInspectionUuids = dedupeText(template.inspections.map(item => item.inspectionUuid))
+  const nextCategoryScoreLimits = buildTemplateCategoryScoreLimitMap(template)
 
   batchTemplateUuid.value = template.uuid
 
@@ -474,6 +481,7 @@ function applyTemplate(template: TemplateOption) {
     buildingConfigs.value = buildingConfigs.value.map((config) => ({
       ...cloneBuildingConfig(config),
       inspectionUuids: [...nextInspectionUuids],
+      categoryScoreLimitByCategoryUuid: { ...nextCategoryScoreLimits },
       templateSourceUuid: template.uuid,
       inspectionTouched: false,
     }))
@@ -523,7 +531,9 @@ function addBuildingConfig(build: BuildOption) {
     parkUuid: build.parkUuid,
     parkName: build.parkName,
     inspectionUuids: nextInspectionUuids,
-    categoryScoreLimitByCategoryUuid: {},
+    categoryScoreLimitByCategoryUuid: selectedBatchTemplateOption.value
+      ? buildTemplateCategoryScoreLimitMap(selectedBatchTemplateOption.value)
+      : {},
     templateSourceUuid: batchTemplateUuid.value || undefined,
     inspectionTouched: false,
   }]
@@ -746,9 +756,7 @@ async function handleSubmit() {
       Level: normalizeText(form.level),
       ManagerName: normalizeText(form.managerName),
       ManagerPhone: normalizeText(form.managerPhone),
-      TemplateUuid: resolveSubmitTemplateUuid(),
-      InspectionUuids: selectedInspectionUuidsForSubmit.value,
-      BuildUuids: buildingConfigs.value.map(config => config.buildUuid),
+      BuildInfos: buildInspectionServiceBuildInfosPayload(),
       Remark: getOptionalText(form.remark),
     }
 
@@ -923,11 +931,10 @@ async function loadInspectionServiceForEdit(uuid: string) {
     }
 
     const nextCustomerUuid = normalizeText(detail.CustomerUuid)
-    const nextInspectionUuids = extractInspectionServiceDetailInspectionUuids(detail)
     const nextBuildingConfigs: InspectionServiceBuildingConfig[] = []
 
-    for (const [index, item] of (Array.isArray(detail.Builds) ? detail.Builds : []).entries()) {
-      const mappedConfig = mapServiceDetailBuildToConfig(item, nextInspectionUuids, index)
+    for (const [index, item] of (Array.isArray(detail.BuildInfos) ? detail.BuildInfos : (Array.isArray(detail.Builds) ? detail.Builds : [])).entries()) {
+      const mappedConfig = mapServiceDetailBuildToConfig(item, index)
 
       if (mappedConfig) {
         nextBuildingConfigs.push(mappedConfig)
@@ -1115,6 +1122,7 @@ async function loadTemplateOptions() {
               categoryName: normalizeText(inspection.CategoryName),
               inspectionName: normalizeText(inspection.InspectionName),
               inspectionUuid: normalizeText(inspection.InspectionUuid),
+              score: normalizeScoreLimitValue(inspection.Score),
             })).filter(inspection => inspection.inspectionUuid)
           : [],
       }
@@ -1280,17 +1288,42 @@ function reconcileBuildingConfigs(
 
 function mapServiceDetailBuildToConfig(
   build: Record<string, unknown>,
-  inspectionUuids: string[],
   index: number,
 ) {
   const buildUuid = normalizeText(build.BuildUuid) || normalizeText(build.BuildId)
   const buildName = normalizeText(build.BuildName) || `建筑 ${index + 1}`
   const parkName = normalizeText(build.ParkName) || "未命名园区"
   const parkUuid = resolveParkIdentity(build.ParkUuid, parkName)
+  const categoryList = Array.isArray(build.List) ? build.List : []
 
   if (!buildUuid) {
     return null
   }
+
+  const inspectionUuids = dedupeText(categoryList.flatMap((category) => {
+    const inspectionList = category && typeof category === "object" && Array.isArray((category as { List?: unknown }).List)
+      ? (category as { List: Array<Record<string, unknown>> }).List
+      : []
+
+    return inspectionList.map(item => normalizeText(item.Uuid))
+  }))
+
+  const categoryScoreLimitByCategoryUuid = Object.fromEntries(
+    categoryList.flatMap((category) => {
+      if (!category || typeof category !== "object") {
+        return []
+      }
+
+      const categoryUuid = normalizeText((category as { Uuid?: unknown }).Uuid)
+      const score = normalizeScoreLimitValue((category as { Score?: unknown }).Score)
+
+      if (!categoryUuid || score === null) {
+        return []
+      }
+
+      return [[categoryUuid, score] as const]
+    }),
+  )
 
   return {
     buildUuid,
@@ -1298,21 +1331,88 @@ function mapServiceDetailBuildToConfig(
     parkUuid,
     parkName,
     inspectionUuids: [...inspectionUuids],
-    categoryScoreLimitByCategoryUuid: {},
+    categoryScoreLimitByCategoryUuid,
     templateSourceUuid: batchTemplateUuid.value || undefined,
     inspectionTouched: false,
   } satisfies InspectionServiceBuildingConfig
 }
 
+function buildInspectionServiceBuildInfosPayload() {
+  return buildingConfigs.value.map((config) => {
+    const categoryMap = new Map<string, {
+      uuid: string
+      name: string
+      score: InspectionCategoryScoreLimit
+      items: Array<{ Uuid: string, Name: string }>
+    }>()
 
-function resolveSubmitTemplateUuid() {
-  if (!batchTemplateUuid.value || !selectedTemplateInspectionUuids.value.length) {
-    return undefined
+    for (const inspectionUuid of config.inspectionUuids) {
+      const inspection = inspectionItemByUuid.value.get(inspectionUuid)
+
+      if (!inspection) {
+        continue
+      }
+
+      const fallbackCategory = inspection.categoryName
+        ? inspectionCategoryByName.value.get(inspection.categoryName)
+        : undefined
+      const categoryUuid = inspection.categoryUuid || fallbackCategory?.uuid || ""
+      const categoryName = fallbackCategory?.name || inspection.categoryName || "未分类"
+
+      if (!categoryUuid && !categoryName) {
+        continue
+      }
+
+      const categoryKey = categoryUuid || `category-name:${categoryName}`
+      const current = categoryMap.get(categoryKey) ?? {
+        uuid: categoryUuid,
+        name: categoryName,
+        score: config.categoryScoreLimitByCategoryUuid[categoryUuid] ?? getDefaultCategoryScoreLimit(categoryUuid),
+        items: [],
+      }
+
+      current.items.push({
+        Uuid: inspection.uuid,
+        Name: inspection.name,
+      })
+
+      categoryMap.set(categoryKey, current)
+    }
+
+    return {
+      BuildUuid: config.buildUuid,
+      List: Array.from(categoryMap.values()).map((category) => ({
+        Uuid: category.uuid || undefined,
+        Name: category.name || undefined,
+        Score: category.score === null ? undefined : category.score,
+        List: category.items,
+      })),
+    }
+  })
+}
+
+function buildTemplateCategoryScoreLimitMap(template: TemplateOption) {
+  const scoreMap: Record<string, InspectionServiceCategoryScoreLimitDraft> = {}
+
+  for (const inspection of template.inspections) {
+    if (inspection.score === null) {
+      continue
+    }
+
+    const itemOption = inspectionItemByUuid.value.get(inspection.inspectionUuid)
+    const fallbackCategory = inspection.categoryName
+      ? inspectionCategoryByName.value.get(inspection.categoryName)
+      : undefined
+    const categoryUuid = itemOption?.categoryUuid || fallbackCategory?.uuid || ""
+
+    if (!categoryUuid) {
+      continue
+    }
+
+    scoreMap[categoryUuid] = inspection.score
   }
 
-  return allBuildingsMatchSelectedTemplate.value
-    ? batchTemplateUuid.value
-    : undefined
+  return scoreMap
 }
 
 function getBuildingInspectionSummary(config: InspectionServiceBuildingConfig) {
@@ -1393,6 +1493,22 @@ function parseScoreFieldValue(value: string) {
   }
 
   return parsed
+}
+
+function normalizeScoreLimitValue(value: unknown): InspectionCategoryScoreLimit {
+  if (typeof value === "number" && Number.isFinite(value) && value >= 0) {
+    return Math.round(value)
+  }
+
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value)
+
+    if (Number.isFinite(parsed) && parsed >= 0) {
+      return Math.round(parsed)
+    }
+  }
+
+  return null
 }
 
 function isSameScoreLimit(left: InspectionCategoryScoreLimit, right: InspectionCategoryScoreLimit) {
