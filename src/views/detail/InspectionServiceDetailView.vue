@@ -973,11 +973,11 @@ function readFileAsDataUrl(file: File) {
                           v-for="(group, groupIndex) in building.inspectionGroups"
                           :key="`${building.key}-${group.key}`"
                           :class="[
-                            'space-y-3 px-2',
+                            'space-y-3',
                             groupIndex === 0 ? 'pt-3' : 'pt-2',
                           ]"
                         >
-                          <div class="flex min-w-0 items-center gap-3">
+                          <div class="flex min-w-0 items-center gap-3 px-2">
                             <div class="flex min-w-0 items-center gap-2">
                               <div class="truncate text-sm font-semibold text-muted-foreground">{{ group.title }}</div>
                               <Badge
@@ -1008,7 +1008,7 @@ function readFileAsDataUrl(file: File) {
                               class="min-w-0 overflow-x-clip border-0 bg-transparent"
                             >
                               <AccordionTrigger
-                                class="rounded-none border-0 bg-transparent px-0 py-3 text-left transition-colors hover:bg-muted/50 hover:no-underline"
+                                class="rounded-none border-0 bg-transparent px-2 py-3 text-left transition-colors hover:bg-muted/50 hover:no-underline"
                               >
                                 <div class="min-w-0">
                                   <div class="truncate text-sm font-semibold text-foreground">
@@ -1018,7 +1018,7 @@ function readFileAsDataUrl(file: File) {
                               </AccordionTrigger>
 
                               <AccordionContent
-                                class="rounded-none px-0 data-[state=closed]:pb-0 data-[state=closed]:pt-0 data-[state=open]:!overflow-visible data-[state=open]:bg-background data-[state=open]:pb-3 data-[state=open]:pt-3 [&>div]:pb-0 [&>div]:pt-0"
+                                class="rounded-none px-2 data-[state=closed]:pb-0 data-[state=closed]:pt-0 data-[state=open]:!overflow-visible data-[state=open]:bg-background data-[state=open]:pb-0 data-[state=open]:pt-0 [&>div]:pb-0 [&>div]:pt-0"
                               >
                                 <div v-if="isInspectionItemDetailLoading(item)" class="grid gap-3">
                                   <div class="grid gap-2">
@@ -1031,7 +1031,7 @@ function readFileAsDataUrl(file: File) {
                                     <Skeleton class="h-5 w-full rounded" />
                                     <Skeleton class="h-5 w-3/4 rounded" />
                                   </div>
-                                  <div class="grid grid-cols-2 gap-3 border-t border-border/50 pt-2">
+                                  <div class="grid grid-cols-2 gap-3">
                                     <div class="space-y-2">
                                       <Skeleton class="h-3 w-14 rounded" />
                                       <Skeleton class="h-5 w-12 rounded" />
@@ -1072,7 +1072,7 @@ function readFileAsDataUrl(file: File) {
                                       {{ resolveInspectionItemStandard(item) }}
                                     </p>
                                   </div>
-                                  <div class="grid grid-cols-2 gap-3 border-t border-border/50 pt-2">
+                                  <div class="grid grid-cols-2 gap-3">
                                     <div>
                                       <p class="text-xs text-muted-foreground">强制拍照</p>
                                       <p class="mt-1 text-foreground">{{ resolveInspectionItemForcePhoto(item) }}</p>
