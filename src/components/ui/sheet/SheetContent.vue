@@ -5,10 +5,10 @@ import type { SheetVariants } from "."
 import { reactiveOmit } from "@vueuse/core"
 import {
   DialogContent,
-  DialogOverlay,
   DialogPortal,
   useForwardPropsEmits,
 } from "reka-ui"
+import DialogOverlay from "@/components/ui/dialog/DialogOverlay.vue"
 import { cn } from "@/lib/utils"
 import { sheetVariants } from "."
 
@@ -32,9 +32,7 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
 
 <template>
   <DialogPortal>
-    <DialogOverlay
-      class="fixed inset-0 z-50 bg-transparent data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
-    />
+    <DialogOverlay />
     <DialogContent
       :class="cn(sheetVariants({ side }), props.class)"
       v-bind="{ ...forwarded, ...$attrs }"
