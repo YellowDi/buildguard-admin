@@ -410,7 +410,7 @@ function parseScoreFieldValue(value: string) {
 
   const parsed = Number(value)
 
-  if (!Number.isInteger(parsed) || parsed < 0 || parsed > 20) {
+  if (!Number.isInteger(parsed) || parsed < 0) {
     return null
   }
 
@@ -527,7 +527,7 @@ defineExpose({
           <div class="grid gap-2">
             <div class="flex items-center justify-between gap-3">
               <label class="text-sm font-medium text-foreground" for="create-inspection-category-score-limit">分数上限</label>
-              <span class="text-xs text-muted-foreground">范围 0-20，默认 20 分</span>
+              <span class="text-xs text-muted-foreground">默认 20 分</span>
             </div>
             <Input
               id="create-inspection-category-score-limit"
@@ -535,7 +535,6 @@ defineExpose({
               type="number"
               inputmode="numeric"
               min="0"
-              max="20"
               step="1"
               placeholder="例如：20"
               class="h-9 min-w-0"
@@ -579,7 +578,7 @@ defineExpose({
           <div class="grid gap-2">
             <div class="flex items-center justify-between gap-3">
               <label class="text-sm font-medium text-foreground" for="edit-inspection-category-score-limit">分数上限</label>
-              <span class="text-xs text-muted-foreground">范围 0-20，默认 20 分</span>
+              <span class="text-xs text-muted-foreground">默认 20 分</span>
             </div>
             <Input
               id="edit-inspection-category-score-limit"
@@ -587,7 +586,6 @@ defineExpose({
               type="number"
               inputmode="numeric"
               min="0"
-              max="20"
               step="1"
               placeholder="例如：20"
               class="h-9 min-w-0"

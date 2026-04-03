@@ -20,7 +20,6 @@ function formatLimit(limit: number) {
       props.class,
     )"
   >
-    <i class="ri-trophy-line text-[12px] text-muted-foreground" />
     <span class="text-muted-foreground">上限</span>
     <span class="font-semibold tabular-nums text-foreground">{{ formatLimit(props.limit) }}</span>
     <span class="text-muted-foreground">分</span>

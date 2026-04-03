@@ -665,7 +665,7 @@ function saveScoreLimitDraft(buildUuid: string) {
     const parsedScoreLimit = parseScoreLimitForm(formState)
 
     if (parsedScoreLimit === null) {
-      toast.error(`请检查 ${category.name} 的分数上限，范围需为 0-20 的整数。`)
+      toast.error(`请检查 ${category.name} 的分数上限，需为非负整数。`)
       return
     }
 
@@ -1370,7 +1370,7 @@ function parseScoreFieldValue(value: string) {
 
   const parsed = Number(value)
 
-  if (!Number.isInteger(parsed) || parsed < 0 || parsed > 20) {
+  if (!Number.isInteger(parsed) || parsed < 0) {
     return null
   }
 
@@ -1787,7 +1787,6 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
                                 <Input
                                   type="number"
                                   min="0"
-                                  max="20"
                                   inputmode="numeric"
                                   :model-value="scoreLimitDraftForms[category.uuid]?.scoreLimit ?? ''"
                                   @update:model-value="updateScoreLimitField(category.uuid, 'scoreLimit', $event)"

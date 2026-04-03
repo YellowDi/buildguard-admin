@@ -133,7 +133,7 @@ function toFiniteNumber(value: unknown) {
 }
 
 function normalizeScoreLimit(value: number) {
-  return Math.max(0, Math.min(20, Math.round(value)))
+  return Math.max(0, Math.round(value))
 }
 
 function isScoreLimitStorage(value: unknown): value is InspectionCategoryScoreLimitStorage {
