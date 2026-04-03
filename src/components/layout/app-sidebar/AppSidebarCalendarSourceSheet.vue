@@ -140,7 +140,7 @@ function getEventTitleText(event: AppSidebarCalendarItem) {
           </Button>
         </header>
 
-        <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-1 pb-4 pt-2">
+        <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-4 pt-0">
           <template v-if="loading">
             <p class="px-3 py-8 text-center text-sm text-muted-foreground">加载中...</p>
           </template>
@@ -153,7 +153,7 @@ function getEventTitleText(event: AppSidebarCalendarItem) {
               :key="`${block.sectionLabel}-${idx}`"
               class="mb-4 last:mb-0"
             >
-              <div class="flex items-center gap-2 px-2 py-1.5">
+              <div class="flex items-center gap-2 py-1.5">
                 <h3 class="text-xs font-medium text-muted-foreground">{{ block.sectionLabel }}</h3>
                 <span
                   class="tabular-nums rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground"
