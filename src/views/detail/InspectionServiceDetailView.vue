@@ -9,6 +9,7 @@ import BuildingDetailSheet from "@/components/detail/BuildingDetailSheet.vue"
 import DetailFieldSections from "@/components/detail/DetailFieldSections.vue"
 import FormDatePicker from "@/components/form/FormDatePicker.vue"
 import DetailRelationModule from "@/components/detail/DetailRelationModule.vue"
+import InspectionCategoryScorePresetInline from "@/components/inspection/InspectionCategoryScorePresetInline.vue"
 import DetailFieldsSkeleton from "@/components/loading/DetailFieldsSkeleton.vue"
 import DetailRelationSkeleton from "@/components/loading/DetailRelationSkeleton.vue"
 import type { DetailContactValue, DetailFieldSection, DetailRelationModuleSchema, DetailStatusValue } from "@/components/detail/types"
@@ -31,6 +32,7 @@ import { detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
 import DetailLayout from "@/layouts/DetailLayout.vue"
 import { buildApiRequestUrl } from "@/lib/api"
 import { handleApiError } from "@/lib/api-errors"
+import { readInspectionCategoryScorePresets, type InspectionCategoryScorePreset } from "@/lib/inspection-category-score-presets"
 import {
   deleteInspectionService,
   fetchInspectionServiceDetail,
@@ -47,6 +49,7 @@ type InspectionServiceBuildingRow = {
 
 type InspectionServiceInspectionRow = {
   id: string
+  categoryUuid: string
   categoryName: string
   name: string
   content: string
@@ -58,7 +61,23 @@ type InspectionServiceInspectionRow = {
 type InspectionServiceInspectionGroup = {
   key: string
   title: string
+  categoryUuid: string
+  scorePreset: InspectionCategoryScorePreset
   rows: InspectionServiceInspectionRow[]
+}
+
+type InspectionServiceBuildingInspectionView = {
+  key: string
+  buildUuid: string
+  buildName: string
+  parkName: string
+  inspectionGroups: InspectionServiceInspectionGroup[]
+}
+
+const DEFAULT_CATEGORY_SCORE_PRESET: InspectionCategoryScorePreset = {
+  normal: 0,
+  attention: 10,
+  risk: 20,
 }
 
 const route = useRoute()
@@ -69,6 +88,7 @@ const loading = ref(false)
 const errorMessage = ref("")
 const deleteConfirmOpen = ref(false)
 const deleteSubmitting = ref(false)
+const expandedBuildingKey = ref("")
 const expandedInspectionItemKey = ref("")
 const uploadContractDialogOpen = ref(false)
 const uploadingContract = ref(false)
@@ -82,6 +102,7 @@ const uploadContractForm = ref({
   contractFileName: "",
 })
 let latestRequestId = 0
+const categoryScorePresets = ref<Record<string, InspectionCategoryScorePreset>>({})
 
 const inspectionServiceUuid = computed(() => typeof route.params.id === "string" ? route.params.id.trim() : "")
 const customerUuid = computed(() => {
@@ -149,10 +170,13 @@ const inspectionGroups = computed<InspectionServiceInspectionGroup[]>(() => buil
 const inspectionCount = computed(() => (
   inspectionGroups.value.reduce((sum, group) => sum + group.rows.length, 0)
 ))
+const buildingInspectionViews = computed<InspectionServiceBuildingInspectionView[]>(() =>
+  buildBuildingInspectionViews(detail.value?.Builds, inspectionGroups.value),
+)
 
 const buildingModule = computed<DetailRelationModuleSchema<InspectionServiceBuildingRow>>(() => ({
   key: "inspection-service-buildings",
-  title: "关联建筑",
+  title: "服务建筑",
   count: Array.isArray(detail.value?.Builds) ? detail.value.Builds.length : 0,
   rowKey: "id",
   columns: [
@@ -173,6 +197,17 @@ const buildingModule = computed<DetailRelationModuleSchema<InspectionServiceBuil
 watch(detail, (current) => {
   detailBreadcrumbTitle.value = toOptionalText(current?.Name)
 })
+
+watch(buildingInspectionViews, (views) => {
+  if (!views.length) {
+    expandedBuildingKey.value = ""
+    return
+  }
+
+  if (!views.some(view => view.key === expandedBuildingKey.value)) {
+    expandedBuildingKey.value = views[0]?.key ?? ""
+  }
+}, { immediate: true })
 
 watch(inspectionServiceUuid, (nextUuid) => {
   void loadInspectionServiceDetail(nextUuid)
@@ -371,6 +406,7 @@ async function submitUploadContract() {
 
 async function loadInspectionServiceDetail(uuid: string) {
   const requestId = ++latestRequestId
+  categoryScorePresets.value = readInspectionCategoryScorePresets()
 
   if (!uuid) {
     detail.value = null
@@ -441,14 +477,24 @@ function buildInspectionGroups(inspections: InspectionServiceListItem["Inspectio
     return []
   }
 
-  const categoryMap = new Map<string, InspectionServiceInspectionRow[]>()
+  const categoryMap = new Map<string, {
+    title: string
+    categoryUuid: string
+    rows: InspectionServiceInspectionRow[]
+  }>()
 
   inspections.forEach((inspection, index) => {
     const categoryName = toText(inspection.CategoryName, "未分类")
-    const rows = categoryMap.get(categoryName) ?? []
+    const categoryUuid = toText(inspection.CategoryUuid, "") || `inspection-category-name:${categoryName}`
+    const current = categoryMap.get(categoryUuid) ?? {
+      title: categoryName,
+      categoryUuid,
+      rows: [],
+    }
 
-    rows.push({
+    current.rows.push({
       id: toText(inspection.InspectionUuid || inspection.Uuid, `${categoryName}-${index + 1}`),
+      categoryUuid,
       categoryName,
       name: toText(inspection.InspectionName || inspection.Name, `检测项 ${index + 1}`),
       content: toText(inspection.Content, "-"),
@@ -457,14 +503,49 @@ function buildInspectionGroups(inspections: InspectionServiceListItem["Inspectio
       isMeasureRecord: formatInspectionFlag(inspection.IsMeasureRecord),
     })
 
-    categoryMap.set(categoryName, rows)
+    categoryMap.set(categoryUuid, current)
   })
 
-  return Array.from(categoryMap.entries()).map(([categoryName, rows]) => ({
-    key: categoryName,
-    title: categoryName,
-    rows,
+  return Array.from(categoryMap.values()).map(group => ({
+    key: group.categoryUuid,
+    title: group.title,
+    categoryUuid: group.categoryUuid,
+    scorePreset: getCategoryScorePreset(group.categoryUuid),
+    rows: group.rows,
   }))
+}
+
+function buildBuildingInspectionViews(
+  builds: InspectionServiceListItem["Builds"],
+  groups: InspectionServiceInspectionGroup[],
+) {
+  if (!Array.isArray(builds) || !builds.length) {
+    return []
+  }
+
+  return builds.map((build, index) => {
+    const buildUuid = toText(build.BuildUuid, `inspection-service-build-${index + 1}`)
+    const buildName = toText(build.BuildName, `建筑 ${index + 1}`)
+    const parkName = toText(build.ParkName, "未命名园区")
+
+    return {
+      key: buildUuid || `inspection-service-build-${index + 1}`,
+      buildUuid,
+      buildName,
+      parkName,
+      inspectionGroups: groups,
+    }
+  })
+}
+
+function getCategoryScorePreset(categoryUuid: string): InspectionCategoryScorePreset {
+  const current = categoryScorePresets.value[categoryUuid] ?? DEFAULT_CATEGORY_SCORE_PRESET
+
+  return {
+    normal: current.normal,
+    attention: current.attention,
+    risk: current.risk,
+  }
 }
 
 function buildStatusValue(status: unknown): DetailStatusValue {
@@ -668,17 +749,16 @@ function readFileAsDataUrl(file: File) {
         <AlertDescription>{{ errorMessage }}</AlertDescription>
       </Alert>
 
-      <DetailFieldsSkeleton v-if="loading" :sections="2" :rows-per-section="4" />
-
-      <DetailFieldSections v-else-if="detail" :sections="fieldSections" />
-    </template>
-
-    <template #secondary>
-      <div v-if="loading" class="pb-5">
-        <DetailRelationSkeleton :two-data-columns="false" :rows-per-group="3" />
-      </div>
+      <template v-if="loading">
+        <DetailFieldsSkeleton :sections="2" :rows-per-section="4" />
+        <div class="mt-5">
+          <DetailRelationSkeleton :two-data-columns="false" :rows-per-group="3" />
+        </div>
+      </template>
 
       <div v-else-if="detail" class="space-y-5 pb-5">
+        <DetailFieldSections :sections="fieldSections" />
+
         <DetailRelationModule :schema="buildingModule">
           <template #building-action-cell="{ row }">
             <Button
@@ -693,89 +773,154 @@ function readFileAsDataUrl(file: File) {
             </Button>
           </template>
         </DetailRelationModule>
+      </div>
+    </template>
 
+    <template #secondary>
+      <div v-if="loading" class="pb-5">
+        <DetailRelationSkeleton :two-data-columns="false" :rows-per-group="3" />
+      </div>
+
+      <div v-else-if="detail" class="space-y-5 pb-5">
         <section class="detail-relation-module w-full min-w-0 max-w-full">
           <div class="detail-table-scroll">
             <div class="detail-table-frame detail-relation-frame">
               <div class="detail-table-heading-row detail-table-grid detail-relation-grid detail-section-inset items-center">
                 <div class="flex min-w-0 items-center gap-2">
-                  <h2 class="detail-field-section__heading shrink-0 whitespace-nowrap">检测项</h2>
+                  <h2 class="detail-field-section__heading shrink-0 whitespace-nowrap">建筑与检测项</h2>
                   <Badge
                     variant="secondary"
                     class="min-w-6 justify-center rounded-md px-1.5 py-0.5 text-[12px] font-medium leading-none"
                   >
-                    {{ inspectionCount }}
+                    {{ buildingInspectionViews.length }}
                   </Badge>
                 </div>
               </div>
 
               <div
-                v-if="inspectionGroups.length === 0"
+                v-if="buildingInspectionViews.length === 0"
                 class="flex min-h-[min(160px,30vh)] w-full min-w-0 flex-col items-center justify-center px-4 py-12"
               >
                 <Empty class="w-full max-w-md flex-none border-0 bg-transparent shadow-none !p-6 md:!p-8">
                   <EmptyHeader class="max-w-md">
                     <EmptyMedia variant="icon">
-                      <i class="ri-task-line text-[18px]" />
+                      <i class="ri-building-line text-[18px]" />
                     </EmptyMedia>
-                    <EmptyTitle>暂无检测项</EmptyTitle>
-                    <EmptyDescription>当前检测服务还没有配置检测项。</EmptyDescription>
+                    <EmptyTitle>暂无服务建筑</EmptyTitle>
+                    <EmptyDescription>当前检测服务还没有配置建筑。</EmptyDescription>
                   </EmptyHeader>
                 </Empty>
               </div>
 
               <div v-else class="detail-group-stack">
-                <div v-for="group in inspectionGroups" :key="group.key">
-                  <div class="detail-group-divider-row detail-section-inset flex min-w-0 items-center gap-3">
-                    <div class="min-w-0 truncate text-[14px] font-medium text-muted-foreground">{{ group.title }}</div>
-                    <div class="h-px flex-1 bg-border/80" />
-                  </div>
-
-                  <Accordion
-                    v-model="expandedInspectionItemKey"
-                    type="single"
-                    collapsible
-                    class="pb-2"
+                <Accordion
+                  v-model="expandedBuildingKey"
+                  type="single"
+                  collapsible
+                  class="pb-2"
+                >
+                  <AccordionItem
+                    v-for="building in buildingInspectionViews"
+                    :key="building.key"
+                    :value="building.key"
+                    class="mb-3 overflow-hidden rounded-md border border-border/55 bg-background/95 shadow-xs last:mb-0 dark:shadow-[var(--shadow-card)]"
                   >
-                    <AccordionItem
-                      v-for="item in group.rows"
-                      :key="`${group.key}-${item.id}`"
-                      :value="`${group.key}-${item.id}`"
-                      class="mb-2 overflow-hidden rounded-md border border-border/55 bg-background/95 shadow-xs last:mb-0 dark:shadow-[var(--shadow-card)]"
-                    >
-                      <AccordionTrigger class="bg-muted px-3.5 py-3 text-left hover:no-underline data-[state=open]:border-b data-[state=open]:border-border/60">
+                    <AccordionTrigger class="bg-muted px-3.5 py-3 text-left hover:no-underline data-[state=open]:border-b data-[state=open]:border-border/60">
+                      <div class="flex min-w-0 items-center justify-between gap-3">
                         <div class="min-w-0">
                           <div class="truncate text-sm font-semibold text-foreground">
-                            {{ item.name }}
+                            {{ building.buildName }}
+                          </div>
+                          <div class="mt-1 truncate text-xs text-muted-foreground">
+                            {{ building.parkName }} · {{ inspectionCount }} 个检测项
                           </div>
                         </div>
-                      </AccordionTrigger>
+                        <Badge
+                          variant="secondary"
+                          class="min-w-6 shrink-0 justify-center rounded-md px-1.5 py-0.5 text-[12px] font-medium leading-none"
+                        >
+                          {{ building.inspectionGroups.length }}
+                        </Badge>
+                      </div>
+                    </AccordionTrigger>
 
-                      <AccordionContent class="px-3.5 data-[state=closed]:pb-0 data-[state=closed]:pt-0 data-[state=open]:pb-3 data-[state=open]:pt-3 [&>div]:pb-0">
-                        <div class="grid gap-3 text-sm">
-                          <div class="grid gap-1">
-                            <p class="text-xs text-muted-foreground">检测内容</p>
-                            <p class="whitespace-pre-wrap break-words leading-6 text-foreground">{{ item.content }}</p>
-                          </div>
-                          <div class="grid gap-1">
-                            <p class="text-xs text-muted-foreground">检测标准</p>
-                            <p class="whitespace-pre-wrap break-words leading-6 text-foreground">{{ item.standard }}</p>
-                          </div>
-                          <div class="grid grid-cols-2 gap-3 border-t border-border/50 pt-2">
-                            <div>
-                              <p class="text-xs text-muted-foreground">强制拍照</p>
-                              <p class="mt-1 text-foreground">{{ item.forcePhoto }}</p>
+                    <AccordionContent class="px-3.5 data-[state=closed]:pb-0 data-[state=closed]:pt-0 data-[state=open]:pb-3 data-[state=open]:pt-3 [&>div]:pb-0">
+                      <div v-if="building.inspectionGroups.length === 0" class="py-2 text-sm text-muted-foreground">
+                        当前建筑暂无绑定检测项。
+                      </div>
+
+                      <div v-else class="space-y-4">
+                        <div
+                          v-for="group in building.inspectionGroups"
+                          :key="`${building.key}-${group.key}`"
+                          class="space-y-3"
+                        >
+                          <div class="flex flex-col gap-2 rounded-md border border-border/55 bg-muted/20 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
+                            <div class="flex min-w-0 items-center gap-2">
+                              <div class="truncate text-sm font-semibold text-foreground">{{ group.title }}</div>
+                              <Badge
+                                variant="secondary"
+                                class="min-w-6 justify-center rounded-md px-1.5 py-0.5 text-[12px] font-medium leading-none"
+                              >
+                                {{ group.rows.length }}
+                              </Badge>
                             </div>
-                            <div>
-                              <p class="text-xs text-muted-foreground">是否测量数据记录</p>
-                              <p class="mt-1 text-foreground">{{ item.isMeasureRecord }}</p>
+
+                            <div class="flex items-center gap-2">
+                              <span class="text-xs text-muted-foreground">计分预设</span>
+                              <InspectionCategoryScorePresetInline :preset="group.scorePreset" />
                             </div>
                           </div>
+
+                          <Accordion
+                            v-model="expandedInspectionItemKey"
+                            type="single"
+                            collapsible
+                            class="pb-1"
+                          >
+                            <AccordionItem
+                              v-for="item in group.rows"
+                              :key="`${building.key}-${group.key}-${item.id}`"
+                              :value="`${building.key}-${group.key}-${item.id}`"
+                              class="mb-2 overflow-hidden rounded-md border border-border/55 bg-background/95 shadow-xs last:mb-0 dark:shadow-[var(--shadow-card)]"
+                            >
+                              <AccordionTrigger class="bg-background px-3.5 py-3 text-left hover:no-underline data-[state=open]:border-b data-[state=open]:border-border/60">
+                                <div class="min-w-0">
+                                  <div class="truncate text-sm font-semibold text-foreground">
+                                    {{ item.name }}
+                                  </div>
+                                </div>
+                              </AccordionTrigger>
+
+                              <AccordionContent class="px-3.5 data-[state=closed]:pb-0 data-[state=closed]:pt-0 data-[state=open]:pb-3 data-[state=open]:pt-3 [&>div]:pb-0">
+                                <div class="grid gap-3 text-sm">
+                                  <div class="grid gap-1">
+                                    <p class="text-xs text-muted-foreground">检测内容</p>
+                                    <p class="whitespace-pre-wrap break-words leading-6 text-foreground">{{ item.content }}</p>
+                                  </div>
+                                  <div class="grid gap-1">
+                                    <p class="text-xs text-muted-foreground">检测标准</p>
+                                    <p class="whitespace-pre-wrap break-words leading-6 text-foreground">{{ item.standard }}</p>
+                                  </div>
+                                  <div class="grid grid-cols-2 gap-3 border-t border-border/50 pt-2">
+                                    <div>
+                                      <p class="text-xs text-muted-foreground">强制拍照</p>
+                                      <p class="mt-1 text-foreground">{{ item.forcePhoto }}</p>
+                                    </div>
+                                    <div>
+                                      <p class="text-xs text-muted-foreground">是否测量数据记录</p>
+                                      <p class="mt-1 text-foreground">{{ item.isMeasureRecord }}</p>
+                                    </div>
+                                  </div>
+                                </div>
+                              </AccordionContent>
+                            </AccordionItem>
+                          </Accordion>
                         </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  </Accordion>
-                </div>
+                      </div>
+                    </AccordionContent>
+                  </AccordionItem>
+                </Accordion>
               </div>
             </div>
           </div>
