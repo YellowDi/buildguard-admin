@@ -869,8 +869,7 @@ function readFileAsDataUrl(file: File) {
 
                             <div class="h-px flex-1 bg-border/80" />
 
-                            <div class="flex shrink-0 items-center gap-2">
-                              <span class="text-xs text-muted-foreground">分数上限</span>
+                            <div class="flex shrink-0 items-center">
                               <InspectionCategoryScoreLimitInline :limit="group.scoreLimit" />
                             </div>
                           </div>
