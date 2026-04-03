@@ -330,6 +330,12 @@ const categoryScoreLimitFeatureDisabledReason = computed(() => {
 
   return ""
 })
+
+type InspectionCategoryDraftOption = {
+  uuid: string
+  name: string
+}
+
 const isInteractionLocked = computed(() => loadingDetail.value || Boolean(legacyMultiParkMessage.value))
 const canSubmit = computed(() =>
   Boolean(
@@ -601,9 +607,15 @@ function handleScoreLimitPopoverOpenChange(buildUuid: string, open: boolean) {
       return
     }
 
+    const categories = getInspectionCategoriesForConfig(target)
+
+    if (!categories.length) {
+      return
+    }
+
     activeScoreLimitBuildUuid.value = buildUuid
     scoreLimitDraftForms.value = Object.fromEntries(
-      inspectionCategoryOptions.value.map((category) => {
+      categories.map((category) => {
         const existingScoreLimit = target.categoryScoreLimitByCategoryUuid[category.uuid]
         const initialScoreLimit = existingScoreLimit ?? getDefaultCategoryScoreLimit(category.uuid)
 
@@ -649,9 +661,10 @@ function saveScoreLimitDraft(buildUuid: string) {
     return
   }
 
+  const categories = getInspectionCategoriesForConfig(target)
   const nextScoreLimitMap: Record<string, InspectionServiceCategoryScoreLimitDraft> = {}
 
-  for (const category of inspectionCategoryOptions.value) {
+  for (const category of categories) {
     const formState = scoreLimitDraftForms.value[category.uuid]
     const defaultScoreLimit = getDefaultCategoryScoreLimit(category.uuid)
     const rawScoreLimit = formState?.scoreLimit.trim() ?? ""
@@ -1415,6 +1428,51 @@ function buildTemplateCategoryScoreLimitMap(template: TemplateOption) {
   return scoreMap
 }
 
+function getInspectionCategoriesForConfig(config: InspectionServiceBuildingConfig): InspectionCategoryDraftOption[] {
+  const categories = new Map<string, InspectionCategoryDraftOption>()
+
+  for (const inspectionUuid of config.inspectionUuids) {
+    const inspection = inspectionItemByUuid.value.get(inspectionUuid)
+
+    if (!inspection) {
+      continue
+    }
+
+    const fallbackCategory = inspection.categoryName
+      ? inspectionCategoryByName.value.get(inspection.categoryName)
+      : undefined
+    const categoryUuid = inspection.categoryUuid || fallbackCategory?.uuid || ""
+    const categoryName = fallbackCategory?.name || inspection.categoryName || "未分类"
+
+    if (!categoryUuid || categories.has(categoryUuid)) {
+      continue
+    }
+
+    categories.set(categoryUuid, {
+      uuid: categoryUuid,
+      name: categoryName,
+    })
+  }
+
+  return Array.from(categories.values())
+}
+
+function getCategoryScoreLimitActionDisabledReason(config: InspectionServiceBuildingConfig) {
+  if (categoryScoreLimitFeatureDisabledReason.value) {
+    return categoryScoreLimitFeatureDisabledReason.value
+  }
+
+  if (!config.inspectionUuids.length) {
+    return "请先为当前建筑选择检测项。"
+  }
+
+  if (!getInspectionCategoriesForConfig(config).length) {
+    return "当前建筑没有可配置分数上限的检测分类。"
+  }
+
+  return ""
+}
+
 function getBuildingInspectionSummary(config: InspectionServiceBuildingConfig) {
   if (!config.inspectionUuids.length) {
     return "当前未配置检测项。"
@@ -1892,8 +1950,8 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
                           variant="outline"
                           type="button"
                           class="size-7 px-0"
-                          :disabled="Boolean(categoryScoreLimitFeatureDisabledReason) || Boolean(legacyMultiParkMessage)"
-                          :title="categoryScoreLimitFeatureDisabledReason || '配置分数上限'"
+                          :disabled="Boolean(getCategoryScoreLimitActionDisabledReason(config)) || Boolean(legacyMultiParkMessage)"
+                          :title="getCategoryScoreLimitActionDisabledReason(config) || '配置分数上限'"
                         >
                           <i class="ri-settings-3-line text-[13px]" />
                           <span class="sr-only">分数上限</span>
@@ -1910,7 +1968,13 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
 
                         <div class="max-h-[26rem] overflow-y-auto px-4 py-2">
                           <div
-                            v-for="category in inspectionCategoryOptions"
+                            v-if="!getInspectionCategoriesForConfig(config).length"
+                            class="py-6 text-sm text-muted-foreground"
+                          >
+                            当前建筑暂无已选检测项分类可配置。
+                          </div>
+                          <div
+                            v-for="category in getInspectionCategoriesForConfig(config)"
                             :key="`${config.buildUuid}-${category.uuid}`"
                             class="flex items-center justify-between gap-4 border-b border-dashed border-border/60 py-3 last:border-b-0"
                           >
