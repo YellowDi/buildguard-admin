@@ -4,6 +4,7 @@ export type InspectionPlanRecord = {
   id: string
   uuid: string
   customerUuid: string
+  serviceUuid: string
   code: string
   planName: string
   serviceName: string
@@ -60,6 +61,7 @@ function normalizeInspectionPlanRecord(value: unknown): InspectionPlanRecord {
     id: getString(record?.Uuid ?? record?.Id ?? record?.Code, fallbackId),
     uuid: getString(record?.Uuid, "-"),
     customerUuid: getString(record?.CustomerUuid, ""),
+    serviceUuid: getString(record?.ServiceUuid ?? record?.serviceUuid, ""),
     code: getString(record?.Code ?? record?.code, fallbackId),
     planName: getString(record?.PlanName ?? record?.Name ?? record?.planName, serviceName === "-" ? "检测计划" : `${serviceName}计划`),
     serviceName,

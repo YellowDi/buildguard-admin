@@ -85,6 +85,7 @@ const schema: TablePageSchema<InspectionPlanRecord> = {
       key: "serviceName",
       label: "服务名称",
       filterType: "text",
+      slot: "cell-serviceName",
       filter: {
         type: "text",
         placeholder: "输入服务名称",
@@ -257,6 +258,19 @@ function jumpToCustomerDetail(row: InspectionPlanRecord) {
   })
 }
 
+function jumpToServiceDetail(row: InspectionPlanRecord) {
+  if (!row.serviceUuid) {
+    toast.error("当前检测计划缺少服务 Uuid，无法跳转检测服务详情")
+    return
+  }
+
+  void router.push({
+    name: "inspection-service-detail",
+    params: { id: row.serviceUuid },
+    query: row.customerUuid ? { customerUuid: row.customerUuid } : undefined,
+  })
+}
+
 function extractDatePart(value: string) {
   const [datePart] = value.split(" ")
   return datePart ?? ""
@@ -357,6 +371,7 @@ function buildPageFilterText(row: InspectionPlanRecord) {
     row.serviceName,
     row.customerName,
     row.customerUuid,
+    row.serviceUuid,
     row.cycleDays ?? "",
     row.cycle,
     row.workOrderDuration,
@@ -391,6 +406,17 @@ function asInspectionPlanRecord(row: Record<string, unknown>): InspectionPlanRec
             @click.stop="jumpToCustomerDetail(asInspectionPlanRecord(row))"
           >
             <span class="truncate">{{ row.customerName }}</span>
+            <i class="ri-arrow-right-up-line shrink-0 text-sm" />
+          </button>
+        </template>
+
+        <template #cell-serviceName="{ row }">
+          <button
+            type="button"
+            class="inline-flex max-w-full items-center gap-1 text-left text-[#2B67F6] transition-colors hover:text-[#1D4ED8]"
+            @click.stop="jumpToServiceDetail(asInspectionPlanRecord(row))"
+          >
+            <span class="truncate">{{ row.serviceName }}</span>
             <i class="ri-arrow-right-up-line shrink-0 text-sm" />
           </button>
         </template>
