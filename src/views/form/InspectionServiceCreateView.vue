@@ -43,10 +43,6 @@ import { fetchBuildings, type BuildingListItem } from "@/lib/buildings-api"
 import { fetchCustomers, type CustomerListItem } from "@/lib/customers-api"
 import { fetchInspectionCategories, type InspectionCategoryRecord } from "@/lib/inspection-categories-api"
 import {
-  readInspectionCategoryScoreLimits,
-  type InspectionCategoryScoreLimit,
-} from "@/lib/inspection-category-score-limits"
-import {
   fetchInspectionServiceTemplates,
   type InspectionServiceTemplateRecord,
 } from "@/lib/inspection-service-templates-api"
@@ -119,8 +115,9 @@ type InspectionCategoryOption = {
   name: string
 }
 
+type InspectionCategoryScoreLimit = number | null
+
 const DEFAULT_LEVEL_OPTIONS = ["S级", "A级", "B级", "C级"] as const
-const DEFAULT_CATEGORY_SCORE_LIMIT: InspectionCategoryScoreLimit = 20
 
 function createEmptyBaseForm(): InspectionServiceBaseForm {
   return {
@@ -160,7 +157,7 @@ function cloneBuildingConfigs(configs: InspectionServiceBuildingConfig[]) {
 
 function createCategoryScoreLimitForm(scoreLimit: InspectionCategoryScoreLimit): InspectionServiceCategoryScoreLimitForm {
   return {
-    scoreLimit: String(scoreLimit),
+    scoreLimit: scoreLimit === null ? "" : String(scoreLimit),
   }
 }
 
@@ -646,14 +643,24 @@ function saveScoreLimitDraft(buildUuid: string) {
 
   for (const category of inspectionCategoryOptions.value) {
     const formState = scoreLimitDraftForms.value[category.uuid]
+    const defaultScoreLimit = getDefaultCategoryScoreLimit(category.uuid)
+    const rawScoreLimit = formState?.scoreLimit.trim() ?? ""
+
+    if (!rawScoreLimit) {
+      if (defaultScoreLimit === null) {
+        continue
+      }
+
+      toast.error(`请检查 ${category.name} 的分数上限，需为非负整数。`)
+      return
+    }
+
     const parsedScoreLimit = parseScoreLimitForm(formState)
 
     if (parsedScoreLimit === null) {
       toast.error(`请检查 ${category.name} 的分数上限，需为非负整数。`)
       return
     }
-
-    const defaultScoreLimit = getDefaultCategoryScoreLimit(category.uuid)
 
     if (!isSameScoreLimit(parsedScoreLimit, defaultScoreLimit)) {
       nextScoreLimitMap[category.uuid] = parsedScoreLimit
@@ -666,7 +673,7 @@ function saveScoreLimitDraft(buildUuid: string) {
   toast.success("分数上限已更新", {
     description: Object.keys(nextScoreLimitMap).length
       ? `${target.buildName} 已配置 ${Object.keys(nextScoreLimitMap).length} 个分类的服务内分数上限。`
-      : `${target.buildName} 已恢复为默认分数上限。`,
+      : `${target.buildName} 已恢复为分类接口分数上限。`,
   })
 }
 
@@ -680,7 +687,7 @@ function clearScoreLimitOverrides(buildUuid: string) {
   target.categoryScoreLimitByCategoryUuid = {}
   closeScoreLimitPopover()
 
-  toast.success("已恢复默认分数上限", {
+  toast.success("已恢复分类分数上限", {
     description: `${target.buildName} 当前不再使用服务内自定义分数上限。`,
   })
 }
@@ -799,7 +806,7 @@ async function handleReset() {
 async function loadInitialOptions() {
   loadError.value = ""
   customerLoading.value = true
-  globalCategoryScoreLimits.value = readInspectionCategoryScoreLimits()
+  globalCategoryScoreLimits.value = {}
 
   try {
     const [customers] = await Promise.all([
@@ -1153,12 +1160,19 @@ async function loadInspectionCategoryOptions() {
 
   try {
     const result = await fetchInspectionCategories()
+    globalCategoryScoreLimits.value = Object.fromEntries(
+      result.list.map((item, index) => {
+        const option = normalizeInspectionCategoryOption(item, index)
+        return [option.uuid, resolveInspectionCategoryScoreLimit(item)]
+      }),
+    )
     inspectionCategoryOptions.value = result.list
       .map((item, index) => normalizeInspectionCategoryOption(item, index))
       .filter(item => item.uuid)
       .sort((left, right) => left.name.localeCompare(right.name, "zh-Hans-CN"))
     return inspectionCategoryOptions.value
   } catch (error) {
+    globalCategoryScoreLimits.value = {}
     inspectionCategoryOptions.value = []
     inspectionCategoryError.value = handleApiError(error, {
       mode: "silent",
@@ -1321,7 +1335,7 @@ function getBuildingScoreLimitSummary(config: InspectionServiceBuildingConfig) {
   const categoryUuids = Object.keys(config.categoryScoreLimitByCategoryUuid)
 
   if (!categoryUuids.length) {
-    return "使用默认分数上限"
+    return "使用分类接口分数上限"
   }
 
   const previewNames = categoryUuids
@@ -1336,7 +1350,27 @@ function getBuildingScoreLimitSummary(config: InspectionServiceBuildingConfig) {
 }
 
 function getDefaultCategoryScoreLimit(categoryUuid: string): InspectionCategoryScoreLimit {
-  return globalCategoryScoreLimits.value[categoryUuid] ?? DEFAULT_CATEGORY_SCORE_LIMIT
+  return categoryUuid in globalCategoryScoreLimits.value
+    ? globalCategoryScoreLimits.value[categoryUuid]
+    : null
+}
+
+function resolveInspectionCategoryScoreLimit(item: InspectionCategoryRecord) {
+  const value = item.Score
+
+  if (typeof value === "number" && Number.isFinite(value) && value >= 0) {
+    return Math.round(value)
+  }
+
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value)
+
+    if (Number.isFinite(parsed) && parsed >= 0) {
+      return Math.round(parsed)
+    }
+  }
+
+  return null
 }
 
 function parseScoreLimitForm(formState: InspectionServiceCategoryScoreLimitForm | undefined) {
@@ -1754,7 +1788,7 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
                         <div class="border-b border-border/60 px-4 py-3">
                           <p class="text-sm font-semibold text-foreground">分数上限</p>
                           <p class="mt-1 text-xs leading-5 text-muted-foreground">
-                            未改动时会使用默认分数上限。
+                            未改动时会使用分类接口返回的分数上限。
                           </p>
                         </div>
 

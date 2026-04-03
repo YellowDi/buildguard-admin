@@ -1,5 +1,5 @@
 import { createHttpError, readResponseBody } from "@/lib/api-errors"
-import { API_PATHS, buildApiHeaders, buildApiUrl } from "@/lib/api"
+import { API_PATHS, buildApiHeaders, buildApiRequestUrl, buildApiUrl } from "@/lib/api"
 
 type InspectionCategoriesListEnvelope = {
   Total?: number
@@ -13,6 +13,7 @@ export type InspectionCategoryRecord = {
   Uuid?: string
   Id?: number
   Name?: string
+  Score?: number
   Total?: number
   [property: string]: unknown
 }
@@ -24,12 +25,19 @@ export type InspectionCategoriesListResult = {
 
 export type CreateInspectionCategoryPayload = {
   Name: string
+  Score: number
+  [property: string]: unknown
+}
+
+export type InspectionCategoryDetailPayload = {
+  Uuid?: string
   [property: string]: unknown
 }
 
 export type UpdateInspectionCategoryPayload = {
   Uuid: string
   Name: string
+  Score: number
   [property: string]: unknown
 }
 
@@ -44,6 +52,7 @@ const INSPECTION_CATEGORY_UPDATE_API_URL = buildApiUrl(API_PATHS.inspectionCateg
 const INSPECTION_CATEGORY_DELETE_API_URL = buildApiUrl(API_PATHS.inspectionCategoryDelete)
 const INSPECTION_CATEGORIES_LOAD_ERROR_MESSAGE = "检测项分类列表加载失败，请稍后重试。"
 const INSPECTION_CATEGORY_CREATE_ERROR_MESSAGE = "检测项分类创建失败，请稍后重试。"
+const INSPECTION_CATEGORY_DETAIL_ERROR_MESSAGE = "检测项分类详情加载失败，请稍后重试。"
 const INSPECTION_CATEGORY_UPDATE_ERROR_MESSAGE = "检测项分类更新失败，请稍后重试。"
 const INSPECTION_CATEGORY_DELETE_ERROR_MESSAGE = "检测项分类删除失败，请稍后重试。"
 
@@ -77,12 +86,32 @@ export async function createInspectionCategory(payload: CreateInspectionCategory
     }),
     body: JSON.stringify({
       Name: getRequiredString(payload.Name, "Name"),
+      Score: getRequiredNonNegativeInteger(payload.Score, "Score"),
     }),
   })
   const responseBody = await readResponseBody(response)
 
   if (!response.ok) {
     throw createHttpError(response, responseBody, INSPECTION_CATEGORY_CREATE_ERROR_MESSAGE)
+  }
+
+  return extractDetailRecord(responseBody)
+}
+
+export async function getInspectionCategoryDetail(
+  payload: InspectionCategoryDetailPayload,
+): Promise<InspectionCategoryRecord> {
+  const url = buildApiRequestUrl(API_PATHS.inspectionCategoryDetail)
+  url.searchParams.set("Uuid", getRequiredString(payload.Uuid, "Uuid"))
+
+  const response = await fetch(url.toString(), {
+    method: "GET",
+    headers: buildApiHeaders(),
+  })
+  const responseBody = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responseBody, INSPECTION_CATEGORY_DETAIL_ERROR_MESSAGE)
   }
 
   return extractDetailRecord(responseBody)
@@ -97,6 +126,7 @@ export async function updateInspectionCategory(payload: UpdateInspectionCategory
     body: JSON.stringify({
       Uuid: getRequiredString(payload.Uuid, "Uuid"),
       Name: getRequiredString(payload.Name, "Name"),
+      Score: getRequiredNonNegativeInteger(payload.Score, "Score"),
     }),
   })
   const responseBody = await readResponseBody(response)
@@ -207,4 +237,20 @@ function getRequiredString(value: unknown, fieldName: string) {
   }
 
   throw new TypeError(`${fieldName} is required`)
+}
+
+function getRequiredNonNegativeInteger(value: unknown, fieldName: string) {
+  if (typeof value === "number" && Number.isInteger(value) && value >= 0) {
+    return value
+  }
+
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value)
+
+    if (Number.isInteger(parsed) && parsed >= 0) {
+      return parsed
+    }
+  }
+
+  throw new TypeError(`${fieldName} must be a non-negative integer`)
 }

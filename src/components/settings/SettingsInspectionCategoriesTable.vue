@@ -36,15 +36,10 @@ import TablePageTable from "@/components/table-page/TablePageTable.vue"
 import type { TableColumn, TablePageEmptyState } from "@/components/table-page/types"
 import { handleApiError } from "@/lib/api-errors"
 import {
-  readInspectionCategoryScoreLimits,
-  removeInspectionCategoryScoreLimit,
-  writeInspectionCategoryScoreLimit,
-  type InspectionCategoryScoreLimit,
-} from "@/lib/inspection-category-score-limits"
-import {
   createInspectionCategory,
   deleteInspectionCategory,
   fetchInspectionCategories,
+  getInspectionCategoryDetail,
   type InspectionCategoryRecord,
   updateInspectionCategory,
 } from "@/lib/inspection-categories-api"
@@ -62,6 +57,8 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{
   countChange: [count: number]
 }>()
+
+type InspectionCategoryScoreLimit = number | null
 
 type InspectionCategoryRow = {
   id: number
@@ -87,6 +84,7 @@ const editDialogOpen = ref(false)
 const createSubmitting = ref(false)
 const editSubmitting = ref(false)
 const deleteSubmitting = ref(false)
+const editDetailLoading = ref(false)
 const deleteConfirmOpen = ref(false)
 const createSubmitArmed = ref(false)
 const editSubmitArmed = ref(false)
@@ -180,8 +178,7 @@ async function loadInspectionCategories() {
 
   try {
     const result = await fetchInspectionCategories()
-    const scoreLimits = readInspectionCategoryScoreLimits()
-    rows.value = result.list.map((item, index) => normalizeInspectionCategory(item, index, scoreLimits))
+    rows.value = result.list.map((item, index) => normalizeInspectionCategory(item, index))
     emit("countChange", rows.value.length)
   } catch (error) {
     errorMessage.value = handleApiError(error, {
@@ -209,19 +206,48 @@ function openCreateDialog() {
   createDialogOpen.value = true
 }
 
-function openEditDialog(row: InspectionCategoryRow) {
+async function openEditDialog(row: InspectionCategoryRow) {
   editingCategoryId.value = row.id
   editForm.value = {
     name: row.name,
-    scoreLimit: String(row.scoreLimit),
+    scoreLimit: formatScoreLimitFieldValue(row.scoreLimit),
   }
+  editDetailLoading.value = true
   editSubmitArmed.value = false
   editDialogOpen.value = true
+
+  try {
+    const detail = await getInspectionCategoryDetail({
+      Uuid: row.uuid,
+    })
+    const detailRow = normalizeInspectionCategory(
+      detail,
+      rows.value.findIndex(item => item.id === row.id),
+      row,
+    )
+
+    if (editingCategoryId.value === row.id) {
+      editForm.value = {
+        name: detailRow.name,
+        scoreLimit: formatScoreLimitFieldValue(detailRow.scoreLimit),
+      }
+    }
+  } catch (error) {
+    handleApiError(error, {
+      title: "检测项分类详情加载失败",
+      fallback: "检测项分类详情加载失败，请稍后重试。",
+    })
+  } finally {
+    if (editingCategoryId.value === row.id) {
+      editDetailLoading.value = false
+    }
+  }
 }
 
 function closeEditDialog() {
   editDialogOpen.value = false
   editingCategoryId.value = null
+  editDetailLoading.value = false
   editSubmitArmed.value = false
   editForm.value = createInspectionCategoryForm()
 }
@@ -248,6 +274,7 @@ async function submitCreate() {
   try {
     const response = await createInspectionCategory({
       Name: createForm.value.name.trim(),
+      Score: nextScoreLimit,
     })
 
     const nextId = Number.isFinite(Number(response.Id)) ? Number(response.Id) : createLocalId()
@@ -256,12 +283,10 @@ async function submitCreate() {
       ...response,
       Id: nextId,
       Name: createForm.value.name.trim(),
+      Score: nextScoreLimit,
       Uuid: nextUuid,
-    }, rows.value.length, {
-      [nextUuid]: nextScoreLimit,
-    })
+    }, rows.value.length)
 
-    writeInspectionCategoryScoreLimit(nextRow.uuid, nextScoreLimit)
     rows.value = [nextRow, ...rows.value]
     emit("countChange", rows.value.length)
     createDialogOpen.value = false
@@ -304,12 +329,12 @@ async function submitEdit() {
     await updateInspectionCategory({
       Uuid: currentRow.uuid,
       Name: editForm.value.name.trim(),
+      Score: nextScoreLimit,
     })
 
     currentRow.name = editForm.value.name.trim()
     currentRow.scoreLimit = nextScoreLimit
     currentRow.scoreLimitSearchText = buildScoreLimitSearchText(nextScoreLimit)
-    writeInspectionCategoryScoreLimit(currentRow.uuid, nextScoreLimit)
     closeEditDialog()
     toast.success("检测项分类已更新", {
       description: `${currentRow.name} 的名称和分数上限已保存。`,
@@ -349,7 +374,6 @@ async function confirmDeleteEditingCategory() {
     })
 
     rows.value = rows.value.filter(row => row.id !== currentRow.id)
-    removeInspectionCategoryScoreLimit(currentRow.uuid)
     emit("countChange", rows.value.length)
     deleteConfirmOpen.value = false
     closeEditDialog()
@@ -369,16 +393,16 @@ async function confirmDeleteEditingCategory() {
 function normalizeInspectionCategory(
   item: InspectionCategoryRecord,
   index: number,
-  scoreLimits: Record<string, InspectionCategoryScoreLimit>,
+  fallbackRow?: InspectionCategoryRow,
 ): InspectionCategoryRow {
   const id = Number.isFinite(Number(item.Id)) ? Number(item.Id) : index + 1
   const uuid = toText(item.Uuid, `category-${id}`)
-  const scoreLimit = scoreLimits[uuid] ?? createDefaultScoreLimit()
+  const scoreLimit = toScoreLimit(item.Score, fallbackRow?.scoreLimit ?? null)
 
   return {
     id,
     uuid,
-    name: toText(item.Name, `分类 ${id}`),
+    name: toText(item.Name, fallbackRow?.name || `分类 ${id}`),
     scoreLimit,
     scoreLimitSearchText: buildScoreLimitSearchText(scoreLimit),
   }
@@ -391,12 +415,18 @@ function toText(value: unknown, fallback = "") {
 function createInspectionCategoryForm(): InspectionCategoryForm {
   return {
     name: "",
-    scoreLimit: String(createDefaultScoreLimit()),
+    scoreLimit: "",
   }
 }
 
-function createDefaultScoreLimit(): InspectionCategoryScoreLimit {
-  return 20
+function toScoreLimit(value: unknown, fallback: InspectionCategoryScoreLimit) {
+  const parsed = typeof value === "number" ? value : typeof value === "string" && value.trim() ? Number(value) : NaN
+
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    return fallback
+  }
+
+  return Math.round(parsed)
 }
 
 function parseInspectionCategoryScoreLimitForm(form: InspectionCategoryForm): InspectionCategoryScoreLimit | null {
@@ -422,7 +452,13 @@ function isInspectionCategoryFormValid(form: InspectionCategoryForm) {
 }
 
 function buildScoreLimitSearchText(scoreLimit: InspectionCategoryScoreLimit) {
-  return ["分数上限", String(scoreLimit)].join(" ")
+  return scoreLimit === null
+    ? "分数上限 未设置"
+    : ["分数上限", String(scoreLimit)].join(" ")
+}
+
+function formatScoreLimitFieldValue(scoreLimit: InspectionCategoryScoreLimit) {
+  return scoreLimit === null ? "" : String(scoreLimit)
 }
 
 function createLocalId() {
@@ -511,7 +547,7 @@ defineExpose({
       <DialogContent class="sm:max-w-[640px]">
         <DialogHeader>
           <DialogTitle>添加检测项分类</DialogTitle>
-          <DialogDescription>添加一个检测项分类，并设置该分类的默认分数上限。</DialogDescription>
+          <DialogDescription>添加一个检测项分类，并填写该分类的分数上限。</DialogDescription>
         </DialogHeader>
 
         <form class="grid gap-4" @submit.prevent>
@@ -525,10 +561,7 @@ defineExpose({
           </div>
 
           <div class="grid gap-2">
-            <div class="flex items-center justify-between gap-3">
-              <label class="text-sm font-medium text-foreground" for="create-inspection-category-score-limit">分数上限</label>
-              <span class="text-xs text-muted-foreground">默认 20 分</span>
-            </div>
+            <label class="text-sm font-medium text-foreground" for="create-inspection-category-score-limit">分数上限</label>
             <Input
               id="create-inspection-category-score-limit"
               v-model="createForm.scoreLimit"
@@ -562,7 +595,9 @@ defineExpose({
       <DialogContent class="sm:max-w-[640px]">
         <DialogHeader>
           <DialogTitle>修改检测项分类</DialogTitle>
-          <DialogDescription>更新当前分类名称和默认分数上限，调整后会同步应用到分类列表中。</DialogDescription>
+          <DialogDescription>
+            {{ editDetailLoading ? "正在同步分类详情..." : "更新当前分类名称和分数上限，调整后会同步应用到分类列表中。" }}
+          </DialogDescription>
         </DialogHeader>
 
         <form class="grid gap-4" @submit.prevent>
@@ -571,18 +606,17 @@ defineExpose({
             <Input
               id="edit-inspection-category-name"
               v-model="editForm.name"
+              :disabled="editDetailLoading || editSubmitting || deleteSubmitting"
               placeholder="例如：消防设施"
             />
           </div>
 
           <div class="grid gap-2">
-            <div class="flex items-center justify-between gap-3">
-              <label class="text-sm font-medium text-foreground" for="edit-inspection-category-score-limit">分数上限</label>
-              <span class="text-xs text-muted-foreground">默认 20 分</span>
-            </div>
+            <label class="text-sm font-medium text-foreground" for="edit-inspection-category-score-limit">分数上限</label>
             <Input
               id="edit-inspection-category-score-limit"
               v-model="editForm.scoreLimit"
+              :disabled="editDetailLoading || editSubmitting || deleteSubmitting"
               type="number"
               inputmode="numeric"
               min="0"
@@ -610,7 +644,7 @@ defineExpose({
               </Button>
               <Button
                 type="button"
-                :disabled="editSubmitting || deleteSubmitting || !editFormValid"
+                :disabled="editDetailLoading || editSubmitting || deleteSubmitting || !editFormValid"
                 @click.stop.prevent="requestEditSubmit"
               >
                 <i v-if="editSubmitting" class="ri-loader-4-line animate-spin text-base" />

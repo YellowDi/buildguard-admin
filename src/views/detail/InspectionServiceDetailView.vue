@@ -31,13 +31,15 @@ import { detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
 import DetailLayout from "@/layouts/DetailLayout.vue"
 import { buildApiRequestUrl } from "@/lib/api"
 import { handleApiError } from "@/lib/api-errors"
-import { readInspectionCategoryScoreLimits, type InspectionCategoryScoreLimit } from "@/lib/inspection-category-score-limits"
+import { fetchInspectionCategories, type InspectionCategoryRecord } from "@/lib/inspection-categories-api"
 import {
   deleteInspectionService,
   fetchInspectionServiceDetail,
   type InspectionServiceListItem,
   updateInspectionServiceContract,
 } from "@/lib/inspection-services-api"
+
+type InspectionCategoryScoreLimit = number | null
 
 type InspectionServiceBuildingRow = {
   id: string
@@ -72,8 +74,6 @@ type InspectionServiceBuildingInspectionView = {
   parkName: string
   inspectionGroups: InspectionServiceInspectionGroup[]
 }
-
-const DEFAULT_CATEGORY_SCORE_LIMIT: InspectionCategoryScoreLimit = 20
 
 const route = useRoute()
 const router = useRouter()
@@ -383,7 +383,7 @@ async function submitUploadContract() {
 
 async function loadInspectionServiceDetail(uuid: string) {
   const requestId = ++latestRequestId
-  categoryScoreLimits.value = readInspectionCategoryScoreLimits()
+  categoryScoreLimits.value = {}
 
   if (!uuid) {
     detail.value = null
@@ -395,15 +395,25 @@ async function loadInspectionServiceDetail(uuid: string) {
   errorMessage.value = ""
 
   try {
-    const result = await fetchInspectionServiceDetail({
-      Uuid: uuid,
-    })
+    const [detailResult, categoryResult] = await Promise.allSettled([
+      fetchInspectionServiceDetail({
+        Uuid: uuid,
+      }),
+      fetchInspectionCategories(),
+    ])
+
+    if (detailResult.status !== "fulfilled") {
+      throw detailResult.reason
+    }
 
     if (requestId !== latestRequestId) {
       return
     }
 
-    detail.value = result
+    detail.value = detailResult.value
+    categoryScoreLimits.value = categoryResult.status === "fulfilled"
+      ? buildCategoryScoreLimitMap(categoryResult.value.list)
+      : {}
   } catch (error) {
     if (requestId !== latestRequestId) {
       return
@@ -516,7 +526,37 @@ function buildBuildingInspectionViews(
 }
 
 function getCategoryScoreLimit(categoryUuid: string): InspectionCategoryScoreLimit {
-  return categoryScoreLimits.value[categoryUuid] ?? DEFAULT_CATEGORY_SCORE_LIMIT
+  return categoryUuid in categoryScoreLimits.value
+    ? categoryScoreLimits.value[categoryUuid]
+    : null
+}
+
+function buildCategoryScoreLimitMap(list: InspectionCategoryRecord[]) {
+  return Object.fromEntries(
+    list.map((item, index) => {
+      const name = toText(item.Name, `分类 ${toText(item.Id, String(index + 1))}`)
+      const uuid = toText(item.Uuid, `inspection-category-name:${name}`)
+      return [uuid, resolveInspectionCategoryScoreLimit(item)]
+    }),
+  )
+}
+
+function resolveInspectionCategoryScoreLimit(item: InspectionCategoryRecord) {
+  const value = item.Score
+
+  if (typeof value === "number" && Number.isFinite(value) && value >= 0) {
+    return Math.round(value)
+  }
+
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value)
+
+    if (Number.isFinite(parsed) && parsed >= 0) {
+      return Math.round(parsed)
+    }
+  }
+
+  return null
 }
 
 function buildStatusValue(status: unknown): DetailStatusValue {

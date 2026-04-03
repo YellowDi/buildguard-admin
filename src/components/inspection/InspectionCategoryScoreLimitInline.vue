@@ -4,12 +4,16 @@ import type { HTMLAttributes } from "vue"
 import { cn } from "@/lib/utils"
 
 const props = defineProps<{
-  limit: number
+  limit: number | null | undefined
   class?: HTMLAttributes["class"]
 }>()
 
-function formatLimit(limit: number) {
-  return Number.isFinite(limit) ? Math.round(limit) : 0
+function hasLimit(limit: number | null | undefined) {
+  return typeof limit === "number" && Number.isFinite(limit)
+}
+
+function formatLimit(limit: number | null | undefined) {
+  return hasLimit(limit) ? Math.round(limit as number) : "--"
 }
 </script>
 
@@ -22,6 +26,6 @@ function formatLimit(limit: number) {
   >
     <span class="text-muted-foreground">上限</span>
     <span class="font-semibold tabular-nums text-foreground">{{ formatLimit(props.limit) }}</span>
-    <span class="text-muted-foreground">分</span>
+    <span v-if="hasLimit(props.limit)" class="text-muted-foreground">分</span>
   </div>
 </template>
