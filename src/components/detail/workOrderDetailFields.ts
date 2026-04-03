@@ -16,7 +16,7 @@ export function buildWorkOrderPrimarySections(
       title: "基本信息",
       rows: [
         { key: "order-no", label: "工单标号", value: toText(workOrder.OrderNo, "-") },
-        { key: "package-name", label: "检测服务", value: toText(workOrder.PackageName, "-") },
+        { key: "package-name", label: "检测服务", value: toText(workOrder.ServiceName, toText(workOrder.PackageName, "-")) },
         { key: "plan-name", label: "检测计划", value: toText(workOrder.PlanName, "-") },
         { key: "deadline", label: "截止时间", value: formatDateOnly(toText(workOrder.Deadline, "-")) },
         { key: "created-at", label: "创建时间", value: toText(workOrder.CreatedAt, "-") },
@@ -28,7 +28,7 @@ export function buildWorkOrderPrimarySections(
       title: "客户信息",
       rows: [
         { key: "customer-name", label: "客户名称", value: toText(customer?.CorpName, toText(workOrder.CustomerName, "-")) },
-        { key: "park-building", label: "园区/建筑", value: "-" },
+        { key: "park-name", label: "园区", value: toText(workOrder.ParkName, "-") },
         {
           key: "address",
           label: "地址",
@@ -50,28 +50,7 @@ export function buildWorkOrderPrimarySections(
 }
 
 export function buildWorkOrderSecondarySections(workOrder: WorkOrderDetailResult | null): DetailFieldSection[] {
-  if (!workOrder) {
-    return []
-  }
-
-  return [
-    {
-      key: "work-order-report-suggestion",
-      title: "报告建议",
-      rows: [
-        { key: "remark", label: "建议内容", value: toText(workOrder.Remark, "-"), truncate: false, valueClass: "leading-6" },
-      ],
-    },
-    {
-      key: "work-order-result",
-      title: "检测结果",
-      rows: [
-        { key: "status", label: "状态", value: formatWorkOrderStatus(workOrder.Status) },
-        { key: "result", label: "检测结果", value: formatWorkOrderResult(workOrder.Result) },
-        { key: "score", label: "评分", value: formatWorkOrderScore(workOrder.Score) },
-      ],
-    },
-  ]
+  return []
 }
 
 export function toText(value: unknown, fallback = "") {
@@ -94,35 +73,6 @@ function formatDateOnly(value: string) {
 
   const [datePart] = normalized.split(/[ T]/)
   return datePart || normalized
-}
-
-function formatWorkOrderStatus(value: unknown) {
-  const status = toNumber(value)
-
-  if (status === null) return "-"
-  if (status === 1) return "待指派"
-  if (status === 2) return "待开始"
-  if (status === 3) return "进行中"
-  if (status === 4) return "报告生成中"
-  if (status === 5) return "已结单"
-
-  return `状态 ${status}`
-}
-
-function formatWorkOrderResult(value: unknown) {
-  const result = toNumber(value)
-
-  if (result === null || result === 0) return "未反馈"
-  if (result === 1) return "正常"
-  if (result === 2) return "异常"
-  if (result === 3) return "已驳回"
-
-  return `结果 ${result}`
-}
-
-function formatWorkOrderScore(value: unknown) {
-  const score = toNumber(value)
-  return score === null ? "-" : String(score)
 }
 
 function toNumber(value: unknown) {

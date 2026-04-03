@@ -16,11 +16,15 @@ export type WorkOrderListItem = {
   PlanUuid?: string
   PlanName?: string
   PackageName?: string
+  ServiceName?: string
+  ServiceUuid?: string
   CustomerUuid?: string
   CorpName?: string
   CustomerName?: string
+  ParkUuid?: string
   ParkName?: string
   BuildName?: string
+  Builds?: WorkOrderBuildInfo[]
   Deadline?: string
   Executor?: string
   Status?: number
@@ -29,6 +33,22 @@ export type WorkOrderListItem = {
   Remark?: string
   CreatedAt?: string
   UpdatedAt?: string
+  [property: string]: unknown
+}
+
+export type WorkOrderBuildInfo = {
+  BuildName?: string
+  BuildUuid?: string
+  InspectionItems?: WorkOrderBuildInspectionItem[]
+  Score?: number
+  [property: string]: unknown
+}
+
+export type WorkOrderBuildInspectionItem = {
+  InspectionItemName?: string
+  InspectionItemUuid?: string
+  Score?: number
+  UserName?: string
   [property: string]: unknown
 }
 
@@ -425,11 +445,15 @@ function normalizeWorkOrderListItem(value: unknown): WorkOrderListItem {
     PlanUuid: getFirstText(record, ["PlanUuid", "planUuid"]),
     PlanName: getFirstText(record, ["PlanName", "planName", "InspectionPlanName", "inspectionPlanName", "Name", "name"]),
     PackageName: getFirstText(record, ["PackageName", "packageName", "ServiceName", "serviceName"]),
+    ServiceName: getFirstText(record, ["ServiceName", "serviceName", "PackageName", "packageName"]),
+    ServiceUuid: getFirstText(record, ["ServiceUuid", "serviceUuid"]),
     CustomerUuid: getFirstText(record, ["CustomerUuid", "customerUuid"]),
     CorpName: getFirstText(record, ["CorpName", "corpName", "CompanyName", "companyName", "CustomerName", "customerName"]),
     CustomerName: getFirstText(record, ["CustomerName", "customerName", "CorpName", "corpName", "CompanyName", "companyName"]),
+    ParkUuid: getFirstText(record, ["ParkUuid", "parkUuid"]),
     ParkName: getFirstText(record, ["ParkName", "parkName"]),
     BuildName: getFirstText(record, ["BuildName", "buildName", "BuildingName", "buildingName"]),
+    Builds: normalizeWorkOrderBuildInfos(record.Builds),
     Deadline: getFirstText(record, ["Deadline", "deadline", "ExpireAt", "expireAt", "DueAt", "dueAt"]),
     Executor: getFirstText(record, ["Executor", "executor", "PrincipalName", "principalName", "Assignee", "assignee"]),
     Status: getFirstNumber(record, ["Status", "status", "WorkOrderStatus", "workOrderStatus"]),
@@ -559,6 +583,46 @@ function getFirstText(record: Record<string, unknown>, keys: string[]) {
   }
 
   return undefined
+}
+
+function normalizeWorkOrderBuildInfos(value: unknown): WorkOrderBuildInfo[] {
+  if (!Array.isArray(value)) {
+    return []
+  }
+
+  return value
+    .filter(item => item && typeof item === "object")
+    .map((item) => {
+      const record = item as Record<string, unknown>
+
+      return {
+        ...record,
+        BuildName: getFirstText(record, ["BuildName", "buildName", "BuildingName", "buildingName"]),
+        BuildUuid: getFirstText(record, ["BuildUuid", "buildUuid"]),
+        InspectionItems: normalizeWorkOrderBuildInspectionItems(record.InspectionItems),
+        Score: getFirstNumber(record, ["Score", "score"]),
+      }
+    })
+}
+
+function normalizeWorkOrderBuildInspectionItems(value: unknown): WorkOrderBuildInspectionItem[] {
+  if (!Array.isArray(value)) {
+    return []
+  }
+
+  return value
+    .filter(item => item && typeof item === "object")
+    .map((item) => {
+      const record = item as Record<string, unknown>
+
+      return {
+        ...record,
+        InspectionItemName: getFirstText(record, ["InspectionItemName", "inspectionItemName", "Name", "name"]),
+        InspectionItemUuid: getFirstText(record, ["InspectionItemUuid", "inspectionItemUuid", "Uuid", "uuid"]),
+        Score: getFirstNumber(record, ["Score", "score"]),
+        UserName: getFirstText(record, ["UserName", "userName"]),
+      }
+    })
 }
 
 function getFirstNumber(record: Record<string, unknown>, keys: string[]) {

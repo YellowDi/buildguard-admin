@@ -3,10 +3,12 @@ import { computed, onUnmounted, ref, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { toast } from "vue-sonner"
 
+import InspectionBuildingCards from "@/components/detail/InspectionBuildingCards.vue"
 import DetailFieldsSkeleton from "@/components/loading/DetailFieldsSkeleton.vue"
+import DetailRelationSkeleton from "@/components/loading/DetailRelationSkeleton.vue"
 import DetailFieldSections from "@/components/detail/DetailFieldSections.vue"
 import { buildRepairWorkOrderPrimarySections, buildRepairWorkOrderSecondarySections, toText as toRepairWorkOrderText } from "@/components/detail/repairWorkOrderDetailFields"
-import { buildWorkOrderPrimarySections, buildWorkOrderSecondarySections, toText } from "@/components/detail/workOrderDetailFields"
+import { buildWorkOrderPrimarySections, toText } from "@/components/detail/workOrderDetailFields"
 import type { DetailFieldSection } from "@/components/detail/types"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -22,6 +24,7 @@ import {
   fetchRepairWorkOrderDetail,
   fetchWorkOrderDetail,
   type RepairWorkOrderDetailResult,
+  type WorkOrderBuildInfo,
   type WorkOrderDetailResult,
 } from "@/lib/work-orders-api"
 
@@ -82,10 +85,10 @@ const secondarySections = computed<DetailFieldSection[]>(() => {
     return buildRepairWorkOrderSecondarySections(repairWorkOrder.value)
   }
 
-  return buildWorkOrderSecondarySections(inspectionWorkOrder.value)
+  return []
 })
 
-const secondarySkeletonSectionCount = computed(() => props.kind === "repair" ? 1 : 2)
+const inspectionBuildingCards = computed(() => buildInspectionWorkOrderCards(inspectionWorkOrder.value?.Builds))
 
 function openRepairCustomerDetail() {
   const targetCustomerUuid = toRepairWorkOrderText(repairWorkOrder.value?.CustomerUuid) || customerUuid.value
@@ -121,7 +124,10 @@ const pageTitle = computed(() => {
     return toRepairWorkOrderText(repairWorkOrder.value?.Title, "报修工单详情")
   }
 
-  return toText(inspectionWorkOrder.value?.PackageName, "关联检测服务") || "关联检测服务"
+  return toText(
+    inspectionWorkOrder.value?.ServiceName,
+    toText(inspectionWorkOrder.value?.PackageName, "关联检测服务"),
+  ) || "关联检测服务"
 })
 
 const pageSubtitle = computed(() => {
@@ -156,7 +162,7 @@ watch([inspectionWorkOrder, repairWorkOrder], () => {
   }
 
   const current = inspectionWorkOrder.value
-  detailBreadcrumbTitle.value = toOptionalText(current?.PackageName) || toOptionalText(current?.OrderNo)
+  detailBreadcrumbTitle.value = toOptionalText(current?.ServiceName) || toOptionalText(current?.PackageName) || toOptionalText(current?.OrderNo)
 })
 
 watch(workOrderUuid, (uuid) => {
@@ -280,6 +286,44 @@ function toMemberText(value: unknown, fallback = "") {
   }
 
   return fallback
+}
+
+function buildInspectionWorkOrderCards(builds: WorkOrderBuildInfo[] | undefined) {
+  if (!Array.isArray(builds) || !builds.length) {
+    return []
+  }
+
+  return builds.map((build, buildIndex) => {
+    const inspectionItems = Array.isArray(build.InspectionItems) ? build.InspectionItems : []
+
+    return {
+      key: toText(build.BuildUuid, `work-order-build-${buildIndex + 1}`),
+      buildName: toText(build.BuildName, `建筑 ${buildIndex + 1}`),
+      summary: `${inspectionItems.length} 个检测项`,
+      groups: [
+        {
+          key: "inspection-items",
+          title: "检测项",
+          items: inspectionItems.map((item, itemIndex) => ({
+            key: toText(item.InspectionItemUuid, `inspection-item-${itemIndex + 1}`),
+            name: toText(item.InspectionItemName, `检测项 ${itemIndex + 1}`),
+            fields: [
+              {
+                key: "executor",
+                label: "检测人",
+                value: toText(item.UserName, "-"),
+              },
+              {
+                key: "score",
+                label: "扣分数",
+                value: toText(item.Score, "-"),
+              },
+            ],
+          })),
+        },
+      ],
+    }
+  })
 }
 
 function openAssignDialog() {
@@ -406,13 +450,29 @@ async function submitAssign() {
     </template>
 
     <template #secondary>
-      <div v-if="loading" class="pb-5">
-        <DetailFieldsSkeleton :sections="secondarySkeletonSectionCount" :rows-per-section="3" />
-      </div>
+      <template v-if="props.kind === 'repair'">
+        <div v-if="loading" class="pb-5">
+          <DetailFieldsSkeleton :sections="1" :rows-per-section="3" />
+        </div>
 
-      <div v-else-if="!loading && hasWorkOrder" class="pb-5">
-        <DetailFieldSections :sections="secondarySections" />
-      </div>
+        <div v-else-if="!loading && hasWorkOrder" class="pb-5">
+          <DetailFieldSections :sections="secondarySections" />
+        </div>
+      </template>
+
+      <template v-else>
+        <div v-if="loading" class="pb-5">
+          <DetailRelationSkeleton :two-data-columns="false" :rows-per-group="3" />
+        </div>
+
+        <div v-else-if="!loading && hasWorkOrder" class="pb-5">
+          <InspectionBuildingCards
+            :buildings="inspectionBuildingCards"
+            empty-title="暂无建筑检测项"
+            empty-description="当前工单还没有返回建筑与检测项数据。"
+          />
+        </div>
+      </template>
     </template>
   </DetailLayout>
 

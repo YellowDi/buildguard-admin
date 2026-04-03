@@ -631,20 +631,25 @@ function normalizeBuildCategoryWriteItems(value: unknown) {
     return undefined
   }
 
-  const normalized = value
+  const normalized: InspectionServiceBuildCategoryWriteItem[] = value
     .filter(item => item && typeof item === "object")
-    .map((item, index) => {
+    .map((item, index): InspectionServiceBuildCategoryWriteItem | null => {
       const record = item as Record<string, unknown>
       const score = normalizeOptionalNumberLike(record.Score)
+      const inspections = normalizeBuildInspectionWriteItems(record.List, `BuildInfos.List[${index}].List`)
+
+      if (!Array.isArray(inspections) || inspections.length === 0) {
+        return null
+      }
 
       return {
         Uuid: getOptionalString(record.Uuid),
         Name: getOptionalString(record.Name),
         Score: score,
-        List: normalizeBuildInspectionWriteItems(record.List, `BuildInfos.List[${index}].List`),
-      } satisfies InspectionServiceBuildCategoryWriteItem
+        List: inspections,
+      }
     })
-    .filter(item => Array.isArray(item.List) && item.List.length)
+    .filter((item): item is InspectionServiceBuildCategoryWriteItem => item !== null)
 
   return normalized.length ? normalized : undefined
 }
@@ -654,9 +659,9 @@ function normalizeBuildInspectionWriteItems(value: unknown, fieldName: string) {
     return undefined
   }
 
-  const normalized = value
+  const normalized: InspectionServiceBuildInspectionWriteItem[] = value
     .filter(item => item && typeof item === "object")
-    .map((item) => {
+    .map((item): InspectionServiceBuildInspectionWriteItem | null => {
       const record = item as Record<string, unknown>
       const uuid = getOptionalString(record.Uuid)
       const name = getOptionalString(record.Name)
@@ -668,9 +673,9 @@ function normalizeBuildInspectionWriteItems(value: unknown, fieldName: string) {
       return {
         Uuid: uuid,
         Name: name,
-      } satisfies InspectionServiceBuildInspectionWriteItem
+      }
     })
-    .filter((item): item is InspectionServiceBuildInspectionWriteItem => Boolean(item))
+    .filter((item): item is InspectionServiceBuildInspectionWriteItem => item !== null)
 
   if (!normalized.length) {
     throw new TypeError(`${fieldName} must contain at least one item.`)
