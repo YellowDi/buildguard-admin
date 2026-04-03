@@ -31,6 +31,7 @@ import { detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
 import DetailLayout from "@/layouts/DetailLayout.vue"
 import { buildApiRequestUrl } from "@/lib/api"
 import { handleApiError } from "@/lib/api-errors"
+import { getInspectionItemDetail, type InspectionItemRecord } from "@/lib/inspection-items-api"
 import {
   deleteInspectionService,
   fetchInspectionServiceDetail,
@@ -49,6 +50,7 @@ type InspectionServiceBuildingRow = {
 
 type InspectionServiceInspectionRow = {
   id: string
+  inspectionUuid: string
   categoryUuid: string
   categoryName: string
   name: string
@@ -96,6 +98,9 @@ const uploadContractForm = ref({
   contractFileName: "",
 })
 let latestRequestId = 0
+const inspectionItemDetailByUuid = ref<Record<string, InspectionItemRecord>>({})
+const inspectionItemDetailLoadingByUuid = ref<Record<string, boolean>>({})
+const inspectionItemDetailErrorByUuid = ref<Record<string, string>>({})
 
 const inspectionServiceUuid = computed(() => typeof route.params.id === "string" ? route.params.id.trim() : "")
 const customerUuid = computed(() => {
@@ -183,6 +188,16 @@ watch(buildingInspectionViews, (views) => {
 watch(inspectionServiceUuid, (nextUuid) => {
   void loadInspectionServiceDetail(nextUuid)
 }, { immediate: true })
+
+watch(expandedInspectionItemKey, (nextKey) => {
+  const row = nextKey ? findInspectionRowByAccordionKey(nextKey) : null
+
+  if (!row) {
+    return
+  }
+
+  void ensureInspectionItemDetailLoaded(row)
+})
 
 onUnmounted(() => {
   detailBreadcrumbTitle.value = null
@@ -386,6 +401,9 @@ async function loadInspectionServiceDetail(uuid: string) {
 
   loading.value = true
   errorMessage.value = ""
+  inspectionItemDetailByUuid.value = {}
+  inspectionItemDetailLoadingByUuid.value = {}
+  inspectionItemDetailErrorByUuid.value = {}
 
   try {
     const detailResult = await fetchInspectionServiceDetail({
@@ -464,6 +482,7 @@ function buildInspectionGroups(
       scoreLimit: normalizeInspectionCategoryScore(category.Score),
       rows: items.map((item, itemIndex) => ({
         id: toText(item.Uuid, `${categoryUuid || categoryName}-${itemIndex + 1}`),
+        inspectionUuid: toText(item.Uuid, ""),
         categoryUuid,
         categoryName,
         name: toText(item.Name, `检测项 ${itemIndex + 1}`),
@@ -518,6 +537,97 @@ function normalizeInspectionCategoryScore(value: unknown) {
 
 function getBuildingInspectionCount(building: InspectionServiceBuildingInspectionView) {
   return building.inspectionGroups.reduce((sum, group) => sum + group.rows.length, 0)
+}
+
+function findInspectionRowByAccordionKey(key: string) {
+  for (const building of buildingInspectionViews.value) {
+    for (const group of building.inspectionGroups) {
+      for (const item of group.rows) {
+        if (`${building.key}-${group.key}-${item.id}` === key) {
+          return item
+        }
+      }
+    }
+  }
+
+  return null
+}
+
+async function ensureInspectionItemDetailLoaded(row: InspectionServiceInspectionRow) {
+  const inspectionUuid = row.inspectionUuid.trim()
+
+  if (!inspectionUuid) {
+    return
+  }
+
+  if (inspectionItemDetailByUuid.value[inspectionUuid] || inspectionItemDetailLoadingByUuid.value[inspectionUuid]) {
+    return
+  }
+
+  inspectionItemDetailLoadingByUuid.value = {
+    ...inspectionItemDetailLoadingByUuid.value,
+    [inspectionUuid]: true,
+  }
+  inspectionItemDetailErrorByUuid.value = {
+    ...inspectionItemDetailErrorByUuid.value,
+    [inspectionUuid]: "",
+  }
+
+  try {
+    const detail = await getInspectionItemDetail({
+      Uuid: inspectionUuid,
+    })
+
+    inspectionItemDetailByUuid.value = {
+      ...inspectionItemDetailByUuid.value,
+      [inspectionUuid]: detail,
+    }
+  } catch (error) {
+    inspectionItemDetailErrorByUuid.value = {
+      ...inspectionItemDetailErrorByUuid.value,
+      [inspectionUuid]: handleApiError(error, {
+        mode: "silent",
+        fallback: "检测项详情加载失败，请稍后重试。",
+      }),
+    }
+  } finally {
+    inspectionItemDetailLoadingByUuid.value = {
+      ...inspectionItemDetailLoadingByUuid.value,
+      [inspectionUuid]: false,
+    }
+  }
+}
+
+function getInspectionItemDetailValue(row: InspectionServiceInspectionRow) {
+  return row.inspectionUuid ? inspectionItemDetailByUuid.value[row.inspectionUuid] : undefined
+}
+
+function isInspectionItemDetailLoading(row: InspectionServiceInspectionRow) {
+  return Boolean(row.inspectionUuid && inspectionItemDetailLoadingByUuid.value[row.inspectionUuid])
+}
+
+function getInspectionItemDetailError(row: InspectionServiceInspectionRow) {
+  return row.inspectionUuid ? inspectionItemDetailErrorByUuid.value[row.inspectionUuid] || "" : ""
+}
+
+function resolveInspectionItemContent(row: InspectionServiceInspectionRow) {
+  const detail = getInspectionItemDetailValue(row)
+  return toText(detail?.Content, row.content)
+}
+
+function resolveInspectionItemStandard(row: InspectionServiceInspectionRow) {
+  const detail = getInspectionItemDetailValue(row)
+  return toText(detail?.Standard, row.standard)
+}
+
+function resolveInspectionItemForcePhoto(row: InspectionServiceInspectionRow) {
+  const detail = getInspectionItemDetailValue(row)
+  return detail ? formatInspectionFlag(detail.IsForcePhoto) : row.forcePhoto
+}
+
+function resolveInspectionItemMeasureRecord(row: InspectionServiceInspectionRow) {
+  const detail = getInspectionItemDetailValue(row)
+  return detail ? formatInspectionFlag(detail.IsMeasureRecord) : row.isMeasureRecord
 }
 
 function buildStatusValue(status: unknown): DetailStatusValue {
@@ -900,23 +1010,47 @@ function readFileAsDataUrl(file: File) {
                               <AccordionContent
                                 class="rounded-none px-0 data-[state=closed]:pb-0 data-[state=closed]:pt-0 data-[state=open]:!overflow-visible data-[state=open]:bg-background data-[state=open]:pb-3 data-[state=open]:pt-3 [&>div]:pb-0 [&>div]:pt-0"
                               >
-                                <div class="grid gap-3 text-sm">
+                                <div v-if="isInspectionItemDetailLoading(item)" class="py-1 text-sm text-muted-foreground">
+                                  正在加载检测项详情...
+                                </div>
+
+                                <div v-else-if="getInspectionItemDetailError(item)" class="space-y-3">
+                                  <p class="text-sm text-destructive">
+                                    {{ getInspectionItemDetailError(item) }}
+                                  </p>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    class="gap-2"
+                                    @click="ensureInspectionItemDetailLoaded(item)"
+                                  >
+                                    <i class="ri-refresh-line text-sm" />
+                                    重新加载
+                                  </Button>
+                                </div>
+
+                                <div v-else class="grid gap-3 text-sm">
                                   <div class="grid gap-1">
                                     <p class="text-xs text-muted-foreground">检测内容</p>
-                                    <p class="whitespace-pre-wrap break-words leading-6 text-foreground">{{ item.content }}</p>
+                                    <p class="whitespace-pre-wrap break-words leading-6 text-foreground">
+                                      {{ resolveInspectionItemContent(item) }}
+                                    </p>
                                   </div>
                                   <div class="grid gap-1">
                                     <p class="text-xs text-muted-foreground">检测标准</p>
-                                    <p class="whitespace-pre-wrap break-words leading-6 text-foreground">{{ item.standard }}</p>
+                                    <p class="whitespace-pre-wrap break-words leading-6 text-foreground">
+                                      {{ resolveInspectionItemStandard(item) }}
+                                    </p>
                                   </div>
                                   <div class="grid grid-cols-2 gap-3 border-t border-border/50 pt-2">
                                     <div>
                                       <p class="text-xs text-muted-foreground">强制拍照</p>
-                                      <p class="mt-1 text-foreground">{{ item.forcePhoto }}</p>
+                                      <p class="mt-1 text-foreground">{{ resolveInspectionItemForcePhoto(item) }}</p>
                                     </div>
                                     <div>
                                       <p class="text-xs text-muted-foreground">是否测量数据记录</p>
-                                      <p class="mt-1 text-foreground">{{ item.isMeasureRecord }}</p>
+                                      <p class="mt-1 text-foreground">{{ resolveInspectionItemMeasureRecord(item) }}</p>
                                     </div>
                                   </div>
                                 </div>
