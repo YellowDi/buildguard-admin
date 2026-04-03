@@ -1731,8 +1731,8 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
                     <h4 class="line-clamp-2 text-sm font-semibold leading-5 text-foreground">
                       {{ config.buildName }}
                     </h4>
-                    <p class="mt-0.5 text-xs text-muted-foreground">
-                      {{ config.parkName }}
+                    <p class="mt-0.5 text-xs leading-5 text-muted-foreground">
+                      {{ getBuildingScoreLimitSummary(config) }}
                     </p>
                   </div>
                   <div class="flex shrink-0 items-center gap-1">
@@ -1816,20 +1816,11 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
                   </div>
                 </div>
 
-                <div class="mt-3 space-y-3">
-                  <div>
-                    <span class="text-[11px] text-muted-foreground">检测项</span>
-                    <p class="mt-1 text-xs leading-5 text-muted-foreground">
-                      {{ getBuildingInspectionSummary(config) }}
-                    </p>
-                  </div>
-
-                  <div>
-                    <span class="text-[11px] text-muted-foreground">分数上限</span>
-                    <p class="mt-1 text-xs leading-5 text-muted-foreground">
-                      {{ getBuildingScoreLimitSummary(config) }}
-                    </p>
-                  </div>
+                <div class="mt-3">
+                  <span class="text-[11px] text-muted-foreground">检测项</span>
+                  <p class="mt-1 text-xs leading-5 text-muted-foreground">
+                    {{ getBuildingInspectionSummary(config) }}
+                  </p>
                 </div>
 
               </article>
