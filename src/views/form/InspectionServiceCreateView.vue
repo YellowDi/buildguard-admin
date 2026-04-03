@@ -1774,25 +1774,27 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
                           </p>
                         </div>
 
-                        <div class="max-h-[26rem] space-y-3 overflow-y-auto px-4 py-4">
+                        <div class="max-h-[26rem] overflow-y-auto px-4 py-2">
                           <div
                             v-for="category in inspectionCategoryOptions"
                             :key="`${config.buildUuid}-${category.uuid}`"
-                            class="rounded-md border border-border/60 px-3 py-3"
+                            class="flex items-center justify-between gap-4 border-b border-dashed border-border/60 py-3 last:border-b-0"
                           >
-                            <p class="text-sm font-medium text-foreground">{{ category.name }}</p>
-                            <div class="mt-3">
-                              <label class="space-y-1">
-                                <span class="text-xs text-muted-foreground">分数上限</span>
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  inputmode="numeric"
-                                  :model-value="scoreLimitDraftForms[category.uuid]?.scoreLimit ?? ''"
-                                  @update:model-value="updateScoreLimitField(category.uuid, 'scoreLimit', $event)"
-                                />
-                              </label>
-                            </div>
+                            <label
+                              :for="`score-limit-${config.buildUuid}-${category.uuid}`"
+                              class="min-w-0 flex-1 text-sm font-medium text-foreground"
+                            >
+                              {{ category.name }}
+                            </label>
+                            <Input
+                              :id="`score-limit-${config.buildUuid}-${category.uuid}`"
+                              type="number"
+                              min="0"
+                              inputmode="numeric"
+                              :model-value="scoreLimitDraftForms[category.uuid]?.scoreLimit ?? ''"
+                              class="h-8 w-28 shrink-0 text-right tabular-nums"
+                              @update:model-value="updateScoreLimitField(category.uuid, 'scoreLimit', $event)"
+                            />
                           </div>
                         </div>
 
