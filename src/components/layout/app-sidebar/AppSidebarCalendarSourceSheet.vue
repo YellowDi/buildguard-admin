@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ChevronRight, MoreHorizontal } from "lucide-vue-next"
+import { Plus, X } from "lucide-vue-next"
 import { computed } from "vue"
+import { useRouter } from "vue-router"
 import { onKeyStroke } from "@vueuse/core"
 import { Button } from "@/components/ui/button"
 import { useSidebar } from "@/components/ui/sidebar"
@@ -22,7 +23,20 @@ const emit = defineEmits<{
   "select-event": [event: AppSidebarCalendarItem]
 }>()
 
+const router = useRouter()
 const { open: sidebarOpen, isMobile } = useSidebar()
+
+function goToCreateForm() {
+  if (!props.sourceType)
+    return
+  close()
+  const name = props.sourceType === "work-order"
+    ? "inspection-work-order-create"
+    : props.sourceType === "inspection-plan"
+      ? "inspection-plan-create"
+      : "inspection-service-create"
+  void router.push({ name })
+}
 
 /**
  * Teleport 在 body 上，无法继承 SidebarProvider 的 --sidebar-width，必须用与侧栏一致的定宽，
@@ -88,7 +102,7 @@ function getEventTitleText(event: AppSidebarCalendarItem) {
     >
       <div
         v-if="open && sourceType"
-        class="fixed z-[60] flex min-h-0 flex-col border-l border-border bg-background shadow-[4px_0_32px_rgba(15,23,42,0.06)]"
+        class="fixed z-[60] flex min-h-0 flex-col bg-background [outline:1px_solid_rgba(84,72,49,0.08)]"
         :style="panelFrameStyle"
         role="dialog"
         aria-modal="true"
@@ -100,28 +114,29 @@ function getEventTitleText(event: AppSidebarCalendarItem) {
             :class="swatchClass"
             aria-hidden="true"
           />
-          <div class="min-w-0 flex-1">
-            <p class="truncate text-sm font-semibold text-foreground">{{ title }}</p>
-            <p class="truncate text-xs text-muted-foreground">{{ subtitle }}</p>
+          <div class="flex min-w-0 flex-1 flex-row items-center gap-2">
+            <p class="min-w-0 truncate text-sm font-semibold text-foreground">{{ title }}</p>
+            <p class="shrink-0 text-xs text-muted-foreground">{{ subtitle }}</p>
           </div>
           <Button
             type="button"
             variant="ghost"
             size="icon"
             class="size-8 shrink-0 text-muted-foreground"
-            aria-label="更多"
+            aria-label="添加"
+            @click="goToCreateForm"
           >
-            <MoreHorizontal class="size-4" />
+            <Plus class="size-4" />
           </Button>
           <Button
             type="button"
             variant="ghost"
             size="icon"
             class="size-8 shrink-0 text-muted-foreground"
-            aria-label="收起"
+            aria-label="关闭"
             @click="close"
           >
-            <ChevronRight class="size-4" />
+            <X class="size-4" />
           </Button>
         </header>
 
