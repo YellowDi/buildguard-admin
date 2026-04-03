@@ -3,8 +3,9 @@ import { computed, onMounted, ref } from "vue"
 import { useRouter } from "vue-router"
 import { getLocalTimeZone, today } from "@internationalized/date"
 import AppSidebarMiniCalendar from "@/components/layout/app-sidebar/AppSidebarMiniCalendar.vue"
+import AppSidebarCalendarSourceSheet from "@/components/layout/app-sidebar/AppSidebarCalendarSourceSheet.vue"
 import type { AppSidebarCalendarDate, AppSidebarCalendarItem } from "@/components/layout/app-sidebar/types"
-import { useCalendarEvents } from "@/composables/useCalendarEvents"
+import { dateValueToKey, useCalendarEvents, type CalendarDataSourceEntry } from "@/composables/useCalendarEvents"
 
 /**
  * 与下方日程条目右上角徽章同一套色板。
@@ -29,7 +30,76 @@ const calendarItemTypePresentation: Record<
 }
 
 const router = useRouter()
-const { loading, dataSources, getEventsForDate, hasEventsOnDate, refresh } = useCalendarEvents()
+const { loading, dataSources, allEvents, getEventsForDate, hasEventsOnDate, refresh } = useCalendarEvents()
+
+const sourceSheetOpen = ref(false)
+const selectedSourceType = ref<AppSidebarCalendarItem["type"] | null>(null)
+
+function addDaysToDateKey(dateKey: string, delta: number): string {
+  const [y, m, d] = dateKey.split("-").map(Number)
+  const dt = new Date(y, m - 1, d)
+  dt.setDate(dt.getDate() + delta)
+  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`
+}
+
+function sectionLabelForDateKey(dateKey: string, todayKey: string): string {
+  if (dateKey === todayKey)
+    return "今天"
+  if (dateKey === addDaysToDateKey(todayKey, 1))
+    return "明天"
+  const [y, m, d] = dateKey.split("-").map(Number)
+  const dt = new Date(y, m - 1, d)
+  const w = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"][dt.getDay()]!
+  return `${m}月${d}日 ${w}`
+}
+
+const sourceSheetGroups = computed(() => {
+  if (!selectedSourceType.value)
+    return [] as Array<{ sectionLabel: string, events: AppSidebarCalendarItem[] }>
+  const list = allEvents.value
+    .filter(e => e.type === selectedSourceType.value)
+    .sort((a, b) => a.dateKey.localeCompare(b.dateKey) || a.time.localeCompare(b.time))
+  const todayKey = dateValueToKey(getTodayDate())
+  const map = new Map<string, AppSidebarCalendarItem[]>()
+  for (const e of list) {
+    const arr = map.get(e.dateKey) ?? []
+    arr.push(e)
+    map.set(e.dateKey, arr)
+  }
+  const keys = [...map.keys()].sort()
+  return keys.map(k => ({
+    sectionLabel: sectionLabelForDateKey(k, todayKey),
+    events: map.get(k)!,
+  }))
+})
+
+const selectedSourceMeta = computed(() => {
+  if (!selectedSourceType.value)
+    return { label: "", subtitle: "", swatch: "" }
+  const src = dataSources.value.find(s => s.type === selectedSourceType.value)
+  const pres = calendarItemTypePresentation[selectedSourceType.value]
+  return {
+    label: src?.label ?? "",
+    subtitle: src?.dateFieldLabel ?? "",
+    swatch: pres.swatch,
+  }
+})
+
+function toggleSourceSheet(src: CalendarDataSourceEntry) {
+  if (sourceSheetOpen.value && selectedSourceType.value === src.type) {
+    sourceSheetOpen.value = false
+    selectedSourceType.value = null
+  }
+  else {
+    selectedSourceType.value = src.type
+    sourceSheetOpen.value = true
+  }
+}
+
+function onSourceSheetOpenChange(open: boolean) {
+  if (!open)
+    selectedSourceType.value = null
+}
 
 function getTodayDate(): AppSidebarCalendarDate {
   return today(getLocalTimeZone()) as unknown as AppSidebarCalendarDate
@@ -74,6 +144,12 @@ function navigateToDetail(event: { type: string, uuid: string }) {
   }
 }
 
+function onSheetSelectEvent(event: AppSidebarCalendarItem) {
+  sourceSheetOpen.value = false
+  selectedSourceType.value = null
+  navigateToDetail(event)
+}
+
 onMounted(() => {
   refresh()
 })
@@ -91,7 +167,13 @@ onMounted(() => {
         <li
           v-for="src in dataSources"
           :key="src.type"
-          class="flex cursor-default items-center gap-2 rounded-sm px-1.5 py-1.5 transition-colors hover:bg-sidebar-hover"
+          role="button"
+          tabindex="0"
+          class="flex w-full cursor-pointer items-center gap-2 rounded-sm px-1.5 py-1.5 text-left transition-colors hover:bg-sidebar-hover"
+          :class="sourceSheetOpen && selectedSourceType === src.type ? 'bg-sidebar-accent text-sidebar-accent-foreground' : ''"
+          @click="toggleSourceSheet(src)"
+          @keydown.enter.prevent="toggleSourceSheet(src)"
+          @keydown.space.prevent="toggleSourceSheet(src)"
         >
           <span
             class="size-3 shrink-0 rounded-[3px]"
@@ -145,5 +227,17 @@ onMounted(() => {
         </article>
       </div>
     </div>
+
+    <AppSidebarCalendarSourceSheet
+      v-model:open="sourceSheetOpen"
+      @update:open="onSourceSheetOpenChange"
+      :source-type="selectedSourceType"
+      :title="selectedSourceMeta.label"
+      :subtitle="selectedSourceMeta.subtitle"
+      :loading="loading"
+      :groups="sourceSheetGroups"
+      :swatch-class="selectedSourceMeta.swatch"
+      @select-event="onSheetSelectEvent"
+    />
   </div>
 </template>
