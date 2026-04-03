@@ -5,6 +5,12 @@ import type { WorkOrderDetailResult } from "@/lib/work-orders-api"
 export function buildWorkOrderPrimarySections(
   workOrder: WorkOrderDetailResult | null,
   customer: CustomerDetailResult | null,
+  options: {
+    onOpenCustomer?: () => void
+    onOpenService?: () => void
+    onOpenPlan?: () => void
+    onOpenPark?: () => void
+  } = {},
 ): DetailFieldSection[] {
   if (!workOrder) {
     return []
@@ -16,8 +22,18 @@ export function buildWorkOrderPrimarySections(
       title: "基本信息",
       rows: [
         { key: "order-no", label: "工单标号", value: toText(workOrder.OrderNo, "-") },
-        { key: "service-name", label: "检测服务", value: toText(workOrder.ServiceName, "-") },
-        { key: "plan-name", label: "检测计划", value: toText(workOrder.PlanName, "-") },
+        {
+          key: "service-name",
+          label: "检测服务",
+          value: toText(workOrder.ServiceName, "-"),
+          linkAction: options.onOpenService && toText(workOrder.ServiceUuid, "") ? { onClick: options.onOpenService } : undefined,
+        },
+        {
+          key: "plan-name",
+          label: "检测计划",
+          value: toText(workOrder.PlanName, "-"),
+          linkAction: options.onOpenPlan && toText(workOrder.PlanUuid, "") ? { onClick: options.onOpenPlan } : undefined,
+        },
         { key: "deadline", label: "截止时间", value: formatDateOnly(toText(workOrder.Deadline, "-")) },
         { key: "created-at", label: "创建时间", value: toText(workOrder.CreatedAt, "-") },
         { key: "updated-at", label: "更新时间", value: toText(workOrder.UpdatedAt, "-") },
@@ -27,8 +43,18 @@ export function buildWorkOrderPrimarySections(
       key: "work-order-customer",
       title: "客户信息",
       rows: [
-        { key: "customer-name", label: "客户名称", value: toText(customer?.CorpName, toText(workOrder.CustomerName, "-")) },
-        { key: "park-name", label: "园区", value: toText(workOrder.ParkName, "-") },
+        {
+          key: "customer-name",
+          label: "客户名称",
+          value: toText(customer?.CorpName, toText(workOrder.CustomerName, "-")),
+          linkAction: options.onOpenCustomer && toText(workOrder.CustomerUuid, "") ? { onClick: options.onOpenCustomer } : undefined,
+        },
+        {
+          key: "park-name",
+          label: "园区",
+          value: toText(workOrder.ParkName, "-"),
+          linkAction: options.onOpenPark && toText(workOrder.ParkUuid, "") ? { onClick: options.onOpenPark } : undefined,
+        },
         {
           key: "address",
           label: "地址",

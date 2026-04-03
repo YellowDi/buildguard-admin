@@ -80,14 +80,22 @@ const resolvedInspectionWorkOrder = computed<WorkOrderDetailResult | null>(() =>
     return null
   }
 
+  const resolvedServiceUuid = toText(
+    inspectionWorkOrder.value.ServiceUuid,
+    toText(inspectionPlanDetail.value?.ServiceUuid, toText(inspectionServiceDetail.value?.Uuid, "")),
+  )
+  const resolvedPark = resolveWorkOrderPark()
+
   return {
     ...inspectionWorkOrder.value,
+    ServiceUuid: resolvedServiceUuid,
     PlanName: toText(inspectionWorkOrder.value.PlanName, toText(inspectionPlanDetail.value?.Name, "")),
     ServiceName: toText(
       inspectionWorkOrder.value.ServiceName,
       toText(inspectionPlanDetail.value?.ServiceName, toText(inspectionServiceDetail.value?.Name, "")),
     ),
-    ParkName: toText(inspectionWorkOrder.value.ParkName, resolveWorkOrderParkName()),
+    ParkUuid: toText(inspectionWorkOrder.value.ParkUuid, resolvedPark.parkUuid),
+    ParkName: toText(inspectionWorkOrder.value.ParkName, resolvedPark.parkName),
   }
 })
 
@@ -99,7 +107,12 @@ const primarySections = computed<DetailFieldSection[]>(() => {
     })
   }
 
-  return buildWorkOrderPrimarySections(resolvedInspectionWorkOrder.value, customer.value)
+  return buildWorkOrderPrimarySections(resolvedInspectionWorkOrder.value, customer.value, {
+    onOpenCustomer: openInspectionCustomerDetail,
+    onOpenService: openInspectionServiceDetail,
+    onOpenPlan: openInspectionPlanDetail,
+    onOpenPark: openInspectionParkDetail,
+  })
 })
 
 const secondarySections = computed<DetailFieldSection[]>(() => {
@@ -133,6 +146,64 @@ function openRepairParkDetail() {
   }
 
   const targetCustomerUuid = toRepairWorkOrderText(repairWorkOrder.value?.CustomerUuid) || customerUuid.value
+
+  void router.push({
+    name: "park-detail",
+    params: { id: targetParkUuid },
+    query: targetCustomerUuid ? { customerUuid: targetCustomerUuid } : undefined,
+  })
+}
+
+function openInspectionCustomerDetail() {
+  const targetCustomerUuid = toText(resolvedInspectionWorkOrder.value?.CustomerUuid, "")
+
+  if (!targetCustomerUuid) {
+    return
+  }
+
+  void router.push({
+    name: "customer-detail",
+    params: { id: targetCustomerUuid },
+  })
+}
+
+function openInspectionServiceDetail() {
+  const targetServiceUuid = toText(resolvedInspectionWorkOrder.value?.ServiceUuid, "")
+
+  if (!targetServiceUuid) {
+    return
+  }
+
+  const targetCustomerUuid = toText(resolvedInspectionWorkOrder.value?.CustomerUuid, "")
+
+  void router.push({
+    name: "inspection-service-detail",
+    params: { id: targetServiceUuid },
+    query: targetCustomerUuid ? { customerUuid: targetCustomerUuid } : undefined,
+  })
+}
+
+function openInspectionPlanDetail() {
+  const targetPlanUuid = toText(resolvedInspectionWorkOrder.value?.PlanUuid, "")
+
+  if (!targetPlanUuid) {
+    return
+  }
+
+  void router.push({
+    name: "inspection-plan-detail",
+    params: { id: targetPlanUuid },
+  })
+}
+
+function openInspectionParkDetail() {
+  const targetParkUuid = toText(resolvedInspectionWorkOrder.value?.ParkUuid, "")
+
+  if (!targetParkUuid) {
+    return
+  }
+
+  const targetCustomerUuid = toText(resolvedInspectionWorkOrder.value?.CustomerUuid, "")
 
   void router.push({
     name: "park-detail",
@@ -362,11 +433,14 @@ async function loadInspectionServiceFallback(
   }
 }
 
-function resolveWorkOrderParkName() {
+function resolveWorkOrderPark() {
   const currentWorkOrder = inspectionWorkOrder.value
 
   if (!currentWorkOrder) {
-    return ""
+    return {
+      parkUuid: "",
+      parkName: "",
+    }
   }
 
   const workOrderBuildUuids = new Set(
@@ -383,7 +457,10 @@ function resolveWorkOrderParkName() {
     !workOrderBuildUuids.size || workOrderBuildUuids.has(toText(build.BuildUuid, ""))
   ))
 
-  return toText(matchedBuild?.ParkName, "")
+  return {
+    parkUuid: toText(matchedBuild?.ParkUuid, ""),
+    parkName: toText(matchedBuild?.ParkName, ""),
+  }
 }
 
 function toOptionalText(value: unknown) {
