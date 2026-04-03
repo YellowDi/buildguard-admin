@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { toast } from "vue-sonner"
 
+import LinkedEntityDetailSheet from "@/components/detail/LinkedEntityDetailSheet.vue"
 import TablePageLoading from "@/components/loading/TablePageLoading.vue"
 import TablePage from "@/components/table-page/TablePage.vue"
 import { createTablePageDefinition, useTablePage } from "@/components/table-page/useTablePage"
@@ -19,9 +20,14 @@ import {
 import { handleApiError } from "@/lib/api-errors"
 import { listInspectionPlanRecords, type InspectionPlanRecord } from "@/lib/inspection-plan-records"
 
+type LinkedDetailSheetKind = "customer" | "service" | "plan" | "park"
+
 const inspectionPlans = ref<InspectionPlanRecord[]>([])
 const loading = ref(false)
 const errorMessage = ref("")
+const activeLinkedDetailKind = ref<LinkedDetailSheetKind | null>(null)
+const activeLinkedDetailUuid = ref("")
+const activeLinkedDetailCustomerUuid = ref("")
 
 const schema: TablePageSchema<InspectionPlanRecord> = {
   title: "检测计划",
@@ -252,10 +258,9 @@ function jumpToCustomerDetail(row: InspectionPlanRecord) {
     return
   }
 
-  void router.push({
-    name: "customer-detail",
-    params: { id: row.customerUuid },
-  })
+  activeLinkedDetailKind.value = "customer"
+  activeLinkedDetailUuid.value = row.customerUuid
+  activeLinkedDetailCustomerUuid.value = ""
 }
 
 function jumpToServiceDetail(row: InspectionPlanRecord) {
@@ -264,11 +269,17 @@ function jumpToServiceDetail(row: InspectionPlanRecord) {
     return
   }
 
-  void router.push({
-    name: "inspection-service-detail",
-    params: { id: row.serviceUuid },
-    query: row.customerUuid ? { customerUuid: row.customerUuid } : undefined,
-  })
+  activeLinkedDetailKind.value = "service"
+  activeLinkedDetailUuid.value = row.serviceUuid
+  activeLinkedDetailCustomerUuid.value = row.customerUuid
+}
+
+function handleLinkedDetailSheetOpenChange(open: boolean) {
+  if (!open) {
+    activeLinkedDetailKind.value = null
+    activeLinkedDetailUuid.value = ""
+    activeLinkedDetailCustomerUuid.value = ""
+  }
 }
 
 function extractDatePart(value: string) {
@@ -442,5 +453,13 @@ function asInspectionPlanRecord(row: Record<string, unknown>): InspectionPlanRec
         </template>
       </TablePage>
     </TooltipProvider>
+
+    <LinkedEntityDetailSheet
+      :open="Boolean(activeLinkedDetailKind) && Boolean(activeLinkedDetailUuid)"
+      :kind="activeLinkedDetailKind"
+      :uuid="activeLinkedDetailUuid"
+      :customer-uuid="activeLinkedDetailCustomerUuid"
+      @update:open="handleLinkedDetailSheetOpenChange"
+    />
   </div>
 </template>

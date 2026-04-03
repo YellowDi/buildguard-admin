@@ -4,6 +4,7 @@ import { useRoute, useRouter } from "vue-router"
 import { toast } from "vue-sonner"
 
 import InspectionBuildingCards from "@/components/detail/InspectionBuildingCards.vue"
+import LinkedEntityDetailSheet from "@/components/detail/LinkedEntityDetailSheet.vue"
 import DetailFieldsSkeleton from "@/components/loading/DetailFieldsSkeleton.vue"
 import DetailRelationSkeleton from "@/components/loading/DetailRelationSkeleton.vue"
 import DetailFieldSections from "@/components/detail/DetailFieldSections.vue"
@@ -32,6 +33,7 @@ import {
 } from "@/lib/work-orders-api"
 
 type WorkOrderDetailKind = "inspection" | "repair"
+type LinkedDetailSheetKind = "customer" | "service" | "plan" | "park"
 
 const props = withDefaults(defineProps<{
   kind?: WorkOrderDetailKind
@@ -63,6 +65,9 @@ const assignableUsers = ref<AssignableUserOption[]>([])
 const assignableUsersLoading = ref(false)
 const assignableUsersLoaded = ref(false)
 const assignSubmitting = ref(false)
+const linkedDetailSheetOpen = ref(false)
+const linkedDetailSheetKind = ref<LinkedDetailSheetKind | null>(null)
+const linkedDetailSheetUuid = ref("")
 
 const workOrderUuid = computed(() => typeof route.params.id === "string" ? route.params.id.trim() : "")
 const customerUuid = computed(() => {
@@ -132,10 +137,7 @@ function openRepairCustomerDetail() {
     return
   }
 
-  void router.push({
-    name: "customer-detail",
-    params: { id: targetCustomerUuid },
-  })
+  openLinkedDetailSheet("customer", targetCustomerUuid)
 }
 
 function openRepairParkDetail() {
@@ -145,13 +147,7 @@ function openRepairParkDetail() {
     return
   }
 
-  const targetCustomerUuid = toRepairWorkOrderText(repairWorkOrder.value?.CustomerUuid) || customerUuid.value
-
-  void router.push({
-    name: "park-detail",
-    params: { id: targetParkUuid },
-    query: targetCustomerUuid ? { customerUuid: targetCustomerUuid } : undefined,
-  })
+  openLinkedDetailSheet("park", targetParkUuid)
 }
 
 function openInspectionCustomerDetail() {
@@ -161,10 +157,7 @@ function openInspectionCustomerDetail() {
     return
   }
 
-  void router.push({
-    name: "customer-detail",
-    params: { id: targetCustomerUuid },
-  })
+  openLinkedDetailSheet("customer", targetCustomerUuid)
 }
 
 function openInspectionServiceDetail() {
@@ -174,13 +167,7 @@ function openInspectionServiceDetail() {
     return
   }
 
-  const targetCustomerUuid = toText(resolvedInspectionWorkOrder.value?.CustomerUuid, "")
-
-  void router.push({
-    name: "inspection-service-detail",
-    params: { id: targetServiceUuid },
-    query: targetCustomerUuid ? { customerUuid: targetCustomerUuid } : undefined,
-  })
+  openLinkedDetailSheet("service", targetServiceUuid)
 }
 
 function openInspectionPlanDetail() {
@@ -190,10 +177,7 @@ function openInspectionPlanDetail() {
     return
   }
 
-  void router.push({
-    name: "inspection-plan-detail",
-    params: { id: targetPlanUuid },
-  })
+  openLinkedDetailSheet("plan", targetPlanUuid)
 }
 
 function openInspectionParkDetail() {
@@ -203,13 +187,26 @@ function openInspectionParkDetail() {
     return
   }
 
-  const targetCustomerUuid = toText(resolvedInspectionWorkOrder.value?.CustomerUuid, "")
+  openLinkedDetailSheet("park", targetParkUuid)
+}
 
-  void router.push({
-    name: "park-detail",
-    params: { id: targetParkUuid },
-    query: targetCustomerUuid ? { customerUuid: targetCustomerUuid } : undefined,
-  })
+function handleLinkedDetailSheetOpenChange(open: boolean) {
+  linkedDetailSheetOpen.value = open
+
+  if (!open) {
+    linkedDetailSheetKind.value = null
+    linkedDetailSheetUuid.value = ""
+  }
+}
+
+function openLinkedDetailSheet(kind: LinkedDetailSheetKind, uuid: string) {
+  if (!uuid) {
+    return
+  }
+
+  linkedDetailSheetKind.value = kind
+  linkedDetailSheetUuid.value = uuid
+  linkedDetailSheetOpen.value = true
 }
 
 const pageTitle = computed(() => {
@@ -757,4 +754,12 @@ async function submitAssign() {
       </DialogFooter>
     </DialogContent>
   </Dialog>
+
+  <LinkedEntityDetailSheet
+    :open="linkedDetailSheetOpen"
+    :kind="linkedDetailSheetKind"
+    :uuid="linkedDetailSheetUuid"
+    :customer-uuid="toText(resolvedInspectionWorkOrder?.CustomerUuid, '')"
+    @update:open="handleLinkedDetailSheetOpenChange"
+  />
 </template>

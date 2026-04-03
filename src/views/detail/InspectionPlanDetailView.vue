@@ -3,6 +3,7 @@ import { computed, onUnmounted, ref, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { toast } from "vue-sonner"
 
+import LinkedEntityDetailSheet from "@/components/detail/LinkedEntityDetailSheet.vue"
 import type { DetailFieldSection } from "@/components/detail/types"
 import DetailFieldSections from "@/components/detail/DetailFieldSections.vue"
 import DetailFieldsSkeleton from "@/components/loading/DetailFieldsSkeleton.vue"
@@ -31,6 +32,9 @@ const loading = ref(false)
 const errorMessage = ref("")
 const deleteConfirmOpen = ref(false)
 const deleteSubmitting = ref(false)
+const linkedDetailSheetOpen = ref(false)
+const linkedDetailSheetKind = ref<"customer" | "service" | "plan" | "park" | null>(null)
+const linkedDetailSheetUuid = ref("")
 let latestRequestId = 0
 
 const inspectionPlanUuid = computed(() => typeof route.params.id === "string" ? route.params.id.trim() : "")
@@ -151,10 +155,9 @@ function goToCustomerDetail() {
     return
   }
 
-  void router.push({
-    name: "customer-detail",
-    params: { id: customerUuid.value },
-  })
+  linkedDetailSheetKind.value = "customer"
+  linkedDetailSheetUuid.value = customerUuid.value
+  linkedDetailSheetOpen.value = true
 }
 
 function goToServiceDetail() {
@@ -163,11 +166,18 @@ function goToServiceDetail() {
     return
   }
 
-  void router.push({
-    name: "inspection-service-detail",
-    params: { id: serviceUuid.value },
-    query: customerUuid.value ? { customerUuid: customerUuid.value } : undefined,
-  })
+  linkedDetailSheetKind.value = "service"
+  linkedDetailSheetUuid.value = serviceUuid.value
+  linkedDetailSheetOpen.value = true
+}
+
+function handleLinkedDetailSheetOpenChange(open: boolean) {
+  linkedDetailSheetOpen.value = open
+
+  if (!open) {
+    linkedDetailSheetKind.value = null
+    linkedDetailSheetUuid.value = ""
+  }
 }
 
 async function loadInspectionPlanDetail(uuid: string) {
@@ -383,4 +393,12 @@ function getRemainingDaysHint(value: unknown) {
       <DetailFieldSections v-else-if="detail" :sections="fieldSections" />
     </template>
   </DetailLayout>
+
+  <LinkedEntityDetailSheet
+    :open="linkedDetailSheetOpen"
+    :kind="linkedDetailSheetKind"
+    :uuid="linkedDetailSheetUuid"
+    :customer-uuid="customerUuid"
+    @update:open="handleLinkedDetailSheetOpenChange"
+  />
 </template>

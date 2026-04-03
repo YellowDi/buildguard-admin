@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import BuildingDetailSheet from "@/components/detail/BuildingDetailSheet.vue"
 import DetailFieldSections from "@/components/detail/DetailFieldSections.vue"
 import InspectionBuildingCards from "@/components/detail/InspectionBuildingCards.vue"
+import LinkedEntityDetailSheet from "@/components/detail/LinkedEntityDetailSheet.vue"
 import FormDatePicker from "@/components/form/FormDatePicker.vue"
 import DetailFieldsSkeleton from "@/components/loading/DetailFieldsSkeleton.vue"
 import DetailRelationSkeleton from "@/components/loading/DetailRelationSkeleton.vue"
@@ -60,11 +61,14 @@ const uploadContractFileInputRef = ref<HTMLInputElement | null>(null)
 const buildingDetailSheetOpen = ref(false)
 const activeBuildingUuid = ref("")
 const activeParkUuid = ref("")
+const linkedDetailSheetOpen = ref(false)
 const uploadContractForm = ref({
   contractEndTime: "",
   contractFile: "",
   contractFileName: "",
 })
+const linkedDetailSheetKind = ref<"customer" | "service" | "plan" | "park" | null>(null)
+const linkedDetailSheetUuid = ref("")
 let latestRequestId = 0
 const inspectionItemDetailByUuid = ref<Record<string, InspectionItemRecord>>({})
 const inspectionItemDetailLoadingByUuid = ref<Record<string, boolean>>({})
@@ -158,10 +162,9 @@ function goToCustomerDetail() {
     return
   }
 
-  void router.push({
-    name: "customer-detail",
-    params: { id: customerUuid.value },
-  })
+  linkedDetailSheetKind.value = "customer"
+  linkedDetailSheetUuid.value = customerUuid.value
+  linkedDetailSheetOpen.value = true
 }
 
 function goToBuildingDetail(row: InspectionServiceBuildingRow) {
@@ -178,6 +181,15 @@ function handleBuildingDetailSheetOpenChange(open: boolean) {
   if (!open) {
     activeBuildingUuid.value = ""
     activeParkUuid.value = ""
+  }
+}
+
+function handleLinkedDetailSheetOpenChange(open: boolean) {
+  linkedDetailSheetOpen.value = open
+
+  if (!open) {
+    linkedDetailSheetKind.value = null
+    linkedDetailSheetUuid.value = ""
   }
 }
 
@@ -934,5 +946,13 @@ function readFileAsDataUrl(file: File) {
     :park-uuid="activeParkUuid"
     :customer-uuid="customerUuid"
     @update:open="handleBuildingDetailSheetOpenChange"
+  />
+
+  <LinkedEntityDetailSheet
+    :open="linkedDetailSheetOpen"
+    :kind="linkedDetailSheetKind"
+    :uuid="linkedDetailSheetUuid"
+    :customer-uuid="customerUuid"
+    @update:open="handleLinkedDetailSheetOpenChange"
   />
 </template>

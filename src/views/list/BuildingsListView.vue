@@ -3,6 +3,7 @@ import { computed, ref, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { toast } from "vue-sonner"
 
+import LinkedEntityDetailSheet from "@/components/detail/LinkedEntityDetailSheet.vue"
 import TablePageLoading from "@/components/loading/TablePageLoading.vue"
 import TablePage from "@/components/table-page/TablePage.vue"
 import { createTablePageDefinition, useTablePage } from "@/components/table-page/useTablePage"
@@ -43,12 +44,17 @@ type BuildingRecord = {
   updatedAt: string
 }
 
+type LinkedDetailSheetKind = "customer" | "service" | "plan" | "park"
+
 const buildings = ref<BuildingRecord[]>([])
 const loading = ref(false)
 const errorMessage = ref("")
 const pageNum = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
+const activeLinkedDetailKind = ref<LinkedDetailSheetKind | null>(null)
+const activeLinkedDetailUuid = ref("")
+const activeLinkedDetailCustomerUuid = ref("")
 let latestRequestId = 0
 
 const router = useRouter()
@@ -258,10 +264,9 @@ function handleOpenCustomerDetail(row: unknown) {
     return
   }
 
-  void router.push({
-    name: "customer-detail",
-    params: { id: currentRow.customerUuid },
-  })
+  activeLinkedDetailKind.value = "customer"
+  activeLinkedDetailUuid.value = currentRow.customerUuid
+  activeLinkedDetailCustomerUuid.value = ""
 }
 
 function handleOpenParkDetail(row: unknown) {
@@ -272,11 +277,17 @@ function handleOpenParkDetail(row: unknown) {
     return
   }
 
-  void router.push({
-    name: "park-detail",
-    params: { id: currentRow.parkUuid },
-    query: currentRow.customerUuid ? { customerUuid: currentRow.customerUuid } : undefined,
-  })
+  activeLinkedDetailKind.value = "park"
+  activeLinkedDetailUuid.value = currentRow.parkUuid
+  activeLinkedDetailCustomerUuid.value = currentRow.customerUuid
+}
+
+function handleLinkedDetailSheetOpenChange(open: boolean) {
+  if (!open) {
+    activeLinkedDetailKind.value = null
+    activeLinkedDetailUuid.value = ""
+    activeLinkedDetailCustomerUuid.value = ""
+  }
 }
 
 async function loadBuildings() {
@@ -442,6 +453,14 @@ function toText(value: unknown, fallback = "") {
         </button>
       </template>
     </TablePage>
+
+    <LinkedEntityDetailSheet
+      :open="Boolean(activeLinkedDetailKind) && Boolean(activeLinkedDetailUuid)"
+      :kind="activeLinkedDetailKind"
+      :uuid="activeLinkedDetailUuid"
+      :customer-uuid="activeLinkedDetailCustomerUuid"
+      @update:open="handleLinkedDetailSheetOpenChange"
+    />
 
     <div class="-mx-4 pt-3">
       <div class="flex w-full justify-end px-4">

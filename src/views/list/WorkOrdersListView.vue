@@ -3,6 +3,7 @@ import { computed, ref, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { toast } from "vue-sonner"
 
+import LinkedEntityDetailSheet from "@/components/detail/LinkedEntityDetailSheet.vue"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -34,6 +35,7 @@ import {
 } from "@/components/ui/pagination"
 
 type WorkOrderPageKind = "inspection" | "repair"
+type LinkedDetailSheetKind = "customer" | "service" | "plan" | "park"
 
 type WorkOrderRecord = {
   id: string
@@ -91,6 +93,8 @@ const assignableUsers = ref<AssignableUserOption[]>([])
 const assignableUsersLoading = ref(false)
 const assignableUsersLoaded = ref(false)
 const assignSubmitting = ref(false)
+const activeLinkedDetailKind = ref<LinkedDetailSheetKind | null>(null)
+const activeLinkedDetailUuid = ref("")
 const pageTitle = computed(() => props.kind === "inspection" ? "检测工单" : "报修工单")
 const pageEmptyStateTitle = computed(() => `暂无${pageTitle.value}数据`)
 const pageEmptyStateDescription = computed(() => props.kind === "inspection"
@@ -885,10 +889,15 @@ function jumpToCustomerDetail(row: Record<string, unknown>) {
     return
   }
 
-  void router.push({
-    name: "customer-detail",
-    params: { id: nextCustomerUuid },
-  })
+  activeLinkedDetailKind.value = "customer"
+  activeLinkedDetailUuid.value = nextCustomerUuid
+}
+
+function handleLinkedDetailSheetOpenChange(open: boolean) {
+  if (!open) {
+    activeLinkedDetailKind.value = null
+    activeLinkedDetailUuid.value = ""
+  }
 }
 </script>
 
@@ -960,6 +969,13 @@ function jumpToCustomerDetail(row: Record<string, unknown>) {
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    <LinkedEntityDetailSheet
+      :open="Boolean(activeLinkedDetailKind) && Boolean(activeLinkedDetailUuid)"
+      :kind="activeLinkedDetailKind"
+      :uuid="activeLinkedDetailUuid"
+      @update:open="handleLinkedDetailSheetOpenChange"
+    />
 
     <div class="-mx-4 pt-3">
       <div class="flex w-full justify-end px-4">

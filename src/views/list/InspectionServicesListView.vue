@@ -3,6 +3,7 @@ import { computed, ref, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { toast } from "vue-sonner"
 
+import LinkedEntityDetailSheet from "@/components/detail/LinkedEntityDetailSheet.vue"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -60,7 +61,7 @@ type InspectionServiceRecord = {
   }
 }
 
-const INSPECTION_SERVICE_DETAIL_STORAGE_KEY = "inspection-service-detail:"
+type LinkedDetailSheetKind = "customer" | "service" | "plan" | "park"
 
 const inspectionServices = ref<InspectionServiceRecord[]>([])
 const loading = ref(false)
@@ -71,6 +72,9 @@ const total = ref(0)
 const route = useRoute()
 const router = useRouter()
 const showInitialLoading = computed(() => loading.value && !inspectionServices.value.length && !errorMessage.value)
+const activeLinkedDetailKind = ref<LinkedDetailSheetKind | null>(null)
+const activeLinkedDetailUuid = ref("")
+const activeLinkedDetailCustomerUuid = ref("")
 let latestRequestId = 0
 
 const schema: TablePageSchema<InspectionServiceRecord> = {
@@ -91,7 +95,6 @@ const schema: TablePageSchema<InspectionServiceRecord> = {
       key: "view-detail",
       label: "查看详情",
       onClick: row => {
-        cacheInspectionServiceDetail(row)
         void router.push({
           name: "inspection-service-detail",
           params: { id: row.uuid },
@@ -358,21 +361,17 @@ function jumpToCustomerDetail(row: Record<string, unknown>) {
     return
   }
 
-  void router.push({
-    name: "customer-detail",
-    params: { id: nextCustomerUuid },
-  })
+  activeLinkedDetailKind.value = "customer"
+  activeLinkedDetailUuid.value = nextCustomerUuid
+  activeLinkedDetailCustomerUuid.value = ""
 }
 
-function cacheInspectionServiceDetail(row: InspectionServiceRecord) {
-  if (typeof window === "undefined" || !row.uuid) {
-    return
+function handleLinkedDetailSheetOpenChange(open: boolean) {
+  if (!open) {
+    activeLinkedDetailKind.value = null
+    activeLinkedDetailUuid.value = ""
+    activeLinkedDetailCustomerUuid.value = ""
   }
-
-  window.sessionStorage.setItem(
-    `${INSPECTION_SERVICE_DETAIL_STORAGE_KEY}${row.uuid}`,
-    JSON.stringify(row),
-  )
 }
 
 function uniqueText(values: string[]) {
@@ -671,6 +670,14 @@ function toText(value: unknown, fallback = "") {
         </template>
       </TablePage>
     </TooltipProvider>
+
+    <LinkedEntityDetailSheet
+      :open="Boolean(activeLinkedDetailKind) && Boolean(activeLinkedDetailUuid)"
+      :kind="activeLinkedDetailKind"
+      :uuid="activeLinkedDetailUuid"
+      :customer-uuid="activeLinkedDetailCustomerUuid"
+      @update:open="handleLinkedDetailSheetOpenChange"
+    />
 
     <div class="-mx-4 pt-3">
       <div class="flex w-full justify-end px-4">

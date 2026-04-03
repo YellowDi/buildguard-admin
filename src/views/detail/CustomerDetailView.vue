@@ -1513,14 +1513,8 @@ function openRepairWorkOrderParkDetail() {
     return
   }
 
-  const targetCustomerUuid = toRepairWorkOrderText(activeRepairWorkOrderDetail.value?.CustomerUuid) || customerUuid.value
   handleWorkOrderDetailSheetOpenChange(false)
-
-  void router.push({
-    name: "park-detail",
-    params: { id: targetParkUuid },
-    query: targetCustomerUuid ? { customerUuid: targetCustomerUuid } : undefined,
-  })
+  void goToParkDetail(targetParkUuid)
 }
 
 const workOrderDetailPrimarySections = computed<DetailFieldSection[]>(() => {
