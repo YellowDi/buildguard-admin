@@ -847,7 +847,7 @@ function readFileAsDataUrl(file: File) {
                           :key="`${building.key}-${group.key}`"
                           class="space-y-3"
                         >
-                          <div class="flex flex-col gap-2 rounded-md border border-border/55 bg-muted/20 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
+                          <div class="flex min-w-0 items-center gap-3">
                             <div class="flex min-w-0 items-center gap-2">
                               <div class="truncate text-sm font-semibold text-foreground">{{ group.title }}</div>
                               <Badge
@@ -858,7 +858,9 @@ function readFileAsDataUrl(file: File) {
                               </Badge>
                             </div>
 
-                            <div class="flex items-center gap-2">
+                            <div class="h-px flex-1 bg-border/80" />
+
+                            <div class="flex shrink-0 items-center gap-2">
                               <span class="text-xs text-muted-foreground">计分预设</span>
                               <InspectionCategoryScorePresetInline :preset="group.scorePreset" />
                             </div>
