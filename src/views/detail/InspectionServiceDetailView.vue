@@ -753,7 +753,7 @@ function readFileAsDataUrl(file: File) {
             </Badge>
           </div>
 
-          <div v-if="buildingGroups.length === 0" class="px-1 py-6 text-sm text-muted-foreground">
+          <div v-if="buildingGroups.length === 0" class="detail-section-inset py-6 text-sm text-muted-foreground">
             当前检测服务还没有配置关联建筑。
           </div>
 
@@ -767,7 +767,7 @@ function readFileAsDataUrl(file: File) {
               <div
                 v-for="row in group.rows"
                 :key="`${group.key}-${row.id}`"
-                class="flex min-w-0 items-center justify-between gap-3 px-1 py-2 text-[14px] transition-colors hover:bg-surface-hover-strong"
+                class="detail-section-inset flex min-w-0 items-center justify-between gap-3 py-2 text-[14px] transition-colors hover:bg-surface-hover-strong"
               >
                 <div class="min-w-0 truncate text-foreground">
                   {{ row.name }}
