@@ -13,6 +13,7 @@ import DetailFieldsSkeleton from "@/components/loading/DetailFieldsSkeleton.vue"
 import DetailRelationSkeleton from "@/components/loading/DetailRelationSkeleton.vue"
 import type { DetailContactValue, DetailFieldSection, DetailStatusValue } from "@/components/detail/types"
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import {
   AlertDialog,
@@ -1010,8 +1011,27 @@ function readFileAsDataUrl(file: File) {
                               <AccordionContent
                                 class="rounded-none px-0 data-[state=closed]:pb-0 data-[state=closed]:pt-0 data-[state=open]:!overflow-visible data-[state=open]:bg-background data-[state=open]:pb-3 data-[state=open]:pt-3 [&>div]:pb-0 [&>div]:pt-0"
                               >
-                                <div v-if="isInspectionItemDetailLoading(item)" class="py-1 text-sm text-muted-foreground">
-                                  正在加载检测项详情...
+                                <div v-if="isInspectionItemDetailLoading(item)" class="grid gap-3">
+                                  <div class="grid gap-2">
+                                    <Skeleton class="h-3 w-16 rounded" />
+                                    <Skeleton class="h-5 w-full rounded" />
+                                    <Skeleton class="h-5 w-4/5 rounded" />
+                                  </div>
+                                  <div class="grid gap-2">
+                                    <Skeleton class="h-3 w-16 rounded" />
+                                    <Skeleton class="h-5 w-full rounded" />
+                                    <Skeleton class="h-5 w-3/4 rounded" />
+                                  </div>
+                                  <div class="grid grid-cols-2 gap-3 border-t border-border/50 pt-2">
+                                    <div class="space-y-2">
+                                      <Skeleton class="h-3 w-14 rounded" />
+                                      <Skeleton class="h-5 w-12 rounded" />
+                                    </div>
+                                    <div class="space-y-2">
+                                      <Skeleton class="h-3 w-24 rounded" />
+                                      <Skeleton class="h-5 w-12 rounded" />
+                                    </div>
+                                  </div>
                                 </div>
 
                                 <div v-else-if="getInspectionItemDetailError(item)" class="space-y-3">
