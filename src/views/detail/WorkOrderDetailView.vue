@@ -295,33 +295,41 @@ function buildInspectionWorkOrderCards(builds: WorkOrderBuildInfo[] | undefined)
 
   return builds.map((build, buildIndex) => {
     const inspectionItems = Array.isArray(build.InspectionItems) ? build.InspectionItems : []
+    const groupMap = new Map<string, {
+      key: string
+      title: string
+      items: Array<{
+        key: string
+        name: string
+        summary: string
+        emptyText: string
+      }>
+    }>()
+
+    inspectionItems.forEach((item, itemIndex) => {
+      const categoryName = toText(item.CategoryName, "检测项")
+      const categoryKey = toText(item.CategoryUuid, `category-${categoryName}`)
+      const nextGroup = groupMap.get(categoryKey) ?? {
+        key: categoryKey,
+        title: categoryName,
+        items: [],
+      }
+
+      nextGroup.items.push({
+        key: toText(item.InspectionItemUuid, `inspection-item-${itemIndex + 1}`),
+        name: toText(item.InspectionItemName, `检测项 ${itemIndex + 1}`),
+        summary: `检测人：${toText(item.UserName, "-")} · 扣分：${toText(item.Score, "-")}`,
+        emptyText: "等待检测人通过 App 回传信息",
+      })
+
+      groupMap.set(categoryKey, nextGroup)
+    })
 
     return {
       key: toText(build.BuildUuid, `work-order-build-${buildIndex + 1}`),
       buildName: toText(build.BuildName, `建筑 ${buildIndex + 1}`),
       summary: `${inspectionItems.length} 个检测项`,
-      groups: [
-        {
-          key: "inspection-items",
-          title: "检测项",
-          items: inspectionItems.map((item, itemIndex) => ({
-            key: toText(item.InspectionItemUuid, `inspection-item-${itemIndex + 1}`),
-            name: toText(item.InspectionItemName, `检测项 ${itemIndex + 1}`),
-            fields: [
-              {
-                key: "executor",
-                label: "检测人",
-                value: toText(item.UserName, "-"),
-              },
-              {
-                key: "score",
-                label: "扣分数",
-                value: toText(item.Score, "-"),
-              },
-            ],
-          })),
-        },
-      ],
+      groups: Array.from(groupMap.values()),
     }
   })
 }

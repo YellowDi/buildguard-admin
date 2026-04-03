@@ -17,6 +17,7 @@ type InspectionBuildingCardField = {
 type InspectionBuildingCardItem = {
   key: string
   name: string
+  summary?: string
   fields?: InspectionBuildingCardField[]
   loading?: boolean
   error?: string
@@ -210,6 +211,9 @@ function buildInspectionAccordionKey(buildingKey: string, groupKey: string, item
                           <div class="min-w-0">
                             <div class="truncate text-sm font-semibold text-foreground">
                               {{ item.name }}
+                            </div>
+                            <div v-if="item.summary" class="mt-1 truncate text-xs text-muted-foreground">
+                              {{ item.summary }}
                             </div>
                           </div>
                         </AccordionTrigger>

@@ -47,6 +47,8 @@ export type WorkOrderBuildInfo = {
 export type WorkOrderBuildInspectionItem = {
   InspectionItemName?: string
   InspectionItemUuid?: string
+  CategoryName?: string
+  CategoryUuid?: string
   Score?: number
   UserName?: string
   [property: string]: unknown
@@ -619,6 +621,8 @@ function normalizeWorkOrderBuildInspectionItems(value: unknown): WorkOrderBuildI
         ...record,
         InspectionItemName: getFirstText(record, ["InspectionItemName", "inspectionItemName", "Name", "name"]),
         InspectionItemUuid: getFirstText(record, ["InspectionItemUuid", "inspectionItemUuid", "Uuid", "uuid"]),
+        CategoryName: getFirstText(record, ["CategoryName", "categoryName"]),
+        CategoryUuid: getFirstText(record, ["CategoryUuid", "categoryUuid"]),
         Score: getFirstNumber(record, ["Score", "score"]),
         UserName: getFirstText(record, ["UserName", "userName"]),
       }
