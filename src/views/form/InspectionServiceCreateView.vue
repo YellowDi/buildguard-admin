@@ -958,7 +958,6 @@ async function loadInspectionServiceForEdit(uuid: string) {
     legacyMultiParkMessage.value = hasLegacyMultiParkConflict
       ? `当前历史检测服务关联了多个园区（${parkNames.join("、")}），新页面仅支持单园区配置。为避免误删历史数据，当前页面已切换为只读兼容模式。`
       : ""
-    suppressCustomerWatch.value = false
 
     if (nextCustomerUuid) {
       await loadCustomerScopedOptions(nextCustomerUuid, {
@@ -966,6 +965,8 @@ async function loadInspectionServiceForEdit(uuid: string) {
         keepBuildingConfigs: nextBuildingConfigs,
       })
     }
+
+    suppressCustomerWatch.value = false
 
     if (requestId !== latestDetailRequestId) {
       return
@@ -982,6 +983,7 @@ async function loadInspectionServiceForEdit(uuid: string) {
       fallback: "检测服务资料加载失败，请稍后重试。",
     })
   } finally {
+    suppressCustomerWatch.value = false
     if (requestId === latestDetailRequestId) {
       loadingDetail.value = false
     }
@@ -1268,22 +1270,20 @@ function reconcileBuildingConfigs(
 ) {
   const buildingMap = new Map(availableBuildings.map(item => [item.uuid, item]))
 
-  return configs
-    .map((config) => {
-      const matched = buildingMap.get(config.buildUuid)
+  return configs.map((config) => {
+    const matched = buildingMap.get(config.buildUuid)
 
-      if (!matched) {
-        return null
-      }
+    if (!matched) {
+      return cloneBuildingConfig(config)
+    }
 
-      return {
-        ...cloneBuildingConfig(config),
-        buildName: matched.name,
-        parkUuid: matched.parkUuid,
-        parkName: matched.parkName,
-      }
-    })
-    .filter((item): item is InspectionServiceBuildingConfig => Boolean(item))
+    return {
+      ...cloneBuildingConfig(config),
+      buildName: matched.name,
+      parkUuid: matched.parkUuid,
+      parkName: matched.parkName,
+    }
+  })
 }
 
 function mapServiceDetailBuildToConfig(
