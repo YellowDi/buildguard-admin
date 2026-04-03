@@ -54,9 +54,7 @@ import {
   createInspectionService,
   extractInspectionServiceDetailInspectionUuids,
   fetchInspectionServiceDetail,
-  resolveInspectionServiceSubmitCompatibility,
   updateInspectionService,
-  type InspectionServiceSubmitCompatibilityResult,
 } from "@/lib/inspection-services-api"
 import { fetchAllInspectionItemOptions, type InspectionItemOption } from "@/lib/inspection-item-options"
 import { fetchParks, type ParkListItem } from "@/lib/parks-api"
@@ -228,6 +226,15 @@ const selectedBatchTemplateName = computed(() => selectedBatchTemplateOption.val
 const selectedTemplateInspectionUuids = computed(() => dedupeText(
   (selectedBatchTemplateOption.value?.inspections ?? []).map(item => item.inspectionUuid),
 ))
+const selectedInspectionUuidsForSubmit = computed(() => dedupeText(
+  buildingConfigs.value.flatMap(config => config.inspectionUuids),
+))
+const allBuildingsMatchSelectedTemplate = computed(() => (
+  Boolean(batchTemplateUuid.value)
+  && selectedTemplateInspectionUuids.value.length > 0
+  && buildingConfigs.value.length > 0
+  && buildingConfigs.value.every(config => haveSameTextSet(config.inspectionUuids, selectedTemplateInspectionUuids.value))
+))
 const filteredTemplateOptions = computed(() => {
   const keyword = normalizeText(templateKeyword.value).toLowerCase()
 
@@ -320,29 +327,6 @@ const categoryScoreLimitFeatureDisabledReason = computed(() => {
 
   return ""
 })
-const submitCompatibility = computed<InspectionServiceSubmitCompatibilityResult>(() =>
-  resolveInspectionServiceSubmitCompatibility(
-    buildingConfigs.value.map(config => ({
-      inspectionUuids: config.inspectionUuids,
-      categoryScoreLimitCount: Object.keys(config.categoryScoreLimitByCategoryUuid).length,
-    })),
-  ),
-)
-const compatibilityHint = computed(() => {
-  if (legacyMultiParkMessage.value) {
-    return legacyMultiParkMessage.value
-  }
-
-  if (!buildingConfigs.value.length) {
-    return "请先在当前园区内选择至少一栋建筑。"
-  }
-
-  if (submitCompatibility.value.canSubmit) {
-    return "当前配置可按现有旧接口提交保存。"
-  }
-
-  return submitCompatibility.value.reason
-})
 const isInteractionLocked = computed(() => loadingDetail.value || Boolean(legacyMultiParkMessage.value))
 const canSubmit = computed(() =>
   Boolean(
@@ -352,7 +336,7 @@ const canSubmit = computed(() =>
     && normalizeText(form.managerName)
     && normalizeText(form.managerPhone)
     && buildingConfigs.value.length > 0
-    && submitCompatibility.value.canSubmit
+    && selectedInspectionUuidsForSubmit.value.length > 0
     && !legacyMultiParkMessage.value
     && !submitting.value
     && !loadingDetail.value
@@ -741,8 +725,8 @@ async function handleSubmit() {
     return
   }
 
-  if (!submitCompatibility.value.canSubmit) {
-    toast.error(submitCompatibility.value.reason)
+  if (!selectedInspectionUuidsForSubmit.value.length) {
+    toast.error("请至少配置一个检测项")
     return
   }
 
@@ -756,7 +740,7 @@ async function handleSubmit() {
       ManagerName: normalizeText(form.managerName),
       ManagerPhone: normalizeText(form.managerPhone),
       TemplateUuid: resolveSubmitTemplateUuid(),
-      InspectionUuids: submitCompatibility.value.inspectionUuids,
+      InspectionUuids: selectedInspectionUuidsForSubmit.value,
       BuildUuids: buildingConfigs.value.map(config => config.buildUuid),
       Remark: getOptionalText(form.remark),
     }
@@ -1312,7 +1296,7 @@ function resolveSubmitTemplateUuid() {
     return undefined
   }
 
-  return haveSameTextSet(selectedTemplateInspectionUuids.value, submitCompatibility.value.inspectionUuids)
+  return allBuildingsMatchSelectedTemplate.value
     ? batchTemplateUuid.value
     : undefined
 }
@@ -1828,12 +1812,6 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
           </div>
         </section>
 
-        <section class="py-5">
-          <p class="text-sm font-semibold text-foreground">提交兼容性</p>
-          <p class="mt-1 text-sm leading-6 text-muted-foreground">
-            {{ compatibilityHint }}
-          </p>
-        </section>
       </div>
     </div>
 

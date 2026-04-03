@@ -99,17 +99,6 @@ export type InspectionServiceCreateResult = {
   [property: string]: unknown
 }
 
-export type InspectionServiceSubmitCompatibilitySource = {
-  inspectionUuids?: string[]
-  categoryScoreLimitCount?: number
-}
-
-export type InspectionServiceSubmitCompatibilityResult = {
-  canSubmit: boolean
-  inspectionUuids: string[]
-  reason: string
-}
-
 export type InspectionServiceDetailPayload = {
   Uuid?: string
   [property: string]: unknown
@@ -330,59 +319,6 @@ export function extractInspectionServiceDetailInspectionUuids(
       getOptionalString(item?.InspectionUuid) ?? getOptionalString(item?.Uuid)
     ))),
   ])
-}
-
-export function resolveInspectionServiceSubmitCompatibility(
-  sources: InspectionServiceSubmitCompatibilitySource[],
-): InspectionServiceSubmitCompatibilityResult {
-  if (!sources.length) {
-    return {
-      canSubmit: false,
-      inspectionUuids: [],
-      reason: "请至少选择一个建筑。",
-    }
-  }
-
-  const normalizedSources = sources.map(source => ({
-    inspectionUuids: dedupeStringList(source.inspectionUuids ?? []),
-    categoryScoreLimitCount: normalizeOptionalNumberLike(source.categoryScoreLimitCount) ?? 0,
-  }))
-
-  if (normalizedSources.some(source => source.categoryScoreLimitCount > 0)) {
-    return {
-      canSubmit: false,
-      inspectionUuids: [],
-      reason: "当前接口暂不支持保存按建筑配置的分类分数上限。",
-    }
-  }
-
-  if (normalizedSources.some(source => !source.inspectionUuids.length)) {
-    return {
-      canSubmit: false,
-      inspectionUuids: [],
-      reason: "请为每个建筑至少配置一个检测项。",
-    }
-  }
-
-  const [firstSource] = normalizedSources
-  const baselineKey = serializeStringList(firstSource.inspectionUuids)
-  const hasDifferentInspectionSelections = normalizedSources.some(source =>
-    serializeStringList(source.inspectionUuids) !== baselineKey,
-  )
-
-  if (hasDifferentInspectionSelections) {
-    return {
-      canSubmit: false,
-      inspectionUuids: [],
-      reason: "当前接口暂不支持保存按建筑单独配置的检测项。",
-    }
-  }
-
-  return {
-    canSubmit: true,
-    inspectionUuids: firstSource.inspectionUuids,
-    reason: "",
-  }
 }
 
 function listMockInspectionServices(
@@ -642,10 +578,6 @@ function dedupeStringList(value: unknown[]) {
       .map(item => getOptionalString(item))
       .filter((item): item is string => Boolean(item)),
   ))
-}
-
-function serializeStringList(value: string[]) {
-  return [...value].sort((left, right) => left.localeCompare(right, "zh-Hans-CN")).join("::")
 }
 
 function normalizeInspectionServiceInspectionItems(value: unknown): InspectionServiceInspectionItem[] {
