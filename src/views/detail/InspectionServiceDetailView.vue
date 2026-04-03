@@ -14,6 +14,16 @@ import DetailRelationSkeleton from "@/components/loading/DetailRelationSkeleton.
 import type { DetailContactValue, DetailFieldSection, DetailRelationModuleSchema, DetailStatusValue } from "@/components/detail/types"
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
@@ -21,7 +31,12 @@ import { detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
 import DetailLayout from "@/layouts/DetailLayout.vue"
 import { buildApiRequestUrl } from "@/lib/api"
 import { handleApiError } from "@/lib/api-errors"
-import { fetchInspectionServiceDetail, type InspectionServiceListItem, updateInspectionServiceContract } from "@/lib/inspection-services-api"
+import {
+  deleteInspectionService,
+  fetchInspectionServiceDetail,
+  type InspectionServiceListItem,
+  updateInspectionServiceContract,
+} from "@/lib/inspection-services-api"
 
 type InspectionServiceBuildingRow = {
   id: string
@@ -52,6 +67,8 @@ const router = useRouter()
 const detail = ref<InspectionServiceListItem | null>(null)
 const loading = ref(false)
 const errorMessage = ref("")
+const deleteConfirmOpen = ref(false)
+const deleteSubmitting = ref(false)
 const expandedInspectionItemKey = ref("")
 const uploadContractDialogOpen = ref(false)
 const uploadingContract = ref(false)
@@ -208,6 +225,27 @@ function goToEdit() {
     params: { id: inspectionServiceUuid.value },
     query: customerUuid.value ? { customerUuid: customerUuid.value } : undefined,
   })
+}
+
+async function confirmDelete() {
+  if (!inspectionServiceUuid.value || deleteSubmitting.value) {
+    return
+  }
+
+  deleteSubmitting.value = true
+
+  try {
+    await deleteInspectionService({ Uuid: inspectionServiceUuid.value })
+    deleteConfirmOpen.value = false
+    toast.success("检测服务已删除")
+    await router.push({ name: "inspection-services" })
+  } catch (error) {
+    handleApiError(error, {
+      fallback: "检测服务删除失败，请稍后重试。",
+    })
+  } finally {
+    deleteSubmitting.value = false
+  }
 }
 
 function openContractFile(file: unknown) {
@@ -575,15 +613,53 @@ function readFileAsDataUrl(file: File) {
     @back="goBack"
   >
     <template #headerActions>
-      <Button
-        variant="outline"
-        size="sm"
-        class="h-8 gap-1 border-border/80 bg-background px-3 text-[14px] font-medium shadow-none"
-        @click="goToEdit"
-      >
-        <i class="ri-edit-line text-base" />
-        修改检测服务信息
-      </Button>
+      <div class="flex items-center gap-2">
+        <AlertDialog :open="deleteConfirmOpen" @update:open="deleteConfirmOpen = $event">
+          <Button
+            variant="outline"
+            size="sm"
+            class="h-8 gap-1 border-destructive/50 bg-background px-3 text-[14px] font-medium text-destructive shadow-none hover:bg-destructive/10 hover:text-destructive"
+            @click="deleteConfirmOpen = true"
+          >
+            <i class="ri-delete-bin-line text-base" />
+            删除检测服务
+          </Button>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>确认删除当前检测服务？</AlertDialogTitle>
+              <AlertDialogDescription>
+                删除后将无法恢复，该操作会移除当前检测服务及其关联配置。
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel :disabled="deleteSubmitting" class="gap-2">
+                <i class="ri-close-line text-base" />
+                取消
+              </AlertDialogCancel>
+              <AlertDialogAction
+                :disabled="deleteSubmitting"
+                class="gap-2 bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                @click="confirmDelete"
+              >
+                <i
+                  :class="deleteSubmitting ? 'ri-loader-4-line animate-spin text-base' : 'ri-delete-bin-line text-base'"
+                />
+                {{ deleteSubmitting ? "删除中..." : "确认删除" }}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        <Button
+          variant="outline"
+          size="sm"
+          class="h-8 gap-1 border-border/80 bg-background px-3 text-[14px] font-medium shadow-none"
+          @click="goToEdit"
+        >
+          <i class="ri-edit-line text-base" />
+          修改检测服务信息
+        </Button>
+      </div>
     </template>
 
     <template #primary>

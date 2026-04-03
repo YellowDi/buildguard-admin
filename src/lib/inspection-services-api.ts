@@ -115,6 +115,11 @@ export type InspectionServiceDetailPayload = {
   [property: string]: unknown
 }
 
+export type InspectionServiceDeletePayload = {
+  Uuid?: string
+  [property: string]: unknown
+}
+
 export type ListInspectionServicesPayload = {
   Name?: string
   CustomerUuid?: string
@@ -128,11 +133,13 @@ const INSPECTION_SERVICES_API_URL = buildApiUrl(API_PATHS.inspectionServicesList
 const INSPECTION_SERVICE_CREATE_API_URL = buildApiUrl(API_PATHS.inspectionServiceCreate)
 const INSPECTION_SERVICE_UPDATE_API_URL = buildApiUrl(API_PATHS.inspectionServiceUpdate)
 const INSPECTION_SERVICE_CONTRACT_UPDATE_API_URL = buildApiUrl(API_PATHS.inspectionServiceContractUpdate)
+const INSPECTION_SERVICE_DELETE_API_URL = buildApiUrl(API_PATHS.inspectionServiceDelete)
 const INSPECTION_SERVICES_LOAD_ERROR_MESSAGE = "检测服务列表加载失败，请稍后重试。"
 const INSPECTION_SERVICE_CREATE_ERROR_MESSAGE = "检测服务创建失败，请稍后重试。"
 const INSPECTION_SERVICE_UPDATE_ERROR_MESSAGE = "检测服务更新失败，请稍后重试。"
 const INSPECTION_SERVICE_CONTRACT_UPDATE_ERROR_MESSAGE = "检测服务合同更新失败，请稍后重试。"
 const INSPECTION_SERVICE_DETAIL_ERROR_MESSAGE = "检测服务详情加载失败，请稍后重试。"
+const INSPECTION_SERVICE_DELETE_ERROR_MESSAGE = "检测服务删除失败，请稍后重试。"
 const USE_INSPECTION_SERVICES_LIST_MOCK = false
 const USE_INSPECTION_SERVICE_DETAIL_MOCK = false
 
@@ -293,6 +300,25 @@ export async function fetchInspectionServiceDetail(
   assertApiSuccess(responseBody, INSPECTION_SERVICE_DETAIL_ERROR_MESSAGE)
 
   return normalizeInspectionServiceListItem(extractDetailRecord(responseBody))
+}
+
+export async function deleteInspectionService(payload: InspectionServiceDeletePayload) {
+  const url = buildApiRequestUrl(API_PATHS.inspectionServiceDelete)
+  const uuid = getRequiredString(payload.Uuid, "Uuid")
+
+  url.searchParams.set("Uuid", uuid)
+
+  const response = await fetch(url.toString(), {
+    method: "GET",
+    headers: buildApiHeaders(),
+  })
+  const responseBody = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responseBody, INSPECTION_SERVICE_DELETE_ERROR_MESSAGE)
+  }
+
+  assertApiSuccess(responseBody, INSPECTION_SERVICE_DELETE_ERROR_MESSAGE)
 }
 
 export function extractInspectionServiceDetailInspectionUuids(
