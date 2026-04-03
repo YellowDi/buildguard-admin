@@ -143,11 +143,27 @@ const columns: TableColumn[] = [
     label: "强制拍照",
     filterType: "tag",
     tone: "muted",
+    headerClass: "text-center",
+    cellClass: "text-center",
   },
   {
     key: "isMeasureRecordLabel",
     label: "记录实测值",
     filterType: "tag",
+    tone: "muted",
+    headerClass: "text-center",
+    cellClass: "text-center",
+  },
+  {
+    key: "createdAt",
+    label: "创建时间",
+    filterType: "time",
+    tone: "muted",
+  },
+  {
+    key: "updatedAt",
+    label: "更新时间",
+    filterType: "time",
     tone: "muted",
     width: "fill",
   },
@@ -192,6 +208,8 @@ const filteredRows = computed(() => {
     row.categoryName,
     row.content,
     row.standard,
+    row.createdAt,
+    row.updatedAt,
   ].some(field => field.toLowerCase().includes(query)))
 })
 
@@ -699,6 +717,28 @@ defineExpose({
       :table-class="SETTINGS_TABLE_PAGE_CLASS"
       :empty-state="tableEmptyState"
     >
+      <template #cell-isForcePhotoLabel="{ row: rawRow }">
+        <span
+          class="inline-flex items-center justify-center"
+          :aria-label="asInspectionItemRow(rawRow).isForcePhoto ? '是' : '否'"
+        >
+          <i
+            :class="asInspectionItemRow(rawRow).isForcePhoto ? 'ri-check-line' : 'ri-close-line'"
+            class="text-[17px] leading-none text-muted-foreground"
+          />
+        </span>
+      </template>
+      <template #cell-isMeasureRecordLabel="{ row: rawRow }">
+        <span
+          class="inline-flex items-center justify-center"
+          :aria-label="asInspectionItemRow(rawRow).isMeasureRecord ? '是' : '否'"
+        >
+          <i
+            :class="asInspectionItemRow(rawRow).isMeasureRecord ? 'ri-check-line' : 'ri-close-line'"
+            class="text-[17px] leading-none text-muted-foreground"
+          />
+        </span>
+      </template>
       <template #cell-actions="{ row: rawRow }">
         <Button
           variant="outline"
