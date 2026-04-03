@@ -74,10 +74,11 @@ onKeyStroke("Escape", (e) => {
   }
 })
 
-const barBorderClass: Record<AppSidebarCalendarItem["type"], string> = {
-  "work-order": "border-l-[3px] border-orange-500",
-  "inspection-plan": "border-l-[3px] border-blue-500",
-  "inspection-service": "border-l-[3px] border-emerald-500",
+/** 左侧圆角竖条填色（与类型色一致） */
+const barAccentClass: Record<AppSidebarCalendarItem["type"], string> = {
+  "work-order": "bg-orange-500 dark:bg-orange-400",
+  "inspection-plan": "bg-blue-500 dark:bg-blue-400",
+  "inspection-service": "bg-emerald-500 dark:bg-emerald-400",
 }
 
 function onSelectEvent(event: AppSidebarCalendarItem) {
@@ -140,7 +141,7 @@ function getEventTitleText(event: AppSidebarCalendarItem) {
           </Button>
         </header>
 
-        <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-4 pt-0">
+        <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-4">
           <template v-if="loading">
             <p class="px-3 py-8 text-center text-sm text-muted-foreground">加载中...</p>
           </template>
@@ -151,28 +152,38 @@ function getEventTitleText(event: AppSidebarCalendarItem) {
             <section
               v-for="(block, idx) in groups"
               :key="`${block.sectionLabel}-${idx}`"
-              class="mb-4 last:mb-0"
+              class="mb-5 last:mb-0"
             >
-              <div class="flex items-center gap-2 py-1.5">
+              <div class="mb-2 flex items-center gap-2 py-1">
                 <h3 class="text-xs font-medium text-muted-foreground">{{ block.sectionLabel }}</h3>
                 <span
                   class="tabular-nums rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground"
                 >{{ block.events.length }}</span>
               </div>
-              <ul class="space-y-0.5" role="list">
+              <ul class="flex flex-col gap-2" role="list">
                 <li
                   v-for="event in block.events"
                   :key="`${event.type}-${event.uuid}-${event.dateKey}`"
-                  class="cursor-pointer rounded-md py-2 pl-3 pr-2 transition-colors hover:bg-muted/60"
-                  :class="barBorderClass[event.type]"
+                  class="cursor-pointer rounded-md bg-background p-[4px] transition-colors hover:bg-muted dark:bg-background dark:hover:bg-muted/50"
                   @click="onSelectEvent(event)"
                 >
-                  <p class="text-sm font-medium text-foreground">{{ getEventTitleText(event) }}</p>
-                  <p class="mt-0.5 text-xs text-muted-foreground">
-                    <span v-if="event.time">{{ event.time }}</span>
-                    <span v-if="event.time && event.meta" class="mx-1">·</span>
-                    <span v-if="event.meta">{{ event.meta }}</span>
-                  </p>
+                  <div class="flex items-center gap-3">
+                    <span
+                      class="h-[46px] w-[4px] shrink-0 rounded-full"
+                      :class="barAccentClass[event.type]"
+                      aria-hidden="true"
+                    />
+                    <div class="min-w-0 flex-1">
+                      <p class="text-sm font-medium leading-snug text-foreground">
+                        {{ getEventTitleText(event) }}
+                      </p>
+                      <p class="mt-0.5 text-xs leading-snug text-muted-foreground">
+                        <span v-if="event.time">{{ event.time }}</span>
+                        <span v-if="event.time && event.meta" class="mx-1">·</span>
+                        <span v-if="event.meta">{{ event.meta }}</span>
+                      </p>
+                    </div>
+                  </div>
                 </li>
               </ul>
             </section>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue"
+import { computed, onMounted, onUnmounted, ref, watch } from "vue"
 import { useRouter } from "vue-router"
 import { getLocalTimeZone, today } from "@internationalized/date"
 import AppSidebarMiniCalendar from "@/components/layout/app-sidebar/AppSidebarMiniCalendar.vue"
@@ -34,6 +34,18 @@ const { loading, dataSources, allEvents, getEventsForDate, hasEventsOnDate, refr
 
 const sourceSheetOpen = ref(false)
 const selectedSourceType = ref<AppSidebarCalendarItem["type"] | null>(null)
+
+watch(
+  sourceSheetOpen,
+  (open) => {
+    document.documentElement.classList.toggle("calendar-source-sheet-open", open)
+  },
+  { flush: "post" },
+)
+
+onUnmounted(() => {
+  document.documentElement.classList.remove("calendar-source-sheet-open")
+})
 
 function addDaysToDateKey(dateKey: string, delta: number): string {
   const [y, m, d] = dateKey.split("-").map(Number)

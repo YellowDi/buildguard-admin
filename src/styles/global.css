@@ -370,6 +370,14 @@
   }
 
   /**
+   * 日历「数据来源」侧层面板打开时去掉桌面侧栏右边线宽度（与面板贴齐）。
+   * 使用 width: 0 而非 border-right: none，避免部分浏览器下出现异常黑线。
+   */
+  html.calendar-source-sheet-open .group[data-side="left"] > div.fixed.inset-y-0 {
+    border-right-width: 0;
+  }
+
+  /**
    * `border-border/55` softens outlines in light mode.
    * In dark mode `--border` is rgba(255,255,255,0.08); the /55 multiplier makes container edges nearly invisible.
    * Use the full semantic border token for accordion / surface cards using this utility.
