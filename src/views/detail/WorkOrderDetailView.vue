@@ -18,6 +18,7 @@ import { detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
 import DetailLayout from "@/layouts/DetailLayout.vue"
 import { handleApiError } from "@/lib/api-errors"
 import { fetchCustomerDetail, type CustomerDetailResult } from "@/lib/customers-api"
+import { getInspectionItemDetail, type InspectionItemRecord } from "@/lib/inspection-items-api"
 import { fetchMembers } from "@/lib/members-api"
 import {
   dispatchWorkOrder,
@@ -44,6 +45,7 @@ const repairWorkOrder = ref<RepairWorkOrderDetailResult | null>(null)
 const customer = ref<CustomerDetailResult | null>(null)
 const loading = ref(false)
 const errorMessage = ref("")
+const inspectionItemDetailByUuid = ref<Record<string, InspectionItemRecord>>({})
 let latestRequestId = 0
 
 type AssignableUserOption = {
@@ -205,12 +207,14 @@ async function loadWorkOrderDetail(uuid: string) {
     inspectionWorkOrder.value = null
     repairWorkOrder.value = null
     customer.value = null
+    inspectionItemDetailByUuid.value = {}
     errorMessage.value = "工单 Uuid 缺失，无法加载详情。"
     return
   }
 
   loading.value = true
   errorMessage.value = ""
+  inspectionItemDetailByUuid.value = {}
 
   try {
     const result = props.kind === "repair"
@@ -224,9 +228,11 @@ async function loadWorkOrderDetail(uuid: string) {
     if (props.kind === "repair") {
       repairWorkOrder.value = result as RepairWorkOrderDetailResult
       inspectionWorkOrder.value = null
+      inspectionItemDetailByUuid.value = {}
     } else {
       inspectionWorkOrder.value = result as WorkOrderDetailResult
       repairWorkOrder.value = null
+      void loadWorkOrderInspectionItemDetails((result as WorkOrderDetailResult).Builds, requestId)
     }
 
     const nextCustomerUuid = props.kind === "repair"
@@ -260,6 +266,7 @@ async function loadWorkOrderDetail(uuid: string) {
     inspectionWorkOrder.value = null
     repairWorkOrder.value = null
     customer.value = null
+    inspectionItemDetailByUuid.value = {}
     errorMessage.value = handleApiError(error, {
       mode: "silent",
       fallback: "工单详情加载失败，请稍后重试。",
@@ -307,8 +314,10 @@ function buildInspectionWorkOrderCards(builds: WorkOrderBuildInfo[] | undefined)
     }>()
 
     inspectionItems.forEach((item, itemIndex) => {
-      const categoryName = toText(item.CategoryName, "检测项")
-      const categoryKey = toText(item.CategoryUuid, `category-${categoryName}`)
+      const inspectionItemUuid = toText(item.InspectionItemUuid, "")
+      const detail = inspectionItemUuid ? inspectionItemDetailByUuid.value[inspectionItemUuid] : undefined
+      const categoryName = toText(detail?.CategoryName, toText(item.CategoryName, "检测项"))
+      const categoryKey = toText(detail?.CategoryUuid, toText(item.CategoryUuid, `category-${categoryName}`))
       const nextGroup = groupMap.get(categoryKey) ?? {
         key: categoryKey,
         title: categoryName,
@@ -316,7 +325,7 @@ function buildInspectionWorkOrderCards(builds: WorkOrderBuildInfo[] | undefined)
       }
 
       nextGroup.items.push({
-        key: toText(item.InspectionItemUuid, `inspection-item-${itemIndex + 1}`),
+        key: inspectionItemUuid || `inspection-item-${itemIndex + 1}`,
         name: toText(item.InspectionItemName, `检测项 ${itemIndex + 1}`),
         summary: `检测人：${toText(item.UserName, "-")} · 扣分：${toText(item.Score, "-")}`,
         emptyText: "等待检测人通过 App 回传信息",
@@ -332,6 +341,48 @@ function buildInspectionWorkOrderCards(builds: WorkOrderBuildInfo[] | undefined)
       groups: Array.from(groupMap.values()),
     }
   })
+}
+
+async function loadWorkOrderInspectionItemDetails(builds: WorkOrderBuildInfo[] | undefined, requestId: number) {
+  const inspectionItemUuids = Array.from(new Set(
+    (Array.isArray(builds) ? builds : [])
+      .flatMap(build => Array.isArray(build.InspectionItems) ? build.InspectionItems : [])
+      .map(item => toText(item.InspectionItemUuid, ""))
+      .filter(Boolean),
+  ))
+
+  inspectionItemDetailByUuid.value = {}
+
+  if (!inspectionItemUuids.length) {
+    return
+  }
+
+  try {
+    const results = await Promise.allSettled(
+      inspectionItemUuids.map(async (inspectionItemUuid) => ({
+        inspectionItemUuid,
+        detail: await getInspectionItemDetail({ Uuid: inspectionItemUuid }),
+      })),
+    )
+
+    if (requestId !== latestRequestId) {
+      return
+    }
+
+    const nextMap: Record<string, InspectionItemRecord> = {}
+
+    results.forEach((result) => {
+      if (result.status !== "fulfilled") {
+        return
+      }
+
+      nextMap[result.value.inspectionItemUuid] = result.value.detail
+    })
+
+    inspectionItemDetailByUuid.value = nextMap
+  } finally {
+    // 保留 finally，后续若需要增加状态提示时不改控制流。
+  }
 }
 
 function openAssignDialog() {
