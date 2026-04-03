@@ -826,21 +826,13 @@ function readFileAsDataUrl(file: File) {
                     class="mb-3 overflow-hidden rounded-md border border-border/55 bg-background/95 shadow-xs last:mb-0 dark:shadow-[var(--shadow-card)]"
                   >
                     <AccordionTrigger class="bg-muted px-3.5 py-3 text-left hover:no-underline data-[state=open]:border-b data-[state=open]:border-border/60">
-                      <div class="flex min-w-0 items-center justify-between gap-3">
-                        <div class="min-w-0">
-                          <div class="truncate text-sm font-semibold text-foreground">
-                            {{ building.buildName }}
-                          </div>
-                          <div class="mt-1 truncate text-xs text-muted-foreground">
-                            {{ building.parkName }} · {{ inspectionCount }} 个检测项
-                          </div>
+                      <div class="min-w-0">
+                        <div class="truncate text-sm font-semibold text-foreground">
+                          {{ building.buildName }}
                         </div>
-                        <Badge
-                          variant="secondary"
-                          class="min-w-6 shrink-0 justify-center rounded-md px-1.5 py-0.5 text-[12px] font-medium leading-none"
-                        >
-                          {{ building.inspectionGroups.length }}
-                        </Badge>
+                        <div class="mt-1 truncate text-xs text-muted-foreground">
+                          {{ building.inspectionGroups.length }} 个检测分类 · {{ inspectionCount }} 个检测项
+                        </div>
                       </div>
                     </AccordionTrigger>
 
