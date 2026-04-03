@@ -965,7 +965,6 @@ function readFileAsDataUrl(file: File) {
                           :class="[
                             'space-y-3 px-2',
                             groupIndex === 0 ? 'pt-3' : 'pt-2',
-                            groupIndex === building.inspectionGroups.length - 1 ? 'pb-3' : 'pb-2',
                           ]"
                         >
                           <div class="flex min-w-0 items-center gap-3">
