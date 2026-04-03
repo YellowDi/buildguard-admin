@@ -101,7 +101,7 @@ export type InspectionServiceCreateResult = {
 
 export type InspectionServiceSubmitCompatibilitySource = {
   inspectionUuids?: string[]
-  categoryScorePresetCount?: number
+  categoryScoreLimitCount?: number
 }
 
 export type InspectionServiceSubmitCompatibilityResult = {
@@ -345,14 +345,14 @@ export function resolveInspectionServiceSubmitCompatibility(
 
   const normalizedSources = sources.map(source => ({
     inspectionUuids: dedupeStringList(source.inspectionUuids ?? []),
-    categoryScorePresetCount: normalizeOptionalNumberLike(source.categoryScorePresetCount) ?? 0,
+    categoryScoreLimitCount: normalizeOptionalNumberLike(source.categoryScoreLimitCount) ?? 0,
   }))
 
-  if (normalizedSources.some(source => source.categoryScorePresetCount > 0)) {
+  if (normalizedSources.some(source => source.categoryScoreLimitCount > 0)) {
     return {
       canSubmit: false,
       inspectionUuids: [],
-      reason: "当前接口暂不支持保存按建筑配置的分类积分策略。",
+      reason: "当前接口暂不支持保存按建筑配置的分类分数上限。",
     }
   }
 

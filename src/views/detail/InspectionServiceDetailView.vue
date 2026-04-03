@@ -8,7 +8,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import BuildingDetailSheet from "@/components/detail/BuildingDetailSheet.vue"
 import DetailFieldSections from "@/components/detail/DetailFieldSections.vue"
 import FormDatePicker from "@/components/form/FormDatePicker.vue"
-import InspectionCategoryScorePresetInline from "@/components/inspection/InspectionCategoryScorePresetInline.vue"
+import InspectionCategoryScoreLimitInline from "@/components/inspection/InspectionCategoryScoreLimitInline.vue"
 import DetailFieldsSkeleton from "@/components/loading/DetailFieldsSkeleton.vue"
 import DetailRelationSkeleton from "@/components/loading/DetailRelationSkeleton.vue"
 import type { DetailContactValue, DetailFieldSection, DetailStatusValue } from "@/components/detail/types"
@@ -31,7 +31,7 @@ import { detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
 import DetailLayout from "@/layouts/DetailLayout.vue"
 import { buildApiRequestUrl } from "@/lib/api"
 import { handleApiError } from "@/lib/api-errors"
-import { readInspectionCategoryScorePresets, type InspectionCategoryScorePreset } from "@/lib/inspection-category-score-presets"
+import { readInspectionCategoryScoreLimits, type InspectionCategoryScoreLimit } from "@/lib/inspection-category-score-limits"
 import {
   deleteInspectionService,
   fetchInspectionServiceDetail,
@@ -61,7 +61,7 @@ type InspectionServiceInspectionGroup = {
   key: string
   title: string
   categoryUuid: string
-  scorePreset: InspectionCategoryScorePreset
+  scoreLimit: InspectionCategoryScoreLimit
   rows: InspectionServiceInspectionRow[]
 }
 
@@ -73,11 +73,7 @@ type InspectionServiceBuildingInspectionView = {
   inspectionGroups: InspectionServiceInspectionGroup[]
 }
 
-const DEFAULT_CATEGORY_SCORE_PRESET: InspectionCategoryScorePreset = {
-  normal: 0,
-  attention: 10,
-  risk: 20,
-}
+const DEFAULT_CATEGORY_SCORE_LIMIT: InspectionCategoryScoreLimit = 20
 
 const route = useRoute()
 const router = useRouter()
@@ -101,7 +97,7 @@ const uploadContractForm = ref({
   contractFileName: "",
 })
 let latestRequestId = 0
-const categoryScorePresets = ref<Record<string, InspectionCategoryScorePreset>>({})
+const categoryScoreLimits = ref<Record<string, InspectionCategoryScoreLimit>>({})
 
 const inspectionServiceUuid = computed(() => typeof route.params.id === "string" ? route.params.id.trim() : "")
 const customerUuid = computed(() => {
@@ -387,7 +383,7 @@ async function submitUploadContract() {
 
 async function loadInspectionServiceDetail(uuid: string) {
   const requestId = ++latestRequestId
-  categoryScorePresets.value = readInspectionCategoryScorePresets()
+  categoryScoreLimits.value = readInspectionCategoryScoreLimits()
 
   if (!uuid) {
     detail.value = null
@@ -491,7 +487,7 @@ function buildInspectionGroups(inspections: InspectionServiceListItem["Inspectio
     key: group.categoryUuid,
     title: group.title,
     categoryUuid: group.categoryUuid,
-    scorePreset: getCategoryScorePreset(group.categoryUuid),
+    scoreLimit: getCategoryScoreLimit(group.categoryUuid),
     rows: group.rows,
   }))
 }
@@ -519,14 +515,8 @@ function buildBuildingInspectionViews(
   })
 }
 
-function getCategoryScorePreset(categoryUuid: string): InspectionCategoryScorePreset {
-  const current = categoryScorePresets.value[categoryUuid] ?? DEFAULT_CATEGORY_SCORE_PRESET
-
-  return {
-    normal: current.normal,
-    attention: current.attention,
-    risk: current.risk,
-  }
+function getCategoryScoreLimit(categoryUuid: string): InspectionCategoryScoreLimit {
+  return categoryScoreLimits.value[categoryUuid] ?? DEFAULT_CATEGORY_SCORE_LIMIT
 }
 
 function buildStatusValue(status: unknown): DetailStatusValue {
@@ -876,8 +866,8 @@ function readFileAsDataUrl(file: File) {
                             <div class="h-px flex-1 bg-border/80" />
 
                             <div class="flex shrink-0 items-center gap-2">
-                              <span class="text-xs text-muted-foreground">计分预设</span>
-                              <InspectionCategoryScorePresetInline :preset="group.scorePreset" />
+                              <span class="text-xs text-muted-foreground">分数上限</span>
+                              <InspectionCategoryScoreLimitInline :limit="group.scoreLimit" />
                             </div>
                           </div>
 

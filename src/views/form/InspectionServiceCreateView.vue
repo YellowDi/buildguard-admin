@@ -43,9 +43,9 @@ import { fetchBuildings, type BuildingListItem } from "@/lib/buildings-api"
 import { fetchCustomers, type CustomerListItem } from "@/lib/customers-api"
 import { fetchInspectionCategories, type InspectionCategoryRecord } from "@/lib/inspection-categories-api"
 import {
-  readInspectionCategoryScorePresets,
-  type InspectionCategoryScorePreset,
-} from "@/lib/inspection-category-score-presets"
+  readInspectionCategoryScoreLimits,
+  type InspectionCategoryScoreLimit,
+} from "@/lib/inspection-category-score-limits"
 import {
   fetchInspectionServiceTemplates,
   type InspectionServiceTemplateRecord,
@@ -72,12 +72,10 @@ type InspectionServiceBaseForm = {
   remark: string
 }
 
-type InspectionServiceCategoryPresetDraft = InspectionCategoryScorePreset
+type InspectionServiceCategoryScoreLimitDraft = InspectionCategoryScoreLimit
 
-type InspectionServiceCategoryPresetForm = {
-  normal: string
-  attention: string
-  risk: string
+type InspectionServiceCategoryScoreLimitForm = {
+  scoreLimit: string
 }
 
 type InspectionServiceBuildingConfig = {
@@ -86,7 +84,7 @@ type InspectionServiceBuildingConfig = {
   parkUuid: string
   parkName: string
   inspectionUuids: string[]
-  categoryScorePresetByCategoryUuid: Record<string, InspectionServiceCategoryPresetDraft>
+  categoryScoreLimitByCategoryUuid: Record<string, InspectionServiceCategoryScoreLimitDraft>
   templateSourceUuid?: string
   inspectionTouched?: boolean
 }
@@ -124,11 +122,7 @@ type InspectionCategoryOption = {
 }
 
 const DEFAULT_LEVEL_OPTIONS = ["S级", "A级", "B级", "C级"] as const
-const DEFAULT_CATEGORY_SCORE_PRESET: InspectionCategoryScorePreset = {
-  normal: 0,
-  attention: 10,
-  risk: 20,
-}
+const DEFAULT_CATEGORY_SCORE_LIMIT: InspectionCategoryScoreLimit = 20
 
 function createEmptyBaseForm(): InspectionServiceBaseForm {
   return {
@@ -139,14 +133,6 @@ function createEmptyBaseForm(): InspectionServiceBaseForm {
     managerName: "",
     managerPhone: "",
     remark: "",
-  }
-}
-
-function cloneScorePreset(preset: InspectionCategoryScorePreset): InspectionCategoryScorePreset {
-  return {
-    normal: preset.normal,
-    attention: preset.attention,
-    risk: preset.risk,
   }
 }
 
@@ -166,11 +152,7 @@ function cloneBuildingConfig(config: InspectionServiceBuildingConfig): Inspectio
   return {
     ...config,
     inspectionUuids: [...config.inspectionUuids],
-    categoryScorePresetByCategoryUuid: Object.fromEntries(
-      Object.entries(config.categoryScorePresetByCategoryUuid).map(([categoryUuid, preset]) => (
-        [categoryUuid, cloneScorePreset(preset)]
-      )),
-    ),
+    categoryScoreLimitByCategoryUuid: { ...config.categoryScoreLimitByCategoryUuid },
   }
 }
 
@@ -178,11 +160,9 @@ function cloneBuildingConfigs(configs: InspectionServiceBuildingConfig[]) {
   return configs.map(config => cloneBuildingConfig(config))
 }
 
-function createCategoryPresetForm(preset: InspectionCategoryScorePreset): InspectionServiceCategoryPresetForm {
+function createCategoryScoreLimitForm(scoreLimit: InspectionCategoryScoreLimit): InspectionServiceCategoryScoreLimitForm {
   return {
-    normal: String(preset.normal),
-    attention: String(preset.attention),
-    risk: String(preset.risk),
+    scoreLimit: String(scoreLimit),
   }
 }
 
@@ -216,15 +196,15 @@ const parkOptions = ref<ParkOption[]>([])
 const buildingOptions = ref<BuildOption[]>([])
 const inspectionItemOptions = ref<InspectionItemOption[]>([])
 const inspectionCategoryOptions = ref<InspectionCategoryOption[]>([])
-const globalCategoryScorePresets = ref<Record<string, InspectionCategoryScorePreset>>({})
+const globalCategoryScoreLimits = ref<Record<string, InspectionCategoryScoreLimit>>({})
 const buildingConfigs = ref<InspectionServiceBuildingConfig[]>([])
 const batchTemplateUuid = ref("")
 const buildingEditorOpen = ref(false)
 const activeBuildingEditorUuid = ref("")
 const buildingEditorDraftUuids = ref<string[]>([])
 const expandedBuildGroupKey = ref("")
-const activeScorePresetBuildUuid = ref("")
-const scorePresetDraftForms = ref<Record<string, InspectionServiceCategoryPresetForm>>({})
+const activeScoreLimitBuildUuid = ref("")
+const scoreLimitDraftForms = ref<Record<string, InspectionServiceCategoryScoreLimitForm>>({})
 const suppressCustomerWatch = ref(false)
 const legacyMultiParkMessage = ref("")
 
@@ -325,7 +305,7 @@ const currentBuildingEditor = computed(() =>
 const currentBuildingEditorTitle = computed(() =>
   currentBuildingEditor.value?.buildName || "建筑检测项",
 )
-const categoryPresetFeatureDisabledReason = computed(() => {
+const categoryScoreLimitFeatureDisabledReason = computed(() => {
   if (inspectionCategoryLoading.value) {
     return "检测项分类加载中。"
   }
@@ -344,7 +324,7 @@ const submitCompatibility = computed<InspectionServiceSubmitCompatibilityResult>
   resolveInspectionServiceSubmitCompatibility(
     buildingConfigs.value.map(config => ({
       inspectionUuids: config.inspectionUuids,
-      categoryScorePresetCount: Object.keys(config.categoryScorePresetByCategoryUuid).length,
+      categoryScoreLimitCount: Object.keys(config.categoryScoreLimitByCategoryUuid).length,
     })),
   ),
 )
@@ -562,7 +542,7 @@ function addBuildingConfig(build: BuildOption) {
     parkUuid: build.parkUuid,
     parkName: build.parkName,
     inspectionUuids: nextInspectionUuids,
-    categoryScorePresetByCategoryUuid: {},
+    categoryScoreLimitByCategoryUuid: {},
     templateSourceUuid: batchTemplateUuid.value || undefined,
     inspectionTouched: false,
   }]
@@ -575,8 +555,8 @@ function removeBuildingConfig(buildUuid: string) {
     closeBuildingEditor()
   }
 
-  if (activeScorePresetBuildUuid.value === buildUuid) {
-    closeScorePresetPopover()
+  if (activeScoreLimitBuildUuid.value === buildUuid) {
+    closeScoreLimitPopover()
   }
 
   if (!buildingConfigs.value.length) {
@@ -622,7 +602,7 @@ function closeBuildingEditor() {
   buildingEditorDraftUuids.value = []
 }
 
-function handleScorePresetPopoverOpenChange(buildUuid: string, open: boolean) {
+function handleScoreLimitPopoverOpenChange(buildUuid: string, open: boolean) {
   if (open) {
     const target = buildingConfigs.value.find(config => config.buildUuid === buildUuid)
 
@@ -630,29 +610,29 @@ function handleScorePresetPopoverOpenChange(buildUuid: string, open: boolean) {
       return
     }
 
-    activeScorePresetBuildUuid.value = buildUuid
-    scorePresetDraftForms.value = Object.fromEntries(
+    activeScoreLimitBuildUuid.value = buildUuid
+    scoreLimitDraftForms.value = Object.fromEntries(
       inspectionCategoryOptions.value.map((category) => {
-        const existingPreset = target.categoryScorePresetByCategoryUuid[category.uuid]
-        const initialPreset = existingPreset ?? getDefaultCategoryScorePreset(category.uuid)
+        const existingScoreLimit = target.categoryScoreLimitByCategoryUuid[category.uuid]
+        const initialScoreLimit = existingScoreLimit ?? getDefaultCategoryScoreLimit(category.uuid)
 
-        return [category.uuid, createCategoryPresetForm(initialPreset)]
+        return [category.uuid, createCategoryScoreLimitForm(initialScoreLimit)]
       }),
     )
     return
   }
 
-  if (activeScorePresetBuildUuid.value === buildUuid) {
-    closeScorePresetPopover()
+  if (activeScoreLimitBuildUuid.value === buildUuid) {
+    closeScoreLimitPopover()
   }
 }
 
-function updateScorePresetField(
+function updateScoreLimitField(
   categoryUuid: string,
-  field: keyof InspectionServiceCategoryPresetForm,
+  field: keyof InspectionServiceCategoryScoreLimitForm,
   value: string | number,
 ) {
-  const current = scorePresetDraftForms.value[categoryUuid]
+  const current = scoreLimitDraftForms.value[categoryUuid]
 
   if (!current) {
     return
@@ -661,69 +641,69 @@ function updateScorePresetField(
   current[field] = typeof value === "number" ? String(value) : value
 }
 
-function resetScorePresetDraft() {
-  const buildUuid = activeScorePresetBuildUuid.value
+function resetScoreLimitDraft() {
+  const buildUuid = activeScoreLimitBuildUuid.value
 
   if (!buildUuid) {
     return
   }
 
-  handleScorePresetPopoverOpenChange(buildUuid, true)
+  handleScoreLimitPopoverOpenChange(buildUuid, true)
 }
 
-function saveScorePresetDraft(buildUuid: string) {
+function saveScoreLimitDraft(buildUuid: string) {
   const target = buildingConfigs.value.find(config => config.buildUuid === buildUuid)
 
   if (!target) {
     return
   }
 
-  const nextScorePresetMap: Record<string, InspectionServiceCategoryPresetDraft> = {}
+  const nextScoreLimitMap: Record<string, InspectionServiceCategoryScoreLimitDraft> = {}
 
   for (const category of inspectionCategoryOptions.value) {
-    const formState = scorePresetDraftForms.value[category.uuid]
-    const parsedPreset = parseScorePresetForm(formState)
+    const formState = scoreLimitDraftForms.value[category.uuid]
+    const parsedScoreLimit = parseScoreLimitForm(formState)
 
-    if (!parsedPreset) {
-      toast.error(`请检查 ${category.name} 的积分预设，范围需为 0-20 的整数。`)
+    if (parsedScoreLimit === null) {
+      toast.error(`请检查 ${category.name} 的分数上限，范围需为 0-20 的整数。`)
       return
     }
 
-    const defaultPreset = getDefaultCategoryScorePreset(category.uuid)
+    const defaultScoreLimit = getDefaultCategoryScoreLimit(category.uuid)
 
-    if (!isSameScorePreset(parsedPreset, defaultPreset)) {
-      nextScorePresetMap[category.uuid] = parsedPreset
+    if (!isSameScoreLimit(parsedScoreLimit, defaultScoreLimit)) {
+      nextScoreLimitMap[category.uuid] = parsedScoreLimit
     }
   }
 
-  target.categoryScorePresetByCategoryUuid = nextScorePresetMap
-  closeScorePresetPopover()
+  target.categoryScoreLimitByCategoryUuid = nextScoreLimitMap
+  closeScoreLimitPopover()
 
-  toast.success("计分预设已更新", {
-    description: Object.keys(nextScorePresetMap).length
-      ? `${target.buildName} 已配置 ${Object.keys(nextScorePresetMap).length} 个分类的服务内计分预设。`
-      : `${target.buildName} 已恢复为默认计分预设。`,
+  toast.success("分数上限已更新", {
+    description: Object.keys(nextScoreLimitMap).length
+      ? `${target.buildName} 已配置 ${Object.keys(nextScoreLimitMap).length} 个分类的服务内分数上限。`
+      : `${target.buildName} 已恢复为默认分数上限。`,
   })
 }
 
-function clearScorePresetOverrides(buildUuid: string) {
+function clearScoreLimitOverrides(buildUuid: string) {
   const target = buildingConfigs.value.find(config => config.buildUuid === buildUuid)
 
   if (!target) {
     return
   }
 
-  target.categoryScorePresetByCategoryUuid = {}
-  closeScorePresetPopover()
+  target.categoryScoreLimitByCategoryUuid = {}
+  closeScoreLimitPopover()
 
-  toast.success("已恢复默认计分预设", {
-    description: `${target.buildName} 当前不再使用服务内自定义计分预设。`,
+  toast.success("已恢复默认分数上限", {
+    description: `${target.buildName} 当前不再使用服务内自定义分数上限。`,
   })
 }
 
-function closeScorePresetPopover() {
-  activeScorePresetBuildUuid.value = ""
-  scorePresetDraftForms.value = {}
+function closeScoreLimitPopover() {
+  activeScoreLimitBuildUuid.value = ""
+  scoreLimitDraftForms.value = {}
 }
 
 async function handleSubmit() {
@@ -835,7 +815,7 @@ async function handleReset() {
 async function loadInitialOptions() {
   loadError.value = ""
   customerLoading.value = true
-  globalCategoryScorePresets.value = readInspectionCategoryScorePresets()
+  globalCategoryScoreLimits.value = readInspectionCategoryScoreLimits()
 
   try {
     const [customers] = await Promise.all([
@@ -884,7 +864,7 @@ async function loadCustomerScopedOptions(
   const normalizedCustomerUuid = normalizeText(customerUuid)
 
   closeBuildingEditor()
-  closeScorePresetPopover()
+  closeScoreLimitPopover()
   parkOptions.value = []
   buildingOptions.value = []
   buildingConfigs.value = []
@@ -1320,7 +1300,7 @@ function mapServiceDetailBuildToConfig(
     parkUuid,
     parkName,
     inspectionUuids: [...inspectionUuids],
-    categoryScorePresetByCategoryUuid: {},
+    categoryScoreLimitByCategoryUuid: {},
     templateSourceUuid: batchTemplateUuid.value || undefined,
     inspectionTouched: false,
   } satisfies InspectionServiceBuildingConfig
@@ -1353,11 +1333,11 @@ function getBuildingInspectionSummary(config: InspectionServiceBuildingConfig) {
   return previewNames.join("、")
 }
 
-function getBuildingScorePresetSummary(config: InspectionServiceBuildingConfig) {
-  const categoryUuids = Object.keys(config.categoryScorePresetByCategoryUuid)
+function getBuildingScoreLimitSummary(config: InspectionServiceBuildingConfig) {
+  const categoryUuids = Object.keys(config.categoryScoreLimitByCategoryUuid)
 
   if (!categoryUuids.length) {
-    return "使用默认计分预设"
+    return "使用默认分数上限"
   }
 
   const previewNames = categoryUuids
@@ -1365,34 +1345,22 @@ function getBuildingScorePresetSummary(config: InspectionServiceBuildingConfig) 
     .map(uuid => inspectionCategoryNameByUuid.value.get(uuid) || "未命名分类")
 
   if (categoryUuids.length > 2) {
-    return `${previewNames.join("、")} 等 ${categoryUuids.length} 个分类已自定义。`
+    return `${previewNames.join("、")} 等 ${categoryUuids.length} 个分类已自定义分数上限。`
   }
 
-  return `${previewNames.join("、")} 已使用服务内计分预设。`
+  return `${previewNames.join("、")} 已使用服务内分数上限。`
 }
 
-function getDefaultCategoryScorePreset(categoryUuid: string): InspectionCategoryScorePreset {
-  return cloneScorePreset(globalCategoryScorePresets.value[categoryUuid] ?? DEFAULT_CATEGORY_SCORE_PRESET)
+function getDefaultCategoryScoreLimit(categoryUuid: string): InspectionCategoryScoreLimit {
+  return globalCategoryScoreLimits.value[categoryUuid] ?? DEFAULT_CATEGORY_SCORE_LIMIT
 }
 
-function parseScorePresetForm(formState: InspectionServiceCategoryPresetForm | undefined) {
+function parseScoreLimitForm(formState: InspectionServiceCategoryScoreLimitForm | undefined) {
   if (!formState) {
     return null
   }
 
-  const normal = parseScoreFieldValue(formState.normal)
-  const attention = parseScoreFieldValue(formState.attention)
-  const risk = parseScoreFieldValue(formState.risk)
-
-  if (normal === null || attention === null || risk === null) {
-    return null
-  }
-
-  return {
-    normal,
-    attention,
-    risk,
-  }
+  return parseScoreFieldValue(formState.scoreLimit)
 }
 
 function parseScoreFieldValue(value: string) {
@@ -1409,10 +1377,8 @@ function parseScoreFieldValue(value: string) {
   return parsed
 }
 
-function isSameScorePreset(left: InspectionCategoryScorePreset, right: InspectionCategoryScorePreset) {
-  return left.normal === right.normal
-    && left.attention === right.attention
-    && left.risk === right.risk
+function isSameScoreLimit(left: InspectionCategoryScoreLimit, right: InspectionCategoryScoreLimit) {
+  return left === right
 }
 
 function resetLocalStateForRoute() {
@@ -1440,7 +1406,7 @@ function resetLocalStateForRoute() {
   buildingConfigs.value = []
   batchTemplateUuid.value = ""
   closeBuildingEditor()
-  closeScorePresetPopover()
+  closeScoreLimitPopover()
   legacyMultiParkMessage.value = ""
   Object.assign(form, createEmptyBaseForm())
   initialBaseForm.value = createEmptyBaseForm()
@@ -1750,7 +1716,7 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
             <div v-if="!sortedBuildingConfigs.length" class="border border-dashed border-border/60 px-4 py-8 text-center">
               <p class="text-sm font-medium text-foreground">还没有选中建筑</p>
               <p class="mt-2 text-sm leading-6 text-muted-foreground">
-                勾选建筑后，这里会列出对应的配置卡片，便于逐栋编辑检测项和计分预设。
+                勾选建筑后，这里会列出对应的配置卡片，便于逐栋编辑检测项和分数上限。
               </p>
             </div>
 
@@ -1783,8 +1749,8 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
                     </Button>
 
                     <Popover
-                      :open="activeScorePresetBuildUuid === config.buildUuid"
-                      @update:open="handleScorePresetPopoverOpenChange(config.buildUuid, $event)"
+                      :open="activeScoreLimitBuildUuid === config.buildUuid"
+                      @update:open="handleScoreLimitPopoverOpenChange(config.buildUuid, $event)"
                     >
                       <PopoverTrigger as-child>
                         <Button
@@ -1792,19 +1758,19 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
                           variant="outline"
                           type="button"
                           class="size-7 px-0"
-                          :disabled="Boolean(categoryPresetFeatureDisabledReason) || Boolean(legacyMultiParkMessage)"
-                          :title="categoryPresetFeatureDisabledReason || '配置计分预设'"
+                          :disabled="Boolean(categoryScoreLimitFeatureDisabledReason) || Boolean(legacyMultiParkMessage)"
+                          :title="categoryScoreLimitFeatureDisabledReason || '配置分数上限'"
                         >
                           <i class="ri-settings-3-line text-[13px]" />
-                          <span class="sr-only">计分预设</span>
+                          <span class="sr-only">分数上限</span>
                         </Button>
                       </PopoverTrigger>
 
                       <PopoverContent class="w-[min(100vw-2rem,28rem)] p-0" align="end">
                         <div class="border-b border-border/60 px-4 py-3">
-                          <p class="text-sm font-semibold text-foreground">计分预设</p>
+                          <p class="text-sm font-semibold text-foreground">分数上限</p>
                           <p class="mt-1 text-xs leading-5 text-muted-foreground">
-                            未改动时会使用默认计分预设。
+                            未改动时会使用默认分数上限。
                           </p>
                         </div>
 
@@ -1815,38 +1781,16 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
                             class="rounded-md border border-border/60 px-3 py-3"
                           >
                             <p class="text-sm font-medium text-foreground">{{ category.name }}</p>
-                            <div class="mt-3 grid gap-3 sm:grid-cols-3">
+                            <div class="mt-3">
                               <label class="space-y-1">
-                                <span class="text-xs text-muted-foreground">一切正常</span>
+                                <span class="text-xs text-muted-foreground">分数上限</span>
                                 <Input
                                   type="number"
                                   min="0"
                                   max="20"
                                   inputmode="numeric"
-                                  :model-value="scorePresetDraftForms[category.uuid]?.normal ?? ''"
-                                  @update:model-value="updateScorePresetField(category.uuid, 'normal', $event)"
-                                />
-                              </label>
-                              <label class="space-y-1">
-                                <span class="text-xs text-muted-foreground">需重点关注</span>
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  max="20"
-                                  inputmode="numeric"
-                                  :model-value="scorePresetDraftForms[category.uuid]?.attention ?? ''"
-                                  @update:model-value="updateScorePresetField(category.uuid, 'attention', $event)"
-                                />
-                              </label>
-                              <label class="space-y-1">
-                                <span class="text-xs text-muted-foreground">存在风险</span>
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  max="20"
-                                  inputmode="numeric"
-                                  :model-value="scorePresetDraftForms[category.uuid]?.risk ?? ''"
-                                  @update:model-value="updateScorePresetField(category.uuid, 'risk', $event)"
+                                  :model-value="scoreLimitDraftForms[category.uuid]?.scoreLimit ?? ''"
+                                  @update:model-value="updateScoreLimitField(category.uuid, 'scoreLimit', $event)"
                                 />
                               </label>
                             </div>
@@ -1854,15 +1798,15 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
                         </div>
 
                         <div class="flex flex-wrap items-center justify-between gap-2 border-t border-border/60 px-4 py-3">
-                          <Button size="sm" variant="ghost" type="button" @click="resetScorePresetDraft">
+                          <Button size="sm" variant="ghost" type="button" @click="resetScoreLimitDraft">
                             恢复初始
                           </Button>
                           <div class="flex flex-wrap gap-2">
-                            <Button size="sm" variant="outline" type="button" @click="clearScorePresetOverrides(config.buildUuid)">
+                            <Button size="sm" variant="outline" type="button" @click="clearScoreLimitOverrides(config.buildUuid)">
                               清空自定义
                             </Button>
-                            <Button size="sm" type="button" @click="saveScorePresetDraft(config.buildUuid)">
-                              保存策略
+                            <Button size="sm" type="button" @click="saveScoreLimitDraft(config.buildUuid)">
+                              保存上限
                             </Button>
                           </div>
                         </div>
@@ -1880,9 +1824,9 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
                   </div>
 
                   <div>
-                    <span class="text-[11px] text-muted-foreground">计分预设</span>
+                    <span class="text-[11px] text-muted-foreground">分数上限</span>
                     <p class="mt-1 text-xs leading-5 text-muted-foreground">
-                      {{ getBuildingScorePresetSummary(config) }}
+                      {{ getBuildingScoreLimitSummary(config) }}
                     </p>
                   </div>
                 </div>
