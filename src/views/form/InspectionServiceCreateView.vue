@@ -1481,8 +1481,8 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
       </AlertDescription>
     </Alert>
 
-    <div class="grid min-w-0 gap-0 xl:grid-cols-[560px_1px_460px]">
-      <form class="min-w-0 xl:sticky xl:top-24 xl:self-start xl:pr-6" @submit.prevent="handleSubmit">
+    <div class="grid min-w-0 gap-0 lg:grid-cols-[minmax(0,1fr)_1px_460px]">
+      <form class="min-w-0 lg:sticky lg:top-24 lg:self-start lg:pr-6" @submit.prevent="handleSubmit">
         <FormFieldSection
           id="section-customer"
           quick-nav-label="所属客户"
@@ -1640,7 +1640,7 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
                         @update:model-value="updateBuildChecked(build, $event)"
                       />
                       <div class="min-w-0 flex-1">
-                        <div class="line-clamp-2 text-sm font-medium leading-snug text-foreground">
+                        <div class="truncate text-sm font-medium text-foreground">
                           {{ build.name }}
                         </div>
                       </div>
@@ -1671,10 +1671,10 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
         </FormFieldSection>
       </form>
 
-      <Separator orientation="vertical" class="hidden h-auto bg-border/80 xl:block" />
+      <Separator orientation="vertical" class="hidden h-auto bg-border/80 lg:block" />
 
-      <div class="min-w-0 xl:max-w-[460px] xl:pl-6">
-        <section class="border-b border-border/80 pt-5 pb-5">
+      <div class="min-w-0 lg:max-w-[460px] lg:pl-6">
+        <section class="pt-5 pb-5">
           <div class="flex items-center justify-between gap-3">
             <h3 class="text-sm font-semibold text-foreground">
               已选 {{ selectedBuildCount }} 栋建筑
