@@ -72,26 +72,11 @@ function handleCreateConversation() {
                 置顶
               </span>
             </div>
-            <p class="mt-1 truncate text-xs text-muted-foreground">
-              {{ item.project }}
-            </p>
           </div>
 
           <div class="shrink-0 text-right">
             <p class="text-xs text-muted-foreground">{{ item.updatedAt }}</p>
-            <p class="mt-1 text-[11px] font-medium text-muted-foreground">
-              {{ item.messageCount }} 条
-            </p>
           </div>
-        </div>
-
-        <p class="mt-2 line-clamp-2 text-xs leading-5 text-muted-foreground">
-          {{ item.preview }}
-        </p>
-
-        <div class="mt-3 flex items-center gap-2 text-[11px] text-muted-foreground">
-          <span class="rounded-full bg-muted px-2 py-0.5">{{ item.model }}</span>
-          <span>最近更新</span>
         </div>
       </article>
 
