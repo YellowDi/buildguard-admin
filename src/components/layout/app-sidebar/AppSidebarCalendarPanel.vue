@@ -3,11 +3,33 @@ import { computed, onMounted, ref } from "vue"
 import { useRouter } from "vue-router"
 import { getLocalTimeZone, today } from "@internationalized/date"
 import AppSidebarMiniCalendar from "@/components/layout/app-sidebar/AppSidebarMiniCalendar.vue"
-import type { AppSidebarCalendarDate } from "@/components/layout/app-sidebar/types"
+import type { AppSidebarCalendarDate, AppSidebarCalendarItem } from "@/components/layout/app-sidebar/types"
 import { useCalendarEvents } from "@/composables/useCalendarEvents"
 
+/**
+ * 与下方日程条目右上角徽章同一套色板。
+ * 色块用同色相的 500/400（与徽章上偏亮的橙/绿/蓝观感一致）；勿用 700 作实心填充，易偏褐红、与标签不一致。
+ */
+const calendarItemTypePresentation: Record<
+  AppSidebarCalendarItem["type"],
+  { swatch: string, badge: string }
+> = {
+  "work-order": {
+    swatch: "bg-orange-500 dark:bg-orange-400",
+    badge: "bg-orange-100 text-orange-700 dark:bg-orange-950/50 dark:text-orange-400",
+  },
+  "inspection-service": {
+    swatch: "bg-emerald-500 dark:bg-emerald-400",
+    badge: "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400",
+  },
+  "inspection-plan": {
+    swatch: "bg-blue-500 dark:bg-blue-400",
+    badge: "bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-400",
+  },
+}
+
 const router = useRouter()
-const { loading, getEventsForDate, hasEventsOnDate, refresh } = useCalendarEvents()
+const { loading, dataSources, getEventsForDate, hasEventsOnDate, refresh } = useCalendarEvents()
 
 function getTodayDate(): AppSidebarCalendarDate {
   return today(getLocalTimeZone()) as unknown as AppSidebarCalendarDate
@@ -64,7 +86,26 @@ onMounted(() => {
       :has-event-on-date="hasEventsOnDate"
     />
 
-    <div class="mt-3 min-h-0 flex-1 overflow-y-auto">
+    <div class="mt-2 shrink-0 border-t border-sidebar-border/80 px-1.5 pt-2.5">
+      <ul class="space-y-0.5" role="list">
+        <li
+          v-for="src in dataSources"
+          :key="src.type"
+          class="flex items-center gap-2 rounded-lg px-1.5 py-1.5"
+        >
+          <span
+            class="size-3 shrink-0 rounded-[3px]"
+            :class="calendarItemTypePresentation[src.type].swatch"
+            aria-hidden="true"
+          />
+
+          <span class="min-w-0 flex-1 truncate text-sm text-foreground">{{ src.label }}</span>
+          <span class="shrink-0 whitespace-nowrap text-right text-xs text-muted-foreground">{{ src.dateFieldLabel }}</span>
+        </li>
+      </ul>
+    </div>
+
+    <div class="mt-3 min-h-0 flex-1 overflow-y-auto border-t border-sidebar-border pt-3">
       <div class="flex items-center justify-between px-3 py-2.5">
         <p class="text-sm font-semibold text-foreground">{{ selectedDateLabel }}</p>
         <span class="text-xs text-muted-foreground">
@@ -88,11 +129,7 @@ onMounted(() => {
             <p class="truncate text-xs font-medium text-muted-foreground">{{ getEventTypeText(event) }}</p>
             <span
               class="shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium"
-              :class="event.type === 'work-order'
-                ? 'bg-orange-100 text-orange-700 dark:bg-orange-950/50 dark:text-orange-400'
-                : event.type === 'inspection-service'
-                  ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400'
-                  : 'bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-400'"
+              :class="calendarItemTypePresentation[event.type as AppSidebarCalendarItem['type']].badge"
             >
               {{ event.type === "work-order" ? "工单" : event.type === "inspection-service" ? "服务" : "计划" }}
             </span>

@@ -25,11 +25,43 @@ export function dateValueToKey(date: AppSidebarCalendarDate): string {
   return `${date.year}-${String(date.month).padStart(2, "0")}-${String(date.day).padStart(2, "0")}`
 }
 
+export type CalendarDataSourceEntry = {
+  type: AppSidebarCalendarItem["type"]
+  label: string
+  /** 日历上使用的日期字段说明（右侧副标题） */
+  dateFieldLabel: string
+  count: number
+}
+
 export function useCalendarEvents() {
   const loading = ref(false)
 
   const allEvents = ref<AppSidebarCalendarItem[]>([])
   const eventDateKeys = computed(() => new Set(allEvents.value.map(e => e.dateKey)))
+
+  const dataSources = computed((): CalendarDataSourceEntry[] => {
+    const list = allEvents.value
+    return [
+      {
+        type: "work-order",
+        label: "检测工单",
+        dateFieldLabel: "截止日期",
+        count: list.filter(e => e.type === "work-order").length,
+      },
+      {
+        type: "inspection-plan",
+        label: "检测计划",
+        dateFieldLabel: "下次执行",
+        count: list.filter(e => e.type === "inspection-plan").length,
+      },
+      {
+        type: "inspection-service",
+        label: "检测服务",
+        dateFieldLabel: "合同到期",
+        count: list.filter(e => e.type === "inspection-service").length,
+      },
+    ]
+  })
 
   function getEventsForDate(date: AppSidebarCalendarDate): AppSidebarCalendarItem[] {
     const key = dateValueToKey(date)
@@ -101,6 +133,7 @@ export function useCalendarEvents() {
   return {
     loading,
     allEvents,
+    dataSources,
     eventDateKeys,
     getEventsForDate,
     hasEventsOnDate,
