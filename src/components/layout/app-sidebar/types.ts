@@ -32,7 +32,8 @@ export type AppSidebarConversationItem = {
   title: string
   project: string
   model: string
-  updatedAt: string
+  /** ISO 8601，用于分组与右侧日期展示 */
+  updatedAtIso: string
   preview: string
   messageCount: number
   pinned?: boolean
