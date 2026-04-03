@@ -86,12 +86,12 @@ onMounted(() => {
       :has-event-on-date="hasEventsOnDate"
     />
 
-    <div class="mt-2 shrink-0 border-t border-sidebar-border/80 px-1.5 pt-2.5">
+    <div class="mt-2 shrink-0 border-t border-sidebar-border/80 pt-2.5">
       <ul class="space-y-0.5" role="list">
         <li
           v-for="src in dataSources"
           :key="src.type"
-          class="flex items-center gap-2 rounded-lg px-1.5 py-1.5"
+          class="flex cursor-default items-center gap-2 rounded-sm px-1.5 py-1.5 transition-colors hover:bg-sidebar-hover"
         >
           <span
             class="size-3 shrink-0 rounded-[3px]"
