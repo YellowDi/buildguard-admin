@@ -58,6 +58,10 @@ const props = withDefaults(defineProps<{
   stickyThead?: boolean
   /** 兼容旧调用保留；尾部占位列已移除，不再影响结构。 */
   endSpacer?: boolean
+  /** 是否显示序号列中的 checkbox 选择交互。 */
+  showIndexCheckbox?: boolean
+  /** 是否启用滚动内容的动态边缘留白。 */
+  edgeGutter?: boolean
   /** 右侧操作列按钮是否展示图标。设置浮窗内表格可显式开启。 */
   showRowActionIcons?: boolean
 }>(), {
@@ -70,6 +74,8 @@ const props = withDefaults(defineProps<{
   listLevelTable: false,
   stickyThead: false,
   endSpacer: true,
+  showIndexCheckbox: true,
+  edgeGutter: true,
   showRowActionIcons: false,
 })
 const emit = defineEmits<{
@@ -99,7 +105,7 @@ const currentRowKeys = computed(() => props.rows.map((row, index) => getRowKey(r
 const selectedCurrentRowCount = computed(() => (
   currentRowKeys.value.filter(rowKey => selectedRowKeySet.value.has(rowKey)).length
 ))
-const shouldShowHeaderCheckbox = computed(() => selectedCurrentRowCount.value > 0)
+const shouldShowHeaderCheckbox = computed(() => props.showIndexCheckbox && selectedCurrentRowCount.value > 0)
 const headerCheckboxState = computed<CheckboxState>(() => {
   if (currentRowKeys.value.length === 0 || selectedCurrentRowCount.value === 0) {
     return false
@@ -118,8 +124,10 @@ const stickyHeaderVisible = computed(() => (
   && stickyHeaderWidth.value > 0
   && stickyColumnWidths.value.length > 0
 ))
-const leadingEdgeGutter = computed(() => edgeGutterSize.value)
-const trailingEdgeGutter = computed(() => (horizontalOverflow.value ? edgeGutterSize.value : 0))
+const leadingEdgeGutter = computed(() => (props.edgeGutter ? edgeGutterSize.value : 0))
+const trailingEdgeGutter = computed(() => (
+  props.edgeGutter && horizontalOverflow.value ? edgeGutterSize.value : 0
+))
 const tableInlineMinWidth = computed(() => {
   const reservedSpace = leadingEdgeGutter.value + trailingEdgeGutter.value
   return `calc(100% - ${reservedSpace}px)`
@@ -343,6 +351,10 @@ function getActionCellClass(row: Record<string, unknown>, index: number) {
 }
 
 function getIndexLabelClass(row: Record<string, unknown>, index: number) {
+  if (!props.showIndexCheckbox) {
+    return "absolute inset-0 flex items-center justify-center"
+  }
+
   return cn(
     "absolute inset-0 flex items-center justify-center transition-opacity duration-150",
     isRowSelected(row, index)
@@ -352,6 +364,10 @@ function getIndexLabelClass(row: Record<string, unknown>, index: number) {
 }
 
 function getIndexCheckboxWrapperClass(row: Record<string, unknown>, index: number) {
+  if (!props.showIndexCheckbox) {
+    return "hidden"
+  }
+
   return cn(
     "absolute inset-0 flex items-center justify-center transition-opacity duration-150",
     isRowSelected(row, index)
@@ -361,6 +377,10 @@ function getIndexCheckboxWrapperClass(row: Record<string, unknown>, index: numbe
 }
 
 function getHeaderCheckboxWrapperClass() {
+  if (!props.showIndexCheckbox) {
+    return "hidden"
+  }
+
   return cn(
     "absolute inset-0 flex items-center justify-center transition-opacity duration-150",
     shouldShowHeaderCheckbox.value

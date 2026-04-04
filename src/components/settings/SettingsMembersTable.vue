@@ -1402,8 +1402,11 @@ function asRoleRow(row: Record<string, unknown>) {
     </Alert>
 
     <TablePageTable
+      show-index
       sticky-header
       :end-spacer="false"
+      :show-index-checkbox="false"
+      :edge-gutter="false"
       :show-row-action-icons="true"
       :columns="currentColumns"
       :rows="currentRows"

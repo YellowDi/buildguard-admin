@@ -533,8 +533,11 @@ defineExpose({
       </h3>
       <TablePageTable
         row-key="id"
+        show-index
         sticky-header
         :end-spacer="false"
+        :show-index-checkbox="false"
+        :edge-gutter="false"
         :show-row-action-icons="true"
         :columns="majorColumns"
         :rows="filteredMajorRows"
@@ -563,8 +566,11 @@ defineExpose({
       </h3>
       <TablePageTable
         row-key="id"
+        show-index
         sticky-header
         :end-spacer="false"
+        :show-index-checkbox="false"
+        :edge-gutter="false"
         :show-row-action-icons="true"
         :columns="categoryColumns"
         :rows="categoryDisplayRows"

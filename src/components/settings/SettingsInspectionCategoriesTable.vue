@@ -530,8 +530,11 @@ defineExpose({
 
     <TablePageTable
       row-key="uuid"
+      show-index
       sticky-header
       :end-spacer="false"
+      :show-index-checkbox="false"
+      :edge-gutter="false"
       :show-row-action-icons="true"
       :columns="columns"
       :rows="filteredRows"

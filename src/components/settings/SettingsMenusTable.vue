@@ -932,8 +932,11 @@ function formatDateTime(...values: unknown[]) {
 
     <TablePageTable
       row-key="id"
+      show-index
       sticky-header
       :end-spacer="false"
+      :show-index-checkbox="false"
+      :edge-gutter="false"
       :show-row-action-icons="true"
       :columns="currentColumns"
       :rows="currentRows"
