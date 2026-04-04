@@ -2,6 +2,7 @@
 import { computed, ref } from "vue"
 
 import { Button } from "@/components/ui/button"
+import { useSlidingTabIndicator } from "@/composables/useSlidingTabIndicator"
 import DateFilterPopover from "@/components/table-page/TableDateFilterPopover.vue"
 import FilterChip from "@/components/table-page/TableFilterChip.vue"
 import NumberFilterPopover from "@/components/table-page/TableNumberFilterPopover.vue"
@@ -97,6 +98,10 @@ const hasTabs = computed(() => props.tabs.length > 0)
 const hasHeading = computed(() => Boolean(props.title || props.description))
 const hasTopSurface = computed(() => hasHeading.value || hasTabs.value || props.showToolbarActions)
 const activeTabLabel = computed(() => props.tabs.find(tab => tab.active)?.label ?? props.tabs[0]?.label ?? "")
+const { indicatorStyle, setTabRef } = useSlidingTabIndicator({
+  activeKey: activeTabLabel,
+  watchSource: computed(() => props.tabs.map(tab => `${tab.label}:${Number(Boolean(tab.active))}`)),
+})
 
 function getTextFilter(key: string) {
   return props.textFilters[key]
@@ -429,10 +434,11 @@ function handleMobileToolbarActionSelect(action: "filters" | "sort" | "export" |
           </div>
 
           <div class="hidden min-w-0 flex-wrap items-end gap-x-6 gap-y-3 sm:flex">
-            <nav class="flex min-w-0 flex-[999_1_24rem] flex-wrap items-center text-[14px]">
+            <nav class="relative flex min-w-0 flex-[999_1_24rem] flex-wrap items-center text-[14px]">
               <button
                 v-for="tab in tabs"
                 :key="tab.label"
+                :ref="(element) => setTabRef(tab.label, element)"
                 type="button"
                 :aria-pressed="tab.active"
                 :class="[
@@ -445,11 +451,12 @@ function handleMobileToolbarActionSelect(action: "filters" | "sort" | "export" |
                   <span class="pointer-events-none absolute -inset-x-2 -inset-y-1 rounded-md transition-colors group-hover:bg-surface-tertiary" />
                   <span class="relative z-10">{{ tab.label }}</span>
                 </span>
-                <span
-                  v-if="tab.active"
-                  class="absolute inset-x-0 bottom-0 h-0.5 bg-foreground"
-                />
               </button>
+              <span
+                aria-hidden="true"
+                class="pointer-events-none absolute bottom-0 left-0 h-0.5 rounded-full bg-foreground transition-[transform,width,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
+                :style="indicatorStyle"
+              />
             </nav>
 
             <div

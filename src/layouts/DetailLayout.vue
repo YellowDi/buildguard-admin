@@ -2,6 +2,7 @@
 import { computed, useSlots } from "vue"
 
 import SectionHeader from "@/components/layout/SectionHeader.vue"
+import { useSlidingTabIndicator } from "@/composables/useSlidingTabIndicator"
 import { Button } from "@/components/ui/button"
 import {
   Select,
@@ -56,6 +57,10 @@ const hasHeaderActions = computed(() => Boolean(slots.headerActions) || (!hasTab
 const hasTabActions = computed(() => hasTabs.value && (Boolean(slots.tabActions) || Boolean(slots.actions)))
 const hasHeaderBottom = computed(() => Boolean(slots.headerBottom))
 const activeTabId = computed(() => props.tabs.find(tab => tab.active)?.id ?? props.tabs[0]?.id ?? "")
+const { indicatorStyle, setTabRef } = useSlidingTabIndicator({
+  activeKey: activeTabId,
+  watchSource: computed(() => props.tabs.map(tab => `${tab.id}:${tab.label}:${Number(Boolean(tab.active))}:${Number(Boolean(tab.disabled))}`)),
+})
 
 function handleTabSelect(value: unknown) {
   if (typeof value === "string" && value) {
@@ -118,10 +123,11 @@ function handleTabSelect(value: unknown) {
 
             <div class="hidden min-w-0 items-end gap-6 sm:flex">
               <div class="min-w-0 flex-1">
-                <nav class="flex min-w-0 flex-wrap items-center text-[14px]" :aria-label="props.tabsAriaLabel">
+                <nav class="relative flex min-w-0 flex-wrap items-center text-[14px]" :aria-label="props.tabsAriaLabel">
                   <button
                     v-for="tab in props.tabs"
                     :key="tab.id"
+                    :ref="(element) => setTabRef(tab.id, element)"
                     type="button"
                     :aria-pressed="Boolean(tab.active)"
                     :disabled="tab.disabled"
@@ -135,11 +141,12 @@ function handleTabSelect(value: unknown) {
                       <span class="pointer-events-none absolute -inset-x-2 -inset-y-1 rounded-md transition-colors group-hover:bg-surface-tertiary" />
                       <span class="relative z-10">{{ tab.label }}</span>
                     </span>
-                    <span
-                      v-if="tab.active"
-                      class="absolute inset-x-0 bottom-0 h-0.5 bg-foreground"
-                    />
                   </button>
+                  <span
+                    aria-hidden="true"
+                    class="pointer-events-none absolute bottom-0 left-0 h-0.5 rounded-full bg-foreground transition-[transform,width,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
+                    :style="indicatorStyle"
+                  />
                 </nav>
               </div>
 
