@@ -108,6 +108,16 @@ const schema: TablePageSchema<InspectionServiceRecord> = {
       params: { id: row.uuid },
     })
   },
+  onQuickAction: row => {
+    if (!row.uuid) {
+      toast.error("当前检测服务缺少 Uuid，无法打开侧边详情")
+      return
+    }
+
+    activeLinkedDetailKind.value = "service"
+    activeLinkedDetailUuid.value = row.uuid
+    activeLinkedDetailCustomerUuid.value = row.customerUuid || ""
+  },
   columns: [
     {
       key: "Name",

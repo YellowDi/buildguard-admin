@@ -34,8 +34,6 @@ export const tableTheme = {
     content: "min-w-0 flex-1",
     slot: "ml-1 flex shrink-0 items-center",
     button: "h-6 w-6 rounded-md border border-transparent bg-transparent p-0 text-muted-foreground shadow-none hover:border-border/60 hover:bg-surface-tertiary hover:text-foreground focus-visible:border-border/60 focus-visible:bg-surface-tertiary focus-visible:text-foreground",
-    menu: "w-44 rounded-xl p-1.5",
-    item: "rounded-lg px-2.5 py-2",
   },
   headerCell: {
     base: "h-[38px] border-b border-border px-3 py-0 text-left font-normal whitespace-nowrap align-middle transition-colors hover:bg-surface-tertiary",

@@ -51,6 +51,7 @@ const slots = useSlots()
     :columns="page.columns"
     :row-actions="page.rowActions"
     :on-row-click="page.onRowClick"
+    :on-quick-action="page.onQuickAction"
     :rows="page.visibleRows.value"
     :filtered-rows="page.filteredRows.value"
     :selected-rows="page.selectedRows.value"

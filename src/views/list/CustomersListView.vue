@@ -3,6 +3,7 @@ import { computed, ref, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { toast } from "vue-sonner"
 
+import LinkedEntityDetailSheet from "@/components/detail/LinkedEntityDetailSheet.vue"
 import TablePage from "@/components/table-page/TablePage.vue"
 import TablePageLoading from "@/components/loading/TablePageLoading.vue"
 import { customerStatusMap } from "@/components/table-page/statusPresets"
@@ -60,12 +61,16 @@ type CustomerRecord = {
   createdAt: string
 }
 
+type LinkedDetailSheetKind = "customer" | "service" | "plan" | "park"
+
 const customers = ref<CustomerRecord[]>([])
 const loading = ref(false)
 const errorMessage = ref("")
 const pageNum = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
+const activeLinkedDetailKind = ref<LinkedDetailSheetKind | null>(null)
+const activeLinkedDetailUuid = ref("")
 let latestRequestId = 0
 
 const schema: TablePageSchema<CustomerRecord> = {
@@ -101,6 +106,15 @@ const schema: TablePageSchema<CustomerRecord> = {
     }
 
     void router.push({ name: "customer-detail", params: { id: row.detailId } })
+  },
+  onQuickAction: row => {
+    if (!row.detailId) {
+      toast.error("当前客户缺少 Uuid，无法打开侧边详情")
+      return
+    }
+
+    activeLinkedDetailKind.value = "customer"
+    activeLinkedDetailUuid.value = row.detailId
   },
   columns: [
     {
@@ -1099,6 +1113,13 @@ function handleCreateCustomer() {
   router.push({ name: "customer-create" })
 }
 
+function handleLinkedDetailSheetOpenChange(open: boolean) {
+  if (!open) {
+    activeLinkedDetailKind.value = null
+    activeLinkedDetailUuid.value = ""
+  }
+}
+
 </script>
 
 <template>
@@ -1131,6 +1152,13 @@ function handleCreateCustomer() {
         </button>
       </template>
     </TablePage>
+
+    <LinkedEntityDetailSheet
+      :open="Boolean(activeLinkedDetailKind) && Boolean(activeLinkedDetailUuid)"
+      :kind="activeLinkedDetailKind"
+      :uuid="activeLinkedDetailUuid"
+      @update:open="handleLinkedDetailSheetOpenChange"
+    />
 
     <div class="-mx-4 pt-3">
       <div class="flex w-full justify-end px-4">

@@ -3,6 +3,7 @@ import { computed, ref, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { toast } from "vue-sonner"
 
+import BuildingDetailSheet from "@/components/detail/BuildingDetailSheet.vue"
 import LinkedEntityDetailSheet from "@/components/detail/LinkedEntityDetailSheet.vue"
 import TablePageLoading from "@/components/loading/TablePageLoading.vue"
 import TablePage from "@/components/table-page/TablePage.vue"
@@ -55,6 +56,9 @@ const total = ref(0)
 const activeLinkedDetailKind = ref<LinkedDetailSheetKind | null>(null)
 const activeLinkedDetailUuid = ref("")
 const activeLinkedDetailCustomerUuid = ref("")
+const buildingDetailSheetOpen = ref(false)
+const activeBuildingSheetUuid = ref("")
+const activeBuildingSheetParkUuid = ref("")
 let latestRequestId = 0
 
 const router = useRouter()
@@ -102,6 +106,16 @@ const schema: TablePageSchema<BuildingRecord> = {
       name: "building-detail",
       params: { id: row.uuid },
     })
+  },
+  onQuickAction: row => {
+    if (!row.uuid || !row.parkUuid) {
+      toast.error("当前建筑缺少必要参数，无法打开侧边详情")
+      return
+    }
+
+    activeBuildingSheetUuid.value = row.uuid
+    activeBuildingSheetParkUuid.value = row.parkUuid
+    buildingDetailSheetOpen.value = true
   },
   columns: [
     {
@@ -301,6 +315,15 @@ function handleLinkedDetailSheetOpenChange(open: boolean) {
   }
 }
 
+function handleBuildingDetailSheetOpenChange(open: boolean) {
+  buildingDetailSheetOpen.value = open
+
+  if (!open) {
+    activeBuildingSheetUuid.value = ""
+    activeBuildingSheetParkUuid.value = ""
+  }
+}
+
 async function loadBuildings() {
   const requestId = ++latestRequestId
 
@@ -471,6 +494,13 @@ function toText(value: unknown, fallback = "") {
       :uuid="activeLinkedDetailUuid"
       :customer-uuid="activeLinkedDetailCustomerUuid"
       @update:open="handleLinkedDetailSheetOpenChange"
+    />
+
+    <BuildingDetailSheet
+      :open="buildingDetailSheetOpen"
+      :building-uuid="activeBuildingSheetUuid"
+      :park-uuid="activeBuildingSheetParkUuid"
+      @update:open="handleBuildingDetailSheetOpenChange"
     />
 
     <div class="-mx-4 pt-3">

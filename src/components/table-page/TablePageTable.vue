@@ -5,12 +5,7 @@ import { toast } from "vue-sonner"
 
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+import { TooltipWrap } from "@/components/ui/tooltip"
 import StatusChip from "@/components/table-page/TableStatusChip.vue"
 import {
   getColumnCellClass,
@@ -71,6 +66,7 @@ const props = withDefaults(defineProps<{
   columns: TableColumn[]
   rowActions?: TableRowAction[]
   onRowClick?: (row: Record<string, unknown>, index: number) => void
+  onQuickAction?: (row: Record<string, unknown>, index: number) => void
   rows: Record<string, unknown>[]
   rowKey: string | ((row: Record<string, unknown>, index: number) => string | number)
   selectedRowKeys?: Array<RowSelectionKey>
@@ -140,23 +136,8 @@ const selectedCurrentRowCount = computed(() => (
 const shouldShowHeaderCheckbox = computed(() => props.showIndexCheckbox && selectedCurrentRowCount.value > 0)
 const rowClickEnabled = computed(() => typeof props.onRowClick === "function")
 const inlineQuickActionEnabled = computed(() => (
-  horizontalOverflow.value && (rowClickEnabled.value || hasRowActions.value)
+  horizontalOverflow.value && typeof props.onQuickAction === "function"
 ))
-const inlineQuickActionMode = computed<"none" | "direct" | "menu">(() => {
-  if (!inlineQuickActionEnabled.value) {
-    return "none"
-  }
-
-  if ((props.rowActions?.length ?? 0) > 1) {
-    return "menu"
-  }
-
-  if ((props.rowActions?.length ?? 0) === 1 || rowClickEnabled.value) {
-    return "direct"
-  }
-
-  return "none"
-})
 const headerCheckboxState = computed<CheckboxState>(() => {
   if (currentRowKeys.value.length === 0 || selectedCurrentRowCount.value === 0) {
     return false
@@ -446,7 +427,7 @@ function getHeaderCheckboxWrapperClass() {
 }
 
 function getInlineQuickActionWrapperClass(row: Record<string, unknown>, index: number) {
-  if (inlineQuickActionMode.value === "none") {
+  if (!inlineQuickActionEnabled.value) {
     return "hidden"
   }
 
@@ -458,38 +439,8 @@ function getInlineQuickActionWrapperClass(row: Record<string, unknown>, index: n
   )
 }
 
-function getInlineQuickActionLabel() {
-  if (inlineQuickActionMode.value === "menu") {
-    return "更多操作"
-  }
-
-  if ((props.rowActions?.length ?? 0) === 1) {
-    return props.rowActions?.[0]?.label ?? "快捷操作"
-  }
-
-  return "打开详情"
-}
-
-function getInlineQuickActionIcon() {
-  if (inlineQuickActionMode.value === "menu") {
-    return "ri-more-1-line"
-  }
-
-  if ((props.rowActions?.length ?? 0) === 1) {
-    const action = props.rowActions?.[0]
-    return remixIconForTableRowAction(action?.label ?? "", action?.icon)
-  }
-
-  return "ri-arrow-right-up-line"
-}
-
-function handleInlineQuickPrimaryAction(row: Record<string, unknown>, index: number) {
-  if ((props.rowActions?.length ?? 0) === 1 && props.rowActions?.[0]) {
-    handleRowActionClick(props.rowActions[0], row, index)
-    return
-  }
-
-  props.onRowClick?.(row, index)
+function handleInlineQuickAction(row: Record<string, unknown>, index: number) {
+  props.onQuickAction?.(row, index)
 }
 
 function hasActiveTextSelection() {
@@ -1206,13 +1157,13 @@ onBeforeUnmount(() => {
                   </span>
                 </div>
                 <div
-                  :class="[
-                    isSelectionColumn(columnIndex) ? tableTheme.indexInline.content : '',
-                    isPrimaryColumn(columnIndex) && inlineQuickActionMode !== 'none' ? tableTheme.quickAction.layout : '',
-                  ]"
+                    :class="[
+                      isSelectionColumn(columnIndex) ? tableTheme.indexInline.content : '',
+                      isPrimaryColumn(columnIndex) && inlineQuickActionEnabled ? tableTheme.quickAction.layout : '',
+                    ]"
                 >
                   <div
-                    :class="isPrimaryColumn(columnIndex) && inlineQuickActionMode !== 'none' ? tableTheme.quickAction.content : ''"
+                    :class="isPrimaryColumn(columnIndex) && inlineQuickActionEnabled ? tableTheme.quickAction.content : ''"
                   >
                     <slot
                       :name="column.slot ?? `cell-${column.key}`"
@@ -1323,48 +1274,22 @@ onBeforeUnmount(() => {
                   </div>
 
                   <div
-                    v-if="isPrimaryColumn(columnIndex) && inlineQuickActionMode !== 'none'"
+                    v-if="isPrimaryColumn(columnIndex) && inlineQuickActionEnabled"
                     :class="getInlineQuickActionWrapperClass(row, index)"
                   >
-                    <Button
-                      v-if="inlineQuickActionMode === 'direct'"
-                      variant="ghost"
-                      size="sm"
-                      :class="tableTheme.quickAction.button"
-                      :aria-label="getInlineQuickActionLabel()"
-                      :title="getInlineQuickActionLabel()"
-                      data-row-click-ignore
-                      @click.stop="handleInlineQuickPrimaryAction(row, index)"
-                    >
-                      <i :class="[getInlineQuickActionIcon(), 'text-[14px] leading-none']" />
-                    </Button>
-
-                    <DropdownMenu v-else>
-                      <DropdownMenuTrigger as-child>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          :class="tableTheme.quickAction.button"
-                          aria-label="更多操作"
-                          title="更多操作"
-                          data-row-click-ignore
-                          @click.stop
-                        >
-                          <i class="ri-more-1-line text-[14px] leading-none" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="start" :class="tableTheme.quickAction.menu">
-                        <DropdownMenuItem
-                          v-for="action in rowActions"
-                          :key="`${getRowKey(row, index)}-quick-${action.key}`"
-                          :class="tableTheme.quickAction.item"
-                          @select="handleRowActionClick(action, row, index)"
-                        >
-                          <i :class="remixIconForTableRowAction(action.label, action.icon)" />
-                          <span>{{ action.label }}</span>
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    <TooltipWrap content="在侧边预览中打开">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        :class="tableTheme.quickAction.button"
+                        aria-label="在侧边预览中打开"
+                        title="在侧边预览中打开"
+                        data-row-click-ignore
+                        @click.stop="handleInlineQuickAction(row, index)"
+                      >
+                        <i class="ri-layout-right-2-line text-[14px] leading-none" />
+                      </Button>
+                    </TooltipWrap>
                   </div>
                 </div>
               </div>

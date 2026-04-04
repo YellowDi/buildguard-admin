@@ -50,6 +50,16 @@ const schema: TablePageSchema<InspectionPlanRecord> = {
     },
   ],
   onRowClick: row => handleViewDetail(row as InspectionPlanRecord),
+  onQuickAction: row => {
+    if (!row.uuid) {
+      toast.error("当前检测计划缺少 Uuid，无法打开侧边详情")
+      return
+    }
+
+    activeLinkedDetailKind.value = "plan"
+    activeLinkedDetailUuid.value = row.uuid
+    activeLinkedDetailCustomerUuid.value = row.customerUuid || ""
+  },
   columns: [
     {
       key: "code",

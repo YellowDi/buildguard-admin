@@ -91,6 +91,16 @@ const schema: TablePageSchema<ParkRecord> = {
       params: { id: row.uuid },
     })
   },
+  onQuickAction: row => {
+    if (!row.uuid) {
+      toast.error("当前园区缺少 Uuid，无法打开侧边详情")
+      return
+    }
+
+    activeLinkedDetailKind.value = "park"
+    activeLinkedDetailUuid.value = row.uuid
+    activeLinkedDetailCustomerUuid.value = row.customerUuid || ""
+  },
   columns: [
     {
       key: "parkName",
