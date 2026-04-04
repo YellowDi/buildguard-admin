@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { Plus, X } from "lucide-vue-next"
 import { computed } from "vue"
 import { useRouter } from "vue-router"
 import { onKeyStroke } from "@vueuse/core"
-import { Button } from "@/components/ui/button"
 import { useSidebar } from "@/components/ui/sidebar"
 import { SIDEBAR_WIDTH } from "@/components/ui/sidebar/utils"
+import { Drawer, DrawerContent } from "@/components/ui/drawer"
+import AppSidebarCalendarSourceSheetBody from "@/components/layout/app-sidebar/AppSidebarCalendarSourceSheetBody.vue"
 import type { AppSidebarCalendarItem } from "@/components/layout/app-sidebar/types"
 
 const props = defineProps<{
@@ -26,6 +26,14 @@ const emit = defineEmits<{
 const router = useRouter()
 const { open: sidebarOpen, isMobile } = useSidebar()
 
+const drawerOpen = computed({
+  get: () => props.open && !!props.sourceType,
+  set: (v) => {
+    if (!v)
+      emit("update:open", false)
+  },
+})
+
 function goToCreateForm() {
   if (!props.sourceType)
     return
@@ -41,17 +49,9 @@ function goToCreateForm() {
 /**
  * Teleport 在 body 上，无法继承 SidebarProvider 的 --sidebar-width，必须用与侧栏一致的定宽，
  * 否则 left 不生效，面板会叠在主内容区而非紧贴侧栏右侧。
+ * 仅桌面端侧滑面板使用；移动端「数据来源」面板走全局 `Drawer`/`DrawerContent`（`@/components/ui/drawer`）。
  */
 const panelFrameStyle = computed(() => {
-  if (isMobile.value) {
-    return {
-      top: "0",
-      right: "0",
-      bottom: "0",
-      left: "0",
-      width: "100%",
-    }
-  }
   const docked = sidebarOpen.value
   return {
     top: "0",
@@ -67,32 +67,43 @@ function close() {
   emit("update:open", false)
 }
 
-onKeyStroke("Escape", (e) => {
-  if (props.open) {
-    e.preventDefault()
-    close()
-  }
-})
-
-/** 左侧圆角竖条填色（与类型色一致） */
-const barAccentClass: Record<AppSidebarCalendarItem["type"], string> = {
-  "work-order": "bg-orange-500 dark:bg-orange-400",
-  "inspection-plan": "bg-blue-500 dark:bg-blue-400",
-  "inspection-service": "bg-emerald-500 dark:bg-emerald-400",
-}
-
 function onSelectEvent(event: AppSidebarCalendarItem) {
   emit("select-event", event)
 }
 
-function getEventTitleText(event: AppSidebarCalendarItem) {
-  const parts = event.title.split(/[:：]\s*/, 2)
-  return parts[1]?.trim() || event.title
-}
+onKeyStroke("Escape", (e) => {
+  if (props.open && !isMobile.value && props.sourceType) {
+    e.preventDefault()
+    close()
+  }
+})
 </script>
 
 <template>
-  <Teleport to="body">
+  <!-- 移动端：底部抽屉；样式由 `ui/drawer/DrawerContent` 统一提供 -->
+  <Drawer
+    v-if="isMobile"
+    v-model:open="drawerOpen"
+    direction="bottom"
+  >
+    <DrawerContent
+      class="flex flex-col gap-0 border-0 outline-none"
+      :aria-label="title"
+    >
+      <AppSidebarCalendarSourceSheetBody
+        :title="title"
+        :subtitle="subtitle"
+        :swatch-class="swatchClass"
+        :loading="loading"
+        :groups="groups"
+        @close="close"
+        @add="goToCreateForm"
+        @select-event="onSelectEvent"
+      />
+    </DrawerContent>
+  </Drawer>
+
+  <Teleport v-else to="body">
     <Transition name="calendar-sheet">
       <div
         v-if="open && sourceType"
@@ -102,86 +113,16 @@ function getEventTitleText(event: AppSidebarCalendarItem) {
         aria-modal="true"
         :aria-label="title"
       >
-        <header class="flex shrink-0 items-center gap-2 border-b border-border px-3 py-2.5 pr-2">
-          <span
-            class="size-3 shrink-0 rounded-[3px]"
-            :class="swatchClass"
-            aria-hidden="true"
-          />
-          <div class="flex min-w-0 flex-1 flex-row items-center gap-2">
-            <p class="min-w-0 truncate text-sm font-semibold text-foreground">{{ title }}</p>
-            <p class="shrink-0 text-xs text-muted-foreground">{{ subtitle }}</p>
-          </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            class="size-8 shrink-0 text-muted-foreground"
-            aria-label="添加"
-            @click="goToCreateForm"
-          >
-            <Plus class="size-4" />
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            class="size-8 shrink-0 text-muted-foreground"
-            aria-label="关闭"
-            @click="close"
-          >
-            <X class="size-4" />
-          </Button>
-        </header>
-
-        <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-4">
-          <template v-if="loading">
-            <p class="px-3 py-8 text-center text-sm text-muted-foreground">加载中...</p>
-          </template>
-          <template v-else-if="groups.length === 0">
-            <p class="px-3 py-8 text-center text-sm text-muted-foreground">暂无条目</p>
-          </template>
-          <template v-else>
-            <section
-              v-for="(block, idx) in groups"
-              :key="`${block.sectionLabel}-${idx}`"
-              class="mb-5 last:mb-0"
-            >
-              <div class="mb-2 flex items-center gap-2 py-1">
-                <h3 class="text-xs font-medium text-muted-foreground">{{ block.sectionLabel }}</h3>
-                <span
-                  class="tabular-nums rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground"
-                >{{ block.events.length }}</span>
-              </div>
-              <ul class="flex flex-col gap-2" role="list">
-                <li
-                  v-for="event in block.events"
-                  :key="`${event.type}-${event.uuid}-${event.dateKey}`"
-                  class="cursor-pointer rounded-md bg-background p-[4px] transition-colors hover:bg-muted dark:bg-background dark:hover:bg-muted/50"
-                  @click="onSelectEvent(event)"
-                >
-                  <div class="flex items-center gap-3">
-                    <span
-                      class="h-[46px] w-[4px] shrink-0 rounded-full"
-                      :class="barAccentClass[event.type]"
-                      aria-hidden="true"
-                    />
-                    <div class="min-w-0 flex-1">
-                      <p class="text-sm font-medium leading-snug text-foreground">
-                        {{ getEventTitleText(event) }}
-                      </p>
-                      <p class="mt-0.5 text-xs leading-snug text-muted-foreground">
-                        <span v-if="event.time">{{ event.time }}</span>
-                        <span v-if="event.time && event.meta" class="mx-1">·</span>
-                        <span v-if="event.meta">{{ event.meta }}</span>
-                      </p>
-                    </div>
-                  </div>
-                </li>
-              </ul>
-            </section>
-          </template>
-        </div>
+        <AppSidebarCalendarSourceSheetBody
+          :title="title"
+          :subtitle="subtitle"
+          :swatch-class="swatchClass"
+          :loading="loading"
+          :groups="groups"
+          @close="close"
+          @add="goToCreateForm"
+          @select-event="onSelectEvent"
+        />
       </div>
     </Transition>
   </Teleport>

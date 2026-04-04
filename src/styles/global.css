@@ -378,6 +378,13 @@
   }
 
   /**
+   * 全站底部 Drawer（vaul）：::after 向下延伸背景，会盖住底部留白里的 --shadow-card。
+   */
+  [data-vaul-drawer][data-vaul-drawer-direction="bottom"]::after {
+    display: none !important;
+  }
+
+  /**
    * `border-border/55` softens outlines in light mode.
    * In dark mode `--border` is rgba(255,255,255,0.08); the /55 multiplier makes container edges nearly invisible.
    * Use the full semantic border token for accordion / surface cards using this utility.
