@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { computed, ref } from "vue"
+import { computed, ref, watch } from "vue"
 import { useRoute } from "vue-router"
 
 import AppHeader from "@/components/layout/AppHeader.vue"
 import AppSidebar from "@/components/layout/AppSidebar.vue"
 import SettingsDialog from "@/components/settings/SettingsDialog.vue"
 import RouteLoadingFallback from "@/components/loading/RouteLoadingFallback.vue"
-import { useRouteLoadingState } from "@/composables/useRouteLoadingState"
+import { useRouteLoadingState, type RouteLoadingKind } from "@/composables/useRouteLoadingState"
 import { SidebarProvider } from "@/components/ui/sidebar"
 
 const mobileSidebarOpen = ref(false)
@@ -15,6 +15,37 @@ const route = useRoute()
 
 const showContentFallback = computed(() =>
   isRouteLoading.value && loadingKind.value !== "auth",
+)
+const routeTransitionName = ref("route-page-fade")
+const currentRouteKind = ref<RouteLoadingKind | null>(resolveRouteLoadingKind(route.meta.loading))
+
+function resolveRouteLoadingKind(value: unknown): RouteLoadingKind | null {
+  return value === "auth" || value === "dashboard" || value === "table" || value === "detail" || value === "form"
+    ? value
+    : null
+}
+
+function getRouteTransitionName(fromKind: RouteLoadingKind | null, toKind: RouteLoadingKind | null) {
+  if (fromKind === "table" && toKind === "detail") {
+    return "route-page-forward"
+  }
+
+  if (fromKind === "detail" && toKind === "table") {
+    return "route-page-backward"
+  }
+
+  return "route-page-fade"
+}
+
+watch(
+  () => route.fullPath,
+  () => {
+    const fromKind = currentRouteKind.value
+    const toKind = resolveRouteLoadingKind(route.meta.loading)
+
+    routeTransitionName.value = getRouteTransitionName(fromKind, toKind)
+    currentRouteKind.value = toKind
+  },
 )
 
 function toggleMobileSidebar() {
@@ -54,7 +85,13 @@ function closeMobileSidebar() {
             v-if="showContentFallback"
             :kind="loadingKind"
           />
-          <component :is="Component" :key="route.name ?? route.fullPath" v-else />
+          <Transition
+            v-else
+            :name="routeTransitionName"
+            mode="out-in"
+          >
+            <component :is="Component" :key="route.name ?? route.fullPath" />
+          </Transition>
         </RouterView>
       </main>
     </div>

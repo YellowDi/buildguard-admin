@@ -427,6 +427,56 @@
 }
 
 @layer utilities {
+  .route-page-forward-enter-active,
+  .route-page-forward-leave-active,
+  .route-page-backward-enter-active,
+  .route-page-backward-leave-active,
+  .route-page-fade-enter-active,
+  .route-page-fade-leave-active {
+    transition:
+      opacity 200ms ease,
+      transform 200ms ease;
+    will-change: opacity, transform;
+  }
+
+  .route-page-forward-enter-active,
+  .route-page-backward-enter-active {
+    transition-timing-function: cubic-bezier(0.2, 0.72, 0.22, 1);
+  }
+
+  .route-page-forward-leave-active,
+  .route-page-backward-leave-active {
+    transition-duration: 180ms;
+    transition-timing-function: cubic-bezier(0.4, 0, 1, 1);
+  }
+
+  .route-page-forward-enter-from,
+  .route-page-backward-leave-to {
+    opacity: 0;
+    transform: translate3d(18px, 0, 0) scale(0.992);
+  }
+
+  .route-page-forward-leave-to,
+  .route-page-backward-enter-from {
+    opacity: 0;
+    transform: translate3d(-14px, 0, 0) scale(0.996);
+  }
+
+  .route-page-forward-enter-to,
+  .route-page-forward-leave-from,
+  .route-page-backward-enter-to,
+  .route-page-backward-leave-from,
+  .route-page-fade-enter-to,
+  .route-page-fade-leave-from {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+
+  .route-page-fade-enter-from,
+  .route-page-fade-leave-to {
+    opacity: 0;
+  }
+
   /* Overrides component transition-* utilities in dark mode (design token). */
   .dark [data-slot="card"],
   .dark [data-slot="button"],
@@ -447,6 +497,15 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .route-page-forward-enter-active,
+  .route-page-forward-leave-active,
+  .route-page-backward-enter-active,
+  .route-page-backward-leave-active,
+  .route-page-fade-enter-active,
+  .route-page-fade-leave-active {
+    transition: none !important;
+  }
+
   .dialog-panel-float[data-state="open"],
   .dialog-panel-float[data-state="closed"],
   .sheet-panel-right[data-state="open"],
