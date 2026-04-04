@@ -36,6 +36,7 @@ const schema: TablePageSchema<AlarmQueryRecord> = {
       onClick: row => console.info("查看报警详情", row),
     },
   ],
+  onRowClick: row => console.info("查看报警详情", row),
   columns: [
     {
       key: "plateNumber",

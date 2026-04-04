@@ -1303,6 +1303,17 @@ function asMemberRow(row: Record<string, unknown>) {
 function asRoleRow(row: Record<string, unknown>) {
   return row as RoleRow
 }
+
+function handleCurrentRowClick(row: Record<string, unknown>) {
+  if (activeView.value === "members") {
+    void openEditMemberDialog(asMemberRow(row))
+    return
+  }
+
+  if (activeView.value === "roles") {
+    void openEditRoleDialog(asRoleRow(row))
+  }
+}
 </script>
 
 <template>
@@ -1411,6 +1422,7 @@ function asRoleRow(row: Record<string, unknown>) {
       :columns="currentColumns"
       :rows="currentRows"
       :row-key="currentRowKey"
+      :on-row-click="handleCurrentRowClick"
       :table-class="SETTINGS_TABLE_PAGE_CLASS"
       :empty-state="tableEmptyState"
     >
@@ -1462,7 +1474,7 @@ function asRoleRow(row: Record<string, unknown>) {
           variant="outline"
           size="sm"
           class="ml-auto h-8 gap-1 rounded-md px-2.5 text-[13px]"
-          @click="openEditMemberDialog(asMemberRow(rawRow))"
+          @click.stop="openEditMemberDialog(asMemberRow(rawRow))"
         >
           <i class="ri-edit-line text-base" />
           <span>编辑</span>
@@ -1472,7 +1484,7 @@ function asRoleRow(row: Record<string, unknown>) {
           variant="outline"
           size="sm"
           class="ml-auto h-8 gap-1 rounded-md px-2.5 text-[13px]"
-          @click="openEditRoleDialog(asRoleRow(rawRow))"
+          @click.stop="openEditRoleDialog(asRoleRow(rawRow))"
         >
           <i class="ri-edit-line text-base" />
           <span>编辑</span>

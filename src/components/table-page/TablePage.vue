@@ -50,6 +50,7 @@ const slots = useSlots()
     :date-filter-fields="page.dateFilterFields.value"
     :columns="page.columns"
     :row-actions="page.rowActions"
+    :on-row-click="page.onRowClick"
     :rows="page.visibleRows.value"
     :filtered-rows="page.filteredRows.value"
     :selected-rows="page.selectedRows.value"

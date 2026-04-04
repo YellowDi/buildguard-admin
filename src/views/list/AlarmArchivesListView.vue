@@ -37,6 +37,7 @@ const schema: TablePageSchema<AlarmArchiveRecord> = {
       onClick: row => console.info("查看历史归档", row),
     },
   ],
+  onRowClick: row => console.info("查看历史归档", row),
   columns: [
     {
       key: "archiveNumber",

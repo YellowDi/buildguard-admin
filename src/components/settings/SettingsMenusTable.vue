@@ -803,6 +803,10 @@ function asMenuRow(row: Record<string, unknown>) {
   return row as MenuRow
 }
 
+function handleRowClick(row: Record<string, unknown>) {
+  openEditDialog(asMenuRow(row))
+}
+
 function normalizeStatus(value: unknown) {
   if (value === 1 || value === "1" || value === "启用") {
     return "启用"
@@ -940,6 +944,7 @@ function formatDateTime(...values: unknown[]) {
       :show-row-action-icons="true"
       :columns="currentColumns"
       :rows="currentRows"
+      :on-row-click="activeView === 'menus' ? handleRowClick : undefined"
       :table-class="SETTINGS_TABLE_PAGE_CLASS"
       :empty-state="tableEmptyState"
     >
@@ -949,7 +954,7 @@ function formatDateTime(...values: unknown[]) {
           variant="outline"
           size="sm"
           class="ml-auto h-8 gap-1 rounded-md px-2.5 text-[13px]"
-          @click="openEditDialog(asMenuRow(rawRow))"
+          @click.stop="openEditDialog(asMenuRow(rawRow))"
         >
           <i class="ri-edit-line text-base" />
           <span>编辑</span>

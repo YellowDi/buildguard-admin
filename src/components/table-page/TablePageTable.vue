@@ -5,6 +5,12 @@ import { toast } from "vue-sonner"
 
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import StatusChip from "@/components/table-page/TableStatusChip.vue"
 import {
   getColumnCellClass,
@@ -31,15 +37,40 @@ import { cn } from "@/lib/utils"
 type ScrollRoot = HTMLElement | Window
 type RowSelectionKey = string | number
 type CheckboxState = boolean | "indeterminate"
+type RowPointerDownState = {
+  rowKey: RowSelectionKey
+  clientX: number
+  clientY: number
+}
 
 const HORIZONTAL_SCROLL_HINT_MESSAGE = "可按住 Shift + 鼠标滚轮进行横向移动。"
 /** 同一路由在本次浏览器会话内只提示一次，避免布局抖动或重复挂载反复弹出 */
 const HORIZONTAL_SCROLL_HINT_SESSION_PREFIX = "buildguard:table-hscroll-hint:"
+const ROW_CLICK_DRAG_THRESHOLD = 5
+const ROW_CLICK_IGNORE_SELECTOR = [
+  "button",
+  "a[href]",
+  "input",
+  "label",
+  "select",
+  "textarea",
+  "summary",
+  "[role='button']",
+  "[role='link']",
+  "[role='checkbox']",
+  "[role='switch']",
+  "[role='menuitem']",
+  "[role='option']",
+  "[data-row-click-ignore]",
+  "[data-list-popover]",
+  "[data-slot='button']",
+].join(",")
 const selectionCheckboxClass = "border-[#B7C4E0] bg-white data-[state=checked]:border-[#2B67F6] data-[state=checked]:bg-[#2B67F6] data-[state=indeterminate]:border-[#2B67F6] data-[state=indeterminate]:bg-[#2B67F6] focus-visible:ring-[#2B67F6]/20"
 
 const props = withDefaults(defineProps<{
   columns: TableColumn[]
   rowActions?: TableRowAction[]
+  onRowClick?: (row: Record<string, unknown>, index: number) => void
   rows: Record<string, unknown>[]
   rowKey: string | ((row: Record<string, unknown>, index: number) => string | number)
   selectedRowKeys?: Array<RowSelectionKey>
@@ -100,12 +131,32 @@ const stickyScrollLeft = ref(0)
 const stickyColumnWidths = ref<number[]>([])
 const hoveredRowKey = ref<RowSelectionKey | null>(null)
 const focusedRowKey = ref<RowSelectionKey | null>(null)
+const rowPointerDown = ref<RowPointerDownState | null>(null)
 const selectedRowKeySet = computed(() => new Set(props.selectedRowKeys ?? []))
 const currentRowKeys = computed(() => props.rows.map((row, index) => getRowKey(row, index)))
 const selectedCurrentRowCount = computed(() => (
   currentRowKeys.value.filter(rowKey => selectedRowKeySet.value.has(rowKey)).length
 ))
 const shouldShowHeaderCheckbox = computed(() => props.showIndexCheckbox && selectedCurrentRowCount.value > 0)
+const rowClickEnabled = computed(() => typeof props.onRowClick === "function")
+const inlineQuickActionEnabled = computed(() => (
+  horizontalOverflow.value && (rowClickEnabled.value || hasRowActions.value)
+))
+const inlineQuickActionMode = computed<"none" | "direct" | "menu">(() => {
+  if (!inlineQuickActionEnabled.value) {
+    return "none"
+  }
+
+  if ((props.rowActions?.length ?? 0) > 1) {
+    return "menu"
+  }
+
+  if ((props.rowActions?.length ?? 0) === 1 || rowClickEnabled.value) {
+    return "direct"
+  }
+
+  return "none"
+})
 const headerCheckboxState = computed<CheckboxState>(() => {
   if (currentRowKeys.value.length === 0 || selectedCurrentRowCount.value === 0) {
     return false
@@ -282,6 +333,10 @@ function isSelectionColumn(columnIndex: number) {
   return props.showIndex && columnIndex === 0
 }
 
+function isPrimaryColumn(columnIndex: number) {
+  return columnIndex === 0
+}
+
 function handleRowActionClick(action: TableRowAction, row: Record<string, unknown>, index: number) {
   action.onClick?.(row, index)
 }
@@ -330,6 +385,7 @@ function getRowClass(row: Record<string, unknown>, index: number) {
   const rowKey = getRowKey(row, index)
   return cn(
     tableTheme.row,
+    rowClickEnabled.value ? "cursor-pointer" : "",
     isRowSelected(row, index)
       ? "bg-[#EBF1FF] hover:bg-[#EBF1FF]"
       : isRowKeyHighlighted(rowKey)
@@ -387,6 +443,117 @@ function getHeaderCheckboxWrapperClass() {
       ? "opacity-100"
       : "pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100",
   )
+}
+
+function getInlineQuickActionWrapperClass(row: Record<string, unknown>, index: number) {
+  if (inlineQuickActionMode.value === "none") {
+    return "hidden"
+  }
+
+  return cn(
+    tableTheme.quickAction.slot,
+    isRowSelected(row, index) || isRowKeyHighlighted(getRowKey(row, index))
+      ? "opacity-100"
+      : "pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100",
+  )
+}
+
+function getInlineQuickActionLabel() {
+  if (inlineQuickActionMode.value === "menu") {
+    return "更多操作"
+  }
+
+  if ((props.rowActions?.length ?? 0) === 1) {
+    return props.rowActions?.[0]?.label ?? "快捷操作"
+  }
+
+  return "打开详情"
+}
+
+function getInlineQuickActionIcon() {
+  if (inlineQuickActionMode.value === "menu") {
+    return "ri-more-1-line"
+  }
+
+  if ((props.rowActions?.length ?? 0) === 1) {
+    const action = props.rowActions?.[0]
+    return remixIconForTableRowAction(action?.label ?? "", action?.icon)
+  }
+
+  return "ri-arrow-right-up-line"
+}
+
+function handleInlineQuickPrimaryAction(row: Record<string, unknown>, index: number) {
+  if ((props.rowActions?.length ?? 0) === 1 && props.rowActions?.[0]) {
+    handleRowActionClick(props.rowActions[0], row, index)
+    return
+  }
+
+  props.onRowClick?.(row, index)
+}
+
+function hasActiveTextSelection() {
+  if (typeof window === "undefined") {
+    return false
+  }
+
+  const selection = window.getSelection()
+  return Boolean(selection && selection.rangeCount > 0 && !selection.isCollapsed && selection.toString().trim())
+}
+
+function isIgnoredRowClickTarget(target: EventTarget | null) {
+  return target instanceof Element && Boolean(target.closest(ROW_CLICK_IGNORE_SELECTOR))
+}
+
+function clearRowPointerDown() {
+  rowPointerDown.value = null
+}
+
+function handleRowMouseDown(row: Record<string, unknown>, index: number, event: MouseEvent) {
+  if (!rowClickEnabled.value || event.button !== 0 || event.defaultPrevented || isIgnoredRowClickTarget(event.target)) {
+    clearRowPointerDown()
+    return
+  }
+
+  rowPointerDown.value = {
+    rowKey: getRowKey(row, index),
+    clientX: event.clientX,
+    clientY: event.clientY,
+  }
+}
+
+function handleRowClick(row: Record<string, unknown>, index: number, event: MouseEvent) {
+  const pointerDown = rowPointerDown.value
+  clearRowPointerDown()
+
+  if (
+    !rowClickEnabled.value
+    || event.defaultPrevented
+    || event.button !== 0
+    || event.metaKey
+    || event.ctrlKey
+    || event.shiftKey
+    || event.altKey
+    || isIgnoredRowClickTarget(event.target)
+    || hasActiveTextSelection()
+  ) {
+    return
+  }
+
+  const rowKey = getRowKey(row, index)
+
+  if (!pointerDown || pointerDown.rowKey !== rowKey) {
+    return
+  }
+
+  const deltaX = event.clientX - pointerDown.clientX
+  const deltaY = event.clientY - pointerDown.clientY
+
+  if (Math.hypot(deltaX, deltaY) > ROW_CLICK_DRAG_THRESHOLD) {
+    return
+  }
+
+  props.onRowClick?.(row, index)
 }
 
 function isRowKeyHighlighted(rowKey: RowSelectionKey) {
@@ -850,6 +1017,7 @@ onBeforeUnmount(() => {
   window.removeEventListener("resize", scheduleStickySync)
   detachScrollRootListener()
   stopObservingStickyLayout()
+  clearRowPointerDown()
 })
 </script>
 
@@ -1002,6 +1170,8 @@ onBeforeUnmount(() => {
             v-for="(row, index) in rows"
             :key="getRowKey(row, index)"
             :class="getRowClass(row, index)"
+            @mousedown="handleRowMouseDown(row, index, $event)"
+            @click="handleRowClick(row, index, $event)"
             @mouseenter="handleRowMouseEnter(getRowKey(row, index))"
             @mouseleave="handleRowMouseLeave(getRowKey(row, index))"
             @focusin="handleRowFocusIn(getRowKey(row, index))"
@@ -1030,117 +1200,172 @@ onBeforeUnmount(() => {
                     <Checkbox
                       :model-value="isRowSelected(row, index)"
                       :class="selectionCheckboxClass"
+                      @click.stop
                       @update:model-value="updateRowSelection(row, index, $event)"
                     />
                   </span>
                 </div>
-                <div :class="isSelectionColumn(columnIndex) ? tableTheme.indexInline.content : ''">
-                  <slot
-                    :name="column.slot ?? `cell-${column.key}`"
-                    :row="row"
-                    :value="getColumnValue(row, column.key)"
-                    :index="index"
+                <div
+                  :class="[
+                    isSelectionColumn(columnIndex) ? tableTheme.indexInline.content : '',
+                    isPrimaryColumn(columnIndex) && inlineQuickActionMode !== 'none' ? tableTheme.quickAction.layout : '',
+                  ]"
+                >
+                  <div
+                    :class="isPrimaryColumn(columnIndex) && inlineQuickActionMode !== 'none' ? tableTheme.quickAction.content : ''"
                   >
-                    <template v-if="column.cellRenderer?.kind === 'dual-inline'">
-                      <span :class="column.cellRenderer.primaryClass ?? tableTheme.renderers.contactPrimary">
-                        {{ getRendererValue(row, column.cellRenderer.primaryKey) }}
-                      </span>
-                      <span
-                        v-if="stringifyValue(getRendererValue(row, column.cellRenderer.secondaryKey))"
-                        :class="['ml-1', column.cellRenderer.secondaryClass ?? tableTheme.renderers.contactSecondary]"
-                      >
-                        {{ getRendererValue(row, column.cellRenderer.secondaryKey) }}
-                      </span>
-                    </template>
-
-                    <div
-                      v-else-if="column.cellRenderer?.kind === 'dual-stack'"
-                      class="flex flex-col gap-0.5"
+                    <slot
+                      :name="column.slot ?? `cell-${column.key}`"
+                      :row="row"
+                      :value="getColumnValue(row, column.key)"
+                      :index="index"
                     >
-                      <span :class="column.cellRenderer.primaryClass ?? tableTheme.renderers.contactPrimary">
-                        {{ getRendererValue(row, column.cellRenderer.primaryKey) }}
-                      </span>
-                      <span
-                        v-if="stringifyValue(getRendererValue(row, column.cellRenderer.secondaryKey))"
-                        :class="column.cellRenderer.secondaryClass ?? tableTheme.renderers.contactSecondary"
-                      >
-                        {{ getRendererValue(row, column.cellRenderer.secondaryKey) }}
-                      </span>
-                    </div>
+                      <template v-if="column.cellRenderer?.kind === 'dual-inline'">
+                        <span :class="column.cellRenderer.primaryClass ?? tableTheme.renderers.contactPrimary">
+                          {{ getRendererValue(row, column.cellRenderer.primaryKey) }}
+                        </span>
+                        <span
+                          v-if="stringifyValue(getRendererValue(row, column.cellRenderer.secondaryKey))"
+                          :class="['ml-1', column.cellRenderer.secondaryClass ?? tableTheme.renderers.contactSecondary]"
+                        >
+                          {{ getRendererValue(row, column.cellRenderer.secondaryKey) }}
+                        </span>
+                      </template>
 
-                    <div
-                      v-else-if="column.cellRenderer?.kind === 'array'"
-                      class="flex flex-wrap items-center gap-1"
-                    >
-                      <span
-                        v-for="(item, itemIndex) in getArrayValue(getColumnValue(row, column.key))"
-                        :key="`${column.key}-${index}-${itemIndex}`"
-                        :class="column.cellRenderer.itemClass ?? tableTheme.renderers.arrayItem"
+                      <div
+                        v-else-if="column.cellRenderer?.kind === 'dual-stack'"
+                        class="flex flex-col gap-0.5"
                       >
-                        {{ item }}<template v-if="itemIndex < getArrayValue(getColumnValue(row, column.key)).length - 1">{{ column.cellRenderer.separator ?? "、" }}</template>
-                      </span>
-                    </div>
-
-                    <div
-                      v-else-if="column.cellRenderer?.kind === 'tags'"
-                      class="flex flex-wrap items-center gap-1.5"
-                    >
-                      <span
-                        v-for="(item, itemIndex) in getArrayValue(getColumnValue(row, column.key))"
-                        :key="`${column.key}-${index}-tag-${itemIndex}`"
-                        :class="column.cellRenderer.itemClass ?? tableTheme.renderers.tagItem"
-                      >
-                        {{ item }}
-                      </span>
-                    </div>
-
-                    <div
-                      v-else-if="column.cellRenderer?.kind === 'progress'"
-                      class="flex min-w-[120px] items-center gap-2"
-                    >
-                      <div :class="column.cellRenderer.trackClass ?? tableTheme.renderers.progressTrack">
-                        <div
-                          :class="column.cellRenderer.fillClass ?? tableTheme.renderers.progressFill"
-                          :style="{ width: `${getProgressPercent(row, column)}%` }"
-                        />
+                        <span :class="column.cellRenderer.primaryClass ?? tableTheme.renderers.contactPrimary">
+                          {{ getRendererValue(row, column.cellRenderer.primaryKey) }}
+                        </span>
+                        <span
+                          v-if="stringifyValue(getRendererValue(row, column.cellRenderer.secondaryKey))"
+                          :class="column.cellRenderer.secondaryClass ?? tableTheme.renderers.contactSecondary"
+                        >
+                          {{ getRendererValue(row, column.cellRenderer.secondaryKey) }}
+                        </span>
                       </div>
-                      <span :class="column.cellRenderer.labelClass ?? tableTheme.renderers.progressLabel">
-                        {{ getColumnValue(row, column.key) }}
-                      </span>
-                    </div>
 
-                    <div
-                      v-else-if="column.cellRenderer?.kind === 'metric-unit'"
-                      class="inline-flex items-baseline justify-end"
-                    >
-                      <span :class="column.cellRenderer.valueClass ?? tableTheme.renderers.metricValue">
-                        {{ getRendererValue(row, column.cellRenderer.valueKey ?? column.key) }}
-                      </span>
-                      <span
-                        v-if="hasDisplayValue(getRendererValue(row, column.cellRenderer.valueKey ?? column.key))"
-                        :class="['ml-1', column.cellRenderer.unitClass ?? tableTheme.renderers.metricUnit]"
+                      <div
+                        v-else-if="column.cellRenderer?.kind === 'array'"
+                        class="flex flex-wrap items-center gap-1"
                       >
-                        {{ column.cellRenderer.unit }}
-                      </span>
-                    </div>
+                        <span
+                          v-for="(item, itemIndex) in getArrayValue(getColumnValue(row, column.key))"
+                          :key="`${column.key}-${index}-${itemIndex}`"
+                          :class="column.cellRenderer.itemClass ?? tableTheme.renderers.arrayItem"
+                        >
+                          {{ item }}<template v-if="itemIndex < getArrayValue(getColumnValue(row, column.key)).length - 1">{{ column.cellRenderer.separator ?? "、" }}</template>
+                        </span>
+                      </div>
 
-                    <StatusChip
-                      v-else-if="column.cellRenderer?.kind === 'status'"
-                      :value="getRendererValue(row, column.cellRenderer.valueKey ?? column.key)"
-                      :renderer="column.cellRenderer"
-                    />
+                      <div
+                        v-else-if="column.cellRenderer?.kind === 'tags'"
+                        class="flex flex-wrap items-center gap-1.5"
+                      >
+                        <span
+                          v-for="(item, itemIndex) in getArrayValue(getColumnValue(row, column.key))"
+                          :key="`${column.key}-${index}-tag-${itemIndex}`"
+                          :class="column.cellRenderer.itemClass ?? tableTheme.renderers.tagItem"
+                        >
+                          {{ item }}
+                        </span>
+                      </div>
 
-                    <div
-                      v-else-if="column.cellRenderer?.kind === 'note'"
-                      :class="getNoteContentClass(column, columnIndex)"
+                      <div
+                        v-else-if="column.cellRenderer?.kind === 'progress'"
+                        class="flex min-w-[120px] items-center gap-2"
+                      >
+                        <div :class="column.cellRenderer.trackClass ?? tableTheme.renderers.progressTrack">
+                          <div
+                            :class="column.cellRenderer.fillClass ?? tableTheme.renderers.progressFill"
+                            :style="{ width: `${getProgressPercent(row, column)}%` }"
+                          />
+                        </div>
+                        <span :class="column.cellRenderer.labelClass ?? tableTheme.renderers.progressLabel">
+                          {{ getColumnValue(row, column.key) }}
+                        </span>
+                      </div>
+
+                      <div
+                        v-else-if="column.cellRenderer?.kind === 'metric-unit'"
+                        class="inline-flex items-baseline justify-end"
+                      >
+                        <span :class="column.cellRenderer.valueClass ?? tableTheme.renderers.metricValue">
+                          {{ getRendererValue(row, column.cellRenderer.valueKey ?? column.key) }}
+                        </span>
+                        <span
+                          v-if="hasDisplayValue(getRendererValue(row, column.cellRenderer.valueKey ?? column.key))"
+                          :class="['ml-1', column.cellRenderer.unitClass ?? tableTheme.renderers.metricUnit]"
+                        >
+                          {{ column.cellRenderer.unit }}
+                        </span>
+                      </div>
+
+                      <StatusChip
+                        v-else-if="column.cellRenderer?.kind === 'status'"
+                        :value="getRendererValue(row, column.cellRenderer.valueKey ?? column.key)"
+                        :renderer="column.cellRenderer"
+                      />
+
+                      <div
+                        v-else-if="column.cellRenderer?.kind === 'note'"
+                        :class="getNoteContentClass(column, columnIndex)"
+                      >
+                        {{ getColumnValue(row, column.key) }}
+                      </div>
+
+                      <template v-else>
+                        {{ getColumnValue(row, column.key) }}
+                      </template>
+                    </slot>
+                  </div>
+
+                  <div
+                    v-if="isPrimaryColumn(columnIndex) && inlineQuickActionMode !== 'none'"
+                    :class="getInlineQuickActionWrapperClass(row, index)"
+                  >
+                    <Button
+                      v-if="inlineQuickActionMode === 'direct'"
+                      variant="ghost"
+                      size="sm"
+                      :class="tableTheme.quickAction.button"
+                      :aria-label="getInlineQuickActionLabel()"
+                      :title="getInlineQuickActionLabel()"
+                      data-row-click-ignore
+                      @click.stop="handleInlineQuickPrimaryAction(row, index)"
                     >
-                      {{ getColumnValue(row, column.key) }}
-                    </div>
+                      <i :class="[getInlineQuickActionIcon(), 'text-[14px] leading-none']" />
+                    </Button>
 
-                    <template v-else>
-                      {{ getColumnValue(row, column.key) }}
-                    </template>
-                  </slot>
+                    <DropdownMenu v-else>
+                      <DropdownMenuTrigger as-child>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          :class="tableTheme.quickAction.button"
+                          aria-label="更多操作"
+                          title="更多操作"
+                          data-row-click-ignore
+                          @click.stop
+                        >
+                          <i class="ri-more-1-line text-[14px] leading-none" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="start" :class="tableTheme.quickAction.menu">
+                        <DropdownMenuItem
+                          v-for="action in rowActions"
+                          :key="`${getRowKey(row, index)}-quick-${action.key}`"
+                          :class="tableTheme.quickAction.item"
+                          @select="handleRowActionClick(action, row, index)"
+                        >
+                          <i :class="remixIconForTableRowAction(action.label, action.icon)" />
+                          <span>{{ action.label }}</span>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </div>
               </div>
             </td>
@@ -1155,7 +1380,7 @@ onBeforeUnmount(() => {
                   variant="outline"
                   size="sm"
                   :class="tableTheme.actionButton"
-                  @click="handleRowActionClick(action, row, index)"
+                  @click.stop="handleRowActionClick(action, row, index)"
                 >
                   <i v-if="props.showRowActionIcons" :class="remixIconForTableRowAction(action.label, action.icon)" />
                   {{ action.label }}

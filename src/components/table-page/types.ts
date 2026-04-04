@@ -164,6 +164,7 @@ export type TableSection = {
   rows: Record<string, unknown>[]
   rowKey: string | ((row: Record<string, unknown>, index: number) => string | number)
   rowActions?: TableRowAction[]
+  onRowClick?: (row: Record<string, unknown>, index: number) => void
   summary?: string
   showIndex?: boolean
   stickyHeader?: boolean
@@ -247,6 +248,7 @@ export type TablePageSchema<Row> = {
   data: Row[]
   columns: Array<TablePageColumn<Row>>
   rowActions?: Array<TableRowAction<Row>>
+  onRowClick?: (row: Row, index: number) => void
   filters?: TablePageFilterDefinition<Row>[]
   sort?: TablePageSortDefinition<Row>
   tabs?: TablePageTabsDefinition<Row>

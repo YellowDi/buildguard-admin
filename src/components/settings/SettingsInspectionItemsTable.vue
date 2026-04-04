@@ -665,6 +665,10 @@ function asInspectionItemRow(row: Record<string, unknown>) {
   return row as InspectionItemRow
 }
 
+function handleRowClick(row: Record<string, unknown>) {
+  void openEditDialog(asInspectionItemRow(row))
+}
+
 defineExpose({
   openCreateDialog,
   refreshData: refreshInspectionItemsPage,
@@ -718,6 +722,7 @@ defineExpose({
       :columns="columns"
       :rows="filteredRows"
       row-key="id"
+      :on-row-click="handleRowClick"
       :table-class="SETTINGS_TABLE_PAGE_CLASS"
       :empty-state="tableEmptyState"
     >
@@ -748,7 +753,7 @@ defineExpose({
           variant="outline"
           size="sm"
           class="ml-auto h-8 gap-1 rounded-md px-2.5 text-[13px]"
-          @click="openEditDialog(asInspectionItemRow(rawRow))"
+          @click.stop="openEditDialog(asInspectionItemRow(rawRow))"
         >
           <i class="ri-edit-line text-base" />
           <span>编辑</span>

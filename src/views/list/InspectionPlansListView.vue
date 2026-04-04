@@ -49,6 +49,7 @@ const schema: TablePageSchema<InspectionPlanRecord> = {
       onClick: row => handleViewDetail(row as InspectionPlanRecord),
     },
   ],
+  onRowClick: row => handleViewDetail(row as InspectionPlanRecord),
   columns: [
     {
       key: "code",

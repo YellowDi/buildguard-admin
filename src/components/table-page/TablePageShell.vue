@@ -45,6 +45,7 @@ const props = withDefaults(defineProps<{
   dateFilterFields: string[]
   columns: TableColumn[]
   rowActions?: TableRowAction[]
+  onRowClick?: (row: Record<string, unknown>, index: number) => void
   rows: Record<string, unknown>[]
   filteredRows?: Record<string, unknown>[]
   selectedRows?: Record<string, unknown>[]
@@ -215,6 +216,7 @@ async function handleExportConfirm(payload: { scope: TableExportScope; format: T
                 :rows="section.rows"
                 :row-key="section.rowKey"
                 :row-actions="section.rowActions ?? props.rowActions"
+                :on-row-click="section.onRowClick ?? props.onRowClick"
                 :selected-row-keys="props.selectedRowKeys"
                 :summary="section.summary"
                 :show-index="section.showIndex ?? props.showIndex"
@@ -238,6 +240,7 @@ async function handleExportConfirm(payload: { scope: TableExportScope; format: T
               v-else
               :columns="props.columns"
               :row-actions="props.rowActions"
+              :on-row-click="props.onRowClick"
               :rows="props.rows"
               :row-key="props.rowKey"
               :selected-row-keys="props.selectedRowKeys"

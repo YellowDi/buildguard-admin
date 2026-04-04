@@ -92,6 +92,17 @@ const schema: TablePageSchema<BuildingRecord> = {
       },
     },
   ],
+  onRowClick: row => {
+    if (!row.uuid) {
+      toast.error("当前建筑缺少 Uuid，无法打开详情")
+      return
+    }
+
+    void router.push({
+      name: "building-detail",
+      params: { id: row.uuid },
+    })
+  },
   columns: [
     {
       key: "buildingName",

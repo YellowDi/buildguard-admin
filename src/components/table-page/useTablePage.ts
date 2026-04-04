@@ -39,6 +39,7 @@ export type TablePageDefinition<Row> = {
   rows: MaybeRows<Row>
   columns: TableColumn[]
   rowActions?: Array<TableRowAction<Row>>
+  onRowClick?: (row: Row, index: number) => void
   summary?: string
   primaryActionLabel?: string
   showIndex?: boolean
@@ -125,6 +126,7 @@ export function createTablePageDefinition<Row>(schema: TablePageSchema<Row>): Ta
     rows: schema.data,
     columns: schema.columns,
     rowActions: schema.rowActions,
+    onRowClick: schema.onRowClick,
     summary: schema.summary,
     primaryActionLabel: schema.primaryActionLabel,
     showIndex: schema.showIndex,
@@ -464,6 +466,7 @@ export function useTablePage<Row>(input: TablePageSchema<Row> | TablePageDefinit
     summary: definition.summary,
     columns: definition.columns,
     rowActions: definition.rowActions,
+    onRowClick: definition.onRowClick,
     rowKey: definition.rowKey,
     primaryActionLabel: definition.primaryActionLabel,
     showIndex: definition.showIndex,

@@ -29,6 +29,14 @@ export const tableTheme = {
     prefix: "relative flex h-4 w-8 shrink-0 items-center justify-center text-muted-foreground tabular-nums",
     content: "min-w-0 flex-1",
   },
+  quickAction: {
+    layout: "flex min-w-0 items-center gap-2",
+    content: "min-w-0 flex-1",
+    slot: "ml-1 flex shrink-0 items-center",
+    button: "h-6 w-6 rounded-md border border-transparent bg-transparent p-0 text-muted-foreground shadow-none hover:border-border/60 hover:bg-surface-tertiary hover:text-foreground focus-visible:border-border/60 focus-visible:bg-surface-tertiary focus-visible:text-foreground",
+    menu: "w-44 rounded-xl p-1.5",
+    item: "rounded-lg px-2.5 py-2",
+  },
   headerCell: {
     base: "h-[38px] border-b border-border px-3 py-0 text-left font-normal whitespace-nowrap align-middle transition-colors hover:bg-surface-tertiary",
     /** 序号/checkbox 列：去掉 px-3 左侧 12px，与滚动区左缘对齐（右侧仍保留 pr-3） */
@@ -36,7 +44,7 @@ export const tableTheme = {
     sticky: "sticky z-20 bg-background bg-clip-padding",
   },
   bodyCell: {
-    base: "h-[42px] border-b border-border px-3 py-0 whitespace-nowrap align-middle",
+    base: "h-[42px] border-b border-border px-3 py-0 whitespace-nowrap align-middle select-text",
     selectionFlush: "!pl-0",
     split: "border-l",
     rightAligned: "text-right",

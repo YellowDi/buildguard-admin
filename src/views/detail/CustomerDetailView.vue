@@ -731,6 +731,7 @@ const buildingAssetsSchema: TablePageSchema<CustomerBuildingAssetRow> = {
       onClick: row => handleBuildingAssetDetail(row as CustomerBuildingAssetRow),
     },
   ],
+  onRowClick: row => handleBuildingAssetDetail(row as CustomerBuildingAssetRow),
   columns: [
     {
       key: "buildingName",
@@ -878,6 +879,7 @@ const inspectionWorkOrdersSchema: TablePageSchema<CustomerWorkOrderRow> = {
       onClick: row => handleViewWorkOrder(row as CustomerWorkOrderRow),
     },
   ],
+  onRowClick: row => handleViewWorkOrder(row as CustomerWorkOrderRow),
   columns: [
     {
       key: "orderNo",
@@ -1063,6 +1065,7 @@ const repairWorkOrdersSchema: TablePageSchema<CustomerWorkOrderRow> = {
       onClick: row => handleViewWorkOrder(row as CustomerWorkOrderRow),
     },
   ],
+  onRowClick: row => handleViewWorkOrder(row as CustomerWorkOrderRow),
   columns: [
     {
       key: "orderNo",
@@ -1239,6 +1242,7 @@ const monitoringSchema: TablePageSchema<MonitoringRow> = {
       onClick: row => handleViewMonitoring(row as MonitoringRow),
     },
   ],
+  onRowClick: row => handleViewMonitoring(row as MonitoringRow),
   columns: [
     {
       key: "deviceName",

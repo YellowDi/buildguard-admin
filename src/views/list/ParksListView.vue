@@ -85,6 +85,12 @@ const schema: TablePageSchema<ParkRecord> = {
       },
     },
   ],
+  onRowClick: row => {
+    void router.push({
+      name: "park-detail",
+      params: { id: row.uuid },
+    })
+  },
   columns: [
     {
       key: "parkName",

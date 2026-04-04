@@ -473,6 +473,14 @@ function asCategoryRow(raw: Record<string, unknown>) {
   return raw as CategoryDisplayRow
 }
 
+function handleMajorRowClick(row: Record<string, unknown>) {
+  openEditMajor(asMajorRow(row))
+}
+
+function handleCategoryRowClick(row: Record<string, unknown>) {
+  openEditCategory(asCategoryRow(row))
+}
+
 async function refreshData() {
   toast.success("列表已刷新", { description: "当前为本地模拟数据。" })
 }
@@ -541,6 +549,7 @@ defineExpose({
         :show-row-action-icons="true"
         :columns="majorColumns"
         :rows="filteredMajorRows"
+        :on-row-click="handleMajorRowClick"
         :table-class="SETTINGS_TABLE_PAGE_CLASS"
         :empty-state="majorEmptyState"
       >
@@ -550,7 +559,7 @@ defineExpose({
               variant="outline"
               size="sm"
               class="h-8 gap-1 rounded-md px-2.5 text-[13px]"
-              @click="openEditMajor(asMajorRow(rawRow))"
+              @click.stop="openEditMajor(asMajorRow(rawRow))"
             >
               <i class="ri-edit-line text-base" />
               <span>编辑</span>
@@ -574,6 +583,7 @@ defineExpose({
         :show-row-action-icons="true"
         :columns="categoryColumns"
         :rows="categoryDisplayRows"
+        :on-row-click="handleCategoryRowClick"
         :table-class="SETTINGS_TABLE_PAGE_CLASS"
         :empty-state="categoryEmptyState"
       >
@@ -583,7 +593,7 @@ defineExpose({
               variant="outline"
               size="sm"
               class="h-8 gap-1 rounded-md px-2.5 text-[13px]"
-              @click="openEditCategory(asCategoryRow(rawRow))"
+              @click.stop="openEditCategory(asCategoryRow(rawRow))"
             >
               <i class="ri-edit-line text-base" />
               <span>编辑</span>

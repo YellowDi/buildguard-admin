@@ -275,6 +275,10 @@ async function openEditDialog(row: TemplateRow) {
   }
 }
 
+function handleRowClick(row: Record<string, unknown>) {
+  void openEditDialog(row as TemplateRow)
+}
+
 function resetCreateDialog() {
   editingTemplateUuid.value = ""
   createTemplateName.value = ""
@@ -468,6 +472,7 @@ defineExpose({
       :columns="columns"
       :rows="filteredRows"
       row-key="id"
+      :on-row-click="handleRowClick"
       :table-class="SETTINGS_TABLE_PAGE_CLASS"
       :empty-state="tableEmptyState"
     >
@@ -476,7 +481,7 @@ defineExpose({
           variant="outline"
           size="sm"
           class="ml-auto h-8 gap-1 rounded-md px-2.5 text-[13px]"
-          @click="openEditDialog(row as TemplateRow)"
+          @click.stop="openEditDialog(row as TemplateRow)"
         >
           <i class="ri-edit-line text-base" />
           <span>编辑</span>

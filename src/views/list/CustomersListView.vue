@@ -94,6 +94,14 @@ const schema: TablePageSchema<CustomerRecord> = {
       },
     },
   ],
+  onRowClick: row => {
+    if (!row.detailId) {
+      toast.error("当前客户缺少 Uuid，无法打开详情")
+      return
+    }
+
+    void router.push({ name: "customer-detail", params: { id: row.detailId } })
+  },
   columns: [
     {
       key: "customerName",

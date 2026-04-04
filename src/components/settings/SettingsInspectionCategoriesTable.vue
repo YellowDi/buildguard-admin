@@ -481,6 +481,10 @@ function asInspectionCategoryRow(row: Record<string, unknown>) {
   return row as InspectionCategoryRow
 }
 
+function handleRowClick(row: Record<string, unknown>) {
+  void openEditDialog(asInspectionCategoryRow(row))
+}
+
 defineExpose({
   openCreateDialog,
   refreshData: loadInspectionCategories,
@@ -538,6 +542,7 @@ defineExpose({
       :show-row-action-icons="true"
       :columns="columns"
       :rows="filteredRows"
+      :on-row-click="handleRowClick"
       :table-class="SETTINGS_TABLE_PAGE_CLASS"
       :empty-state="tableEmptyState"
     >
@@ -550,7 +555,7 @@ defineExpose({
           variant="outline"
           size="sm"
           class="ml-auto h-8 gap-1 rounded-md px-2.5 text-[13px]"
-          @click="openEditDialog(asInspectionCategoryRow(rawRow))"
+          @click.stop="openEditDialog(asInspectionCategoryRow(rawRow))"
         >
           <i class="ri-edit-line text-base" />
           <span>编辑</span>

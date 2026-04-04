@@ -145,6 +145,7 @@ const schema: TablePageSchema<WorkOrderRecord> = {
           onClick: row => handleViewDetail(row as WorkOrderRecord),
         },
       ],
+  onRowClick: row => handleViewDetail(row as WorkOrderRecord),
   columns,
   filters: [
     {

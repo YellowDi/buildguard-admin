@@ -102,6 +102,12 @@ const schema: TablePageSchema<InspectionServiceRecord> = {
       },
     },
   ],
+  onRowClick: row => {
+    void router.push({
+      name: "inspection-service-detail",
+      params: { id: row.uuid },
+    })
+  },
   columns: [
     {
       key: "Name",
