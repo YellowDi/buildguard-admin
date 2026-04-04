@@ -90,7 +90,9 @@ function closeMobileSidebar() {
             :name="routeTransitionName"
             mode="out-in"
           >
-            <component :is="Component" :key="route.name ?? route.fullPath" />
+            <div :key="route.name ?? route.fullPath" class="route-page-shell flex min-h-0 flex-1 flex-col">
+              <component :is="Component" />
+            </div>
           </Transition>
         </RouterView>
       </main>
