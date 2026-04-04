@@ -3636,7 +3636,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
           </Alert>
 
           <CustomerDetailContentLoading v-if="loading || buildingAssetsLoading" variant="building-assets" />
-          <TablePage v-else-if="customer" :page="buildingAssetsPage" :show-toolbar-actions="false" :list-level-table="false" class="-mt-3 sm:-mx-4 xl:-mx-8" />
+          <TablePage v-else-if="customer" :page="buildingAssetsPage" :show-toolbar-actions="false" :list-level-table="false" class="-mt-3 -mx-4 sm:-mx-8 xl:-mx-12" />
         </div>
       </template>
 
@@ -3648,7 +3648,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
             <AlertDescription>{{ activeWorkOrderTableErrorMessage }}</AlertDescription>
           </Alert>
 
-          <TablePage :page="activeWorkOrderTableTab === 'inspection' ? inspectionWorkOrdersPage : repairWorkOrdersPage" :show-toolbar-actions="false" :list-level-table="false" class="-mt-3 sm:-mx-4 xl:-mx-8">
+          <TablePage :page="activeWorkOrderTableTab === 'inspection' ? inspectionWorkOrdersPage : repairWorkOrdersPage" :show-toolbar-actions="false" :list-level-table="false" class="-mt-3 -mx-4 sm:-mx-8 xl:-mx-12">
             <template #controls-prefix>
               <div class="mr-2 inline-flex shrink-0 items-center gap-2.5 whitespace-nowrap">
                 <TopTabSwitch
@@ -3665,7 +3665,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
             </template>
           </TablePage>
 
-          <div class="mt-auto -mx-4 pt-3 px-4 sm:px-0">
+          <div class="mt-auto -mx-4 pt-3 px-4 sm:-mx-8 sm:px-8 xl:-mx-12 xl:px-12">
             <div class="flex w-full justify-end">
               <Pagination
                 v-model:page="activeWorkOrderTablePageNumProxy"
@@ -3706,14 +3706,14 @@ function toDisplayText(value: unknown, fallback = "未填写") {
       <template v-else-if="activeTab === 'monitoring'">
         <CustomerDetailContentLoading v-if="loading" variant="monitoring" />
         <div v-else-if="customer" class="flex min-h-0 flex-1 flex-col pb-5">
-          <TablePage :page="monitoringPage" :show-toolbar-actions="false" :list-level-table="false" class="-mt-3 sm:-mx-4 xl:-mx-8" />
+          <TablePage :page="monitoringPage" :show-toolbar-actions="false" :list-level-table="false" class="-mt-3 -mx-4 sm:-mx-8 xl:-mx-12" />
         </div>
       </template>
 
       <template v-else-if="activeTab === 'sub-accounts'">
         <CustomerDetailContentLoading v-if="loading" variant="sub-accounts" />
         <div v-else-if="customer" class="flex min-h-0 flex-1 flex-col pb-5">
-          <TablePage :page="subAccountsPage" :show-toolbar-actions="false" :list-level-table="false" class="-mt-3 sm:-mx-4 xl:-mx-8" />
+          <TablePage :page="subAccountsPage" :show-toolbar-actions="false" :list-level-table="false" class="-mt-3 -mx-4 sm:-mx-8 xl:-mx-12" />
         </div>
       </template>
 

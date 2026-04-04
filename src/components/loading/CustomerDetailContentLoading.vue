@@ -254,14 +254,14 @@ const tableConfig = computed(() => {
     class="flex min-h-0 flex-1 flex-col pb-5"
   >
     <TablePageLoading
-      class="-mt-3 sm:-mx-4 xl:-mx-8"
+      class="-mt-3 -mx-4 sm:-mx-8 xl:-mx-12"
       :columns-template="tableConfig.columnsTemplate"
       :column-count="tableConfig.columnCount"
     />
 
     <div
       v-if="props.variant === 'work-orders'"
-      class="mt-auto flex items-center justify-end gap-3 px-4 pt-4 sm:px-0"
+      class="mt-auto flex items-center justify-end gap-3 -mx-4 px-4 pt-4 sm:-mx-8 sm:px-8 xl:-mx-12 xl:px-12"
     >
       <Skeleton class="h-4 w-48" />
       <Skeleton class="h-9 w-20 rounded-md" />
