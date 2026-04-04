@@ -124,7 +124,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="flex items-center gap-1" role="tablist" :aria-label="props.ariaLabel">
+  <div class="flex items-center gap-0.5" role="tablist" :aria-label="props.ariaLabel">
     <button
       v-for="(tab, index) in props.tabs"
       :key="tab.id"
@@ -151,22 +151,41 @@ onBeforeUnmount(() => {
 
       <span
         :ref="element => setMeasureRef(element, index)"
-        class="pointer-events-none absolute left-0 top-0 flex h-8 w-max items-center rounded-full px-2.5 opacity-0"
+        :class="[
+          'pointer-events-none absolute left-0 top-0 flex h-8 w-max items-center rounded-full opacity-0',
+          props.collapseInactive && tab.icon ? 'pl-[30px] pr-2' : 'px-2.5',
+        ]"
         aria-hidden="true"
       >
-        <i v-if="tab.icon" :class="[tab.icon, 'shrink-0 text-[17px] leading-none']" />
-        <span :class="[tab.icon ? 'ml-2' : '', 'flex items-center whitespace-nowrap']">
-          <span class="leading-4">{{ tab.label }}</span>
-          <span
-            v-if="tab.badge !== undefined"
-            :class="[
-              'ml-2 flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full px-1 text-center text-[10px] font-semibold leading-none',
-              getBadgeClass(tab.id),
-            ]"
-          >
-            {{ tab.badge }}
+        <template v-if="props.collapseInactive && tab.icon">
+          <span class="flex min-w-0 items-center whitespace-nowrap">
+            <span class="leading-4">{{ tab.label }}</span>
+            <span
+              v-if="tab.badge !== undefined"
+              :class="[
+                'ml-2 flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full px-1 text-center text-[10px] font-semibold leading-none',
+                getBadgeClass(tab.id),
+              ]"
+            >
+              {{ tab.badge }}
+            </span>
           </span>
-        </span>
+        </template>
+        <template v-else>
+          <i v-if="tab.icon" :class="[tab.icon, 'shrink-0 text-[17px] leading-none']" />
+          <span :class="[tab.icon ? 'ml-2' : '', 'flex items-center whitespace-nowrap']">
+            <span class="leading-4">{{ tab.label }}</span>
+            <span
+              v-if="tab.badge !== undefined"
+              :class="[
+                'ml-2 flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full px-1 text-center text-[10px] font-semibold leading-none',
+                getBadgeClass(tab.id),
+              ]"
+            >
+              {{ tab.badge }}
+            </span>
+          </span>
+        </template>
       </span>
 
       <span
@@ -184,8 +203,8 @@ onBeforeUnmount(() => {
 
       <span
         :class="[
-          'absolute inset-y-0 left-0 z-10 flex items-center overflow-hidden whitespace-nowrap pr-2.5',
-          props.collapseInactive && tab.icon ? 'pl-[30px]' : 'px-2.5',
+          'absolute inset-y-0 left-0 z-10 flex items-center overflow-hidden whitespace-nowrap',
+          props.collapseInactive && tab.icon ? 'pl-[30px] pr-2' : 'px-2.5',
         ]"
       >
         <span

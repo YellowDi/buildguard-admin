@@ -45,7 +45,7 @@ const topTabs: Array<{ id: AppSidebarTopTabId, label: string, icon: string }> = 
   {
     id: "conversation",
     label: "对话",
-    icon: "ri-message-3-line",
+    icon: "ri-chat-1-line",
   },
   {
     id: "calendar",
@@ -55,7 +55,7 @@ const topTabs: Array<{ id: AppSidebarTopTabId, label: string, icon: string }> = 
   {
     id: "inbox",
     label: "收件箱",
-    icon: "ri-mail-line",
+    icon: "ri-inbox-2-line",
   },
 ]
 
@@ -77,7 +77,7 @@ const businessItems = reactive<AppSidebarNavItem[]>([
   },
   {
     label: "监控",
-    icon: "ri-radar-line",
+    icon: "ri-webcam-line",
     path: "/monitoring",
   },
   {
@@ -114,10 +114,6 @@ const businessItems = reactive<AppSidebarNavItem[]>([
 
 const inboxGroups = inboxData as AppSidebarInboxGroup[]
 const conversationItems = conversationsData as AppSidebarConversationItem[]
-const inboxAttentionCount = inboxGroups.reduce(
-  (total, group) => total + group.items.filter((item) => item.severity !== "info").length,
-  0,
-)
 const selectedTopTab = ref<AppSidebarTopTabId>("home")
 const isSearchDialogOpen = ref(false)
 
@@ -128,13 +124,6 @@ const activePath = computed(() => {
 
   return navActivePath || route.path
 })
-const topTabItems = computed(() =>
-  topTabs.map(tab => ({
-    ...tab,
-    badge: tab.id === "inbox" ? inboxAttentionCount : undefined,
-  })),
-)
-
 function toggleItem(item: AppSidebarNavItem) {
   if (!item.children?.length) {
     if (item.action === "open-settings") {
@@ -182,7 +171,7 @@ watch(() => route.fullPath, () => {
   >
     <div class="flex min-h-0 flex-1 flex-col">
       <AppSidebarTopBar
-        :tabs="topTabItems"
+        :tabs="topTabs"
         :model-value="selectedTopTab"
         @update:model-value="handleTopTabUpdate"
         @search="handleSearch"
@@ -217,7 +206,7 @@ watch(() => route.fullPath, () => {
   <Sidebar collapsible="offcanvas" class="z-40 bg-transparent max-[999px]:hidden">
     <SidebarHeader class="shrink-0 pb-0">
       <AppSidebarTopBar
-        :tabs="topTabItems"
+        :tabs="topTabs"
         :model-value="selectedTopTab"
         @update:model-value="handleTopTabUpdate"
         @search="handleSearch"
