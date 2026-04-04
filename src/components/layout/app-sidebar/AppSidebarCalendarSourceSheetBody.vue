@@ -71,10 +71,10 @@ function getEventTitleText(event: AppSidebarCalendarItem) {
 
     <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-4">
     <template v-if="loading">
-      <p class="px-3 py-8 text-center text-sm text-muted-foreground">加载中...</p>
+      <p class="py-8 text-center text-sm text-muted-foreground">加载中...</p>
     </template>
     <template v-else-if="groups.length === 0">
-      <p class="px-3 py-8 text-center text-sm text-muted-foreground">暂无条目</p>
+      <p class="py-8 text-center text-sm text-muted-foreground">暂无条目</p>
     </template>
     <template v-else>
       <section

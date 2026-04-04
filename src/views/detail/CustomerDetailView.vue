@@ -52,7 +52,7 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination"
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { ResponsiveRightSheet } from "@/components/ui/sheet"
 import TablePage from "@/components/table-page/TablePage.vue"
 import SortPopover, { type SortRule } from "@/components/table-page/TableSortPopover.vue"
 import { createTablePageDefinition, useTablePage } from "@/components/table-page/useTablePage"
@@ -2053,6 +2053,14 @@ function goToParkFullDetail(parkUuid: string, currentCustomerUuid: string) {
   })
 }
 
+function handleParkDetailSheetFooterPrimary() {
+  const p = activeParkDetail.value
+  if (!p?.Uuid) {
+    return
+  }
+  goToParkFullDetail(p.Uuid, p.CustomerUuid || customer.value?.Uuid || "")
+}
+
 function handleParkDetailSheetOpenChange(open: boolean) {
   parkDetailSheetOpen.value = open
 
@@ -3937,143 +3945,147 @@ function toDisplayText(value: unknown, fallback = "未填写") {
     </DialogContent>
   </Dialog>
 
-  <Sheet :open="workOrderDetailSheetOpen" @update:open="handleWorkOrderDetailSheetOpenChange">
-    <SheetContent side="right" class="overflow-hidden max-sm:w-[calc(100vw-1rem)] sm:max-w-xl">
-      <SheetHeader>
-        <template #actions>
-          <div class="flex items-center justify-between gap-3">
-            <div class="flex items-center gap-1">
-              <TooltipWrap content="关闭工单详情" side="right">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  class="h-8 w-8 rounded-md text-muted-foreground hover:text-foreground"
-                  @click="handleWorkOrderDetailSheetOpenChange(false)"
-                >
-                  <i class="ri-arrow-right-double-line text-[16px]" />
-                  <span class="sr-only">关闭工单详情</span>
-                </Button>
-              </TooltipWrap>
-              <TooltipWrap
-                v-if="activeWorkOrderDetailKind === 'repair' ? activeRepairWorkOrderDetail?.Uuid : activeInspectionWorkOrderDetail?.Uuid"
-                content="打开完整工单详情页"
-              >
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  class="h-8 w-8 rounded-md text-muted-foreground hover:text-foreground"
-                  @click="goToWorkOrderFullDetail"
-                >
-                  <i class="ri-fullscreen-line text-[16px]" />
-                  <span class="sr-only">打开完整工单详情页</span>
-                </Button>
-              </TooltipWrap>
-            </div>
-          </div>
-        </template>
-        <SheetTitle>{{ workOrderDetailSheetTitle }}</SheetTitle>
-      </SheetHeader>
-
-      <div class="space-y-5 overflow-y-auto">
-        <Alert v-if="workOrderDetailErrorMessage" variant="destructive" class="mb-4">
-          <AlertTitle>工单详情接口加载失败</AlertTitle>
-          <AlertDescription>{{ workOrderDetailErrorMessage }}</AlertDescription>
-        </Alert>
-
-        <div v-if="workOrderDetailLoading" class="space-y-5">
-          <DetailFieldsSkeleton :sections="2" :rows-per-section="4" />
-          <DetailFieldsSkeleton
-            :sections="activeWorkOrderDetailKind === 'repair' ? 1 : 2"
-            :rows-per-section="3"
-          />
+  <ResponsiveRightSheet
+    :open="workOrderDetailSheetOpen"
+    sheet-content-class="overflow-hidden sm:max-w-xl"
+    :show-primary="Boolean(activeWorkOrderDetailKind === 'repair' ? activeRepairWorkOrderDetail?.Uuid : activeInspectionWorkOrderDetail?.Uuid)"
+    @update:open="handleWorkOrderDetailSheetOpenChange"
+    @footer-primary="goToWorkOrderFullDetail"
+  >
+    <template #actions>
+      <div class="flex items-center justify-between gap-3">
+        <div class="flex items-center gap-1">
+          <TooltipWrap content="关闭工单详情" side="right">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              class="h-8 w-8 rounded-md text-muted-foreground hover:text-foreground"
+              @click="handleWorkOrderDetailSheetOpenChange(false)"
+            >
+              <i class="ri-arrow-right-double-line text-[16px]" />
+              <span class="sr-only">关闭工单详情</span>
+            </Button>
+          </TooltipWrap>
+          <TooltipWrap
+            v-if="activeWorkOrderDetailKind === 'repair' ? activeRepairWorkOrderDetail?.Uuid : activeInspectionWorkOrderDetail?.Uuid"
+            content="打开完整工单详情页"
+          >
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              class="h-8 w-8 rounded-md text-muted-foreground hover:text-foreground"
+              @click="goToWorkOrderFullDetail"
+            >
+              <i class="ri-fullscreen-line text-[16px]" />
+              <span class="sr-only">打开完整工单详情页</span>
+            </Button>
+          </TooltipWrap>
         </div>
-
-        <template v-else-if="activeWorkOrderDetailKind === 'repair' ? activeRepairWorkOrderDetail : activeInspectionWorkOrderDetail">
-          <DetailFieldSections :sections="workOrderDetailPrimarySections" />
-          <DetailFieldSections :sections="workOrderDetailSecondarySections" />
-        </template>
       </div>
-    </SheetContent>
-  </Sheet>
+    </template>
+    <template #title>{{ workOrderDetailSheetTitle }}</template>
 
-  <Sheet :open="parkDetailSheetOpen" @update:open="handleParkDetailSheetOpenChange">
-    <SheetContent side="right" class="overflow-hidden max-sm:w-[calc(100vw-1rem)] sm:max-w-xl">
-      <SheetHeader>
-        <template #actions>
-          <div class="flex items-center justify-between gap-3">
-            <div class="flex items-center gap-1">
-              <TooltipWrap content="关闭园区详情" side="right">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  class="h-8 w-8 rounded-md text-muted-foreground hover:text-foreground"
-                  @click="handleParkDetailSheetOpenChange(false)"
-                >
-                  <i class="ri-arrow-right-double-line text-[16px]" />
-                  <span class="sr-only">关闭园区详情</span>
-                </Button>
-              </TooltipWrap>
-              <TooltipWrap v-if="activeParkDetail?.Uuid" content="打开完整园区详情页">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  class="h-8 w-8 rounded-md text-muted-foreground hover:text-foreground"
-                  @click="goToParkFullDetail(activeParkDetail.Uuid, activeParkDetail.CustomerUuid || customer?.Uuid || '')"
-                >
-                  <i class="ri-fullscreen-line text-[16px]" />
-                  <span class="sr-only">打开完整园区详情页</span>
-                </Button>
-              </TooltipWrap>
-            </div>
-            <div v-if="activeParkDetail?.Uuid" class="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                class="h-8 gap-1 rounded-md border-destructive/40 text-destructive hover:border-destructive/60 hover:bg-destructive/5 hover:text-destructive"
-                :disabled="parkDeleteSubmitting"
-                @click="promptDeletePark"
-              >
-                <i
-                  :class="parkDeleteSubmitting ? 'ri-loader-4-line animate-spin text-base' : 'ri-delete-bin-line text-base'"
-                />
-                {{ parkDeleteSubmitting ? "删除中..." : "删除园区" }}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                class="h-8 gap-1 rounded-md"
-                :disabled="parkDeleteSubmitting"
-                @click="goToParkEdit(activeParkDetail.Uuid, activeParkDetail.CustomerUuid || customer?.Uuid || '')"
-              >
-                <i class="ri-edit-line text-base" />
-                编辑园区
-              </Button>
-            </div>
-          </div>
-        </template>
-        <SheetTitle>{{ toDisplayText(activeParkDetail?.Name, "园区详情") }}</SheetTitle>
-      </SheetHeader>
+    <div class="space-y-5 overflow-y-auto">
+      <Alert v-if="workOrderDetailErrorMessage" variant="destructive" class="mb-4">
+        <AlertTitle>工单详情接口加载失败</AlertTitle>
+        <AlertDescription>{{ workOrderDetailErrorMessage }}</AlertDescription>
+      </Alert>
 
-      <div class="overflow-y-auto">
-        <Alert v-if="parkDetailErrorMessage" variant="destructive" class="mb-4">
-          <AlertTitle>园区详情接口加载失败</AlertTitle>
-          <AlertDescription>{{ parkDetailErrorMessage }}</AlertDescription>
-        </Alert>
-
+      <div v-if="workOrderDetailLoading" class="space-y-5">
+        <DetailFieldsSkeleton :sections="2" :rows-per-section="4" />
         <DetailFieldsSkeleton
-          v-if="parkDetailLoading"
-          :sections="1"
-          :rows-per-section="6"
+          :sections="activeWorkOrderDetailKind === 'repair' ? 1 : 2"
+          :rows-per-section="3"
         />
-
-        <DetailFieldSections v-else-if="activeParkDetail" :sections="parkDetailSheetSections" />
       </div>
-    </SheetContent>
-  </Sheet>
+
+      <template v-else-if="activeWorkOrderDetailKind === 'repair' ? activeRepairWorkOrderDetail : activeInspectionWorkOrderDetail">
+        <DetailFieldSections :sections="workOrderDetailPrimarySections" />
+        <DetailFieldSections :sections="workOrderDetailSecondarySections" />
+      </template>
+    </div>
+  </ResponsiveRightSheet>
+
+  <ResponsiveRightSheet
+    :open="parkDetailSheetOpen"
+    sheet-content-class="overflow-hidden sm:max-w-xl"
+    :show-primary="Boolean(activeParkDetail?.Uuid)"
+    @update:open="handleParkDetailSheetOpenChange"
+    @footer-primary="handleParkDetailSheetFooterPrimary"
+  >
+    <template #actions>
+      <div class="flex items-center justify-between gap-3">
+        <div class="flex items-center gap-1">
+          <TooltipWrap content="关闭园区详情" side="right">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              class="h-8 w-8 rounded-md text-muted-foreground hover:text-foreground"
+              @click="handleParkDetailSheetOpenChange(false)"
+            >
+              <i class="ri-arrow-right-double-line text-[16px]" />
+              <span class="sr-only">关闭园区详情</span>
+            </Button>
+          </TooltipWrap>
+          <TooltipWrap v-if="activeParkDetail?.Uuid" content="打开完整园区详情页">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              class="h-8 w-8 rounded-md text-muted-foreground hover:text-foreground"
+              @click="goToParkFullDetail(activeParkDetail.Uuid, activeParkDetail.CustomerUuid || customer?.Uuid || '')"
+            >
+              <i class="ri-fullscreen-line text-[16px]" />
+              <span class="sr-only">打开完整园区详情页</span>
+            </Button>
+          </TooltipWrap>
+        </div>
+        <div v-if="activeParkDetail?.Uuid" class="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            class="h-8 gap-1 rounded-md border-destructive/40 text-destructive hover:border-destructive/60 hover:bg-destructive/5 hover:text-destructive"
+            :disabled="parkDeleteSubmitting"
+            @click="promptDeletePark"
+          >
+            <i
+              :class="parkDeleteSubmitting ? 'ri-loader-4-line animate-spin text-base' : 'ri-delete-bin-line text-base'"
+            />
+            {{ parkDeleteSubmitting ? "删除中..." : "删除园区" }}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            class="h-8 gap-1 rounded-md"
+            :disabled="parkDeleteSubmitting"
+            @click="goToParkEdit(activeParkDetail.Uuid, activeParkDetail.CustomerUuid || customer?.Uuid || '')"
+          >
+            <i class="ri-edit-line text-base" />
+            编辑园区
+          </Button>
+        </div>
+      </div>
+    </template>
+    <template #title>{{ toDisplayText(activeParkDetail?.Name, "园区详情") }}</template>
+
+    <div class="overflow-y-auto">
+      <Alert v-if="parkDetailErrorMessage" variant="destructive" class="mb-4">
+        <AlertTitle>园区详情接口加载失败</AlertTitle>
+        <AlertDescription>{{ parkDetailErrorMessage }}</AlertDescription>
+      </Alert>
+
+      <DetailFieldsSkeleton
+        v-if="parkDetailLoading"
+        :sections="1"
+        :rows-per-section="6"
+      />
+
+      <DetailFieldSections v-else-if="activeParkDetail" :sections="parkDetailSheetSections" />
+    </div>
+  </ResponsiveRightSheet>
 
   <MapLocationDialog
     v-model:open="parkMapDialogOpen"

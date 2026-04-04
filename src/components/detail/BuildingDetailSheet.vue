@@ -20,7 +20,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { ResponsiveRightSheet } from "@/components/ui/sheet"
 import { TooltipWrap } from "@/components/ui/tooltip"
 import { handleApiError } from "@/lib/api-errors"
 import { deleteBuilding, fetchBuildings, type BuildingListItem } from "@/lib/buildings-api"
@@ -195,74 +195,75 @@ function resetState() {
 </script>
 
 <template>
-  <Sheet :open="open" @update:open="handleOpenChange">
-    <SheetContent side="right" class="overflow-hidden max-sm:w-[calc(100vw-1rem)] sm:max-w-xl">
-      <SheetHeader>
-        <template #actions>
-          <div class="flex items-center justify-between gap-3">
-            <div class="flex items-center gap-1">
-              <TooltipWrap content="关闭建筑详情" side="right">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  class="h-8 w-8 rounded-md text-muted-foreground hover:text-foreground"
-                  @click="handleOpenChange(false)"
-                >
-                  <i class="ri-arrow-right-double-line text-[16px]" />
-                  <span class="sr-only">关闭建筑详情</span>
-                </Button>
-              </TooltipWrap>
-              <TooltipWrap content="打开完整建筑详情页">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  class="h-8 w-8 rounded-md text-muted-foreground hover:text-foreground"
-                  @click="goToBuildingFullDetail"
-                >
-                  <i class="ri-fullscreen-line text-[16px]" />
-                  <span class="sr-only">打开完整建筑详情页</span>
-                </Button>
-              </TooltipWrap>
-            </div>
-            <div class="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                class="h-8 rounded-md border-destructive/40 text-destructive hover:border-destructive/60 hover:bg-destructive/5 hover:text-destructive"
-                :disabled="deleteSubmitting"
-                @click="promptDeleteBuilding"
-              >
-                {{ deleteSubmitting ? "删除中..." : "删除建筑" }}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                class="h-8 rounded-md"
-                :disabled="deleteSubmitting"
-                @click="goToBuildingEdit"
-              >
-                编辑建筑信息
-              </Button>
-            </div>
-          </div>
-        </template>
-        <SheetTitle>{{ toText(building?.Name, "建筑详情") }}</SheetTitle>
-      </SheetHeader>
-
-      <div class="overflow-y-auto">
-        <Alert v-if="errorMessage" variant="destructive" class="mb-4">
-          <AlertTitle>建筑详情接口加载失败</AlertTitle>
-          <AlertDescription>{{ errorMessage }}</AlertDescription>
-        </Alert>
-
-        <DetailFieldsSkeleton v-if="loading" :sections="1" :rows-per-section="11" />
-
-        <DetailFieldSections v-else-if="building" :sections="fieldSections" />
+  <ResponsiveRightSheet
+    :open="open"
+    sheet-content-class="overflow-hidden sm:max-w-xl"
+    @update:open="handleOpenChange"
+    @footer-primary="goToBuildingFullDetail"
+  >
+    <template #actions>
+      <div class="flex items-center justify-between gap-3">
+        <div class="flex items-center gap-1">
+          <TooltipWrap content="关闭建筑详情" side="right">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              class="h-8 w-8 rounded-md text-muted-foreground hover:text-foreground"
+              @click="handleOpenChange(false)"
+            >
+              <i class="ri-arrow-right-double-line text-[16px]" />
+              <span class="sr-only">关闭建筑详情</span>
+            </Button>
+          </TooltipWrap>
+          <TooltipWrap content="打开完整建筑详情页">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              class="h-8 w-8 rounded-md text-muted-foreground hover:text-foreground"
+              @click="goToBuildingFullDetail"
+            >
+              <i class="ri-fullscreen-line text-[16px]" />
+              <span class="sr-only">打开完整建筑详情页</span>
+            </Button>
+          </TooltipWrap>
+        </div>
+        <div class="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            class="h-8 rounded-md border-destructive/40 text-destructive hover:border-destructive/60 hover:bg-destructive/5 hover:text-destructive"
+            :disabled="deleteSubmitting"
+            @click="promptDeleteBuilding"
+          >
+            {{ deleteSubmitting ? "删除中..." : "删除建筑" }}
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            class="h-8 rounded-md"
+            :disabled="deleteSubmitting"
+            @click="goToBuildingEdit"
+          >
+            编辑建筑信息
+          </Button>
+        </div>
       </div>
-    </SheetContent>
-  </Sheet>
+    </template>
+    <template #title>{{ toText(building?.Name, "建筑详情") }}</template>
+
+    <div class="overflow-y-auto">
+      <Alert v-if="errorMessage" variant="destructive" class="mb-4">
+        <AlertTitle>建筑详情接口加载失败</AlertTitle>
+        <AlertDescription>{{ errorMessage }}</AlertDescription>
+      </Alert>
+
+      <DetailFieldsSkeleton v-if="loading" :sections="1" :rows-per-section="11" />
+
+      <DetailFieldSections v-else-if="building" :sections="fieldSections" />
+    </div>
+  </ResponsiveRightSheet>
 
   <MapLocationDialog
     v-model:open="mapDialogOpen"

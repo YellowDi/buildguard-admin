@@ -8,7 +8,7 @@ import DetailFieldSections from "@/components/detail/DetailFieldSections.vue"
 import DetailFieldsSkeleton from "@/components/loading/DetailFieldsSkeleton.vue"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet"
+import { ResponsiveRightSheet } from "@/components/ui/sheet"
 import { TooltipWrap } from "@/components/ui/tooltip"
 import { fetchCustomerDetail, type CustomerDetailResult } from "@/lib/customers-api"
 import { handleApiError } from "@/lib/api-errors"
@@ -498,51 +498,53 @@ function getServiceRemainingDaysHint(value: unknown) {
 </script>
 
 <template>
-  <Sheet :open="props.open" @update:open="handleOpenChange">
-    <SheetContent side="right" class="overflow-hidden max-sm:w-[calc(100vw-1rem)] sm:max-w-xl">
-      <SheetHeader>
-        <template #actions>
-          <div class="flex items-center justify-between gap-3">
-            <div class="flex items-center gap-1">
-              <TooltipWrap content="关闭关联详情" side="right">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  class="h-8 w-8 rounded-md text-muted-foreground hover:text-foreground"
-                  @click="handleOpenChange(false)"
-                >
-                  <i class="ri-arrow-right-double-line text-[16px]" />
-                  <span class="sr-only">关闭关联详情</span>
-                </Button>
-              </TooltipWrap>
-              <TooltipWrap v-if="!loading" content="打开完整详情页">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  class="h-8 w-8 rounded-md text-muted-foreground hover:text-foreground"
-                  @click="openFullPage"
-                >
-                  <i class="ri-fullscreen-line text-[16px]" />
-                  <span class="sr-only">打开完整详情页</span>
-                </Button>
-              </TooltipWrap>
-            </div>
-          </div>
-        </template>
-        <SheetTitle>{{ title }}</SheetTitle>
-      </SheetHeader>
-
-      <div class="space-y-5 overflow-y-auto">
-        <Alert v-if="errorMessage" variant="destructive" class="mb-4">
-          <AlertTitle>关联详情接口加载失败</AlertTitle>
-          <AlertDescription>{{ errorMessage }}</AlertDescription>
-        </Alert>
-
-        <DetailFieldsSkeleton v-if="loading" :sections="1" :rows-per-section="5" />
-        <DetailFieldSections v-else-if="sections.length" :sections="sections" />
+  <ResponsiveRightSheet
+    :open="props.open"
+    sheet-content-class="overflow-hidden sm:max-w-xl"
+    :show-primary="!loading"
+    @update:open="handleOpenChange"
+    @footer-primary="openFullPage"
+  >
+    <template #actions>
+      <div class="flex items-center justify-between gap-3">
+        <div class="flex items-center gap-1">
+          <TooltipWrap content="关闭关联详情" side="right">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              class="h-8 w-8 rounded-md text-muted-foreground hover:text-foreground"
+              @click="handleOpenChange(false)"
+            >
+              <i class="ri-arrow-right-double-line text-[16px]" />
+              <span class="sr-only">关闭关联详情</span>
+            </Button>
+          </TooltipWrap>
+          <TooltipWrap v-if="!loading" content="打开完整详情页">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              class="h-8 w-8 rounded-md text-muted-foreground hover:text-foreground"
+              @click="openFullPage"
+            >
+              <i class="ri-fullscreen-line text-[16px]" />
+              <span class="sr-only">打开完整详情页</span>
+            </Button>
+          </TooltipWrap>
+        </div>
       </div>
-    </SheetContent>
-  </Sheet>
+    </template>
+    <template #title>{{ title }}</template>
+
+    <div class="space-y-5 overflow-y-auto">
+      <Alert v-if="errorMessage" variant="destructive" class="mb-4">
+        <AlertTitle>关联详情接口加载失败</AlertTitle>
+        <AlertDescription>{{ errorMessage }}</AlertDescription>
+      </Alert>
+
+      <DetailFieldsSkeleton v-if="loading" :sections="1" :rows-per-section="5" />
+      <DetailFieldSections v-else-if="sections.length" :sections="sections" />
+    </div>
+  </ResponsiveRightSheet>
 </template>

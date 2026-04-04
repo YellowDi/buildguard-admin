@@ -30,12 +30,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from "@/components/ui/sheet"
+import { ResponsiveRightSheet } from "@/components/ui/sheet"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
 import { TooltipWrap } from "@/components/ui/tooltip"
@@ -2149,46 +2144,48 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
       </DialogContent>
     </Dialog>
 
-    <Sheet :open="buildingEditorOpen" @update:open="buildingEditorOpen = $event">
-      <SheetContent side="right" class="overflow-hidden max-sm:w-[calc(100vw-1rem)] sm:max-w-2xl">
-        <SheetHeader>
-          <template #actions>
-            <div class="flex items-center justify-between gap-3">
-              <TooltipWrap content="关闭建筑检测项编辑" side="right">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  class="h-8 w-8 rounded-md text-muted-foreground hover:text-foreground"
-                  @click="closeBuildingEditor"
-                >
-                  <i class="ri-arrow-right-double-line text-[16px]" />
-                  <span class="sr-only">关闭建筑检测项编辑</span>
-                </Button>
-              </TooltipWrap>
-              <Button size="sm" type="button" @click="saveBuildingEditor">
-                保存当前建筑配置
-              </Button>
-            </div>
-          </template>
-          <SheetTitle>{{ currentBuildingEditorTitle }}</SheetTitle>
-        </SheetHeader>
-
-        <div class="flex min-h-0 flex-1 flex-col overflow-hidden px-4 pb-4 pt-4">
-          <p class="mb-4 text-sm leading-6 text-muted-foreground">
-            当前面板只会修改这栋建筑的检测项，不影响其他已选建筑。
-          </p>
-
-          <InspectionItemPicker
-            :model-value="buildingEditorDraftUuids"
-            :options="inspectionItemOptions"
-            :loading="inspectionPickerLoading"
-            :error-message="inspectionPickerError"
-            :open="buildingEditorOpen"
-            @update:model-value="buildingEditorDraftUuids = $event"
-          />
+    <ResponsiveRightSheet
+      :open="buildingEditorOpen"
+      sheet-content-class="overflow-hidden sm:max-w-2xl"
+      primary-label="保存"
+      @update:open="buildingEditorOpen = $event"
+      @footer-primary="saveBuildingEditor"
+    >
+      <template #actions>
+        <div class="flex items-center justify-between gap-3">
+          <TooltipWrap content="关闭建筑检测项编辑" side="right">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              class="h-8 w-8 rounded-md text-muted-foreground hover:text-foreground"
+              @click="closeBuildingEditor"
+            >
+              <i class="ri-arrow-right-double-line text-[16px]" />
+              <span class="sr-only">关闭建筑检测项编辑</span>
+            </Button>
+          </TooltipWrap>
+          <Button size="sm" type="button" @click="saveBuildingEditor">
+            保存当前建筑配置
+          </Button>
         </div>
-      </SheetContent>
-    </Sheet>
+      </template>
+      <template #title>{{ currentBuildingEditorTitle }}</template>
+
+      <div class="flex min-h-0 flex-1 flex-col overflow-hidden px-0 pb-4 pt-4">
+        <p class="mb-4 text-sm leading-6 text-muted-foreground">
+          当前面板只会修改这栋建筑的检测项，不影响其他已选建筑。
+        </p>
+
+        <InspectionItemPicker
+          :model-value="buildingEditorDraftUuids"
+          :options="inspectionItemOptions"
+          :loading="inspectionPickerLoading"
+          :error-message="inspectionPickerError"
+          :open="buildingEditorOpen"
+          @update:model-value="buildingEditorDraftUuids = $event"
+        />
+      </div>
+    </ResponsiveRightSheet>
   </section>
 </template>

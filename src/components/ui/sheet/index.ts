@@ -1,6 +1,7 @@
 import type { VariantProps } from "class-variance-authority"
 import { cva } from "class-variance-authority"
 
+export { default as ResponsiveRightSheet } from "./ResponsiveRightSheet.vue"
 export { default as Sheet } from "./Sheet.vue"
 export { default as SheetClose } from "./SheetClose.vue"
 export { default as SheetContent } from "./SheetContent.vue"
