@@ -93,17 +93,10 @@ function getEventTitleText(event: AppSidebarCalendarItem) {
 
 <template>
   <Teleport to="body">
-    <Transition
-      enter-active-class="transition duration-200 ease-out"
-      enter-from-class="opacity-0"
-      enter-to-class="opacity-100"
-      leave-active-class="transition duration-150 ease-in"
-      leave-from-class="opacity-100"
-      leave-to-class="opacity-0"
-    >
+    <Transition name="calendar-sheet">
       <div
         v-if="open && sourceType"
-        class="fixed z-[60] flex min-h-0 flex-col bg-background [outline:1px_solid_rgba(84,72,49,0.08)]"
+        class="fixed z-[20] flex min-h-0 flex-col overflow-hidden bg-background [outline:1px_solid_rgba(84,72,49,0.08)]"
         :style="panelFrameStyle"
         role="dialog"
         aria-modal="true"
@@ -193,3 +186,29 @@ function getEventTitleText(event: AppSidebarCalendarItem) {
     </Transition>
   </Teleport>
 </template>
+
+<style scoped>
+/**
+ * 从侧栏一侧划入：left 已与侧栏右缘对齐，translateX(-100%) 使面板先整体位于侧栏下方（叠在侧栏之下），再滑入主内容区。
+ * z-[20] 低于桌面侧栏 z-40，划入时经过侧栏区域会被侧栏盖住，视觉上像从侧栏边缘抽出。
+ */
+.calendar-sheet-enter-active,
+.calendar-sheet-leave-active {
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.calendar-sheet-leave-active {
+  transition-duration: 0.25s;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.7, 0.2);
+}
+
+.calendar-sheet-enter-from,
+.calendar-sheet-leave-to {
+  transform: translateX(-100%);
+}
+
+.calendar-sheet-enter-to,
+.calendar-sheet-leave-from {
+  transform: translateX(0);
+}
+</style>
