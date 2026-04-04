@@ -45,7 +45,7 @@ export const tableTheme = {
   actionHeaderSticky: "bg-background bg-clip-padding",
   actionCell: "h-[42px] border-b border-l border-border px-3 py-0 align-middle whitespace-nowrap",
   actionCellContent: "flex items-center justify-end gap-1.5",
-  actionButton: "pointer-events-auto h-6 gap-1 px-2 text-[12px] border-border/80 bg-background/95 shadow-sm",
+  actionButton: "pointer-events-auto h-7 gap-1.5 px-2.5 text-[13px] border-border/80 bg-background/95 shadow-sm",
   tones: {
     default: "text-foreground",
     primary: "text-foreground",
