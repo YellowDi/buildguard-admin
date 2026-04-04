@@ -379,18 +379,6 @@ function getRowClass(row: Record<string, unknown>, index: number) {
   )
 }
 
-function getActionCellClass(row: Record<string, unknown>, index: number) {
-  const rowKey = getRowKey(row, index)
-  return cn(
-    tableTheme.actionCell,
-    isRowSelected(row, index)
-      ? "bg-[#EBF1FF]"
-      : isRowKeyHighlighted(rowKey)
-        ? "bg-surface-hover-subtle"
-        : "",
-  )
-}
-
 function getIndexLabelClass(row: Record<string, unknown>, index: number) {
   if (!props.showIndexCheckbox) {
     return "absolute inset-0 flex items-center justify-center"
@@ -1351,7 +1339,10 @@ onBeforeUnmount(() => {
             </td>
             <td
               v-if="hasRowActions"
-              :class="getActionCellClass(row, index)"
+              :class="[
+                tableTheme.actionCell,
+                isRowSelected(row, index) ? 'bg-[#EBF1FF]' : '',
+              ]"
             >
               <div :class="tableTheme.actionCellContent">
                 <Button
