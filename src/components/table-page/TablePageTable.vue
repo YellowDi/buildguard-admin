@@ -439,7 +439,14 @@ function getInlineQuickActionWrapperClass(row: Record<string, unknown>, index: n
   )
 }
 
-function handleInlineQuickAction(row: Record<string, unknown>, index: number) {
+function handleInlineQuickAction(row: Record<string, unknown>, index: number, event?: MouseEvent) {
+  hoveredRowKey.value = null
+  focusedRowKey.value = null
+
+  if (event?.currentTarget instanceof HTMLElement) {
+    event.currentTarget.blur()
+  }
+
   props.onQuickAction?.(row, index)
 }
 
@@ -1281,12 +1288,13 @@ onBeforeUnmount(() => {
                       <Button
                         variant="ghost"
                         size="sm"
-                        :class="tableTheme.quickAction.button"
-                        aria-label="在侧边预览中打开"
-                        title="在侧边预览中打开"
-                        data-row-click-ignore
-                        @click.stop="handleInlineQuickAction(row, index)"
-                      >
+                      :class="tableTheme.quickAction.button"
+                      aria-label="在侧边预览中打开"
+                      title="在侧边预览中打开"
+                      data-row-click-ignore
+                      @mousedown.stop.prevent
+                      @click.stop="handleInlineQuickAction(row, index, $event)"
+                    >
                         <i class="ri-layout-right-2-line text-[14px] leading-none" />
                       </Button>
                     </TooltipWrap>
