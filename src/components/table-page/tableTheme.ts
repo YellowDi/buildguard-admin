@@ -31,10 +31,13 @@ export const tableTheme = {
   },
   headerCell: {
     base: "h-[42px] border-b border-border px-3 py-0 text-left font-normal whitespace-nowrap align-middle transition-colors hover:bg-surface-tertiary",
+    /** 序号/checkbox 列：去掉 px-3 左侧 12px，与滚动区左缘对齐（右侧仍保留 pr-3） */
+    selectionFlush: "!pl-0",
     sticky: "sticky z-20 bg-background bg-clip-padding",
   },
   bodyCell: {
     base: "h-[42px] border-b border-border px-3 py-0 whitespace-nowrap align-middle",
+    selectionFlush: "!pl-0",
     split: "border-l",
     rightAligned: "text-right",
   },

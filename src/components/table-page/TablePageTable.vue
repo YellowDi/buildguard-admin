@@ -860,7 +860,7 @@ onBeforeUnmount(() => {
                   :class="[
                     tableTheme.headerCell.base,
                     getStickyHeaderCellClass(column, columnIndex),
-                    isSelectionColumn(columnIndex) ? 'group' : '',
+                    isSelectionColumn(columnIndex) ? ['group', tableTheme.headerCell.selectionFlush] : '',
                   ]"
                   :style="getStickyCellStyle(columnIndex)"
                 >
@@ -949,7 +949,7 @@ onBeforeUnmount(() => {
               :class="[
                 tableTheme.headerCell.base,
                 getResolvedColumnHeaderClass(column, columnIndex),
-                isSelectionColumn(columnIndex) ? 'group' : '',
+                isSelectionColumn(columnIndex) ? ['group', tableTheme.headerCell.selectionFlush] : '',
               ]"
             >
               <div :class="isSelectionColumn(columnIndex) ? tableTheme.indexInline.headerLayout : ''">
@@ -992,6 +992,7 @@ onBeforeUnmount(() => {
               :key="column.key"
               :class="[
                 tableTheme.bodyCell.base,
+                isSelectionColumn(columnIndex) ? tableTheme.bodyCell.selectionFlush : '',
                 columnIndex > 0 ? tableTheme.bodyCell.split : '',
                 isRightAlignedColumn(column) && !isSelectionColumn(columnIndex) ? tableTheme.bodyCell.rightAligned : '',
                 getResolvedColumnCellClass(column, columnIndex),
