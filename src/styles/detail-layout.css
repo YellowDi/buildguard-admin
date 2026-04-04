@@ -26,7 +26,7 @@
 }
 
 .detail-table-heading-row {
-  min-height: 56px;
+  min-height: 38px;
 }
 
 .detail-group-divider-row {
@@ -46,7 +46,7 @@
 
 .detail-section-heading-row {
   display: flex;
-  min-height: 56px;
+  min-height: 38px;
   align-items: center;
 }
 

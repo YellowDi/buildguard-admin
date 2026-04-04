@@ -30,7 +30,7 @@ export const tableTheme = {
     content: "min-w-0 flex-1",
   },
   headerCell: {
-    base: "h-[42px] border-b border-border px-3 py-0 text-left font-normal whitespace-nowrap align-middle transition-colors hover:bg-surface-tertiary",
+    base: "h-[38px] border-b border-border px-3 py-0 text-left font-normal whitespace-nowrap align-middle transition-colors hover:bg-surface-tertiary",
     /** 序号/checkbox 列：去掉 px-3 左侧 12px，与滚动区左缘对齐（右侧仍保留 pr-3） */
     selectionFlush: "!pl-0",
     sticky: "sticky z-20 bg-background bg-clip-padding",
@@ -41,7 +41,7 @@ export const tableTheme = {
     split: "border-l",
     rightAligned: "text-right",
   },
-  actionHeader: "h-[42px] w-px whitespace-nowrap border-b border-l border-border px-3 py-0 text-left font-normal text-muted-foreground align-middle transition-colors hover:bg-surface-tertiary",
+  actionHeader: "h-[38px] w-px whitespace-nowrap border-b border-l border-border px-3 py-0 text-left font-normal text-muted-foreground align-middle transition-colors hover:bg-surface-tertiary",
   actionHeaderSticky: "bg-background bg-clip-padding",
   actionCell: "h-[42px] border-b border-l border-border px-3 py-0 align-middle whitespace-nowrap",
   actionCellContent: "flex items-center justify-end gap-1.5",
