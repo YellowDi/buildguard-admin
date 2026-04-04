@@ -883,8 +883,9 @@ const inspectionWorkOrdersSchema: TablePageSchema<CustomerWorkOrderRow> = {
   columns: [
     {
       key: "orderNo",
-      label: "工单编号",
+      label: "检测工单",
       filterType: "text",
+      slot: "cell-orderNo",
       emphasis: "default",
       tone: "muted",
       filter: {
@@ -1069,8 +1070,9 @@ const repairWorkOrdersSchema: TablePageSchema<CustomerWorkOrderRow> = {
   columns: [
     {
       key: "orderNo",
-      label: "工单编号",
+      label: "报修工单",
       filterType: "text",
+      slot: "cell-orderNo",
       emphasis: "default",
       tone: "muted",
       filter: {
@@ -3665,6 +3667,17 @@ function toDisplayText(value: unknown, fallback = "未填写") {
                   :collapse-inactive="false"
                 />
                 <div class="h-5 w-px shrink-0 bg-border" aria-hidden="true" />
+              </div>
+            </template>
+
+            <template #cell-orderNo="{ row }">
+              <div class="inline-flex max-w-full items-baseline gap-1.5">
+                <span class="truncate text-foreground">
+                  {{ row.workOrderKind === "inspection" ? toDisplayText(row.packageName, "-") : toDisplayText(row.customerName, "-") }}
+                </span>
+                <span class="shrink-0 text-[#8C94A6]">
+                  #{{ toDisplayText(row.orderNo, "-") }}
+                </span>
               </div>
             </template>
           </TablePage>

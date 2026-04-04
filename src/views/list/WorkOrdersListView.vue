@@ -4,6 +4,7 @@ import { useRoute, useRouter } from "vue-router"
 import { toast } from "vue-sonner"
 
 import LinkedEntityDetailSheet from "@/components/detail/LinkedEntityDetailSheet.vue"
+import WorkOrderPreviewSheet from "@/components/detail/WorkOrderPreviewSheet.vue"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -95,6 +96,9 @@ const assignableUsersLoaded = ref(false)
 const assignSubmitting = ref(false)
 const activeLinkedDetailKind = ref<LinkedDetailSheetKind | null>(null)
 const activeLinkedDetailUuid = ref("")
+const workOrderPreviewSheetOpen = ref(false)
+const activeWorkOrderPreviewUuid = ref("")
+const activeWorkOrderPreviewCustomerUuid = ref("")
 const pageTitle = computed(() => props.kind === "inspection" ? "检测工单" : "报修工单")
 const pageEmptyStateTitle = computed(() => `暂无${pageTitle.value}数据`)
 const pageEmptyStateDescription = computed(() => props.kind === "inspection"
@@ -146,6 +150,7 @@ const schema: TablePageSchema<WorkOrderRecord> = {
         },
       ],
   onRowClick: row => handleViewDetail(row as WorkOrderRecord),
+  onQuickAction: row => handleOpenPreviewSheet(row as WorkOrderRecord),
   columns,
   filters: [
     {
@@ -255,6 +260,17 @@ function handleAssign(row: WorkOrderRecord) {
   assignUserUuid.value = ""
   assignDialogOpen.value = true
   void loadAssignableUsers()
+}
+
+function handleOpenPreviewSheet(row: WorkOrderRecord) {
+  if (!row.uuid) {
+    toast.error("当前工单缺少 Uuid，无法打开侧边预览")
+    return
+  }
+
+  activeWorkOrderPreviewUuid.value = row.uuid
+  activeWorkOrderPreviewCustomerUuid.value = row.customerUuid || ""
+  workOrderPreviewSheetOpen.value = true
 }
 
 function closeAssignDialog() {
@@ -554,8 +570,9 @@ function createInspectionColumns(): TablePageSchema<WorkOrderRecord>["columns"] 
   return [
     {
       key: "orderNo",
-      label: "工单编号",
+      label: props.kind === "inspection" ? "检测工单" : "报修工单",
       filterType: "text",
+      slot: "cell-orderNo",
       emphasis: "default",
       tone: "muted",
       filter: {
@@ -709,8 +726,9 @@ function createRepairColumns(): TablePageSchema<WorkOrderRecord>["columns"] {
   return [
     {
       key: "orderNo",
-      label: "工单编号",
+      label: "报修工单",
       filterType: "text",
+      slot: "cell-orderNo",
       emphasis: "default",
       tone: "muted",
       filter: {
@@ -900,6 +918,15 @@ function handleLinkedDetailSheetOpenChange(open: boolean) {
     activeLinkedDetailUuid.value = ""
   }
 }
+
+function handleWorkOrderPreviewSheetOpenChange(open: boolean) {
+  workOrderPreviewSheetOpen.value = open
+
+  if (!open) {
+    activeWorkOrderPreviewUuid.value = ""
+    activeWorkOrderPreviewCustomerUuid.value = ""
+  }
+}
 </script>
 
 <template>
@@ -921,6 +948,17 @@ function handleLinkedDetailSheetOpenChange(open: boolean) {
     </div>
 
     <TablePage :page="page" @primary-action="handlePrimaryAction">
+      <template #cell-orderNo="{ row }">
+        <div class="inline-flex max-w-full items-baseline gap-1.5">
+          <span class="truncate text-foreground">
+            {{ props.kind === "inspection" ? toText(row.packageName, "-") : toText(row.customerName, "-") }}
+          </span>
+          <span class="shrink-0 text-[#8C94A6]">
+            #{{ toText(row.orderNo, "-") }}
+          </span>
+        </div>
+      </template>
+
       <template #cell-customerName="{ row }">
         <button
           type="button"
@@ -976,6 +1014,14 @@ function handleLinkedDetailSheetOpenChange(open: boolean) {
       :kind="activeLinkedDetailKind"
       :uuid="activeLinkedDetailUuid"
       @update:open="handleLinkedDetailSheetOpenChange"
+    />
+
+    <WorkOrderPreviewSheet
+      :open="workOrderPreviewSheetOpen && Boolean(activeWorkOrderPreviewUuid)"
+      :kind="props.kind"
+      :uuid="activeWorkOrderPreviewUuid"
+      :customer-uuid="activeWorkOrderPreviewCustomerUuid"
+      @update:open="handleWorkOrderPreviewSheetOpenChange"
     />
 
     <div class="-mx-4 pt-3">

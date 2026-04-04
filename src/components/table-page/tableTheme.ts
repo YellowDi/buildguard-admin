@@ -32,7 +32,7 @@ export const tableTheme = {
   quickAction: {
     layout: "flex min-w-0 items-center gap-2",
     content: "min-w-0 flex-1",
-    slot: "ml-1 flex shrink-0 items-center",
+    slot: "ml-1 flex shrink-0 items-center gap-1",
     button: "h-6 w-6 rounded-md border border-transparent bg-transparent p-0 text-muted-foreground shadow-none hover:border-border/60 hover:bg-surface-tertiary hover:text-foreground focus-visible:border-border/60 focus-visible:bg-surface-tertiary focus-visible:text-foreground",
   },
   headerCell: {

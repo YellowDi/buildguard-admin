@@ -61,6 +61,7 @@ const ROW_CLICK_IGNORE_SELECTOR = [
   "[data-slot='button']",
 ].join(",")
 const selectionCheckboxClass = "border-[#B7C4E0] bg-white data-[state=checked]:border-[#2B67F6] data-[state=checked]:bg-[#2B67F6] data-[state=indeterminate]:border-[#2B67F6] data-[state=indeterminate]:bg-[#2B67F6] focus-visible:ring-[#2B67F6]/20"
+const INLINE_PREVIEW_ACTION_LABELS = new Set(["查看详情", "查看", "查看归档"])
 
 const props = withDefaults(defineProps<{
   columns: TableColumn[]
@@ -137,6 +138,9 @@ const shouldShowHeaderCheckbox = computed(() => props.showIndexCheckbox && selec
 const rowClickEnabled = computed(() => typeof props.onRowClick === "function")
 const inlineQuickActionEnabled = computed(() => (
   horizontalOverflow.value && typeof props.onQuickAction === "function"
+))
+const inlineSecondaryActions = computed(() => (
+  (props.rowActions ?? []).filter(action => !isInlinePreviewAction(action))
 ))
 const headerCheckboxState = computed<CheckboxState>(() => {
   if (currentRowKeys.value.length === 0 || selectedCurrentRowCount.value === 0) {
@@ -439,15 +443,39 @@ function getInlineQuickActionWrapperClass(row: Record<string, unknown>, index: n
   )
 }
 
-function handleInlineQuickAction(row: Record<string, unknown>, index: number, event?: MouseEvent) {
+function normalizeActionLabel(label: string) {
+  return label.replace(/\s+/g, "").trim()
+}
+
+function isInlinePreviewAction(action: TableRowAction) {
+  const normalizedKey = action.key.trim().toLowerCase()
+  const normalizedLabel = normalizeActionLabel(action.label)
+
+  return (
+    normalizedKey.includes("view")
+    || normalizedKey.includes("detail")
+    || normalizedKey.includes("archive")
+    || INLINE_PREVIEW_ACTION_LABELS.has(normalizedLabel)
+  )
+}
+
+function clearInlineActionState(event?: MouseEvent) {
   hoveredRowKey.value = null
   focusedRowKey.value = null
 
   if (event?.currentTarget instanceof HTMLElement) {
     event.currentTarget.blur()
   }
+}
 
+function handleInlineQuickAction(row: Record<string, unknown>, index: number, event?: MouseEvent) {
+  clearInlineActionState(event)
   props.onQuickAction?.(row, index)
+}
+
+function handleInlineSecondaryAction(action: TableRowAction, row: Record<string, unknown>, index: number, event?: MouseEvent) {
+  clearInlineActionState(event)
+  action.onClick?.(row, index)
 }
 
 function hasActiveTextSelection() {
@@ -1284,17 +1312,36 @@ onBeforeUnmount(() => {
                     v-if="isPrimaryColumn(columnIndex) && inlineQuickActionEnabled"
                     :class="getInlineQuickActionWrapperClass(row, index)"
                   >
+                    <TooltipWrap
+                      v-for="action in inlineSecondaryActions"
+                      :key="`${getRowKey(row, index)}-${action.key}-inline`"
+                      :content="action.label"
+                    >
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        :class="tableTheme.quickAction.button"
+                        :aria-label="action.label"
+                        :title="action.label"
+                        data-row-click-ignore
+                        @mousedown.stop.prevent
+                        @click.stop="handleInlineSecondaryAction(action, row, index, $event)"
+                      >
+                        <i :class="[remixIconForTableRowAction(action.label, action.icon), 'text-[14px] leading-none']" />
+                      </Button>
+                    </TooltipWrap>
+
                     <TooltipWrap content="在侧边预览中打开">
                       <Button
                         variant="ghost"
                         size="sm"
-                      :class="tableTheme.quickAction.button"
-                      aria-label="在侧边预览中打开"
-                      title="在侧边预览中打开"
-                      data-row-click-ignore
-                      @mousedown.stop.prevent
-                      @click.stop="handleInlineQuickAction(row, index, $event)"
-                    >
+                        :class="tableTheme.quickAction.button"
+                        aria-label="在侧边预览中打开"
+                        title="在侧边预览中打开"
+                        data-row-click-ignore
+                        @mousedown.stop.prevent
+                        @click.stop="handleInlineQuickAction(row, index, $event)"
+                      >
                         <i class="ri-layout-right-2-line text-[14px] leading-none" />
                       </Button>
                     </TooltipWrap>
