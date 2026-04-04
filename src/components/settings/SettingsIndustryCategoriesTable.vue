@@ -535,6 +535,7 @@ defineExpose({
         row-key="id"
         sticky-header
         :end-spacer="false"
+        :show-row-action-icons="true"
         :columns="majorColumns"
         :rows="filteredMajorRows"
         :table-class="SETTINGS_TABLE_PAGE_CLASS"
@@ -564,6 +565,7 @@ defineExpose({
         row-key="id"
         sticky-header
         :end-spacer="false"
+        :show-row-action-icons="true"
         :columns="categoryColumns"
         :rows="categoryDisplayRows"
         :table-class="SETTINGS_TABLE_PAGE_CLASS"

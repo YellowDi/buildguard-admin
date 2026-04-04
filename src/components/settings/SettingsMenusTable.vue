@@ -934,6 +934,7 @@ function formatDateTime(...values: unknown[]) {
       row-key="id"
       sticky-header
       :end-spacer="false"
+      :show-row-action-icons="true"
       :columns="currentColumns"
       :rows="currentRows"
       :table-class="SETTINGS_TABLE_PAGE_CLASS"

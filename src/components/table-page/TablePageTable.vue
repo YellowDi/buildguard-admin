@@ -61,6 +61,8 @@ const props = withDefaults(defineProps<{
   stickyThead?: boolean
   /** 最右侧是否保留一级列表用的 w-8 占位列；设置浮窗等场景可关，使最后一列贴齐容器 */
   endSpacer?: boolean
+  /** 右侧操作列按钮是否展示图标。设置浮窗内表格可显式开启。 */
+  showRowActionIcons?: boolean
 }>(), {
   summary: "",
   showIndex: false,
@@ -71,6 +73,7 @@ const props = withDefaults(defineProps<{
   listLevelTable: false,
   stickyThead: false,
   endSpacer: true,
+  showRowActionIcons: false,
 })
 const emit = defineEmits<{
   "update:selected-row-keys": [keys: RowSelectionKey[]]
@@ -1328,7 +1331,7 @@ onBeforeUnmount(() => {
                 class="border-border/80 bg-background/95 shadow-sm dark:shadow-[var(--shadow-card)]"
                 tabindex="-1"
               >
-                <i :class="remixIconForTableRowAction(action.label, action.icon)" />
+                <i v-if="props.showRowActionIcons" :class="remixIconForTableRowAction(action.label, action.icon)" />
                 {{ action.label }}
               </Button>
             </div>
@@ -1367,7 +1370,7 @@ onBeforeUnmount(() => {
               :class="tableTheme.actionButton"
               @click="handleRowActionClick(action, rows[metric.rowIndex] ?? {}, metric.rowIndex)"
             >
-              <i :class="remixIconForTableRowAction(action.label, action.icon)" />
+              <i v-if="props.showRowActionIcons" :class="remixIconForTableRowAction(action.label, action.icon)" />
               {{ action.label }}
             </Button>
           </div>
