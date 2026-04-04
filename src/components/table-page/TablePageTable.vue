@@ -370,7 +370,7 @@ function getRowClass(row: Record<string, unknown>, index: number) {
     isRowSelected(row, index)
       ? "bg-[#EBF1FF] hover:bg-[#EBF1FF]"
       : isRowKeyHighlighted(rowKey)
-        ? "bg-surface-tertiary"
+        ? "bg-surface-hover-subtle"
         : "",
   )
 }
@@ -382,7 +382,7 @@ function getActionCellClass(row: Record<string, unknown>, index: number) {
     isRowSelected(row, index)
       ? "bg-[#EBF1FF]"
       : isRowKeyHighlighted(rowKey)
-        ? "bg-surface-tertiary"
+        ? "bg-surface-hover-subtle"
         : "",
   )
 }

@@ -21,7 +21,7 @@ export const tableTheme = {
   /** z 须高于根级 Dialog/Overlay（z-50），否则 Teleport 到 body 的吸顶表头会被设置弹窗挡住；设置内嵌套弹窗请用 DialogContent 的 stackAboveStickyHeader（z-[70]） */
   stickyViewport: "fixed z-[60] overflow-hidden bg-background",
   body: "text-foreground",
-  row: "group transition hover:bg-surface-tertiary",
+  row: "group transition hover:bg-surface-hover-subtle",
   summary: "px-3 py-3 text-[13px] text-muted-foreground",
   indexInline: {
     headerLayout: "flex min-w-0 items-center gap-2.5",
