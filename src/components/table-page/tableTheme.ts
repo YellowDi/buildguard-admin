@@ -33,7 +33,7 @@ export const tableTheme = {
     layout: "flex min-w-0 items-center gap-2",
     content: "min-w-0 flex-1",
     slot: "ml-1 flex shrink-0 items-center gap-1",
-    button: "h-6 w-6 rounded-md border border-transparent bg-transparent p-0 text-muted-foreground shadow-none hover:border-border/60 hover:bg-surface-tertiary hover:text-foreground focus-visible:border-border/60 focus-visible:bg-surface-tertiary focus-visible:text-foreground",
+    button: "h-6 w-6 rounded-md border border-border/80 bg-white p-0 text-muted-foreground shadow-sm hover:border-border hover:bg-white hover:text-foreground focus-visible:border-border focus-visible:bg-white focus-visible:text-foreground",
   },
   headerCell: {
     base: "h-[38px] border-b border-border px-3 py-0 text-left font-normal whitespace-nowrap align-middle transition-colors hover:bg-surface-tertiary",
