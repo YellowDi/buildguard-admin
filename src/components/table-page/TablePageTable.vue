@@ -12,6 +12,8 @@ import {
   getTableClass,
   getTableScrollViewportClass,
   getTableWrapperClass,
+  TABLE_EDGE_GUTTER_DESKTOP,
+  TABLE_EDGE_GUTTER_MOBILE,
   tableTheme,
 } from "@/components/table-page/tableTheme"
 import type { TableColumn, TablePageEmptyState, TableRowAction } from "@/components/table-page/types"
@@ -29,12 +31,7 @@ import { cn } from "@/lib/utils"
 type ScrollRoot = HTMLElement | Window
 type RowSelectionKey = string | number
 type CheckboxState = boolean | "indeterminate"
-type ActionRowMetric = {
-  rowKey: RowSelectionKey
-  rowIndex: number
-  top: number
-  height: number
-}
+
 const HORIZONTAL_SCROLL_HINT_MESSAGE = "可按住 Shift + 鼠标滚轮进行横向移动。"
 /** 同一路由在本次浏览器会话内只提示一次，避免布局抖动或重复挂载反复弹出 */
 const HORIZONTAL_SCROLL_HINT_SESSION_PREFIX = "buildguard:table-hscroll-hint:"
@@ -52,14 +49,14 @@ const props = withDefaults(defineProps<{
   wrapperClass?: string
   tableClass?: string
   emptyState?: TablePageEmptyState
-  /** 一级列表全页表格：操作列右侧额外留白；详情/设置内嵌表勿开 */
+  /** 兼容旧调用保留；左右外扩布局已移除，不再影响结构。 */
   listLevelTable?: boolean
   /**
    * 使用原生 `position:sticky` 固定表头（表格外层横向滚动时往往无法相对侧栏竖向滚动吸顶）。
    * 一般请用 `stickyHeader`（fixed 克隆，已 Teleport 到 body）；勿与 `stickyHeader` 同时开启。
    */
   stickyThead?: boolean
-  /** 最右侧是否保留一级列表用的 w-8 占位列；设置浮窗等场景可关，使最后一列贴齐容器 */
+  /** 兼容旧调用保留；尾部占位列已移除，不再影响结构。 */
   endSpacer?: boolean
   /** 右侧操作列按钮是否展示图标。设置浮窗内表格可显式开启。 */
   showRowActionIcons?: boolean
@@ -83,17 +80,11 @@ const wrapperClassName = computed(() => getTableWrapperClass(props.wrapperClass)
 const scrollViewportClassName = computed(() => getTableScrollViewportClass())
 const tableClassName = computed(() => getTableClass(props.tableClass))
 const hasRowActions = computed(() => (props.rowActions?.length ?? 0) > 0)
-const actionPaddingTheme = computed(() => ({
-  header: props.listLevelTable ? tableTheme.actionHeaderList : tableTheme.actionHeader,
-  sizer: props.listLevelTable ? tableTheme.actionSizerList : tableTheme.actionSizer,
-  railSurface: props.listLevelTable ? tableTheme.actionRailSurfaceList : tableTheme.actionRailSurface,
-  headerRailSurface: props.listLevelTable ? tableTheme.actionHeaderRailSurfaceList : tableTheme.actionHeaderRailSurface,
-}))
-const tableShellRef = ref<HTMLElement | null>(null)
 const tableWrapperRef = ref<HTMLElement | null>(null)
 const tableRef = ref<HTMLTableElement | null>(null)
 const fillColumnActive = ref(false)
 const horizontalOverflow = ref(false)
+const edgeGutterSize = ref(TABLE_EDGE_GUTTER_MOBILE)
 const stickyHeaderActive = ref(false)
 const stickyHeaderLeft = ref(0)
 const stickyHeaderTop = ref(0)
@@ -101,10 +92,6 @@ const stickyHeaderWidth = ref(0)
 const stickyTableWidth = ref(0)
 const stickyScrollLeft = ref(0)
 const stickyColumnWidths = ref<number[]>([])
-const actionColumnWidth = ref(0)
-const actionRailRightInset = ref(0)
-const actionHeaderHeight = ref(41)
-const rowMetrics = ref<ActionRowMetric[]>([])
 const hoveredRowKey = ref<RowSelectionKey | null>(null)
 const focusedRowKey = ref<RowSelectionKey | null>(null)
 const selectedRowKeySet = computed(() => new Set(props.selectedRowKeys ?? []))
@@ -131,46 +118,35 @@ const stickyHeaderVisible = computed(() => (
   && stickyHeaderWidth.value > 0
   && stickyColumnWidths.value.length > 0
 ))
-const actionRailVisible = computed(() => (
-  hasRowActions.value
-  && actionColumnWidth.value > 0
-  && rowMetrics.value.length > 0
-))
-const actionHeaderRailVisible = computed(() => hasRowActions.value && actionColumnWidth.value > 0)
-const actionRailBoundaryMaskVisible = computed(() => hasRowActions.value && actionRailRightInset.value > 0)
-const isAtHorizontalEnd = computed(() => {
-  if (!tableWrapperRef.value) {
-    return false
-  }
-
-  const maxScrollLeft = tableWrapperRef.value.scrollWidth - tableWrapperRef.value.clientWidth
-  return maxScrollLeft <= 0 || stickyScrollLeft.value >= maxScrollLeft - 1
+const leadingEdgeGutter = computed(() => edgeGutterSize.value)
+const trailingEdgeGutter = computed(() => (horizontalOverflow.value ? edgeGutterSize.value : 0))
+const tableInlineMinWidth = computed(() => {
+  const reservedSpace = leadingEdgeGutter.value + trailingEdgeGutter.value
+  return `calc(100% - ${reservedSpace}px)`
 })
-const actionRailTrailingSpace = computed(() => 0)
-const actionRailWidth = computed(() => actionColumnWidth.value + actionRailTrailingSpace.value)
-const actionRailHostStyle = computed(() => ({
-  width: `${actionRailWidth.value}px`,
-  right: `${actionRailRightInset.value}px`,
+const tableElementStyle = computed(() => ({
+  width: "max-content",
+  minWidth: tableInlineMinWidth.value,
+  maxWidth: "none",
 }))
-const actionHeaderRailStyle = computed(() => ({
-  width: `${actionRailWidth.value}px`,
-  height: `${actionHeaderHeight.value}px`,
-  top: "0px",
-  right: `${actionRailRightInset.value}px`,
-}))
-const actionRailBoundaryMaskStyle = computed(() => ({
-  width: `${actionRailRightInset.value}px`,
-}))
+const stickyContentWidth = computed(() => (
+  stickyTableWidth.value + leadingEdgeGutter.value + trailingEdgeGutter.value
+))
 const stickyViewportStyle = computed(() => ({
   left: `${stickyHeaderLeft.value}px`,
   top: `${stickyHeaderTop.value}px`,
   width: `${stickyHeaderWidth.value}px`,
 }))
+const stickyContentStyle = computed(() => ({
+  minWidth: `${stickyContentWidth.value}px`,
+  width: `${stickyContentWidth.value}px`,
+  transform: `translateX(${-stickyScrollLeft.value}px)`,
+}))
 const stickyTableStyle = computed(() => ({
   minWidth: `${stickyTableWidth.value}px`,
   width: `${stickyTableWidth.value}px`,
+  maxWidth: `${stickyTableWidth.value}px`,
   tableLayout: "fixed" as const,
-  transform: `translateX(${-stickyScrollLeft.value}px)`,
 }))
 const route = useRoute()
 const horizontalScrollHintId = computed(() => `table-page-horizontal-scroll-hint:${route.path}`)
@@ -210,6 +186,17 @@ function rememberHorizontalScrollHintThisSession(path: string) {
   } catch {
     // 隐私模式或配额不足时忽略
   }
+}
+
+function updateEdgeGutterSize() {
+  if (typeof window === "undefined") {
+    edgeGutterSize.value = TABLE_EDGE_GUTTER_MOBILE
+    return
+  }
+
+  edgeGutterSize.value = window.innerWidth >= 640
+    ? TABLE_EDGE_GUTTER_DESKTOP
+    : TABLE_EDGE_GUTTER_MOBILE
 }
 
 function maybeShowHorizontalScrollHint() {
@@ -283,6 +270,10 @@ function isRightAlignedColumn(column: TableColumn) {
   return column.filterType === "number" || column.cellRenderer?.kind === "metric-unit"
 }
 
+function isSelectionColumn(columnIndex: number) {
+  return props.showIndex && columnIndex === 0
+}
+
 function handleRowActionClick(action: TableRowAction, row: Record<string, unknown>, index: number) {
   action.onClick?.(row, index)
 }
@@ -343,53 +334,6 @@ function getActionCellClass(row: Record<string, unknown>, index: number) {
   const rowKey = getRowKey(row, index)
   return cn(
     tableTheme.actionCell,
-    "relative bg-background transition-colors group-hover:bg-surface-tertiary",
-    isRowSelected(row, index)
-      ? "!bg-[#EBF1FF] group-hover:!bg-[#EBF1FF]"
-      : isRowKeyHighlighted(rowKey)
-        ? "!bg-surface-tertiary"
-        : "",
-  )
-}
-
-function getActionRailRowClass(rowKey: RowSelectionKey) {
-  return cn(
-    tableTheme.actionRailRow,
-    isRowKeySelected(rowKey)
-      ? "bg-[#EBF1FF]"
-      : isRowKeyHighlighted(rowKey)
-        ? "bg-surface-tertiary"
-        : "bg-background",
-  )
-}
-
-function getActionRailSurfaceClass(rowKey: RowSelectionKey) {
-  return cn(
-    actionPaddingTheme.value.railSurface,
-    horizontalOverflow.value ? tableTheme.actionRailSurfaceShadow : "",
-    isRowKeySelected(rowKey)
-      ? "bg-[#EBF1FF]"
-      : isRowKeyHighlighted(rowKey)
-        ? "bg-surface-tertiary"
-        : "bg-background",
-  )
-}
-
-function getActionRailSpacerClass(rowKey: RowSelectionKey) {
-  return cn(
-    tableTheme.actionRailSpacer,
-    isRowKeySelected(rowKey)
-      ? "bg-[#EBF1FF]"
-      : isRowKeyHighlighted(rowKey)
-        ? "bg-surface-tertiary"
-        : "bg-background",
-  )
-}
-
-function getEndSpacerCellClass(row: Record<string, unknown>, index: number) {
-  const rowKey = getRowKey(row, index)
-  return cn(
-    tableTheme.endSpacerCell,
     isRowSelected(row, index)
       ? "bg-[#EBF1FF]"
       : isRowKeyHighlighted(rowKey)
@@ -418,15 +362,11 @@ function getIndexCheckboxWrapperClass(row: Record<string, unknown>, index: numbe
 
 function getHeaderCheckboxWrapperClass() {
   return cn(
-    "ml-auto flex h-4 w-4 items-center justify-center transition-opacity duration-150",
+    "absolute inset-0 flex items-center justify-center transition-opacity duration-150",
     shouldShowHeaderCheckbox.value
       ? "opacity-100"
       : "pointer-events-none opacity-0 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100",
   )
-}
-
-function isRowKeySelected(rowKey: RowSelectionKey) {
-  return selectedRowKeySet.value.has(rowKey)
 }
 
 function isRowKeyHighlighted(rowKey: RowSelectionKey) {
@@ -459,58 +399,6 @@ function handleRowFocusOut(rowKey: RowSelectionKey, event: FocusEvent) {
   }
 }
 
-function getActionRailRowStyle(metric: ActionRowMetric) {
-  return {
-    top: `${metric.top}px`,
-    height: `${metric.height}px`,
-    width: `${actionRailWidth.value}px`,
-  }
-}
-
-function getActionRailSurfaceStyle() {
-  return {
-    width: `${actionColumnWidth.value}px`,
-  }
-}
-
-function getActionColumnStyle() {
-  if (actionColumnWidth.value <= 0) {
-    return undefined
-  }
-
-  return {
-    width: `${actionColumnWidth.value}px`,
-    minWidth: `${actionColumnWidth.value}px`,
-    maxWidth: `${actionColumnWidth.value}px`,
-  }
-}
-
-function getActionRailSpacerStyle() {
-  return {
-    width: `${actionRailTrailingSpace.value}px`,
-    minWidth: `${actionRailTrailingSpace.value}px`,
-  }
-}
-
-function getActionHeaderRailSurfaceClass() {
-  return cn(
-    actionPaddingTheme.value.headerRailSurface,
-    horizontalOverflow.value ? tableTheme.actionRailSurfaceShadow : "",
-    "bg-background",
-  )
-}
-
-function getActionHeaderRailSurfaceStyle() {
-  return {
-    width: `${actionColumnWidth.value}px`,
-    height: `${actionHeaderHeight.value}px`,
-  }
-}
-
-function getActionHeaderRailSpacerClass() {
-  return cn(tableTheme.actionHeaderRailSpacer, "bg-background")
-}
-
 function getStickyCellStyle(columnIndex: number) {
   const width = stickyColumnWidths.value[columnIndex]
 
@@ -522,6 +410,14 @@ function getStickyCellStyle(columnIndex: number) {
     width: `${width}px`,
     minWidth: `${width}px`,
     maxWidth: `${width}px`,
+  }
+}
+
+function getEdgeGutterStyle(size: number) {
+  return {
+    width: `${size}px`,
+    minWidth: `${size}px`,
+    maxWidth: `${size}px`,
   }
 }
 
@@ -667,13 +563,6 @@ function clearStickyState() {
   stickyColumnWidths.value = []
 }
 
-function clearActionRailState() {
-  actionColumnWidth.value = 0
-  actionRailRightInset.value = 0
-  actionHeaderHeight.value = 41
-  rowMetrics.value = []
-}
-
 function syncHorizontalScrollState() {
   if (!tableWrapperRef.value || !tableRef.value) {
     horizontalOverflow.value = false
@@ -744,8 +633,7 @@ function measureFillColumnState() {
 
   for (const row of tableClone.querySelectorAll("tr")) {
     for (const fillColumnIndex of fillColumnIndexes) {
-      const cellIndex = fillColumnIndex + (props.showIndex ? 1 : 0)
-      const cell = row.children.item(cellIndex)
+      const cell = row.children.item(fillColumnIndex)
 
       if (cell instanceof HTMLElement) {
         cell.style.width = "auto"
@@ -772,6 +660,8 @@ function measureFillColumnState() {
 }
 
 async function syncTableLayoutState() {
+  updateEdgeGutterSize()
+
   const nextFillColumnActive = measureFillColumnState()
 
   if (fillColumnActive.value !== nextFillColumnActive) {
@@ -781,61 +671,6 @@ async function syncTableLayoutState() {
 
   syncHorizontalScrollState()
   syncStickyHeaderState()
-  syncActionRailState()
-}
-
-function syncActionRailState() {
-  if (!hasRowActions.value || !tableShellRef.value || !tableWrapperRef.value || !tableRef.value) {
-    clearActionRailState()
-    return
-  }
-
-  const headerCells = getHeaderCells()
-  const actionCellIndex = props.columns.length + (props.showIndex ? 1 : 0)
-  const actionHeaderCell = headerCells[actionCellIndex]
-
-  if (!(actionHeaderCell instanceof HTMLElement)) {
-    clearActionRailState()
-    return
-  }
-
-  const detailPrimary = tableShellRef.value.closest(".detail-layout__primary")
-  const shellRect = tableShellRef.value.getBoundingClientRect()
-  actionRailRightInset.value = detailPrimary instanceof HTMLElement
-    ? Math.max(0, Math.round(shellRect.right - detailPrimary.getBoundingClientRect().right))
-    : 0
-
-  const bodyRows = Array.from(tableRef.value.querySelectorAll("tbody > tr"))
-  const actionSizerWidths = Array.from(tableRef.value.querySelectorAll("[data-table-action-sizer]")).map((element) => {
-    if (!(element instanceof HTMLElement)) {
-      return 0
-    }
-
-    return Math.ceil(Math.max(element.getBoundingClientRect().width, element.scrollWidth))
-  })
-  const measuredActionWidth = Math.max(72, ...actionSizerWidths)
-  actionHeaderHeight.value = actionHeaderCell.getBoundingClientRect().height || 41
-
-  if (!bodyRows.length) {
-    actionColumnWidth.value = measuredActionWidth
-    rowMetrics.value = []
-    return
-  }
-
-  actionColumnWidth.value = measuredActionWidth
-  rowMetrics.value = bodyRows.map((row, index) => {
-    const rowElement = row as HTMLElement
-    const rowRect = rowElement.getBoundingClientRect()
-
-    return {
-      rowKey: getRowKey(props.rows[index] ?? {}, index),
-      rowIndex: index,
-      // 保留小数像素，避免行高/位置四舍五入后在长表格中累积误差
-      // （表现为某些行操作按钮贴边，看起来“没有下边距”）。
-      top: rowRect.top - shellRect.top,
-      height: rowRect.height,
-    }
-  })
 }
 
 function syncStickyHeaderState() {
@@ -953,7 +788,6 @@ watch(() => props.rows, scheduleStickySync, { deep: true })
 watch(() => props.showIndex, scheduleStickySync)
 watch(() => hasRowActions.value, scheduleStickySync)
 watch(() => props.stickyHeader, scheduleStickySync)
-watch(() => props.endSpacer, scheduleStickySync)
 watch(() => [props.rows, props.selectedRowKeys] as const, ([rows, selectedKeys]) => {
   const availableRowKeys = new Set(rows.map((row, index) => getRowKey(row, index)))
   const nextSelections = new Set(
@@ -1000,29 +834,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div ref="tableShellRef" :class="wrapperClassName">
-    <div
-      v-if="actionRailBoundaryMaskVisible"
-      class="pointer-events-none absolute inset-y-0 right-0 z-[24] bg-background"
-      :style="actionRailBoundaryMaskStyle"
-    />
-
-    <div
-      v-if="actionHeaderRailVisible"
-      :class="tableTheme.actionHeaderRailHost"
-      :style="actionHeaderRailStyle"
-    >
-      <div :class="tableTheme.actionHeaderRail" :style="{ width: `${actionRailWidth}px`, height: `${actionHeaderHeight}px` }">
-        <div
-          :class="getActionHeaderRailSurfaceClass()"
-          :style="getActionHeaderRailSurfaceStyle()"
-        >
-          操作
-        </div>
-        <div :class="getActionHeaderRailSpacerClass()" :style="getActionRailSpacerStyle()" />
-      </div>
-    </div>
-
+  <div :class="wrapperClassName">
     <!-- fixed 克隆挂到 body，与 getBoundingClientRect 视口坐标一致；避免嵌套 overflow/transform 导致吸顶错位 -->
     <Teleport v-if="stickyHeaderVisible" to="body">
       <div
@@ -1030,69 +842,58 @@ onBeforeUnmount(() => {
         :class="tableTheme.stickyViewport"
         :style="stickyViewportStyle"
       >
-        <table :class="tableClassName" :style="stickyTableStyle">
-          <colgroup>
-            <col
-              v-for="(width, columnIndex) in stickyColumnWidths"
-              :key="`sticky-col-${columnIndex}`"
-              :style="{ width: `${width}px` }"
-            >
-          </colgroup>
-          <thead :class="[tableTheme.head, tableTheme.headActive]">
-            <tr>
-              <th
-                v-if="showIndex"
-                :class="[tableTheme.indexHeader.base, tableTheme.indexHeader.sticky, 'group']"
-                :style="getStickyCellStyle(0)"
+        <div :class="tableTheme.scrollContent" :style="stickyContentStyle">
+          <div :class="tableTheme.edgeGutter" :style="getEdgeGutterStyle(leadingEdgeGutter)" />
+          <table :class="tableClassName" :style="stickyTableStyle">
+            <colgroup>
+              <col
+                v-for="(width, columnIndex) in stickyColumnWidths"
+                :key="`sticky-col-${columnIndex}`"
+                :style="{ width: `${width}px` }"
               >
-                <div :class="getHeaderCheckboxWrapperClass()">
-                  <Checkbox
-                    :model-value="headerCheckboxState"
-                    :disabled="rows.length === 0"
-                    :class="selectionCheckboxClass"
-                    @update:model-value="updateAllRowsSelection($event)"
-                  />
-                </div>
-              </th>
-              <th
-                v-for="(column, columnIndex) in columns"
-                :key="`sticky-${column.key}`"
-                :class="[
-                  tableTheme.headerCell.base,
-                  getStickyHeaderCellClass(column, columnIndex),
-                ]"
-                :style="getStickyCellStyle(columnIndex + (showIndex ? 1 : 0))"
-              >
-                {{ column.label }}
-              </th>
-              <th
-                v-if="hasRowActions"
-                :class="[actionPaddingTheme.header, tableTheme.actionHeaderSticky]"
-                :style="getActionColumnStyle() ?? getStickyCellStyle(stickyColumnWidths.length - 2)"
-              />
-              <th
-                v-if="endSpacer"
-                :class="tableTheme.endSpacerHeader"
-                :style="getStickyCellStyle(stickyColumnWidths.length - 1)"
-              />
-            </tr>
-          </thead>
-        </table>
-
-        <div
-          v-if="actionHeaderRailVisible"
-          :class="tableTheme.actionHeaderRailHost"
-          :style="actionHeaderRailStyle"
-        >
-          <div :class="tableTheme.actionHeaderRail" :style="{ width: `${actionRailWidth}px`, height: `${actionHeaderHeight}px` }">
-            <div
-              :class="getActionHeaderRailSurfaceClass()"
-              :style="getActionHeaderRailSurfaceStyle()"
-            >
-              操作
-            </div>
-            <div :class="getActionHeaderRailSpacerClass()" :style="getActionRailSpacerStyle()" />
-          </div>
+            </colgroup>
+            <thead :class="[tableTheme.head, tableTheme.headActive]">
+              <tr>
+                <th
+                  v-for="(column, columnIndex) in columns"
+                  :key="`sticky-${column.key}`"
+                  :class="[
+                    tableTheme.headerCell.base,
+                    getStickyHeaderCellClass(column, columnIndex),
+                    isSelectionColumn(columnIndex) ? 'group' : '',
+                  ]"
+                  :style="getStickyCellStyle(columnIndex)"
+                >
+                  <div :class="isSelectionColumn(columnIndex) ? tableTheme.indexInline.headerLayout : ''">
+                    <div
+                      v-if="isSelectionColumn(columnIndex)"
+                      :class="tableTheme.indexInline.prefix"
+                    >
+                      <div :class="getHeaderCheckboxWrapperClass()">
+                        <Checkbox
+                          :model-value="headerCheckboxState"
+                          :disabled="rows.length === 0"
+                          :class="selectionCheckboxClass"
+                          @update:model-value="updateAllRowsSelection($event)"
+                        />
+                      </div>
+                    </div>
+                    <span :class="isSelectionColumn(columnIndex) ? tableTheme.indexInline.content : ''">
+                      {{ column.label }}
+                    </span>
+                  </div>
+                </th>
+                <th
+                  v-if="hasRowActions"
+                  :class="[tableTheme.actionHeader, tableTheme.actionHeaderSticky]"
+                  :style="getStickyCellStyle(columns.length)"
+                >
+                  操作
+                </th>
+              </tr>
+            </thead>
+          </table>
+          <div :class="tableTheme.edgeGutter" :style="getEdgeGutterStyle(trailingEdgeGutter)" />
         </div>
       </div>
     </Teleport>
@@ -1122,260 +923,228 @@ onBeforeUnmount(() => {
           </EmptyContent>
         </Empty>
       </div>
-      <table
+      <div
         v-else
-        ref="tableRef"
-        :class="tableClassName"
+        :class="tableTheme.scrollContent"
       >
-      <thead
-        :class="
-          cn(
-            tableTheme.head,
-            props.stickyThead
-              && 'sticky top-0 z-30 bg-background shadow-[inset_0_-1px_0_hsl(var(--border))]',
-          )
-        "
-      >
-        <tr>
-          <th
-            v-if="showIndex"
-            :class="[
-              tableTheme.indexHeader.base,
-              tableTheme.indexHeader.static,
-              'group',
-            ]"
-          >
-            <div :class="getHeaderCheckboxWrapperClass()">
-              <Checkbox
-                :model-value="headerCheckboxState"
-                :disabled="rows.length === 0"
-                :class="selectionCheckboxClass"
-                @update:model-value="updateAllRowsSelection($event)"
-              />
-            </div>
-          </th>
-          <th
-            v-for="(column, columnIndex) in columns"
-            :key="column.key"
-            :class="[
-              tableTheme.headerCell.base,
-              getResolvedColumnHeaderClass(column, columnIndex),
-            ]"
-          >
-            {{ column.label }}
-          </th>
-          <th
-            v-if="hasRowActions"
-            :class="actionPaddingTheme.header"
-            :style="getActionColumnStyle()"
-          />
-          <th v-if="endSpacer" :class="tableTheme.endSpacerHeader" />
-        </tr>
-      </thead>
-
-      <tbody :class="tableTheme.body">
-        <tr
-          v-for="(row, index) in rows"
-          :key="getRowKey(row, index)"
-          :class="getRowClass(row, index)"
-          @mouseenter="handleRowMouseEnter(getRowKey(row, index))"
-          @mouseleave="handleRowMouseLeave(getRowKey(row, index))"
-          @focusin="handleRowFocusIn(getRowKey(row, index))"
-          @focusout="handleRowFocusOut(getRowKey(row, index), $event)"
+        <div :class="tableTheme.edgeGutter" :style="getEdgeGutterStyle(leadingEdgeGutter)" />
+        <table
+          ref="tableRef"
+          :class="tableClassName"
+          :style="tableElementStyle"
         >
-          <td
-            v-if="showIndex"
-            :class="tableTheme.indexCell"
-          >
-            <div class="relative ml-auto h-4 w-4">
-              <span :class="getIndexLabelClass(row, index)">
-                {{ index + 1 }}
-              </span>
-              <span :class="getIndexCheckboxWrapperClass(row, index)">
-                <Checkbox
-                  :model-value="isRowSelected(row, index)"
-                  :class="selectionCheckboxClass"
-                  @update:model-value="updateRowSelection(row, index, $event)"
-                />
-              </span>
-            </div>
-          </td>
-          <td
-            v-for="(column, columnIndex) in columns"
-            :key="column.key"
-            :class="[
-              tableTheme.bodyCell.base,
-              columnIndex > 0 ? tableTheme.bodyCell.split : '',
-              isRightAlignedColumn(column) ? tableTheme.bodyCell.rightAligned : '',
-              getResolvedColumnCellClass(column, columnIndex),
-            ]"
-          >
-            <slot
-              :name="column.slot ?? `cell-${column.key}`"
-              :row="row"
-              :value="getColumnValue(row, column.key)"
-              :index="index"
+        <thead
+          :class="
+            cn(
+              tableTheme.head,
+              props.stickyThead
+                && 'sticky top-0 z-30 bg-background shadow-[inset_0_-1px_0_hsl(var(--border))]',
+            )
+          "
+        >
+          <tr>
+            <th
+              v-for="(column, columnIndex) in columns"
+              :key="column.key"
+              :class="[
+                tableTheme.headerCell.base,
+                getResolvedColumnHeaderClass(column, columnIndex),
+                isSelectionColumn(columnIndex) ? 'group' : '',
+              ]"
             >
-              <template v-if="column.cellRenderer?.kind === 'dual-inline'">
-                <span :class="column.cellRenderer.primaryClass ?? tableTheme.renderers.contactPrimary">
-                  {{ getRendererValue(row, column.cellRenderer.primaryKey) }}
-                </span>
-                <span
-                  v-if="stringifyValue(getRendererValue(row, column.cellRenderer.secondaryKey))"
-                  :class="['ml-1', column.cellRenderer.secondaryClass ?? tableTheme.renderers.contactSecondary]"
+              <div :class="isSelectionColumn(columnIndex) ? tableTheme.indexInline.headerLayout : ''">
+                <div
+                  v-if="isSelectionColumn(columnIndex)"
+                  :class="tableTheme.indexInline.prefix"
                 >
-                  {{ getRendererValue(row, column.cellRenderer.secondaryKey) }}
-                </span>
-              </template>
-
-              <div
-                v-else-if="column.cellRenderer?.kind === 'dual-stack'"
-                class="flex flex-col gap-0.5"
-              >
-                <span :class="column.cellRenderer.primaryClass ?? tableTheme.renderers.contactPrimary">
-                  {{ getRendererValue(row, column.cellRenderer.primaryKey) }}
-                </span>
-                <span
-                  v-if="stringifyValue(getRendererValue(row, column.cellRenderer.secondaryKey))"
-                  :class="column.cellRenderer.secondaryClass ?? tableTheme.renderers.contactSecondary"
-                >
-                  {{ getRendererValue(row, column.cellRenderer.secondaryKey) }}
-                </span>
-              </div>
-
-              <div
-                v-else-if="column.cellRenderer?.kind === 'array'"
-                class="flex flex-wrap items-center gap-1"
-              >
-                <span
-                  v-for="(item, itemIndex) in getArrayValue(getColumnValue(row, column.key))"
-                  :key="`${column.key}-${index}-${itemIndex}`"
-                  :class="column.cellRenderer.itemClass ?? tableTheme.renderers.arrayItem"
-                >
-                  {{ item }}<template v-if="itemIndex < getArrayValue(getColumnValue(row, column.key)).length - 1">{{ column.cellRenderer.separator ?? "、" }}</template>
-                </span>
-              </div>
-
-              <div
-                v-else-if="column.cellRenderer?.kind === 'tags'"
-                class="flex flex-wrap items-center gap-1.5"
-              >
-                <span
-                  v-for="(item, itemIndex) in getArrayValue(getColumnValue(row, column.key))"
-                  :key="`${column.key}-${index}-tag-${itemIndex}`"
-                  :class="column.cellRenderer.itemClass ?? tableTheme.renderers.tagItem"
-                >
-                  {{ item }}
-                </span>
-              </div>
-
-              <div
-                v-else-if="column.cellRenderer?.kind === 'progress'"
-                class="flex min-w-[120px] items-center gap-2"
-              >
-                <div :class="column.cellRenderer.trackClass ?? tableTheme.renderers.progressTrack">
-                  <div
-                    :class="column.cellRenderer.fillClass ?? tableTheme.renderers.progressFill"
-                    :style="{ width: `${getProgressPercent(row, column)}%` }"
-                  />
+                  <div :class="getHeaderCheckboxWrapperClass()">
+                    <Checkbox
+                      :model-value="headerCheckboxState"
+                      :disabled="rows.length === 0"
+                      :class="selectionCheckboxClass"
+                      @update:model-value="updateAllRowsSelection($event)"
+                    />
+                  </div>
                 </div>
-                <span :class="column.cellRenderer.labelClass ?? tableTheme.renderers.progressLabel">
-                  {{ getColumnValue(row, column.key) }}
+                <span :class="isSelectionColumn(columnIndex) ? tableTheme.indexInline.content : ''">
+                  {{ column.label }}
                 </span>
               </div>
+            </th>
+            <th v-if="hasRowActions" :class="tableTheme.actionHeader">
+              操作
+            </th>
+          </tr>
+        </thead>
 
-              <div
-                v-else-if="column.cellRenderer?.kind === 'metric-unit'"
-                class="inline-flex items-baseline justify-end"
-              >
-                <span :class="column.cellRenderer.valueClass ?? tableTheme.renderers.metricValue">
-                  {{ getRendererValue(row, column.cellRenderer.valueKey ?? column.key) }}
-                </span>
-                <span
-                  v-if="hasDisplayValue(getRendererValue(row, column.cellRenderer.valueKey ?? column.key))"
-                  :class="['ml-1', column.cellRenderer.unitClass ?? tableTheme.renderers.metricUnit]"
-                >
-                  {{ column.cellRenderer.unit }}
-                </span>
-              </div>
-
-              <StatusChip
-                v-else-if="column.cellRenderer?.kind === 'status'"
-                :value="getRendererValue(row, column.cellRenderer.valueKey ?? column.key)"
-                :renderer="column.cellRenderer"
-              />
-
-              <div
-                v-else-if="column.cellRenderer?.kind === 'note'"
-                :class="getNoteContentClass(column, columnIndex)"
-              >
-                {{ getColumnValue(row, column.key) }}
-              </div>
-
-              <template v-else>
-                {{ getColumnValue(row, column.key) }}
-              </template>
-            </slot>
-          </td>
-          <td
-            v-if="hasRowActions"
-            :class="getActionCellClass(row, index)"
-            :style="getActionColumnStyle()"
+        <tbody :class="tableTheme.body">
+          <tr
+            v-for="(row, index) in rows"
+            :key="getRowKey(row, index)"
+            :class="getRowClass(row, index)"
+            @mouseenter="handleRowMouseEnter(getRowKey(row, index))"
+            @mouseleave="handleRowMouseLeave(getRowKey(row, index))"
+            @focusin="handleRowFocusIn(getRowKey(row, index))"
+            @focusout="handleRowFocusOut(getRowKey(row, index), $event)"
           >
-            <div aria-hidden="true" :class="actionPaddingTheme.sizer" data-table-action-sizer>
-              <Button
-                v-for="action in rowActions"
-                :key="`sizer-${action.key}`"
-                variant="outline"
-                size="sm"
-                class="border-border/80 bg-background/95 shadow-sm dark:shadow-[var(--shadow-card)]"
-                tabindex="-1"
-              >
-                <i v-if="props.showRowActionIcons" :class="remixIconForTableRowAction(action.label, action.icon)" />
-                {{ action.label }}
-              </Button>
-            </div>
-          </td>
-          <td v-if="endSpacer" :class="getEndSpacerCellClass(row, index)" />
-        </tr>
-      </tbody>
-      </table>
-    </div>
-
-    <div
-      v-if="actionRailVisible"
-      :class="tableTheme.actionRailHost"
-      :style="actionRailHostStyle"
-    >
-      <div :class="tableTheme.actionRail" :style="{ width: `${actionRailWidth}px` }">
-        <div
-          v-for="metric in rowMetrics"
-          :key="`action-rail-${metric.rowKey}`"
-          :class="getActionRailRowClass(metric.rowKey)"
-          :style="getActionRailRowStyle(metric)"
-        >
-          <div
-            :class="getActionRailSurfaceClass(metric.rowKey)"
-            :style="getActionRailSurfaceStyle()"
-            @mouseenter="handleRowMouseEnter(metric.rowKey)"
-            @mouseleave="handleRowMouseLeave(metric.rowKey)"
-            @focusin="handleRowFocusIn(metric.rowKey)"
-            @focusout="handleRowFocusOut(metric.rowKey, $event)"
-          >
-            <Button
-              v-for="action in rowActions"
-              :key="`rail-${metric.rowKey}-${action.key}`"
-              variant="outline"
-              size="sm"
-              :class="tableTheme.actionButton"
-              @click="handleRowActionClick(action, rows[metric.rowIndex] ?? {}, metric.rowIndex)"
+            <td
+              v-for="(column, columnIndex) in columns"
+              :key="column.key"
+              :class="[
+                tableTheme.bodyCell.base,
+                columnIndex > 0 ? tableTheme.bodyCell.split : '',
+                isRightAlignedColumn(column) && !isSelectionColumn(columnIndex) ? tableTheme.bodyCell.rightAligned : '',
+                getResolvedColumnCellClass(column, columnIndex),
+              ]"
             >
-              <i v-if="props.showRowActionIcons" :class="remixIconForTableRowAction(action.label, action.icon)" />
-              {{ action.label }}
-            </Button>
-          </div>
-          <div :class="getActionRailSpacerClass(metric.rowKey)" :style="getActionRailSpacerStyle()" />
-        </div>
+              <div :class="isSelectionColumn(columnIndex) ? tableTheme.indexInline.cellLayout : ''">
+                <div
+                  v-if="isSelectionColumn(columnIndex)"
+                  :class="tableTheme.indexInline.prefix"
+                >
+                  <span :class="getIndexLabelClass(row, index)">
+                    {{ index + 1 }}
+                  </span>
+                  <span :class="getIndexCheckboxWrapperClass(row, index)">
+                    <Checkbox
+                      :model-value="isRowSelected(row, index)"
+                      :class="selectionCheckboxClass"
+                      @update:model-value="updateRowSelection(row, index, $event)"
+                    />
+                  </span>
+                </div>
+                <div :class="isSelectionColumn(columnIndex) ? tableTheme.indexInline.content : ''">
+                  <slot
+                    :name="column.slot ?? `cell-${column.key}`"
+                    :row="row"
+                    :value="getColumnValue(row, column.key)"
+                    :index="index"
+                  >
+                    <template v-if="column.cellRenderer?.kind === 'dual-inline'">
+                      <span :class="column.cellRenderer.primaryClass ?? tableTheme.renderers.contactPrimary">
+                        {{ getRendererValue(row, column.cellRenderer.primaryKey) }}
+                      </span>
+                      <span
+                        v-if="stringifyValue(getRendererValue(row, column.cellRenderer.secondaryKey))"
+                        :class="['ml-1', column.cellRenderer.secondaryClass ?? tableTheme.renderers.contactSecondary]"
+                      >
+                        {{ getRendererValue(row, column.cellRenderer.secondaryKey) }}
+                      </span>
+                    </template>
+
+                    <div
+                      v-else-if="column.cellRenderer?.kind === 'dual-stack'"
+                      class="flex flex-col gap-0.5"
+                    >
+                      <span :class="column.cellRenderer.primaryClass ?? tableTheme.renderers.contactPrimary">
+                        {{ getRendererValue(row, column.cellRenderer.primaryKey) }}
+                      </span>
+                      <span
+                        v-if="stringifyValue(getRendererValue(row, column.cellRenderer.secondaryKey))"
+                        :class="column.cellRenderer.secondaryClass ?? tableTheme.renderers.contactSecondary"
+                      >
+                        {{ getRendererValue(row, column.cellRenderer.secondaryKey) }}
+                      </span>
+                    </div>
+
+                    <div
+                      v-else-if="column.cellRenderer?.kind === 'array'"
+                      class="flex flex-wrap items-center gap-1"
+                    >
+                      <span
+                        v-for="(item, itemIndex) in getArrayValue(getColumnValue(row, column.key))"
+                        :key="`${column.key}-${index}-${itemIndex}`"
+                        :class="column.cellRenderer.itemClass ?? tableTheme.renderers.arrayItem"
+                      >
+                        {{ item }}<template v-if="itemIndex < getArrayValue(getColumnValue(row, column.key)).length - 1">{{ column.cellRenderer.separator ?? "、" }}</template>
+                      </span>
+                    </div>
+
+                    <div
+                      v-else-if="column.cellRenderer?.kind === 'tags'"
+                      class="flex flex-wrap items-center gap-1.5"
+                    >
+                      <span
+                        v-for="(item, itemIndex) in getArrayValue(getColumnValue(row, column.key))"
+                        :key="`${column.key}-${index}-tag-${itemIndex}`"
+                        :class="column.cellRenderer.itemClass ?? tableTheme.renderers.tagItem"
+                      >
+                        {{ item }}
+                      </span>
+                    </div>
+
+                    <div
+                      v-else-if="column.cellRenderer?.kind === 'progress'"
+                      class="flex min-w-[120px] items-center gap-2"
+                    >
+                      <div :class="column.cellRenderer.trackClass ?? tableTheme.renderers.progressTrack">
+                        <div
+                          :class="column.cellRenderer.fillClass ?? tableTheme.renderers.progressFill"
+                          :style="{ width: `${getProgressPercent(row, column)}%` }"
+                        />
+                      </div>
+                      <span :class="column.cellRenderer.labelClass ?? tableTheme.renderers.progressLabel">
+                        {{ getColumnValue(row, column.key) }}
+                      </span>
+                    </div>
+
+                    <div
+                      v-else-if="column.cellRenderer?.kind === 'metric-unit'"
+                      class="inline-flex items-baseline justify-end"
+                    >
+                      <span :class="column.cellRenderer.valueClass ?? tableTheme.renderers.metricValue">
+                        {{ getRendererValue(row, column.cellRenderer.valueKey ?? column.key) }}
+                      </span>
+                      <span
+                        v-if="hasDisplayValue(getRendererValue(row, column.cellRenderer.valueKey ?? column.key))"
+                        :class="['ml-1', column.cellRenderer.unitClass ?? tableTheme.renderers.metricUnit]"
+                      >
+                        {{ column.cellRenderer.unit }}
+                      </span>
+                    </div>
+
+                    <StatusChip
+                      v-else-if="column.cellRenderer?.kind === 'status'"
+                      :value="getRendererValue(row, column.cellRenderer.valueKey ?? column.key)"
+                      :renderer="column.cellRenderer"
+                    />
+
+                    <div
+                      v-else-if="column.cellRenderer?.kind === 'note'"
+                      :class="getNoteContentClass(column, columnIndex)"
+                    >
+                      {{ getColumnValue(row, column.key) }}
+                    </div>
+
+                    <template v-else>
+                      {{ getColumnValue(row, column.key) }}
+                    </template>
+                  </slot>
+                </div>
+              </div>
+            </td>
+            <td
+              v-if="hasRowActions"
+              :class="getActionCellClass(row, index)"
+            >
+              <div :class="tableTheme.actionCellContent">
+                <Button
+                  v-for="action in rowActions"
+                  :key="`${getRowKey(row, index)}-${action.key}`"
+                  variant="outline"
+                  size="sm"
+                  :class="tableTheme.actionButton"
+                  @click="handleRowActionClick(action, row, index)"
+                >
+                  <i v-if="props.showRowActionIcons" :class="remixIconForTableRowAction(action.label, action.icon)" />
+                  {{ action.label }}
+                </Button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+        </table>
+        <div :class="tableTheme.edgeGutter" :style="getEdgeGutterStyle(trailingEdgeGutter)" />
       </div>
     </div>
 

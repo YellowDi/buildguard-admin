@@ -7,9 +7,14 @@ import type {
 } from "@/components/table-page/types"
 import { cn } from "@/lib/utils"
 
+export const TABLE_EDGE_GUTTER_MOBILE = 16
+export const TABLE_EDGE_GUTTER_DESKTOP = 32
+
 export const tableTheme = {
   wrapper: "relative min-w-0 w-full max-w-full overflow-visible",
   scrollViewport: "min-w-0 w-full max-w-full overflow-x-auto overflow-y-visible overscroll-x-contain",
+  scrollContent: "flex min-w-full items-stretch",
+  edgeGutter: "shrink-0",
   table: "min-w-full w-full table-auto border-separate border-spacing-0 bg-background text-[14px] text-foreground",
   head: "relative z-20 text-muted-foreground",
   headActive: "shadow-[inset_0_-1px_0_hsl(var(--border))]",
@@ -18,43 +23,26 @@ export const tableTheme = {
   body: "text-foreground",
   row: "group transition hover:bg-surface-tertiary",
   summary: "px-3 py-3 text-[13px] text-muted-foreground",
-  indexHeader: {
-    base: "w-8 min-w-8 py-2 pr-2 text-right font-normal",
-    static: "transition-colors hover:bg-surface-tertiary",
-    sticky: "sticky z-20 bg-background bg-clip-padding",
+  indexInline: {
+    headerLayout: "flex min-w-0 items-center gap-2.5",
+    cellLayout: "flex min-w-0 items-center gap-2.5",
+    prefix: "relative flex h-4 w-8 shrink-0 items-center justify-center text-muted-foreground tabular-nums",
+    content: "min-w-0 flex-1",
   },
-  indexCell: "w-8 min-w-8 py-3 pr-2 text-right text-muted-foreground whitespace-nowrap",
   headerCell: {
-    base: "border-b border-border px-3 py-2 text-left font-normal whitespace-nowrap transition-colors hover:bg-surface-tertiary",
+    base: "h-[42px] border-b border-border px-3 py-0 text-left font-normal whitespace-nowrap align-middle transition-colors hover:bg-surface-tertiary",
     sticky: "sticky z-20 bg-background bg-clip-padding",
   },
   bodyCell: {
-    base: "border-b border-border px-3 py-3 whitespace-nowrap",
+    base: "h-[42px] border-b border-border px-3 py-0 whitespace-nowrap align-middle",
     split: "border-l",
     rightAligned: "text-right",
   },
-  actionHeader: "w-px whitespace-nowrap border-b border-border px-3 py-2 text-left font-normal text-muted-foreground transition-colors hover:bg-surface-tertiary",
-  /** 一级列表页：sm 及以上操作列右侧多留空白；移动端与默认一致保持 px-3 */
-  actionHeaderList: "w-px whitespace-nowrap border-b border-border py-2 px-3 text-left font-normal text-muted-foreground transition-colors hover:bg-surface-tertiary sm:pr-8",
+  actionHeader: "h-[42px] w-px whitespace-nowrap border-b border-l border-border px-3 py-0 text-left font-normal text-muted-foreground align-middle transition-colors hover:bg-surface-tertiary",
   actionHeaderSticky: "bg-background bg-clip-padding",
-  actionCell: "relative border-b border-border p-0 align-middle whitespace-nowrap",
-  actionSizer: "invisible ml-auto inline-flex h-0 w-max max-w-none overflow-hidden items-center justify-end gap-2 whitespace-nowrap px-3 py-0",
-  actionSizerList: "invisible ml-auto inline-flex h-0 w-max max-w-none overflow-hidden items-center justify-end gap-2 whitespace-nowrap py-0 px-3 sm:pr-8",
-  actionRailHost: "pointer-events-none absolute inset-y-0 right-0 z-[25] will-change-transform",
-  actionRail: "sticky right-0 ml-auto h-full",
-  actionRailRow: "absolute right-0 flex overflow-hidden transition-colors",
-  actionRailSurface: "flex items-center justify-end gap-2 border-b border-l border-border px-3 transition-colors",
-  actionRailSurfaceList: "flex items-center justify-end gap-2 border-b border-l border-border px-3 transition-colors sm:pr-8",
-  actionRailSurfaceShadow: "shadow-[-10px_0_14px_-12px_rgba(15,23,42,0.28)]",
-  actionRailSpacer: "transition-colors",
-  actionButton: "pointer-events-auto border-border/80 bg-background/95 shadow-sm",
-  actionHeaderRailHost: "pointer-events-none absolute right-0 z-[26]",
-  actionHeaderRail: "flex overflow-hidden",
-  actionHeaderRailSurface: "flex items-center border-b border-l border-border px-3 text-left text-[14px] font-normal text-muted-foreground transition-colors",
-  actionHeaderRailSurfaceList: "flex items-center border-b border-l border-border px-3 text-left text-[14px] font-normal text-muted-foreground transition-colors sm:pr-8",
-  actionHeaderRailSpacer: "transition-colors",
-  endSpacerHeader: "w-8 min-w-8 border-b border-border p-0",
-  endSpacerCell: "w-8 min-w-8 border-b border-border p-0",
+  actionCell: "h-[42px] border-b border-l border-border px-3 py-0 align-middle whitespace-nowrap",
+  actionCellContent: "flex items-center justify-end gap-1.5",
+  actionButton: "pointer-events-auto h-6 gap-1 px-2 text-[12px] border-border/80 bg-background/95 shadow-sm",
   tones: {
     default: "text-foreground",
     primary: "text-foreground",

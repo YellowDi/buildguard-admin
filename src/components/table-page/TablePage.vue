@@ -14,7 +14,7 @@ const props = defineProps({
     type: Boolean,
     default: true,
   },
-  /** 默认 true（路由一级列表）；详情页内嵌表传 false */
+  /** 兼容旧调用保留；公共表格已统一结构，不再影响左右布局。 */
   listLevelTable: {
     type: Boolean,
     default: true,

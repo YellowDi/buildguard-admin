@@ -62,7 +62,7 @@ const props = withDefaults(defineProps<{
   sections?: TableSection[]
   emptyState?: TablePageEmptyState
   showToolbarActions?: boolean
-  /** 一级列表页表格：操作列右侧额外留白 */
+  /** 兼容旧调用保留；公共表格已统一结构，不再影响左右布局。 */
   listLevelTable?: boolean
 }>(), {
   showToolbarActions: true,
