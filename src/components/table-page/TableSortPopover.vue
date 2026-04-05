@@ -2,20 +2,8 @@
 import { computed, ref } from "vue"
 
 import PopoverSelect from "@/components/table-page/TablePopoverSelect.vue"
+import type { SortField, SortFieldOption, SortRule } from "@/components/table-page/sort.types"
 import { TooltipWrap } from "@/components/ui/tooltip"
-
-export type SortField = string
-export type SortFieldOption = {
-  value: SortField
-  label: string
-  kind?: "text" | "metric"
-}
-
-export type SortRule = {
-  id: string
-  field: SortField
-  direction: "asc" | "desc"
-}
 
 const props = withDefaults(defineProps<{
   enabled: boolean

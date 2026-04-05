@@ -11,7 +11,7 @@ import {
   type TableExportFormat,
   type TableExportScope,
 } from "@/components/table-page/export-utils"
-import type { SortFieldOption, SortRule } from "@/components/table-page/TableSortPopover.vue"
+import type { SortFieldOption, SortRule } from "@/components/table-page/sort.types"
 import type {
   DateFilterState,
   HeaderField,

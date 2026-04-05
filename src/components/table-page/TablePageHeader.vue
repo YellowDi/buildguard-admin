@@ -24,7 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import type { SortFieldOption, SortRule } from "@/components/table-page/TableSortPopover.vue"
+import type { SortFieldOption, SortRule } from "@/components/table-page/sort.types"
 import type {
   DateFilterState,
   HeaderField,

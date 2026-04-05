@@ -54,7 +54,8 @@ import {
 } from "@/components/ui/pagination"
 import { ResponsiveRightSheet } from "@/components/ui/sheet"
 import TablePage from "@/components/table-page/TablePage.vue"
-import SortPopover, { type SortRule } from "@/components/table-page/TableSortPopover.vue"
+import SortPopover from "@/components/table-page/TableSortPopover.vue"
+import type { SortRule } from "@/components/table-page/sort.types"
 import { createTablePageDefinition, useTablePage } from "@/components/table-page/useTablePage"
 import type { TablePageSchema } from "@/components/table-page/types"
 import {

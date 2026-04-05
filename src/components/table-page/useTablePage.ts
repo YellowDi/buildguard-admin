@@ -1,6 +1,6 @@
 import { computed, onMounted, ref, watch, type ComputedRef, type Ref } from "vue"
 
-import type { SortFieldOption, SortRule } from "@/components/table-page/TableSortPopover.vue"
+import type { SortFieldOption, SortRule } from "@/components/table-page/sort.types"
 import type {
   DateFilterState,
   FilterStateMaps,

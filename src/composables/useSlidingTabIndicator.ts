@@ -1,4 +1,4 @@
-import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch, type MaybeRefOrGetter } from "vue"
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch, type ComponentPublicInstance, type MaybeRefOrGetter } from "vue"
 import { toValue } from "vue"
 
 type SlidingIndicatorStyle = {
@@ -42,11 +42,23 @@ export function useSlidingTabIndicator<T extends string | number>(options: {
     void nextTick(syncIndicator)
   }
 
-  function setTabRef(key: T, element: Element | null) {
+  function resolveButtonElement(element: Element | ComponentPublicInstance | null) {
     if (element instanceof HTMLButtonElement) {
-      tabElements.set(key, element)
+      return element
     }
-    else {
+
+    if (element && "$el" in element && element.$el instanceof HTMLButtonElement) {
+      return element.$el
+    }
+
+    return null
+  }
+
+  function setTabRef(key: T, element: Element | ComponentPublicInstance | null) {
+    const buttonElement = resolveButtonElement(element)
+    if (buttonElement) {
+      tabElements.set(key, buttonElement)
+    } else {
       tabElements.delete(key)
     }
 
