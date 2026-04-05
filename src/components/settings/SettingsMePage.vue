@@ -123,6 +123,10 @@ const deviceColumns: TableColumn[] = [
   },
 ]
 
+function asDeviceRow(row: unknown) {
+  return row as Device & { isCurrentLabel: string }
+}
+
 function handleSavePreferredName() {
   emit("update:preferredName", localPreferredName.value)
   toast.success("偏好名称已更新")
@@ -383,15 +387,15 @@ function handleDeleteAccount() {
               row-key="id"
               :table-class="SETTINGS_TABLE_PAGE_CLASS"
             >
-              <template #cell-name="{ row }">
+              <template #cell-name="{ row: rawRow }">
                 <div class="flex items-center gap-2">
                   <i class="ri-computer-line text-lg text-muted-foreground" />
                   <div>
                     <div class="text-sm font-medium text-foreground">
-                      {{ row.name }}
+                      {{ asDeviceRow(rawRow).name }}
                     </div>
                     <div
-                      v-if="row.isCurrent"
+                      v-if="asDeviceRow(rawRow).isCurrent"
                       class="text-xs text-primary"
                     >
                       此设备
@@ -400,13 +404,13 @@ function handleDeleteAccount() {
                 </div>
               </template>
 
-              <template #cell-actions="{ row }">
+              <template #cell-actions="{ row: rawRow }">
                 <Button
-                  v-if="!row.isCurrent"
+                  v-if="!asDeviceRow(rawRow).isCurrent"
                   variant="outline"
                   size="sm"
                   class="h-8 gap-1 rounded-md px-2.5 text-[13px]"
-                  @click="handleDeviceLogout(row.id)"
+                  @click="handleDeviceLogout(asDeviceRow(rawRow).id)"
                 >
                   登出
                 </Button>
