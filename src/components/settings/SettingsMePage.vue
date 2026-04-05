@@ -368,6 +368,8 @@ function handleDeleteAccount() {
               </div>
             </div>
 
+            <div class="h-6" />
+
             <!-- 设备表格 -->
             <TablePageTable
               show-index
