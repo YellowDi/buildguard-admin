@@ -162,14 +162,14 @@ function handleDeleteAccount() {
           <div class="flex items-start gap-6 py-4">
             <!-- Avatar -->
             <div class="flex flex-col items-center">
-              <Avatar class="size-16 rounded-full">
+              <Avatar class="size-16 rounded-sm">
                 <AvatarImage
                   v-if="avatarSrc"
                   :src="avatarSrc"
                   :alt="userName"
                   class="object-cover"
                 />
-                <AvatarFallback class="rounded-full bg-avatar-placeholder text-xl font-semibold">
+                <AvatarFallback class="rounded-sm bg-avatar-placeholder text-xl font-semibold">
                   {{ avatarFallback }}
                 </AvatarFallback>
               </Avatar>
