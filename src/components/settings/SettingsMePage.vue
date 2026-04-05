@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from "vue"
+import { computed, ref } from "vue"
 import { useClipboard } from "@vueuse/core"
 import { toast } from "vue-sonner"
 
@@ -13,6 +13,9 @@ import {
 } from "@/components/ui/tooltip"
 import SettingsPageHeader from "@/components/settings/SettingsPageHeader.vue"
 import SettingsSection from "@/components/settings/SettingsSection.vue"
+import { SETTINGS_TABLE_PAGE_CLASS } from "@/components/settings/settingsTablePageClass"
+import TablePageTable from "@/components/table-page/TablePageTable.vue"
+import type { TableColumn } from "@/components/table-page/types"
 import type {
   SettingsActionKey,
 } from "@/components/settings/types"
@@ -78,6 +81,47 @@ const devices = ref<Device[]>([
     location: "MY-08, Malaysia",
   },
 ])
+
+const deviceRows = computed(() =>
+  devices.value.map(device => ({
+    ...device,
+    isCurrentLabel: device.isCurrent ? "此设备" : "",
+  })),
+)
+
+const deviceColumns: TableColumn[] = [
+  {
+    key: "name",
+    label: "设备名称",
+    filterType: "text",
+    cellRenderer: {
+      kind: "dual-inline",
+      primaryKey: "name",
+      secondaryKey: "isCurrentLabel",
+      primaryClass: "font-medium text-foreground",
+      secondaryClass: "text-primary",
+    },
+  },
+  {
+    key: "lastActive",
+    label: "上次活动",
+    filterType: "text",
+    tone: "muted",
+  },
+  {
+    key: "location",
+    label: "位置",
+    filterType: "text",
+    tone: "muted",
+  },
+  {
+    key: "actions",
+    label: "",
+    filterType: "none",
+    slot: "cell-actions",
+    cellClass: "text-right",
+  },
+]
 
 function handleSavePreferredName() {
   emit("update:preferredName", localPreferredName.value)
@@ -324,63 +368,51 @@ function handleDeleteAccount() {
               </div>
             </div>
 
-            <!-- 设备列表表头 -->
-            <div class="grid grid-cols-[1fr_120px_100px_80px] gap-4 py-3 text-sm text-muted-foreground">
-              <div>设备名称</div>
-              <div class="flex items-center gap-1">
-                上次活动
-                <TooltipWrap content="显示设备最近一次活跃时间">
-                  <i class="ri-question-line cursor-help" />
-                </TooltipWrap>
-              </div>
-              <div>位置</div>
-              <div />
-            </div>
-
-            <!-- 设备列表 -->
-            <div
-              v-for="device in devices"
-              :key="device.id"
-              class="grid grid-cols-[1fr_120px_100px_80px] items-center gap-4 border-t border-border/50 py-3"
+            <!-- 设备表格 -->
+            <TablePageTable
+              show-index
+              sticky-header
+              :end-spacer="false"
+              :show-index-checkbox="false"
+              :edge-gutter="false"
+              :show-row-action-icons="true"
+              :columns="deviceColumns"
+              :rows="deviceRows"
+              row-key="id"
+              :table-class="SETTINGS_TABLE_PAGE_CLASS"
             >
-              <div class="flex items-center gap-2">
-                <i class="ri-computer-line text-lg text-muted-foreground" />
-                <div>
-                  <div class="text-sm font-medium text-foreground">
-                    {{ device.name }}
-                  </div>
-                  <div
-                    v-if="device.isCurrent"
-                    class="text-xs text-primary"
-                  >
-                    此设备
+              <template #cell-name="{ row }">
+                <div class="flex items-center gap-2">
+                  <i class="ri-computer-line text-lg text-muted-foreground" />
+                  <div>
+                    <div class="text-sm font-medium text-foreground">
+                      {{ row.name }}
+                    </div>
+                    <div
+                      v-if="row.isCurrent"
+                      class="text-xs text-primary"
+                    >
+                      此设备
+                    </div>
                   </div>
                 </div>
-              </div>
-              <div class="text-sm text-muted-foreground">
-                {{ device.lastActive }}
-              </div>
-              <div class="text-sm text-muted-foreground">
-                {{ device.location }}
-              </div>
-              <div
-                v-if="!device.isCurrent"
-                class="flex justify-end"
-              >
+              </template>
+
+              <template #cell-actions="{ row }">
                 <Button
+                  v-if="!row.isCurrent"
                   variant="outline"
                   size="sm"
-                  class="h-8 px-2"
-                  @click="handleDeviceLogout(device.id)"
+                  class="h-8 gap-1 rounded-md px-2.5 text-[13px]"
+                  @click="handleDeviceLogout(row.id)"
                 >
                   登出
                 </Button>
-              </div>
-              <div v-else />
-            </div>
+              </template>
+            </TablePageTable>
 
             <!-- 加载更多 -->
-            <div class="border-t border-border/50 py-3">
+            <div class="py-2">
               <Button
                 variant="ghost"
                 size="sm"
