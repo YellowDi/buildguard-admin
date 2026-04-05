@@ -159,12 +159,6 @@ const columns: TableColumn[] = [
     label: "创建时间",
     filterType: "time",
     tone: "muted",
-  },
-  {
-    key: "updatedAt",
-    label: "更新时间",
-    filterType: "time",
-    tone: "muted",
     width: "fill",
   },
   {
@@ -209,7 +203,6 @@ const filteredRows = computed(() => {
     row.content,
     row.standard,
     row.createdAt,
-    row.updatedAt,
   ].some(field => field.toLowerCase().includes(query)))
 })
 
