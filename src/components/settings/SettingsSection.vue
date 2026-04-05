@@ -11,7 +11,7 @@ defineProps<{
 </script>
 
 <template>
-  <section :class="showHeader === false ? '' : 'space-y-4'">
+  <section>
     <template v-if="showHeader !== false">
       <SettingsPageHeader
         variant="section"
@@ -19,8 +19,13 @@ defineProps<{
         :description="description"
         :tone="tone"
       />
-      <Separator class="bg-border/80" />
+      <Separator class="mt-2 bg-border/80" />
+      <div class="mt-4">
+        <slot />
+      </div>
     </template>
-    <slot />
+    <template v-else>
+      <slot />
+    </template>
   </section>
 </template>

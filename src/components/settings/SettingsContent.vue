@@ -24,6 +24,7 @@ import { Switch } from "@/components/ui/switch"
 import SettingsBusinessPresetsHub from "@/components/settings/SettingsBusinessPresetsHub.vue"
 import SettingsGlobalBranding from "@/components/settings/SettingsGlobalBranding.vue"
 import SettingsInspectionHub from "@/components/settings/SettingsInspectionHub.vue"
+import SettingsMePage from "@/components/settings/SettingsMePage.vue"
 import SettingsMenusTable from "@/components/settings/SettingsMenusTable.vue"
 import SettingsMembersTable from "@/components/settings/SettingsMembersTable.vue"
 import SettingsRightPanelLayout from "@/components/settings/SettingsRightPanelLayout.vue"
@@ -62,8 +63,21 @@ function getBooleanValue(key: keyof SettingsState) {
 </script>
 
 <template>
+  <SettingsMePage
+    v-if="props.category.key === 'me'"
+    :user-name="state.accountName"
+    :user-email="state.accountEmail"
+    :avatar-src="props.category.avatarSrc"
+    :avatar-fallback="props.category.avatarFallback ?? state.accountName.charAt(0).toUpperCase()"
+    :preferred-name="state.preferredName"
+    :user-id="state.userId"
+    :support-access-enabled="state.supportAccessEnabled"
+    @action="emit('action', $event)"
+    @update:preferred-name="updateString('preferredName', $event)"
+    @update:support-access-enabled="updateBoolean('supportAccessEnabled', $event)"
+  />
   <SettingsMembersTable
-    v-if="props.category.key === 'members'"
+    v-else-if="props.category.key === 'members'"
     :page-title="props.category.pageTitle ?? props.category.label"
     :page-description="props.category.pageDescription ?? props.category.description"
   />

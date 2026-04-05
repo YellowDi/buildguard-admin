@@ -22,6 +22,13 @@ export type SettingsActionKey =
   | "review-active-sessions"
   | "revoke-other-sessions"
   | "delete-workspace"
+  | "manage-email"
+  | "change-password"
+  | "add-2fa"
+  | "add-passkey"
+  | "delete-account"
+  | "logout-all-devices"
+  | "copy-user-id"
 
 export type SettingsState = {
   accountName: string
@@ -42,6 +49,10 @@ export type SettingsState = {
   digestFrequency: string
   twoFactorEnabled: boolean
   sessionTimeout: string
+  // Me page fields
+  preferredName: string
+  userId: string
+  supportAccessEnabled: boolean
 }
 
 type BaseSettingsItem = {

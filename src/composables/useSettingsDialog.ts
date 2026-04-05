@@ -33,6 +33,10 @@ const state = reactive<SettingsState>({
   digestFrequency: "daily",
   twoFactorEnabled: true,
   sessionTimeout: "30",
+  // Me page fields
+  preferredName: currentUser.name,
+  userId: "cdfac05d-1fde-4501-a2c5-66ab2d360bb2",
+  supportAccessEnabled: false,
 })
 
 watch(
@@ -74,47 +78,7 @@ const categories = computed<SettingsCategory[]>(() => [
     icon: "ri-user-line",
     avatarSrc: currentUser.avatarSrc,
     avatarFallback: currentUser.name.charAt(0).toUpperCase(),
-    sections: [
-      {
-        key: "account-profile",
-        title: "档案",
-        description: "维护你的公开名称和登录邮箱。",
-        items: [
-          {
-            key: "accountName",
-            type: "input",
-            modelKey: "accountName",
-            label: "用户名",
-            description: "显示在头像菜单、设置导航和协作记录中的名称。",
-            placeholder: "输入用户名",
-          },
-          {
-            key: "accountEmail",
-            type: "input",
-            modelKey: "accountEmail",
-            label: "登录邮箱",
-            description: "用于登录验证、账号通知和安全提醒。",
-            placeholder: "name@example.com",
-          },
-        ],
-      },
-      {
-        key: "account-devices",
-        title: "设备",
-        description: "查看你的已登录设备和最近访问记录。",
-        items: [
-          {
-            key: "reviewMySessions",
-            type: "button",
-            actionKey: "review-active-sessions",
-            label: "查看已登录设备",
-            description: "检查当前账号已登录的浏览器和设备。",
-            buttonLabel: "查看设备",
-            variant: "outline",
-          },
-        ],
-      },
-    ],
+    sections: [], // Me page uses custom component
   },
   {
     key: "preferences",
@@ -553,8 +517,55 @@ function runAction(actionKey: SettingsActionKey) {
     return
   }
 
-  toast.error("删除工作区未开放", {
-    description: "危险操作入口已预留，接入前端确认流后再启用。",
+  if (actionKey === "delete-account") {
+    toast.error("删除账号未开放", {
+      description: "危险操作入口已预留，接入前端确认流后再启用。",
+    })
+    return
+  }
+
+  if (actionKey === "manage-email") {
+    toast("邮箱管理待接入", {
+      description: "当前先保留交互入口，后续可接真实邮箱管理功能。",
+    })
+    return
+  }
+
+  if (actionKey === "change-password") {
+    toast("密码修改待接入", {
+      description: "当前先保留交互入口，后续可接真实密码修改功能。",
+    })
+    return
+  }
+
+  if (actionKey === "add-2fa") {
+    toast("两步验证待接入", {
+      description: "当前先保留交互入口，后续可接真实两步验证功能。",
+    })
+    return
+  }
+
+  if (actionKey === "add-passkey") {
+    toast("密钥管理待接入", {
+      description: "当前先保留交互入口，后续可接真实密钥管理功能。",
+    })
+    return
+  }
+
+  if (actionKey === "logout-all-devices") {
+    toast.success("已请求退出所有其他设备", {
+      description: "当前设备会保持登录状态。",
+    })
+    return
+  }
+
+  if (actionKey === "copy-user-id") {
+    toast.success("用户 ID 已复制")
+    return
+  }
+
+  toast.error("操作未开放", {
+    description: "该操作入口已预留，接入前端确认流后再启用。",
   })
 }
 

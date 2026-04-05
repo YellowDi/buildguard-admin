@@ -24,7 +24,7 @@ const isSection = computed(() => props.variant === "section")
 
 const headingClass = computed(() =>
   isSection.value
-    ? "text-[1.375rem] font-semibold tracking-tight"
+    ? "text-base font-semibold tracking-tight text-foreground"
     : "text-[1.625rem] font-semibold tracking-tight",
 )
 
