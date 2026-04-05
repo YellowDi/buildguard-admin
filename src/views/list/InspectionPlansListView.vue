@@ -31,7 +31,7 @@ const activeLinkedDetailCustomerUuid = ref("")
 
 const schema: TablePageSchema<InspectionPlanRecord> = {
   title: "检测计划",
-  description: "检测计划列表",
+  description: "基于服务配置生成周期性检测安排，自动驱动工单生成与执行节奏",
   primaryActionLabel: "添加检测计划",
   rowKey: "id",
   data: [],

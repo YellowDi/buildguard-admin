@@ -58,7 +58,7 @@ const monitoringStatusMap = {
 
 const schema: TablePageSchema<MonitoringRecord> = {
   title: "监控",
-  description: "园区与建筑监控设备列表",
+  description: "查看和管理所有建筑的监控设备，了解设备分布和运行情况",
   rowKey: "id",
   data: [],
   primaryActionLabel: "添加监控",

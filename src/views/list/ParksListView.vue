@@ -62,7 +62,7 @@ const showInitialLoading = computed(() => loading.value && !parks.value.length &
 
 const schema: TablePageSchema<ParkRecord> = {
   title: "园区",
-  description: "所有客户园区资产列表",
+  description: "查看所有园区信息，快速了解园区规模和整体情况",
   rowKey: "uuid",
   data: [],
   primaryActionLabel: "添加园区",

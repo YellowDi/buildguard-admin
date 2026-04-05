@@ -67,7 +67,7 @@ const showInitialLoading = computed(() => loading.value && !buildings.value.leng
 
 const schema: TablePageSchema<BuildingRecord> = {
   title: "建筑",
-  description: "所有客户建筑资产列表",
+  description: "查看所有建筑的检测情况，了解评分、状态和存在的问题",
   rowKey: "uuid",
   data: [],
   primaryActionLabel: "添加建筑",

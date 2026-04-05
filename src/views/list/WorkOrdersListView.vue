@@ -113,7 +113,7 @@ const columns = props.kind === "inspection" ? createInspectionColumns() : create
 
 const schema: TablePageSchema<WorkOrderRecord> = {
   title: pageTitle.value,
-  description: props.kind === "inspection" ? "所有客户检测工单列表" : "所有客户报修工单列表",
+  description: props.kind === "inspection" ? "查看和管理巡检任务，了解现场检查进度和结果" : "处理客户提交的报修问题，跟进维修进度和处理情况",
   rowKey: "uuid",
   data: [],
   primaryActionLabel,

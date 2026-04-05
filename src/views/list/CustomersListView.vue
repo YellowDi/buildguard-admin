@@ -75,7 +75,7 @@ let latestRequestId = 0
 
 const schema: TablePageSchema<CustomerRecord> = {
   title: "客户",
-  description: "所有客户资料列表",
+  description: "管理客户信息和服务情况，查看合同、资产和检测记录",
   rowKey: "id",
   data: [],
   showIndex: true,

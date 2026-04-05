@@ -79,7 +79,7 @@ let latestRequestId = 0
 
 const schema: TablePageSchema<InspectionServiceRecord> = {
   title: "检测服务",
-  description: "所有客户检测服务列表",
+  description: "为客户配置检测服务内容，管理检测范围和周期",
   primaryActionLabel: "添加检测服务",
   rowKey: "uuid",
   data: [],
