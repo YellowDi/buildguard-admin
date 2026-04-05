@@ -35,14 +35,14 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
 
 <template>
   <DialogPortal>
-    <DialogOverlay :class="props.stackAboveStickyHeader ? 'z-[70]' : undefined" />
+    <DialogOverlay :class="props.stackAboveStickyHeader ? 'z-70' : undefined" />
     <DialogContent
       data-slot="dialog-content"
       v-bind="{ ...$attrs, ...forwarded }"
       :class="
         cn(
-          'dialog-panel-float fixed top-[50%] left-[50%] grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-2xl bg-background p-4 shadow-[var(--shadow-card)] sm:max-w-lg',
-          props.stackAboveStickyHeader ? 'z-[70]' : 'z-50',
+          'dialog-panel-float fixed top-[50%] left-[50%] grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-2xl bg-background p-4 shadow-(--shadow-card) sm:max-w-lg',
+          props.stackAboveStickyHeader ? 'z-70' : 'z-50',
           props.class,
         )"
     >

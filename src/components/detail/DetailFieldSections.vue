@@ -53,7 +53,7 @@ function isStatusValue(value: DetailFieldValue): value is DetailStatusValue {
 <template>
   <div class="detail-field-sections" :style="sectionStyle">
     <template v-for="(section, sectionIndex) in sections" :key="section.key">
-      <section :class="cn('detail-field-section', !props.compact && sectionIndex > 0 && 'detail-field-section--after-separator', props.compact && '!pb-0 !pt-0')">
+      <section :class="cn('detail-field-section', !props.compact && sectionIndex > 0 && 'detail-field-section--after-separator', props.compact && 'pb-0! pt-0!')">
         <div v-if="props.showSectionTitles && section.title" class="detail-section-heading-row detail-section-inset">
           <h2 class="detail-field-section__heading">{{ section.title }}</h2>
         </div>

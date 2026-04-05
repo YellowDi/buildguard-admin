@@ -1110,7 +1110,7 @@ function hashText(value: string) {
                     <Skeleton class="size-6 shrink-0 rounded-full" />
                     <div class="min-w-0 flex-1 space-y-1.5">
                       <Skeleton class="h-[13px] w-3/4 max-w-[16rem]" />
-                      <Skeleton class="h-3 w-1/2 max-w-[12rem]" />
+                      <Skeleton class="h-3 w-1/2 max-w-48" />
                     </div>
                     <div class="flex shrink-0 items-center gap-1.5">
                       <div class="space-y-0.5 text-right">

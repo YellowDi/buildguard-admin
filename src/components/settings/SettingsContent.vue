@@ -127,7 +127,7 @@ function getBooleanValue(key: keyof SettingsState) {
             <Alert
               v-if="section.tone === 'danger'"
               variant="destructive"
-              class="mb-4 border-destructive/20 bg-destructive/[0.03]"
+              class="mb-4 border-destructive/20 bg-destructive/3"
             >
               <i class="ri-error-warning-line text-base" />
               <AlertTitle>危险操作</AlertTitle>

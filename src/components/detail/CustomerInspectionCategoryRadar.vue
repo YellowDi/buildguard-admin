@@ -269,7 +269,7 @@ function scorePillClass(score: number) {
               :points="points"
               fill="none"
               :stroke="ringIndex === gridPolygonPoints.length - 1 ? '#CBD5E1' : '#E2E8F0'"
-              class="dark:stroke-border/70 dark:[&:last-of-type]:stroke-border"
+              class="dark:stroke-border/70 dark:last-of-type:stroke-border"
               stroke-width="1"
             />
 

@@ -632,7 +632,7 @@ function toText(value: unknown, fallback = "") {
               <div class="flex min-w-[180px] items-center gap-2">
                 <Progress
                   :model-value="getExpireProgressValue(row)"
-                  class="h-1.5 max-w-[120px] bg-[#E9EDF2] [&_[data-slot=progress-indicator]]:transition-all"
+                  class="h-1.5 max-w-[120px] bg-[#E9EDF2] **:data-[slot=progress-indicator]:transition-all"
                   :class="getExpireProgressClass(row)"
                 />
                 <span class="shrink-0 text-xs text-muted-foreground">

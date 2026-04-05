@@ -144,7 +144,7 @@ const tableConfig = computed(() => {
 
         <div class="pb-4">
           <div class="detail-field-sections">
-            <section class="detail-field-section !pb-0 !pt-0">
+            <section class="detail-field-section pb-0! pt-0!">
               <div>
                 <div
                   v-for="row in 3"

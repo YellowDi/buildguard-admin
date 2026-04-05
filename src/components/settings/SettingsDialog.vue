@@ -30,7 +30,7 @@ const {
       :show-close-button="false"
       :class="
         cn(
-          'w-[min(1040px,calc(100vw-1rem))] max-w-[min(1040px,calc(100vw-1rem))] sm:w-[min(1040px,calc(100vw-2rem))] sm:max-w-[min(1040px,calc(100vw-2rem))] xl:w-[min(1040px,calc(100vw-5rem))] xl:max-w-[min(1040px,calc(100vw-5rem))] gap-0 overflow-hidden rounded-[20px] bg-background p-0 shadow-[var(--shadow-card)]',
+          'w-[min(1040px,calc(100vw-1rem))] max-w-[min(1040px,calc(100vw-1rem))] sm:w-[min(1040px,calc(100vw-2rem))] sm:max-w-[min(1040px,calc(100vw-2rem))] xl:w-[min(1040px,calc(100vw-5rem))] xl:max-w-[min(1040px,calc(100vw-5rem))] gap-0 overflow-hidden rounded-[20px] bg-background p-0 shadow-(--shadow-card)',
           'h-[760px]',
         )
       "

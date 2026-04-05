@@ -78,7 +78,7 @@ function handleTabSelect(value: unknown) {
     ]"
   >
     <template v-if="!props.empty">
-      <div class="sticky top-0 z-10 -mx-0 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80 sm:-mx-4">
+      <div class="sticky top-0 z-10 mx-0 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80 sm:-mx-4">
         <div :class="['px-1 pt-4 sm:px-4 sm:pt-5', hasTabs || hasHeaderBottom ? '' : 'pb-4 sm:pb-5']">
           <SectionHeader :title="props.title" :subtitle="props.subtitle" :has-actions="hasHeaderActions">
             <template #leading>

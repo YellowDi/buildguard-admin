@@ -111,7 +111,7 @@ const hasExpandedContent = computed(() => Boolean(slots["expanded-content"]))
       v-else
       class="flex min-h-[min(160px,30vh)] w-full min-w-0 flex-col items-center justify-center px-0 py-4"
     >
-      <Empty class="w-full max-w-md flex-none border-0 bg-transparent shadow-none !p-6 md:!p-8">
+      <Empty class="w-full max-w-md flex-none border-0 bg-transparent shadow-none p-6! md:p-8!">
         <EmptyHeader class="max-w-md">
           <EmptyMedia variant="icon">
             <i

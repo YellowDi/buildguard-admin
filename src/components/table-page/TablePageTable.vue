@@ -1069,7 +1069,7 @@ onBeforeUnmount(() => {
         class="flex min-h-[min(320px,50vh)] w-full min-w-0 flex-col items-center justify-center px-4 py-16"
       >
         <Empty
-          class="w-full max-w-md flex-none border-0 bg-transparent shadow-none !p-6 md:!p-8"
+          class="w-full max-w-md flex-none border-0 bg-transparent shadow-none p-6! md:p-8!"
         >
           <EmptyHeader class="max-w-md">
             <EmptyMedia variant="icon">

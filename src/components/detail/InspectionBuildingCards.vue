@@ -124,7 +124,7 @@ function buildInspectionAccordionKey(buildingKey: string, groupKey: string, item
           v-if="props.buildings.length === 0"
           class="flex min-h-[min(160px,30vh)] w-full min-w-0 flex-col items-center justify-center px-4 py-12"
         >
-          <Empty class="w-full max-w-md flex-none border-0 bg-transparent shadow-none !p-6 md:!p-8">
+          <Empty class="w-full max-w-md flex-none border-0 bg-transparent shadow-none p-6! md:p-8!">
             <EmptyHeader class="max-w-md">
               <EmptyMedia variant="icon">
                 <i class="ri-building-line text-[18px]" />
@@ -146,7 +146,7 @@ function buildInspectionAccordionKey(buildingKey: string, groupKey: string, item
               v-for="building in props.buildings"
               :key="building.key"
               :value="building.key"
-              class="mb-3 min-w-0 overflow-x-clip rounded-md border border-border/55 bg-muted shadow-xs last:mb-0 dark:shadow-[var(--shadow-card)]"
+              class="mb-3 min-w-0 overflow-x-clip rounded-md border border-border/55 bg-muted shadow-xs last:mb-0 dark:shadow-(--shadow-card)"
             >
               <AccordionTrigger class="bg-transparent px-3.5 py-3 text-left hover:no-underline">
                 <div class="flex min-w-0 flex-1 items-center gap-3 pr-3">
@@ -160,13 +160,13 @@ function buildInspectionAccordionKey(buildingKey: string, groupKey: string, item
               </AccordionTrigger>
 
               <AccordionContent
-                class="bg-transparent data-[state=closed]:p-0 data-[state=open]:!overflow-visible data-[state=open]:px-2 data-[state=open]:pb-2 data-[state=open]:pt-0 [&>div]:pb-0 [&>div]:pt-0"
+                class="bg-transparent data-[state=closed]:p-0 data-[state=open]:overflow-visible! data-[state=open]:px-2 data-[state=open]:pb-2 data-[state=open]:pt-0 [&>div]:pb-0 [&>div]:pt-0"
               >
                 <div v-if="building.groups.length === 0" class="py-2 text-sm text-muted-foreground">
                   当前建筑暂无绑定检测项。
                 </div>
 
-                <div v-else class="overflow-hidden rounded-md bg-background shadow-[var(--shadow-card)]">
+                <div v-else class="overflow-hidden rounded-md bg-background shadow-(--shadow-card)">
                   <div
                     v-for="(group, groupIndex) in building.groups"
                     :key="`${building.key}-${group.key}`"
@@ -222,7 +222,7 @@ function buildInspectionAccordionKey(buildingKey: string, groupKey: string, item
                         </AccordionTrigger>
 
                         <AccordionContent
-                          class="rounded-none px-2 data-[state=closed]:pb-0 data-[state=closed]:pt-0 data-[state=open]:!overflow-visible data-[state=open]:bg-background data-[state=open]:pb-0 data-[state=open]:pt-0 [&>div]:pb-0 [&>div]:pt-0"
+                          class="rounded-none px-2 data-[state=closed]:pb-0 data-[state=closed]:pt-0 data-[state=open]:overflow-visible! data-[state=open]:bg-background data-[state=open]:pb-0 data-[state=open]:pt-0 [&>div]:pb-0 [&>div]:pt-0"
                         >
                           <div v-if="item.loading" class="grid gap-3">
                             <div class="grid gap-2">
@@ -269,7 +269,7 @@ function buildInspectionAccordionKey(buildingKey: string, groupKey: string, item
                               class="grid gap-1"
                             >
                               <p class="text-xs text-muted-foreground">{{ field.label }}</p>
-                              <p class="whitespace-pre-wrap break-words leading-6 text-foreground">
+                              <p class="whitespace-pre-wrap wrap-break-word leading-6 text-foreground">
                                 {{ field.value }}
                               </p>
                             </div>
