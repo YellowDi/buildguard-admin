@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, onUnmounted, ref, watch } from "vue"
+import { computed, defineAsyncComponent, onUnmounted, ref, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
 
 import { buildBuildingDetailSections, toText } from "@/components/detail/buildingDetailFields"
+import CustomerInspectionCategoryRadarPlaceholder from "@/components/detail/CustomerInspectionCategoryRadarPlaceholder.vue"
 import DetailFieldsSkeleton from "@/components/loading/DetailFieldsSkeleton.vue"
 import DetailRelationSkeleton from "@/components/loading/DetailRelationSkeleton.vue"
 import DetailFieldSections from "@/components/detail/DetailFieldSections.vue"
@@ -16,7 +17,14 @@ import { detailBreadcrumbItems, detailBreadcrumbTitle } from "@/composables/useD
 import DetailLayout from "@/layouts/DetailLayout.vue"
 import { handleApiError } from "@/lib/api-errors"
 import { fetchBuildings, type BuildingListItem } from "@/lib/buildings-api"
+import { fetchInspectionCategories, type InspectionCategoryRecord } from "@/lib/inspection-categories-api"
 import { fetchRepairWorkOrders, fetchWorkOrders } from "@/lib/work-orders-api"
+
+const CustomerInspectionCategoryRadar = defineAsyncComponent({
+  loader: () => import("@/components/detail/CustomerInspectionCategoryRadar.vue"),
+  loadingComponent: CustomerInspectionCategoryRadarPlaceholder,
+  delay: 180,
+})
 
 const route = useRoute()
 const router = useRouter()
@@ -29,6 +37,8 @@ const errorMessage = ref("")
 const recordsLoading = ref(false)
 const recordsErrorMessage = ref("")
 const mapDialogOpen = ref(false)
+const inspectionCategoriesList = ref<InspectionCategoryRecord[]>([])
+const inspectionCategoriesLoading = ref(false)
 let latestRequestId = 0
 let latestRecordsRequestId = 0
 
@@ -150,6 +160,7 @@ watch(building, (current) => {
 
 watch([buildingUuid, parkUuid], ([nextBuildingUuid, nextParkUuid]) => {
   void loadBuildingDetail(nextBuildingUuid, nextParkUuid)
+  void loadInspectionCategoriesList()
 }, { immediate: true })
 
 onUnmounted(() => {
@@ -385,6 +396,89 @@ type BuildingRecordRow = {
   deadline: string
   sortTime: number
 }
+
+// 雷达图相关计算属性
+const inspectionCategoryRadarLabels = computed(() => (
+  inspectionCategoriesList.value.map(cat => toDisplayText(cat.Name, "未命名分类"))
+))
+
+const inspectionCategoryRadarValues = computed(() => {
+  const categories = inspectionCategoriesList.value
+  const currentBuilding = building.value
+
+  if (!categories.length || !currentBuilding) {
+    return categories.map(() => 0)
+  }
+
+  // 从建筑的检测分类分数数据中获取各分类得分
+  return categories.map((category) => {
+    const categoryUuid = toTrimmedText(category.Uuid)
+    const categoryName = toTrimmedText(category.Name)
+
+    // 尝试从建筑的 CategoryScores 等字段获取分数
+    const listKeys = ["CategoryScores", "categoryScores", "InspectionCategoryScores", "inspectionCategoryScores"] as const
+    for (const key of listKeys) {
+      const raw = currentBuilding[key]
+      if (!Array.isArray(raw)) continue
+
+      for (const row of raw) {
+        if (!row || typeof row !== "object") continue
+        const record = row as Record<string, unknown>
+        const ru = toTrimmedText(record.CategoryUuid ?? record.categoryUuid)
+        const rn = toTrimmedText(record.CategoryName ?? record.categoryName)
+        const matchesUuid = categoryUuid && ru === categoryUuid
+        const matchesName = categoryName && rn === categoryName
+
+        if (!matchesUuid && !matchesName) continue
+
+        const scoreRaw = record.Score ?? record.score ?? record.AvgScore ?? record.avgScore
+        const num = typeof scoreRaw === "number" ? scoreRaw : Number(scoreRaw)
+        if (Number.isFinite(num)) {
+          return Math.max(0, Math.min(100, num))
+        }
+      }
+    }
+
+    // 回退到建筑综合分
+    const overallScore = currentBuilding.Score ?? currentBuilding.score ?? currentBuilding.OverallScore ?? currentBuilding.overallScore ?? currentBuilding.AvgScore ?? currentBuilding.avgScore
+    const num = typeof overallScore === "number" ? overallScore : Number(overallScore)
+    return Number.isFinite(num) ? Math.max(0, Math.min(100, num)) : 0
+  })
+})
+
+const inspectionCategoryRadarLoading = computed(() => (
+  inspectionCategoriesLoading.value || loading.value
+))
+
+function toTrimmedText(value: unknown) {
+  if (typeof value === "string" && value.trim()) {
+    return value.trim()
+  }
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return String(value)
+  }
+  return ""
+}
+
+function toDisplayText(value: unknown, fallback = ""): string {
+  if (typeof value === "string" && value.trim()) {
+    return value.trim()
+  }
+  return fallback
+}
+
+async function loadInspectionCategoriesList() {
+  inspectionCategoriesLoading.value = true
+
+  try {
+    const result = await fetchInspectionCategories()
+    inspectionCategoriesList.value = result.list
+  } catch {
+    inspectionCategoriesList.value = []
+  } finally {
+    inspectionCategoriesLoading.value = false
+  }
+}
 </script>
 
 <template>
@@ -404,6 +498,17 @@ type BuildingRecordRow = {
       <DetailFieldsSkeleton v-if="loading" :sections="1" :rows-per-section="11" />
 
       <DetailFieldSections v-else-if="building" :sections="fieldSections" />
+
+      <!-- 检测分类得分雷达图 -->
+      <div v-if="!loading && building" class="mt-6">
+        <CustomerInspectionCategoryRadar
+          :labels="inspectionCategoryRadarLabels"
+          :values="inspectionCategoryRadarValues"
+          :loading="inspectionCategoryRadarLoading"
+          :has-buildings="true"
+          empty-text="暂无检测项分类数据"
+        />
+      </div>
     </template>
 
     <template #secondary>
