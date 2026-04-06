@@ -102,9 +102,15 @@ const schema: TablePageSchema<BuildingRecord> = {
       return
     }
 
+    if (!row.parkUuid) {
+      toast.error("当前建筑缺少所属园区，无法打开详情")
+      return
+    }
+
     void router.push({
       name: "building-detail",
       params: { id: row.uuid },
+      query: { parkUuid: row.parkUuid },
     })
   },
   onQuickAction: row => {
