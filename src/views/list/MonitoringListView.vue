@@ -43,7 +43,7 @@ const monitoringRows = ref<MonitoringRecord[]>([])
 const loading = ref(false)
 const errorMessage = ref("")
 const pageNum = ref(1)
-const pageSize = ref(10)
+const pageSize = ref(50)
 const total = ref(0)
 let latestRequestId = 0
 
