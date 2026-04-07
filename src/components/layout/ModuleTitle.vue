@@ -13,11 +13,15 @@ const props = withDefaults(defineProps<{
   tone?: "default" | "danger"
   showSeparator?: boolean
   separatorClass?: string
+  sticky?: boolean
+  stickyClass?: string
 }>(), {
   variant: "page",
   tone: "default",
   showSeparator: false,
   separatorClass: "",
+  sticky: false,
+  stickyClass: "",
 })
 
 const showDescription = computed(() => {
@@ -42,7 +46,13 @@ const descriptionClass = computed(() => {
 </script>
 
 <template>
-  <div class="flex flex-col">
+  <div
+    :class="cn(
+      'flex flex-col',
+      props.sticky && 'sticky top-0 z-10 bg-background',
+      props.stickyClass,
+    )"
+  >
     <header class="flex flex-col gap-1.5">
       <div class="min-w-0">
         <component :is="isSection ? 'h3' : 'h2'" :class="headingClass">

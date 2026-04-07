@@ -18,6 +18,7 @@ defineProps<{
         :description="description"
         :tone="tone"
         :show-separator="true"
+        :sticky="true"
       />
       <div class="mt-4">
         <slot />
