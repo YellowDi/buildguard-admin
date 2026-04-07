@@ -15,6 +15,7 @@ import {
   getTableWrapperClass,
   TABLE_EDGE_GUTTER_DESKTOP,
   TABLE_EDGE_GUTTER_MOBILE,
+  TABLE_HORIZONTAL_SCROLL_SAFE_AREA,
   tableTheme,
 } from "@/components/table-page/tableTheme"
 import type { TableColumn, TablePageEmptyState, TableRowAction } from "@/components/table-page/types"
@@ -172,6 +173,11 @@ const tableElementStyle = computed(() => ({
   width: "max-content",
   minWidth: tableInlineMinWidth.value,
   maxWidth: "none",
+}))
+const scrollViewportStyle = computed(() => ({
+  paddingBottom: horizontalOverflow.value && props.rows.length > 0
+    ? `${TABLE_HORIZONTAL_SCROLL_SAFE_AREA}px`
+    : undefined,
 }))
 const stickyContentWidth = computed(() => (
   stickyTableWidth.value + leadingEdgeGutter.value + trailingEdgeGutter.value
@@ -1063,6 +1069,7 @@ onBeforeUnmount(() => {
     <div
       ref="tableWrapperRef"
       :class="cn(scrollViewportClassName, rows.length === 0 && 'overflow-x-hidden')"
+      :style="scrollViewportStyle"
     >
       <div
         v-if="rows.length === 0"

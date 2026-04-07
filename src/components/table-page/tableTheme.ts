@@ -9,11 +9,12 @@ import { cn } from "@/lib/utils"
 
 export const TABLE_EDGE_GUTTER_MOBILE = 16
 export const TABLE_EDGE_GUTTER_DESKTOP = 32
+export const TABLE_HORIZONTAL_SCROLL_SAFE_AREA = 14
 
 export const tableTheme = {
   wrapper: "relative min-w-0 w-full max-w-full overflow-visible",
-  scrollViewport: "min-w-0 w-full max-w-full overflow-x-auto overflow-y-visible overscroll-x-contain",
-  scrollContent: "flex min-w-full items-stretch",
+  scrollViewport: "box-border min-w-0 w-full max-w-full overflow-x-auto overflow-y-visible overscroll-x-contain bg-background",
+  scrollContent: "flex min-w-full items-stretch bg-background",
   edgeGutter: "shrink-0",
   table: "min-w-full w-full table-auto border-separate border-spacing-0 bg-background text-[14px] text-foreground",
   head: "relative z-20 text-muted-foreground",
