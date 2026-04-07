@@ -537,7 +537,7 @@ async function loadInspectionCategoriesList() {
           <AlertDescription>{{ recordsErrorMessage }}</AlertDescription>
         </Alert>
 
-        <DetailRelationModule :schema="inspectionModule" use-title-block>
+        <DetailRelationModule :schema="inspectionModule">
           <template #record-action-cell="{ row }">
             <TooltipWrap content="查看工单详情" :disabled="!row.uuid">
               <Button
@@ -554,7 +554,7 @@ async function loadInspectionCategoriesList() {
           </template>
         </DetailRelationModule>
 
-        <DetailRelationModule :schema="repairModule" use-title-block>
+        <DetailRelationModule :schema="repairModule">
           <template #record-action-cell="{ row }">
             <TooltipWrap content="查看工单详情" :disabled="!row.uuid">
               <Button

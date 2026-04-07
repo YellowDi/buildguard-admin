@@ -97,7 +97,7 @@ const buildingModule = computed<DetailRelationModuleSchema<BuildingRow>>(() => (
   groups: [
     {
       key: "buildings",
-      title: "园区建筑",
+      title: "",
       rows: buildings.value,
     },
   ],

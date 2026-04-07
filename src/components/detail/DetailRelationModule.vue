@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import { computed, useSlots } from "vue"
 
+import TableTitleBlock from "@/components/detail/TableTitleBlock.vue"
 import type { DetailRelationColumn, DetailRelationModuleSchema } from "@/components/detail/types"
-import TitleBlock from "@/components/layout/TitleBlock.vue"
-import { Badge } from "@/components/ui/badge"
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import { cn } from "@/lib/utils"
 
@@ -76,46 +75,28 @@ function hasNamedSlot(name?: string) {
   <section class="detail-relation-module w-full min-w-0 max-w-full" :style="moduleStyle">
     <div class="detail-table-scroll">
       <div class="detail-table-frame detail-relation-frame">
-        <TitleBlock
-          v-if="props.useTitleBlock"
-          variant="section"
+        <TableTitleBlock
+          :module-key="schema.key"
           :title="schema.title"
-          :sticky="true"
-          sticky-top="var(--detail-layout-sticky-offset, 0px)"
-          class="detail-section-inset pt-4 pb-1"
+          :count="displayCount"
+          :columns="trailingColumns"
+          :padded="props.useTitleBlock"
         >
-          <template #append>
-            <Badge
-              variant="secondary"
-              class="min-w-6 justify-center rounded-md px-1.5 py-0.5 text-[12px] font-medium leading-none"
-            >
-              {{ displayCount }}
-            </Badge>
-          </template>
-        </TitleBlock>
-        <div v-else class="detail-table-heading-row detail-table-grid detail-relation-grid detail-section-inset items-center">
-          <div class="flex min-w-0 items-center gap-2">
-            <h2 class="detail-field-section__heading shrink-0 whitespace-nowrap">{{ schema.title }}</h2>
-            <Badge
-              variant="secondary"
-              class="min-w-6 justify-center rounded-md px-1.5 py-0.5 text-[12px] font-medium leading-none"
-            >
-              {{ displayCount }}
-            </Badge>
-          </div>
-          <div
+          <template
             v-for="column in trailingColumns"
-            :key="`${schema.key}-header-${column.key}`"
-            :class="cn('whitespace-nowrap text-[12px] text-muted-foreground', column.headerClass)"
+            :key="`${schema.key}-header-slot-${column.key}`"
+            #[`${column.key}-header`]="slotProps"
           >
-            <slot v-if="hasNamedSlot(`${column.key}-header`)" :name="`${column.key}-header`" :column="column">
-              {{ column.label }}
-            </slot>
+            <slot
+              v-if="hasNamedSlot(`${column.key}-header`)"
+              :name="`${column.key}-header`"
+              v-bind="slotProps"
+            />
             <template v-else>
               {{ column.label }}
             </template>
-          </div>
-        </div>
+          </template>
+        </TableTitleBlock>
 
         <div
           v-if="schema.groups.length === 0"
@@ -141,7 +122,10 @@ function hasNamedSlot(name?: string) {
 
         <div v-else class="detail-group-stack">
           <div v-for="group in schema.groups" :key="group.key">
-            <div class="detail-group-divider-row detail-section-inset flex min-w-0 items-center gap-3">
+            <div
+              v-if="group.title || hasNamedSlot('group-actions')"
+              class="detail-group-divider-row detail-section-inset flex min-w-0 items-center gap-3"
+            >
               <div class="min-w-0 truncate text-[14px] font-medium text-muted-foreground">{{ group.title }}</div>
               <div class="h-px flex-1 bg-border/80" />
               <slot
