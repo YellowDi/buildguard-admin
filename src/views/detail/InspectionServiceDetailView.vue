@@ -802,7 +802,7 @@ function readFileAsDataUrl(file: File) {
         </div>
       </template>
 
-      <div v-else-if="detail" class="space-y-5 pb-5">
+      <div v-else-if="detail" class="pb-5">
         <DetailFieldSections :sections="fieldSections" use-title-block />
 
         <div class="h-px bg-border/80" />
