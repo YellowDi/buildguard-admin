@@ -30,6 +30,8 @@ const displayCount = computed(() => (
   ?? props.schema.groups.reduce((sum, group) => sum + group.rows.length, 0)
 ))
 
+const hasRows = computed(() => displayCount.value > 0)
+
 const trailingColumns = computed(() => props.schema.columns.slice(1))
 
 function getRowKey(row: RelationRow, index: number) {
@@ -99,7 +101,7 @@ function hasNamedSlot(name?: string) {
         </TableTitleBlock>
 
         <div
-          v-if="schema.groups.length === 0"
+          v-if="!hasRows"
           class="flex min-h-[min(160px,30vh)] w-full min-w-0 flex-col items-center justify-center px-4 py-12"
         >
           <Empty class="w-full max-w-md flex-none border-0 bg-transparent shadow-none p-6! md:p-8!">

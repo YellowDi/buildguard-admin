@@ -75,7 +75,7 @@ const inspectionModule = computed<DetailRelationModuleSchema<BuildingRecordRow>>
   groups: [
     {
       key: "inspection",
-      title: "检测工单",
+      title: "",
       rows: inspectionRecords.value,
     },
   ],
@@ -104,7 +104,7 @@ const repairModule = computed<DetailRelationModuleSchema<BuildingRecordRow>>(() 
   groups: [
     {
       key: "repair",
-      title: "报修工单",
+      title: "",
       rows: repairRecords.value,
     },
   ],
