@@ -285,7 +285,7 @@ function buildContactValue(name: string | null, phone?: string | null): DetailCo
       </div>
 
       <div v-else-if="park" class="space-y-4">
-        <DetailFieldSections :sections="fieldSections" />
+        <DetailFieldSections :sections="fieldSections" use-title-block />
       </div>
     </template>
 
@@ -295,7 +295,7 @@ function buildContactValue(name: string | null, phone?: string | null): DetailCo
       </div>
 
       <div v-else-if="park" class="pb-5">
-        <DetailRelationModule :schema="buildingModule">
+        <DetailRelationModule :schema="buildingModule" use-title-block>
           <template #building-name-cell="{ row }">
             <div class="flex min-w-0 items-center gap-2 text-foreground">
               <i

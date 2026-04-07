@@ -740,7 +740,7 @@ async function submitAssign() {
 
       <DetailFieldsSkeleton v-if="loading" :sections="2" :rows-per-section="4" />
 
-      <DetailFieldSections v-else-if="hasWorkOrder" :sections="primarySections" />
+      <DetailFieldSections v-else-if="hasWorkOrder" :sections="primarySections" use-title-block />
     </template>
 
     <template #secondary>
@@ -750,7 +750,7 @@ async function submitAssign() {
         </div>
 
         <div v-else-if="!loading && hasWorkOrder" class="pb-5">
-          <DetailFieldSections :sections="secondarySections" />
+          <DetailFieldSections :sections="secondarySections" use-title-block />
         </div>
       </template>
 

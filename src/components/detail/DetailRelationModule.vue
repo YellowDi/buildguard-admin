@@ -2,6 +2,7 @@
 import { computed, useSlots } from "vue"
 
 import type { DetailRelationColumn, DetailRelationModuleSchema } from "@/components/detail/types"
+import TitleBlock from "@/components/layout/TitleBlock.vue"
 import { Badge } from "@/components/ui/badge"
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import { cn } from "@/lib/utils"
@@ -13,6 +14,7 @@ type RelationRow = Record<string, unknown>
 // 新页面优先通过 schema 配列和分组，只有状态图标、操作按钮这类特殊内容再写 slot。
 const props = defineProps<{
   schema: DetailRelationModuleSchema<any>
+  useTitleBlock?: boolean
 }>()
 
 const slots = useSlots()
@@ -74,7 +76,24 @@ function hasNamedSlot(name?: string) {
   <section class="detail-relation-module w-full min-w-0 max-w-full" :style="moduleStyle">
     <div class="detail-table-scroll">
       <div class="detail-table-frame detail-relation-frame">
-        <div class="detail-table-heading-row detail-table-grid detail-relation-grid detail-section-inset items-center">
+        <TitleBlock
+          v-if="props.useTitleBlock"
+          variant="section"
+          :title="schema.title"
+          :sticky="true"
+          sticky-top="var(--detail-layout-sticky-offset, 0px)"
+          class="detail-section-inset pt-4 pb-1"
+        >
+          <template #append>
+            <Badge
+              variant="secondary"
+              class="min-w-6 justify-center rounded-md px-1.5 py-0.5 text-[12px] font-medium leading-none"
+            >
+              {{ displayCount }}
+            </Badge>
+          </template>
+        </TitleBlock>
+        <div v-else class="detail-table-heading-row detail-table-grid detail-relation-grid detail-section-inset items-center">
           <div class="flex min-w-0 items-center gap-2">
             <h2 class="detail-field-section__heading shrink-0 whitespace-nowrap">{{ schema.title }}</h2>
             <Badge

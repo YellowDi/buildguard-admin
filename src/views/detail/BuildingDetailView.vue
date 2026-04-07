@@ -511,7 +511,7 @@ async function loadInspectionCategoriesList() {
 
       <DetailFieldsSkeleton v-if="loading" :sections="1" :rows-per-section="11" />
 
-      <DetailFieldSections v-else-if="building" :sections="fieldSections" />
+      <DetailFieldSections v-else-if="building" :sections="fieldSections" use-title-block />
 
       <!-- 检测分类得分雷达图 -->
       <div v-if="!loading && building" class="mt-6">
@@ -537,7 +537,7 @@ async function loadInspectionCategoriesList() {
           <AlertDescription>{{ recordsErrorMessage }}</AlertDescription>
         </Alert>
 
-        <DetailRelationModule :schema="inspectionModule">
+        <DetailRelationModule :schema="inspectionModule" use-title-block>
           <template #record-action-cell="{ row }">
             <TooltipWrap content="查看工单详情" :disabled="!row.uuid">
               <Button
@@ -554,7 +554,7 @@ async function loadInspectionCategoriesList() {
           </template>
         </DetailRelationModule>
 
-        <DetailRelationModule :schema="repairModule">
+        <DetailRelationModule :schema="repairModule" use-title-block>
           <template #record-action-cell="{ row }">
             <TooltipWrap content="查看工单详情" :disabled="!row.uuid">
               <Button

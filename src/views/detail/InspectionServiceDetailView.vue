@@ -8,6 +8,7 @@ import BuildingDetailSheet from "@/components/detail/BuildingDetailSheet.vue"
 import DetailFieldSections from "@/components/detail/DetailFieldSections.vue"
 import InspectionBuildingCards from "@/components/detail/InspectionBuildingCards.vue"
 import LinkedEntityDetailSheet from "@/components/detail/LinkedEntityDetailSheet.vue"
+import TitleBlock from "@/components/layout/TitleBlock.vue"
 import FormDatePicker from "@/components/form/FormDatePicker.vue"
 import DetailFieldsSkeleton from "@/components/loading/DetailFieldsSkeleton.vue"
 import DetailRelationSkeleton from "@/components/loading/DetailRelationSkeleton.vue"
@@ -802,20 +803,27 @@ function readFileAsDataUrl(file: File) {
       </template>
 
       <div v-else-if="detail" class="space-y-5 pb-5">
-        <DetailFieldSections :sections="fieldSections" />
+        <DetailFieldSections :sections="fieldSections" use-title-block />
 
         <div class="h-px bg-border/80" />
 
         <section class="detail-field-section detail-field-section--after-separator">
-          <div class="detail-section-heading-row detail-section-inset flex items-center gap-2">
-            <h2 class="detail-field-section__heading">服务建筑</h2>
-            <Badge
-              variant="secondary"
-              class="min-w-6 justify-center rounded-md px-1.5 py-0.5 text-[12px] font-medium leading-none"
-            >
-              {{ buildingCount }}
-            </Badge>
-          </div>
+          <TitleBlock
+            variant="section"
+            title="服务建筑"
+            :sticky="true"
+            sticky-top="var(--detail-layout-sticky-offset, 0px)"
+            class="detail-section-inset pt-4 pb-1"
+          >
+            <template #append>
+              <Badge
+                variant="secondary"
+                class="min-w-6 justify-center rounded-md px-1.5 py-0.5 text-[12px] font-medium leading-none"
+              >
+                {{ buildingCount }}
+              </Badge>
+            </template>
+          </TitleBlock>
 
           <div v-if="buildingGroups.length === 0" class="detail-section-inset py-6 text-sm text-muted-foreground">
             当前检测服务还没有配置关联建筑。

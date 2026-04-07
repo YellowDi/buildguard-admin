@@ -390,7 +390,7 @@ function getRemainingDaysHint(value: unknown) {
 
       <DetailFieldsSkeleton v-if="loading" :sections="2" :rows-per-section="5" />
 
-      <DetailFieldSections v-else-if="detail" :sections="fieldSections" />
+      <DetailFieldSections v-else-if="detail" :sections="fieldSections" use-title-block />
     </template>
   </DetailLayout>
 
