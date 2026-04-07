@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import ModuleTitle from "@/components/layout/ModuleTitle.vue"
+import TitleBlock from "@/components/layout/TitleBlock.vue"
 
 defineProps<{
   title: string
@@ -12,7 +12,7 @@ defineProps<{
 <template>
   <section>
     <template v-if="showHeader !== false">
-      <ModuleTitle
+      <TitleBlock
         variant="section"
         :title="title"
         :description="description"
