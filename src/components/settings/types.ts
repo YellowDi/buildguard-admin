@@ -36,11 +36,22 @@ export type SettingsState = {
   displayName: string
   supportEmail: string
   startupView: string
+  enterKeyStartsNewLine: boolean
+  language: string
+  numberFormat: string
+  bidirectionalTextControl: boolean
+  weekStartsOnMonday: boolean
+  dateFormat: string
+  autoTimezoneByLocation: boolean
   timezone: string
   themeMode: ThemeMode
   compactTables: boolean
   reducedMotion: boolean
   showCommandHints: boolean
+  usageDiagnostics: boolean
+  cookiePreference: string
+  viewHistoryVisible: boolean
+  profileDiscoverable: boolean
   memberDefaultRole: string
   inviteApprovalRequired: boolean
   allowExternalMembers: boolean

@@ -27,6 +27,7 @@ import SettingsInspectionHub from "@/components/settings/SettingsInspectionHub.v
 import SettingsMePage from "@/components/settings/SettingsMePage.vue"
 import SettingsMenusTable from "@/components/settings/SettingsMenusTable.vue"
 import SettingsMembersTable from "@/components/settings/SettingsMembersTable.vue"
+import SettingsPreferencesPage from "@/components/settings/SettingsPreferencesPage.vue"
 import SettingsRightPanelLayout from "@/components/settings/SettingsRightPanelLayout.vue"
 import SettingsSection from "@/components/settings/SettingsSection.vue"
 import type {
@@ -95,6 +96,12 @@ function getBooleanValue(key: keyof SettingsState) {
     v-else-if="props.category.key === 'inspection-items'"
     :page-title="props.category.pageTitle ?? props.category.label"
     :page-description="props.category.pageDescription ?? props.category.description"
+  />
+  <SettingsPreferencesPage
+    v-else-if="props.category.key === 'preferences'"
+    :category="props.category"
+    :state="props.state"
+    @action="emit('action', $event)"
   />
 
   <SettingsRightPanelLayout
