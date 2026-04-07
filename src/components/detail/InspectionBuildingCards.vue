@@ -37,6 +37,7 @@ type InspectionBuildingCardBuilding = {
   key: string
   buildName: string
   summary: string
+  score?: string
   groups: InspectionBuildingCardGroup[]
 }
 
@@ -153,6 +154,13 @@ function buildInspectionAccordionKey(buildingKey: string, groupKey: string, item
                   <div class="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">
                     {{ building.buildName }}
                   </div>
+                  <Badge
+                    v-if="building.score"
+                    variant="secondary"
+                    class="shrink-0 rounded-md border border-[#BFD3FF] bg-[#EEF4FF] px-2 py-0.5 text-[12px] font-semibold text-[#2B67F6]"
+                  >
+                    {{ building.score }}
+                  </Badge>
                   <div class="shrink-0 truncate text-xs text-muted-foreground">
                     {{ building.summary }}
                   </div>

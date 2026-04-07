@@ -490,6 +490,18 @@ function toMemberText(value: unknown, fallback = "") {
   return fallback
 }
 
+function formatBuildScore(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return `建筑分数 ${value}`
+  }
+
+  if (typeof value === "string" && value.trim()) {
+    return `建筑分数 ${value.trim()}`
+  }
+
+  return ""
+}
+
 function buildInspectionWorkOrderCards(builds: WorkOrderBuildInfo[] | undefined) {
   if (!Array.isArray(builds) || !builds.length) {
     return []
@@ -532,6 +544,7 @@ function buildInspectionWorkOrderCards(builds: WorkOrderBuildInfo[] | undefined)
     return {
       key: toText(build.BuildUuid, `work-order-build-${buildIndex + 1}`),
       buildName: toText(build.BuildName, `建筑 ${buildIndex + 1}`),
+      score: formatBuildScore(build.Score),
       summary: `${inspectionItems.length} 个检测项`,
       groups: Array.from(groupMap.values()),
     }
