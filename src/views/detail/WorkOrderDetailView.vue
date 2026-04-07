@@ -9,7 +9,7 @@ import DetailFieldsSkeleton from "@/components/loading/DetailFieldsSkeleton.vue"
 import DetailRelationSkeleton from "@/components/loading/DetailRelationSkeleton.vue"
 import DetailFieldSections from "@/components/detail/DetailFieldSections.vue"
 import { buildRepairWorkOrderPrimarySections, buildRepairWorkOrderSecondarySections, toText as toRepairWorkOrderText } from "@/components/detail/repairWorkOrderDetailFields"
-import { buildWorkOrderPrimarySections, toText } from "@/components/detail/workOrderDetailFields"
+import { buildWorkOrderPrimarySections, buildWorkOrderSecondarySections, toText } from "@/components/detail/workOrderDetailFields"
 import type { DetailFieldSection } from "@/components/detail/types"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -138,7 +138,7 @@ const secondarySections = computed<DetailFieldSection[]>(() => {
     return buildRepairWorkOrderSecondarySections(repairWorkOrder.value)
   }
 
-  return []
+  return buildWorkOrderSecondarySections(resolvedInspectionWorkOrder.value)
 })
 
 const inspectionBuildingCards = computed(() => buildInspectionWorkOrderCards(resolvedInspectionWorkOrder.value?.Builds))
