@@ -27,6 +27,7 @@ export type WorkOrderListItem = {
   Builds?: WorkOrderBuildInfo[]
   Deadline?: string
   Executor?: string
+  Executors?: string[]
   Status?: number
   Score?: number
   Result?: number
@@ -467,6 +468,7 @@ function normalizeWorkOrderListItem(value: unknown): WorkOrderListItem {
     Builds: normalizeWorkOrderBuildInfos(record.Builds),
     Deadline: getFirstText(record, ["Deadline", "deadline", "ExpireAt", "expireAt", "DueAt", "dueAt"]),
     Executor: getFirstText(record, ["Executor", "executor", "PrincipalName", "principalName", "Assignee", "assignee"]),
+    Executors: getFirstTextArray(record, ["Executors", "executors"]),
     Status: getFirstNumber(record, ["Status", "status", "WorkOrderStatus", "workOrderStatus"]),
     Score: getFirstNumber(record, ["Score", "score", "TotalScore", "totalScore"]),
     Result: getFirstNumber(record, ["Result", "result", "WorkOrderResult", "workOrderResult"]),
@@ -699,6 +701,26 @@ function getFirstText(record: Record<string, unknown>, keys: string[]) {
 
     if (typeof value === "number" && Number.isFinite(value)) {
       return String(value)
+    }
+  }
+
+  return undefined
+}
+
+function getFirstTextArray(record: Record<string, unknown>, keys: string[]) {
+  for (const key of keys) {
+    const value = record[key]
+
+    if (!Array.isArray(value)) {
+      continue
+    }
+
+    const normalized = value
+      .map(item => getOptionalString(item))
+      .filter((item): item is string => Boolean(item))
+
+    if (normalized.length) {
+      return normalized
     }
   }
 

@@ -34,7 +34,7 @@ export function buildWorkOrderPrimarySections(
           value: toText(workOrder.PlanName, "-"),
           linkAction: options.onOpenPlan && toText(workOrder.PlanUuid, "") ? { onClick: options.onOpenPlan } : undefined,
         },
-        { key: "executor", label: "执行人", value: toText(workOrder.Executor, "-") },
+        { key: "executor", label: "执行人", value: formatExecutors(workOrder.Executors, workOrder.Executor) },
         { key: "status", label: "工单状态", value: formatWorkOrderStatus(workOrder.Status) },
         { key: "deadline", label: "截止时间", value: formatDateOnly(toText(workOrder.Deadline, "-")) },
         { key: "created-at", label: "创建时间", value: toText(workOrder.CreatedAt, "-") },
@@ -121,6 +121,20 @@ function formatDateOnly(value: string) {
 
   const [datePart] = normalized.split(/[ T]/)
   return datePart || normalized
+}
+
+function formatExecutors(value: unknown, fallback?: unknown) {
+  if (Array.isArray(value)) {
+    const normalized = value
+      .map(item => toText(item))
+      .filter(Boolean)
+
+    if (normalized.length) {
+      return normalized.join("、")
+    }
+  }
+
+  return toText(fallback, "-")
 }
 
 function toNumber(value: unknown) {
