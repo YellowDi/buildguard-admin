@@ -3719,7 +3719,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
       <div v-else class="space-y-5 pb-5">
         <CustomerDetailContentLoading v-if="loading" variant="basic-info-primary" />
         <template v-else-if="customer">
-          <DetailFieldSections :sections="fieldSections" />
+          <DetailFieldSections :sections="fieldSections" use-title-block />
         </template>
       </div>
     </template>
@@ -3735,7 +3735,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
           <CustomerDetailContentLoading v-if="loading || relationsLoading" variant="basic-info-secondary" />
 
           <template v-else-if="customer">
-            <DetailAccordionModule :schema="parkBuildingAccordion">
+            <DetailAccordionModule :schema="parkBuildingAccordion" use-title-block>
               <template #item-actions="{ item }">
                 <div class="flex items-center gap-2">
                   <Button

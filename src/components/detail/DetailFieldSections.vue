@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue"
 
+import TitleBlock from "@/components/layout/TitleBlock.vue"
 import TableStatusChip from "@/components/table-page/TableStatusChip.vue"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
@@ -16,11 +17,13 @@ const props = withDefaults(defineProps<{
   labelWidthDesktop?: string
   compact?: boolean
   showSectionTitles?: boolean
+  useTitleBlock?: boolean
 }>(), {
   labelWidthMobile: "6.5rem",
   labelWidthDesktop: "180px",
   compact: false,
   showSectionTitles: true,
+  useTitleBlock: false,
 })
 
 const sectionStyle = computed(() => ({
@@ -54,7 +57,14 @@ function isStatusValue(value: DetailFieldValue): value is DetailStatusValue {
   <div class="detail-field-sections" :style="sectionStyle">
     <template v-for="(section, sectionIndex) in sections" :key="section.key">
       <section :class="cn('detail-field-section', !props.compact && sectionIndex > 0 && 'detail-field-section--after-separator', props.compact && 'pb-0! pt-0!')">
-        <div v-if="props.showSectionTitles && section.title" class="detail-section-heading-row detail-section-inset">
+        <TitleBlock
+          v-if="props.showSectionTitles && section.title && props.useTitleBlock"
+          variant="section"
+          :title="section.title"
+          :show-separator="true"
+          class="detail-section-inset py-1"
+        />
+        <div v-else-if="props.showSectionTitles && section.title" class="detail-section-heading-row detail-section-inset">
           <h2 class="detail-field-section__heading">{{ section.title }}</h2>
         </div>
         <div>
@@ -172,7 +182,10 @@ function isStatusValue(value: DetailFieldValue): value is DetailStatusValue {
         </div>
       </section>
 
-      <Separator v-if="!props.compact && sectionIndex < sections.length - 1" class="bg-border/80" />
+      <Separator
+        v-if="!props.compact && !props.useTitleBlock && sectionIndex < sections.length - 1"
+        class="bg-border/80"
+      />
     </template>
   </div>
 </template>

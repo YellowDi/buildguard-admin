@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from "vue"
+import { computed, useSlots } from "vue"
 
 import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
@@ -24,12 +24,14 @@ const props = withDefaults(defineProps<{
   stickyClass: "",
 })
 
+const slots = useSlots()
 const showDescription = computed(() => {
   const text = props.description
   return typeof text === "string" && text.trim().length > 0
 })
 
 const isSection = computed(() => props.variant === "section")
+const hasAppend = computed(() => Boolean(slots.append))
 
 const headingClass = computed(() =>
   isSection.value
@@ -55,8 +57,9 @@ const descriptionClass = computed(() => {
   >
     <header class="flex flex-col gap-1.5">
       <div class="min-w-0">
-        <component :is="isSection ? 'h3' : 'h2'" :class="headingClass">
+        <component :is="isSection ? 'h3' : 'h2'" :class="['flex min-w-0 items-center gap-2', headingClass]">
           {{ title }}
+          <slot v-if="hasAppend" name="append" />
         </component>
         <p
           v-if="showDescription"

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, useSlots } from "vue"
 
+import TitleBlock from "@/components/layout/TitleBlock.vue"
 import { Badge } from "@/components/ui/badge"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
@@ -33,6 +34,7 @@ const props = withDefaults(defineProps<{
     columns?: AccordionColumn[]
     items: AccordionItem[]
   }
+  useTitleBlock?: boolean
 }>(), {
   schema: () => ({
     key: "accordion-module",
@@ -42,6 +44,7 @@ const props = withDefaults(defineProps<{
     columns: [],
     items: [],
   }),
+  useTitleBlock: false,
 })
 
 const slots = useSlots()
@@ -51,7 +54,23 @@ const hasExpandedContent = computed(() => Boolean(slots["expanded-content"]))
 
 <template>
   <section class="detail-accordion-module min-w-0">
-    <div class="detail-section-heading-row detail-section-inset flex items-center gap-2">
+    <TitleBlock
+      v-if="props.useTitleBlock"
+      variant="section"
+      :title="schema.title"
+      :show-separator="true"
+      class="detail-section-inset py-1"
+    >
+      <template #append>
+        <Badge
+          variant="secondary"
+          class="min-w-6 justify-center rounded-md px-1.5 py-0.5 text-[12px] font-medium leading-none"
+        >
+          {{ displayCount }}
+        </Badge>
+      </template>
+    </TitleBlock>
+    <div v-else class="detail-section-heading-row detail-section-inset flex items-center gap-2">
       <h2 class="detail-field-section__heading">{{ schema.title }}</h2>
       <Badge
         variant="secondary"
