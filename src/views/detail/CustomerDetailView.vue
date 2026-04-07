@@ -3786,10 +3786,10 @@ function toDisplayText(value: unknown, fallback = "未填写") {
             </DetailAccordionModule>
           </template>
 
-          <div v-if="customer" class="my-5 h-px bg-border/80" />
-
           <TooltipProvider v-if="customer">
-            <div class="w-full min-w-0 space-y-5">
+            <div class="w-full min-w-0">
+              <div class="h-px bg-border/80" />
+
               <DetailRelationModule :schema="maintenanceModule" use-title-block>
                 <template #actions-header>
                   <Button variant="outline" size="sm" class="h-8 px-3 text-sm" @click="showInspectionWorkOrdersTab">
