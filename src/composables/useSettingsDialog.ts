@@ -44,6 +44,18 @@ const state = reactive<SettingsState>({
   digestFrequency: "daily",
   twoFactorEnabled: true,
   sessionTimeout: "30",
+  appRelease: {
+    hasUpdate: true,
+    versionName: "1.0.1",
+    versionCode: 102,
+    title: "发现新版本",
+    description: "1. 修复问题\n2. 优化体验",
+    forceUpdate: false,
+    downloadUrl: "https://example.com/app.apk",
+    appStoreUrl: "https://apps.apple.com/app/idxxxx",
+    packageType: "apk",
+    platform: "android",
+  },
   // Me page fields
   preferredName: currentUser.name,
   userId: "cdfac05d-1fde-4501-a2c5-66ab2d360bb2",
@@ -424,6 +436,16 @@ const categories = computed<SettingsCategory[]>(() => [
     pageTitle: "系统",
     pageDescription:
       "在这里修改站点名称和标志图片，登录页、左侧菜单和浏览器标签页标题会随之更新。设置保存在当前使用的浏览器中，换电脑或清除浏览器数据后需重新设置。",
+    sections: [],
+  },
+  {
+    key: "apps",
+    group: "admin",
+    label: "应用",
+    description: "维护移动端版本号、更新日志和下载地址。",
+    icon: "ri-smartphone-line",
+    pageTitle: "应用",
+    pageDescription: "维护 Android 与 iOS 用户端版本信息，后续可直接对接更新接口。",
     sections: [],
   },
   {

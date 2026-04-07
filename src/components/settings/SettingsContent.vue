@@ -24,6 +24,7 @@ import { Switch } from "@/components/ui/switch"
 import SettingsBusinessPresetsHub from "@/components/settings/SettingsBusinessPresetsHub.vue"
 import SettingsGlobalBranding from "@/components/settings/SettingsGlobalBranding.vue"
 import SettingsInspectionHub from "@/components/settings/SettingsInspectionHub.vue"
+import SettingsAppsPage from "@/components/settings/SettingsAppsPage.vue"
 import SettingsMePage from "@/components/settings/SettingsMePage.vue"
 import SettingsMenusTable from "@/components/settings/SettingsMenusTable.vue"
 import SettingsMembersTable from "@/components/settings/SettingsMembersTable.vue"
@@ -96,6 +97,10 @@ function getBooleanValue(key: keyof SettingsState) {
     v-else-if="props.category.key === 'inspection-items'"
     :page-title="props.category.pageTitle ?? props.category.label"
     :page-description="props.category.pageDescription ?? props.category.description"
+  />
+  <SettingsAppsPage
+    v-else-if="props.category.key === 'apps'"
+    :state="props.state"
   />
   <SettingsPreferencesPage
     v-else-if="props.category.key === 'preferences'"

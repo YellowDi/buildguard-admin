@@ -11,7 +11,7 @@ const props = defineProps<{
 <template>
   <!-- 与 TablePageShell 一致，供 TablePageTable 吸顶偏移（--table-page-sticky-top）继承 -->
   <div class="flex min-h-0 flex-1 flex-col" style="--table-page-sticky-top: -1rem;">
-    <div class="shrink-0 px-3 pt-4 pb-3 sm:px-4">
+    <div class="sticky top-0 z-[6] shrink-0 bg-background px-3 pt-4 pb-3 sm:px-4">
       <template v-if="props.variant === 'with-tabs'">
         <div class="flex flex-col gap-3">
           <TitleBlock
