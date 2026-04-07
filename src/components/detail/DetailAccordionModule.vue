@@ -60,7 +60,7 @@ const hasExpandedContent = computed(() => Boolean(slots["expanded-content"]))
       :title="schema.title"
       :sticky="true"
       sticky-top="var(--detail-layout-sticky-offset, 0px)"
-      class="detail-section-inset py-1"
+      class="detail-section-inset pt-4 pb-1"
     >
       <template #append>
         <Badge
