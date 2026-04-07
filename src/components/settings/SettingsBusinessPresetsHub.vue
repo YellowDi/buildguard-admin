@@ -215,7 +215,7 @@ watch(activeTabCode, async (code, previousCode) => {
     return
   }
 
-  await loadEntries(code)
+  await loadEntries()
 })
 
 onMounted(async () => {

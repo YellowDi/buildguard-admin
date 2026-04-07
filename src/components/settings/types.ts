@@ -85,6 +85,14 @@ export type AppReleaseDraft = {
   platform: AppReleasePlatform
 }
 
+export type BooleanSettingsKey = {
+  [K in keyof SettingsState]: SettingsState[K] extends boolean ? K : never
+}[keyof SettingsState]
+
+export type StringSettingsKey = {
+  [K in keyof SettingsState]: SettingsState[K] extends string ? K : never
+}[keyof SettingsState]
+
 type BaseSettingsItem = {
   key: string
   label: string
@@ -93,18 +101,18 @@ type BaseSettingsItem = {
 
 export type SettingsToggleItem = BaseSettingsItem & {
   type: "toggle"
-  modelKey: keyof SettingsState
+  modelKey: BooleanSettingsKey
 }
 
 export type SettingsInputItem = BaseSettingsItem & {
   type: "input"
-  modelKey: keyof SettingsState
+  modelKey: StringSettingsKey
   placeholder?: string
 }
 
 export type SettingsSelectItem = BaseSettingsItem & {
   type: "select"
-  modelKey: keyof SettingsState
+  modelKey: StringSettingsKey
   options: Array<{ label: string, value: string }>
 }
 

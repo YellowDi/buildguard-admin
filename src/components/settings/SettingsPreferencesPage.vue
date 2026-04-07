@@ -18,9 +18,14 @@ import {
 import { Switch } from "@/components/ui/switch"
 import { cn } from "@/lib/utils"
 import type {
+  BooleanSettingsKey,
   SettingsActionKey,
   SettingsCategory,
+  SettingsInputItem,
+  SettingsSelectItem,
   SettingsState,
+  StringSettingsKey,
+  SettingsToggleItem,
 } from "@/components/settings/types"
 
 const props = defineProps<{
@@ -32,12 +37,20 @@ const emit = defineEmits<{
   action: [actionKey: SettingsActionKey]
 }>()
 
-function updateBoolean(key: keyof SettingsState, value: boolean) {
-  (props.state as Record<string, boolean | string>)[key] = value
+function updateBoolean(key: BooleanSettingsKey, value: boolean) {
+  props.state[key] = value
 }
 
-function updateString(key: keyof SettingsState, value: string) {
-  (props.state as Record<string, boolean | string>)[key] = value
+function updateString<K extends StringSettingsKey>(key: K, value: SettingsState[K]) {
+  props.state[key] = value
+}
+
+function updateToggleItem(item: SettingsToggleItem, value: boolean) {
+  updateBoolean(item.modelKey, value)
+}
+
+function updateTextItem(item: SettingsInputItem | SettingsSelectItem, value: string) {
+  updateString(item.modelKey, value as SettingsState[typeof item.modelKey])
 }
 
 function getStringValue(key: keyof SettingsState) {
@@ -73,6 +86,7 @@ function isItemDisabled(key: string) {
           v-for="section in props.category.sections"
           :key="section.key"
           :title="section.title"
+          :description="section.description"
           :tone="section.tone"
           :show-header="true"
         >
@@ -98,7 +112,7 @@ function isItemDisabled(key: string) {
                     v-if="item.type === 'toggle'"
                     :checked="getBooleanValue(item.modelKey)"
                     :disabled="isItemDisabled(item.key)"
-                    @update:checked="updateBoolean(item.modelKey, Boolean($event))"
+                    @update:checked="updateToggleItem(item, Boolean($event))"
                   />
 
                   <Input
@@ -107,13 +121,13 @@ function isItemDisabled(key: string) {
                     :placeholder="item.placeholder"
                     :disabled="isItemDisabled(item.key)"
                     class="h-9 w-full min-w-0 rounded-md bg-background"
-                    @update:model-value="updateString(item.modelKey, String($event))"
+                    @update:model-value="updateTextItem(item, String($event))"
                   />
 
                   <Select
                     v-else-if="item.type === 'select'"
                     :model-value="getStringValue(item.modelKey)"
-                    @update:model-value="updateString(item.modelKey, String($event))"
+                    @update:model-value="updateTextItem(item, String($event))"
                   >
                     <SelectTrigger
                       :disabled="isItemDisabled(item.key)"
