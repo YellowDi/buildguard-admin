@@ -513,16 +513,19 @@ async function loadInspectionCategoriesList() {
 
       <DetailFieldSections v-else-if="building" :sections="fieldSections" use-title-block />
 
-      <!-- 检测分类得分雷达图 -->
-      <div v-if="!loading && building" class="mt-6">
-        <CustomerInspectionCategoryRadar
-          :labels="inspectionCategoryRadarLabels"
-          :values="inspectionCategoryRadarValues"
-          :loading="inspectionCategoryRadarLoading"
-          :has-buildings="true"
-          empty-text="暂无检测项分类数据"
-        />
-      </div>
+      <template v-if="!loading && building">
+        <div class="h-px bg-border/80" />
+
+        <div>
+          <CustomerInspectionCategoryRadar
+            :labels="inspectionCategoryRadarLabels"
+            :values="inspectionCategoryRadarValues"
+            :loading="inspectionCategoryRadarLoading"
+            :has-buildings="true"
+            empty-text="暂无检测项分类数据"
+          />
+        </div>
+      </template>
     </template>
 
     <template #secondary>
@@ -531,7 +534,7 @@ async function loadInspectionCategoriesList() {
         <DetailRelationSkeleton :rows-per-group="3" />
       </div>
 
-      <div v-else-if="building" class="space-y-5 pb-5">
+      <div v-else-if="building" class="pb-5">
         <Alert v-if="recordsErrorMessage" variant="destructive" class="mb-5">
           <AlertTitle>建筑关联记录接口加载失败</AlertTitle>
           <AlertDescription>{{ recordsErrorMessage }}</AlertDescription>
@@ -553,6 +556,8 @@ async function loadInspectionCategoriesList() {
             </TooltipWrap>
           </template>
         </DetailRelationModule>
+
+        <div class="h-px bg-border/80" />
 
         <DetailRelationModule :schema="repairModule" use-title-block>
           <template #record-action-cell="{ row }">

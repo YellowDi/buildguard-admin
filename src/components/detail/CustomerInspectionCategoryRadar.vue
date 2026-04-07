@@ -232,7 +232,7 @@ function scorePillClass(score: number) {
 
 <template>
   <div class="w-full min-w-0">
-    <div class="detail-section-heading-row detail-section-inset">
+    <div class="detail-section-heading-row detail-section-inset pt-4 pb-1">
       <h2 class="detail-field-section__heading">
         建筑平均分
       </h2>
