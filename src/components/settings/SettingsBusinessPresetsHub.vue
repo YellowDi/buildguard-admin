@@ -8,6 +8,16 @@ import SettingsToolbarRow from "@/components/settings/SettingsToolbarRow.vue"
 import SettingsToolbarRefreshSlot from "@/components/settings/SettingsToolbarRefreshSlot.vue"
 import SettingsToolbarSearchInput from "@/components/settings/SettingsToolbarSearchInput.vue"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -17,6 +27,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { SETTINGS_TABLE_PAGE_CLASS } from "@/components/settings/settingsTablePageClass"
@@ -25,16 +42,22 @@ import type { TableColumn, TablePageEmptyState } from "@/components/table-page/t
 import {
   createDictEntry,
   createDictType,
+  deleteDictEntry,
+  deleteDictType,
+  fetchDictEntryDetail,
   fetchDictEntries,
+  fetchDictTypeDetail,
   fetchDictTypes,
   type DictEntryItem,
   type DictTypeItem,
+  updateDictEntry,
+  updateDictType,
 } from "@/lib/business-presets-api"
 
 type DictEntryDisplayRow = {
   id: number
   uuid: string
-  code: string
+  parentName: string
   name: string
   remark: string
   sort: string
@@ -61,7 +84,11 @@ const activeTabCode = ref("")
 const currentEntries = ref<DictEntryItem[]>([])
 
 const createTypeOpen = ref(false)
+const editTypeOpen = ref(false)
 const createItemOpen = ref(false)
+const editItemOpen = ref(false)
+const deleteTypeOpen = ref(false)
+const deleteItemOpen = ref(false)
 
 const typeForm = ref({
   code: "",
@@ -72,9 +99,14 @@ const typeForm = ref({
 const itemForm = ref({
   code: "",
   name: "",
+  parentUuid: "",
+  parentName: "",
   sort: "",
   remark: "",
 })
+
+const editingItemUuid = ref("")
+const deletingItem = ref<DictEntryDisplayRow | null>(null)
 
 const tabs = computed(() => dictTypes.value.map(type => ({
   id: type.Code,
@@ -85,7 +117,7 @@ const activeType = computed(() => (
   dictTypes.value.find(type => type.Code === activeTabCode.value) ?? null
 ))
 
-const canCreateItem = computed(() => Boolean(activeType.value?.Code))
+const canCreateItem = computed(() => Boolean(activeType.value?.Uuid))
 
 const tableColumns: TableColumn[] = [
   {
@@ -95,6 +127,12 @@ const tableColumns: TableColumn[] = [
     emphasis: "strong",
     tone: "primary",
     cellClass: "font-medium text-foreground",
+  },
+  {
+    key: "parentName",
+    label: "父级",
+    filterType: "text",
+    tone: "default",
   },
   {
     key: "remark",
@@ -107,6 +145,13 @@ const tableColumns: TableColumn[] = [
     label: "排序",
     filterType: "text",
     tone: "default",
+  },
+  {
+    key: "actions",
+    label: "",
+    filterType: "none",
+    slot: "cell-actions",
+    cellClass: "text-right",
   },
 ]
 
@@ -124,7 +169,7 @@ const filteredEntries = computed(() => {
   const displayRows = rows.map<DictEntryDisplayRow>(row => ({
     id: row.Id,
     uuid: row.Uuid,
-    code: row.Code,
+    parentName: row.ParentName || "-",
     name: row.Name,
     remark: row.Remark,
     sort: row.Sort === null ? "-" : String(row.Sort),
@@ -135,7 +180,7 @@ const filteredEntries = computed(() => {
   }
 
   return displayRows.filter(row => (
-    [row.name, row.remark, row.code]
+    [row.name, row.remark, row.parentName]
       .filter(Boolean)
       .some(field => field.toLowerCase().includes(query))
   ))
@@ -195,9 +240,34 @@ function openCreateTypeDialog() {
   createTypeOpen.value = true
 }
 
+async function openEditTypeDialog() {
+  const currentType = activeType.value
+
+  if (!currentType?.Uuid) {
+    toast.error("请先选择一个字典类型")
+    return
+  }
+
+  try {
+    const detail = await fetchDictTypeDetail({
+      Uuid: currentType.Uuid,
+    })
+
+    typeForm.value = {
+      code: detail.Code,
+      name: detail.Name,
+      remark: detail.Remark,
+    }
+    editTypeOpen.value = true
+  } catch (error) {
+    toast.error(resolveErrorMessage(error, "加载字典类型详情失败"))
+  }
+}
+
 function openCreateItemDialog() {
   const code = activeType.value?.Code?.trim() ?? ""
-  if (!code) {
+  const uuid = activeType.value?.Uuid?.trim() ?? ""
+  if (!uuid) {
     toast.error("请先添加并选择字典类型")
     return
   }
@@ -205,10 +275,33 @@ function openCreateItemDialog() {
   itemForm.value = {
     code,
     name: "",
+    parentUuid: "",
+    parentName: "",
     sort: "",
     remark: "",
   }
   createItemOpen.value = true
+}
+
+async function openEditItemDialog(row: DictEntryDisplayRow) {
+  try {
+    const detail = await fetchDictEntryDetail({
+      Uuid: row.uuid,
+    })
+
+    editingItemUuid.value = detail.Uuid
+    itemForm.value = {
+      code: activeType.value?.Code ?? "",
+      name: detail.Name,
+      parentUuid: detail.ParentUuid,
+      parentName: detail.ParentName,
+      sort: detail.Sort === null ? "" : String(detail.Sort),
+      remark: detail.Remark,
+    }
+    editItemOpen.value = true
+  } catch (error) {
+    toast.error(resolveErrorMessage(error, "加载字典条目详情失败"))
+  }
 }
 
 async function refreshData() {
@@ -239,29 +332,131 @@ async function submitCreateType() {
   }
 }
 
+async function submitEditType() {
+  const currentType = activeType.value
+  const code = typeForm.value.code.trim()
+  const name = typeForm.value.name.trim()
+  const remark = typeForm.value.remark.trim()
+
+  if (!currentType?.Uuid) {
+    toast.error("当前字典类型缺少标识，无法编辑")
+    return
+  }
+
+  if (!code || !name) {
+    toast.error("请填写类型代码和类型名称")
+    return
+  }
+
+  try {
+    await updateDictType({
+      Uuid: currentType.Uuid,
+      Code: code,
+      Name: name,
+      Remark: remark,
+    })
+    editTypeOpen.value = false
+    await loadTypes(code)
+    toast.success("已更新字典类型")
+  } catch (error) {
+    toast.error(resolveErrorMessage(error, "更新字典类型失败"))
+  }
+}
+
 async function submitCreateItem() {
-  const code = itemForm.value.code.trim()
   const name = itemForm.value.name.trim()
   const remark = itemForm.value.remark.trim()
   const sort = itemForm.value.sort.trim()
+  const dictTypeUuid = activeType.value?.Uuid?.trim() ?? ""
 
-  if (!code || !name) {
+  if (!dictTypeUuid || !name) {
     toast.error("请填写条目名称")
     return
   }
 
   try {
     await createDictEntry({
-      Code: code,
+      DictTypeUuid: dictTypeUuid,
       Name: name,
+      ParentUuid: itemForm.value.parentUuid.trim(),
       Remark: remark,
       Sort: sort ? Number(sort) : undefined,
     })
     createItemOpen.value = false
-    await loadEntries(code)
+    await loadEntries()
     toast.success("已添加字典条目")
   } catch (error) {
     toast.error(resolveErrorMessage(error, "添加字典条目失败"))
+  }
+}
+
+async function submitEditItem() {
+  const dictTypeUuid = activeType.value?.Uuid?.trim() ?? ""
+  const name = itemForm.value.name.trim()
+  const remark = itemForm.value.remark.trim()
+  const parentUuid = itemForm.value.parentUuid.trim()
+  const sort = itemForm.value.sort.trim()
+
+  if (!editingItemUuid.value || !dictTypeUuid || !name) {
+    toast.error("请填写条目名称")
+    return
+  }
+
+  try {
+    await updateDictEntry({
+      Uuid: editingItemUuid.value,
+      DictTypeUuid: dictTypeUuid,
+      Name: name,
+      ParentUuid: parentUuid,
+      Remark: remark,
+      Sort: sort ? Number(sort) : undefined,
+    })
+    editItemOpen.value = false
+    editingItemUuid.value = ""
+    await loadEntries()
+    toast.success("已更新字典条目")
+  } catch (error) {
+    toast.error(resolveErrorMessage(error, "更新字典条目失败"))
+  }
+}
+
+async function confirmDeleteItem() {
+  if (!deletingItem.value?.uuid) {
+    toast.error("当前条目缺少标识，无法删除")
+    return
+  }
+
+  try {
+    await deleteDictEntry({
+      Uuid: deletingItem.value.uuid,
+    })
+    deleteItemOpen.value = false
+    deletingItem.value = null
+    await loadEntries()
+    toast.success("已删除字典条目")
+  } catch (error) {
+    toast.error(resolveErrorMessage(error, "删除字典条目失败"))
+  }
+}
+
+async function confirmDeleteType() {
+  const currentType = activeType.value
+
+  if (!currentType?.Uuid) {
+    toast.error("当前字典类型缺少标识，无法删除")
+    return
+  }
+
+  try {
+    await deleteDictType({
+      Uuid: currentType.Uuid,
+      Code: currentType.Code,
+    })
+    deleteTypeOpen.value = false
+    await loadTypes()
+    toast.success("已删除字典类型")
+  } catch (error) {
+    toast.error(resolveErrorMessage(error, "删除字典类型失败"))
   }
 }
 
@@ -277,7 +472,7 @@ async function loadTypes(preferredCode?: string) {
     activeTabCode.value = nextCode
 
     if (!changed && nextCode) {
-      await loadEntries(nextCode)
+      await loadEntries()
       return
     }
 
@@ -294,8 +489,10 @@ async function loadTypes(preferredCode?: string) {
   }
 }
 
-async function loadEntries(code: string) {
-  if (!code) {
+async function loadEntries() {
+  const dictTypeUuid = activeType.value?.Uuid?.trim() ?? ""
+
+  if (!dictTypeUuid) {
     currentEntries.value = []
     return
   }
@@ -303,7 +500,13 @@ async function loadEntries(code: string) {
   loading.value = true
 
   try {
-    currentEntries.value = await fetchDictEntries(code)
+    currentEntries.value = await fetchDictEntries({
+      DictTypeUuid: dictTypeUuid,
+      Name: searchQuery.value.trim(),
+      PageNum: 1,
+      PageSize: 200,
+      ParentUuid: "",
+    })
   } catch (error) {
     currentEntries.value = []
     toast.error(resolveErrorMessage(error, "加载字典条目失败"))
@@ -385,14 +588,42 @@ defineExpose<ExposedActions>({
             </Button>
           </SettingsToolbarRefreshSlot>
 
-          <Button
-            variant="outline"
-            class="h-8 gap-1 rounded-md px-3 text-[14px]"
-            @click="openCreateTypeDialog"
-          >
-            <i class="ri-add-circle-line text-base" />
-            <span>添加类型</span>
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger as-child>
+              <Button
+                variant="outline"
+                class="h-8 gap-1 rounded-md px-3 text-[14px]"
+              >
+                <i class="ri-add-circle-line text-base" />
+                <span>添加类型</span>
+                <i class="ri-arrow-down-s-line text-base" />
+              </Button>
+            </DropdownMenuTrigger>
+
+            <DropdownMenuContent align="end" class="w-44 rounded-xl p-1.5">
+              <DropdownMenuItem class="rounded-lg px-2.5 py-2" @select="openCreateTypeDialog">
+                <i class="ri-add-line text-base" />
+                <span>新增类型</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator class="mx-0 my-1 bg-border" />
+              <DropdownMenuItem
+                class="rounded-lg px-2.5 py-2"
+                :disabled="!activeType"
+                @select="openEditTypeDialog"
+              >
+                <i class="ri-edit-line text-base" />
+                <span>编辑当前类型</span>
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                class="rounded-lg px-2.5 py-2 text-destructive focus:text-destructive"
+                :disabled="!activeType"
+                @select="deleteTypeOpen = true"
+              >
+                <i class="ri-delete-bin-line text-base" />
+                <span>删除当前类型</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           <Button
             class="h-8 gap-1 rounded-md px-3 text-[14px]"
@@ -427,12 +658,35 @@ defineExpose<ExposedActions>({
         :end-spacer="false"
         :show-index-checkbox="false"
         :edge-gutter="false"
-        :show-row-action-icons="false"
+        :show-row-action-icons="true"
         :columns="tableColumns"
         :rows="filteredEntries"
         :table-class="SETTINGS_TABLE_PAGE_CLASS"
         :empty-state="emptyState"
-      />
+      >
+        <template #cell-actions="{ row: rawRow }">
+          <div class="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              class="h-8 gap-1 rounded-md px-2.5 text-[13px]"
+              @click.stop="openEditItemDialog(rawRow as DictEntryDisplayRow)"
+            >
+              <i class="ri-edit-line text-base" />
+              <span>编辑</span>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              class="h-8 gap-1 rounded-md px-2.5 text-[13px] text-destructive hover:text-destructive"
+              @click.stop="deletingItem = rawRow as DictEntryDisplayRow; deleteItemOpen = true"
+            >
+              <i class="ri-delete-bin-line text-base" />
+              <span>删除</span>
+            </Button>
+          </div>
+        </template>
+      </TablePageTable>
     </section>
 
     <Dialog :open="createTypeOpen" @update:open="createTypeOpen = $event">
@@ -485,6 +739,56 @@ defineExpose<ExposedActions>({
       </DialogContent>
     </Dialog>
 
+    <Dialog :open="editTypeOpen" @update:open="editTypeOpen = $event">
+      <DialogContent class="sm:max-w-[520px]">
+        <DialogHeader>
+          <DialogTitle>编辑字典类型</DialogTitle>
+          <DialogDescription>
+            当前正在编辑分页 {{ activeType?.Name || activeType?.Code || "-" }} 的类型信息。
+          </DialogDescription>
+        </DialogHeader>
+
+        <form class="grid gap-4" @submit.prevent>
+          <div class="grid gap-2">
+            <label class="text-sm font-medium text-foreground" for="edit-dict-type-code">类型代码</label>
+            <Input
+              id="edit-dict-type-code"
+              v-model="typeForm.code"
+              placeholder="例如 industry_category"
+            />
+          </div>
+
+          <div class="grid gap-2">
+            <label class="text-sm font-medium text-foreground" for="edit-dict-type-name">类型名称</label>
+            <Input
+              id="edit-dict-type-name"
+              v-model="typeForm.name"
+              placeholder="例如 行业分类"
+            />
+          </div>
+
+          <div class="grid gap-2">
+            <label class="text-sm font-medium text-foreground" for="edit-dict-type-remark">备注</label>
+            <Textarea
+              id="edit-dict-type-remark"
+              v-model="typeForm.remark"
+              rows="3"
+              placeholder="可选，补充该类型的用途说明"
+            />
+          </div>
+        </form>
+
+        <DialogFooter>
+          <Button variant="outline" @click="editTypeOpen = false">
+            取消
+          </Button>
+          <Button @click="submitEditType">
+            保存修改
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
     <Dialog :open="createItemOpen" @update:open="createItemOpen = $event">
       <DialogContent class="sm:max-w-[520px]">
         <DialogHeader>
@@ -510,6 +814,15 @@ defineExpose<ExposedActions>({
               id="dict-entry-name"
               v-model="itemForm.name"
               placeholder="请输入条目名称"
+            />
+          </div>
+
+          <div class="grid gap-2">
+            <label class="text-sm font-medium text-foreground" for="dict-entry-parent-uuid">父级 UUID</label>
+            <Input
+              id="dict-entry-parent-uuid"
+              v-model="itemForm.parentUuid"
+              placeholder="可选，空表示顶级"
             />
           </div>
 
@@ -545,5 +858,109 @@ defineExpose<ExposedActions>({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    <Dialog :open="editItemOpen" @update:open="editItemOpen = $event">
+      <DialogContent class="sm:max-w-[520px]">
+        <DialogHeader>
+          <DialogTitle>编辑字典条目</DialogTitle>
+          <DialogDescription>
+            当前正在编辑 {{ itemForm.name || "字典条目" }}。
+          </DialogDescription>
+        </DialogHeader>
+
+        <form class="grid gap-4" @submit.prevent>
+          <div class="grid gap-2">
+            <label class="text-sm font-medium text-foreground" for="edit-dict-entry-code">类型代码</label>
+            <Input
+              id="edit-dict-entry-code"
+              :model-value="itemForm.code"
+              disabled
+            />
+          </div>
+
+          <div class="grid gap-2">
+            <label class="text-sm font-medium text-foreground" for="edit-dict-entry-name">条目名称</label>
+            <Input
+              id="edit-dict-entry-name"
+              v-model="itemForm.name"
+              placeholder="请输入条目名称"
+            />
+          </div>
+
+          <div class="grid gap-2">
+            <label class="text-sm font-medium text-foreground" for="edit-dict-entry-parent-uuid">父级 UUID</label>
+            <Input
+              id="edit-dict-entry-parent-uuid"
+              v-model="itemForm.parentUuid"
+              placeholder="可选，空表示顶级"
+            />
+          </div>
+
+          <div class="grid gap-2">
+            <label class="text-sm font-medium text-foreground" for="edit-dict-entry-sort">排序</label>
+            <Input
+              id="edit-dict-entry-sort"
+              v-model="itemForm.sort"
+              type="number"
+              inputmode="numeric"
+              placeholder="可选，数值越小越靠前"
+            />
+          </div>
+
+          <div class="grid gap-2">
+            <label class="text-sm font-medium text-foreground" for="edit-dict-entry-remark">备注</label>
+            <Textarea
+              id="edit-dict-entry-remark"
+              v-model="itemForm.remark"
+              rows="3"
+              placeholder="可选，补充该条目说明"
+            />
+          </div>
+        </form>
+
+        <DialogFooter>
+          <Button variant="outline" @click="editItemOpen = false">
+            取消
+          </Button>
+          <Button @click="submitEditItem">
+            保存修改
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <AlertDialog :open="deleteTypeOpen" @update:open="deleteTypeOpen = $event">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>删除当前字典类型？</AlertDialogTitle>
+          <AlertDialogDescription>
+            将删除当前分页 {{ activeType?.Name || activeType?.Code || "-" }} 对应的字典类型。该操作不可撤销，请确认后再继续。
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>取消</AlertDialogCancel>
+          <AlertDialogAction @click="confirmDeleteType">
+            删除
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
+    <AlertDialog :open="deleteItemOpen" @update:open="deleteItemOpen = $event">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>删除当前字典条目？</AlertDialogTitle>
+          <AlertDialogDescription>
+            将删除条目 {{ deletingItem?.name || "-" }}。该操作不可撤销，请确认后再继续。
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>取消</AlertDialogCancel>
+          <AlertDialogAction @click="confirmDeleteItem">
+            删除
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   </SettingsRightPanelLayout>
 </template>

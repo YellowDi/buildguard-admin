@@ -77,12 +77,14 @@ export const API_PATHS = {
   inspectionItemDelete: "/bqi/inspection/del",
   dictTypeList: "/bqi/sys/dict/type/list",
   dictTypeCreate: "/bqi/sys/dict/type/new",
+  dictTypeDetail: "/bqi/sys/dict/type/detail",
   dictTypeUpdate: "/bqi/sys/dict/type/update",
-  dictTypeDelete: "/bqi/sys/dict/type/del",
-  dictEntryList: "/bqi/sys/dict/list",
-  dictEntryCreate: "/bqi/sys/dict/new",
-  dictEntryUpdate: "/bqi/sys/dict/update",
-  dictEntryDelete: "/bqi/sys/dict/del",
+  dictTypeDelete: "/bqi/sys/dict/type/delete",
+  dictEntryList: "/bqi/sys/dict/data/list",
+  dictEntryCreate: "/bqi/sys/dict/data/new",
+  dictEntryDetail: "/bqi/sys/dict/data/detail",
+  dictEntryUpdate: "/bqi/sys/dict/data/update",
+  dictEntryDelete: "/bqi/sys/dict/data/delete",
 } as const
 
 export function getApiBaseUrl() {

@@ -1,5 +1,5 @@
 import { assertApiSuccess, createHttpError, readResponseBody } from "@/lib/api-errors"
-import { API_PATHS, buildApiHeaders, buildApiUrl } from "@/lib/api"
+import { API_PATHS, buildApiHeaders, buildApiRequestUrl, buildApiUrl } from "@/lib/api"
 
 type ListEnvelope = {
   Total?: number
@@ -21,8 +21,11 @@ export type DictTypeItem = {
 export type DictEntryItem = {
   Id: number
   Uuid: string
-  Code: string
+  DictTypeUuid: string
+  DictTypeName: string
   Name: string
+  ParentName: string
+  ParentUuid: string
   Remark: string
   Sort: number | null
 }
@@ -33,11 +36,53 @@ export type DictTypeCreatePayload = {
   Remark?: string
 }
 
-export type DictEntryCreatePayload = {
+export type DictTypeUpdatePayload = {
+  Uuid?: string
   Code?: string
   Name?: string
   Remark?: string
+}
+
+export type DictTypeDeletePayload = {
+  Uuid?: string
+  Code?: string
+}
+
+export type DictTypeDetailPayload = {
+  Uuid?: string
+}
+
+export type DictEntryCreatePayload = {
+  DictTypeUuid?: string
+  Name?: string
+  ParentUuid?: string
+  Remark?: string
   Sort?: number
+}
+
+export type DictEntryListPayload = {
+  DictTypeUuid?: string
+  Name?: string
+  PageNum?: number
+  PageSize?: number
+  ParentUuid?: string
+}
+
+export type DictEntryDetailPayload = {
+  Uuid?: string
+}
+
+export type DictEntryUpdatePayload = {
+  Uuid?: string
+  DictTypeUuid?: string
+  Name?: string
+  ParentUuid?: string
+  Remark?: string
+  Sort?: number
+}
+
+export type DictEntryDeletePayload = {
+  Uuid?: string
 }
 
 type DictCreateResult = {
@@ -48,13 +93,24 @@ type DictCreateResult = {
 
 const DICT_TYPE_LIST_API_URL = buildApiUrl(API_PATHS.dictTypeList)
 const DICT_TYPE_CREATE_API_URL = buildApiUrl(API_PATHS.dictTypeCreate)
+const DICT_TYPE_UPDATE_API_URL = buildApiUrl(API_PATHS.dictTypeUpdate)
+const DICT_TYPE_DELETE_API_URL = buildApiUrl(API_PATHS.dictTypeDelete)
 const DICT_ENTRY_LIST_API_URL = buildApiUrl(API_PATHS.dictEntryList)
 const DICT_ENTRY_CREATE_API_URL = buildApiUrl(API_PATHS.dictEntryCreate)
+const DICT_ENTRY_DETAIL_API_URL = buildApiUrl(API_PATHS.dictEntryDetail)
+const DICT_ENTRY_UPDATE_API_URL = buildApiUrl(API_PATHS.dictEntryUpdate)
+const DICT_ENTRY_DELETE_API_URL = buildApiUrl(API_PATHS.dictEntryDelete)
 
 const DICT_TYPE_LIST_ERROR_MESSAGE = "字典类型加载失败，请稍后重试。"
 const DICT_TYPE_CREATE_ERROR_MESSAGE = "字典类型创建失败，请稍后重试。"
+const DICT_TYPE_DETAIL_ERROR_MESSAGE = "字典类型详情加载失败，请稍后重试。"
+const DICT_TYPE_UPDATE_ERROR_MESSAGE = "字典类型更新失败，请稍后重试。"
+const DICT_TYPE_DELETE_ERROR_MESSAGE = "字典类型删除失败，请稍后重试。"
 const DICT_ENTRY_LIST_ERROR_MESSAGE = "字典条目加载失败，请稍后重试。"
 const DICT_ENTRY_CREATE_ERROR_MESSAGE = "字典条目创建失败，请稍后重试。"
+const DICT_ENTRY_DETAIL_ERROR_MESSAGE = "字典条目详情加载失败，请稍后重试。"
+const DICT_ENTRY_UPDATE_ERROR_MESSAGE = "字典条目更新失败，请稍后重试。"
+const DICT_ENTRY_DELETE_ERROR_MESSAGE = "字典条目删除失败，请稍后重试。"
 
 export async function fetchDictTypes() {
   const response = await fetch(DICT_TYPE_LIST_API_URL, {
@@ -100,14 +156,87 @@ export async function createDictType(payload: DictTypeCreatePayload) {
   return extractCreateResult(responseBody)
 }
 
-export async function fetchDictEntries(code?: string) {
+export async function fetchDictTypeDetail(payload: DictTypeDetailPayload) {
+  const url = buildApiRequestUrl(API_PATHS.dictTypeDetail)
+  const uuid = getRequiredString(payload.Uuid, "Uuid")
+
+  url.searchParams.set("Uuid", uuid)
+
+  const response = await fetch(url.toString(), {
+    method: "GET",
+    headers: buildApiHeaders(),
+  })
+  const responseBody = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responseBody, DICT_TYPE_DETAIL_ERROR_MESSAGE)
+  }
+
+  assertApiSuccess(responseBody, DICT_TYPE_DETAIL_ERROR_MESSAGE)
+
+  return normalizeDictType(extractDetailRecord(responseBody))
+}
+
+export async function updateDictType(payload: DictTypeUpdatePayload) {
+  const normalizedPayload = {
+    Uuid: getOptionalString(payload.Uuid),
+    Code: getOptionalString(payload.Code),
+    Name: getOptionalString(payload.Name),
+    Remark: getOptionalString(payload.Remark),
+  }
+
+  const response = await fetch(DICT_TYPE_UPDATE_API_URL, {
+    method: "POST",
+    headers: buildApiHeaders({
+      "Content-Type": "application/json",
+    }),
+    body: JSON.stringify(normalizedPayload),
+  })
+  const responseBody = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responseBody, DICT_TYPE_UPDATE_ERROR_MESSAGE)
+  }
+
+  assertApiSuccess(responseBody, DICT_TYPE_UPDATE_ERROR_MESSAGE)
+
+  return extractCreateResult(responseBody)
+}
+
+export async function deleteDictType(payload: DictTypeDeletePayload) {
+  const normalizedPayload = {
+    Uuid: getOptionalString(payload.Uuid),
+    Code: getOptionalString(payload.Code),
+  }
+
+  const response = await fetch(DICT_TYPE_DELETE_API_URL, {
+    method: "POST",
+    headers: buildApiHeaders({
+      "Content-Type": "application/json",
+    }),
+    body: JSON.stringify(normalizedPayload),
+  })
+  const responseBody = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responseBody, DICT_TYPE_DELETE_ERROR_MESSAGE)
+  }
+
+  assertApiSuccess(responseBody, DICT_TYPE_DELETE_ERROR_MESSAGE)
+}
+
+export async function fetchDictEntries(payload: DictEntryListPayload = {}) {
   const response = await fetch(DICT_ENTRY_LIST_API_URL, {
     method: "POST",
     headers: buildApiHeaders({
       "Content-Type": "application/json",
     }),
     body: JSON.stringify({
-      Code: getOptionalString(code),
+      DictTypeUuid: getOptionalString(payload.DictTypeUuid),
+      Name: getOptionalString(payload.Name),
+      PageNum: getOptionalNumber(payload.PageNum),
+      PageSize: getOptionalNumber(payload.PageSize),
+      ParentUuid: getOptionalString(payload.ParentUuid),
     }),
   })
   const responseBody = await readResponseBody(response) as ListEnvelope | unknown[]
@@ -123,8 +252,9 @@ export async function fetchDictEntries(code?: string) {
 
 export async function createDictEntry(payload: DictEntryCreatePayload) {
   const normalizedPayload = {
-    Code: getOptionalString(payload.Code),
+    DictTypeUuid: getOptionalString(payload.DictTypeUuid),
     Name: getOptionalString(payload.Name),
+    ParentUuid: getOptionalString(payload.ParentUuid),
     Remark: getOptionalString(payload.Remark),
     Sort: getOptionalNumber(payload.Sort),
   }
@@ -145,6 +275,74 @@ export async function createDictEntry(payload: DictEntryCreatePayload) {
   assertApiSuccess(responseBody, DICT_ENTRY_CREATE_ERROR_MESSAGE)
 
   return extractCreateResult(responseBody)
+}
+
+export async function fetchDictEntryDetail(payload: DictEntryDetailPayload) {
+  const url = buildApiRequestUrl(API_PATHS.dictEntryDetail)
+  const uuid = getRequiredString(payload.Uuid, "Uuid")
+
+  url.searchParams.set("Uuid", uuid)
+
+  const response = await fetch(url.toString(), {
+    method: "GET",
+    headers: buildApiHeaders(),
+  })
+  const responseBody = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responseBody, DICT_ENTRY_DETAIL_ERROR_MESSAGE)
+  }
+
+  assertApiSuccess(responseBody, DICT_ENTRY_DETAIL_ERROR_MESSAGE)
+
+  return normalizeDictEntry(extractDetailRecord(responseBody))
+}
+
+export async function updateDictEntry(payload: DictEntryUpdatePayload) {
+  const normalizedPayload = {
+    Uuid: getOptionalString(payload.Uuid),
+    DictTypeUuid: getOptionalString(payload.DictTypeUuid),
+    Name: getOptionalString(payload.Name),
+    ParentUuid: getOptionalString(payload.ParentUuid),
+    Remark: getOptionalString(payload.Remark),
+    Sort: getOptionalNumber(payload.Sort),
+  }
+
+  const response = await fetch(DICT_ENTRY_UPDATE_API_URL, {
+    method: "POST",
+    headers: buildApiHeaders({
+      "Content-Type": "application/json",
+    }),
+    body: JSON.stringify(normalizedPayload),
+  })
+  const responseBody = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responseBody, DICT_ENTRY_UPDATE_ERROR_MESSAGE)
+  }
+
+  assertApiSuccess(responseBody, DICT_ENTRY_UPDATE_ERROR_MESSAGE)
+
+  return extractCreateResult(responseBody)
+}
+
+export async function deleteDictEntry(payload: DictEntryDeletePayload) {
+  const response = await fetch(DICT_ENTRY_DELETE_API_URL, {
+    method: "POST",
+    headers: buildApiHeaders({
+      "Content-Type": "application/json",
+    }),
+    body: JSON.stringify({
+      Uuid: getRequiredString(payload.Uuid, "Uuid"),
+    }),
+  })
+  const responseBody = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responseBody, DICT_ENTRY_DELETE_ERROR_MESSAGE)
+  }
+
+  assertApiSuccess(responseBody, DICT_ENTRY_DELETE_ERROR_MESSAGE)
 }
 
 function extractList(payload: ListEnvelope | unknown[]) {
@@ -183,6 +381,24 @@ function extractCreateResult(payload: unknown): DictCreateResult {
   return payload as DictCreateResult
 }
 
+function extractDetailRecord(payload: unknown) {
+  if (!payload || typeof payload !== "object") {
+    return {}
+  }
+
+  const record = payload as Record<string, unknown>
+
+  if (record.data && typeof record.data === "object") {
+    return record.data as Record<string, unknown>
+  }
+
+  if (record.Data && typeof record.Data === "object") {
+    return record.Data as Record<string, unknown>
+  }
+
+  return record
+}
+
 function normalizeDictType(raw: unknown): DictTypeItem {
   const item = asRecord(raw)
 
@@ -201,8 +417,11 @@ function normalizeDictEntry(raw: unknown): DictEntryItem {
   return {
     Id: getNumber(item.Id ?? item.id),
     Uuid: getString(item.Uuid ?? item.uuid),
-    Code: getString(item.Code ?? item.code),
+    DictTypeUuid: getString(item.DictTypeUuid ?? item.dictTypeUuid),
+    DictTypeName: getString(item.DictTypeName ?? item.dictTypeName),
     Name: getString(item.Name ?? item.name),
+    ParentName: getString(item.ParentName ?? item.parentName),
+    ParentUuid: getString(item.ParentUuid ?? item.parentUuid),
     Remark: getString(item.Remark ?? item.remark),
     Sort: getNullableNumber(item.Sort ?? item.sort),
   }
@@ -227,6 +446,14 @@ function getOptionalNumber(value: unknown) {
 
   const parsed = Number(value)
   return Number.isFinite(parsed) ? parsed : undefined
+}
+
+function getRequiredString(value: unknown, fieldName: string) {
+  const normalized = getOptionalString(value)
+  if (!normalized) {
+    throw new TypeError(`${fieldName} is required`)
+  }
+  return normalized
 }
 
 function getNumber(value: unknown) {
