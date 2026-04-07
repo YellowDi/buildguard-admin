@@ -63,14 +63,6 @@ import { detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
 import { useDetailRouteTab } from "@/composables/useDetailRouteTab"
 import DetailLayout from "@/layouts/DetailLayout.vue"
 import { handleApiError } from "@/lib/api-errors"
-import {
-  applyInspectionDispatchDefaultUser,
-  buildInspectionDispatchPayloadGroups,
-  extractInspectionDispatchBuilds,
-  hasValidInspectionDispatchBuilds,
-  isInspectionDispatchComplete,
-  type InspectionDispatchBuildAssignment,
-} from "@/lib/inspection-work-order-dispatch"
 import { fetchMembers } from "@/lib/members-api"
 import { hasValidLatLng } from "@/lib/map-coordinates"
 import { fetchBuildings, type BuildingListItem } from "@/lib/buildings-api"
@@ -274,14 +266,11 @@ type AssignableUserOption = {
 }
 const assignDialogOpen = ref(false)
 const assignUserUuid = ref("")
-const assignDefaultUserUuid = ref("")
-const assignBuilds = ref<InspectionDispatchBuildAssignment[]>([])
+const assignUserUuids = ref<string[]>([])
 const assignTargetWorkOrder = ref<CustomerWorkOrderRow | null>(null)
 const assignableUsers = ref<AssignableUserOption[]>([])
 const assignableUsersLoading = ref(false)
 const assignableUsersLoaded = ref(false)
-const assignDetailLoaded = ref(false)
-const assignDetailLoading = ref(false)
 const assignSubmitting = ref(false)
 const buildingDetailSheetOpen = ref(false)
 const activeBuildingUuid = ref("")
@@ -322,9 +311,8 @@ const detailHeaderTabs = computed(() => detailTabs.value.map(tab => ({
   active: activeTab.value === tab.id,
 })))
 const isInspectionAssignDialog = computed(() => assignTargetWorkOrder.value?.workOrderKind === "inspection")
-const showInspectionAssignBuilds = computed(() => isInspectionAssignDialog.value && assignBuilds.value.length > 1)
 const canSubmitAssign = computed(() => {
-  if (assignSubmitting.value || assignDetailLoading.value) {
+  if (assignSubmitting.value) {
     return false
   }
 
@@ -332,7 +320,7 @@ const canSubmitAssign = computed(() => {
     return Boolean(assignUserUuid.value)
   }
 
-  return isInspectionDispatchComplete(assignBuilds.value)
+  return assignUserUuids.value.length > 0
 })
 const detailTabActionsByTab: Record<CustomerDetailTab, CustomerDetailTabActions> = {
   "basic-info": {
@@ -1691,13 +1679,7 @@ async function handleAssignWorkOrder(row: CustomerWorkOrderRow) {
 
   try {
     await loadAssignableUsers()
-
-    if (row.workOrderKind === "inspection") {
-      await prepareInspectionAssign(row.uuid)
-    } else {
-      resetAssignState()
-      assignUserUuid.value = ""
-    }
+    resetAssignState()
 
     assignDialogOpen.value = true
   } catch (error) {
@@ -1758,50 +1740,9 @@ async function loadAssignableUsers() {
   }
 }
 
-async function prepareInspectionAssign(uuid: string) {
-  assignDetailLoading.value = true
-  assignDetailLoaded.value = false
-  assignDefaultUserUuid.value = ""
-  assignUserUuid.value = ""
-  assignBuilds.value = []
-
-  try {
-    const detail = await fetchWorkOrderDetail({ Uuid: uuid })
-    const nextBuilds = extractInspectionDispatchBuilds(detail.Builds)
-
-    if (!hasValidInspectionDispatchBuilds(nextBuilds)) {
-      throw new Error("当前工单缺少建筑信息，无法按建筑指派。")
-    }
-
-    assignBuilds.value = nextBuilds
-    assignDetailLoaded.value = true
-  } finally {
-    assignDetailLoading.value = false
-  }
-}
-
-function updateInspectionDefaultUser(nextUserUuid: unknown) {
-  const normalizedUserUuid = toDisplayText(nextUserUuid, "")
-  const previousDefaultUserUuid = assignDefaultUserUuid.value
-  assignDefaultUserUuid.value = normalizedUserUuid
-  assignBuilds.value = applyInspectionDispatchDefaultUser(assignBuilds.value, normalizedUserUuid, previousDefaultUserUuid)
-}
-
-function updateInspectionBuildUser(buildUuid: string, userUuid: unknown) {
-  const normalizedUserUuid = toDisplayText(userUuid, "")
-  assignBuilds.value = assignBuilds.value.map(build => (
-    build.buildUuid === buildUuid
-      ? { ...build, userUuid: normalizedUserUuid }
-      : build
-  ))
-}
-
 function resetAssignState() {
   assignUserUuid.value = ""
-  assignDefaultUserUuid.value = ""
-  assignBuilds.value = []
-  assignDetailLoaded.value = false
-  assignDetailLoading.value = false
+  assignUserUuids.value = []
 }
 
 async function submitCustomerWorkOrderAssign() {
@@ -1822,18 +1763,15 @@ async function submitCustomerWorkOrderAssign() {
 
   try {
     if (currentTarget.workOrderKind === "inspection") {
-      if (!isInspectionDispatchComplete(assignBuilds.value)) {
-        toast.error("请先为每栋建筑选择指派人员")
+      if (!assignUserUuids.value.length) {
+        toast.error("请先选择至少一位指派人员")
         return
       }
 
-      const dispatchGroups = buildInspectionDispatchPayloadGroups(assignBuilds.value)
-
-      await Promise.all(dispatchGroups.map(group => dispatchWorkOrder({
+      await dispatchWorkOrder({
         Uuid: currentTarget.uuid,
-        UserUuid: group.userUuid,
-        BuildUuids: group.buildUuids,
-      })))
+        UserUuids: assignUserUuids.value,
+      })
     } else {
       if (!assignUserUuid.value) {
         toast.error("请先选择指派用户")
@@ -3947,62 +3885,22 @@ function toDisplayText(value: unknown, fallback = "未填写") {
       <DialogHeader>
         <DialogTitle>指派工单</DialogTitle>
         <DialogDescription>
-          {{ isInspectionAssignDialog ? "先选择默认执行人，再按建筑覆盖分配。" : "请选择要指派的用户并确认提交。" }}
+          {{ isInspectionAssignDialog ? "请选择一位或多位执行人并确认提交。" : "请选择要指派的用户并确认提交。" }}
         </DialogDescription>
       </DialogHeader>
 
       <div v-if="isInspectionAssignDialog" class="space-y-4">
-        <div class="space-y-2">
-          <p class="text-sm text-foreground">默认执行人</p>
-          <Select
-            :model-value="assignDefaultUserUuid"
-            :disabled="assignableUsersLoading || assignSubmitting || assignDetailLoading"
-            @update:model-value="updateInspectionDefaultUser"
-          >
-            <SelectTrigger class="w-full">
-              <SelectValue :placeholder="assignableUsersLoading ? '正在加载用户...' : '请选择默认执行人'" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem v-for="user in assignableUsers" :key="user.uuid" :value="user.uuid">
-                {{ user.name }}
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div v-if="assignDetailLoading" class="rounded-lg border border-dashed px-3 py-4 text-sm text-muted-foreground">
-          正在加载工单建筑信息...
-        </div>
-
-        <div v-else-if="assignDetailLoaded" class="space-y-3">
-          <div v-if="showInspectionAssignBuilds" class="space-y-3">
-            <div
-              v-for="build in assignBuilds"
-              :key="build.buildUuid"
-              class="space-y-2 rounded-lg border px-3 py-3"
-            >
-              <div class="text-sm font-medium text-foreground">{{ build.buildName }}</div>
-              <Select
-                :model-value="build.userUuid"
-                :disabled="assignableUsersLoading || assignSubmitting"
-                @update:model-value="value => updateInspectionBuildUser(build.buildUuid, value)"
-              >
-                <SelectTrigger class="w-full">
-                  <SelectValue placeholder="请选择该建筑执行人" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem v-for="user in assignableUsers" :key="user.uuid" :value="user.uuid">
-                    {{ user.name }}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <p v-else class="text-sm text-muted-foreground">
-            当前工单仅包含 1 栋建筑，选择默认执行人后将直接绑定到该建筑。
-          </p>
-        </div>
+        <p class="text-sm text-foreground">执行人</p>
+        <Select v-model="assignUserUuids" multiple :disabled="assignableUsersLoading || assignSubmitting">
+          <SelectTrigger class="w-full">
+            <SelectValue :placeholder="assignableUsersLoading ? '正在加载用户...' : '请选择执行人，可多选'" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem v-for="user in assignableUsers" :key="user.uuid" :value="user.uuid">
+              {{ user.name }}
+            </SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <div v-else class="space-y-2">

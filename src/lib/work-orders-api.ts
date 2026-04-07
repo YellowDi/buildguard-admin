@@ -90,8 +90,8 @@ export type UpdateWorkOrderPayload = {
 
 export type DispatchWorkOrderPayload = {
   Uuid: string
-  UserUuid: string
-  BuildUuids?: string[]
+  UserUuid?: string
+  UserUuids?: string[]
 }
 
 export type WorkOrderDetailPayload = {
@@ -322,10 +322,17 @@ export async function updateWorkOrder(payload: UpdateWorkOrderPayload): Promise<
 }
 
 export async function dispatchWorkOrder(payload: DispatchWorkOrderPayload): Promise<CreateWorkOrderResult> {
+  const userUuid = getOptionalString(payload.UserUuid)
+  const userUuids = normalizeOptionalStringArray(payload.UserUuids)
+
+  if (!userUuid && !userUuids?.length) {
+    throw new ApiError("请求参数校验失败：UserUuid 或 UserUuids 至少需要一个。")
+  }
+
   const normalizedPayload = {
     Uuid: getRequiredString(payload.Uuid, "Uuid"),
-    UserUuid: getRequiredString(payload.UserUuid, "UserUuid"),
-    BuildUuids: normalizeOptionalStringArray(payload.BuildUuids),
+    UserUuid: userUuid,
+    UserUuids: userUuids,
   }
 
   const response = await fetch(WORK_ORDER_DISPATCH_API_URL, {
