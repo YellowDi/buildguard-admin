@@ -58,7 +58,8 @@ const hasExpandedContent = computed(() => Boolean(slots["expanded-content"]))
       v-if="props.useTitleBlock"
       variant="section"
       :title="schema.title"
-      :show-separator="true"
+      :sticky="true"
+      sticky-top="var(--detail-layout-sticky-offset, 0px)"
       class="detail-section-inset py-1"
     >
       <template #append>

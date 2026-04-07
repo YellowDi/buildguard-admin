@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, useSlots } from "vue"
+import { computed, onBeforeUnmount, onMounted, ref, useSlots } from "vue"
 
 import SectionHeader from "@/components/layout/SectionHeader.vue"
 import { useSlidingTabIndicator } from "@/composables/useSlidingTabIndicator"
@@ -50,6 +50,8 @@ const emit = defineEmits<{
 }>()
 
 const slots = useSlots()
+const headerRef = ref<HTMLElement | null>(null)
+const headerHeight = ref(0)
 const hasTabs = computed(() => props.tabs.length > 0)
 const hasSecondary = computed(() => Boolean(slots.secondary) && props.secondaryVisible)
 const useSingleColumn = computed(() => props.fullWidth || !hasSecondary.value)
@@ -60,6 +62,28 @@ const activeTabId = computed(() => props.tabs.find(tab => tab.active)?.id ?? pro
 const { indicatorStyle, setTabRef } = useSlidingTabIndicator({
   activeKey: activeTabId,
   watchSource: computed(() => props.tabs.map(tab => `${tab.id}:${tab.label}:${Number(Boolean(tab.active))}:${Number(Boolean(tab.disabled))}`)),
+})
+
+let headerResizeObserver: ResizeObserver | null = null
+
+function syncHeaderHeight() {
+  headerHeight.value = headerRef.value?.offsetHeight ?? 0
+}
+
+onMounted(() => {
+  syncHeaderHeight()
+
+  if (typeof ResizeObserver !== "undefined" && headerRef.value) {
+    headerResizeObserver = new ResizeObserver(() => {
+      syncHeaderHeight()
+    })
+    headerResizeObserver.observe(headerRef.value)
+  }
+})
+
+onBeforeUnmount(() => {
+  headerResizeObserver?.disconnect()
+  headerResizeObserver = null
 })
 
 function handleTabSelect(value: unknown) {
@@ -76,9 +100,13 @@ function handleTabSelect(value: unknown) {
       useSingleColumn ? 'detail-layout--single-column' : '',
       props.fullWidth ? 'max-w-none' : 'max-w-[1440px]',
     ]"
+    :style="{ '--detail-layout-sticky-offset': `${headerHeight}px` }"
   >
     <template v-if="!props.empty">
-      <div class="sticky top-0 z-10 mx-0 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80 sm:-mx-4">
+      <div
+        ref="headerRef"
+        class="sticky top-0 z-20 mx-0 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80 sm:-mx-4"
+      >
         <div :class="['px-1 pt-4 sm:px-4 sm:pt-5', hasTabs || hasHeaderBottom ? '' : 'pb-4 sm:pb-5']">
           <SectionHeader :title="props.title" :subtitle="props.subtitle" :has-actions="hasHeaderActions">
             <template #leading>

@@ -15,6 +15,7 @@ const props = withDefaults(defineProps<{
   separatorClass?: string
   sticky?: boolean
   stickyClass?: string
+  stickyTop?: string
 }>(), {
   variant: "page",
   tone: "default",
@@ -22,6 +23,7 @@ const props = withDefaults(defineProps<{
   separatorClass: "",
   sticky: false,
   stickyClass: "",
+  stickyTop: "0px",
 })
 
 const slots = useSlots()
@@ -45,15 +47,22 @@ const descriptionClass = computed(() => {
   }
   return "text-sm leading-6 text-muted-foreground"
 })
+
+const stickyStyle = computed(() => (
+  props.sticky
+    ? { top: props.stickyTop }
+    : undefined
+))
 </script>
 
 <template>
   <div
     :class="cn(
       'flex flex-col',
-      props.sticky && 'sticky top-0 z-10 bg-background',
+      props.sticky && 'sticky z-[5] bg-background',
       props.stickyClass,
     )"
+    :style="stickyStyle"
   >
     <header class="flex flex-col gap-1.5">
       <div class="min-w-0">

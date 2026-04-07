@@ -61,7 +61,8 @@ function isStatusValue(value: DetailFieldValue): value is DetailStatusValue {
           v-if="props.showSectionTitles && section.title && props.useTitleBlock"
           variant="section"
           :title="section.title"
-          :show-separator="true"
+          :sticky="true"
+          sticky-top="var(--detail-layout-sticky-offset, 0px)"
           class="detail-section-inset py-1"
         />
         <div v-else-if="props.showSectionTitles && section.title" class="detail-section-heading-row detail-section-inset">
