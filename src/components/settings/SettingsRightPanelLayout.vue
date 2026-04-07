@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import SettingsPageHeader from "@/components/settings/SettingsPageHeader.vue"
+import ModuleTitle from "@/components/layout/ModuleTitle.vue"
 
 const props = defineProps<{
   variant: "with-tabs" | "title-only"
@@ -14,7 +14,7 @@ const props = defineProps<{
     <div class="shrink-0 px-3 pt-4 pb-3 sm:px-4">
       <template v-if="props.variant === 'with-tabs'">
         <div class="flex flex-col gap-3">
-          <SettingsPageHeader
+          <ModuleTitle
             :title="props.title"
             :description="props.description ?? undefined"
           />
@@ -22,7 +22,7 @@ const props = defineProps<{
         </div>
       </template>
       <template v-else>
-        <SettingsPageHeader
+        <ModuleTitle
           :title="props.title"
           :description="props.description ?? undefined"
         />

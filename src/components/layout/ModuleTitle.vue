@@ -1,18 +1,23 @@
 <script setup lang="ts">
 import { computed } from "vue"
 
+import { Separator } from "@/components/ui/separator"
 import { cn } from "@/lib/utils"
 
 const props = withDefaults(defineProps<{
   title: string
   description?: string | null
-  /** 页面级（设置浮窗右侧主标题）或区块级（表单分组标题） */
+  /** 页面级主标题或模块级分组标题 */
   variant?: "page" | "section"
-  /** 仅 `variant="section"` 时生效，危险区块的说明文案用强调色 */
+  /** 仅 `variant="section"` 时生效，危险区块说明使用强调色 */
   tone?: "default" | "danger"
+  showSeparator?: boolean
+  separatorClass?: string
 }>(), {
   variant: "page",
   tone: "default",
+  showSeparator: false,
+  separatorClass: "",
 })
 
 const showDescription = computed(() => {
@@ -37,17 +42,23 @@ const descriptionClass = computed(() => {
 </script>
 
 <template>
-  <header class="flex flex-col gap-1.5">
-    <div class="min-w-0">
-      <component :is="isSection ? 'h3' : 'h2'" :class="headingClass">
-        {{ title }}
-      </component>
-      <p
-        v-if="showDescription"
-        :class="cn('mt-1 max-w-2xl', descriptionClass)"
-      >
-        {{ description }}
-      </p>
-    </div>
-  </header>
+  <div class="flex flex-col">
+    <header class="flex flex-col gap-1.5">
+      <div class="min-w-0">
+        <component :is="isSection ? 'h3' : 'h2'" :class="headingClass">
+          {{ title }}
+        </component>
+        <p
+          v-if="showDescription"
+          :class="cn('mt-1 max-w-2xl', descriptionClass)"
+        >
+          {{ description }}
+        </p>
+      </div>
+    </header>
+    <Separator
+      v-if="props.showSeparator"
+      :class="cn('mt-2 bg-border/80', props.separatorClass)"
+    />
+  </div>
 </template>

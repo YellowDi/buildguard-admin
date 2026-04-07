@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import SettingsPageHeader from "@/components/settings/SettingsPageHeader.vue"
-import { Separator } from "@/components/ui/separator"
+import ModuleTitle from "@/components/layout/ModuleTitle.vue"
 
 defineProps<{
   title: string
@@ -13,13 +12,13 @@ defineProps<{
 <template>
   <section>
     <template v-if="showHeader !== false">
-      <SettingsPageHeader
+      <ModuleTitle
         variant="section"
         :title="title"
         :description="description"
         :tone="tone"
+        :show-separator="true"
       />
-      <Separator class="mt-2 bg-border/80" />
       <div class="mt-4">
         <slot />
       </div>
