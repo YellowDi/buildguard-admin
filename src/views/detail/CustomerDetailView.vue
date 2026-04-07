@@ -3790,7 +3790,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
             <div class="w-full min-w-0">
               <div class="h-px bg-border/80" />
 
-              <DetailRelationModule :schema="maintenanceModule" use-title-block>
+              <DetailRelationModule :schema="maintenanceModule" use-title-block class="pb-4">
                 <template #actions-header>
                   <Button variant="outline" size="sm" class="h-8 px-3 text-sm" @click="showInspectionWorkOrdersTab">
                     查看更多
