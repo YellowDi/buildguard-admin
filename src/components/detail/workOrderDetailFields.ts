@@ -1,4 +1,5 @@
-import type { DetailContactValue, DetailFieldSection } from "@/components/detail/types"
+import type { DetailContactValue, DetailFieldSection, DetailStatusValue } from "@/components/detail/types"
+import { workOrderStatusMap } from "@/components/table-page/statusPresets"
 import type { CustomerDetailResult } from "@/lib/customers-api"
 import type { WorkOrderDetailResult } from "@/lib/work-orders-api"
 
@@ -35,7 +36,7 @@ export function buildWorkOrderPrimarySections(
           linkAction: options.onOpenPlan && toText(workOrder.PlanUuid, "") ? { onClick: options.onOpenPlan } : undefined,
         },
         { key: "executor", label: "执行人", value: formatExecutors(workOrder.Executors, workOrder.Executor) },
-        { key: "status", label: "工单状态", value: formatWorkOrderStatus(workOrder.Status) },
+        { key: "status", label: "工单状态", value: buildWorkOrderStatusValue(workOrder.Status) },
         { key: "deadline", label: "截止时间", value: formatDateOnly(toText(workOrder.Deadline, "-")) },
         { key: "created-at", label: "创建时间", value: toText(workOrder.CreatedAt, "-") },
         { key: "updated-at", label: "更新时间", value: toText(workOrder.UpdatedAt, "-") },
@@ -152,6 +153,19 @@ function formatWorkOrderStatus(value: unknown) {
   if (status === 5) return "已结单"
 
   return `状态 ${status}`
+}
+
+function buildWorkOrderStatusValue(value: unknown): DetailStatusValue {
+  const label = formatWorkOrderStatus(value)
+
+  return {
+    kind: "status",
+    value: label,
+    renderer: {
+      kind: "status",
+      map: workOrderStatusMap,
+    },
+  }
 }
 
 function formatWorkOrderResult(value: unknown) {
