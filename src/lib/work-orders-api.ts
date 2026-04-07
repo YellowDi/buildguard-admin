@@ -91,6 +91,7 @@ export type UpdateWorkOrderPayload = {
 export type DispatchWorkOrderPayload = {
   Uuid: string
   UserUuid: string
+  BuildUuids?: string[]
 }
 
 export type WorkOrderDetailPayload = {
@@ -324,6 +325,7 @@ export async function dispatchWorkOrder(payload: DispatchWorkOrderPayload): Prom
   const normalizedPayload = {
     Uuid: getRequiredString(payload.Uuid, "Uuid"),
     UserUuid: getRequiredString(payload.UserUuid, "UserUuid"),
+    BuildUuids: normalizeOptionalStringArray(payload.BuildUuids),
   }
 
   const response = await fetch(WORK_ORDER_DISPATCH_API_URL, {
@@ -661,6 +663,20 @@ function getOptionalNumber(value: unknown, fieldName: string) {
   }
 
   return value
+}
+
+function normalizeOptionalStringArray(value: unknown) {
+  if (!Array.isArray(value)) {
+    return undefined
+  }
+
+  const normalized = Array.from(new Set(
+    value
+      .map(item => getOptionalString(item))
+      .filter((item): item is string => Boolean(item)),
+  ))
+
+  return normalized.length ? normalized : undefined
 }
 
 function getFirstText(record: Record<string, unknown>, keys: string[]) {

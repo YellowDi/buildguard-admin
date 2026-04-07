@@ -15,10 +15,19 @@ import { createTablePageDefinition, useTablePage } from "@/components/table-page
 import type { TablePageSchema } from "@/components/table-page/types"
 import { useRouteTableSearch } from "@/composables/useRouteTableSearch"
 import { handleApiError } from "@/lib/api-errors"
+import {
+  applyInspectionDispatchDefaultUser,
+  buildInspectionDispatchPayloadGroups,
+  extractInspectionDispatchBuilds,
+  hasValidInspectionDispatchBuilds,
+  isInspectionDispatchComplete,
+  type InspectionDispatchBuildAssignment,
+} from "@/lib/inspection-work-order-dispatch"
 import { fetchMembers } from "@/lib/members-api"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   dispatchWorkOrder,
+  fetchWorkOrderDetail,
   fetchRepairWorkOrders,
   fetchWorkOrders,
   type RepairWorkOrderListItem,
@@ -89,10 +98,14 @@ const showInitialLoading = computed(() => loading.value && !workOrders.value.len
 let latestRequestId = 0
 const assignDialogOpen = ref(false)
 const assignUserUuid = ref("")
+const assignDefaultUserUuid = ref("")
+const assignBuilds = ref<InspectionDispatchBuildAssignment[]>([])
 const assignTargetWorkOrder = ref<WorkOrderRecord | null>(null)
 const assignableUsers = ref<AssignableUserOption[]>([])
 const assignableUsersLoading = ref(false)
 const assignableUsersLoaded = ref(false)
+const assignDetailLoaded = ref(false)
+const assignDetailLoading = ref(false)
 const assignSubmitting = ref(false)
 const activeLinkedDetailKind = ref<LinkedDetailSheetKind | null>(null)
 const activeLinkedDetailUuid = ref("")
@@ -104,6 +117,23 @@ const pageEmptyStateTitle = computed(() => `暂无${pageTitle.value}数据`)
 const pageEmptyStateDescription = computed(() => props.kind === "inspection"
   ? "暂时还没有检测工单，您可以先添加一条工单。"
   : "暂时还没有报修工单，您可以先添加一条工单。")
+const isInspectionAssignDialog = computed(() => props.kind === "inspection")
+const showInspectionAssignBuilds = computed(() => isInspectionAssignDialog.value && assignBuilds.value.length > 1)
+const isInspectionAssignReady = computed(() => (
+  !isInspectionAssignDialog.value
+  || (assignDetailLoaded.value && hasValidInspectionDispatchBuilds(assignBuilds.value))
+))
+const canSubmitAssign = computed(() => {
+  if (assignSubmitting.value || assignDetailLoading.value) {
+    return false
+  }
+
+  if (!isInspectionAssignDialog.value) {
+    return Boolean(assignUserUuid.value)
+  }
+
+  return isInspectionDispatchComplete(assignBuilds.value)
+})
 const pageSortStorageKey = computed(() => props.kind === "inspection"
   ? "inspection-work-orders-sort-preferences-created-at-v2"
   : "repair-work-orders-sort-preferences-created-start-at-v3")
@@ -255,11 +285,31 @@ function handleViewDetail(row: WorkOrderRecord) {
   })
 }
 
-function handleAssign(row: WorkOrderRecord) {
+async function handleAssign(row: WorkOrderRecord) {
+  if (!row.uuid) {
+    toast.error("当前工单缺少 Uuid，无法指派")
+    return
+  }
+
   assignTargetWorkOrder.value = row
-  assignUserUuid.value = ""
-  assignDialogOpen.value = true
-  void loadAssignableUsers()
+
+  try {
+      await loadAssignableUsers()
+
+      if (props.kind === "inspection") {
+        await prepareInspectionAssign(row.uuid)
+      } else {
+        resetAssignState()
+        assignUserUuid.value = ""
+      }
+
+    assignDialogOpen.value = true
+  } catch (error) {
+    toast.error(handleApiError(error, {
+      mode: "silent",
+      fallback: "工单详情加载失败，暂时无法指派。",
+    }))
+  }
 }
 
 function handleOpenPreviewSheet(row: WorkOrderRecord) {
@@ -279,6 +329,7 @@ function closeAssignDialog() {
   }
 
   assignDialogOpen.value = false
+  resetAssignState()
 }
 
 async function loadAssignableUsers() {
@@ -322,6 +373,52 @@ async function loadAssignableUsers() {
   }
 }
 
+async function prepareInspectionAssign(uuid: string) {
+  assignDetailLoading.value = true
+  assignDetailLoaded.value = false
+  assignDefaultUserUuid.value = ""
+  assignUserUuid.value = ""
+  assignBuilds.value = []
+
+  try {
+    const detail = await fetchWorkOrderDetail({ Uuid: uuid })
+    const nextBuilds = extractInspectionDispatchBuilds(detail.Builds)
+
+    if (!hasValidInspectionDispatchBuilds(nextBuilds)) {
+      throw new Error("当前工单缺少建筑信息，无法按建筑指派。")
+    }
+
+    assignBuilds.value = nextBuilds
+    assignDetailLoaded.value = true
+  } finally {
+    assignDetailLoading.value = false
+  }
+}
+
+function updateInspectionDefaultUser(nextUserUuid: unknown) {
+  const normalizedUserUuid = toText(nextUserUuid)
+  const previousDefaultUserUuid = assignDefaultUserUuid.value
+  assignDefaultUserUuid.value = normalizedUserUuid
+  assignBuilds.value = applyInspectionDispatchDefaultUser(assignBuilds.value, normalizedUserUuid, previousDefaultUserUuid)
+}
+
+function updateInspectionBuildUser(buildUuid: string, userUuid: unknown) {
+  const normalizedUserUuid = toText(userUuid)
+  assignBuilds.value = assignBuilds.value.map(build => (
+    build.buildUuid === buildUuid
+      ? { ...build, userUuid: normalizedUserUuid }
+      : build
+  ))
+}
+
+function resetAssignState() {
+  assignUserUuid.value = ""
+  assignDefaultUserUuid.value = ""
+  assignBuilds.value = []
+  assignDetailLoaded.value = false
+  assignDetailLoading.value = false
+}
+
 async function submitAssign() {
   const currentTarget = assignTargetWorkOrder.value
 
@@ -330,21 +427,37 @@ async function submitAssign() {
     return
   }
 
-  if (!assignUserUuid.value) {
-    toast.error("请先选择指派用户")
-    return
-  }
-
   assignSubmitting.value = true
 
   try {
-    await dispatchWorkOrder({
-      Uuid: currentTarget.uuid,
-      UserUuid: assignUserUuid.value,
-    })
+    if (props.kind === "inspection") {
+      if (!isInspectionDispatchComplete(assignBuilds.value)) {
+        toast.error("请先为每栋建筑选择指派人员")
+        return
+      }
+
+      const dispatchGroups = buildInspectionDispatchPayloadGroups(assignBuilds.value)
+
+      await Promise.all(dispatchGroups.map(group => dispatchWorkOrder({
+        Uuid: currentTarget.uuid,
+        UserUuid: group.userUuid,
+        BuildUuids: group.buildUuids,
+      })))
+    } else {
+      if (!assignUserUuid.value) {
+        toast.error("请先选择指派用户")
+        return
+      }
+
+      await dispatchWorkOrder({
+        Uuid: currentTarget.uuid,
+        UserUuid: assignUserUuid.value,
+      })
+    }
 
     toast.success("指派成功")
     assignDialogOpen.value = false
+    resetAssignState()
     await loadWorkOrders()
   } catch (error) {
     toast.error(handleApiError(error, {
@@ -976,11 +1089,65 @@ function handleWorkOrderPreviewSheetOpenChange(open: boolean) {
         <DialogHeader>
           <DialogTitle>指派工单</DialogTitle>
           <DialogDescription>
-            请选择要指派的用户并确认提交。
+            {{ isInspectionAssignDialog ? "先选择默认执行人，再按建筑覆盖分配。" : "请选择要指派的用户并确认提交。" }}
           </DialogDescription>
         </DialogHeader>
 
-        <div class="space-y-2">
+        <div v-if="isInspectionAssignDialog" class="space-y-4">
+          <div class="space-y-2">
+            <p class="text-sm text-foreground">默认执行人</p>
+            <Select
+              :model-value="assignDefaultUserUuid"
+              :disabled="assignableUsersLoading || assignSubmitting || assignDetailLoading"
+              @update:model-value="updateInspectionDefaultUser"
+            >
+              <SelectTrigger class="w-full">
+                <SelectValue :placeholder="assignableUsersLoading ? '正在加载用户...' : '请选择默认执行人'" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem v-for="user in assignableUsers" :key="user.uuid" :value="user.uuid">
+                  {{ user.name }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div v-if="assignDetailLoading" class="rounded-lg border border-dashed px-3 py-4 text-sm text-muted-foreground">
+            正在加载工单建筑信息...
+          </div>
+
+          <div v-else-if="isInspectionAssignReady" class="space-y-3">
+            <div v-if="showInspectionAssignBuilds" class="space-y-3">
+              <div
+                v-for="build in assignBuilds"
+                :key="build.buildUuid"
+                class="space-y-2 rounded-lg border px-3 py-3"
+              >
+                <div class="text-sm font-medium text-foreground">{{ build.buildName }}</div>
+                <Select
+                  :model-value="build.userUuid"
+                  :disabled="assignableUsersLoading || assignSubmitting"
+                  @update:model-value="value => updateInspectionBuildUser(build.buildUuid, value)"
+                >
+                  <SelectTrigger class="w-full">
+                    <SelectValue placeholder="请选择该建筑执行人" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem v-for="user in assignableUsers" :key="user.uuid" :value="user.uuid">
+                      {{ user.name }}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <p v-else class="text-sm text-muted-foreground">
+              当前工单仅包含 1 栋建筑，选择默认执行人后将直接绑定到该建筑。
+            </p>
+          </div>
+        </div>
+
+        <div v-else class="space-y-2">
           <p class="text-sm text-foreground">指派用户</p>
           <Select v-model="assignUserUuid" :disabled="assignableUsersLoading || assignSubmitting">
             <SelectTrigger class="w-full">
@@ -999,7 +1166,7 @@ function handleWorkOrderPreviewSheetOpenChange(open: boolean) {
             <i class="ri-close-line text-sm" />
             取消
           </Button>
-          <Button type="button" class="gap-2" :disabled="assignSubmitting || !assignUserUuid" @click="submitAssign">
+          <Button type="button" class="gap-2" :disabled="!canSubmitAssign" @click="submitAssign">
             <i
               :class="assignSubmitting ? 'ri-loader-4-line animate-spin text-sm' : 'ri-send-plane-line text-sm'"
             />
