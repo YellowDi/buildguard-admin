@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue"
 
+import TitleBlock from "@/components/layout/TitleBlock.vue"
 import InspectionCategoryScoreLimitInline from "@/components/inspection/InspectionCategoryScoreLimitInline.vue"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -109,17 +110,20 @@ function buildInspectionAccordionKey(buildingKey: string, groupKey: string, item
   <section class="detail-relation-module w-full min-w-0 max-w-full">
     <div class="detail-table-scroll">
       <div class="detail-table-frame detail-relation-frame">
-        <div class="detail-table-heading-row detail-table-grid detail-relation-grid detail-section-inset items-center">
-          <div class="flex min-w-0 items-center gap-2">
-            <h2 class="detail-field-section__heading shrink-0 whitespace-nowrap">{{ props.title }}</h2>
+        <TitleBlock
+          variant="section"
+          :title="props.title"
+          class="detail-section-inset pt-4 pb-1"
+        >
+          <template #append>
             <Badge
               variant="secondary"
               class="min-w-6 justify-center rounded-md px-1.5 py-0.5 text-[12px] font-medium leading-none"
             >
               {{ displayCount }}
             </Badge>
-          </div>
-        </div>
+          </template>
+        </TitleBlock>
 
         <div
           v-if="props.buildings.length === 0"
