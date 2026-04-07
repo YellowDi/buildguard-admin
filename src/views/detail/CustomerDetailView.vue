@@ -3073,7 +3073,7 @@ function mapInspectionWorkOrderRow(item: WorkOrderListItem, index: number): Cust
     buildingName: toDisplayText(item.BuildName, "-"),
     packageName: toDisplayText(item.PackageName, "-"),
     planName: toDisplayText(item.PlanName, "-"),
-    executor: toDisplayText(item.Executor, "-"),
+    executor: formatInspectionExecutors(item.Executors, item.Executor),
     status: statusValue === null ? "" : String(statusValue),
     statusValue,
     statusLabel: formatWorkOrderStatus(statusValue),
@@ -3092,6 +3092,20 @@ function mapInspectionWorkOrderRow(item: WorkOrderListItem, index: number): Cust
     createdStartAt: "-",
     createdEndAt: "-",
   }
+}
+
+function formatInspectionExecutors(value: unknown, fallback?: unknown) {
+  if (Array.isArray(value)) {
+    const normalized = value
+      .map(item => toDisplayText(item, ""))
+      .filter(Boolean)
+
+    if (normalized.length) {
+      return normalized.join("、")
+    }
+  }
+
+  return toDisplayText(fallback, "-")
 }
 
 function mapRepairWorkOrderRow(item: RepairWorkOrderListItem, index: number): CustomerWorkOrderRow {

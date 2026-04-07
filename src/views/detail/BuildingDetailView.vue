@@ -280,7 +280,7 @@ async function loadBuildingRecords(currentBuilding: BuildingListItem) {
         kind: "inspection" as const,
         serviceName: recordText(item.PackageName || item.PlanName, "未命名检测工单"),
         item: "-",
-        executor: recordText(item.Executor, "-"),
+        executor: formatInspectionExecutors(item.Executors, item.Executor),
         deadline: formatDateOnly(recordText(item.Deadline, "-")),
         sortTime: resolveRecordSortTime(item.UpdatedAt, item.CreatedAt, item.Deadline),
       }))
@@ -317,6 +317,20 @@ async function loadBuildingRecords(currentBuilding: BuildingListItem) {
       recordsLoading.value = false
     }
   }
+}
+
+function formatInspectionExecutors(value: unknown, fallback?: unknown) {
+  if (Array.isArray(value)) {
+    const normalized = value
+      .map(item => recordText(item, ""))
+      .filter(Boolean)
+
+    if (normalized.length) {
+      return normalized.join("、")
+    }
+  }
+
+  return recordText(fallback, "-")
 }
 
 function goToRecordDetail(row: BuildingRecordRow) {

@@ -480,7 +480,7 @@ function normalizeInspectionWorkOrderRecord(item: WorkOrderListItem, index: numb
     parkName: "-",
     packageName,
     planName: toText(item.PlanName, "-"),
-    executor: toText(item.Executor, "-"),
+    executor: formatInspectionExecutors(item.Executors, item.Executor),
     status: statusValue === null ? "" : String(statusValue),
     statusValue,
     statusLabel: formatStatusLabel(props.kind, statusValue),
@@ -499,6 +499,20 @@ function normalizeInspectionWorkOrderRecord(item: WorkOrderListItem, index: numb
     createdStartAt: "-",
     createdEndAt: "-",
   }
+}
+
+function formatInspectionExecutors(value: unknown, fallback?: unknown) {
+  if (Array.isArray(value)) {
+    const normalized = value
+      .map(item => toText(item))
+      .filter(Boolean)
+
+    if (normalized.length) {
+      return normalized.join("、")
+    }
+  }
+
+  return toText(fallback, "-")
 }
 
 function normalizeRepairWorkOrderRecord(item: RepairWorkOrderListItem, index: number): WorkOrderRecord {
