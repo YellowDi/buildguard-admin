@@ -102,7 +102,6 @@ const itemForm = ref({
   name: "",
   parentUuid: "",
   parentName: "",
-  sort: "",
   remark: "",
 })
 
@@ -278,7 +277,6 @@ function openCreateItemDialog() {
     name: "",
     parentUuid: "",
     parentName: "",
-    sort: "",
     remark: "",
   }
   createItemOpen.value = true
@@ -296,7 +294,6 @@ async function openEditItemDialog(row: DictEntryDisplayRow) {
       name: detail.Name,
       parentUuid: detail.ParentUuid,
       parentName: detail.ParentName,
-      sort: detail.Sort === null ? "" : String(detail.Sort),
       remark: detail.Remark,
     }
     editItemOpen.value = true
@@ -367,7 +364,6 @@ async function submitEditType() {
 async function submitCreateItem() {
   const name = itemForm.value.name.trim()
   const remark = itemForm.value.remark.trim()
-  const sort = itemForm.value.sort.trim()
   const dictTypeUuid = activeType.value?.Uuid?.trim() ?? ""
 
   if (!dictTypeUuid || !name) {
@@ -381,7 +377,6 @@ async function submitCreateItem() {
       Name: name,
       ParentUuid: itemForm.value.parentUuid.trim(),
       Remark: remark,
-      Sort: sort ? Number(sort) : undefined,
     })
     createItemOpen.value = false
     await loadEntries()
@@ -396,7 +391,6 @@ async function submitEditItem() {
   const name = itemForm.value.name.trim()
   const remark = itemForm.value.remark.trim()
   const parentUuid = itemForm.value.parentUuid.trim()
-  const sort = itemForm.value.sort.trim()
 
   if (!editingItemUuid.value || !dictTypeUuid || !name) {
     toast.error("请填写条目名称")
@@ -410,7 +404,6 @@ async function submitEditItem() {
       Name: name,
       ParentUuid: parentUuid,
       Remark: remark,
-      Sort: sort ? Number(sort) : undefined,
     })
     editItemOpen.value = false
     editingItemUuid.value = ""
@@ -826,17 +819,6 @@ defineExpose<ExposedActions>({
           </div>
 
           <div class="grid gap-2">
-            <label class="text-sm font-medium text-foreground" for="dict-entry-sort">排序</label>
-            <Input
-              id="dict-entry-sort"
-              v-model="itemForm.sort"
-              type="number"
-              inputmode="numeric"
-              placeholder="可选，数值越小越靠前"
-            />
-          </div>
-
-          <div class="grid gap-2">
             <label class="text-sm font-medium text-foreground" for="dict-entry-remark">备注</label>
             <Textarea
               id="dict-entry-remark"
@@ -892,17 +874,6 @@ defineExpose<ExposedActions>({
               id="edit-dict-entry-parent-uuid"
               v-model="itemForm.parentUuid"
               placeholder="可选，空表示顶级"
-            />
-          </div>
-
-          <div class="grid gap-2">
-            <label class="text-sm font-medium text-foreground" for="edit-dict-entry-sort">排序</label>
-            <Input
-              id="edit-dict-entry-sort"
-              v-model="itemForm.sort"
-              type="number"
-              inputmode="numeric"
-              placeholder="可选，数值越小越靠前"
             />
           </div>
 

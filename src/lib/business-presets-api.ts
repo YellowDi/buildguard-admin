@@ -256,7 +256,6 @@ export async function createDictEntry(payload: DictEntryCreatePayload) {
     Name: getOptionalString(payload.Name),
     ParentUuid: getOptionalString(payload.ParentUuid),
     Remark: getOptionalString(payload.Remark),
-    Sort: getOptionalNumber(payload.Sort),
   }
 
   const response = await fetch(DICT_ENTRY_CREATE_API_URL, {
@@ -305,7 +304,6 @@ export async function updateDictEntry(payload: DictEntryUpdatePayload) {
     Name: getOptionalString(payload.Name),
     ParentUuid: getOptionalString(payload.ParentUuid),
     Remark: getOptionalString(payload.Remark),
-    Sort: getOptionalNumber(payload.Sort),
   }
 
   const response = await fetch(DICT_ENTRY_UPDATE_API_URL, {
