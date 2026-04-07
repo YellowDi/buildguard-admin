@@ -62,27 +62,17 @@ const schema: TablePageSchema<InspectionPlanRecord> = {
   },
   columns: [
     {
-      key: "code",
-      label: "计划编号",
-      filterType: "text",
-      emphasis: "default",
-      tone: "muted",
-      filter: {
-        type: "text",
-        placeholder: "输入计划编号",
-      },
-      sort: true,
-    },
-    {
       key: "planName",
       label: "计划名称",
       filterType: "text",
+      slot: "cell-planName",
       emphasis: "strong",
       tone: "primary",
       filter: {
         type: "text",
         placeholder: "输入计划名称",
         defaultVisible: true,
+        value: row => `${row.planName} ${row.code}`,
       },
       sort: true,
     },
@@ -421,6 +411,13 @@ function asInspectionPlanRecord(row: Record<string, unknown>): InspectionPlanRec
     <TooltipProvider>
       <TablePageLoading v-if="showInitialLoading" />
       <TablePage v-else :page="page" @primary-action="handleCreateInspectionPlan">
+        <template #cell-planName="{ row }">
+          <div class="inline-flex max-w-full items-baseline gap-1.5">
+            <span class="truncate text-foreground">{{ row.planName }}</span>
+            <span class="shrink-0 text-[#8C94A6]">#{{ row.code }}</span>
+          </div>
+        </template>
+
         <template #cell-customerName="{ row }">
           <button
             type="button"
