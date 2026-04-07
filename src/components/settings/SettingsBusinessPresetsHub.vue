@@ -31,6 +31,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
@@ -588,51 +589,49 @@ defineExpose<ExposedActions>({
             </Button>
           </SettingsToolbarRefreshSlot>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger as-child>
-              <Button
-                variant="outline"
-                class="h-8 gap-1 rounded-md px-3 text-[14px]"
-              >
-                <i class="ri-add-circle-line text-base" />
-                <span>添加类型</span>
-                <i class="ri-arrow-down-s-line text-base" />
-              </Button>
-            </DropdownMenuTrigger>
+          <div class="inline-flex items-center">
+            <Button
+              class="h-8 gap-1 rounded-r-none pr-2.5 pl-3 text-[14px]"
+              :disabled="!canCreateItem"
+              @click="openCreateItemDialog"
+            >
+              <i class="ri-add-line text-base" />
+              <span>添加条目</span>
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger as-child>
+                <Button
+                  class="h-8 w-8 rounded-l-none border-l border-white/15 px-0 text-[14px]"
+                  aria-label="打开业务预设操作菜单"
+                >
+                  <i class="ri-arrow-down-s-line text-base" />
+                </Button>
+              </DropdownMenuTrigger>
 
-            <DropdownMenuContent align="end" class="w-44 rounded-xl p-1.5">
-              <DropdownMenuItem class="rounded-lg px-2.5 py-2" @select="openCreateTypeDialog">
-                <i class="ri-add-line text-base" />
-                <span>新增类型</span>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator class="mx-0 my-1 bg-border" />
-              <DropdownMenuItem
-                class="rounded-lg px-2.5 py-2"
-                :disabled="!activeType"
-                @select="openEditTypeDialog"
-              >
-                <i class="ri-edit-line text-base" />
-                <span>编辑当前类型</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                class="rounded-lg px-2.5 py-2 text-destructive focus:text-destructive"
-                :disabled="!activeType"
-                @select="deleteTypeOpen = true"
-              >
-                <i class="ri-delete-bin-line text-base" />
-                <span>删除当前类型</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          <Button
-            class="h-8 gap-1 rounded-md px-3 text-[14px]"
-            :disabled="!canCreateItem"
-            @click="openCreateItemDialog"
-          >
-            <i class="ri-add-line text-base" />
-            <span>添加条目</span>
-          </Button>
+              <DropdownMenuContent align="end" class="w-[220px] rounded-xl p-1.5">
+                <DropdownMenuLabel class="px-2 pb-1 text-xs font-medium text-muted-foreground">
+                  类型操作
+                </DropdownMenuLabel>
+                <DropdownMenuItem class="rounded-lg px-2.5 py-2" @select="openCreateTypeDialog">
+                  新增类型
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  class="rounded-lg px-2.5 py-2"
+                  :disabled="!activeType"
+                  @select="openEditTypeDialog"
+                >
+                  编辑当前类型
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  class="rounded-lg px-2.5 py-2 text-destructive focus:text-destructive"
+                  :disabled="!activeType"
+                  @select="deleteTypeOpen = true"
+                >
+                  删除当前类型
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
       </SettingsToolbarRow>
     </template>
