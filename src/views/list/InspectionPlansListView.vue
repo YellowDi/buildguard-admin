@@ -292,6 +292,15 @@ function getNextExecutionDateValue(row: InspectionPlanRecord) {
   return row.nextExecutionAt || ""
 }
 
+function hasNextExecutionDate(row: InspectionPlanRecord) {
+  const value = getNextExecutionDateValue(row).trim()
+  return Boolean(value && value !== "-" && value !== "—")
+}
+
+function getNextExecutionEmptyLabel() {
+  return "计划结束前无后续执行"
+}
+
 function parseDateTime(value: string) {
   if (!value) {
     return null
@@ -307,9 +316,13 @@ function parseDateTime(value: string) {
 }
 
 function getRemainingDaysLabel(row: InspectionPlanRecord) {
+  if (!hasNextExecutionDate(row)) {
+    return getNextExecutionEmptyLabel()
+  }
+
   const nextExecutionAt = parseDateTime(getNextExecutionDateValue(row))
   if (!nextExecutionAt) {
-    return "-"
+    return getNextExecutionEmptyLabel()
   }
 
   const now = new Date()
@@ -329,6 +342,10 @@ function getRemainingDaysLabel(row: InspectionPlanRecord) {
 }
 
 function getNextExecutionProgressValue(row: InspectionPlanRecord) {
+  if (!hasNextExecutionDate(row)) {
+    return 0
+  }
+
   const nextExecutionAt = parseDateTime(getNextExecutionDateValue(row))
   if (!nextExecutionAt) {
     return 0
@@ -349,6 +366,10 @@ function getNextExecutionProgressValue(row: InspectionPlanRecord) {
 }
 
 function getNextExecutionProgressClass(row: InspectionPlanRecord) {
+  if (!hasNextExecutionDate(row)) {
+    return "[&_[data-slot=progress-indicator]]:bg-transparent"
+  }
+
   const nextExecutionAt = parseDateTime(getNextExecutionDateValue(row))
   if (!nextExecutionAt) {
     return "[&_[data-slot=progress-indicator]]:bg-muted-foreground/40"
@@ -443,7 +464,10 @@ function asInspectionPlanRecord(row: Record<string, unknown>): InspectionPlanRec
         <template #cell-nextExecutionAt="{ row }">
           <Tooltip>
             <TooltipTrigger as-child>
-              <div class="flex min-w-[180px] items-center gap-2">
+              <div
+                v-if="hasNextExecutionDate(asInspectionPlanRecord(row))"
+                class="flex min-w-[180px] items-center gap-2"
+              >
                 <Progress
                   :model-value="getNextExecutionProgressValue(asInspectionPlanRecord(row))"
                   class="h-1.5 max-w-[120px] bg-[#E9EDF2] [&_[data-slot=progress-indicator]]:transition-all"
@@ -453,9 +477,12 @@ function asInspectionPlanRecord(row: Record<string, unknown>): InspectionPlanRec
                   {{ getRemainingDaysLabel(asInspectionPlanRecord(row)) }}
                 </span>
               </div>
+              <span v-else class="text-xs text-muted-foreground">
+                {{ getNextExecutionEmptyLabel() }}
+              </span>
             </TooltipTrigger>
             <TooltipContent side="top" align="start">
-              下次执行时间：{{ row.nextExecutionAt || "-" }}
+              下次执行时间：{{ hasNextExecutionDate(asInspectionPlanRecord(row)) ? row.nextExecutionAt : getNextExecutionEmptyLabel() }}
             </TooltipContent>
           </Tooltip>
         </template>

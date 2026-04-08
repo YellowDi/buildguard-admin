@@ -279,10 +279,69 @@ function extractTotal(payload: InspectionPlansEnvelope | unknown[], fallback: nu
 
 function normalizeInspectionPlan(value: unknown): InspectionPlanListItem {
   if (value && typeof value === "object") {
-    return value as InspectionPlanListItem
+    const record = value as InspectionPlanListItem
+
+    return {
+      ...record,
+      NextTime: normalizePlanNextTime(record.NextTime, record.EndTime),
+    }
   }
 
   return {}
+}
+
+function normalizePlanNextTime(nextTime: unknown, endTime: unknown) {
+  const normalizedNextTime = getOptionalText(nextTime)
+
+  if (!normalizedNextTime) {
+    return undefined
+  }
+
+  const parsedNextTime = parseDateText(normalizedNextTime)
+  const parsedEndTime = parseDateText(endTime)
+
+  if (parsedNextTime && parsedEndTime && isAfterCalendarDay(parsedNextTime, parsedEndTime)) {
+    return undefined
+  }
+
+  return normalizedNextTime
+}
+
+function parseDateText(value: unknown) {
+  const text = getOptionalText(value)
+
+  if (!text) {
+    return null
+  }
+
+  const normalized = text.includes("T") ? text : text.replace(" ", "T")
+  const parsed = new Date(normalized)
+
+  if (Number.isNaN(parsed.getTime())) {
+    return null
+  }
+
+  return parsed
+}
+
+function isAfterCalendarDay(left: Date, right: Date) {
+  const leftDay = new Date(left.getFullYear(), left.getMonth(), left.getDate()).getTime()
+  const rightDay = new Date(right.getFullYear(), right.getMonth(), right.getDate()).getTime()
+
+  return leftDay > rightDay
+}
+
+function getOptionalText(value: unknown) {
+  if (typeof value === "string") {
+    const normalized = value.trim()
+    return normalized || undefined
+  }
+
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return String(value)
+  }
+
+  return undefined
 }
 
 function extractCreateResult(value: unknown) {

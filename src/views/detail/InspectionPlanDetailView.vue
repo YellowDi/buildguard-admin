@@ -77,7 +77,8 @@ const fieldSections = computed<DetailFieldSection[]>(() => {
         {
           key: "next-time",
           label: "下次执行时间",
-          value: formatDateOnly(toText(current.NextTime, "-")),
+          value: formatNextExecutionValue(current.NextTime),
+          valueClass: getNextExecutionValueClass(current.NextTime),
           suffixHint: getRemainingDaysHint(current.NextTime),
         },
         {
@@ -262,6 +263,26 @@ function formatDateOnly(value: string) {
 
   const [datePart] = normalized.split(/[ T]/)
   return datePart || normalized
+}
+
+function formatNextExecutionValue(value: unknown) {
+  const normalized = toText(value, "")
+
+  if (!normalized || normalized === "-" || normalized === "—") {
+    return "计划结束前无后续执行"
+  }
+
+  return formatDateOnly(normalized)
+}
+
+function getNextExecutionValueClass(value: unknown) {
+  const normalized = toText(value, "")
+
+  if (!normalized || normalized === "-" || normalized === "—") {
+    return "text-muted-foreground"
+  }
+
+  return undefined
 }
 
 function parseDateText(value: unknown) {
