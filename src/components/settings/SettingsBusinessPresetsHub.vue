@@ -7,7 +7,6 @@ import SettingsRightPanelLayout from "@/components/settings/SettingsRightPanelLa
 import SettingsToolbarRow from "@/components/settings/SettingsToolbarRow.vue"
 import SettingsToolbarRefreshSlot from "@/components/settings/SettingsToolbarRefreshSlot.vue"
 import SettingsToolbarSearchInput from "@/components/settings/SettingsToolbarSearchInput.vue"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -99,10 +98,7 @@ const typeForm = ref({
 })
 
 const itemForm = ref({
-  code: "",
   name: "",
-  parentUuid: "",
-  parentName: "",
   remark: "",
 })
 
@@ -267,7 +263,6 @@ async function openEditTypeDialog() {
 }
 
 function openCreateItemDialog() {
-  const code = activeType.value?.Code?.trim() ?? ""
   const uuid = activeType.value?.Uuid?.trim() ?? ""
   if (!uuid) {
     toast.error("请先添加并选择字典类型")
@@ -275,10 +270,7 @@ function openCreateItemDialog() {
   }
 
   itemForm.value = {
-    code,
     name: "",
-    parentUuid: "",
-    parentName: "",
     remark: "",
   }
   createItemOpen.value = true
@@ -292,10 +284,7 @@ async function openEditItemDialog(row: DictEntryDisplayRow) {
 
     editingItemUuid.value = detail.Uuid
     itemForm.value = {
-      code: activeType.value?.Code ?? "",
       name: detail.Name,
-      parentUuid: detail.ParentUuid,
-      parentName: detail.ParentName,
       remark: detail.Remark,
     }
     editItemOpen.value = true
@@ -377,7 +366,6 @@ async function submitCreateItem() {
     await createDictEntry({
       DictTypeUuid: dictTypeUuid,
       Name: name,
-      ParentUuid: itemForm.value.parentUuid.trim(),
       Remark: remark,
     })
     createItemOpen.value = false
@@ -392,7 +380,6 @@ async function submitEditItem() {
   const dictTypeUuid = activeType.value?.Uuid?.trim() ?? ""
   const name = itemForm.value.name.trim()
   const remark = itemForm.value.remark.trim()
-  const parentUuid = itemForm.value.parentUuid.trim()
 
   if (!editingItemUuid.value || !dictTypeUuid || !name) {
     toast.error("请填写条目名称")
@@ -404,7 +391,6 @@ async function submitEditItem() {
       Uuid: editingItemUuid.value,
       DictTypeUuid: dictTypeUuid,
       Name: name,
-      ParentUuid: parentUuid,
       Remark: remark,
     })
     editItemOpen.value = false
@@ -678,19 +664,6 @@ defineExpose<ExposedActions>({
     </template>
 
     <section class="space-y-4">
-      <Alert class="border-border/60 bg-muted/25">
-        <i class="ri-information-line text-base text-muted-foreground" />
-        <AlertTitle>{{ activeType?.Name || "业务预设" }}</AlertTitle>
-        <AlertDescription>
-          <template v-if="activeType?.Code">
-            当前分页条目会自动绑定类型代码 <code>{{ activeType.Code }}</code>，新增条目时无需重复选择。
-          </template>
-          <template v-else>
-            请先添加字典类型。新增条目时，系统会自动根据当前分页填充对应的类型代码。
-          </template>
-        </AlertDescription>
-      </Alert>
-
       <TablePageTable
         row-key="id"
         show-index
@@ -834,35 +807,17 @@ defineExpose<ExposedActions>({
         <DialogHeader>
           <DialogTitle>添加字典条目</DialogTitle>
           <DialogDescription>
-            条目会自动添加到当前分页下，并使用当前分页的类型代码。
+            条目会自动添加到当前激活的字典类型下。
           </DialogDescription>
         </DialogHeader>
 
         <form class="grid gap-4" @submit.prevent>
-          <div class="grid gap-2">
-            <label class="text-sm font-medium text-foreground" for="dict-entry-code">类型代码</label>
-            <Input
-              id="dict-entry-code"
-              :model-value="itemForm.code"
-              disabled
-            />
-          </div>
-
           <div class="grid gap-2">
             <label class="text-sm font-medium text-foreground" for="dict-entry-name">条目名称</label>
             <Input
               id="dict-entry-name"
               v-model="itemForm.name"
               placeholder="请输入条目名称"
-            />
-          </div>
-
-          <div class="grid gap-2">
-            <label class="text-sm font-medium text-foreground" for="dict-entry-parent-uuid">父级 UUID</label>
-            <Input
-              id="dict-entry-parent-uuid"
-              v-model="itemForm.parentUuid"
-              placeholder="可选，空表示顶级"
             />
           </div>
 
@@ -899,29 +854,11 @@ defineExpose<ExposedActions>({
 
         <form class="grid gap-4" @submit.prevent>
           <div class="grid gap-2">
-            <label class="text-sm font-medium text-foreground" for="edit-dict-entry-code">类型代码</label>
-            <Input
-              id="edit-dict-entry-code"
-              :model-value="itemForm.code"
-              disabled
-            />
-          </div>
-
-          <div class="grid gap-2">
             <label class="text-sm font-medium text-foreground" for="edit-dict-entry-name">条目名称</label>
             <Input
               id="edit-dict-entry-name"
               v-model="itemForm.name"
               placeholder="请输入条目名称"
-            />
-          </div>
-
-          <div class="grid gap-2">
-            <label class="text-sm font-medium text-foreground" for="edit-dict-entry-parent-uuid">父级 UUID</label>
-            <Input
-              id="edit-dict-entry-parent-uuid"
-              v-model="itemForm.parentUuid"
-              placeholder="可选，空表示顶级"
             />
           </div>
 
