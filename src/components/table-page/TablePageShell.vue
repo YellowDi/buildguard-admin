@@ -64,11 +64,11 @@ const props = withDefaults(defineProps<{
   sections?: TableSection[]
   emptyState?: TablePageEmptyState
   showToolbarActions?: boolean
-  /** 兼容旧调用保留；公共表格已统一结构，不再影响左右布局。 */
+  /** 列表页表格默认外扩到主内容边缘；详情内嵌表格关闭外扩，跟随详情内容宽度。 */
   listLevelTable?: boolean
 }>(), {
   showToolbarActions: true,
-  listLevelTable: false,
+  listLevelTable: true,
 })
 
 const emit = defineEmits<{
@@ -163,7 +163,10 @@ async function handleExportConfirm(payload: { scope: TableExportScope; format: T
 
 <template>
   <section
-    class="-mx-4 flex min-h-0 min-w-0 flex-1 flex-col bg-background"
+    :class="[
+      'flex min-h-0 min-w-0 flex-1 flex-col bg-background',
+      props.listLevelTable ? '-mx-4' : '',
+    ]"
     style="--table-page-sticky-top: -1rem;"
   >
     <div class="flex min-h-0 min-w-0 flex-1 flex-col pb-3 pt-3">
@@ -187,6 +190,7 @@ async function handleExportConfirm(payload: { scope: TableExportScope; format: T
           :date-filters="props.dateFilters"
           :date-filter-fields="props.dateFilterFields"
           :show-toolbar-actions="props.showToolbarActions"
+          :list-level-table="props.listLevelTable"
           @tab-click="emit('tab-click', $event)"
           @add-filter="emit('add-filter', $event)"
           @replace-filter="emit('replace-filter', $event)"
@@ -226,7 +230,8 @@ async function handleExportConfirm(payload: { scope: TableExportScope; format: T
                 :wrapper-class="section.wrapperClass ?? props.wrapperClass"
                 :table-class="section.tableClass ?? props.tableClass"
                 :empty-state="props.emptyState"
-                :align-to-header-at-wide="true"
+                :edge-gutter="true"
+                :align-to-header-at-wide="props.listLevelTable"
                 :list-level-table="props.listLevelTable"
                 @update:selected-row-keys="emit('update:selected-row-keys', $event)"
               >
@@ -254,7 +259,8 @@ async function handleExportConfirm(payload: { scope: TableExportScope; format: T
               :wrapper-class="props.wrapperClass"
               :table-class="props.tableClass"
               :empty-state="props.emptyState"
-              :align-to-header-at-wide="true"
+              :edge-gutter="true"
+              :align-to-header-at-wide="props.listLevelTable"
               :list-level-table="props.listLevelTable"
               @update:selected-row-keys="emit('update:selected-row-keys', $event)"
             >

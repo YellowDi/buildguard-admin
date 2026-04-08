@@ -119,14 +119,20 @@ const wrapperClassName = computed(() => getTableWrapperClass(props.wrapperClass)
 const scrollViewportClassName = computed(() => cn(
   getTableScrollViewportClass(),
   props.alignToHeaderAtWide ? "min-[2000px]:mx-8 min-[2000px]:w-auto" : "",
+  !props.listLevelTable ? "max-w-none" : "",
 ))
 const tableClassName = computed(() => getTableClass(props.tableClass))
 const hasRowActions = computed(() => (props.rowActions?.length ?? 0) > 0)
+const tableOuterRef = ref<HTMLElement | null>(null)
 const tableWrapperRef = ref<HTMLElement | null>(null)
 const tableRef = ref<HTMLTableElement | null>(null)
 const fillColumnActive = ref(false)
 const horizontalOverflow = ref(false)
 const edgeGutterSize = ref(TABLE_EDGE_GUTTER_MOBILE)
+const embeddedViewportExpandLeft = ref(0)
+const embeddedViewportExpandRight = ref(0)
+const embeddedLeadingInset = ref(0)
+const embeddedTrailingInset = ref(0)
 const stickyHeaderActive = ref(false)
 const stickyHeaderLeft = ref(0)
 const stickyHeaderTop = ref(0)
@@ -168,9 +174,17 @@ const stickyHeaderVisible = computed(() => (
   && stickyHeaderWidth.value > 0
   && stickyColumnWidths.value.length > 0
 ))
-const leadingEdgeGutter = computed(() => (props.edgeGutter ? edgeGutterSize.value : 0))
+const leadingEdgeGutter = computed(() => {
+  if (!props.edgeGutter) {
+    return 0
+  }
+
+  return props.listLevelTable ? edgeGutterSize.value : embeddedLeadingInset.value
+})
 const trailingEdgeGutter = computed(() => (
-  props.edgeGutter && horizontalOverflow.value ? edgeGutterSize.value : 0
+  props.edgeGutter && horizontalOverflow.value
+    ? (props.listLevelTable ? edgeGutterSize.value : embeddedTrailingInset.value)
+    : 0
 ))
 const tableInlineMinWidth = computed(() => {
   const reservedSpace = leadingEdgeGutter.value + trailingEdgeGutter.value
@@ -181,11 +195,21 @@ const tableElementStyle = computed(() => ({
   minWidth: tableInlineMinWidth.value,
   maxWidth: "none",
 }))
-const scrollViewportStyle = computed(() => ({
-  paddingBottom: horizontalOverflow.value && props.rows.length > 0
-    ? `${TABLE_HORIZONTAL_SCROLL_SAFE_AREA}px`
-    : undefined,
-}))
+const scrollViewportStyle = computed(() => {
+  const style: Record<string, string | undefined> = {
+    paddingBottom: horizontalOverflow.value && props.rows.length > 0
+      ? `${TABLE_HORIZONTAL_SCROLL_SAFE_AREA}px`
+      : undefined,
+  }
+
+  if (!props.listLevelTable && (embeddedViewportExpandLeft.value > 0 || embeddedViewportExpandRight.value > 0)) {
+    style.marginLeft = `-${embeddedViewportExpandLeft.value}px`
+    style.marginRight = `-${embeddedViewportExpandRight.value}px`
+    style.width = `calc(100% + ${embeddedViewportExpandLeft.value + embeddedViewportExpandRight.value}px)`
+  }
+
+  return style
+})
 const stickyContentWidth = computed(() => (
   stickyTableWidth.value + leadingEdgeGutter.value + trailingEdgeGutter.value
 ))
@@ -251,6 +275,11 @@ function updateEdgeGutterSize() {
     return
   }
 
+  if (!props.listLevelTable) {
+    edgeGutterSize.value = TABLE_EDGE_GUTTER_MOBILE
+    return
+  }
+
   if (props.alignToHeaderAtWide && window.innerWidth >= ALIGN_TO_HEADER_WIDE_BREAKPOINT) {
     edgeGutterSize.value = 0
     return
@@ -259,6 +288,41 @@ function updateEdgeGutterSize() {
   edgeGutterSize.value = window.innerWidth >= 640
     ? TABLE_EDGE_GUTTER_DESKTOP
     : TABLE_EDGE_GUTTER_MOBILE
+}
+
+function resetEmbeddedViewportState() {
+  embeddedViewportExpandLeft.value = 0
+  embeddedViewportExpandRight.value = 0
+  embeddedLeadingInset.value = 0
+  embeddedTrailingInset.value = 0
+}
+
+function syncEmbeddedViewportState() {
+  if (props.listLevelTable || !tableOuterRef.value || typeof window === "undefined") {
+    resetEmbeddedViewportState()
+    return
+  }
+
+  const outerRect = tableOuterRef.value.getBoundingClientRect()
+  const detailLayout = tableOuterRef.value.closest(".detail-layout")
+  const headerContent = detailLayout?.querySelector("[data-detail-layout-header-content]") as HTMLElement | null
+  const mainElement = tableOuterRef.value.closest("main")
+
+  if (!headerContent || !(mainElement instanceof HTMLElement)) {
+    resetEmbeddedViewportState()
+    return
+  }
+
+  const headerRect = headerContent.getBoundingClientRect()
+  const mainRect = mainElement.getBoundingClientRect()
+  const headerStyles = window.getComputedStyle(headerContent)
+  const headerContentLeft = headerRect.left + Number.parseFloat(headerStyles.paddingLeft || "0")
+  const headerContentRight = headerRect.right - Number.parseFloat(headerStyles.paddingRight || "0")
+
+  embeddedViewportExpandLeft.value = Math.max(0, Math.round(outerRect.left - mainRect.left))
+  embeddedViewportExpandRight.value = Math.max(0, Math.round(mainRect.right - outerRect.right))
+  embeddedLeadingInset.value = Math.max(0, Math.round(headerContentLeft - mainRect.left))
+  embeddedTrailingInset.value = Math.max(0, Math.round(mainRect.right - headerContentRight))
 }
 
 function maybeShowHorizontalScrollHint() {
@@ -853,6 +917,7 @@ function measureFillColumnState() {
 
 async function syncTableLayoutState() {
   updateEdgeGutterSize()
+  syncEmbeddedViewportState()
 
   const nextFillColumnActive = measureFillColumnState()
 
@@ -881,9 +946,13 @@ function syncStickyHeaderState() {
   const stickyLine = getScrollRootTop() + getStickyTopOffset()
   const headerHeight = headerCells[0]?.getBoundingClientRect().height ?? 41
 
-  stickyHeaderLeft.value = wrapperRect.left
+  stickyHeaderLeft.value = props.listLevelTable
+    ? wrapperRect.left
+    : wrapperRect.left - embeddedViewportExpandLeft.value
   stickyHeaderTop.value = stickyLine
-  stickyHeaderWidth.value = wrapperRect.width
+  stickyHeaderWidth.value = props.listLevelTable
+    ? wrapperRect.width
+    : wrapperRect.width + embeddedViewportExpandLeft.value + embeddedViewportExpandRight.value
   stickyTableWidth.value = tableRef.value.scrollWidth
   stickyScrollLeft.value = tableWrapperRef.value.scrollLeft
   stickyColumnWidths.value = headerCells.map(cell => cell.getBoundingClientRect().width)
@@ -1027,7 +1096,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div :class="wrapperClassName">
+  <div ref="tableOuterRef" :class="wrapperClassName">
     <!-- fixed 克隆挂到 body，与 getBoundingClientRect 视口坐标一致；避免嵌套 overflow/transform 导致吸顶错位 -->
     <Teleport v-if="stickyHeaderVisible" to="body">
       <div

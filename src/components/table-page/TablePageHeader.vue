@@ -52,6 +52,7 @@ const props = withDefaults(defineProps<{
   dateFilterFields?: string[]
   primaryActionLabel?: string
   showToolbarActions?: boolean
+  listLevelTable?: boolean
 }>(), {
   availableFilters: () => [],
   textFilters: () => ({}),
@@ -63,6 +64,7 @@ const props = withDefaults(defineProps<{
   sortFieldOptions: () => [],
   primaryActionLabel: "",
   showToolbarActions: true,
+  listLevelTable: true,
 })
 
 const emit = defineEmits<{
@@ -270,7 +272,7 @@ function handleMobileToolbarActionSelect(action: "filters" | "sort" | "export" |
 
 <template>
   <div class="flex min-w-0 w-full flex-col">
-    <div v-if="hasTopSurface" class="px-4 sm:px-8">
+    <div v-if="hasTopSurface" :class="props.listLevelTable ? 'px-4 sm:px-8' : ''">
       <div class="flex min-w-0 flex-col border-b border-border">
         <div
           v-if="hasHeading || (!hasTabs && props.showToolbarActions)"
@@ -531,7 +533,7 @@ function handleMobileToolbarActionSelect(action: "filters" | "sort" | "export" |
       leave-from-class="max-h-16 opacity-100 translate-y-0"
       leave-to-class="max-h-0 opacity-0 -translate-y-1"
     >
-        <div v-if="showControls" class="px-4 py-2 sm:px-8">
+        <div v-if="showControls" :class="props.listLevelTable ? 'px-4 py-2 sm:px-8' : 'py-2'">
           <div class="flex flex-wrap items-center gap-0.5 text-[14px] text-muted-foreground">
             <div class="flex min-w-0 flex-wrap items-center gap-0.5">
               <slot name="controls-prefix" />
