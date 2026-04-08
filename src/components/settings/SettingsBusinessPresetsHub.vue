@@ -459,7 +459,15 @@ async function loadTypes(preferredCode?: string) {
 
   try {
     const types = await fetchDictTypes()
-    dictTypes.value = types.filter(type => type.Code)
+    dictTypes.value = types
+      .filter(type => type.Code)
+      .sort((a, b) => {
+        if (a.Id > 0 && b.Id > 0 && a.Id !== b.Id) {
+          return a.Id - b.Id
+        }
+
+        return a.Code.localeCompare(b.Code, "zh-CN")
+      })
 
     const nextCode = resolveNextActiveCode(preferredCode)
     const changed = nextCode !== activeTabCode.value
