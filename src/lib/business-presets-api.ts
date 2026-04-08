@@ -352,6 +352,26 @@ function extractList(payload: ListEnvelope | unknown[]) {
     return payload.List
   }
 
+  if (payload.data && typeof payload.data === "object") {
+    const nested = payload.data as ListEnvelope
+
+    if (Array.isArray(nested.List)) {
+      return nested.List
+    }
+
+    if (Array.isArray(nested.list)) {
+      return nested.list
+    }
+
+    if (Array.isArray(nested.rows)) {
+      return nested.rows
+    }
+
+    if (Array.isArray(nested.data)) {
+      return nested.data
+    }
+  }
+
   if (Array.isArray(payload.list)) {
     return payload.list
   }
@@ -401,11 +421,11 @@ function normalizeDictType(raw: unknown): DictTypeItem {
   const item = asRecord(raw)
 
   return {
-    Id: getNumber(item.Id ?? item.id),
-    Uuid: getString(item.Uuid ?? item.uuid),
-    Code: getString(item.Code ?? item.code),
-    Name: getString(item.Name ?? item.name),
-    Remark: getString(item.Remark ?? item.remark),
+    Id: getFirstNumber(item, ["Id", "id", "DictTypeId", "dictTypeId", "TypeId", "typeId"]),
+    Uuid: getFirstText(item, ["Uuid", "uuid", "DictTypeUuid", "dictTypeUuid", "TypeUuid", "typeUuid"]),
+    Code: getFirstText(item, ["Code", "code", "DictTypeCode", "dictTypeCode", "TypeCode", "typeCode"]),
+    Name: getFirstText(item, ["Name", "name", "DictTypeName", "dictTypeName", "TypeName", "typeName"]),
+    Remark: getFirstText(item, ["Remark", "remark", "DictTypeRemark", "dictTypeRemark", "TypeRemark", "typeRemark"]),
   }
 }
 
@@ -413,15 +433,15 @@ function normalizeDictEntry(raw: unknown): DictEntryItem {
   const item = asRecord(raw)
 
   return {
-    Id: getNumber(item.Id ?? item.id),
-    Uuid: getString(item.Uuid ?? item.uuid),
-    DictTypeUuid: getString(item.DictTypeUuid ?? item.dictTypeUuid),
-    DictTypeName: getString(item.DictTypeName ?? item.dictTypeName),
-    Name: getString(item.Name ?? item.name),
-    ParentName: getString(item.ParentName ?? item.parentName),
-    ParentUuid: getString(item.ParentUuid ?? item.parentUuid),
-    Remark: getString(item.Remark ?? item.remark),
-    Sort: getNullableNumber(item.Sort ?? item.sort),
+    Id: getFirstNumber(item, ["Id", "id", "DictDataId", "dictDataId", "EntryId", "entryId"]),
+    Uuid: getFirstText(item, ["Uuid", "uuid", "DictDataUuid", "dictDataUuid", "EntryUuid", "entryUuid"]),
+    DictTypeUuid: getFirstText(item, ["DictTypeUuid", "dictTypeUuid", "TypeUuid", "typeUuid"]),
+    DictTypeName: getFirstText(item, ["DictTypeName", "dictTypeName", "TypeName", "typeName"]),
+    Name: getFirstText(item, ["Name", "name", "DictDataName", "dictDataName", "EntryName", "entryName"]),
+    ParentName: getFirstText(item, ["ParentName", "parentName", "ParentDictName", "parentDictName"]),
+    ParentUuid: getFirstText(item, ["ParentUuid", "parentUuid", "ParentDictUuid", "parentDictUuid"]),
+    Remark: getFirstText(item, ["Remark", "remark", "Description", "description"]),
+    Sort: getFirstNullableNumber(item, ["Sort", "sort", "SortNum", "sortNum", "SortNo", "sortNo"]),
   }
 }
 
@@ -433,8 +453,46 @@ function getOptionalString(value: unknown) {
   return typeof value === "string" ? value.trim() : ""
 }
 
-function getString(value: unknown) {
-  return typeof value === "string" ? value.trim() : ""
+function getFirstText(record: Record<string, unknown>, keys: string[]) {
+  for (const key of keys) {
+    const value = record[key]
+
+    if (typeof value === "string" && value.trim()) {
+      return value.trim()
+    }
+
+    if (typeof value === "number") {
+      return String(value)
+    }
+  }
+
+  return ""
+}
+
+function getFirstNumber(record: Record<string, unknown>, keys: string[]) {
+  for (const key of keys) {
+    const value = record[key]
+    const parsed = typeof value === "string" ? Number(value.trim()) : value
+
+    if (typeof parsed === "number" && Number.isFinite(parsed)) {
+      return parsed
+    }
+  }
+
+  return 0
+}
+
+function getFirstNullableNumber(record: Record<string, unknown>, keys: string[]) {
+  for (const key of keys) {
+    const value = record[key]
+    const parsed = typeof value === "string" ? Number(value.trim()) : value
+
+    if (typeof parsed === "number" && Number.isFinite(parsed)) {
+      return parsed
+    }
+  }
+
+  return null
 }
 
 function getOptionalNumber(value: unknown) {
@@ -452,14 +510,4 @@ function getRequiredString(value: unknown, fieldName: string) {
     throw new TypeError(`${fieldName} is required`)
   }
   return normalized
-}
-
-function getNumber(value: unknown) {
-  const parsed = Number(value)
-  return Number.isFinite(parsed) ? parsed : 0
-}
-
-function getNullableNumber(value: unknown) {
-  const parsed = Number(value)
-  return Number.isFinite(parsed) ? parsed : null
 }
