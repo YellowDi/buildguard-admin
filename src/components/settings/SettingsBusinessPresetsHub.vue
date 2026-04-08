@@ -99,6 +99,7 @@ const typeForm = ref({
 const itemForm = ref({
   name: "",
   remark: "",
+  sort: "",
 })
 
 const editingItemUuid = ref("")
@@ -264,6 +265,7 @@ function openCreateItemDialog() {
   itemForm.value = {
     name: "",
     remark: "",
+    sort: "",
   }
   createItemOpen.value = true
 }
@@ -278,6 +280,7 @@ async function openEditItemDialog(row: DictEntryDisplayRow) {
     itemForm.value = {
       name: detail.Name,
       remark: detail.Remark,
+      sort: detail.Sort === null ? "" : String(detail.Sort),
     }
     editItemOpen.value = true
   } catch (error) {
@@ -347,6 +350,7 @@ async function submitEditType() {
 async function submitCreateItem() {
   const name = itemForm.value.name.trim()
   const remark = itemForm.value.remark.trim()
+  const sort = toOptionalNumber(itemForm.value.sort)
   const dictTypeUuid = activeType.value?.Uuid?.trim() ?? ""
 
   if (!dictTypeUuid || !name) {
@@ -359,6 +363,7 @@ async function submitCreateItem() {
       DictTypeUuid: dictTypeUuid,
       Name: name,
       Remark: remark,
+      Sort: sort,
     })
     createItemOpen.value = false
     await loadEntries()
@@ -372,6 +377,7 @@ async function submitEditItem() {
   const dictTypeUuid = activeType.value?.Uuid?.trim() ?? ""
   const name = itemForm.value.name.trim()
   const remark = itemForm.value.remark.trim()
+  const sort = toOptionalNumber(itemForm.value.sort)
 
   if (!editingItemUuid.value || !dictTypeUuid || !name) {
     toast.error("请填写条目名称")
@@ -384,6 +390,7 @@ async function submitEditItem() {
       DictTypeUuid: dictTypeUuid,
       Name: name,
       Remark: remark,
+      Sort: sort,
     })
     editItemOpen.value = false
     editingItemUuid.value = ""
@@ -553,6 +560,15 @@ function resolveErrorMessage(error: unknown, fallback: string) {
   }
 
   return fallback
+}
+
+function toOptionalNumber(value: unknown) {
+  if (value === undefined || value === null || value === "") {
+    return undefined
+  }
+
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : undefined
 }
 
 defineExpose<ExposedActions>({
@@ -814,6 +830,19 @@ defineExpose<ExposedActions>({
           </div>
 
           <div class="grid gap-2">
+            <label class="text-sm font-medium text-foreground" for="dict-entry-sort">排序</label>
+            <Input
+              id="dict-entry-sort"
+              v-model="itemForm.sort"
+              type="number"
+              inputmode="numeric"
+              step="1"
+              placeholder="例如：10"
+              class="h-9 min-w-0"
+            />
+          </div>
+
+          <div class="grid gap-2">
             <label class="text-sm font-medium text-foreground" for="dict-entry-remark">备注</label>
             <Textarea
               id="dict-entry-remark"
@@ -851,6 +880,19 @@ defineExpose<ExposedActions>({
               id="edit-dict-entry-name"
               v-model="itemForm.name"
               placeholder="请输入条目名称"
+            />
+          </div>
+
+          <div class="grid gap-2">
+            <label class="text-sm font-medium text-foreground" for="edit-dict-entry-sort">排序</label>
+            <Input
+              id="edit-dict-entry-sort"
+              v-model="itemForm.sort"
+              type="number"
+              inputmode="numeric"
+              step="1"
+              placeholder="例如：10"
+              class="h-9 min-w-0"
             />
           </div>
 
