@@ -291,6 +291,27 @@ async function openEditItemDialog(row: DictEntryDisplayRow) {
   }
 }
 
+function closeEditItemDialog() {
+  editItemOpen.value = false
+  editingItemUuid.value = ""
+}
+
+function promptDeleteEditingItem() {
+  if (!editingItemUuid.value) {
+    toast.error("当前条目缺少标识，无法删除")
+    return
+  }
+
+  deletingItem.value = {
+    id: 0,
+    uuid: editingItemUuid.value,
+    name: itemForm.value.name.trim() || "字典条目",
+    remark: itemForm.value.remark.trim(),
+    sort: itemForm.value.sort.trim() || "-",
+  }
+  deleteItemOpen.value = true
+}
+
 async function refreshData() {
   await loadTypes()
 }
@@ -395,8 +416,7 @@ async function submitEditItem() {
       Remark: remark,
       Sort: sort,
     })
-    editItemOpen.value = false
-    editingItemUuid.value = ""
+    closeEditItemDialog()
     await loadEntries()
     toast.success("已更新字典条目")
   } catch (error) {
@@ -416,6 +436,7 @@ async function confirmDeleteItem() {
     })
     deleteItemOpen.value = false
     deletingItem.value = null
+    closeEditItemDialog()
     await loadEntries()
     toast.success("已删除字典条目")
   } catch (error) {
@@ -689,7 +710,7 @@ defineExpose<ExposedActions>({
         :empty-state="emptyState"
       >
         <template #cell-actions="{ row: rawRow }">
-          <div class="flex justify-end gap-2">
+          <div class="flex justify-end">
             <Button
               variant="outline"
               size="sm"
@@ -698,15 +719,6 @@ defineExpose<ExposedActions>({
             >
               <i class="ri-edit-line text-base" />
               <span>编辑</span>
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              class="h-8 gap-1 rounded-md px-2.5 text-[13px] text-destructive hover:text-destructive"
-              @click.stop="deletingItem = rawRow as DictEntryDisplayRow; deleteItemOpen = true"
-            >
-              <i class="ri-delete-bin-line text-base" />
-              <span>删除</span>
             </Button>
           </div>
         </template>
@@ -867,7 +879,7 @@ defineExpose<ExposedActions>({
       </DialogContent>
     </Dialog>
 
-    <Dialog :open="editItemOpen" @update:open="editItemOpen = $event">
+    <Dialog :open="editItemOpen" @update:open="($event ? (editItemOpen = true) : closeEditItemDialog())">
       <DialogContent class="sm:max-w-[520px]">
         <DialogHeader>
           <DialogTitle>编辑字典条目</DialogTitle>
@@ -910,13 +922,25 @@ defineExpose<ExposedActions>({
           </div>
         </form>
 
-        <DialogFooter>
-          <Button variant="outline" @click="editItemOpen = false">
-            取消
+        <DialogFooter class="flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <Button
+            type="button"
+            variant="outline"
+            class="w-full gap-1 border-destructive/30 bg-background font-medium text-destructive shadow-none hover:bg-destructive/5 hover:text-destructive sm:w-auto"
+            @click="promptDeleteEditingItem"
+          >
+            <i class="ri-delete-bin-line text-base" />
+            <span>删除字典条目</span>
           </Button>
-          <Button @click="submitEditItem">
-            保存修改
-          </Button>
+
+          <div class="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row">
+            <Button type="button" variant="outline" @click="closeEditItemDialog">
+              取消
+            </Button>
+            <Button type="button" @click="submitEditItem">
+              保存修改
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
