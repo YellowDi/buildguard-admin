@@ -127,16 +127,19 @@ const tableColumns: TableColumn[] = [
     cellClass: "font-medium text-foreground",
   },
   {
-    key: "remark",
-    label: "备注",
-    filterType: "text",
-    tone: "default",
-  },
-  {
     key: "sort",
     label: "排序",
     filterType: "text",
     tone: "default",
+  },
+  {
+    key: "remark",
+    label: "备注",
+    filterType: "text",
+    tone: "muted",
+    variant: "note",
+    cellRenderer: { kind: "note" },
+    width: "fill",
   },
   {
     key: "actions",
@@ -673,7 +676,7 @@ defineExpose<ExposedActions>({
 
     <section class="space-y-4">
       <TablePageTable
-        row-key="id"
+        row-key="uuid"
         show-index
         sticky-header
         :end-spacer="false"
