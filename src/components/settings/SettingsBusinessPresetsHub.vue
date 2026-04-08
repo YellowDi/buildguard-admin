@@ -46,7 +46,7 @@ import {
   deleteDictEntry,
   deleteDictType,
   fetchDictEntryDetail,
-  fetchDictEntries,
+  fetchDictEntriesResult,
   fetchDictTypeDetail,
   fetchDictTypes,
   type DictEntryItem,
@@ -83,6 +83,7 @@ const loading = ref(false)
 const dictTypes = ref<DictTypeItem[]>([])
 const activeTabCode = ref("")
 const currentEntries = ref<DictEntryItem[]>([])
+const entryCountByTypeCode = ref<Record<string, number>>({})
 
 const createTypeOpen = ref(false)
 const editTypeOpen = ref(false)
@@ -111,6 +112,7 @@ const deletingItem = ref<DictEntryDisplayRow | null>(null)
 const tabs = computed(() => dictTypes.value.map(type => ({
   id: type.Code,
   label: type.Name || type.Code || "未命名类型",
+  badge: entryCountByTypeCode.value[type.Code] ?? 0,
 })))
 
 const activeType = computed(() => (
@@ -468,6 +470,7 @@ async function loadTypes(preferredCode?: string) {
 
         return a.Code.localeCompare(b.Code, "zh-CN")
       })
+    void syncEntryCounts(dictTypes.value)
 
     const nextCode = resolveNextActiveCode(preferredCode)
     const changed = nextCode !== activeTabCode.value
@@ -484,6 +487,7 @@ async function loadTypes(preferredCode?: string) {
   } catch (error) {
     dictTypes.value = []
     currentEntries.value = []
+    entryCountByTypeCode.value = {}
     activeTabCode.value = ""
     toast.error(resolveErrorMessage(error, "加载字典类型失败"))
   } finally {
@@ -502,19 +506,55 @@ async function loadEntries() {
   loading.value = true
 
   try {
-    currentEntries.value = await fetchDictEntries({
+    const result = await fetchDictEntriesResult({
       DictTypeUuid: dictTypeUuid,
       Name: searchQuery.value.trim(),
       PageNum: 1,
       PageSize: 200,
       ParentUuid: "",
     })
+    currentEntries.value = result.list
+    const activeCode = activeType.value?.Code?.trim() ?? ""
+    if (activeCode && !searchQuery.value.trim()) {
+      entryCountByTypeCode.value = {
+        ...entryCountByTypeCode.value,
+        [activeCode]: result.total,
+      }
+    }
   } catch (error) {
     currentEntries.value = []
     toast.error(resolveErrorMessage(error, "加载字典条目失败"))
   } finally {
     loading.value = false
   }
+}
+
+async function syncEntryCounts(types: DictTypeItem[]) {
+  if (!types.length) {
+    entryCountByTypeCode.value = {}
+    return
+  }
+
+  const counts = await Promise.all(types.map(async (type) => {
+    if (!type.Uuid || !type.Code) {
+      return [type.Code, 0] as const
+    }
+
+    try {
+      const result = await fetchDictEntriesResult({
+        DictTypeUuid: type.Uuid,
+        PageNum: 1,
+        PageSize: 1,
+        ParentUuid: "",
+      })
+
+      return [type.Code, result.total] as const
+    } catch {
+      return [type.Code, 0] as const
+    }
+  }))
+
+  entryCountByTypeCode.value = Object.fromEntries(counts)
 }
 
 function resolveNextActiveCode(preferredCode?: string) {

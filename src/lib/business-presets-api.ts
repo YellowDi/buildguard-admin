@@ -30,6 +30,11 @@ export type DictEntryItem = {
   Sort: number | null
 }
 
+export type DictEntryListResult = {
+  list: DictEntryItem[]
+  total: number
+}
+
 export type DictTypeCreatePayload = {
   Code?: string
   Name?: string
@@ -226,6 +231,11 @@ export async function deleteDictType(payload: DictTypeDeletePayload) {
 }
 
 export async function fetchDictEntries(payload: DictEntryListPayload = {}) {
+  const result = await fetchDictEntriesResult(payload)
+  return result.list
+}
+
+export async function fetchDictEntriesResult(payload: DictEntryListPayload = {}): Promise<DictEntryListResult> {
   const response = await fetch(DICT_ENTRY_LIST_API_URL, {
     method: "POST",
     headers: buildApiHeaders({
@@ -247,7 +257,12 @@ export async function fetchDictEntries(payload: DictEntryListPayload = {}) {
 
   assertApiSuccess(responseBody, DICT_ENTRY_LIST_ERROR_MESSAGE)
 
-  return extractList(responseBody).map(normalizeDictEntry)
+  const list = extractList(responseBody).map(normalizeDictEntry)
+
+  return {
+    list,
+    total: extractTotal(responseBody, list.length),
+  }
 }
 
 export async function createDictEntry(payload: DictEntryCreatePayload) {
@@ -385,6 +400,26 @@ function extractList(payload: ListEnvelope | unknown[]) {
   }
 
   return []
+}
+
+function extractTotal(payload: ListEnvelope | unknown[], fallback: number) {
+  if (Array.isArray(payload)) {
+    return payload.length
+  }
+
+  if (typeof payload.Total === "number") {
+    return payload.Total
+  }
+
+  if (payload.data && typeof payload.data === "object") {
+    const nested = payload.data as ListEnvelope
+
+    if (typeof nested.Total === "number") {
+      return nested.Total
+    }
+  }
+
+  return fallback
 }
 
 function extractCreateResult(payload: unknown): DictCreateResult {
