@@ -103,7 +103,7 @@ const props = withDefaults(defineProps<{
   wrapperClass: "",
   tableClass: "",
   emptyState: undefined,
-  listLevelTable: false,
+  listLevelTable: true,
   stickyThead: false,
   endSpacer: true,
   showIndexCheckbox: true,
@@ -819,7 +819,7 @@ function clearStickyState() {
   stickyColumnWidths.value = []
 }
 
-function syncHorizontalScrollState() {
+function syncHorizontalScrollState(measuredOverflow?: boolean) {
   if (!tableWrapperRef.value || !tableRef.value) {
     horizontalOverflow.value = false
     return
@@ -828,16 +828,12 @@ function syncHorizontalScrollState() {
   const wrapper = tableWrapperRef.value
   const overflow = wrapper.scrollWidth > wrapper.clientWidth + 1
     || tableRef.value.scrollWidth > wrapper.clientWidth + 1
-    || measureNaturalTableOverflow()
+    || measuredOverflow === true
 
   horizontalOverflow.value = overflow
 }
 
-function measureNaturalTableOverflow() {
-  if (!tableWrapperRef.value || !tableRef.value || typeof document === "undefined") {
-    return false
-  }
-
+function createMeasurementHost() {
   const measurementHost = document.createElement("div")
   measurementHost.style.position = "absolute"
   measurementHost.style.left = "-99999px"
@@ -847,86 +843,80 @@ function measureNaturalTableOverflow() {
   measurementHost.style.width = "max-content"
   measurementHost.style.maxWidth = "none"
   measurementHost.style.overflow = "visible"
-
-  const tableClone = tableRef.value.cloneNode(true) as HTMLTableElement
-  tableClone.style.minWidth = "0"
-  tableClone.style.width = "max-content"
-  tableClone.style.maxWidth = "none"
-
-  measurementHost.appendChild(tableClone)
-  document.body.appendChild(measurementHost)
-
-  const naturalWidth = Math.ceil(tableClone.getBoundingClientRect().width)
-  measurementHost.remove()
-
-  return naturalWidth > tableWrapperRef.value.clientWidth + 1
+  return measurementHost
 }
 
-function measureFillColumnState() {
+function measureTableLayout() {
   if (!tableWrapperRef.value || !tableRef.value || typeof document === "undefined") {
-    return false
-  }
-
-  const fillColumnIndexes = getFillColumnIndexes()
-  if (fillColumnIndexes.length === 0) {
-    return false
-  }
-
-  const measurementHost = document.createElement("div")
-  measurementHost.style.position = "absolute"
-  measurementHost.style.left = "-99999px"
-  measurementHost.style.top = "0"
-  measurementHost.style.visibility = "hidden"
-  measurementHost.style.pointerEvents = "none"
-  measurementHost.style.width = "max-content"
-  measurementHost.style.maxWidth = "none"
-  measurementHost.style.overflow = "visible"
-
-  const tableClone = tableRef.value.cloneNode(true) as HTMLTableElement
-  tableClone.style.minWidth = "0"
-  tableClone.style.width = "max-content"
-  tableClone.style.maxWidth = "none"
-
-  for (const row of tableClone.querySelectorAll("tr")) {
-    for (const fillColumnIndex of fillColumnIndexes) {
-      const cell = row.children.item(fillColumnIndex)
-
-      if (cell instanceof HTMLElement) {
-        cell.style.width = "auto"
-        cell.style.maxWidth = "none"
-        cell.style.whiteSpace = "normal"
-
-        const noteContent = cell.firstElementChild
-        if (noteContent instanceof HTMLElement) {
-          noteContent.style.width = "auto"
-          noteContent.style.maxWidth = "none"
-          noteContent.style.whiteSpace = "normal"
-        }
-      }
+    return {
+      overflow: false,
+      fillColumnActive: false,
     }
   }
 
+  const wrapperClientWidth = tableWrapperRef.value.clientWidth
+  const measurementHost = createMeasurementHost()
+  const fillColumnIndexes = getFillColumnIndexes()
+
+  const tableClone = tableRef.value.cloneNode(true) as HTMLTableElement
+  tableClone.style.minWidth = "0"
+  tableClone.style.width = "max-content"
+  tableClone.style.maxWidth = "none"
+
   measurementHost.appendChild(tableClone)
   document.body.appendChild(measurementHost)
 
-  const naturalWidth = Math.ceil(tableClone.getBoundingClientRect().width)
+  let resolvedWidth = Math.ceil(tableClone.getBoundingClientRect().width)
+  let fillColumnActive = false
+
+  if (fillColumnIndexes.length > 0) {
+    for (const row of tableClone.querySelectorAll("tr")) {
+      for (const fillColumnIndex of fillColumnIndexes) {
+        const cell = row.children.item(fillColumnIndex)
+
+        if (cell instanceof HTMLElement) {
+          cell.style.width = "auto"
+          cell.style.maxWidth = "none"
+          cell.style.whiteSpace = "normal"
+
+          const noteContent = cell.firstElementChild
+          if (noteContent instanceof HTMLElement) {
+            noteContent.style.width = "auto"
+            noteContent.style.maxWidth = "none"
+            noteContent.style.whiteSpace = "normal"
+          }
+        }
+      }
+    }
+
+    const fillWidth = Math.ceil(tableClone.getBoundingClientRect().width)
+    fillColumnActive = fillWidth <= wrapperClientWidth + 1
+
+    if (fillColumnActive) {
+      resolvedWidth = fillWidth
+    }
+  }
+
   measurementHost.remove()
 
-  return naturalWidth <= tableWrapperRef.value.clientWidth + 1
+  return {
+    overflow: resolvedWidth > wrapperClientWidth + 1,
+    fillColumnActive,
+  }
 }
 
 async function syncTableLayoutState() {
   updateEdgeGutterSize()
   syncEmbeddedViewportState()
 
-  const nextFillColumnActive = measureFillColumnState()
+  const { fillColumnActive: nextFillColumnActive, overflow: measuredOverflow } = measureTableLayout()
 
   if (fillColumnActive.value !== nextFillColumnActive) {
     fillColumnActive.value = nextFillColumnActive
     await nextTick()
   }
 
-  syncHorizontalScrollState()
+  syncHorizontalScrollState(measuredOverflow)
   syncStickyHeaderState()
 }
 
