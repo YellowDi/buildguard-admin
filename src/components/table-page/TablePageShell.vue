@@ -226,6 +226,7 @@ async function handleExportConfirm(payload: { scope: TableExportScope; format: T
                 :wrapper-class="section.wrapperClass ?? props.wrapperClass"
                 :table-class="section.tableClass ?? props.tableClass"
                 :empty-state="props.emptyState"
+                :align-to-header-at-wide="true"
                 :list-level-table="props.listLevelTable"
                 @update:selected-row-keys="emit('update:selected-row-keys', $event)"
               >
@@ -253,6 +254,7 @@ async function handleExportConfirm(payload: { scope: TableExportScope; format: T
               :wrapper-class="props.wrapperClass"
               :table-class="props.tableClass"
               :empty-state="props.emptyState"
+              :align-to-header-at-wide="true"
               :list-level-table="props.listLevelTable"
               @update:selected-row-keys="emit('update:selected-row-keys', $event)"
             >
