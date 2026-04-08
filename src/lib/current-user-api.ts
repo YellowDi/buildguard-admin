@@ -1,5 +1,6 @@
-import { assertApiSuccess, createHttpError, readResponseBody } from "@/lib/api-errors"
+import { ApiError, assertApiSuccess, createHttpError, readResponseBody } from "@/lib/api-errors"
 import { API_PATHS, buildApiHeaders, buildApiUrl } from "@/lib/api"
+import { notifyAuthExpired } from "@/lib/auth"
 
 export type CurrentUserRole = {
   RoleId?: number
@@ -30,6 +31,7 @@ export type CurrentUserInfoResult = {
 }
 
 const CURRENT_USER_INFO_ERROR_MESSAGE = "当前用户信息加载失败，请稍后重试。"
+const CURRENT_USER_UNAUTHORIZED_MESSAGE = "登录状态已失效，请重新登录。"
 const CURRENT_USER_INFO_API_PATHS = [
   API_PATHS.currentUserInfo,
   "/bqi/user/info",
@@ -44,6 +46,8 @@ export async function fetchCurrentUserInfo(): Promise<CurrentUserInfoResult> {
       headers: buildApiHeaders(),
     })
     const responseBody = await readResponseBody(response)
+    const headerCode = extractResponseStatusCode(response.headers)
+    const headerMessage = extractResponseMessage(response.headers)
 
     if (!response.ok) {
       const httpError = createHttpError(response, responseBody, CURRENT_USER_INFO_ERROR_MESSAGE)
@@ -56,8 +60,32 @@ export async function fetchCurrentUserInfo(): Promise<CurrentUserInfoResult> {
       throw httpError
     }
 
+    if (headerCode && headerCode !== "0" && headerCode !== "200") {
+      const authExpired = isAuthExpiredHeader(headerCode, headerMessage)
+      const message = headerMessage || CURRENT_USER_INFO_ERROR_MESSAGE
+
+      if (authExpired) {
+        notifyAuthExpired()
+      }
+
+      throw new ApiError(message, {
+        status: authExpired ? 401 : undefined,
+        code: headerCode,
+      })
+    }
+
     assertApiSuccess(responseBody, CURRENT_USER_INFO_ERROR_MESSAGE)
-    return extractCurrentUserRecord(responseBody)
+    const profile = extractCurrentUserRecord(responseBody)
+
+    if (!hasCurrentUserIdentity(profile)) {
+      notifyAuthExpired()
+      throw new ApiError(CURRENT_USER_UNAUTHORIZED_MESSAGE, {
+        status: 401,
+        code: "401",
+      })
+    }
+
+    return profile
   }
 
   throw lastError ?? new Error(CURRENT_USER_INFO_ERROR_MESSAGE)
@@ -87,4 +115,72 @@ function extractCurrentUserRecord(payload: unknown): CurrentUserInfoResult {
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   return value !== null && typeof value === "object" ? value as Record<string, unknown> : null
+}
+
+function hasCurrentUserIdentity(profile: CurrentUserInfoResult) {
+  if (typeof profile.Id === "number" && Number.isFinite(profile.Id)) {
+    return true
+  }
+
+  if (typeof profile.Type === "number" && Number.isFinite(profile.Type)) {
+    return true
+  }
+
+  if (profile.Uuid?.trim()) {
+    return true
+  }
+
+  if (profile.EmployeeInfo?.Name?.trim() || profile.EmployeeInfo?.Phone?.trim() || profile.EmployeeInfo?.DepartmentName?.trim()) {
+    return true
+  }
+
+  if (profile.CustomerInfo?.Name?.trim() || profile.CustomerInfo?.Phone?.trim() || profile.CustomerInfo?.CorpName?.trim()) {
+    return true
+  }
+
+  return false
+}
+
+function extractResponseStatusCode(headers: Pick<Headers, "get">) {
+  return normalizeHeaderValue(
+    headers.get("status_code")
+    ?? headers.get("statusCode")
+    ?? headers.get("code"),
+  )
+}
+
+function extractResponseMessage(headers: Pick<Headers, "get">) {
+  return decodePossiblyMisencodedHeader(
+    normalizeHeaderValue(
+      headers.get("resp_err")
+      ?? headers.get("respErr")
+      ?? headers.get("message")
+      ?? headers.get("msg"),
+    ),
+  )
+}
+
+function normalizeHeaderValue(value: string | null) {
+  return value?.trim() || ""
+}
+
+function isAuthExpiredHeader(code: string, message: string) {
+  if (code === "401" || code === "1001") {
+    return true
+  }
+
+  return /(鉴权|身份信息|未登录|登录失效|token|请先登录|请先登陆)/i.test(message)
+}
+
+function decodePossiblyMisencodedHeader(value: string) {
+  if (!value || !/[ÃÂÐÑØÙÚÛÜÝÞßà-áâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿ]/.test(value)) {
+    return value
+  }
+
+  try {
+    const bytes = Uint8Array.from(value, (char) => char.charCodeAt(0) & 0xff)
+    return new TextDecoder("utf-8", { fatal: false }).decode(bytes).trim() || value
+  } catch {
+    return value
+  }
 }

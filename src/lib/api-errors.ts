@@ -26,6 +26,7 @@ const REQUEST_ID_HEADER_KEYS = [
   "x-b3-traceid",
   "x-amzn-trace-id",
 ] as const
+const AUTH_EXPIRED_MESSAGE_PATTERN = /(鉴权|身份信息|未登录|登录失效|token)/i
 
 export class ApiError extends Error {
   status?: number
@@ -78,12 +79,22 @@ export function createHttpError(
   const payloadMessage = extractMessage(payload)
   const status = Number.isFinite(response.status) ? response.status : undefined
   const statusSuffix = status ? `（${status}）` : ""
+  const code = extractScalar(payload, CODE_KEYS)
   const requestId = extractScalar(payload, REQUEST_ID_KEYS)
     ?? extractHeaderValue(response.headers, REQUEST_ID_HEADER_KEYS)
 
+  if (isAuthExpired({
+    status,
+    record: asRecord(payload),
+    code,
+    message: payloadMessage ?? fallback,
+  })) {
+    notifyAuthExpired()
+  }
+
   return new ApiError(payloadMessage ?? `${fallback}${statusSuffix}`, {
     status,
-    code: extractScalar(payload, CODE_KEYS) ?? undefined,
+    code: code ?? undefined,
     requestId: requestId ?? undefined,
   })
 }
@@ -98,7 +109,7 @@ export function assertApiSuccess(payload: unknown, fallback = "请求失败，�
   const code = extractScalar(payload, CODE_KEYS)
   const message = extractMessage(payload) ?? fallback
 
-  if (isAuthExpired(record, code, message)) {
+  if (isAuthExpired({ record, code, message })) {
     notifyAuthExpired()
     throw new ApiError(message, {
       code: code ?? undefined,
@@ -234,12 +245,26 @@ function extractHeaderValue(
   return null
 }
 
-function isAuthExpired(record: Record<string, unknown>, code: string | null, message: string) {
+function isAuthExpired({
+  status,
+  record,
+  code,
+  message,
+}: {
+  status?: number
+  record?: Record<string, unknown> | null
+  code?: string | null
+  message: string
+}) {
+  if (status === 401) {
+    return true
+  }
+
   if (code === "1001" || code === "401") {
     return true
   }
 
-  if (record.success === false && /(鉴权|身份信息|未登录|登录失效|token)/i.test(message)) {
+  if (AUTH_EXPIRED_MESSAGE_PATTERN.test(message) && (!record || record.success === false)) {
     return true
   }
 

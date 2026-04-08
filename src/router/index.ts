@@ -1,7 +1,10 @@
 import { createRouter, createWebHistory } from "vue-router"
 
 import { beginRouteLoading, endRouteLoading, type RouteLoadingKind } from "@/composables/useRouteLoadingState"
-import { isAuthenticated } from "@/lib/auth"
+import { setCurrentUser } from "@/composables/useCurrentUser"
+import { ApiError } from "@/lib/api-errors"
+import { fetchCurrentUserInfo } from "@/lib/current-user-api"
+import { getAuthToken } from "@/lib/auth"
 import AppShellLayout from "@/layouts/AppShellLayout.vue"
 
 type BreadcrumbMetaItem = {
@@ -494,11 +497,16 @@ function resolveRouteLoadingKind(value: unknown): RouteLoadingKind {
     : "table"
 }
 
-router.beforeEach((to) => {
+let validatedAuthToken = ""
+let pendingSessionValidation: Promise<"valid" | "invalid" | "unknown"> | null = null
+
+router.beforeEach(async (to) => {
   const isAuthRoute = to.name === "login" || to.name === "signup" || to.name === "otp"
-  const authenticated = isAuthenticated()
+  const token = getAuthToken()
+  const authenticated = Boolean(token)
 
   if (!authenticated && !isAuthRoute) {
+    validatedAuthToken = ""
     return {
       name: "login",
       query: {
@@ -507,7 +515,26 @@ router.beforeEach((to) => {
     }
   }
 
-  if (authenticated && isAuthRoute) {
+  if (authenticated) {
+    const sessionState = await validateSession(token)
+
+    if (sessionState === "invalid") {
+      validatedAuthToken = ""
+
+      if (!isAuthRoute) {
+        return {
+          name: "login",
+          query: {
+            redirect: to.fullPath,
+          },
+        }
+      }
+    }
+  } else {
+    validatedAuthToken = ""
+  }
+
+  if (authenticated && isAuthRoute && validatedAuthToken === token) {
     const redirect = typeof to.query.redirect === "string" && to.query.redirect.trim()
       ? to.query.redirect
       : "/"
@@ -527,3 +554,53 @@ router.onError(() => {
 })
 
 export default router
+
+async function validateSession(token: string) {
+  if (!token) {
+    validatedAuthToken = ""
+    return "invalid" as const
+  }
+
+  if (validatedAuthToken === token) {
+    return "valid" as const
+  }
+
+  if (pendingSessionValidation) {
+    return pendingSessionValidation
+  }
+
+  pendingSessionValidation = (async () => {
+    try {
+      const profile = await fetchCurrentUserInfo()
+      setCurrentUser(profile)
+      validatedAuthToken = token
+      return "valid" as const
+    } catch (error) {
+      if (isAuthError(error)) {
+        validatedAuthToken = ""
+        return "invalid" as const
+      }
+
+      return "unknown" as const
+    } finally {
+      pendingSessionValidation = null
+    }
+  })()
+
+  return pendingSessionValidation
+}
+
+function isAuthError(error: unknown) {
+  if (error instanceof ApiError) {
+    return error.status === 401
+      || error.code === "401"
+      || error.code === "1001"
+      || /(鉴权|身份信息|未登录|登录失效|token)/i.test(error.message)
+  }
+
+  if (error instanceof Error) {
+    return /(鉴权|身份信息|未登录|登录失效|token)/i.test(error.message)
+  }
+
+  return false
+}

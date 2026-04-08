@@ -39,7 +39,7 @@ const error = ref<string | null>(null)
 
 let pendingRequest: Promise<void> | null = null
 
-export async function loadCurrentUser(options: { force?: boolean } = {}) {
+export async function loadCurrentUser(options: { force?: boolean; throwOnError?: boolean } = {}) {
   if (pendingRequest && !options.force) {
     return pendingRequest
   }
@@ -50,13 +50,16 @@ export async function loadCurrentUser(options: { force?: boolean } = {}) {
 
     try {
       const profile = await fetchCurrentUserInfo()
-      applyCurrentUser(profile)
-      hasLoaded.value = true
+      setCurrentUser(profile)
     } catch (requestError) {
       error.value = getApiErrorMessage(requestError, "当前用户信息加载失败，请稍后重试。")
 
       if (!hasLoaded.value) {
         resetCurrentUser()
+      }
+
+      if (options.throwOnError) {
+        throw requestError
       }
     } finally {
       isLoading.value = false
@@ -87,6 +90,12 @@ export function clearCurrentUser() {
   isLoading.value = false
   pendingRequest = null
   resetCurrentUser()
+}
+
+export function setCurrentUser(profile: CurrentUserInfoResult) {
+  applyCurrentUser(profile)
+  hasLoaded.value = true
+  error.value = null
 }
 
 function applyCurrentUser(profile: CurrentUserInfoResult) {
