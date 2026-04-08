@@ -724,11 +724,7 @@ const buildingAssetsSchema: TablePageSchema<CustomerBuildingAssetRow> = {
       key: "address",
       label: "地址",
       filterType: "text",
-      width: "fill",
-      variant: "note",
-      format: "note",
       tone: "muted",
-      cellRenderer: { kind: "note" },
       filter: {
         type: "text",
         placeholder: "输入地址",
