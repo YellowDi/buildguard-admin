@@ -410,7 +410,7 @@ function getNextExecutionValueClass(value: unknown) {
   const normalized = toText(value, "")
 
   if (!normalized || normalized === "-" || normalized === "—") {
-    return "text-muted-foreground"
+    return "detail-field-row__value--empty"
   }
 
   return undefined
