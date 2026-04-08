@@ -5,7 +5,6 @@ import { toast } from "vue-sonner"
 
 import LinkedEntityDetailSheet from "@/components/detail/LinkedEntityDetailSheet.vue"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import TableStatusChip from "@/components/table-page/TableStatusChip.vue"
@@ -40,14 +39,11 @@ type InspectionServiceRecord = {
   Name: string
   Level: string
   CorpName: string
+  ParkUuid: string
   ExpireAt: string
   ServiceStatus: string
   InspectionQuota: string
   ParkName: string
-  BuildName: string
-  ParkNames: string[]
-  ParkBuildCounts: number[]
-  BuildNames: string[]
   CreatedAt: string
   UpdatedAt: string
   raw: {
@@ -56,7 +52,6 @@ type InspectionServiceRecord = {
     managerPhone: string
     templateName: string
     remark: string
-    builds: NonNullable<InspectionServiceListItem["Builds"]>
     status: number
   }
 }
@@ -155,6 +150,18 @@ const schema: TablePageSchema<InspectionServiceRecord> = {
       sort: true,
     },
     {
+      key: "ParkName",
+      label: "园区",
+      filterType: "text",
+      width: "fill",
+      slot: "cell-ParkName",
+      filter: {
+        type: "text",
+        placeholder: "输入园区名称",
+      },
+      sort: true,
+    },
+    {
       key: "ExpireAt",
       label: "到期时间",
       filterType: "time",
@@ -184,18 +191,6 @@ const schema: TablePageSchema<InspectionServiceRecord> = {
       filter: {
         type: "text",
         placeholder: "输入检测次数",
-      },
-      sort: true,
-    },
-    {
-      key: "ParkName",
-      label: "园区名称",
-      filterType: "text",
-      width: "fill",
-      slot: "cell-ParkName",
-      filter: {
-        type: "text",
-        placeholder: "输入园区名称",
       },
       sort: true,
     },
@@ -274,7 +269,6 @@ function buildPageFilterText(row: InspectionServiceRecord) {
     row.ServiceStatus,
     row.InspectionQuota,
     row.ParkName,
-    row.BuildName,
     row.CreatedAt,
     row.UpdatedAt,
     row.raw.managerName,
@@ -331,30 +325,25 @@ async function loadInspectionServices() {
 function normalizeInspectionServiceRecord(item: InspectionServiceListItem, index: number): InspectionServiceRecord {
   const uuid = toText(item.Uuid)
   const fallbackId = toText(item.Id, `${pageNum.value}-${index + 1}`)
-  const builds = Array.isArray(item.Builds) ? item.Builds : []
-  const parkNames = uniqueText(builds.map(build => toText(build.ParkName)).filter(Boolean))
-  const parkBuildCounts = parkNames.map(parkName => countUniqueBuildsByPark(builds, parkName))
-  const buildNames = uniqueText(builds.map(build => toText(build.BuildName)).filter(Boolean))
+  const customerUuid = toText(item.CustomerUuid, "")
+  const park = resolveInspectionServicePark(item)
 
   return {
     id: uuid || fallbackId,
     uuid: uuid || fallbackId,
-    customerUuid: toText(item.CustomerUuid, ""),
+    customerUuid,
     Name: toText(item.Name, "未命名服务"),
     Level: toText(item.Level, "未分级"),
     // 接口字段从 CustomerName 调整为 CorpName
     CorpName: toText(item.CorpName || item.CustomerName, "未绑定客户"),
+    ParkUuid: park.uuid,
     ExpireAt: toText(item.ContractEndTime, "-"),
     ServiceStatus: formatServiceStatus(item.Status),
     InspectionQuota: formatInspectionQuota(
       getFirstText(item, ["TotalInspectionCount", "InspectionTotalCount", "PackageTotalInspectionCount", "TotalCount"]),
       getFirstText(item, ["RemainInspectionCount", "RemainingInspectionCount", "PackageRemainInspectionCount", "RemainCount"]),
     ),
-    ParkName: parkNames.length ? parkNames.join("、") : "-",
-    BuildName: buildNames.length ? buildNames.join("、") : "-",
-    ParkNames: parkNames.length ? parkNames : ["-"],
-    ParkBuildCounts: parkNames.length ? parkBuildCounts : [0],
-    BuildNames: buildNames.length ? buildNames : ["-"],
+    ParkName: park.name || "-",
     CreatedAt: toText(item.CreatedAt, "-"),
     UpdatedAt: toText(item.UpdatedAt, "-"),
     raw: {
@@ -363,7 +352,6 @@ function normalizeInspectionServiceRecord(item: InspectionServiceListItem, index
       managerPhone: toText(item.ManagerPhone, "-"),
       templateName: toText(item.TemplateName, "未配置模板"),
       remark: toText(item.Remark, ""),
-      builds,
       status: typeof item.Status === "number" && Number.isFinite(item.Status) ? item.Status : -1,
     },
   }
@@ -382,6 +370,20 @@ function jumpToCustomerDetail(row: Record<string, unknown>) {
   activeLinkedDetailCustomerUuid.value = ""
 }
 
+function jumpToParkDetail(row: Record<string, unknown>) {
+  const parkUuid = typeof row.ParkUuid === "string" ? row.ParkUuid : ""
+  const customerUuid = typeof row.customerUuid === "string" ? row.customerUuid : ""
+
+  if (!parkUuid) {
+    toast.error("当前检测服务缺少园区 Uuid，无法打开园区详情")
+    return
+  }
+
+  activeLinkedDetailKind.value = "park"
+  activeLinkedDetailUuid.value = parkUuid
+  activeLinkedDetailCustomerUuid.value = customerUuid
+}
+
 function handleLinkedDetailSheetOpenChange(open: boolean) {
   if (!open) {
     activeLinkedDetailKind.value = null
@@ -390,8 +392,24 @@ function handleLinkedDetailSheetOpenChange(open: boolean) {
   }
 }
 
-function uniqueText(values: string[]) {
-  return Array.from(new Set(values.map(value => value.trim()).filter(Boolean)))
+function resolveInspectionServicePark(item: InspectionServiceListItem) {
+  const buildInfos = Array.isArray(item.BuildInfos) ? item.BuildInfos : []
+  const parks = buildInfos
+    .map(build => ({
+      name: toText(build.ParkName, ""),
+      uuid: toText(build.ParkUuid, ""),
+    }))
+    .filter(park => park.name || park.uuid)
+
+  const uniqueParks = parks.filter((park, index, list) => (
+    list.findIndex(candidate => candidate.uuid === park.uuid && candidate.name === park.name) === index
+  ))
+  const park = uniqueParks[0]
+
+  return {
+    name: park?.name ?? "",
+    uuid: park?.uuid ?? "",
+  }
 }
 
 function getFirstText(
@@ -509,49 +527,12 @@ function formatServiceStatus(status: unknown) {
   return "-"
 }
 
-function getParkBuildCount(row: unknown, index: number) {
-  if (!row || typeof row !== "object" || !("ParkBuildCounts" in row) || !Array.isArray(row.ParkBuildCounts)) {
-    return 0
-  }
-
-  const value = row.ParkBuildCounts[index]
-  return typeof value === "number" && Number.isFinite(value) ? value : 0
-}
-
-function getBuildNamesByPark(row: unknown, parkName: string) {
-  if (!row || typeof row !== "object" || !("raw" in row) || !row.raw || typeof row.raw !== "object" || !("builds" in row.raw)) {
-    return [] as string[]
-  }
-
-  const builds = (row.raw as { builds?: unknown }).builds
-
-  if (!Array.isArray(builds)) {
-    return []
-  }
-
-  return uniqueText(
-    builds
-      .filter((build) => build && typeof build === "object" && toText((build as { ParkName?: unknown }).ParkName) === parkName)
-      .map(build => toText((build as { BuildName?: unknown }).BuildName))
-      .filter(Boolean),
-  )
-}
-
 function getRowServiceStatus(row: unknown) {
   if (!row || typeof row !== "object" || !("ServiceStatus" in row)) {
     return "-"
   }
 
   return toText(row.ServiceStatus, "-")
-}
-
-function countUniqueBuildsByPark(builds: NonNullable<InspectionServiceListItem["Builds"]>, parkName: string) {
-  return uniqueText(
-    builds
-      .filter(build => toText(build.ParkName) === parkName)
-      .map(build => toText(build.BuildName))
-      .filter(Boolean),
-  ).length
 }
 
 const serviceStatusRenderer = {
@@ -622,6 +603,18 @@ function toText(value: unknown, fallback = "") {
           </button>
         </template>
 
+        <template #cell-ParkName="{ row }">
+          <button
+            type="button"
+            class="inline-flex max-w-full items-center gap-1 text-left text-[#2B67F6] transition-colors hover:text-[#1D4ED8] disabled:cursor-not-allowed disabled:text-muted-foreground"
+            :disabled="row.ParkName === '-' || !row.ParkUuid"
+            @click.stop="jumpToParkDetail(row)"
+          >
+            <span class="truncate">{{ row.ParkName }}</span>
+            <i v-if="row.ParkName !== '-' && row.ParkUuid" class="ri-arrow-right-up-line shrink-0 text-sm" />
+          </button>
+        </template>
+
         <template #cell-ServiceStatus="{ row }">
           <TableStatusChip :value="String(getRowServiceStatusCode(row))" :renderer="serviceStatusRenderer" />
         </template>
@@ -646,44 +639,6 @@ function toText(value: unknown, fallback = "") {
           </Tooltip>
         </template>
 
-        <template #cell-ParkName="{ row }">
-          <div class="flex flex-nowrap gap-1.5 overflow-x-auto whitespace-nowrap">
-            <Tooltip v-for="(parkName, index) in row.ParkNames" :key="`${row.uuid}-park-${index}`">
-              <TooltipTrigger as-child>
-                <Badge
-                  variant="secondary"
-                  class="inline-flex h-5 shrink-0 cursor-default items-center whitespace-nowrap rounded-full pl-2 pr-0.5 text-[12px] font-normal leading-[18px]"
-                >
-                  <span>{{ parkName }}</span>
-                  <span
-                    class="ml-1 inline-flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-background/80 px-0.75 text-center text-[9px] font-semibold leading-none text-foreground ring-1 ring-border/70"
-                  >
-                    {{ getParkBuildCount(row, index) }}
-                  </span>
-                </Badge>
-              </TooltipTrigger>
-              <TooltipContent
-                side="top"
-                align="start"
-                class="max-w-[320px] rounded-xl px-3 py-2"
-              >
-                <div class="space-y-1">
-                  <div class="text-[11px] font-medium text-background/72">
-                    建筑名称
-                  </div>
-                  <div class="text-[12px] leading-5 text-background">
-                    <template v-if="getBuildNamesByPark(row, parkName).length">
-                      {{ getBuildNamesByPark(row, parkName).join("、") }}
-                    </template>
-                    <span v-else class="text-background/72">
-                      暂无建筑
-                    </span>
-                  </div>
-                </div>
-              </TooltipContent>
-            </Tooltip>
-          </div>
-        </template>
       </TablePage>
     </TooltipProvider>
 
