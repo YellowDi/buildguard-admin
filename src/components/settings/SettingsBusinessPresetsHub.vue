@@ -291,6 +291,10 @@ async function openEditItemDialog(row: DictEntryDisplayRow) {
   }
 }
 
+function handleItemRowClick(row: Record<string, unknown>) {
+  void openEditItemDialog(row as DictEntryDisplayRow)
+}
+
 function closeEditItemDialog() {
   editItemOpen.value = false
   editingItemUuid.value = ""
@@ -706,6 +710,7 @@ defineExpose<ExposedActions>({
         :show-row-action-icons="true"
         :columns="tableColumns"
         :rows="filteredEntries"
+        :on-row-click="handleItemRowClick"
         :table-class="SETTINGS_TABLE_PAGE_CLASS"
         :empty-state="emptyState"
       >
