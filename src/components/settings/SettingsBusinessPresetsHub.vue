@@ -57,7 +57,6 @@ import {
 type DictEntryDisplayRow = {
   id: number
   uuid: string
-  parentName: string
   name: string
   remark: string
   sort: string
@@ -127,12 +126,6 @@ const tableColumns: TableColumn[] = [
     cellClass: "font-medium text-foreground",
   },
   {
-    key: "parentName",
-    label: "父级",
-    filterType: "text",
-    tone: "default",
-  },
-  {
     key: "remark",
     label: "备注",
     filterType: "text",
@@ -167,7 +160,6 @@ const filteredEntries = computed(() => {
   const displayRows = rows.map<DictEntryDisplayRow>(row => ({
     id: row.Id,
     uuid: row.Uuid,
-    parentName: row.ParentName || "-",
     name: row.Name,
     remark: row.Remark,
     sort: row.Sort === null ? "-" : String(row.Sort),
@@ -178,7 +170,7 @@ const filteredEntries = computed(() => {
   }
 
   return displayRows.filter(row => (
-    [row.name, row.remark, row.parentName]
+    [row.name, row.remark]
       .filter(Boolean)
       .some(field => field.toLowerCase().includes(query))
   ))
