@@ -3,7 +3,9 @@
 interface ImportMetaEnv {
   readonly VITE_API_BASE_URL?: string
   readonly VITE_API_DEVICE?: string
+  readonly VITE_ENABLE_LEGACY_TOKEN_HEADER?: string
   readonly VITE_MOCK_DATA_SCOPES?: string
+  readonly VITE_REQUIRE_SECURE_API?: string
   readonly VITE_API_TOKEN?: string
   readonly VITE_API_TOKEN_HEADER?: string
   readonly VITE_API_TOKEN_PREFIX?: string

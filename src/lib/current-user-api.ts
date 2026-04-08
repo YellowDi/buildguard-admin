@@ -1,4 +1,11 @@
-import { ApiError, assertApiSuccess, createHttpError, readResponseBody } from "@/lib/api-errors"
+import {
+  ApiError,
+  assertApiSuccess,
+  createHttpError,
+  extractResponseCode,
+  extractResponseMessage,
+  readResponseBody,
+} from "@/lib/api-errors"
 import { API_PATHS, buildApiHeaders, buildApiUrl } from "@/lib/api"
 import { notifyAuthExpired } from "@/lib/auth"
 
@@ -46,8 +53,8 @@ export async function fetchCurrentUserInfo(): Promise<CurrentUserInfoResult> {
       headers: buildApiHeaders(),
     })
     const responseBody = await readResponseBody(response)
-    const headerCode = extractResponseStatusCode(response.headers)
-    const headerMessage = extractResponseMessage(response.headers)
+    const headerCode = extractResponseCode(response.headers) ?? ""
+    const headerMessage = extractResponseMessage(response.headers) ?? ""
 
     if (!response.ok) {
       const httpError = createHttpError(response, responseBody, CURRENT_USER_INFO_ERROR_MESSAGE)
@@ -141,46 +148,10 @@ function hasCurrentUserIdentity(profile: CurrentUserInfoResult) {
   return false
 }
 
-function extractResponseStatusCode(headers: Pick<Headers, "get">) {
-  return normalizeHeaderValue(
-    headers.get("status_code")
-    ?? headers.get("statusCode")
-    ?? headers.get("code"),
-  )
-}
-
-function extractResponseMessage(headers: Pick<Headers, "get">) {
-  return decodePossiblyMisencodedHeader(
-    normalizeHeaderValue(
-      headers.get("resp_err")
-      ?? headers.get("respErr")
-      ?? headers.get("message")
-      ?? headers.get("msg"),
-    ),
-  )
-}
-
-function normalizeHeaderValue(value: string | null) {
-  return value?.trim() || ""
-}
-
 function isAuthExpiredHeader(code: string, message: string) {
-  if (code === "401" || code === "1001") {
+  if (code === "401" || code === "403" || code === "1001") {
     return true
   }
 
   return /(鉴权|身份信息|未登录|登录失效|token|请先登录|请先登陆)/i.test(message)
-}
-
-function decodePossiblyMisencodedHeader(value: string) {
-  if (!value || !/[ÃÂÐÑØÙÚÛÜÝÞßà-áâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿ]/.test(value)) {
-    return value
-  }
-
-  try {
-    const bytes = Uint8Array.from(value, (char) => char.charCodeAt(0) & 0xff)
-    return new TextDecoder("utf-8", { fatal: false }).decode(bytes).trim() || value
-  } catch {
-    return value
-  }
 }

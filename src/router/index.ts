@@ -4,7 +4,7 @@ import { beginRouteLoading, endRouteLoading, type RouteLoadingKind } from "@/com
 import { setCurrentUser } from "@/composables/useCurrentUser"
 import { ApiError } from "@/lib/api-errors"
 import { fetchCurrentUserInfo } from "@/lib/current-user-api"
-import { getAuthToken } from "@/lib/auth"
+import { getAuthState, getAuthToken, notifyAuthExpired } from "@/lib/auth"
 import AppShellLayout from "@/layouts/AppShellLayout.vue"
 
 type BreadcrumbMetaItem = {
@@ -502,8 +502,23 @@ let pendingSessionValidation: Promise<"valid" | "invalid" | "unknown"> | null = 
 
 router.beforeEach(async (to) => {
   const isAuthRoute = to.name === "login" || to.name === "signup" || to.name === "otp"
+  const authState = getAuthState()
   const token = getAuthToken()
-  const authenticated = Boolean(token)
+  const authenticated = authState === "authenticated" && Boolean(token)
+
+  if (authState === "expired") {
+    validatedAuthToken = ""
+    notifyAuthExpired()
+
+    if (!isAuthRoute) {
+      return {
+        name: "login",
+        query: {
+          redirect: to.fullPath,
+        },
+      }
+    }
+  }
 
   if (!authenticated && !isAuthRoute) {
     validatedAuthToken = ""
@@ -593,13 +608,15 @@ async function validateSession(token: string) {
 function isAuthError(error: unknown) {
   if (error instanceof ApiError) {
     return error.status === 401
+      || error.status === 403
       || error.code === "401"
+      || error.code === "403"
       || error.code === "1001"
-      || /(鉴权|身份信息|未登录|登录失效|token)/i.test(error.message)
+      || /(鉴权|身份信息|未登录|登录失效|token|请先登录|请先登陆)/i.test(error.message)
   }
 
   if (error instanceof Error) {
-    return /(鉴权|身份信息|未登录|登录失效|token)/i.test(error.message)
+    return /(鉴权|身份信息|未登录|登录失效|token|请先登录|请先登陆)/i.test(error.message)
   }
 
   return false

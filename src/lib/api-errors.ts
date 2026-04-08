@@ -18,6 +18,8 @@ type HandleApiErrorOptions = {
 const MESSAGE_KEYS = ["message", "msg", "error", "detail", "title", "reason", "resp_err", "respErr"] as const
 const NESTED_KEYS = ["data", "error"] as const
 const CODE_KEYS = ["code", "errorCode", "error_code", "status_code", "statusCode"] as const
+const RESPONSE_HEADER_CODE_KEYS = ["status_code", "statusCode", "code"] as const
+const RESPONSE_HEADER_MESSAGE_KEYS = ["resp_err", "respErr", "message", "msg"] as const
 const REQUEST_ID_KEYS = ["requestId", "request_id", "traceId", "trace_id"] as const
 const REQUEST_ID_HEADER_KEYS = [
   "x-request-id",
@@ -26,7 +28,7 @@ const REQUEST_ID_HEADER_KEYS = [
   "x-b3-traceid",
   "x-amzn-trace-id",
 ] as const
-const AUTH_EXPIRED_MESSAGE_PATTERN = /(鉴权|身份信息|未登录|登录失效|token)/i
+const AUTH_EXPIRED_MESSAGE_PATTERN = /(鉴权|身份信息|未登录|登录失效|token|请先登录|请先登陆)/i
 
 export class ApiError extends Error {
   status?: number
@@ -77,22 +79,24 @@ export function createHttpError(
   fallback = "请求失败，请稍后重试。",
 ) {
   const payloadMessage = extractMessage(payload)
+  const headerMessage = extractResponseMessage(response.headers)
   const status = Number.isFinite(response.status) ? response.status : undefined
   const statusSuffix = status ? `（${status}）` : ""
-  const code = extractScalar(payload, CODE_KEYS)
+  const code = extractScalar(payload, CODE_KEYS) ?? extractResponseCode(response.headers)
   const requestId = extractScalar(payload, REQUEST_ID_KEYS)
     ?? extractHeaderValue(response.headers, REQUEST_ID_HEADER_KEYS)
+  const message = payloadMessage ?? headerMessage ?? `${fallback}${statusSuffix}`
 
   if (isAuthExpired({
     status,
     record: asRecord(payload),
     code,
-    message: payloadMessage ?? fallback,
+    message,
   })) {
     notifyAuthExpired()
   }
 
-  return new ApiError(payloadMessage ?? `${fallback}${statusSuffix}`, {
+  return new ApiError(message, {
     status,
     code: code ?? undefined,
     requestId: requestId ?? undefined,
@@ -161,6 +165,16 @@ export async function readResponseBody(response: Response) {
   } catch {
     return normalizedText
   }
+}
+
+export function extractResponseCode(headers: Pick<Headers, "get">) {
+  return extractHeaderValue(headers, RESPONSE_HEADER_CODE_KEYS)
+}
+
+export function extractResponseMessage(headers: Pick<Headers, "get">) {
+  const message = extractHeaderValue(headers, RESPONSE_HEADER_MESSAGE_KEYS)
+
+  return message ? decodePossiblyMisencodedHeader(message) : null
 }
 
 function extractMessage(value: unknown, depth = 0): string | null {
@@ -245,6 +259,19 @@ function extractHeaderValue(
   return null
 }
 
+function decodePossiblyMisencodedHeader(value: string) {
+  if (!/[ÃÂÐÑØÙÚÛÜÝÞßà-áâãäåæçèéêëìíîïðñòóôõö÷øùúûüýþÿ]/.test(value)) {
+    return value
+  }
+
+  try {
+    const bytes = Uint8Array.from(value, (char) => char.charCodeAt(0) & 0xff)
+    return new TextDecoder("utf-8", { fatal: false }).decode(bytes).trim() || value
+  } catch {
+    return value
+  }
+}
+
 function isAuthExpired({
   status,
   record,
@@ -256,11 +283,11 @@ function isAuthExpired({
   code?: string | null
   message: string
 }) {
-  if (status === 401) {
+  if (status === 401 || status === 403) {
     return true
   }
 
-  if (code === "1001" || code === "401") {
+  if (code === "1001" || code === "401" || code === "403") {
     return true
   }
 
