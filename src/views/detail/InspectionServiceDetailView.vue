@@ -879,7 +879,7 @@ function readFileAsDataUrl(file: File) {
   </DetailLayout>
 
   <Dialog v-model:open="uploadContractDialogOpen">
-    <DialogContent class="sm:max-w-[520px]">
+    <DialogContent class="overflow-hidden sm:max-w-[520px]">
       <DialogHeader>
         <DialogTitle>上传合同</DialogTitle>
         <DialogDescription>
@@ -887,7 +887,7 @@ function readFileAsDataUrl(file: File) {
         </DialogDescription>
       </DialogHeader>
 
-      <div class="space-y-4">
+      <div class="min-w-0 space-y-4">
         <div class="space-y-2">
           <p class="text-sm text-foreground">合同到期时间</p>
             <FormDatePicker
@@ -907,18 +907,21 @@ function readFileAsDataUrl(file: File) {
             accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp"
             @change="handleContractFileChange"
           >
-          <div class="flex items-center gap-3">
+          <div class="grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-3 overflow-hidden">
             <Button
               type="button"
               variant="outline"
-              class="gap-2"
+              class="shrink-0 gap-2"
               :disabled="uploadingContract"
               @click="triggerSelectContractFile"
             >
               <i class="ri-file-upload-line text-base" />
               选择文件
             </Button>
-            <span class="min-w-0 truncate text-sm text-muted-foreground">
+            <span
+              class="block min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-sm text-muted-foreground"
+              :title="uploadContractForm.contractFileName || '未选择文件'"
+            >
               {{ uploadContractForm.contractFileName || "未选择文件" }}
             </span>
           </div>
