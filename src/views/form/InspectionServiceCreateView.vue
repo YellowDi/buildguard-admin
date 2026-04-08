@@ -47,6 +47,7 @@ import {
   fetchInspectionServiceDetail,
   updateInspectionService,
 } from "@/lib/inspection-services-api"
+import { fetchBusinessPresetEntryOptions, type BusinessPresetEntryOption } from "@/lib/business-preset-options"
 import { fetchAllInspectionItemOptions, type InspectionItemOption } from "@/lib/inspection-item-options"
 import { fetchParks, type ParkListItem } from "@/lib/parks-api"
 import { cn } from "@/lib/utils"
@@ -113,8 +114,6 @@ type InspectionCategoryOption = {
 
 type InspectionCategoryScoreLimit = number | null
 
-const DEFAULT_LEVEL_OPTIONS = ["S级", "A级", "B级", "C级"] as const
-
 function createEmptyBaseForm(): InspectionServiceBaseForm {
   return {
     customerUuid: "",
@@ -171,6 +170,7 @@ const submitting = ref(false)
 const loadingDetail = ref(false)
 const customerLoading = ref(false)
 const relatedOptionsLoading = ref(false)
+const serviceLevelOptionsLoading = ref(false)
 const templateLoading = ref(false)
 const templateLibraryOpen = ref(false)
 const templateLibraryLoading = ref(false)
@@ -187,6 +187,7 @@ const parkOptions = ref<ParkOption[]>([])
 const buildingOptions = ref<BuildOption[]>([])
 const inspectionItemOptions = ref<InspectionItemOption[]>([])
 const inspectionCategoryOptions = ref<InspectionCategoryOption[]>([])
+const serviceLevelEntries = ref<BusinessPresetEntryOption[]>([])
 const globalCategoryScoreLimits = ref<Record<string, InspectionCategoryScoreLimit>>({})
 const buildingConfigs = ref<InspectionServiceBuildingConfig[]>([])
 const batchTemplateUuid = ref("")
@@ -256,9 +257,22 @@ const inspectionCategoryNameByUuid = computed(() => new Map(
 const inspectionCategoryByName = computed(() => new Map(
   inspectionCategoryOptions.value.map(item => [item.name, item] as const),
 ))
-const levelOptions = computed(() => Array.from(new Set(
-  [...DEFAULT_LEVEL_OPTIONS, normalizeText(form.level)].filter(Boolean),
-)))
+const serviceLevelOptions = computed(() => {
+  const options = serviceLevelEntries.value.map(entry => ({
+    value: entry.name,
+    label: entry.name,
+  }))
+  const currentValue = normalizeText(form.level)
+
+  if (currentValue && !options.some(option => option.value === currentValue)) {
+    options.unshift({
+      value: currentValue,
+      label: currentValue,
+    })
+  }
+
+  return dedupeSelectOptions(options)
+})
 const groupedBuildingParks = computed(() => {
   return parkOptions.value
     .map((park) => {
@@ -828,6 +842,7 @@ async function loadInitialOptions() {
   try {
     const [customers] = await Promise.all([
       fetchAllCustomers(),
+      loadServiceLevelOptions(),
       loadTemplateOptions(),
       loadInspectionItemOptions(),
       loadInspectionCategoryOptions(),
@@ -1032,6 +1047,17 @@ async function fetchAllCustomers() {
   }
 
   return dedupeByUuid(allItems)
+}
+
+async function loadServiceLevelOptions() {
+  serviceLevelOptionsLoading.value = true
+
+  try {
+    const options = await fetchBusinessPresetEntryOptions(["serviceLevel"])
+    serviceLevelEntries.value = options.serviceLevel ?? []
+  } finally {
+    serviceLevelOptionsLoading.value = false
+  }
 }
 
 async function fetchAllParksForCustomer(customerUuid: string) {
@@ -1575,6 +1601,7 @@ function resetLocalStateForRoute() {
   loadingDetail.value = false
   customerLoading.value = false
   relatedOptionsLoading.value = false
+  serviceLevelOptionsLoading.value = false
   templateLoading.value = false
   templateLibraryOpen.value = false
   templateLibraryLoading.value = false
@@ -1591,6 +1618,7 @@ function resetLocalStateForRoute() {
   buildingOptions.value = []
   inspectionItemOptions.value = []
   inspectionCategoryOptions.value = []
+  serviceLevelEntries.value = []
   buildingConfigs.value = []
   batchTemplateUuid.value = ""
   closeBuildingEditor()
@@ -1648,6 +1676,19 @@ function normalizeText(value: unknown) {
 function getOptionalText(value: unknown) {
   const normalized = normalizeText(value)
   return normalized || undefined
+}
+
+function dedupeSelectOptions(options: Array<{ value: string; label: string }>) {
+  const seen = new Set<string>()
+
+  return options.filter((option) => {
+    if (!option.value || seen.has(option.value)) {
+      return false
+    }
+
+    seen.add(option.value)
+    return true
+  })
 }
 
 function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
@@ -1725,20 +1766,18 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
 
             <label class="space-y-2 sm:col-span-3">
               <span class="text-sm font-medium text-foreground">服务等级</span>
-              <Input
-                id="inspection-service-level"
-                v-model="form.level"
-                list="inspection-service-level-options"
-                required
-                placeholder="例如 A级"
-                class="w-full"
-                :disabled="isInteractionLocked"
-              />
+              <Select v-model="form.level" :disabled="isInteractionLocked || serviceLevelOptionsLoading || !serviceLevelOptions.length">
+                <SelectTrigger id="inspection-service-level" class="w-full">
+                  <SelectValue :placeholder="serviceLevelOptionsLoading ? '正在加载服务等级...' : '请选择服务等级'" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem v-for="option in serviceLevelOptions" :key="option.value" :value="option.value">
+                    {{ option.label }}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
             </label>
           </div>
-          <datalist id="inspection-service-level-options">
-            <option v-for="level in levelOptions" :key="level" :value="level" />
-          </datalist>
         </FormFieldSection>
 
         <FormFieldSection

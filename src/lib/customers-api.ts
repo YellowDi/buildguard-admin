@@ -15,7 +15,7 @@ export type CustomerListItem = {
   CorpName?: string
   Business?: string
   Status?: number
-  Level?: number
+  Level?: number | string
   ParkNum?: number
   BuildNum?: number
   CreatedAt?: string
@@ -59,7 +59,7 @@ export type CustomerDetailResult = {
   CorpName?: string
   Address?: string
   Invoice?: string
-  Level?: number
+  Level?: number | string
   [property: string]: unknown
 }
 
@@ -76,7 +76,7 @@ export type CustomerCreatePayload = {
   CorpName?: string
   Address?: string
   Invoice?: string
-  Level?: number
+  Level?: string
   [property: string]: unknown
 }
 
@@ -88,7 +88,7 @@ export type CustomerUpdatePayload = {
   CorpName: string
   Address: string
   Invoice: string
-  Level: number
+  Level: string
   Uuid?: string
 }
 
@@ -163,7 +163,7 @@ export async function createCustomer(payload: CustomerCreatePayload): Promise<Cu
     CorpName: getOptionalString(payload.CorpName),
     Address: getOptionalString(payload.Address),
     Invoice: getOptionalString(payload.Invoice),
-    Level: getOptionalNumber(payload.Level, "Level"),
+    Level: getOptionalString(payload.Level),
   }
 
   const response = await fetch(CUSTOMER_CREATE_API_URL, {
@@ -194,7 +194,7 @@ export async function updateCustomer(payload: CustomerUpdatePayload): Promise<Cu
     CorpName: getUpdateString(payload.CorpName),
     Address: getUpdateString(payload.Address),
     Invoice: getUpdateString(payload.Invoice),
-    Level: getRequiredNumber(payload.Level, "Level"),
+    Level: getRequiredString(payload.Level, "Level"),
   }
 
   const response = await fetch(CUSTOMER_UPDATE_API_URL, {

@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { createCustomer, fetchCustomerDetail, updateCustomer, updateCustomerStatus, type CustomerDetailResult } from "@/lib/customers-api"
 import { handleApiError } from "@/lib/api-errors"
+import { fetchBusinessPresetEntryOptions, type BusinessPresetEntryOption } from "@/lib/business-preset-options"
 
 type CustomerFormState = {
   corpName: string
@@ -36,6 +37,11 @@ type PrincipalFormState = {
 
 type QuickNavItem = {
   id: string
+  label: string
+}
+
+type SelectOption = {
+  value: string
   label: string
 }
 
@@ -87,6 +93,9 @@ const formSectionsRef = ref<HTMLElement | null>(null)
 const businessLicenseInput = ref<HTMLInputElement | null>(null)
 const businessLicenseFileName = ref("")
 const initialSnapshot = ref<CustomerFormSnapshot>(createEmptySnapshot())
+const businessPresetLoading = ref(false)
+const industryEntries = ref<BusinessPresetEntryOption[]>([])
+const customerLevelEntries = ref<BusinessPresetEntryOption[]>([])
 const STICKY_HEADER_OFFSET = 112
 let nextPrincipalId = 2
 let observer: IntersectionObserver | null = null
@@ -117,6 +126,52 @@ const resetDialogDescription = computed(() => (
     ? "当前已修改的客户信息和责任人内容都会恢复为最近一次加载的资料。"
     : "当前已填写的客户信息和责任人内容都会被清空，此操作不可撤销。"
 ))
+const industryOptions = computed<SelectOption[]>(() => {
+  const options = industryEntries.value.map(entry => ({
+    value: entry.name,
+    label: entry.name,
+  }))
+
+  const currentValue = normalizeText(form.business)
+
+  if (currentValue && !options.some(option => option.value === currentValue)) {
+    options.unshift({
+      value: currentValue,
+      label: currentValue,
+    })
+  }
+
+  return dedupeSelectOptions(options)
+})
+const customerLevelOptions = computed<SelectOption[]>(() => {
+  const options = customerLevelEntries.value.map((entry) => ({
+    value: entry.name,
+    label: entry.name,
+  }))
+
+  const currentValue = normalizeText(form.level)
+
+  if (currentValue && !options.some(option => option.value === currentValue)) {
+    options.unshift({
+      value: currentValue,
+      label: currentValue,
+    })
+  }
+
+  return dedupeSelectOptions(options)
+})
+const businessSelectValue = computed({
+  get: () => normalizeText(form.business),
+  set: (value: string) => {
+    form.business = value
+  },
+})
+const customerLevelSelectValue = computed({
+  get: () => normalizeText(form.level),
+  set: (value: string) => {
+    form.level = value
+  },
+})
 
 function handleFocus(sectionId: string) {
   activeNavId.value = sectionId
@@ -233,6 +288,16 @@ async function handleSubmit() {
     return
   }
 
+  if (!normalizeText(form.business)) {
+    toast.error("请选择行业")
+    return
+  }
+
+  if (!normalizeText(form.level)) {
+    toast.error("请选择客户等级")
+    return
+  }
+
   const people = principals.value
     .map(principal => ({
       Name: normalizeText(principal.name),
@@ -266,7 +331,7 @@ async function handleSubmit() {
       CorpName: getOptionalText(form.corpName),
       Address: getOptionalText(form.address),
       Invoice: getOptionalText(form.invoice),
-      Level: getOptionalInteger(form.level),
+      Level: getOptionalText(form.level),
     }
 
     if (isEditMode.value) {
@@ -280,7 +345,7 @@ async function handleSubmit() {
         CorpName: normalizeText(form.corpName),
         Address: normalizeText(form.address),
         Invoice: normalizeText(form.invoice),
-        Level: getRequiredInteger(form.level),
+        Level: normalizeText(form.level),
       })
 
       await updateCustomerStatus({
@@ -406,6 +471,8 @@ watch(editCustomerUuid, (uuid) => {
 }, { immediate: true })
 
 onMounted(() => {
+  void loadBusinessPresetOptions()
+
   nextTick(() => {
     syncAnchorItems()
 
@@ -539,7 +606,7 @@ function didCustomerUpdatePersist(
     UsciFile?: string
     Address?: string
     Invoice?: string
-    Level?: number
+    Level?: string
   },
   people: Array<{ Name: string; Phone: string; IsMain: number }>,
   status?: number,
@@ -575,6 +642,38 @@ function normalizePeopleForCompare(people: Array<{ Name: string; Phone: string; 
     .sort((left, right) => (
       `${left.IsMain}-${left.Name}-${left.Phone}`.localeCompare(`${right.IsMain}-${right.Name}-${right.Phone}`, "zh-CN")
     ))
+}
+
+async function loadBusinessPresetOptions() {
+  businessPresetLoading.value = true
+
+  try {
+    const options = await fetchBusinessPresetEntryOptions(["industry", "customerLevel"])
+    industryEntries.value = options.industry ?? []
+    customerLevelEntries.value = options.customerLevel ?? []
+  } catch (error) {
+    industryEntries.value = []
+    customerLevelEntries.value = []
+    handleApiError(error, {
+      title: "业务预设加载失败",
+      fallback: "行业和客户等级选项加载失败，请稍后重试。",
+    })
+  } finally {
+    businessPresetLoading.value = false
+  }
+}
+
+function dedupeSelectOptions(options: SelectOption[]) {
+  const seen = new Set<string>()
+
+  return options.filter((option) => {
+    if (!option.value || seen.has(option.value)) {
+      return false
+    }
+
+    seen.add(option.value)
+    return true
+  })
 }
 </script>
 
@@ -625,13 +724,16 @@ function normalizePeopleForCompare(people: Array<{ Name: string; Phone: string; 
             label="行业"
             label-for="customer-business"
           >
-            <Input
-              id="customer-business"
-              v-model="form.business"
-              placeholder="请输入行业"
-              class="w-full"
-              @focus="handleFocus('section-business')"
-            />
+            <Select v-model="businessSelectValue" :disabled="businessPresetLoading || !industryOptions.length">
+              <SelectTrigger id="customer-business" class="w-full" @focus="handleFocus('section-business')">
+                <SelectValue :placeholder="businessPresetLoading ? '正在加载行业选项...' : '请选择行业'" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem v-for="option in industryOptions" :key="option.value" :value="option.value">
+                  {{ option.label }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
           </FormFieldSection>
 
           <FormFieldSection
@@ -665,15 +767,16 @@ function normalizePeopleForCompare(people: Array<{ Name: string; Phone: string; 
             label="客户等级"
             label-for="customer-level"
           >
-            <Input
-              id="customer-level"
-              v-model="form.level"
-              type="number"
-              inputmode="numeric"
-              placeholder="请输入客户等级"
-              class="w-full"
-              @focus="handleFocus('section-level')"
-            />
+            <Select v-model="customerLevelSelectValue" :disabled="businessPresetLoading || !customerLevelOptions.length">
+              <SelectTrigger id="customer-level" class="w-full" @focus="handleFocus('section-level')">
+                <SelectValue :placeholder="businessPresetLoading ? '正在加载客户等级...' : '请选择客户等级'" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem v-for="option in customerLevelOptions" :key="option.value" :value="option.value">
+                  {{ option.label }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
           </FormFieldSection>
 
           <FormFieldSection

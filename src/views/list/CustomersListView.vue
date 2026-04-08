@@ -35,7 +35,7 @@ type CustomerRecord = {
   status: number | null
   statusLabel: string
   business: string
-  level: number | null
+  level: string
   levelLabel: string
   principalName: string
   principalPhone: string
@@ -181,8 +181,7 @@ const schema: TablePageSchema<CustomerRecord> = {
       },
       sort: {
         label: "客户等级",
-        kind: "metric",
-        value: row => row.level ?? -1,
+        value: row => row.levelLabel,
       },
     },
     {
@@ -507,12 +506,12 @@ function resolveCustomerDetailId(
   return ""
 }
 
-function formatLevelLabel(level: number | null) {
-  if (level === null) {
+function formatLevelLabel(level: string) {
+  if (!level) {
     return "未评级"
   }
 
-  return `等级 ${level}`
+  return level
 }
 
 function formatCustomerStatus(status: number | null) {
@@ -597,29 +596,7 @@ function normalizeCustomerRecord(
 }
 
 function getLevelValue(item: CustomerListItem) {
-  const numericLevel = getFirstNumber(item, ["Level", "CustomerLevel", "LevelValue"])
-
-  if (numericLevel !== null) {
-    return numericLevel
-  }
-
-  const textLevel = getFirstText(item, ["LevelLabel", "CustomerLevelLabel", "LevelName"], "")
-  const mappedLevel = mapLevelTextToNumber(textLevel)
-
-  return mappedLevel
-}
-
-function mapLevelTextToNumber(value: string) {
-  if (!value) {
-    return null
-  }
-
-  if (/(战略|s)/i.test(value)) return 3
-  if (/(重点|a)/i.test(value)) return 2
-  if (/(成长|b)/i.test(value)) return 1
-
-  const numericValue = Number(value)
-  return Number.isFinite(numericValue) ? numericValue : null
+  return getFirstText(item, ["Level", "CustomerLevel", "LevelLabel", "CustomerLevelLabel", "LevelName"], "")
 }
 
 function formatPackageInfo(packageName: string, packageCode: string) {
