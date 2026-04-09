@@ -85,25 +85,24 @@ function headerSecondaryIcon(action: HeaderAction) {
 
 <template>
   <div class="sticky top-0 z-10 mx-0 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80 sm:-mx-4">
-    <div class="px-4 py-5">
+    <div class="relative px-4 py-5">
+      <TooltipWrap content="返回">
+        <button
+          type="button"
+          class="mb-3 inline-flex size-8 items-center justify-center rounded-md text-foreground transition-colors hover:bg-accent hover:text-accent-foreground sm:absolute sm:-left-10 sm:top-5 sm:mb-0"
+          aria-label="返回"
+          @click="emit('back')"
+        >
+          <i class="ri-arrow-left-line text-[18px]" />
+        </button>
+      </TooltipWrap>
+
       <SectionHeader
         :title="title"
         :has-actions="hasActions"
         layout-class="gap-4 md:gap-5"
         actions-class="w-full min-w-0 gap-2 overflow-x-auto overflow-y-hidden whitespace-nowrap md:w-auto"
       >
-        <template #leading>
-          <TooltipWrap content="返回">
-            <button
-              type="button"
-              class="inline-flex size-8 items-center justify-center rounded-md text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
-              aria-label="返回"
-              @click="emit('back')"
-            >
-              <i class="ri-arrow-left-line text-[18px]" />
-            </button>
-          </TooltipWrap>
-        </template>
         <template #actions>
           <template v-if="hasActions">
             <Button
