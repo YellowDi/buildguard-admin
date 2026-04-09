@@ -197,7 +197,7 @@ watch(() => route.fullPath, () => {
         />
       </div>
 
-      <div class="shrink-0 border-t border-sidebar-border p-2">
+      <div class="shrink-0 p-2">
         <UserCardPopover />
       </div>
     </div>
@@ -235,7 +235,7 @@ watch(() => route.fullPath, () => {
       />
     </SidebarContent>
 
-    <SidebarFooter class="shrink-0 border-t border-sidebar-border">
+    <SidebarFooter class="shrink-0">
       <UserCardPopover />
     </SidebarFooter>
 
