@@ -66,7 +66,12 @@ import { handleApiError } from "@/lib/api-errors"
 import { fetchMembers } from "@/lib/members-api"
 import { hasValidLatLng } from "@/lib/map-coordinates"
 import { fetchBuildings, type BuildingListItem } from "@/lib/buildings-api"
-import { readCustomerSubAccountLocalRecords } from "@/lib/customer-sub-accounts-api"
+import {
+  fetchCustomerSubAccounts,
+  readCustomerSubAccountLocalRecords,
+  type CustomerSubAccountListItem,
+  type CustomerSubAccountLocalRecord,
+} from "@/lib/customer-sub-accounts-api"
 import { deleteCustomer, fetchCustomerDetail, type CustomerDetailPerson, type CustomerDetailResult } from "@/lib/customers-api"
 import {
   dispatchWorkOrder,
@@ -182,10 +187,13 @@ type MonitoringRow = {
 
 type SubAccountRow = {
   id: string
+  uuid: string
+  name: string
   username: string
-  account: string
-  password: string
-  phone: string
+  isMain: number | null
+  isMainLabel: string
+  status: number | null
+  statusLabel: string
 }
 
 type CustomerPackageMockRecord = {
@@ -246,6 +254,9 @@ const repairWorkOrdersErrorMessage = ref("")
 const repairWorkOrdersPageNum = ref(1)
 const repairWorkOrdersPageSize = ref(10)
 const repairWorkOrdersTotal = ref(0)
+const subAccounts = ref<SubAccountRow[]>([])
+const subAccountsLoading = ref(false)
+const subAccountsErrorMessage = ref("")
 const parkDetailSheetOpen = ref(false)
 const parkDetailLoading = ref(false)
 const parkDetailErrorMessage = ref("")
@@ -280,6 +291,7 @@ let latestRelationsRequestId = 0
 let latestBuildingAssetsRequestId = 0
 let latestInspectionWorkOrdersRequestId = 0
 let latestRepairWorkOrdersRequestId = 0
+let latestSubAccountsRequestId = 0
 let latestMaintenanceRecordsRequestId = 0
 let latestRepairOverviewRecordsRequestId = 0
 let latestParkDetailRequestId = 0
@@ -1176,8 +1188,6 @@ const repairWorkOrdersSchema: TablePageSchema<CustomerWorkOrderRow> = {
 
 const monitoringRows = computed<MonitoringRow[]>(() => customer.value ? buildMockMonitoringRows(customer.value) : [])
 
-const subAccountRows = computed<SubAccountRow[]>(() => customer.value ? buildMockSubAccounts(customer.value) : [])
-
 const monitoringSchema: TablePageSchema<MonitoringRow> = {
   title: "",
   description: "",
@@ -1314,7 +1324,7 @@ const subAccountsSchema: TablePageSchema<SubAccountRow> = {
   ],
   columns: [
     {
-      key: "username",
+      key: "name",
       label: "用户名",
       filterType: "text",
       emphasis: "strong",
@@ -1327,7 +1337,7 @@ const subAccountsSchema: TablePageSchema<SubAccountRow> = {
       sort: true,
     },
     {
-      key: "account",
+      key: "username",
       label: "账号",
       filterType: "text",
       filter: {
@@ -1338,23 +1348,21 @@ const subAccountsSchema: TablePageSchema<SubAccountRow> = {
       sort: true,
     },
     {
-      key: "password",
-      label: "密码",
-      filterType: "text",
+      key: "isMainLabel",
+      label: "账号类型",
+      filterType: "tag",
       filter: {
-        type: "text",
-        placeholder: "输入密码",
+        type: "tag",
+        defaultVisible: true,
       },
       sort: true,
     },
     {
-      key: "phone",
-      label: "手机号",
-      filterType: "text",
-      width: "fill",
+      key: "statusLabel",
+      label: "状态",
+      filterType: "tag",
       filter: {
-        type: "text",
-        placeholder: "输入手机号",
+        type: "tag",
         defaultVisible: true,
       },
       sort: true,
@@ -1367,12 +1375,12 @@ const subAccountsSchema: TablePageSchema<SubAccountRow> = {
       type: "text",
       fixed: true,
       placeholder: "输入页面内筛选条件",
-      value: row => `${row.username} ${row.account} ${row.password} ${row.phone}`,
+      value: row => `${row.name} ${row.username} ${row.isMainLabel} ${row.statusLabel} ${row.uuid}`,
     },
   ],
   sort: {
-    storageKey: "customer-detail-sub-accounts-sort-preferences",
-    initialField: "username",
+    storageKey: "customer-detail-sub-accounts-sort-preferences-v2",
+    initialField: "name",
     initialDirection: "asc",
   },
   tabs: {
@@ -1402,7 +1410,7 @@ const monitoringPage = useTablePage({
 
 const subAccountsPage = useTablePage({
   ...createTablePageDefinition(subAccountsSchema),
-  rows: subAccountRows,
+  rows: subAccounts,
 })
 
 const parkDetailSheetSections = computed<DetailFieldSection[]>(() => {
@@ -1517,6 +1525,8 @@ watch(customerUuid, (uuid) => {
   repairWorkOrdersErrorMessage.value = ""
   repairWorkOrdersTotal.value = 0
   repairWorkOrdersPageNum.value = 1
+  subAccounts.value = []
+  subAccountsErrorMessage.value = ""
   handleWorkOrderDetailSheetOpenChange(false)
   void loadCustomerDetail(uuid)
   void loadBuildingAssets(uuid)
@@ -1524,6 +1534,7 @@ watch(customerUuid, (uuid) => {
   void loadRepairOverviewRecords(uuid)
   void loadInspectionWorkOrders(uuid)
   void loadRepairWorkOrders(uuid)
+  void loadSubAccounts(uuid)
   void loadParkBuildings(uuid)
 }, { immediate: true })
 
@@ -1826,7 +1837,7 @@ function handleAddSubAccount() {
 }
 
 function handleResetSubAccountPassword(row: SubAccountRow) {
-  toast.info(`重置子账号「${row.username}」密码功能暂未接入`)
+  toast.info(`重置子账号「${row.name}」密码功能暂未接入`)
 }
 
 function handleContractDownload() {
@@ -2527,6 +2538,48 @@ async function loadRepairWorkOrders(uuid: string) {
   } finally {
     if (requestId === latestRepairWorkOrdersRequestId) {
       repairWorkOrdersLoading.value = false
+    }
+  }
+}
+
+async function loadSubAccounts(uuid: string) {
+  const requestId = ++latestSubAccountsRequestId
+
+  if (!uuid) {
+    subAccounts.value = []
+    subAccountsErrorMessage.value = "客户 Uuid 缺失，无法加载子账号列表。"
+    return
+  }
+
+  subAccountsLoading.value = true
+  subAccountsErrorMessage.value = ""
+
+  try {
+    const result = await fetchCustomerSubAccounts({
+      CustomerUuid: uuid,
+      PageNum: 1,
+      PageSize: 200,
+    })
+
+    if (requestId !== latestSubAccountsRequestId) {
+      return
+    }
+
+    const remoteRows = result.list.map((item, index) => mapSubAccountRow(item, index))
+    subAccounts.value = mergeSubAccountRows(remoteRows, readCustomerSubAccountLocalRecords(uuid))
+  } catch (error) {
+    if (requestId !== latestSubAccountsRequestId) {
+      return
+    }
+
+    subAccounts.value = readCustomerSubAccountLocalRecords(uuid).map(mapLocalSubAccountRow)
+    subAccountsErrorMessage.value = handleApiError(error, {
+      mode: "silent",
+      fallback: "子账号列表加载失败，请稍后重试。",
+    })
+  } finally {
+    if (requestId === latestSubAccountsRequestId) {
+      subAccountsLoading.value = false
     }
   }
 }
@@ -3269,63 +3322,68 @@ function buildMockMonitoringRows(current: CustomerDetailResult): MonitoringRow[]
   ]
 }
 
-function buildMockSubAccounts(current: CustomerDetailResult): SubAccountRow[] {
-  const customerName = toDisplayText(current.CorpName, "customer")
-  const customerCode = customerUuid.value.replace(/[^a-zA-Z0-9]/g, "").slice(0, 6).toLowerCase() || "cust"
-  const accountPrefix = toPinyinAccountPrefix(customerName)
-  const defaultRows = [
-    createMockSubAccount(customerCode, 1, "张晓晨", `${accountPrefix}_ops`, "Bg@2026!ops", "13800138001"),
-    createMockSubAccount(customerCode, 2, "李雨桐", `${accountPrefix}_maint`, "Bg@2026!mt", "13800138002"),
-    createMockSubAccount(customerCode, 3, "王志远", `${accountPrefix}_monitor`, "Bg@2026!mon", "13800138003"),
-  ]
-  const localRows = readCustomerSubAccountLocalRecords(customerUuid.value).map(record => ({
-    id: record.id,
-    username: record.username,
-    account: record.account,
-    password: record.password,
-    phone: record.phone,
-  }))
+function mapSubAccountRow(item: CustomerSubAccountListItem, index: number): SubAccountRow {
+  const uuid = toDisplayText(item.Uuid, "")
 
-  if (!localRows.length) {
-    return defaultRows
+  return {
+    id: uuid || `sub-account-${index + 1}`,
+    uuid,
+    name: toDisplayText(item.Name, "未命名子账号"),
+    username: toDisplayText(item.Username, "-"),
+    isMain: toOptionalNumber(item.IsMain),
+    isMainLabel: resolveSubAccountTypeLabel(item.IsMain),
+    status: toOptionalNumber(item.Status),
+    statusLabel: resolveSubAccountStatusLabel(item.Status),
   }
+}
 
-  const mergedRows = [...localRows]
+function mapLocalSubAccountRow(record: CustomerSubAccountLocalRecord): SubAccountRow {
+  return {
+    id: record.id,
+    uuid: "",
+    name: toDisplayText(record.username, "未命名子账号"),
+    username: toDisplayText(record.account, "-"),
+    isMain: 2,
+    isMainLabel: "子账号",
+    status: 1,
+    statusLabel: "正常",
+  }
+}
 
-  for (const row of defaultRows) {
-    if (!mergedRows.some(item => item.account === row.account)) {
-      mergedRows.push(row)
+function mergeSubAccountRows(remoteRows: SubAccountRow[], localRecords: CustomerSubAccountLocalRecord[]) {
+  const mergedRows = [...remoteRows]
+
+  for (const row of localRecords.map(mapLocalSubAccountRow)) {
+    if (mergedRows.some(item => isSameSubAccountRow(item, row))) {
+      continue
     }
+
+    mergedRows.unshift(row)
   }
 
   return mergedRows
 }
 
-function createMockSubAccount(
-  customerCode: string,
-  index: number,
-  username: string,
-  account: string,
-  password: string,
-  phone: string,
-): SubAccountRow {
-  return {
-    id: `${customerCode}-sub-account-${index}`,
-    username,
-    account,
-    password,
-    phone,
+function isSameSubAccountRow(left: SubAccountRow, right: SubAccountRow) {
+  if (left.uuid && right.uuid) {
+    return left.uuid === right.uuid
   }
+
+  return left.username === right.username
 }
 
-function toPinyinAccountPrefix(value: string) {
-  const normalized = value
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
+function resolveSubAccountTypeLabel(value: unknown) {
+  return Number(value) === 1 ? "主账号" : "子账号"
+}
 
-  return normalized || "subaccount"
+function resolveSubAccountStatusLabel(value: unknown) {
+  return Number(value) === 2 ? "禁用" : "正常"
+}
+
+function toOptionalNumber(value: unknown) {
+  const parsed = Number(value)
+
+  return Number.isFinite(parsed) ? parsed : null
 }
 
 function normalizeBuildingRow(building: BuildingListItem, park: ParkListItem, index: number): BuildingRow {
@@ -3706,8 +3764,12 @@ function toDisplayText(value: unknown, fallback = "未填写") {
       </template>
 
       <template v-else-if="activeTab === 'sub-accounts'">
-        <CustomerDetailContentLoading v-if="loading" variant="sub-accounts" />
+        <CustomerDetailContentLoading v-if="loading || subAccountsLoading" variant="sub-accounts" />
         <div v-else-if="customer" class="flex min-h-0 flex-1 flex-col pb-5">
+          <Alert v-if="subAccountsErrorMessage" variant="destructive" class="mb-5">
+            <AlertTitle>子账号列表接口加载失败</AlertTitle>
+            <AlertDescription>{{ subAccountsErrorMessage }}</AlertDescription>
+          </Alert>
           <TablePage :page="subAccountsPage" :show-toolbar-actions="false" :list-level-table="false" class="-mt-3" />
         </div>
       </template>

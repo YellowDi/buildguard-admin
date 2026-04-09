@@ -44,6 +44,7 @@ const HORIZONTAL_SCROLL_HINT_MESSAGE = "可按住 Shift + 鼠标滚轮进行横�
 const HORIZONTAL_SCROLL_HINT_SESSION_PREFIX = "buildguard:table-hscroll-hint:"
 const ROW_CLICK_DRAG_THRESHOLD = 5
 const ALIGN_TO_HEADER_WIDE_BREAKPOINT = 2000
+const COMPACT_DETAIL_TABLE_WIDTH_THRESHOLD = 48
 const ROW_CLICK_IGNORE_SELECTOR = [
   "button",
   "a[href]",
@@ -127,6 +128,7 @@ const tableOuterRef = ref<HTMLElement | null>(null)
 const tableWrapperRef = ref<HTMLElement | null>(null)
 const tableRef = ref<HTMLTableElement | null>(null)
 const fillColumnActive = ref(false)
+const compactTableActive = ref(false)
 const horizontalOverflow = ref(false)
 const edgeGutterSize = ref(TABLE_EDGE_GUTTER_MOBILE)
 const embeddedViewportExpandLeft = ref(0)
@@ -186,8 +188,15 @@ const trailingEdgeGutter = computed(() => (
     ? (props.listLevelTable ? edgeGutterSize.value : embeddedTrailingInset.value)
     : 0
 ))
+const tableInlineTrailingInset = computed(() => {
+  if (!props.listLevelTable && compactTableActive.value) {
+    return embeddedTrailingInset.value
+  }
+
+  return trailingEdgeGutter.value
+})
 const tableInlineMinWidth = computed(() => {
-  const reservedSpace = leadingEdgeGutter.value + trailingEdgeGutter.value
+  const reservedSpace = leadingEdgeGutter.value + tableInlineTrailingInset.value
   return `calc(100% - ${reservedSpace}px)`
 })
 const tableElementStyle = computed(() => ({
@@ -851,6 +860,7 @@ function measureTableLayout() {
     return {
       overflow: false,
       fillColumnActive: false,
+      compactTableActive: false,
     }
   }
 
@@ -866,7 +876,7 @@ function measureTableLayout() {
   measurementHost.appendChild(tableClone)
   document.body.appendChild(measurementHost)
 
-  let resolvedWidth = Math.ceil(tableClone.getBoundingClientRect().width)
+  let intrinsicWidth = Math.ceil(tableClone.getBoundingClientRect().width)
   let fillColumnActive = false
 
   if (fillColumnIndexes.length > 0) {
@@ -889,19 +899,22 @@ function measureTableLayout() {
       }
     }
 
-    const fillWidth = Math.ceil(tableClone.getBoundingClientRect().width)
-    fillColumnActive = fillWidth <= wrapperClientWidth + 1
-
-    if (fillColumnActive) {
-      resolvedWidth = fillWidth
-    }
+    intrinsicWidth = Math.ceil(tableClone.getBoundingClientRect().width)
   }
 
   measurementHost.remove()
 
+  const compactTableActive = !props.listLevelTable
+    && wrapperClientWidth - intrinsicWidth >= COMPACT_DETAIL_TABLE_WIDTH_THRESHOLD
+
+  if (!compactTableActive) {
+    fillColumnActive = intrinsicWidth <= wrapperClientWidth + 1
+  }
+
   return {
-    overflow: resolvedWidth > wrapperClientWidth + 1,
+    overflow: intrinsicWidth > wrapperClientWidth + 1,
     fillColumnActive,
+    compactTableActive,
   }
 }
 
@@ -909,10 +922,24 @@ async function syncTableLayoutState() {
   updateEdgeGutterSize()
   syncEmbeddedViewportState()
 
-  const { fillColumnActive: nextFillColumnActive, overflow: measuredOverflow } = measureTableLayout()
+  const {
+    fillColumnActive: nextFillColumnActive,
+    overflow: measuredOverflow,
+    compactTableActive: nextCompactTableActive,
+  } = measureTableLayout()
 
-  if (fillColumnActive.value !== nextFillColumnActive) {
+  const compactChanged = compactTableActive.value !== nextCompactTableActive
+  const fillChanged = fillColumnActive.value !== nextFillColumnActive
+
+  if (compactChanged) {
+    compactTableActive.value = nextCompactTableActive
+  }
+
+  if (fillChanged) {
     fillColumnActive.value = nextFillColumnActive
+  }
+
+  if (compactChanged || fillChanged) {
     await nextTick()
   }
 
@@ -940,12 +967,13 @@ function syncStickyHeaderState() {
     ? wrapperRect.left
     : wrapperRect.left - embeddedViewportExpandLeft.value
   stickyHeaderTop.value = stickyLine
-  stickyHeaderWidth.value = props.listLevelTable
-    ? wrapperRect.width
-    : wrapperRect.width + embeddedViewportExpandLeft.value + embeddedViewportExpandRight.value
   stickyTableWidth.value = tableRef.value.scrollWidth
   stickyScrollLeft.value = tableWrapperRef.value.scrollLeft
   stickyColumnWidths.value = headerCells.map(cell => cell.getBoundingClientRect().width)
+  const wrapperWidth = props.listLevelTable
+    ? wrapperRect.width
+    : wrapperRect.width + embeddedViewportExpandLeft.value + embeddedViewportExpandRight.value
+  stickyHeaderWidth.value = wrapperWidth
   stickyHeaderActive.value = wrapperRect.top <= stickyLine && wrapperRect.bottom > stickyLine + headerHeight
 }
 

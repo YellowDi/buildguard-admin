@@ -1,6 +1,35 @@
 import { ApiError, assertApiSuccess, createHttpError, readResponseBody } from "@/lib/api-errors"
 import { API_PATHS, buildApiHeaders, buildApiUrl } from "@/lib/api"
 
+type CustomerSubAccountsListEnvelope = {
+  Total?: number
+  List?: unknown
+  data?: unknown
+  list?: unknown
+  rows?: unknown
+}
+
+export type ListCustomerSubAccountsPayload = {
+  CustomerUuid?: string
+  PageNum?: number
+  PageSize?: number
+  [property: string]: unknown
+}
+
+export type CustomerSubAccountListItem = {
+  IsMain?: number
+  Name?: string
+  Status?: number
+  Username?: string
+  Uuid?: string
+  [property: string]: unknown
+}
+
+export type CustomerSubAccountsListResult = {
+  list: CustomerSubAccountListItem[]
+  total: number
+}
+
 export type CreateCustomerSubAccountPayload = {
   Account: string
   Password: string
@@ -23,9 +52,41 @@ export type CustomerSubAccountLocalRecord = {
   phone: string
 }
 
+const CUSTOMER_SUB_ACCOUNTS_LIST_API_URL = buildApiUrl(API_PATHS.customerSubAccountsList)
 const CUSTOMER_SUB_ACCOUNT_CREATE_API_URL = buildApiUrl(API_PATHS.customerSubAccountCreate)
+const CUSTOMER_SUB_ACCOUNTS_LOAD_ERROR_MESSAGE = "子账号列表加载失败，请稍后重试。"
 const CUSTOMER_SUB_ACCOUNT_CREATE_ERROR_MESSAGE = "子账号创建失败，请稍后重试。"
 const CUSTOMER_SUB_ACCOUNT_STORAGE_KEY = "customer-sub-accounts:local-records"
+
+export async function fetchCustomerSubAccounts(payload: ListCustomerSubAccountsPayload = {}): Promise<CustomerSubAccountsListResult> {
+  const normalizedPayload = {
+    CustomerUuid: getRequiredString(payload.CustomerUuid, "CustomerUuid"),
+    PageNum: getOptionalNumber(payload.PageNum, "PageNum") ?? 1,
+    PageSize: getOptionalNumber(payload.PageSize, "PageSize") ?? 10,
+  }
+
+  const response = await fetch(CUSTOMER_SUB_ACCOUNTS_LIST_API_URL, {
+    method: "POST",
+    headers: buildApiHeaders({
+      "Content-Type": "application/json",
+    }),
+    body: JSON.stringify(normalizedPayload),
+  })
+  const responseBody = await readResponseBody(response) as CustomerSubAccountsListEnvelope | unknown[]
+
+  if (!response.ok) {
+    throw createHttpError(response, responseBody, CUSTOMER_SUB_ACCOUNTS_LOAD_ERROR_MESSAGE)
+  }
+
+  assertApiSuccess(responseBody, CUSTOMER_SUB_ACCOUNTS_LOAD_ERROR_MESSAGE)
+
+  const list = extractList(responseBody)
+
+  return {
+    list: list.map(item => normalizeCustomerSubAccountListItem(item)),
+    total: extractTotal(responseBody, list.length),
+  }
+}
 
 export async function createCustomerSubAccount(payload: CreateCustomerSubAccountPayload): Promise<CreateCustomerSubAccountResult> {
   const normalizedPayload = {
@@ -122,6 +183,78 @@ function extractCreateResult(payload: unknown): CreateCustomerSubAccountResult {
   }
 
   return record as CreateCustomerSubAccountResult
+}
+
+function extractList(payload: CustomerSubAccountsListEnvelope | unknown[]) {
+  if (Array.isArray(payload)) {
+    return payload
+  }
+
+  if (Array.isArray(payload.List)) {
+    return payload.List
+  }
+
+  const nested = asRecord(payload.data)
+
+  if (nested) {
+    if (Array.isArray(nested.List)) {
+      return nested.List
+    }
+
+    if (Array.isArray(nested.list)) {
+      return nested.list
+    }
+
+    if (Array.isArray(nested.rows)) {
+      return nested.rows
+    }
+  }
+
+  if (Array.isArray(payload.list)) {
+    return payload.list
+  }
+
+  if (Array.isArray(payload.rows)) {
+    return payload.rows
+  }
+
+  return []
+}
+
+function extractTotal(payload: CustomerSubAccountsListEnvelope | unknown[], fallback: number) {
+  if (Array.isArray(payload)) {
+    return payload.length
+  }
+
+  if (typeof payload.Total === "number") {
+    return payload.Total
+  }
+
+  const nested = asRecord(payload.data)
+
+  if (nested && typeof nested.Total === "number") {
+    return nested.Total
+  }
+
+  return fallback
+}
+
+function normalizeCustomerSubAccountListItem(value: unknown): CustomerSubAccountListItem {
+  return asRecord(value) as CustomerSubAccountListItem ?? {}
+}
+
+function getOptionalNumber(value: unknown, field: string) {
+  if (value === undefined || value === null) {
+    return undefined
+  }
+
+  const parsed = Number(value)
+
+  if (Number.isFinite(parsed)) {
+    return parsed
+  }
+
+  throw new ApiError(`请求参数校验失败：${field} 必须是有效数字。`)
 }
 
 function getRequiredString(value: unknown, field: string) {

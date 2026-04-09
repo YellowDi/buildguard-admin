@@ -16,6 +16,7 @@ export const API_PATHS = {
   customerUpdate: "/bqi/customer/update",
   customerStatusUpdate: "/bqi/customer/status/update",
   customerDelete: "/bqi/customer/del",
+  customerSubAccountsList: "/bqi/customer/account/list",
   customerSubAccountCreate: "/bqi/customer/account/new",
   parksList: "/bqi/park/list",
   parkCreate: "/bqi/park/new",
