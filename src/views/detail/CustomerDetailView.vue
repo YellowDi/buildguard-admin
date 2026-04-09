@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import CustomerDetailContentLoading from "@/components/loading/CustomerDetailContentLoading.vue"
 import DetailFieldsSkeleton from "@/components/loading/DetailFieldsSkeleton.vue"
@@ -67,6 +68,8 @@ import { fetchMembers } from "@/lib/members-api"
 import { hasValidLatLng } from "@/lib/map-coordinates"
 import { fetchBuildings, type BuildingListItem } from "@/lib/buildings-api"
 import {
+  appendCustomerSubAccountLocalRecord,
+  createCustomerSubAccount,
   fetchCustomerSubAccounts,
   readCustomerSubAccountLocalRecords,
   type CustomerSubAccountListItem,
@@ -196,6 +199,13 @@ type SubAccountRow = {
   statusLabel: string
 }
 
+type CustomerSubAccountCreateFormState = {
+  name: string
+  account: string
+  password: string
+  phone: string
+}
+
 type CustomerPackageMockRecord = {
   name: string
   packageName: string
@@ -290,6 +300,9 @@ const assignableUsers = ref<AssignableUserOption[]>([])
 const assignableUsersLoading = ref(false)
 const assignableUsersLoaded = ref(false)
 const assignSubmitting = ref(false)
+const subAccountCreateDialogOpen = ref(false)
+const subAccountCreateSubmitting = ref(false)
+const subAccountCreateForm = ref<CustomerSubAccountCreateFormState>(createEmptySubAccountCreateForm())
 const buildingDetailSheetOpen = ref(false)
 const activeBuildingUuid = ref("")
 const activeBuildingParkUuid = ref("")
@@ -341,6 +354,16 @@ const canSubmitAssign = computed(() => {
 
   return assignUserUuids.value.length > 0
 })
+const canSubmitSubAccountCreate = computed(() => (
+  Boolean(
+    customerUuid.value
+    && normalizeDialogText(subAccountCreateForm.value.name)
+    && normalizeDialogText(subAccountCreateForm.value.account)
+    && normalizeDialogText(subAccountCreateForm.value.password)
+    && normalizeDialogText(subAccountCreateForm.value.phone)
+    && !subAccountCreateSubmitting.value,
+  )
+))
 const detailTabActionsByTab: Record<CustomerDetailTab, CustomerDetailTabActions> = {
   "basic-info": {
     deleteCustomer: true,
@@ -1867,17 +1890,100 @@ function handleAddSubAccount() {
     return
   }
 
-  router.push({
-    name: "customer-sub-account-create",
-    params: { id: customerUuid.value },
-    query: {
-      customerName: toDisplayText(customer.value?.CorpName, "当前客户"),
-    },
-  })
+  resetSubAccountCreateDialog()
+  subAccountCreateDialogOpen.value = true
 }
 
 function handleResetSubAccountPassword(row: SubAccountRow) {
   toast.info(`重置子账号「${row.name}」密码功能暂未接入`)
+}
+
+function resetSubAccountCreateDialog() {
+  subAccountCreateForm.value = createEmptySubAccountCreateForm()
+}
+
+function closeSubAccountCreateDialog(force = false) {
+  if (subAccountCreateSubmitting.value && !force) {
+    return
+  }
+
+  subAccountCreateDialogOpen.value = false
+  resetSubAccountCreateDialog()
+}
+
+function handleSubAccountCreateDialogOpenChange(open: boolean) {
+  if (open) {
+    subAccountCreateDialogOpen.value = true
+    return
+  }
+
+  closeSubAccountCreateDialog()
+}
+
+async function submitSubAccountCreate() {
+  if (!customerUuid.value) {
+    toast.error("所属客户信息缺失")
+    return
+  }
+
+  const payload = {
+    Account: normalizeDialogText(subAccountCreateForm.value.account),
+    Password: normalizeDialogText(subAccountCreateForm.value.password),
+    Phone: normalizeDialogText(subAccountCreateForm.value.phone),
+    Name: normalizeDialogText(subAccountCreateForm.value.name),
+    CustomerUuid: customerUuid.value,
+  }
+
+  if (!payload.Name) {
+    toast.error("请填写用户名")
+    return
+  }
+
+  if (!payload.Account) {
+    toast.error("请填写账号")
+    return
+  }
+
+  if (!payload.Password) {
+    toast.error("请填写密码")
+    return
+  }
+
+  if (!payload.Phone) {
+    toast.error("请填写手机号")
+    return
+  }
+
+  subAccountCreateSubmitting.value = true
+
+  try {
+    const result = await createCustomerSubAccount(payload)
+
+    appendCustomerSubAccountLocalRecord(payload.CustomerUuid, {
+      id: result.Uuid?.trim() || `${payload.CustomerUuid}-sub-account-${Date.now()}`,
+      username: payload.Name,
+      account: payload.Account,
+      password: payload.Password,
+      phone: payload.Phone,
+    })
+
+    await loadSubAccounts(payload.CustomerUuid)
+
+    toast.success("子账号已创建", {
+      description: result.Uuid
+        ? `子账号 UUID：${result.Uuid}`
+        : "子账号信息已提交到接口。",
+    })
+
+    closeSubAccountCreateDialog(true)
+  } catch (error) {
+    handleApiError(error, {
+      title: "子账号创建失败",
+      fallback: "子账号创建失败，请稍后重试。",
+    })
+  } finally {
+    subAccountCreateSubmitting.value = false
+  }
 }
 
 function handleContractDownload() {
@@ -3457,6 +3563,27 @@ function isSameSubAccountRow(left: SubAccountRow, right: SubAccountRow) {
   return left.username === right.username
 }
 
+function createEmptySubAccountCreateForm(): CustomerSubAccountCreateFormState {
+  return {
+    name: "",
+    account: "",
+    password: "",
+    phone: "",
+  }
+}
+
+function normalizeDialogText(value: unknown) {
+  if (typeof value === "string") {
+    return value.trim()
+  }
+
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return String(value)
+  }
+
+  return ""
+}
+
 function resolveSubAccountTypeLabel(value: unknown) {
   return Number(value) === 1 ? "主账号" : "子账号"
 }
@@ -4186,6 +4313,73 @@ function toDisplayText(value: unknown, fallback = "未填写") {
           {{ assignSubmitting ? "提交中..." : "确认指派" }}
         </Button>
       </DialogFooter>
+    </DialogContent>
+  </Dialog>
+
+  <Dialog :open="subAccountCreateDialogOpen" @update:open="handleSubAccountCreateDialogOpenChange">
+      <DialogContent class="sm:max-w-[520px]">
+      <DialogHeader>
+        <DialogTitle>添加子账号</DialogTitle>
+        <DialogDescription>
+          请填写子账号信息，创建后可用于登录系统。
+        </DialogDescription>
+      </DialogHeader>
+
+      <form class="grid gap-4" @submit.prevent="submitSubAccountCreate">
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div class="grid gap-2">
+            <label class="text-sm font-medium text-foreground" for="sub-account-create-name">用户名</label>
+            <Input
+              id="sub-account-create-name"
+              v-model="subAccountCreateForm.name"
+              :disabled="subAccountCreateSubmitting"
+              placeholder="请输入用户名"
+            />
+          </div>
+
+          <div class="grid gap-2">
+            <label class="text-sm font-medium text-foreground" for="sub-account-create-account">账号</label>
+            <Input
+              id="sub-account-create-account"
+              v-model="subAccountCreateForm.account"
+              :disabled="subAccountCreateSubmitting"
+              placeholder="请输入账号"
+            />
+          </div>
+        </div>
+
+        <div class="grid gap-4 sm:grid-cols-2">
+          <div class="grid gap-2">
+            <label class="text-sm font-medium text-foreground" for="sub-account-create-password">密码</label>
+            <Input
+              id="sub-account-create-password"
+              v-model="subAccountCreateForm.password"
+              :disabled="subAccountCreateSubmitting"
+              type="password"
+              placeholder="请输入密码"
+            />
+          </div>
+
+          <div class="grid gap-2">
+            <label class="text-sm font-medium text-foreground" for="sub-account-create-phone">手机号</label>
+            <Input
+              id="sub-account-create-phone"
+              v-model="subAccountCreateForm.phone"
+              :disabled="subAccountCreateSubmitting"
+              placeholder="请输入手机号"
+            />
+          </div>
+        </div>
+
+        <DialogFooter class="pt-2">
+          <Button type="button" variant="outline" :disabled="subAccountCreateSubmitting" @click="closeSubAccountCreateDialog">
+            取消
+          </Button>
+          <Button type="submit" :disabled="!canSubmitSubAccountCreate">
+            {{ subAccountCreateSubmitting ? "创建中..." : "添加子账号" }}
+          </Button>
+        </DialogFooter>
+      </form>
     </DialogContent>
   </Dialog>
 
