@@ -215,7 +215,14 @@ async function handleExportConfirm(payload: { scope: TableExportScope; format: T
         </Header>
 
         <div class="min-h-0 min-w-0 flex-1 flex flex-col">
-          <div :class="cn('min-h-0 min-w-0 w-full', props.fillAvailableHeight ? 'flex flex-1 flex-col overflow-hidden' : 'overflow-visible')">
+          <div
+            :class="cn(
+              'min-h-0 min-w-0 w-full',
+              props.fillAvailableHeight
+                ? (props.listLevelTable ? 'flex flex-1 flex-col overflow-hidden' : 'flex flex-1 flex-col overflow-visible')
+                : 'overflow-visible',
+            )"
+          >
             <template v-if="props.sections?.length">
               <Table
                 v-for="section in props.sections"
