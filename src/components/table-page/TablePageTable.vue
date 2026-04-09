@@ -865,6 +865,14 @@ function getLoadingActionSkeletonClass(rowIndex: number) {
   return rowIndex % 2 === 0 ? "h-7 w-16 rounded-md" : "h-7 w-20 rounded-md"
 }
 
+function getLoadingPrimaryLineClass(rowIndex: number) {
+  return rowIndex % 3 === 0
+    ? "h-4 w-32"
+    : rowIndex % 3 === 1
+      ? "h-4 w-40"
+      : "h-4 w-36"
+}
+
 function getFillColumnIndexes() {
   return props.columns.reduce<number[]>((indexes, _column, index) => {
     if (isResolvedFillColumn(index)) {
@@ -1477,7 +1485,21 @@ onBeforeUnmount(() => {
                   getResolvedColumnCellClass(column, columnIndex),
                 ]"
               >
-                <div :class="getLoadingCellContentClass(column, columnIndex)">
+                <div
+                  v-if="isPrimaryColumn(columnIndex)"
+                  :class="isSelectionColumn(columnIndex) ? tableTheme.indexInline.cellLayout : 'flex min-w-0 items-center'"
+                >
+                  <div
+                    v-if="isSelectionColumn(columnIndex)"
+                    :class="tableTheme.indexInline.prefix"
+                  >
+                    <Skeleton class="h-4 w-4 rounded-sm" />
+                  </div>
+                  <div :class="cn(isSelectionColumn(columnIndex) ? tableTheme.indexInline.content : 'min-w-0', 'flex min-w-0 items-center')">
+                    <Skeleton :class="getLoadingPrimaryLineClass(rowIndex)" />
+                  </div>
+                </div>
+                <div v-else :class="getLoadingCellContentClass(column, columnIndex)">
                   <Skeleton :class="getLoadingCellWidthClass(column, columnIndex, rowIndex)" />
                 </div>
               </td>
