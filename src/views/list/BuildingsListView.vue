@@ -5,7 +5,6 @@ import { toast } from "vue-sonner"
 
 import BuildingDetailSheet from "@/components/detail/BuildingDetailSheet.vue"
 import LinkedEntityDetailSheet from "@/components/detail/LinkedEntityDetailSheet.vue"
-import TablePageLoading from "@/components/loading/TablePageLoading.vue"
 import TablePage from "@/components/table-page/TablePage.vue"
 import { createTablePageDefinition, useTablePage } from "@/components/table-page/useTablePage"
 import type { TablePageSchema } from "@/components/table-page/types"
@@ -63,8 +62,6 @@ let latestRequestId = 0
 
 const router = useRouter()
 const route = useRoute()
-const showInitialLoading = computed(() => loading.value && !buildings.value.length && !errorMessage.value)
-
 const schema: TablePageSchema<BuildingRecord> = {
   title: "建筑",
   description: "查看所有建筑的检测情况，了解评分、状态和存在的问题",
@@ -454,9 +451,7 @@ function toText(value: unknown, fallback = "") {
 </script>
 
 <template>
-  <TablePageLoading v-if="showInitialLoading" />
-
-  <section v-else class="flex min-h-0 flex-1 flex-col">
+  <section class="flex min-h-0 flex-1 flex-col">
     <div v-if="errorMessage" class="px-4 pb-3 pt-3">
       <Alert variant="destructive">
         <AlertTitle>建筑列表加载失败</AlertTitle>
@@ -470,7 +465,7 @@ function toText(value: unknown, fallback = "") {
       </Alert>
     </div>
 
-    <TablePage :page="page" fill-available-height @primary-action="handleCreateBuilding">
+    <TablePage :page="page" :loading="loading" fill-available-height @primary-action="handleCreateBuilding">
       <template #cell-customerName="{ row }">
         <button
           type="button"

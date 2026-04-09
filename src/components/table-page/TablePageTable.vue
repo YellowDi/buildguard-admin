@@ -5,6 +5,7 @@ import { toast } from "vue-sonner"
 
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
+import { Skeleton } from "@/components/ui/skeleton"
 import { TooltipWrap } from "@/components/ui/tooltip"
 import StatusChip from "@/components/table-page/TableStatusChip.vue"
 import {
@@ -104,6 +105,9 @@ const props = withDefaults(defineProps<{
   alignToHeaderAtWide?: boolean
   /** 让表格自身占满可用高度，并将滚动限制在表格内部。 */
   fillAvailableHeight?: boolean
+  /** 首屏加载时保留真实表头，仅在 tbody 渲染占位行。 */
+  loading?: boolean
+  loadingRowCount?: number
 }>(), {
   summary: "",
   showIndex: false,
@@ -119,6 +123,8 @@ const props = withDefaults(defineProps<{
   showRowActionIcons: false,
   alignToHeaderAtWide: false,
   fillAvailableHeight: false,
+  loading: false,
+  loadingRowCount: 8,
 })
 const emit = defineEmits<{
   "update:selected-row-keys": [keys: RowSelectionKey[]]
@@ -170,6 +176,9 @@ const inlineQuickActionEnabled = computed(() => (
 const inlineSecondaryActions = computed(() => (
   (props.rowActions ?? []).filter(action => !isInlinePreviewAction(action))
 ))
+const showLoadingRows = computed(() => props.loading && props.rows.length === 0)
+const hasVisibleBodyRows = computed(() => props.rows.length > 0 || showLoadingRows.value)
+const totalColumnCount = computed(() => props.columns.length + (hasRowActions.value ? 1 : 0))
 const useInternalStickyThead = computed(() => (
   props.fillAvailableHeight && props.stickyHeader && !props.stickyThead
 ))
@@ -194,7 +203,6 @@ const stickyHeaderVisible = computed(() => (
 ))
 const tableViewportClassName = computed(() => cn(
   scrollViewportClassName.value,
-  props.rows.length === 0 ? "overflow-x-hidden" : "",
   props.fillAvailableHeight ? "min-h-0 flex-1 overflow-y-auto" : "",
 ))
 const leadingEdgeGutter = computed(() => {
@@ -227,7 +235,7 @@ const tableElementStyle = computed(() => ({
 }))
 const scrollViewportStyle = computed(() => {
   const style: Record<string, string | undefined> = {
-    paddingBottom: horizontalOverflow.value && props.rows.length > 0
+    paddingBottom: horizontalOverflow.value && hasVisibleBodyRows.value
       ? `${TABLE_HORIZONTAL_SCROLL_SAFE_AREA}px`
       : undefined,
   }
@@ -817,6 +825,46 @@ function getEdgeGutterStyle(size: number) {
   }
 }
 
+function getLoadingCellWidthClass(column: TableColumn, columnIndex: number, rowIndex: number) {
+  if (isSelectionColumn(columnIndex)) {
+    return "h-4 w-4 rounded-sm"
+  }
+
+  if (isRightAlignedColumn(column) && !isSelectionColumn(columnIndex)) {
+    return rowIndex % 2 === 0 ? "h-4 w-12" : "h-4 w-16"
+  }
+
+  if (column.cellRenderer?.kind === "status" || column.filterType === "tag") {
+    return rowIndex % 2 === 0 ? "h-5 w-16 rounded-full" : "h-5 w-20 rounded-full"
+  }
+
+  if (column.variant === "note" || column.cellRenderer?.kind === "note" || isResolvedFillColumn(columnIndex)) {
+    return rowIndex % 2 === 0 ? "h-4 w-full max-w-[14rem]" : "h-4 w-full max-w-[11rem]"
+  }
+
+  if (column.variant === "contact" || column.cellRenderer?.kind === "dual-stack") {
+    return rowIndex % 2 === 0 ? "h-4 w-28" : "h-4 w-36"
+  }
+
+  return rowIndex % 3 === 0
+    ? "h-4 w-24"
+    : rowIndex % 3 === 1
+      ? "h-4 w-32"
+      : "h-4 w-20"
+}
+
+function getLoadingCellContentClass(column: TableColumn, columnIndex: number) {
+  return cn(
+    "flex items-center",
+    isSelectionColumn(columnIndex) ? "justify-center" : "",
+    isRightAlignedColumn(column) && !isSelectionColumn(columnIndex) ? "justify-end" : "",
+  )
+}
+
+function getLoadingActionSkeletonClass(rowIndex: number) {
+  return rowIndex % 2 === 0 ? "h-7 w-16 rounded-md" : "h-7 w-20 rounded-md"
+}
+
 function getFillColumnIndexes() {
   return props.columns.reduce<number[]>((indexes, _column, index) => {
     if (isResolvedFillColumn(index)) {
@@ -1230,6 +1278,8 @@ watch(() => props.showIndex, scheduleStickySync)
 watch(() => hasRowActions.value, scheduleStickySync)
 watch(() => props.stickyHeader, scheduleStickySync)
 watch(() => props.fillAvailableHeight, scheduleStickySync)
+watch(() => props.loading, scheduleStickySync)
+watch(() => props.loadingRowCount, scheduleStickySync)
 watch(() => [props.rows, props.selectedRowKeys] as const, ([rows, selectedKeys]) => {
   const availableRowKeys = new Set(rows.map((row, index) => getRowKey(row, index)))
   const nextSelections = new Set(
@@ -1357,31 +1407,7 @@ onBeforeUnmount(() => {
       :class="tableViewportClassName"
       :style="scrollViewportStyle"
     >
-      <div
-        v-if="rows.length === 0"
-        class="flex min-h-[min(320px,50vh)] w-full min-w-0 flex-col items-center justify-center px-4 py-16"
-      >
-        <Empty
-          class="w-full max-w-md flex-none border-0 bg-transparent shadow-none p-6! md:p-8!"
-        >
-          <EmptyHeader class="max-w-md">
-            <EmptyMedia variant="icon">
-              <i :class="[props.emptyState?.icon ?? 'ri-inbox-line', 'text-[18px]']" />
-            </EmptyMedia>
-            <EmptyTitle>{{ props.emptyState?.title ?? "暂无数据" }}</EmptyTitle>
-            <EmptyDescription>
-              {{ props.emptyState?.description ?? "当前列表还没有可展示的数据。" }}
-            </EmptyDescription>
-          </EmptyHeader>
-          <EmptyContent v-if="$slots['empty-action']">
-            <slot name="empty-action" />
-          </EmptyContent>
-        </Empty>
-      </div>
-      <div
-        v-else
-        :class="tableTheme.scrollContent"
-      >
+      <div :class="tableTheme.scrollContent">
         <div :class="tableTheme.edgeGutter" :style="getEdgeGutterStyle(leadingEdgeGutter)" />
         <table
           ref="tableRef"
@@ -1433,7 +1459,41 @@ onBeforeUnmount(() => {
         </thead>
 
         <tbody :class="tableTheme.body">
+          <template v-if="showLoadingRows">
+            <tr
+              v-for="rowIndex in props.loadingRowCount"
+              :key="`loading-row-${rowIndex}`"
+              :class="tableTheme.row"
+              aria-hidden="true"
+            >
+              <td
+                v-for="(column, columnIndex) in columns"
+                :key="`loading-row-${rowIndex}-cell-${column.key}`"
+                :class="[
+                  tableTheme.bodyCell.base,
+                  isSelectionColumn(columnIndex) ? tableTheme.bodyCell.selectionFlush : '',
+                  columnIndex > 0 ? tableTheme.bodyCell.split : '',
+                  isRightAlignedColumn(column) && !isSelectionColumn(columnIndex) ? tableTheme.bodyCell.rightAligned : '',
+                  getResolvedColumnCellClass(column, columnIndex),
+                ]"
+              >
+                <div :class="getLoadingCellContentClass(column, columnIndex)">
+                  <Skeleton :class="getLoadingCellWidthClass(column, columnIndex, rowIndex)" />
+                </div>
+              </td>
+              <td
+                v-if="hasRowActions"
+                :class="tableTheme.actionCell"
+              >
+                <div :class="tableTheme.actionCellContent">
+                  <Skeleton :class="getLoadingActionSkeletonClass(rowIndex)" />
+                </div>
+              </td>
+            </tr>
+          </template>
+
           <tr
+            v-else-if="rows.length > 0"
             v-for="(row, index) in rows"
             :key="getRowKey(row, index)"
             :class="getRowClass(row, index)"
@@ -1652,6 +1712,29 @@ onBeforeUnmount(() => {
               </div>
             </td>
           </tr>
+
+          <tr v-else>
+            <td :colspan="totalColumnCount" class="px-0 py-0">
+              <div class="flex min-h-[min(320px,50vh)] w-full min-w-0 flex-col items-center justify-center px-4 py-16">
+                <Empty
+                  class="w-full max-w-md flex-none border-0 bg-transparent p-6! shadow-none md:p-8!"
+                >
+                  <EmptyHeader class="max-w-md">
+                    <EmptyMedia variant="icon">
+                      <i :class="[props.emptyState?.icon ?? 'ri-inbox-line', 'text-[18px]']" />
+                    </EmptyMedia>
+                    <EmptyTitle>{{ props.emptyState?.title ?? "暂无数据" }}</EmptyTitle>
+                    <EmptyDescription>
+                      {{ props.emptyState?.description ?? "当前列表还没有可展示的数据。" }}
+                    </EmptyDescription>
+                  </EmptyHeader>
+                  <EmptyContent v-if="$slots['empty-action']">
+                    <slot name="empty-action" />
+                  </EmptyContent>
+                </Empty>
+              </div>
+            </td>
+          </tr>
         </tbody>
         </table>
         <div :class="tableTheme.edgeGutter" :style="getEdgeGutterStyle(trailingEdgeGutter)" />
@@ -1663,7 +1746,7 @@ onBeforeUnmount(() => {
     </div>
 
     <div
-      v-if="rows.length > 0 && horizontalOverflow"
+      v-if="hasVisibleBodyRows && horizontalOverflow"
       :class="cn('mt-2', props.fillAvailableHeight ? 'shrink-0' : '')"
       :style="horizontalScrollbarStyle"
     >

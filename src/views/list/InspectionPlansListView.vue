@@ -4,7 +4,6 @@ import { useRoute, useRouter } from "vue-router"
 import { toast } from "vue-sonner"
 
 import LinkedEntityDetailSheet from "@/components/detail/LinkedEntityDetailSheet.vue"
-import TablePageLoading from "@/components/loading/TablePageLoading.vue"
 import TablePage from "@/components/table-page/TablePage.vue"
 import { createTablePageDefinition, useTablePage } from "@/components/table-page/useTablePage"
 import type { TablePageSchema } from "@/components/table-page/types"
@@ -213,7 +212,6 @@ const page = useTablePage({
 })
 const route = useRoute()
 const router = useRouter()
-const showInitialLoading = computed(() => loading.value && !inspectionPlans.value.length && !errorMessage.value)
 
 useRouteTableSearch(page, route)
 onMounted(() => {
@@ -430,8 +428,7 @@ function asInspectionPlanRecord(row: Record<string, unknown>): InspectionPlanRec
     </Alert>
 
     <TooltipProvider>
-      <TablePageLoading v-if="showInitialLoading" />
-      <TablePage v-else :page="page" fill-available-height @primary-action="handleCreateInspectionPlan">
+      <TablePage :page="page" :loading="loading" fill-available-height @primary-action="handleCreateInspectionPlan">
         <template #cell-planName="{ row }">
           <div class="inline-flex max-w-full items-baseline gap-1.5">
             <span class="truncate text-foreground">{{ row.planName }}</span>

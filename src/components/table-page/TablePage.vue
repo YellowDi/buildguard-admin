@@ -23,6 +23,14 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  loading: {
+    type: Boolean,
+    default: false,
+  },
+  loadingRowCount: {
+    type: Number,
+    default: 8,
+  },
 })
 
 const emit = defineEmits<{
@@ -74,6 +82,8 @@ const slots = useSlots()
     :show-toolbar-actions="props.showToolbarActions"
     :list-level-table="props.listLevelTable"
     :fill-available-height="props.fillAvailableHeight"
+    :loading="props.loading"
+    :loading-row-count="props.loadingRowCount"
     @tab-click="page.handleTabClick"
     @add-filter="page.handleAddFilter"
     @replace-filter="page.handleReplaceFilter"

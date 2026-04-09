@@ -8,7 +8,6 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import TableStatusChip from "@/components/table-page/TableStatusChip.vue"
-import TablePageLoading from "@/components/loading/TablePageLoading.vue"
 import TablePage from "@/components/table-page/TablePage.vue"
 import { createTablePageDefinition, useTablePage } from "@/components/table-page/useTablePage"
 import type { TablePageSchema } from "@/components/table-page/types"
@@ -66,7 +65,6 @@ const pageSize = ref(50)
 const total = ref(0)
 const route = useRoute()
 const router = useRouter()
-const showInitialLoading = computed(() => loading.value && !inspectionServices.value.length && !errorMessage.value)
 const activeLinkedDetailKind = ref<LinkedDetailSheetKind | null>(null)
 const activeLinkedDetailUuid = ref("")
 const activeLinkedDetailCustomerUuid = ref("")
@@ -573,9 +571,7 @@ function toText(value: unknown, fallback = "") {
 </script>
 
 <template>
-  <TablePageLoading v-if="showInitialLoading" />
-
-  <section v-else class="flex min-h-0 flex-1 flex-col">
+  <section class="flex min-h-0 flex-1 flex-col">
     <div v-if="errorMessage" class="px-4 pb-3 pt-3">
       <Alert variant="destructive">
         <i class="ri-error-warning-line" />
@@ -591,7 +587,7 @@ function toText(value: unknown, fallback = "") {
     </div>
 
     <TooltipProvider>
-      <TablePage :page="page" fill-available-height @primary-action="handleCreateInspectionService">
+      <TablePage :page="page" :loading="loading" fill-available-height @primary-action="handleCreateInspectionService">
         <template #cell-CorpName="{ row }">
           <button
             type="button"

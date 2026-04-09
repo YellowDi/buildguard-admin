@@ -5,7 +5,6 @@ import { toast } from "vue-sonner"
 
 import LinkedEntityDetailSheet from "@/components/detail/LinkedEntityDetailSheet.vue"
 import TablePage from "@/components/table-page/TablePage.vue"
-import TablePageLoading from "@/components/loading/TablePageLoading.vue"
 import { customerStatusMap } from "@/components/table-page/statusPresets"
 import { createTablePageDefinition, useTablePage } from "@/components/table-page/useTablePage"
 import type { TablePageSchema } from "@/components/table-page/types"
@@ -369,7 +368,6 @@ const page = useTablePage({
 })
 const route = useRoute()
 const router = useRouter()
-const showInitialLoading = computed(() => loading.value && !customers.value.length && !errorMessage.value)
 
 useRouteTableSearch(page, route)
 
@@ -1100,9 +1098,7 @@ function handleLinkedDetailSheetOpenChange(open: boolean) {
 </script>
 
 <template>
-  <TablePageLoading v-if="showInitialLoading" />
-
-  <section v-else class="flex min-h-0 flex-1 flex-col">
+  <section class="flex min-h-0 flex-1 flex-col">
     <div v-if="errorMessage" class="px-4 pb-3 pt-3">
       <Alert variant="destructive">
         <i class="ri-error-warning-line" />
@@ -1117,7 +1113,7 @@ function handleLinkedDetailSheetOpenChange(open: boolean) {
       </Alert>
     </div>
 
-    <TablePage :page="page" fill-available-height @primary-action="handleCreateCustomer">
+    <TablePage :page="page" :loading="loading" fill-available-height @primary-action="handleCreateCustomer">
       <template #cell-packageInfo="{ row }">
         <button
           type="button"

@@ -8,7 +8,6 @@ import WorkOrderPreviewSheet from "@/components/detail/WorkOrderPreviewSheet.vue
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import TablePageLoading from "@/components/loading/TablePageLoading.vue"
 import TablePage from "@/components/table-page/TablePage.vue"
 import { workOrderStatusMap } from "@/components/table-page/statusPresets"
 import { createTablePageDefinition, useTablePage } from "@/components/table-page/useTablePage"
@@ -85,7 +84,6 @@ const pageNum = ref(1)
 const pageSize = ref(50)
 const total = ref(0)
 const route = useRoute()
-const showInitialLoading = computed(() => loading.value && !workOrders.value.length && !errorMessage.value)
 let latestRequestId = 0
 const assignDialogOpen = ref(false)
 const assignUserUuid = ref("")
@@ -990,9 +988,7 @@ function handleWorkOrderPreviewSheetOpenChange(open: boolean) {
 </script>
 
 <template>
-  <TablePageLoading v-if="showInitialLoading" />
-
-  <section v-else class="flex min-h-0 flex-1 flex-col">
+  <section class="flex min-h-0 flex-1 flex-col">
     <div v-if="errorMessage" class="px-4 pb-3 pt-3">
       <Alert variant="destructive">
         <i class="ri-error-warning-line" />
@@ -1007,7 +1003,7 @@ function handleWorkOrderPreviewSheetOpenChange(open: boolean) {
       </Alert>
     </div>
 
-    <TablePage :page="page" fill-available-height @primary-action="handlePrimaryAction">
+    <TablePage :page="page" :loading="loading" fill-available-height @primary-action="handlePrimaryAction">
       <template #cell-orderNo="{ row }">
         <div class="inline-flex max-w-full items-baseline gap-1.5">
           <span class="truncate text-foreground">

@@ -4,7 +4,6 @@ import { useRoute, useRouter } from "vue-router"
 import { toast } from "vue-sonner"
 
 import LinkedEntityDetailSheet from "@/components/detail/LinkedEntityDetailSheet.vue"
-import TablePageLoading from "@/components/loading/TablePageLoading.vue"
 import TablePage from "@/components/table-page/TablePage.vue"
 import { createTablePageDefinition, useTablePage } from "@/components/table-page/useTablePage"
 import type { TablePageSchema } from "@/components/table-page/types"
@@ -58,8 +57,6 @@ let latestRequestId = 0
 
 const router = useRouter()
 const route = useRoute()
-const showInitialLoading = computed(() => loading.value && !parks.value.length && !errorMessage.value)
-
 const schema: TablePageSchema<ParkRecord> = {
   title: "园区",
   description: "查看所有园区信息，快速了解园区规模和整体情况",
@@ -416,9 +413,7 @@ function toText(value: unknown, fallback = "") {
 </script>
 
 <template>
-  <TablePageLoading v-if="showInitialLoading" />
-
-  <section v-else class="flex min-h-0 flex-1 flex-col">
+  <section class="flex min-h-0 flex-1 flex-col">
     <div v-if="errorMessage" class="px-4 pb-3 pt-3">
       <Alert variant="destructive">
         <AlertTitle>园区列表加载失败</AlertTitle>
@@ -432,7 +427,7 @@ function toText(value: unknown, fallback = "") {
       </Alert>
     </div>
 
-    <TablePage :page="page" fill-available-height @primary-action="handleCreatePark">
+    <TablePage :page="page" :loading="loading" fill-available-height @primary-action="handleCreatePark">
       <template #cell-customerName="{ row }">
         <button
           type="button"

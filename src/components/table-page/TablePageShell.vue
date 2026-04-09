@@ -68,10 +68,14 @@ const props = withDefaults(defineProps<{
   /** 列表页表格默认外扩到主内容边缘；详情内嵌表格关闭外扩，跟随详情内容宽度。 */
   listLevelTable?: boolean
   fillAvailableHeight?: boolean
+  loading?: boolean
+  loadingRowCount?: number
 }>(), {
   showToolbarActions: true,
   listLevelTable: true,
   fillAvailableHeight: false,
+  loading: false,
+  loadingRowCount: 8,
 })
 
 const emit = defineEmits<{
@@ -274,6 +278,8 @@ async function handleExportConfirm(payload: { scope: TableExportScope; format: T
               :align-to-header-at-wide="props.listLevelTable"
               :list-level-table="props.listLevelTable"
               :fill-available-height="props.fillAvailableHeight"
+              :loading="props.loading"
+              :loading-row-count="props.loadingRowCount"
               @update:selected-row-keys="emit('update:selected-row-keys', $event)"
             >
               <template

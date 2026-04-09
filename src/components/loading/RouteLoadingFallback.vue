@@ -7,7 +7,6 @@ import AuthPageLoading from "@/components/loading/AuthPageLoading.vue"
 import DashboardLoading from "@/components/loading/DashboardLoading.vue"
 import DetailPageLoading from "@/components/loading/DetailPageLoading.vue"
 import FormPageLoading from "@/components/loading/FormPageLoading.vue"
-import TablePageLoading from "@/components/loading/TablePageLoading.vue"
 
 const props = withDefaults(defineProps<{
   fullPage?: boolean
@@ -41,6 +40,6 @@ const wrapperClass = computed(() =>
     <DashboardLoading v-else-if="loadingKind === 'dashboard'" />
     <DetailPageLoading v-else-if="loadingKind === 'detail'" />
     <FormPageLoading v-else-if="loadingKind === 'form'" />
-    <TablePageLoading v-else />
+    <div v-else class="min-h-0 flex-1 bg-background" />
   </div>
 </template>

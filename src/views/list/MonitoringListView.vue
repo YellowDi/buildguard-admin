@@ -3,7 +3,6 @@ import { computed, ref, watch } from "vue"
 import { useRoute } from "vue-router"
 import { toast } from "vue-sonner"
 
-import TablePageLoading from "@/components/loading/TablePageLoading.vue"
 import TablePage from "@/components/table-page/TablePage.vue"
 import { createTablePageDefinition, useTablePage } from "@/components/table-page/useTablePage"
 import type { TablePageSchema, TableStatusOption } from "@/components/table-page/types"
@@ -48,8 +47,6 @@ const total = ref(0)
 let latestRequestId = 0
 
 const route = useRoute()
-const showInitialLoading = computed(() => loading.value && !monitoringRows.value.length && !errorMessage.value)
-
 const monitoringStatusMap = {
   在线: { tone: "green", icon: "check" },
   离线: { tone: "red", icon: "alert" },
@@ -367,9 +364,7 @@ function toText(value: unknown, fallback = "") {
 </script>
 
 <template>
-  <TablePageLoading v-if="showInitialLoading" />
-
-  <section v-else class="flex min-h-0 flex-1 flex-col">
+  <section class="flex min-h-0 flex-1 flex-col">
     <div v-if="errorMessage" class="px-4 pb-3 pt-3">
       <Alert variant="destructive">
         <AlertTitle>监控列表加载失败</AlertTitle>
@@ -383,7 +378,7 @@ function toText(value: unknown, fallback = "") {
       </Alert>
     </div>
 
-    <TablePage :page="page" fill-available-height @primary-action="handleCreateMonitoring">
+    <TablePage :page="page" :loading="loading" fill-available-height @primary-action="handleCreateMonitoring">
       <template #footer>
         <Pagination
           v-model:page="pageNum"

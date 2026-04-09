@@ -14,7 +14,7 @@ const { isRouteLoading, loadingKind } = useRouteLoadingState()
 const route = useRoute()
 
 const showContentFallback = computed(() =>
-  isRouteLoading.value && loadingKind.value !== "auth",
+  isRouteLoading.value && loadingKind.value !== "auth" && loadingKind.value !== "table",
 )
 const routeTransitionName = ref("route-page-fade")
 const currentRouteKind = ref<RouteLoadingKind | null>(resolveRouteLoadingKind(route.meta.loading))
