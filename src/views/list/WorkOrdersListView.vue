@@ -1007,7 +1007,7 @@ function handleWorkOrderPreviewSheetOpenChange(open: boolean) {
       </Alert>
     </div>
 
-    <TablePage :page="page" @primary-action="handlePrimaryAction">
+    <TablePage :page="page" fill-available-height @primary-action="handlePrimaryAction">
       <template #cell-orderNo="{ row }">
         <div class="inline-flex max-w-full items-baseline gap-1.5">
           <span class="truncate text-foreground">
@@ -1028,6 +1028,40 @@ function handleWorkOrderPreviewSheetOpenChange(open: boolean) {
           <span class="truncate">{{ row.customerName }}</span>
           <i class="ri-arrow-right-up-line shrink-0 text-sm" />
         </button>
+      </template>
+
+      <template #footer>
+        <Pagination
+          v-model:page="pageNum"
+          :items-per-page="pageSize"
+          :total="total"
+          :sibling-count="1"
+          :disabled="loading"
+          show-edges
+          class="w-full justify-end"
+        >
+          <PaginationContent v-slot="{ items }" class="justify-end">
+            <PaginationFirst />
+            <PaginationPrevious />
+
+            <template
+              v-for="(item, index) in items"
+              :key="`${item.type}-${item.type === 'page' ? item.value : index}`"
+            >
+              <PaginationItem
+                v-if="item.type === 'page'"
+                :value="item.value"
+                :is-active="item.value === pageNum"
+              >
+                {{ item.value }}
+              </PaginationItem>
+              <PaginationEllipsis v-else />
+            </template>
+
+            <PaginationNext />
+            <PaginationLast />
+          </PaginationContent>
+        </Pagination>
       </template>
     </TablePage>
 
@@ -1097,41 +1131,5 @@ function handleWorkOrderPreviewSheetOpenChange(open: boolean) {
       :customer-uuid="activeWorkOrderPreviewCustomerUuid"
       @update:open="handleWorkOrderPreviewSheetOpenChange"
     />
-
-    <div class="-mx-4 pt-3">
-      <div class="flex w-full justify-end px-4">
-        <Pagination
-          v-model:page="pageNum"
-          :items-per-page="pageSize"
-          :total="total"
-          :sibling-count="1"
-          :disabled="loading"
-          show-edges
-          class="w-full justify-end"
-        >
-          <PaginationContent v-slot="{ items }" class="justify-end">
-            <PaginationFirst />
-            <PaginationPrevious />
-
-            <template
-              v-for="(item, index) in items"
-              :key="`${item.type}-${item.type === 'page' ? item.value : index}`"
-            >
-              <PaginationItem
-                v-if="item.type === 'page'"
-                :value="item.value"
-                :is-active="item.value === pageNum"
-              >
-                {{ item.value }}
-              </PaginationItem>
-              <PaginationEllipsis v-else />
-            </template>
-
-            <PaginationNext />
-            <PaginationLast />
-          </PaginationContent>
-        </Pagination>
-      </div>
-    </div>
   </section>
 </template>

@@ -591,7 +591,7 @@ function toText(value: unknown, fallback = "") {
     </div>
 
     <TooltipProvider>
-      <TablePage :page="page" @primary-action="handleCreateInspectionService">
+      <TablePage :page="page" fill-available-height @primary-action="handleCreateInspectionService">
         <template #cell-CorpName="{ row }">
           <button
             type="button"
@@ -639,6 +639,39 @@ function toText(value: unknown, fallback = "") {
           </Tooltip>
         </template>
 
+        <template #footer>
+          <Pagination
+            v-model:page="pageNum"
+            :items-per-page="pageSize"
+            :total="total"
+            :sibling-count="1"
+            :disabled="loading"
+            show-edges
+            class="w-full justify-end"
+          >
+            <PaginationContent v-slot="{ items }" class="justify-end">
+              <PaginationFirst />
+              <PaginationPrevious />
+
+              <template
+                v-for="(item, index) in items"
+                :key="`${item.type}-${item.type === 'page' ? item.value : index}`"
+              >
+                <PaginationItem
+                  v-if="item.type === 'page'"
+                  :value="item.value"
+                  :is-active="item.value === pageNum"
+                >
+                  {{ item.value }}
+                </PaginationItem>
+                <PaginationEllipsis v-else />
+              </template>
+
+              <PaginationNext />
+              <PaginationLast />
+            </PaginationContent>
+          </Pagination>
+        </template>
       </TablePage>
     </TooltipProvider>
 
@@ -649,41 +682,5 @@ function toText(value: unknown, fallback = "") {
       :customer-uuid="activeLinkedDetailCustomerUuid"
       @update:open="handleLinkedDetailSheetOpenChange"
     />
-
-    <div class="-mx-4 pt-3">
-      <div class="flex w-full justify-end px-4">
-        <Pagination
-          v-model:page="pageNum"
-          :items-per-page="pageSize"
-          :total="total"
-          :sibling-count="1"
-          :disabled="loading"
-          show-edges
-          class="w-full justify-end"
-        >
-          <PaginationContent v-slot="{ items }" class="justify-end">
-            <PaginationFirst />
-            <PaginationPrevious />
-
-            <template
-              v-for="(item, index) in items"
-              :key="`${item.type}-${item.type === 'page' ? item.value : index}`"
-            >
-              <PaginationItem
-                v-if="item.type === 'page'"
-                :value="item.value"
-                :is-active="item.value === pageNum"
-              >
-                {{ item.value }}
-              </PaginationItem>
-              <PaginationEllipsis v-else />
-            </template>
-
-            <PaginationNext />
-            <PaginationLast />
-          </PaginationContent>
-        </Pagination>
-      </div>
-    </div>
   </section>
 </template>

@@ -19,6 +19,10 @@ const props = defineProps({
     type: Boolean,
     default: true,
   },
+  fillAvailableHeight: {
+    type: Boolean,
+    default: false,
+  },
 })
 
 const emit = defineEmits<{
@@ -69,6 +73,7 @@ const slots = useSlots()
     :empty-state="page.emptyState"
     :show-toolbar-actions="props.showToolbarActions"
     :list-level-table="props.listLevelTable"
+    :fill-available-height="props.fillAvailableHeight"
     @tab-click="page.handleTabClick"
     @add-filter="page.handleAddFilter"
     @replace-filter="page.handleReplaceFilter"

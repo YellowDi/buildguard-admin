@@ -383,10 +383,8 @@ function toText(value: unknown, fallback = "") {
       </Alert>
     </div>
 
-    <TablePage :page="page" @primary-action="handleCreateMonitoring" />
-
-    <div class="-mx-4 pt-3">
-      <div class="flex w-full justify-end px-4">
+    <TablePage :page="page" fill-available-height @primary-action="handleCreateMonitoring">
+      <template #footer>
         <Pagination
           v-model:page="pageNum"
           :items-per-page="pageSize"
@@ -418,7 +416,7 @@ function toText(value: unknown, fallback = "") {
             <PaginationLast />
           </PaginationContent>
         </Pagination>
-      </div>
-    </div>
+      </template>
+    </TablePage>
   </section>
 </template>

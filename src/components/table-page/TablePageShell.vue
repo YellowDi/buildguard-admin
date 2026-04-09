@@ -25,6 +25,7 @@ import type {
   TextFilterState,
 } from "@/components/table-page/types"
 import { handleApiError } from "@/lib/api-errors"
+import { cn } from "@/lib/utils"
 
 const props = withDefaults(defineProps<{
   title: string
@@ -66,9 +67,11 @@ const props = withDefaults(defineProps<{
   showToolbarActions?: boolean
   /** 列表页表格默认外扩到主内容边缘；详情内嵌表格关闭外扩，跟随详情内容宽度。 */
   listLevelTable?: boolean
+  fillAvailableHeight?: boolean
 }>(), {
   showToolbarActions: true,
   listLevelTable: true,
+  fillAvailableHeight: false,
 })
 
 const emit = defineEmits<{
@@ -169,7 +172,7 @@ async function handleExportConfirm(payload: { scope: TableExportScope; format: T
     ]"
     style="--table-page-sticky-top: -1rem;"
   >
-    <div class="flex min-h-0 min-w-0 flex-1 flex-col pb-3 pt-3">
+    <div :class="cn('flex min-h-0 min-w-0 flex-1 flex-col pt-3', slots.footer ? '' : 'pb-3')">
       <div class="flex min-h-0 min-w-0 flex-1 flex-col">
         <Header
           class="min-w-0 w-full"
@@ -211,8 +214,8 @@ async function handleExportConfirm(payload: { scope: TableExportScope; format: T
           </template>
         </Header>
 
-        <div class="min-h-0 min-w-0 flex-1">
-          <div class="min-h-0 min-w-0 w-full overflow-visible">
+        <div class="min-h-0 min-w-0 flex-1 flex flex-col">
+          <div :class="cn('min-h-0 min-w-0 w-full', props.fillAvailableHeight ? 'flex flex-1 flex-col overflow-hidden' : 'overflow-visible')">
             <template v-if="props.sections?.length">
               <Table
                 v-for="section in props.sections"
@@ -233,6 +236,7 @@ async function handleExportConfirm(payload: { scope: TableExportScope; format: T
                 :edge-gutter="true"
                 :align-to-header-at-wide="props.listLevelTable"
                 :list-level-table="props.listLevelTable"
+                :fill-available-height="false"
                 @update:selected-row-keys="emit('update:selected-row-keys', $event)"
               >
                 <template
@@ -256,12 +260,13 @@ async function handleExportConfirm(payload: { scope: TableExportScope; format: T
               :summary="props.summary"
               :show-index="props.showIndex"
               :sticky-header="props.stickyHeader"
-              :wrapper-class="props.wrapperClass"
+              :wrapper-class="cn(props.wrapperClass, props.fillAvailableHeight ? 'h-full min-h-0 flex flex-col' : '')"
               :table-class="props.tableClass"
               :empty-state="props.emptyState"
               :edge-gutter="true"
               :align-to-header-at-wide="props.listLevelTable"
               :list-level-table="props.listLevelTable"
+              :fill-available-height="props.fillAvailableHeight"
               @update:selected-row-keys="emit('update:selected-row-keys', $event)"
             >
               <template
@@ -274,6 +279,15 @@ async function handleExportConfirm(payload: { scope: TableExportScope; format: T
             </Table>
           </div>
         </div>
+      </div>
+    </div>
+
+    <div
+      v-if="slots.footer"
+      class="min-w-0 shrink-0 pt-3"
+    >
+      <div :class="cn(props.listLevelTable ? 'flex w-full justify-end px-4' : 'min-w-0')">
+        <slot name="footer" />
       </div>
     </div>
 

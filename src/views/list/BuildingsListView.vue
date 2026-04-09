@@ -470,7 +470,7 @@ function toText(value: unknown, fallback = "") {
       </Alert>
     </div>
 
-    <TablePage :page="page" @primary-action="handleCreateBuilding">
+    <TablePage :page="page" fill-available-height @primary-action="handleCreateBuilding">
       <template #cell-customerName="{ row }">
         <button
           type="button"
@@ -492,25 +492,8 @@ function toText(value: unknown, fallback = "") {
           <i class="ri-arrow-right-up-line shrink-0 text-sm" />
         </button>
       </template>
-    </TablePage>
 
-    <LinkedEntityDetailSheet
-      :open="Boolean(activeLinkedDetailKind) && Boolean(activeLinkedDetailUuid)"
-      :kind="activeLinkedDetailKind"
-      :uuid="activeLinkedDetailUuid"
-      :customer-uuid="activeLinkedDetailCustomerUuid"
-      @update:open="handleLinkedDetailSheetOpenChange"
-    />
-
-    <BuildingDetailSheet
-      :open="buildingDetailSheetOpen"
-      :building-uuid="activeBuildingSheetUuid"
-      :park-uuid="activeBuildingSheetParkUuid"
-      @update:open="handleBuildingDetailSheetOpenChange"
-    />
-
-    <div class="-mx-4 pt-3">
-      <div class="flex w-full justify-end px-4">
+      <template #footer>
         <Pagination
           v-model:page="pageNum"
           :items-per-page="pageSize"
@@ -542,7 +525,22 @@ function toText(value: unknown, fallback = "") {
             <PaginationLast />
           </PaginationContent>
         </Pagination>
-      </div>
-    </div>
+      </template>
+    </TablePage>
+
+    <LinkedEntityDetailSheet
+      :open="Boolean(activeLinkedDetailKind) && Boolean(activeLinkedDetailUuid)"
+      :kind="activeLinkedDetailKind"
+      :uuid="activeLinkedDetailUuid"
+      :customer-uuid="activeLinkedDetailCustomerUuid"
+      @update:open="handleLinkedDetailSheetOpenChange"
+    />
+
+    <BuildingDetailSheet
+      :open="buildingDetailSheetOpen"
+      :building-uuid="activeBuildingSheetUuid"
+      :park-uuid="activeBuildingSheetParkUuid"
+      @update:open="handleBuildingDetailSheetOpenChange"
+    />
   </section>
 </template>

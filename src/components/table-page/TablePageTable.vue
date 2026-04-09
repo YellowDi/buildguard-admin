@@ -38,6 +38,10 @@ type RowPointerDownState = {
   clientX: number
   clientY: number
 }
+type HorizontalScrollbarDragState = {
+  startClientX: number
+  startScrollLeft: number
+}
 
 const HORIZONTAL_SCROLL_HINT_MESSAGE = "可按住 Shift + 鼠标滚轮进行横向移动。"
 /** 同一路由在本次浏览器会话内只提示一次，避免布局抖动或重复挂载反复弹出 */
@@ -45,6 +49,7 @@ const HORIZONTAL_SCROLL_HINT_SESSION_PREFIX = "buildguard:table-hscroll-hint:"
 const ROW_CLICK_DRAG_THRESHOLD = 5
 const ALIGN_TO_HEADER_WIDE_BREAKPOINT = 2000
 const COMPACT_DETAIL_TABLE_WIDTH_THRESHOLD = 48
+const HORIZONTAL_SCROLLBAR_MIN_THUMB_SIZE = 40
 const ROW_CLICK_IGNORE_SELECTOR = [
   "button",
   "a[href]",
@@ -97,6 +102,8 @@ const props = withDefaults(defineProps<{
   showRowActionIcons?: boolean
   /** 超宽窗口下让表格滚动视口与页面标题区宽度对齐。 */
   alignToHeaderAtWide?: boolean
+  /** 让表格自身占满可用高度，并将滚动限制在表格内部。 */
+  fillAvailableHeight?: boolean
 }>(), {
   summary: "",
   showIndex: false,
@@ -111,6 +118,7 @@ const props = withDefaults(defineProps<{
   edgeGutter: true,
   showRowActionIcons: false,
   alignToHeaderAtWide: false,
+  fillAvailableHeight: false,
 })
 const emit = defineEmits<{
   "update:selected-row-keys": [keys: RowSelectionKey[]]
@@ -126,6 +134,7 @@ const tableClassName = computed(() => getTableClass(props.tableClass))
 const hasRowActions = computed(() => (props.rowActions?.length ?? 0) > 0)
 const tableOuterRef = ref<HTMLElement | null>(null)
 const tableWrapperRef = ref<HTMLElement | null>(null)
+const horizontalScrollbarTrackRef = ref<HTMLElement | null>(null)
 const tableRef = ref<HTMLTableElement | null>(null)
 const fillColumnActive = ref(false)
 const compactTableActive = ref(false)
@@ -142,9 +151,12 @@ const stickyHeaderWidth = ref(0)
 const stickyTableWidth = ref(0)
 const stickyScrollLeft = ref(0)
 const stickyColumnWidths = ref<number[]>([])
+const horizontalScrollContentWidth = ref(0)
+const horizontalScrollViewportWidth = ref(0)
 const hoveredRowKey = ref<RowSelectionKey | null>(null)
 const focusedRowKey = ref<RowSelectionKey | null>(null)
 const rowPointerDown = ref<RowPointerDownState | null>(null)
+const horizontalScrollbarDrag = ref<HorizontalScrollbarDragState | null>(null)
 const selectedRowKeySet = computed(() => new Set(props.selectedRowKeys ?? []))
 const currentRowKeys = computed(() => props.rows.map((row, index) => getRowKey(row, index)))
 const selectedCurrentRowCount = computed(() => (
@@ -157,6 +169,9 @@ const inlineQuickActionEnabled = computed(() => (
 ))
 const inlineSecondaryActions = computed(() => (
   (props.rowActions ?? []).filter(action => !isInlinePreviewAction(action))
+))
+const useInternalStickyThead = computed(() => (
+  props.fillAvailableHeight && props.stickyHeader && !props.stickyThead
 ))
 const headerCheckboxState = computed<CheckboxState>(() => {
   if (currentRowKeys.value.length === 0 || selectedCurrentRowCount.value === 0) {
@@ -171,10 +186,16 @@ const headerCheckboxState = computed<CheckboxState>(() => {
 })
 const stickyHeaderVisible = computed(() => (
   props.stickyHeader
+  && !props.fillAvailableHeight
   && !props.stickyThead
   && stickyHeaderActive.value
   && stickyHeaderWidth.value > 0
   && stickyColumnWidths.value.length > 0
+))
+const tableViewportClassName = computed(() => cn(
+  scrollViewportClassName.value,
+  props.rows.length === 0 ? "overflow-x-hidden" : "",
+  props.fillAvailableHeight ? "min-h-0 flex-1 overflow-y-auto" : "",
 ))
 const leadingEdgeGutter = computed(() => {
   if (!props.edgeGutter) {
@@ -219,6 +240,50 @@ const scrollViewportStyle = computed(() => {
 
   return style
 })
+const horizontalScrollbarStyle = computed(() => {
+  const style: Record<string, string | undefined> = {}
+
+  if (!props.listLevelTable && (embeddedViewportExpandLeft.value > 0 || embeddedViewportExpandRight.value > 0)) {
+    style.marginLeft = `-${embeddedViewportExpandLeft.value}px`
+    style.marginRight = `-${embeddedViewportExpandRight.value}px`
+    style.width = `calc(100% + ${embeddedViewportExpandLeft.value + embeddedViewportExpandRight.value}px)`
+  }
+
+  return style
+})
+const horizontalScrollMax = computed(() => (
+  Math.max(0, horizontalScrollContentWidth.value - horizontalScrollViewportWidth.value)
+))
+const horizontalScrollbarTrackWidth = computed(() => (
+  horizontalScrollbarTrackRef.value?.clientWidth ?? horizontalScrollViewportWidth.value
+))
+const horizontalScrollbarThumbWidth = computed(() => {
+  const trackWidth = horizontalScrollbarTrackWidth.value
+  if (!horizontalOverflow.value || trackWidth <= 0 || horizontalScrollContentWidth.value <= 0) {
+    return 0
+  }
+
+  const ratio = horizontalScrollViewportWidth.value / horizontalScrollContentWidth.value
+  return Math.min(
+    trackWidth,
+    Math.max(HORIZONTAL_SCROLLBAR_MIN_THUMB_SIZE, Math.round(trackWidth * ratio)),
+  )
+})
+const horizontalScrollbarThumbOffset = computed(() => {
+  const trackWidth = horizontalScrollbarTrackWidth.value
+  const thumbWidth = horizontalScrollbarThumbWidth.value
+  const maxThumbOffset = Math.max(0, trackWidth - thumbWidth)
+
+  if (maxThumbOffset <= 0 || horizontalScrollMax.value <= 0) {
+    return 0
+  }
+
+  return Math.round((stickyScrollLeft.value / horizontalScrollMax.value) * maxThumbOffset)
+})
+const horizontalScrollbarThumbStyle = computed(() => ({
+  width: `${horizontalScrollbarThumbWidth.value}px`,
+  transform: `translateX(${horizontalScrollbarThumbOffset.value}px)`,
+}))
 const stickyContentWidth = computed(() => (
   stickyTableWidth.value + leadingEdgeGutter.value + trailingEdgeGutter.value
 ))
@@ -244,6 +309,85 @@ const prevHorizontalOverflow = ref(false)
 
 let scrollRoot: ScrollRoot | null = null
 let resizeObserver: ResizeObserver | null = null
+
+function syncHorizontalScrollbarMetrics(contentWidth?: number) {
+  if (!tableWrapperRef.value) {
+    horizontalScrollViewportWidth.value = 0
+    horizontalScrollContentWidth.value = 0
+    return
+  }
+
+  horizontalScrollViewportWidth.value = tableWrapperRef.value.clientWidth
+  horizontalScrollContentWidth.value = contentWidth ?? tableWrapperRef.value.scrollWidth
+}
+
+function scrollTableTo(left: number) {
+  if (!tableWrapperRef.value) {
+    return
+  }
+
+  const nextLeft = Math.max(0, Math.min(horizontalScrollMax.value, left))
+  tableWrapperRef.value.scrollLeft = nextLeft
+  stickyScrollLeft.value = nextLeft
+}
+
+function handleHorizontalScrollbarThumbPointerDown(event: PointerEvent) {
+  if (!horizontalOverflow.value) {
+    return
+  }
+
+  event.preventDefault()
+  horizontalScrollbarDrag.value = {
+    startClientX: event.clientX,
+    startScrollLeft: tableWrapperRef.value?.scrollLeft ?? 0,
+  }
+}
+
+function handleHorizontalScrollbarTrackPointerDown(event: PointerEvent) {
+  if (
+    !horizontalOverflow.value
+    || !(event.currentTarget instanceof HTMLElement)
+    || event.target instanceof HTMLElement && event.target.dataset.tableHscrollThumb === "true"
+  ) {
+    return
+  }
+
+  const rect = event.currentTarget.getBoundingClientRect()
+  const clickX = event.clientX - rect.left
+  const thumbCenter = horizontalScrollbarThumbWidth.value / 2
+  const maxThumbOffset = Math.max(0, rect.width - horizontalScrollbarThumbWidth.value)
+  const nextThumbOffset = Math.max(0, Math.min(maxThumbOffset, clickX - thumbCenter))
+
+  if (maxThumbOffset <= 0 || horizontalScrollMax.value <= 0) {
+    scrollTableTo(0)
+    return
+  }
+
+  scrollTableTo((nextThumbOffset / maxThumbOffset) * horizontalScrollMax.value)
+}
+
+function handleWindowPointerMove(event: PointerEvent) {
+  if (!horizontalScrollbarDrag.value) {
+    return
+  }
+
+  const trackWidth = horizontalScrollbarTrackWidth.value
+  const thumbWidth = horizontalScrollbarThumbWidth.value
+  const maxThumbOffset = Math.max(0, trackWidth - thumbWidth)
+
+  if (maxThumbOffset <= 0 || horizontalScrollMax.value <= 0) {
+    scrollTableTo(0)
+    return
+  }
+
+  const deltaX = event.clientX - horizontalScrollbarDrag.value.startClientX
+  const scrollDelta = deltaX * (horizontalScrollMax.value / maxThumbOffset)
+  scrollTableTo(horizontalScrollbarDrag.value.startScrollLeft + scrollDelta)
+}
+
+function clearHorizontalScrollbarDrag() {
+  horizontalScrollbarDrag.value = null
+}
 
 function getRowKey(row: Record<string, unknown>, index: number) {
   if (typeof props.rowKey === "function") {
@@ -831,15 +975,18 @@ function clearStickyState() {
 function syncHorizontalScrollState(measuredOverflow?: boolean) {
   if (!tableWrapperRef.value || !tableRef.value) {
     horizontalOverflow.value = false
+    syncHorizontalScrollbarMetrics()
     return
   }
 
   const wrapper = tableWrapperRef.value
-  const overflow = wrapper.scrollWidth > wrapper.clientWidth + 1
-    || tableRef.value.scrollWidth > wrapper.clientWidth + 1
+  const contentWidth = Math.max(wrapper.scrollWidth, tableRef.value.scrollWidth)
+  const overflow = contentWidth > wrapper.clientWidth + 1
     || measuredOverflow === true
 
   horizontalOverflow.value = overflow
+  stickyScrollLeft.value = wrapper.scrollLeft
+  syncHorizontalScrollbarMetrics(contentWidth)
 }
 
 function createMeasurementHost() {
@@ -948,6 +1095,11 @@ async function syncTableLayoutState() {
 }
 
 function syncStickyHeaderState() {
+  if (useInternalStickyThead.value) {
+    clearStickyState()
+    return
+  }
+
   if (!props.stickyHeader || !tableWrapperRef.value || !tableRef.value) {
     clearStickyState()
     return
@@ -1016,7 +1168,15 @@ function detachScrollRootListener() {
 }
 
 function attachScrollRootListener() {
+  if (useInternalStickyThead.value) {
+    detachScrollRootListener()
+    scrollRoot = null
+    return
+  }
+
   if (!tableWrapperRef.value || typeof window === "undefined") {
+    detachScrollRootListener()
+    scrollRoot = null
     return
   }
 
@@ -1035,6 +1195,8 @@ function attachScrollRootListener() {
 function scheduleStickySync() {
   void nextTick(() => {
     attachScrollRootListener()
+    stopObservingStickyLayout()
+    observeStickyLayout()
     void syncTableLayoutState()
   })
 }
@@ -1067,6 +1229,7 @@ watch(() => props.rows, scheduleStickySync, { deep: true })
 watch(() => props.showIndex, scheduleStickySync)
 watch(() => hasRowActions.value, scheduleStickySync)
 watch(() => props.stickyHeader, scheduleStickySync)
+watch(() => props.fillAvailableHeight, scheduleStickySync)
 watch(() => [props.rows, props.selectedRowKeys] as const, ([rows, selectedKeys]) => {
   const availableRowKeys = new Set(rows.map((row, index) => getRowKey(row, index)))
   const nextSelections = new Set(
@@ -1091,6 +1254,9 @@ watch(() => [props.rows, props.selectedRowKeys] as const, ([rows, selectedKeys])
 watch(() => horizontalOverflow.value, (overflow) => {
   const wasOverflow = prevHorizontalOverflow.value
   prevHorizontalOverflow.value = overflow
+  if (!overflow) {
+    clearHorizontalScrollbarDrag()
+  }
   if (overflow && !wasOverflow) {
     maybeShowHorizontalScrollHint()
   }
@@ -1100,6 +1266,9 @@ onMounted(() => {
   attachScrollRootListener()
   tableWrapperRef.value?.addEventListener("scroll", handleWrapperScroll, { passive: true })
   window.addEventListener("resize", scheduleStickySync, { passive: true })
+  window.addEventListener("pointermove", handleWindowPointerMove, { passive: true })
+  window.addEventListener("pointerup", clearHorizontalScrollbarDrag, { passive: true })
+  window.addEventListener("pointercancel", clearHorizontalScrollbarDrag, { passive: true })
   observeStickyLayout()
   scheduleStickySync()
 })
@@ -1107,14 +1276,18 @@ onMounted(() => {
 onBeforeUnmount(() => {
   tableWrapperRef.value?.removeEventListener("scroll", handleWrapperScroll)
   window.removeEventListener("resize", scheduleStickySync)
+  window.removeEventListener("pointermove", handleWindowPointerMove)
+  window.removeEventListener("pointerup", clearHorizontalScrollbarDrag)
+  window.removeEventListener("pointercancel", clearHorizontalScrollbarDrag)
   detachScrollRootListener()
   stopObservingStickyLayout()
+  clearHorizontalScrollbarDrag()
   clearRowPointerDown()
 })
 </script>
 
 <template>
-  <div ref="tableOuterRef" :class="wrapperClassName">
+  <div ref="tableOuterRef" :class="cn(wrapperClassName, props.fillAvailableHeight ? 'h-full min-h-0 flex flex-col' : '')">
     <!-- fixed 克隆挂到 body，与 getBoundingClientRect 视口坐标一致；避免嵌套 overflow/transform 导致吸顶错位 -->
     <Teleport v-if="stickyHeaderVisible" to="body">
       <div
@@ -1180,7 +1353,8 @@ onBeforeUnmount(() => {
 
     <div
       ref="tableWrapperRef"
-      :class="cn(scrollViewportClassName, rows.length === 0 && 'overflow-x-hidden')"
+      data-table-scroll-viewport
+      :class="tableViewportClassName"
       :style="scrollViewportStyle"
     >
       <div
@@ -1218,7 +1392,7 @@ onBeforeUnmount(() => {
           :class="
             cn(
               tableTheme.head,
-              props.stickyThead
+              (props.stickyThead || useInternalStickyThead)
                 && 'sticky top-0 z-30 bg-background shadow-[inset_0_-1px_0_hsl(var(--border))]',
             )
           "
@@ -1484,8 +1658,59 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <div v-if="summary" :class="tableTheme.summary">
+    <div v-if="summary" :class="cn(tableTheme.summary, props.fillAvailableHeight ? 'shrink-0' : '')">
       {{ summary }}
+    </div>
+
+    <div
+      v-if="rows.length > 0 && horizontalOverflow"
+      :class="cn('mt-2', props.fillAvailableHeight ? 'shrink-0' : '')"
+      :style="horizontalScrollbarStyle"
+    >
+      <div
+        ref="horizontalScrollbarTrackRef"
+        class="relative h-4 w-full touch-none select-none"
+        @pointerdown="handleHorizontalScrollbarTrackPointerDown"
+      >
+        <div class="absolute inset-x-0 top-1/2 h-1.5 -translate-y-1/2 rounded-full bg-muted/75" />
+        <div
+          data-table-hscroll-thumb="true"
+          class="absolute top-1/2 h-1.5 -translate-y-1/2 cursor-grab rounded-full bg-foreground/22 transition-colors hover:bg-foreground/32 active:cursor-grabbing active:bg-foreground/42"
+          :style="horizontalScrollbarThumbStyle"
+          @pointerdown.stop="handleHorizontalScrollbarThumbPointerDown"
+        />
+      </div>
     </div>
   </div>
 </template>
+
+<style>
+[data-table-scroll-viewport] {
+  scrollbar-width: auto;
+  scrollbar-color: color-mix(in srgb, hsl(var(--foreground)) 18%, transparent) transparent;
+}
+
+[data-table-scroll-viewport]::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+[data-table-scroll-viewport]::-webkit-scrollbar-thumb {
+  border-radius: 9999px;
+  background: color-mix(in srgb, hsl(var(--foreground)) 18%, transparent);
+}
+
+[data-table-scroll-viewport]::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+[data-table-scroll-viewport]::-webkit-scrollbar:horizontal {
+  height: 0 !important;
+}
+
+[data-table-scroll-viewport]::-webkit-scrollbar-track:horizontal,
+[data-table-scroll-viewport]::-webkit-scrollbar-thumb:horizontal,
+[data-table-scroll-viewport]::-webkit-scrollbar-corner {
+  background: transparent;
+}
+</style>

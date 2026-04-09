@@ -3690,7 +3690,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
             <AlertDescription>{{ activeWorkOrderTableErrorMessage }}</AlertDescription>
           </Alert>
 
-          <TablePage :page="activeWorkOrderTableTab === 'inspection' ? inspectionWorkOrdersPage : repairWorkOrdersPage" :show-toolbar-actions="false" :list-level-table="false" class="-mt-3">
+          <TablePage :page="activeWorkOrderTableTab === 'inspection' ? inspectionWorkOrdersPage : repairWorkOrdersPage" :show-toolbar-actions="false" :list-level-table="false" fill-available-height class="-mt-3">
             <template #controls-prefix>
               <div class="mr-2 inline-flex shrink-0 items-center gap-2.5 whitespace-nowrap">
                 <TopTabSwitch
@@ -3716,10 +3716,8 @@ function toDisplayText(value: unknown, fallback = "未填写") {
                 </span>
               </div>
             </template>
-          </TablePage>
 
-          <div class="mt-auto pt-3">
-            <div class="flex w-full justify-end">
+            <template #footer>
               <Pagination
                 v-model:page="activeWorkOrderTablePageNumProxy"
                 :items-per-page="activeWorkOrderTablePageSize"
@@ -3751,8 +3749,8 @@ function toDisplayText(value: unknown, fallback = "未填写") {
                   <PaginationLast />
                 </PaginationContent>
               </Pagination>
-            </div>
-          </div>
+            </template>
+          </TablePage>
         </div>
       </template>
 

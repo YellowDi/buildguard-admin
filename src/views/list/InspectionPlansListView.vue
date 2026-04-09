@@ -431,7 +431,7 @@ function asInspectionPlanRecord(row: Record<string, unknown>): InspectionPlanRec
 
     <TooltipProvider>
       <TablePageLoading v-if="showInitialLoading" />
-      <TablePage v-else :page="page" @primary-action="handleCreateInspectionPlan">
+      <TablePage v-else :page="page" fill-available-height @primary-action="handleCreateInspectionPlan">
         <template #cell-planName="{ row }">
           <div class="inline-flex max-w-full items-baseline gap-1.5">
             <span class="truncate text-foreground">{{ row.planName }}</span>

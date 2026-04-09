@@ -1117,7 +1117,7 @@ function handleLinkedDetailSheetOpenChange(open: boolean) {
       </Alert>
     </div>
 
-    <TablePage :page="page" @primary-action="handleCreateCustomer">
+    <TablePage :page="page" fill-available-height @primary-action="handleCreateCustomer">
       <template #cell-packageInfo="{ row }">
         <button
           type="button"
@@ -1128,17 +1128,8 @@ function handleLinkedDetailSheetOpenChange(open: boolean) {
           <i class="ri-arrow-right-up-line shrink-0 text-sm" />
         </button>
       </template>
-    </TablePage>
 
-    <LinkedEntityDetailSheet
-      :open="Boolean(activeLinkedDetailKind) && Boolean(activeLinkedDetailUuid)"
-      :kind="activeLinkedDetailKind"
-      :uuid="activeLinkedDetailUuid"
-      @update:open="handleLinkedDetailSheetOpenChange"
-    />
-
-    <div class="-mx-4 pt-3">
-      <div class="flex w-full justify-end px-4">
+      <template #footer>
         <Pagination
           v-model:page="pageNum"
           :items-per-page="pageSize"
@@ -1170,7 +1161,14 @@ function handleLinkedDetailSheetOpenChange(open: boolean) {
             <PaginationLast />
           </PaginationContent>
         </Pagination>
-      </div>
-    </div>
+      </template>
+    </TablePage>
+
+    <LinkedEntityDetailSheet
+      :open="Boolean(activeLinkedDetailKind) && Boolean(activeLinkedDetailUuid)"
+      :kind="activeLinkedDetailKind"
+      :uuid="activeLinkedDetailUuid"
+      @update:open="handleLinkedDetailSheetOpenChange"
+    />
   </section>
 </template>
