@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, defineAsyncComponent, onUnmounted, ref, watch } from "vue"
+import { computed, defineAsyncComponent, onUnmounted, ref, watch, type Ref } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { toast } from "vue-sonner"
 
@@ -49,7 +49,7 @@ import { ResponsiveRightSheet } from "@/components/ui/sheet"
 import TablePage from "@/components/table-page/TablePage.vue"
 import SortPopover from "@/components/table-page/TableSortPopover.vue"
 import type { SortRule } from "@/components/table-page/sort.types"
-import { createTablePageDefinition, useTablePage } from "@/components/table-page/useTablePage"
+import { createTablePageDefinition, useTablePage, type TablePageController } from "@/components/table-page/useTablePage"
 import type { TablePageSchema } from "@/components/table-page/types"
 import {
   exportTableData,
@@ -222,6 +222,7 @@ type CustomerDetailTabActions = {
 const route = useRoute()
 const router = useRouter()
 const customerDetailTabIds = ["basic-info", "building-assets", "work-orders", "monitoring", "sub-accounts"] as const
+const DETAIL_TABLE_PAGE_SIZE = 10
 
 const customer = ref<CustomerDetailResult | null>(null)
 const loading = ref(false)
@@ -235,6 +236,8 @@ const buildingAssets = ref<CustomerBuildingAssetRow[]>([])
 const buildingListRaw = ref<BuildingListItem[]>([])
 const buildingAssetsLoading = ref(false)
 const buildingAssetsErrorMessage = ref("")
+const buildingAssetsPageNum = ref(1)
+const buildingAssetsPageSize = ref(DETAIL_TABLE_PAGE_SIZE)
 const maintenanceRecords = ref<MaintenanceRecordRow[]>([])
 const maintenanceRecordsLoading = ref(false)
 const maintenanceRecordsErrorMessage = ref("")
@@ -257,6 +260,10 @@ const repairWorkOrdersTotal = ref(0)
 const subAccounts = ref<SubAccountRow[]>([])
 const subAccountsLoading = ref(false)
 const subAccountsErrorMessage = ref("")
+const monitoringPageNum = ref(1)
+const monitoringPageSize = ref(DETAIL_TABLE_PAGE_SIZE)
+const subAccountsPageNum = ref(1)
+const subAccountsPageSize = ref(DETAIL_TABLE_PAGE_SIZE)
 const parkDetailSheetOpen = ref(false)
 const parkDetailLoading = ref(false)
 const parkDetailErrorMessage = ref("")
@@ -475,13 +482,13 @@ const detailToolbarButtonActiveClass =
   "bg-transparent text-link hover:bg-surface-tertiary active:bg-surface-secondary"
 const activeTablePage = computed(() => (
   activeTab.value === "building-assets"
-    ? buildingAssetsPage
+    ? pagedBuildingAssetsPage
     : activeTab.value === "work-orders"
       ? (activeWorkOrderTableTab.value === "inspection" ? inspectionWorkOrdersPage : repairWorkOrdersPage)
       : activeTab.value === "monitoring"
-        ? monitoringPage
+        ? pagedMonitoringPage
         : activeTab.value === "sub-accounts"
-          ? subAccountsPage
+          ? pagedSubAccountsPage
           : null
 ))
 const activeTableTitle = computed(() => (
@@ -1412,6 +1419,12 @@ const subAccountsPage = useTablePage({
   ...createTablePageDefinition(subAccountsSchema),
   rows: subAccounts,
 })
+const pagedBuildingAssetsPage = createClientPaginatedTablePage(buildingAssetsPage, buildingAssetsPageNum, buildingAssetsPageSize)
+const pagedMonitoringPage = createClientPaginatedTablePage(monitoringPage, monitoringPageNum, monitoringPageSize)
+const pagedSubAccountsPage = createClientPaginatedTablePage(subAccountsPage, subAccountsPageNum, subAccountsPageSize)
+const buildingAssetsPaginationTotal = computed(() => buildingAssetsPage.filteredRowsCount.value)
+const monitoringPaginationTotal = computed(() => monitoringPage.filteredRowsCount.value)
+const subAccountsPaginationTotal = computed(() => subAccountsPage.filteredRowsCount.value)
 
 const parkDetailSheetSections = computed<DetailFieldSection[]>(() => {
   const current = activeParkDetail.value
@@ -1513,6 +1526,7 @@ watch(customerUuid, (uuid) => {
   buildingAssets.value = []
   buildingListRaw.value = []
   buildingAssetsErrorMessage.value = ""
+  buildingAssetsPageNum.value = 1
   maintenanceRecords.value = []
   maintenanceRecordsErrorMessage.value = ""
   repairOverviewRecords.value = []
@@ -1527,6 +1541,8 @@ watch(customerUuid, (uuid) => {
   repairWorkOrdersPageNum.value = 1
   subAccounts.value = []
   subAccountsErrorMessage.value = ""
+  monitoringPageNum.value = 1
+  subAccountsPageNum.value = 1
   handleWorkOrderDetailSheetOpenChange(false)
   void loadCustomerDetail(uuid)
   void loadBuildingAssets(uuid)
@@ -1546,6 +1562,18 @@ watch(repairWorkOrdersPageSize, () => {
   repairWorkOrdersPageNum.value = 1
 })
 
+watch(buildingAssetsPageSize, () => {
+  buildingAssetsPageNum.value = 1
+})
+
+watch(monitoringPageSize, () => {
+  monitoringPageNum.value = 1
+})
+
+watch(subAccountsPageSize, () => {
+  subAccountsPageNum.value = 1
+})
+
 watch([inspectionWorkOrdersPageNum, inspectionWorkOrdersPageSize], () => {
   if (!customerUuid.value) {
     return
@@ -1561,6 +1589,18 @@ watch([repairWorkOrdersPageNum, repairWorkOrdersPageSize], () => {
 
   void loadRepairWorkOrders(customerUuid.value)
 })
+
+watch(buildingAssetsPaginationTotal, (total) => {
+  buildingAssetsPageNum.value = clampClientPageNum(buildingAssetsPageNum.value, buildingAssetsPageSize.value, total)
+}, { immediate: true })
+
+watch(monitoringPaginationTotal, (total) => {
+  monitoringPageNum.value = clampClientPageNum(monitoringPageNum.value, monitoringPageSize.value, total)
+}, { immediate: true })
+
+watch(subAccountsPaginationTotal, (total) => {
+  subAccountsPageNum.value = clampClientPageNum(subAccountsPageNum.value, subAccountsPageSize.value, total)
+}, { immediate: true })
 
 onUnmounted(() => {
   detailBreadcrumbTitle.value = null
@@ -3322,6 +3362,51 @@ function buildMockMonitoringRows(current: CustomerDetailResult): MonitoringRow[]
   ]
 }
 
+function createClientPaginatedTablePage<Row extends Record<string, unknown>>(
+  page: TablePageController<Row>,
+  pageNum: Ref<number>,
+  pageSize: Ref<number>,
+) {
+  const visibleRows = computed(() => {
+    const normalizedPageNum = Math.max(1, pageNum.value)
+    const normalizedPageSize = Math.max(1, pageSize.value)
+    const startIndex = (normalizedPageNum - 1) * normalizedPageSize
+
+    return page.filteredRows.value.slice(startIndex, startIndex + normalizedPageSize)
+  })
+  const currentPageRows = visibleRows
+  const currentPageRowsCount = computed(() => visibleRows.value.length)
+  const selectedRows = computed(() => {
+    const selectedRowKeys = new Set(page.selectedRowKeys.value)
+
+    return visibleRows.value.filter((row, index) => selectedRowKeys.has(resolveTablePageRowKey(page, row, index)))
+  })
+  const selectedRowsCount = computed(() => selectedRows.value.length)
+
+  return {
+    ...page,
+    visibleRows,
+    currentPageRows,
+    currentPageRowsCount,
+    selectedRows,
+    selectedRowsCount,
+  }
+}
+
+function resolveTablePageRowKey<Row extends Record<string, unknown>>(page: TablePageController<Row>, row: Row, index: number) {
+  if (typeof page.rowKey === "function") {
+    return page.rowKey(row, index)
+  }
+
+  const value = row[page.rowKey]
+  return typeof value === "string" || typeof value === "number" ? value : index
+}
+
+function clampClientPageNum(pageNum: number, pageSize: number, total: number) {
+  const maxPage = Math.max(1, Math.ceil(total / Math.max(1, pageSize)))
+  return Math.min(Math.max(1, pageNum), maxPage)
+}
+
 function mapSubAccountRow(item: CustomerSubAccountListItem, index: number): SubAccountRow {
   const uuid = toDisplayText(item.Uuid, "")
 
@@ -3671,14 +3756,48 @@ function toDisplayText(value: unknown, fallback = "未填写") {
       </Alert>
 
       <template v-if="activeTab === 'building-assets'">
-        <div class="flex min-h-0 flex-1 flex-col pb-5">
+        <div class="flex min-h-0 flex-1 flex-col">
           <Alert v-if="buildingAssetsErrorMessage" variant="destructive" class="mb-5">
             <AlertTitle>建筑资产接口加载失败</AlertTitle>
             <AlertDescription>{{ buildingAssetsErrorMessage }}</AlertDescription>
           </Alert>
 
           <CustomerDetailContentLoading v-if="loading || buildingAssetsLoading" variant="building-assets" />
-          <TablePage v-else-if="customer" :page="buildingAssetsPage" :show-toolbar-actions="false" :list-level-table="false" class="-mt-3" />
+          <TablePage v-else-if="customer" :page="pagedBuildingAssetsPage" :show-toolbar-actions="false" :list-level-table="false" fill-available-height class="-mt-3">
+            <template #footer>
+              <Pagination
+                v-model:page="buildingAssetsPageNum"
+                :items-per-page="buildingAssetsPageSize"
+                :total="buildingAssetsPaginationTotal"
+                :sibling-count="1"
+                :disabled="buildingAssetsLoading"
+                show-edges
+                class="w-full justify-end"
+              >
+                <PaginationContent v-slot="{ items }" class="justify-end">
+                  <PaginationFirst />
+                  <PaginationPrevious />
+
+                  <template
+                    v-for="(item, index) in items"
+                    :key="`${item.type}-${item.type === 'page' ? item.value : index}`"
+                  >
+                    <PaginationItem
+                      v-if="item.type === 'page'"
+                      :value="item.value"
+                      :is-active="item.value === buildingAssetsPageNum"
+                    >
+                      {{ item.value }}
+                    </PaginationItem>
+                    <PaginationEllipsis v-else />
+                  </template>
+
+                  <PaginationNext />
+                  <PaginationLast />
+                </PaginationContent>
+              </Pagination>
+            </template>
+          </TablePage>
         </div>
       </template>
 
@@ -3756,19 +3875,87 @@ function toDisplayText(value: unknown, fallback = "未填写") {
 
       <template v-else-if="activeTab === 'monitoring'">
         <CustomerDetailContentLoading v-if="loading" variant="monitoring" />
-        <div v-else-if="customer" class="flex min-h-0 flex-1 flex-col pb-5">
-          <TablePage :page="monitoringPage" :show-toolbar-actions="false" :list-level-table="false" class="-mt-3" />
+        <div v-else-if="customer" class="flex min-h-0 flex-1 flex-col">
+          <TablePage :page="pagedMonitoringPage" :show-toolbar-actions="false" :list-level-table="false" fill-available-height class="-mt-3">
+            <template #footer>
+              <Pagination
+                v-model:page="monitoringPageNum"
+                :items-per-page="monitoringPageSize"
+                :total="monitoringPaginationTotal"
+                :sibling-count="1"
+                :disabled="loading"
+                show-edges
+                class="w-full justify-end"
+              >
+                <PaginationContent v-slot="{ items }" class="justify-end">
+                  <PaginationFirst />
+                  <PaginationPrevious />
+
+                  <template
+                    v-for="(item, index) in items"
+                    :key="`${item.type}-${item.type === 'page' ? item.value : index}`"
+                  >
+                    <PaginationItem
+                      v-if="item.type === 'page'"
+                      :value="item.value"
+                      :is-active="item.value === monitoringPageNum"
+                    >
+                      {{ item.value }}
+                    </PaginationItem>
+                    <PaginationEllipsis v-else />
+                  </template>
+
+                  <PaginationNext />
+                  <PaginationLast />
+                </PaginationContent>
+              </Pagination>
+            </template>
+          </TablePage>
         </div>
       </template>
 
       <template v-else-if="activeTab === 'sub-accounts'">
         <CustomerDetailContentLoading v-if="loading || subAccountsLoading" variant="sub-accounts" />
-        <div v-else-if="customer" class="flex min-h-0 flex-1 flex-col pb-5">
+        <div v-else-if="customer" class="flex min-h-0 flex-1 flex-col">
           <Alert v-if="subAccountsErrorMessage" variant="destructive" class="mb-5">
             <AlertTitle>子账号列表接口加载失败</AlertTitle>
             <AlertDescription>{{ subAccountsErrorMessage }}</AlertDescription>
           </Alert>
-          <TablePage :page="subAccountsPage" :show-toolbar-actions="false" :list-level-table="false" class="-mt-3" />
+          <TablePage :page="pagedSubAccountsPage" :show-toolbar-actions="false" :list-level-table="false" fill-available-height class="-mt-3">
+            <template #footer>
+              <Pagination
+                v-model:page="subAccountsPageNum"
+                :items-per-page="subAccountsPageSize"
+                :total="subAccountsPaginationTotal"
+                :sibling-count="1"
+                :disabled="subAccountsLoading"
+                show-edges
+                class="w-full justify-end"
+              >
+                <PaginationContent v-slot="{ items }" class="justify-end">
+                  <PaginationFirst />
+                  <PaginationPrevious />
+
+                  <template
+                    v-for="(item, index) in items"
+                    :key="`${item.type}-${item.type === 'page' ? item.value : index}`"
+                  >
+                    <PaginationItem
+                      v-if="item.type === 'page'"
+                      :value="item.value"
+                      :is-active="item.value === subAccountsPageNum"
+                    >
+                      {{ item.value }}
+                    </PaginationItem>
+                    <PaginationEllipsis v-else />
+                  </template>
+
+                  <PaginationNext />
+                  <PaginationLast />
+                </PaginationContent>
+              </Pagination>
+            </template>
+          </TablePage>
         </div>
       </template>
 
