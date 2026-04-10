@@ -136,6 +136,12 @@ const schema: TablePageSchema<BuildingRecord> = {
       sort: true,
     },
     {
+      key: "customerName",
+      label: "所属客户",
+      filterType: "text",
+      slot: "cell-customerName",
+    },
+    {
       key: "parkName",
       label: "所属园区",
       filterType: "text",
@@ -146,12 +152,6 @@ const schema: TablePageSchema<BuildingRecord> = {
         defaultVisible: true,
       },
       sort: true,
-    },
-    {
-      key: "customerName",
-      label: "所属客户",
-      filterType: "text",
-      slot: "cell-customerName",
     },
     {
       key: "buildingArea",
