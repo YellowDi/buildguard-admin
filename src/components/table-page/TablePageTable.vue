@@ -261,6 +261,16 @@ const horizontalScrollbarStyle = computed(() => {
 
   return style
 })
+const horizontalScrollbarTrackWrapperStyle = computed(() => {
+  if (props.listLevelTable) {
+    return undefined
+  }
+
+  return {
+    paddingLeft: embeddedLeadingInset.value > 0 ? `${embeddedLeadingInset.value}px` : undefined,
+    paddingRight: embeddedTrailingInset.value > 0 ? `${embeddedTrailingInset.value}px` : undefined,
+  }
+})
 const horizontalScrollMax = computed(() => (
   Math.max(0, horizontalScrollContentWidth.value - horizontalScrollViewportWidth.value)
 ))
@@ -1773,7 +1783,10 @@ onBeforeUnmount(() => {
       :class="cn('mt-2', props.fillAvailableHeight ? 'shrink-0' : '')"
       :style="horizontalScrollbarStyle"
     >
-      <div class="px-4 sm:px-8">
+      <div
+        :class="props.listLevelTable ? 'px-4 sm:px-8' : ''"
+        :style="horizontalScrollbarTrackWrapperStyle"
+      >
         <div
           ref="horizontalScrollbarTrackRef"
           class="group relative h-4 w-full touch-none select-none"
