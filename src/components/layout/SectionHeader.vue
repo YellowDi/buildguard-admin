@@ -38,7 +38,12 @@ const hasActions = computed(() => props.hasActions ?? Boolean(slots.actions))
       props.layoutClass,
     )"
   >
-    <div class="flex min-w-0 items-start gap-3">
+    <div
+      :class="cn(
+        'flex min-w-0 gap-3',
+        props.singleLineTitleOnMobile ? 'items-center sm:items-start' : 'items-start',
+      )"
+    >
       <div v-if="hasLeading" class="shrink-0">
         <slot name="leading" />
       </div>
