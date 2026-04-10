@@ -106,8 +106,7 @@ function isMobileItemActive(item: DetailTabActionMenuItem) {
 
         <DropdownMenu>
           <DropdownMenuTrigger as-child>
-            <Button variant="default" size="sm" class="h-8 gap-1 px-3 text-[14px]" aria-label="更多操作">
-              更多
+            <Button variant="default" size="icon-sm" class="size-8" aria-label="更多操作">
               <i class="ri-arrow-down-s-line text-base" />
             </Button>
           </DropdownMenuTrigger>
