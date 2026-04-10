@@ -55,7 +55,7 @@ const headerHeight = ref(0)
 const hasTabs = computed(() => props.tabs.length > 0)
 const hasSecondary = computed(() => Boolean(slots.secondary) && props.secondaryVisible)
 const useSingleColumn = computed(() => props.fullWidth || !hasSecondary.value)
-const hasHeaderActions = computed(() => Boolean(slots.headerActions) || (!hasTabs.value && Boolean(slots.actions)))
+const hasHeaderActionSlot = computed(() => Boolean(slots.headerActions) || (!hasTabs.value && Boolean(slots.actions)))
 const hasTabActions = computed(() => hasTabs.value && (Boolean(slots.tabActions) || Boolean(slots.actions)))
 const hasHeaderBottom = computed(() => Boolean(slots.headerBottom))
 const activeTabId = computed(() => props.tabs.find(tab => tab.active)?.id ?? props.tabs[0]?.id ?? "")
@@ -108,7 +108,11 @@ function handleTabSelect(value: unknown) {
         class="sticky top-0 z-20 mx-0 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80 sm:-mx-4"
       >
         <div data-detail-layout-header-content :class="['px-1 pt-4 sm:px-4 sm:pt-5', hasTabs || hasHeaderBottom ? '' : 'pb-4 sm:pb-5']">
-          <SectionHeader :title="props.title" :subtitle="props.subtitle" :has-actions="hasHeaderActions">
+          <SectionHeader
+            :title="props.title"
+            :subtitle="props.subtitle"
+            :has-actions="false"
+          >
             <template #leading>
               <button
                 type="button"
@@ -119,11 +123,12 @@ function handleTabSelect(value: unknown) {
                 <i class="ri-arrow-left-line text-[18px]" />
               </button>
             </template>
-            <template #actions>
-              <slot v-if="$slots.headerActions" name="headerActions" />
-              <slot v-else name="actions" />
-            </template>
           </SectionHeader>
+
+          <div v-if="!hasTabs && hasHeaderActionSlot" class="mt-4 flex justify-end pb-2">
+            <slot v-if="$slots.headerActions" name="headerActions" />
+            <slot v-else name="actions" />
+          </div>
 
           <div v-if="hasTabs" class="mt-4 border-b border-border text-muted-foreground">
             <div class="flex min-w-0 items-center justify-between gap-2 pb-2 sm:hidden">
