@@ -1773,23 +1773,25 @@ onBeforeUnmount(() => {
       :class="cn('mt-2', props.fillAvailableHeight ? 'shrink-0' : '')"
       :style="horizontalScrollbarStyle"
     >
-      <div
-        ref="horizontalScrollbarTrackRef"
-        class="group relative h-4 w-full touch-none select-none"
-        @pointerdown="handleHorizontalScrollbarTrackPointerDown"
-      >
-        <div class="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-border" />
+      <div class="px-4 sm:px-8">
         <div
-          data-table-hscroll-thumb="true"
-          :class="[
-            'absolute top-1/2 -translate-y-1/2 rounded-full bg-border-hover transition-[height,background-color] duration-150 ease-out',
-            horizontalScrollbarDrag
-              ? 'h-1.5 cursor-grabbing bg-border-hover'
-              : 'h-px cursor-grab group-hover:h-1.5 group-hover:bg-border-hover active:cursor-grabbing active:h-1.5',
-          ]"
-          :style="horizontalScrollbarThumbStyle"
-          @pointerdown.stop="handleHorizontalScrollbarThumbPointerDown"
-        />
+          ref="horizontalScrollbarTrackRef"
+          class="group relative h-4 w-full touch-none select-none"
+          @pointerdown="handleHorizontalScrollbarTrackPointerDown"
+        >
+          <div class="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-border" />
+          <div
+            data-table-hscroll-thumb="true"
+            :class="[
+              'absolute top-1/2 -translate-y-1/2 rounded-full bg-border-hover transition-[height,background-color] duration-150 ease-out',
+              horizontalScrollbarDrag
+                ? 'h-1.5 cursor-grabbing bg-border-hover'
+                : 'h-px cursor-grab group-hover:h-1.5 group-hover:bg-border-hover active:cursor-grabbing active:h-1.5',
+            ]"
+            :style="horizontalScrollbarThumbStyle"
+            @pointerdown.stop="handleHorizontalScrollbarThumbPointerDown"
+          />
+        </div>
       </div>
     </div>
   </div>
