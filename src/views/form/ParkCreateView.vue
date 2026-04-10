@@ -263,13 +263,10 @@ async function loadCustomerOptions() {
     }
 
     if (!options.some(item => item.uuid === form.customerUuid)) {
-      form.customerUuid = options[0]?.uuid ?? ""
+      form.customerUuid = ""
     }
 
-    initialFormState.value = {
-      ...createEmptyForm(),
-      customerUuid: form.customerUuid,
-    }
+    initialFormState.value = createEmptyForm()
   } catch (error) {
     customerLoadError.value = handleApiError(error, {
       mode: "silent",
