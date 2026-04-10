@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue"
+import { ref, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { toast } from "vue-sonner"
 
@@ -8,7 +8,18 @@ import TablePage from "@/components/table-page/TablePage.vue"
 import { createTablePageDefinition, useTablePage } from "@/components/table-page/useTablePage"
 import type { TablePageSchema } from "@/components/table-page/types"
 import { useRouteTableSearch } from "@/composables/useRouteTableSearch"
+import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationFirst,
+  PaginationItem,
+  PaginationLast,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import {
   Tooltip,
@@ -17,16 +28,42 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { handleApiError } from "@/lib/api-errors"
-import { listInspectionPlanRecords, type InspectionPlanRecord } from "@/lib/inspection-plan-records"
+import { fetchInspectionPlans, type InspectionPlanListItem } from "@/lib/inspection-plans-api"
 
-type LinkedDetailSheetKind = "customer" | "service" | "plan" | "park"
+type InspectionPlanRecord = {
+  id: string
+  uuid: string
+  customerUuid: string
+  serviceUuid: string
+  code: string
+  planName: string
+  serviceName: string
+  customerName: string
+  cycleDays: number | null
+  cycle: string
+  workOrderDuration: string
+  firstExecutionAt: string
+  latestExecutionAt: string
+  latestOrderNo: string
+  nextExecutionAt: string
+  creator: string
+  createdAt: string
+  planStatus: string
+  enableStatus: string
+}
+
+type LinkedDetailSheetKind = "customer" | "service" | "plan"
 
 const inspectionPlans = ref<InspectionPlanRecord[]>([])
 const loading = ref(false)
 const errorMessage = ref("")
+const pageNum = ref(1)
+const pageSize = ref(50)
+const total = ref(0)
 const activeLinkedDetailKind = ref<LinkedDetailSheetKind | null>(null)
 const activeLinkedDetailUuid = ref("")
 const activeLinkedDetailCustomerUuid = ref("")
+let latestRequestId = 0
 
 const schema: TablePageSchema<InspectionPlanRecord> = {
   title: "检测计划",
@@ -214,24 +251,54 @@ const route = useRoute()
 const router = useRouter()
 
 useRouteTableSearch(page, route)
-onMounted(() => {
+watch([pageNum, pageSize], ([nextPageNum, nextPageSize], [previousPageNum, previousPageSize]) => {
+  if (nextPageNum === previousPageNum && nextPageSize === previousPageSize) {
+    return
+  }
+
   void loadInspectionPlans()
-})
+}, { immediate: true })
 
 async function loadInspectionPlans() {
+  const requestId = ++latestRequestId
+
   loading.value = true
   errorMessage.value = ""
 
   try {
-    inspectionPlans.value = await listInspectionPlanRecords()
+    const result = await fetchInspectionPlans({
+      PageNum: pageNum.value,
+      PageSize: pageSize.value,
+    })
+
+    if (requestId !== latestRequestId) {
+      return
+    }
+
+    total.value = result.total
+    inspectionPlans.value = result.list.map((item, index) => normalizeInspectionPlanRecord(item, index))
+
+    const maxPage = Math.max(1, Math.ceil((result.total || 0) / pageSize.value))
+
+    if (pageNum.value > maxPage) {
+      pageNum.value = maxPage
+      return
+    }
   } catch (error) {
+    if (requestId !== latestRequestId) {
+      return
+    }
+
     inspectionPlans.value = []
+    total.value = 0
     errorMessage.value = handleApiError(error, {
       mode: "silent",
       fallback: "检测计划列表加载失败，请稍后重试。",
     })
   } finally {
-    loading.value = false
+    if (requestId === latestRequestId) {
+      loading.value = false
+    }
   }
 }
 
@@ -415,17 +482,133 @@ function buildPageFilterText(row: InspectionPlanRecord) {
   ].join(" ")
 }
 
+function normalizeInspectionPlanRecord(
+  item: InspectionPlanListItem,
+  index: number,
+): InspectionPlanRecord {
+  const serviceName = getText(item.ServiceName, "-")
+  const duration = getNumber(item.Duration)
+  const workOrderDuration = getNumber(item.WorkOrderDuration)
+  const fallbackId = getText(item.Id)
+  const uuid = getText(item.Uuid)
+  const code = getText(item.Code, fallbackId || "-")
+
+  return {
+    id: uuid || code || `${pageNum.value}-${index + 1}`,
+    uuid: uuid || "-",
+    customerUuid: getText(item.CustomerUuid),
+    serviceUuid: getText(item.ServiceUuid),
+    code: code || "-",
+    planName: getText(item.Name, serviceName === "-" ? "检测计划" : `${serviceName}计划`),
+    serviceName,
+    customerName: getText(item.CorpName, "-"),
+    cycleDays: duration,
+    cycle: buildCycleLabel(duration),
+    workOrderDuration: workOrderDuration === null ? "-" : `${workOrderDuration}天`,
+    firstExecutionAt: formatDateOnly(getText(item.FirstTime, "-")),
+    latestExecutionAt: formatDateOnly(getText(item.LastestTime, "-")),
+    latestOrderNo: getText(item.LastestOrderNo, "-"),
+    nextExecutionAt: formatDateOnly(getText(item.NextTime, "-")),
+    creator: getText(item.Creator, "-"),
+    createdAt: getText(item.CreatedAt, "-"),
+    planStatus: normalizePlanStatus(item.PlanStatus),
+    enableStatus: normalizeEnableStatus(item.Status),
+  }
+}
+
+function formatDateOnly(value: string) {
+  const normalized = value.trim()
+
+  if (!normalized || normalized === "-" || normalized === "—") {
+    return "-"
+  }
+
+  const [datePart] = normalized.split(/[ T]/)
+  return datePart || normalized
+}
+
+function buildCycleLabel(duration: number | null) {
+  if (duration !== null) {
+    return `${duration}天`
+  }
+
+  return "-"
+}
+
+function normalizePlanStatus(value: unknown) {
+  if (typeof value === "string") {
+    const normalized = value.trim()
+    return normalized || "-"
+  }
+
+  if (value === 1) {
+    return "进行中"
+  }
+
+  if (value === 0) {
+    return "未开始"
+  }
+
+  return "-"
+}
+
+function normalizeEnableStatus(value: unknown) {
+  if (value === 1 || value === "1" || value === "启用") {
+    return "启用"
+  }
+
+  if (value === 2 || value === "2" || value === 0 || value === "0" || value === "禁用" || value === "停用") {
+    return "禁用"
+  }
+
+  return "-"
+}
+
+function getText(value: unknown, fallback = "") {
+  if (typeof value === "string" && value.trim()) {
+    return value.trim()
+  }
+
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return String(value)
+  }
+
+  return fallback
+}
+
+function getNumber(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value
+  }
+
+  if (typeof value === "string" && value.trim()) {
+    const normalized = Number(value.trim())
+    return Number.isFinite(normalized) ? normalized : null
+  }
+
+  return null
+}
+
 function asInspectionPlanRecord(row: Record<string, unknown>): InspectionPlanRecord {
   return row as InspectionPlanRecord
 }
 </script>
 
 <template>
-  <div class="space-y-4">
-    <Alert v-if="errorMessage" variant="destructive">
-      <AlertTitle>检测计划加载失败</AlertTitle>
-      <AlertDescription>{{ errorMessage }}</AlertDescription>
-    </Alert>
+  <section class="flex min-h-0 flex-1 flex-col">
+    <div v-if="errorMessage" class="px-4 pb-3 pt-3">
+      <Alert variant="destructive">
+        <i class="ri-error-warning-line" />
+        <AlertTitle>检测计划接口加载失败</AlertTitle>
+        <AlertDescription class="flex flex-wrap items-center gap-3">
+          <span>{{ errorMessage }}</span>
+          <Button size="sm" variant="outline" class="gap-2" @click="loadInspectionPlans">
+            <i class="ri-refresh-line text-sm" />
+            重试
+          </Button>
+        </AlertDescription>
+      </Alert>
+    </div>
 
     <TooltipProvider>
       <TablePage :page="page" :loading="loading" fill-available-height @primary-action="handleCreateInspectionPlan">
@@ -483,6 +666,40 @@ function asInspectionPlanRecord(row: Record<string, unknown>): InspectionPlanRec
             </TooltipContent>
           </Tooltip>
         </template>
+
+        <template #footer>
+          <Pagination
+            v-model:page="pageNum"
+            :items-per-page="pageSize"
+            :total="total"
+            :sibling-count="1"
+            :disabled="loading"
+            show-edges
+            class="w-full justify-end"
+          >
+            <PaginationContent v-slot="{ items }" class="justify-end">
+              <PaginationFirst />
+              <PaginationPrevious />
+
+              <template
+                v-for="(item, index) in items"
+                :key="`${item.type}-${item.type === 'page' ? item.value : index}`"
+              >
+                <PaginationItem
+                  v-if="item.type === 'page'"
+                  :value="item.value"
+                  :is-active="item.value === pageNum"
+                >
+                  {{ item.value }}
+                </PaginationItem>
+                <PaginationEllipsis v-else />
+              </template>
+
+              <PaginationNext />
+              <PaginationLast />
+            </PaginationContent>
+          </Pagination>
+        </template>
       </TablePage>
     </TooltipProvider>
 
@@ -493,5 +710,5 @@ function asInspectionPlanRecord(row: Record<string, unknown>): InspectionPlanRec
       :customer-uuid="activeLinkedDetailCustomerUuid"
       @update:open="handleLinkedDetailSheetOpenChange"
     />
-  </div>
+  </section>
 </template>

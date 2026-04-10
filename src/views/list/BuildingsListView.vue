@@ -23,15 +23,11 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { handleApiError } from "@/lib/api-errors"
 import { fetchBuildings } from "@/lib/buildings-api"
-import { fetchCustomers } from "@/lib/customers-api"
-import { fetchParks } from "@/lib/parks-api"
 
 type BuildingRecord = {
   id: string
   uuid: string
   parkUuid: string
-  customerUuid: string
-  customerName: string
   parkName: string
   buildingName: string
   builtTime: string
@@ -44,7 +40,7 @@ type BuildingRecord = {
   updatedAt: string
 }
 
-type LinkedDetailSheetKind = "customer" | "service" | "plan" | "park"
+type LinkedDetailSheetKind = "park"
 
 const buildings = ref<BuildingRecord[]>([])
 const loading = ref(false)
@@ -130,18 +126,6 @@ const schema: TablePageSchema<BuildingRecord> = {
       filter: {
         type: "text",
         placeholder: "输入建筑名称",
-        defaultVisible: true,
-      },
-      sort: true,
-    },
-    {
-      key: "customerName",
-      label: "所属客户",
-      filterType: "text",
-      slot: "cell-customerName",
-      filter: {
-        type: "text",
-        placeholder: "输入客户名称",
         defaultVisible: true,
       },
       sort: true,
@@ -284,19 +268,6 @@ function handleCreateBuilding() {
   void router.push({ name: "building-create" })
 }
 
-function handleOpenCustomerDetail(row: unknown) {
-  const currentRow = row as BuildingRecord
-
-  if (!currentRow.customerUuid) {
-    toast.error("当前建筑缺少所属客户信息，无法打开详情")
-    return
-  }
-
-  activeLinkedDetailKind.value = "customer"
-  activeLinkedDetailUuid.value = currentRow.customerUuid
-  activeLinkedDetailCustomerUuid.value = ""
-}
-
 function handleOpenParkDetail(row: unknown) {
   const currentRow = row as BuildingRecord
 
@@ -307,7 +278,7 @@ function handleOpenParkDetail(row: unknown) {
 
   activeLinkedDetailKind.value = "park"
   activeLinkedDetailUuid.value = currentRow.parkUuid
-  activeLinkedDetailCustomerUuid.value = currentRow.customerUuid
+  activeLinkedDetailCustomerUuid.value = ""
 }
 
 function handleLinkedDetailSheetOpenChange(open: boolean) {
@@ -334,43 +305,23 @@ async function loadBuildings() {
   errorMessage.value = ""
 
   try {
-    const [buildingsResult, parksResult, customersResult] = await Promise.all([
-      fetchBuildings({ PageNum: pageNum.value, PageSize: pageSize.value }),
-      fetchParks({ PageNum: 1, PageSize: 1000 }),
-      fetchCustomers({ PageNum: 1, PageSize: 1000 }),
-    ])
+    const buildingsResult = await fetchBuildings({ PageNum: pageNum.value, PageSize: pageSize.value })
 
     if (requestId !== latestRequestId) {
       return
     }
 
-    const customerNameByUuid = new Map(
-      customersResult.list.map(item => [toText(item.Uuid), toText(item.CorpName, "未关联客户")]),
-    )
-    const parkMetaByUuid = new Map(
-      parksResult.list.map(item => [
-        toText(item.Uuid),
-        {
-          customerUuid: toText(item.CustomerUuid),
-          parkName: toText(item.Name, "未命名园区"),
-        },
-      ]),
-    )
-
     total.value = buildingsResult.total
     buildings.value = buildingsResult.list.map((item, index) => {
       const uuid = toText(item.Uuid, `building-${index + 1}`)
       const parkUuid = toText(item.ParkUuid)
-      const parkMeta = parkMetaByUuid.get(parkUuid)
       const buildingAreaValue = parseAreaValue(item.BuildingArea ?? item.BuildArea)
 
       return {
         id: uuid,
         uuid,
         parkUuid,
-        customerUuid: parkMeta?.customerUuid ?? "",
-        customerName: customerNameByUuid.get(parkMeta?.customerUuid ?? "") ?? "未关联客户",
-        parkName: toText(item.ParkName, parkMeta?.parkName ?? "未关联园区"),
+        parkName: toText(item.ParkName, "未关联园区"),
         buildingName: toText(item.Name, "未命名建筑"),
         builtTime: toText(item.BuiltTime, "-"),
         operationTime: toText(item.OperationTime, "-"),
@@ -409,7 +360,6 @@ async function loadBuildings() {
 function buildPageFilterText(row: BuildingRecord) {
   return [
     row.buildingName,
-    row.customerName,
     row.parkName,
     row.buildingArea,
     row.contactName,
@@ -466,17 +416,6 @@ function toText(value: unknown, fallback = "") {
     </div>
 
     <TablePage :page="page" :loading="loading" fill-available-height @primary-action="handleCreateBuilding">
-      <template #cell-customerName="{ row }">
-        <button
-          type="button"
-          class="inline-flex max-w-full items-center gap-1 text-left text-[#2B67F6] transition-colors hover:text-[#1D4ED8]"
-          @click="handleOpenCustomerDetail(row)"
-        >
-          <span class="truncate">{{ row.customerName }}</span>
-          <i class="ri-arrow-right-up-line shrink-0 text-sm" />
-        </button>
-      </template>
-
       <template #cell-parkName="{ row }">
         <button
           type="button"

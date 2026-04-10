@@ -21,8 +21,6 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { handleApiError } from "@/lib/api-errors"
-import { fetchBuildings } from "@/lib/buildings-api"
-import { fetchCustomers } from "@/lib/customers-api"
 import { fetchParks } from "@/lib/parks-api"
 
 type ParkRecord = {
@@ -35,14 +33,13 @@ type ParkRecord = {
   operationTime: string
   buildArea: string
   buildAreaValue: number | null
-  buildingCount: number
   contactName: string
   contactPhone: string
   address: string
   updatedAt: string
 }
 
-type LinkedDetailSheetKind = "customer" | "service" | "plan" | "park"
+type LinkedDetailSheetKind = "customer" | "park"
 
 const parks = ref<ParkRecord[]>([])
 const loading = ref(false)
@@ -143,24 +140,6 @@ const schema: TablePageSchema<ParkRecord> = {
         kind: "metric-unit",
         valueKey: "buildAreaValue",
         unit: "㎡",
-      },
-    },
-    {
-      key: "buildingCount",
-      label: "建筑数量",
-      filterType: "number",
-      variant: "metric",
-      filter: {
-        type: "number",
-        placeholder: "输入建筑数量",
-        defaultVisible: true,
-      },
-      sort: {
-        kind: "metric",
-      },
-      cellRenderer: {
-        kind: "metric-unit",
-        unit: "栋",
       },
     },
     {
@@ -298,29 +277,10 @@ async function loadParks() {
   errorMessage.value = ""
 
   try {
-    const [parksResult, customersResult, buildingsResult] = await Promise.all([
-      fetchParks({ PageNum: pageNum.value, PageSize: pageSize.value }),
-      fetchCustomers({ PageNum: 1, PageSize: 1000 }),
-      fetchBuildings({ PageNum: 1, PageSize: 1000 }),
-    ])
+    const parksResult = await fetchParks({ PageNum: pageNum.value, PageSize: pageSize.value })
 
     if (requestId !== latestRequestId) {
       return
-    }
-
-    const customerNameByUuid = new Map(
-      customersResult.list.map(item => [toText(item.Uuid), toText(item.CorpName, "未关联客户")]),
-    )
-    const buildingCountByParkUuid = new Map<string, number>()
-
-    for (const item of buildingsResult.list) {
-      const parkUuid = toText(item.ParkUuid)
-
-      if (!parkUuid) {
-        continue
-      }
-
-      buildingCountByParkUuid.set(parkUuid, (buildingCountByParkUuid.get(parkUuid) ?? 0) + 1)
     }
 
     total.value = parksResult.total
@@ -332,13 +292,12 @@ async function loadParks() {
         id: uuid,
         uuid,
         customerUuid: toText(item.CustomerUuid),
-        customerName: customerNameByUuid.get(toText(item.CustomerUuid)) ?? "未关联客户",
+        customerName: toText(item.CorpName, "未关联客户"),
         parkName: toText(item.Name, "未命名园区"),
         builtTime: toText(item.BuiltTime, "-"),
         operationTime: toText(item.OperationTime, "-"),
         buildArea: buildAreaValue === null ? "-" : String(buildAreaValue),
         buildAreaValue,
-        buildingCount: buildingCountByParkUuid.get(uuid) ?? 0,
         contactName: toText(item.Contact, "未填写"),
         contactPhone: toText(item.ContactPhone, "-"),
         address: toText(item.Address, "-"),
