@@ -98,7 +98,7 @@ watch(() => props.value.operator, () => {
 <template>
   <div
     ref="rootRef"
-    class="w-[252px] max-w-[calc(100vw-2rem)] rounded-xl border border-border bg-popover p-2.5 shadow-[var(--shadow-card)]"
+    class="w-[252px] max-w-[calc(100vw-2rem)] rounded-xl bg-popover p-2.5 shadow-[var(--shadow-card)]"
     data-list-popover
   >
     <div class="flex items-center justify-between gap-2">
@@ -128,7 +128,7 @@ watch(() => props.value.operator, () => {
 
         <div
           v-if="openActionMenu"
-          class="absolute left-[calc(100%+6px)] top-1/2 z-40 min-w-[104px] -translate-y-1/2 rounded-md border border-border bg-popover p-1 shadow-[var(--shadow-card)]"
+          class="absolute left-[calc(100%+6px)] top-1/2 z-40 min-w-[104px] -translate-y-1/2 rounded-md bg-popover p-1 shadow-[var(--shadow-card)]"
           data-list-popover
         >
           <button

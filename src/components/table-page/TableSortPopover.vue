@@ -156,7 +156,7 @@ function handleDragEnd() {
 
 <template>
   <div
-    class="w-fit min-w-[320px] max-w-[calc(100vw-2rem)] rounded-xl border border-border bg-popover p-1.5 shadow-(--shadow-card)"
+    class="w-fit min-w-[320px] max-w-[calc(100vw-2rem)] rounded-xl bg-popover p-1.5 shadow-(--shadow-card)"
     data-list-popover
   >
     <div v-if="visibleRules.length" class="space-y-1.5">

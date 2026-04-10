@@ -84,7 +84,7 @@ onBeforeUnmount(() => {
       v-if="open"
       :class="
         cn(
-          'absolute left-0 top-[calc(100%+6px)] z-50 min-w-full overflow-hidden rounded-md border bg-popover p-1 text-popover-foreground shadow-[var(--shadow-card)]',
+          'absolute left-0 top-[calc(100%+6px)] z-50 min-w-full overflow-hidden rounded-md bg-popover p-1 text-popover-foreground shadow-[var(--shadow-card)]',
           props.contentClass,
         )
       "
