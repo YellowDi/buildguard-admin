@@ -55,7 +55,7 @@ const hasActions = computed(() => props.hasActions ?? Boolean(slots.actions))
           <span
             v-if="props.subtitle"
             :class="cn(
-              'text-[20px] font-normal leading-none text-muted-foreground md:text-[22px]',
+              'hidden text-[20px] font-normal leading-none text-muted-foreground sm:inline md:text-[22px]',
               props.subtitleClass,
             )"
           >

@@ -151,7 +151,7 @@ export function useTablePage<Row>(input: TablePageSchema<Row> | TablePageDefinit
   const rows = computed(() => toPlainRows(definition.rows))
   const hasSourceRows = computed(() => rows.value.length > 0)
 
-  const showControls = ref(hasSourceRows.value)
+  const showControls = ref(shouldDefaultShowControls(hasSourceRows.value))
   const customSortEnabled = ref(hasSourceRows.value && definition.sort.initialSortRules.length > 0)
   const selectedTab = ref(getDefaultTabValue(definition.tabs))
   const visibleFilterKeys = ref(definition.filters.filter(filter => filter.defaultVisible && !filter.fixed).map(filter => filter.key))
@@ -434,7 +434,7 @@ export function useTablePage<Row>(input: TablePageSchema<Row> | TablePageDefinit
       }
 
       if (!previousHasRows) {
-        showControls.value = true
+        showControls.value = shouldDefaultShowControls(true)
         customSortEnabled.value = definition.sort.initialSortRules.length > 0
         hydrateStoredSortPreferences()
       }
@@ -543,6 +543,18 @@ function toPlainRows<Row>(rows: MaybeRows<Row>) {
   }
 
   return rows.value
+}
+
+function shouldDefaultShowControls(hasRows: boolean) {
+  if (!hasRows) {
+    return false
+  }
+
+  if (typeof window === "undefined") {
+    return true
+  }
+
+  return window.matchMedia("(min-width: 640px)").matches
 }
 
 function buildTextFilters<Row>(filters: NormalizedFilter<Row>[]) {
