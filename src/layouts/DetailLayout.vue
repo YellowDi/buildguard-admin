@@ -126,9 +126,9 @@ function handleTabSelect(value: unknown) {
           </SectionHeader>
 
           <div v-if="hasTabs" class="mt-4 border-b border-border text-muted-foreground">
-            <div class="flex items-center gap-2 pb-2 sm:hidden">
+            <div class="flex min-w-0 items-center justify-between gap-2 pb-2 sm:hidden">
               <Select :model-value="activeTabId" @update:model-value="handleTabSelect">
-                <SelectTrigger class="h-9 min-w-0 flex-1 rounded-md bg-background text-[14px]">
+                <SelectTrigger class="h-9 max-w-[calc(100vw-11rem)] rounded-md bg-background text-[14px]">
                   <SelectValue placeholder="选择分页" />
                 </SelectTrigger>
                 <SelectContent>
@@ -143,7 +143,7 @@ function handleTabSelect(value: unknown) {
                 </SelectContent>
               </Select>
 
-              <div v-if="hasTabActions" class="shrink-0">
+              <div v-if="hasTabActions" class="ml-auto shrink-0">
                 <slot v-if="$slots.tabActions" name="tabActions" />
                 <slot v-else name="actions" />
               </div>

@@ -291,37 +291,55 @@ function handleMobileToolbarActionSelect(action: "filters" | "sort" | "export" |
             v-if="!hasTabs && props.showToolbarActions"
             class="min-w-0"
           >
-            <DropdownMenu>
-              <DropdownMenuTrigger as-child>
-                <Button variant="outline" class="h-9 gap-1 px-3 text-[14px] sm:hidden">
-                  <i class="ri-more-2-line text-base" />
-                  操作
-                </Button>
-              </DropdownMenuTrigger>
+            <div class="flex items-center justify-end gap-1 sm:hidden">
+              <button
+                type="button"
+                aria-label="筛选"
+                :class="[
+                  ghostIconButtonClass,
+                  showControls ? ghostIconButtonActiveClass : '',
+                ]"
+                @click="handleMobileToolbarActionSelect('filters')"
+              >
+                <i :class="['ri-filter-3-line text-[17px]', showControls ? 'text-link' : '']" />
+              </button>
 
-              <DropdownMenuContent align="end" class="w-52 rounded-xl p-1.5 sm:hidden">
-                <DropdownMenuItem class="rounded-lg px-2.5 py-2" @select="handleMobileToolbarActionSelect('filters')">
-                  <i class="ri-filter-3-line mr-2 text-base text-muted-foreground" />
-                  {{ showControls ? "隐藏筛选" : "显示筛选" }}
-                </DropdownMenuItem>
-                <DropdownMenuItem class="rounded-lg px-2.5 py-2" @select="handleMobileToolbarActionSelect('sort')">
-                  <i class="ri-sort-asc mr-2 text-base text-muted-foreground" />
-                  {{ customSortEnabled ? "关闭排序" : "启用排序" }}
-                </DropdownMenuItem>
-                <DropdownMenuItem class="rounded-lg px-2.5 py-2" @select="handleMobileToolbarActionSelect('export')">
-                  <i class="ri-download-line mr-2 text-base text-muted-foreground" />
-                  导出
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  v-if="primaryActionLabel"
-                  class="rounded-lg px-2.5 py-2"
-                  @select="handleMobileToolbarActionSelect('primary')"
-                >
-                  <i class="ri-add-line mr-2 text-base text-muted-foreground" />
-                  {{ primaryActionLabel }}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+              <button
+                type="button"
+                aria-label="排序"
+                :class="[
+                  ghostIconButtonClass,
+                  customSortEnabled ? ghostIconButtonActiveClass : '',
+                ]"
+                @click="handleMobileToolbarActionSelect('sort')"
+              >
+                <i :class="['ri-sort-asc text-[17px]', customSortEnabled ? 'text-link' : '']" />
+              </button>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger as-child>
+                  <Button variant="outline" class="h-9 gap-1 px-3 text-[14px]">
+                    <i class="ri-more-2-line text-base" />
+                    操作
+                  </Button>
+                </DropdownMenuTrigger>
+
+                <DropdownMenuContent align="end" class="w-52 rounded-xl p-1.5">
+                  <DropdownMenuItem class="rounded-lg px-2.5 py-2" @select="handleMobileToolbarActionSelect('export')">
+                    <i class="ri-download-line mr-2 text-base text-muted-foreground" />
+                    导出
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    v-if="primaryActionLabel"
+                    class="rounded-lg px-2.5 py-2"
+                    @select="handleMobileToolbarActionSelect('primary')"
+                  >
+                    <i class="ri-add-line mr-2 text-base text-muted-foreground" />
+                    {{ primaryActionLabel }}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
 
             <div class="hidden min-w-0 flex-wrap items-center justify-end gap-1 text-muted-foreground sm:flex sm:flex-nowrap">
               <TooltipWrap content="筛选">
@@ -386,9 +404,9 @@ function handleMobileToolbarActionSelect(action: "filters" | "sort" | "export" |
           v-if="hasTabs"
           class="text-muted-foreground"
         >
-          <div class="flex items-center gap-2 pb-2 sm:hidden">
+          <div class="flex min-w-0 items-center justify-between gap-2 pb-2 sm:hidden">
             <Select :model-value="activeTabLabel" @update:model-value="handleMobileTabSelect">
-              <SelectTrigger class="h-9 min-w-0 flex-1 rounded-md bg-background text-[14px]">
+              <SelectTrigger class="h-9 max-w-[calc(100vw-11rem)] rounded-md bg-background text-[14px]">
                 <SelectValue placeholder="选择分页" />
               </SelectTrigger>
               <SelectContent>
@@ -402,37 +420,55 @@ function handleMobileToolbarActionSelect(action: "filters" | "sort" | "export" |
               </SelectContent>
             </Select>
 
-            <DropdownMenu v-if="props.showToolbarActions">
-              <DropdownMenuTrigger as-child>
-                <Button variant="outline" class="h-9 gap-1 px-3 text-[14px]">
-                  <i class="ri-more-2-line text-base" />
-                  操作
-                </Button>
-              </DropdownMenuTrigger>
+            <div v-if="props.showToolbarActions" class="ml-auto flex shrink-0 items-center justify-end gap-1">
+              <button
+                type="button"
+                aria-label="筛选"
+                :class="[
+                  ghostIconButtonClass,
+                  showControls ? ghostIconButtonActiveClass : '',
+                ]"
+                @click="handleMobileToolbarActionSelect('filters')"
+              >
+                <i :class="['ri-filter-3-line text-[17px]', showControls ? 'text-link' : '']" />
+              </button>
 
-              <DropdownMenuContent align="end" class="w-52 rounded-xl p-1.5 sm:hidden">
-                <DropdownMenuItem class="rounded-lg px-2.5 py-2" @select="handleMobileToolbarActionSelect('filters')">
-                  <i class="ri-filter-3-line mr-2 text-base text-muted-foreground" />
-                  {{ showControls ? "隐藏筛选" : "显示筛选" }}
-                </DropdownMenuItem>
-                <DropdownMenuItem class="rounded-lg px-2.5 py-2" @select="handleMobileToolbarActionSelect('sort')">
-                  <i class="ri-sort-asc mr-2 text-base text-muted-foreground" />
-                  {{ customSortEnabled ? "关闭排序" : "启用排序" }}
-                </DropdownMenuItem>
-                <DropdownMenuItem class="rounded-lg px-2.5 py-2" @select="handleMobileToolbarActionSelect('export')">
-                  <i class="ri-download-line mr-2 text-base text-muted-foreground" />
-                  导出
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  v-if="primaryActionLabel"
-                  class="rounded-lg px-2.5 py-2"
-                  @select="handleMobileToolbarActionSelect('primary')"
-                >
-                  <i class="ri-add-line mr-2 text-base text-muted-foreground" />
-                  {{ primaryActionLabel }}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+              <button
+                type="button"
+                aria-label="排序"
+                :class="[
+                  ghostIconButtonClass,
+                  customSortEnabled ? ghostIconButtonActiveClass : '',
+                ]"
+                @click="handleMobileToolbarActionSelect('sort')"
+              >
+                <i :class="['ri-sort-asc text-[17px]', customSortEnabled ? 'text-link' : '']" />
+              </button>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger as-child>
+                  <Button variant="outline" class="h-9 gap-1 px-3 text-[14px]">
+                    <i class="ri-more-2-line text-base" />
+                    操作
+                  </Button>
+                </DropdownMenuTrigger>
+
+                <DropdownMenuContent align="end" class="w-52 rounded-xl p-1.5">
+                  <DropdownMenuItem class="rounded-lg px-2.5 py-2" @select="handleMobileToolbarActionSelect('export')">
+                    <i class="ri-download-line mr-2 text-base text-muted-foreground" />
+                    导出
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    v-if="primaryActionLabel"
+                    class="rounded-lg px-2.5 py-2"
+                    @select="handleMobileToolbarActionSelect('primary')"
+                  >
+                    <i class="ri-add-line mr-2 text-base text-muted-foreground" />
+                    {{ primaryActionLabel }}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
 
           <div class="hidden min-w-0 flex-wrap items-end gap-x-6 gap-y-3 sm:flex">
