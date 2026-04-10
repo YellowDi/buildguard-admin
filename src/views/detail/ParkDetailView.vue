@@ -16,6 +16,7 @@ import { detailBreadcrumbItems, detailBreadcrumbTitle } from "@/composables/useD
 import DetailLayout from "@/layouts/DetailLayout.vue"
 import { handleApiError } from "@/lib/api-errors"
 import { hasValidLatLng } from "@/lib/map-coordinates"
+import { toMobileActionLabel } from "@/lib/mobileActionLabel"
 import { fetchBuildings, type BuildingListItem } from "@/lib/buildings-api"
 import { fetchParkDetail, type ParkDetailResult } from "@/lib/parks-api"
 
@@ -297,7 +298,8 @@ function buildContactValue(name: string | null, phone?: string | null): DetailCo
         @click="goToEdit"
       >
         <i class="ri-edit-line text-base" />
-        修改园区信息
+        <span class="sm:hidden">{{ toMobileActionLabel("修改园区信息") }}</span>
+        <span class="hidden sm:inline">修改园区信息</span>
       </Button>
     </template>
 

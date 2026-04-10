@@ -34,6 +34,7 @@ import type {
   TagFilterState,
   TextFilterState,
 } from "@/components/table-page/types"
+import { toMobileActionLabel } from "@/lib/mobileActionLabel"
 
 type MobileToolbarActionKey = "filters" | "sort" | "export" | "primary"
 
@@ -105,6 +106,7 @@ const hasTabs = computed(() => props.tabs.length > 0)
 const hasHeading = computed(() => Boolean(props.title || props.description))
 const hasTopSurface = computed(() => hasHeading.value || hasTabs.value || props.showToolbarActions)
 const activeTabLabel = computed(() => props.tabs.find(tab => tab.active)?.label ?? props.tabs[0]?.label ?? "")
+const mobilePrimaryActionLabel = computed(() => toMobileActionLabel(props.primaryActionLabel))
 const mobileToolbarItems = computed<Array<{
   key: MobileToolbarActionKey
   label: string
@@ -371,7 +373,7 @@ function handleMobileToolbarActionSelect(action: MobileToolbarActionKey) {
                 @click="handleMobileToolbarActionSelect(primaryMobileToolbarItem.key)"
               >
                 <i :class="[primaryMobileToolbarItem.iconClass, 'text-base']" />
-                {{ primaryMobileToolbarItem.label }}
+                {{ mobilePrimaryActionLabel }}
               </Button>
 
               <ButtonGroup v-else-if="primaryMobileToolbarItem" aria-label="移动端表格操作">
@@ -384,7 +386,7 @@ function handleMobileToolbarActionSelect(action: MobileToolbarActionKey) {
                   @click="handleMobileToolbarActionSelect(primaryMobileToolbarItem.key)"
                 >
                   <i :class="[primaryMobileToolbarItem.iconClass, 'text-base']" />
-                  {{ primaryMobileToolbarItem.label }}
+                  {{ mobilePrimaryActionLabel }}
                 </Button>
 
                 <DropdownMenu>
@@ -513,7 +515,7 @@ function handleMobileToolbarActionSelect(action: MobileToolbarActionKey) {
                 @click="handleMobileToolbarActionSelect(primaryMobileToolbarItem.key)"
               >
                 <i :class="[primaryMobileToolbarItem.iconClass, 'text-base']" />
-                {{ primaryMobileToolbarItem.label }}
+                {{ mobilePrimaryActionLabel }}
               </Button>
 
               <ButtonGroup v-else-if="primaryMobileToolbarItem" aria-label="移动端表格操作">
@@ -526,7 +528,7 @@ function handleMobileToolbarActionSelect(action: MobileToolbarActionKey) {
                   @click="handleMobileToolbarActionSelect(primaryMobileToolbarItem.key)"
                 >
                   <i :class="[primaryMobileToolbarItem.iconClass, 'text-base']" />
-                  {{ primaryMobileToolbarItem.label }}
+                  {{ mobilePrimaryActionLabel }}
                 </Button>
 
                 <DropdownMenu>

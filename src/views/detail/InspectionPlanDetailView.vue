@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button"
 import { detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
 import DetailLayout from "@/layouts/DetailLayout.vue"
 import { handleApiError } from "@/lib/api-errors"
+import { toMobileActionLabel } from "@/lib/mobileActionLabel"
 import { deleteInspectionPlan, fetchInspectionPlanDetail, type InspectionPlanListItem } from "@/lib/inspection-plans-api"
 
 const route = useRoute()
@@ -363,7 +364,8 @@ function getRemainingDaysHint(value: unknown) {
             @click="deleteConfirmOpen = true"
           >
             <i class="ri-delete-bin-line text-base" />
-            删除检测计划
+            <span class="sm:hidden">{{ toMobileActionLabel("删除检测计划") }}</span>
+            <span class="hidden sm:inline">删除检测计划</span>
           </Button>
           <AlertDialogContent>
             <AlertDialogHeader>
@@ -398,7 +400,8 @@ function getRemainingDaysHint(value: unknown) {
           @click="goToEdit"
         >
           <i class="ri-edit-line text-base" />
-          编辑检测计划
+          <span class="sm:hidden">{{ toMobileActionLabel("编辑检测计划") }}</span>
+          <span class="hidden sm:inline">编辑检测计划</span>
         </Button>
       </div>
     </template>

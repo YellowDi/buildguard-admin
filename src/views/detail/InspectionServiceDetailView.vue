@@ -32,6 +32,7 @@ import { detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
 import DetailLayout from "@/layouts/DetailLayout.vue"
 import { buildApiRequestUrl } from "@/lib/api"
 import { handleApiError } from "@/lib/api-errors"
+import { toMobileActionLabel } from "@/lib/mobileActionLabel"
 import { getInspectionItemDetail, type InspectionItemRecord } from "@/lib/inspection-items-api"
 import {
   deleteInspectionService,
@@ -749,7 +750,8 @@ function readFileAsDataUrl(file: File) {
             @click="deleteConfirmOpen = true"
           >
             <i class="ri-delete-bin-line text-base" />
-            删除检测服务
+            <span class="sm:hidden">{{ toMobileActionLabel("删除检测服务") }}</span>
+            <span class="hidden sm:inline">删除检测服务</span>
           </Button>
           <AlertDialogContent>
             <AlertDialogHeader>
@@ -784,7 +786,8 @@ function readFileAsDataUrl(file: File) {
           @click="goToEdit"
         >
           <i class="ri-edit-line text-base" />
-          修改检测服务信息
+          <span class="sm:hidden">{{ toMobileActionLabel("修改检测服务信息") }}</span>
+          <span class="hidden sm:inline">修改检测服务信息</span>
         </Button>
       </div>
     </template>

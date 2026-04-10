@@ -9,6 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { toMobileActionLabel } from "@/lib/mobileActionLabel"
 import { cn } from "@/lib/utils"
 
 type DetailTabActionMenuItem = {
@@ -84,7 +85,7 @@ function isMobileItemActive(item: DetailTabActionMenuItem) {
         @click="emit('select', primaryMobileActionItem.key)"
       >
         <i v-if="primaryMobileActionItem.iconClass" :class="[primaryMobileActionItem.iconClass, 'text-base']" />
-        {{ primaryMobileActionItem.label }}
+        {{ toMobileActionLabel(primaryMobileActionItem.label) }}
       </Button>
 
       <ButtonGroup v-else-if="primaryMobileActionItem" aria-label="移动端其他操作">
@@ -101,7 +102,7 @@ function isMobileItemActive(item: DetailTabActionMenuItem) {
           @click="emit('select', primaryMobileActionItem.key)"
         >
           <i v-if="primaryMobileActionItem.iconClass" :class="[primaryMobileActionItem.iconClass, 'text-base']" />
-          {{ primaryMobileActionItem.label }}
+          {{ toMobileActionLabel(primaryMobileActionItem.label) }}
         </Button>
 
         <DropdownMenu>
