@@ -9,12 +9,6 @@ import NumberFilterPopover from "@/components/table-page/TableNumberFilterPopove
 import SortPopover from "@/components/table-page/TableSortPopover.vue"
 import TagFilterPopover from "@/components/table-page/TableTagFilterPopover.vue"
 import TextFilterPopover from "@/components/table-page/TableTextFilterPopover.vue"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { TooltipWrap } from "@/components/ui/tooltip"
 import {
@@ -316,29 +310,16 @@ function handleMobileToolbarActionSelect(action: "filters" | "sort" | "export" |
                 <i :class="['ri-sort-asc text-[17px]', customSortEnabled ? 'text-link' : '']" />
               </button>
 
-              <DropdownMenu>
-                <DropdownMenuTrigger as-child>
-                  <Button variant="outline" class="h-9 gap-1 px-3 text-[14px]">
-                    <i class="ri-more-2-line text-base" />
-                    操作
-                  </Button>
-                </DropdownMenuTrigger>
-
-                <DropdownMenuContent align="end" class="w-52 rounded-xl p-1.5">
-                  <DropdownMenuItem class="rounded-lg px-2.5 py-2" @select="handleMobileToolbarActionSelect('export')">
-                    <i class="ri-download-line mr-2 text-base text-muted-foreground" />
-                    导出
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    v-if="primaryActionLabel"
-                    class="rounded-lg px-2.5 py-2"
-                    @select="handleMobileToolbarActionSelect('primary')"
-                  >
-                    <i class="ri-add-line mr-2 text-base text-muted-foreground" />
-                    {{ primaryActionLabel }}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <Button
+                v-if="primaryActionLabel"
+                variant="default"
+                class="h-9 gap-1 px-3 text-[14px]"
+                :aria-label="primaryActionLabel"
+                @click="handleMobileToolbarActionSelect('primary')"
+              >
+                <i class="ri-add-line text-base" />
+                {{ primaryActionLabel }}
+              </Button>
             </div>
 
             <div class="hidden min-w-0 flex-wrap items-center justify-end gap-1 text-muted-foreground sm:flex sm:flex-nowrap">
@@ -406,7 +387,7 @@ function handleMobileToolbarActionSelect(action: "filters" | "sort" | "export" |
         >
           <div class="flex min-w-0 items-center justify-between gap-2 pb-2 sm:hidden">
             <Select :model-value="activeTabLabel" @update:model-value="handleMobileTabSelect">
-              <SelectTrigger class="h-9 max-w-[calc(100vw-11rem)] rounded-md bg-background text-[14px]">
+              <SelectTrigger class="h-9 max-w-[calc(100vw-16rem)] rounded-md bg-background text-[14px]">
                 <SelectValue placeholder="选择分页" />
               </SelectTrigger>
               <SelectContent>
@@ -445,29 +426,16 @@ function handleMobileToolbarActionSelect(action: "filters" | "sort" | "export" |
                 <i :class="['ri-sort-asc text-[17px]', customSortEnabled ? 'text-link' : '']" />
               </button>
 
-              <DropdownMenu>
-                <DropdownMenuTrigger as-child>
-                  <Button variant="outline" class="h-9 gap-1 px-3 text-[14px]">
-                    <i class="ri-more-2-line text-base" />
-                    操作
-                  </Button>
-                </DropdownMenuTrigger>
-
-                <DropdownMenuContent align="end" class="w-52 rounded-xl p-1.5">
-                  <DropdownMenuItem class="rounded-lg px-2.5 py-2" @select="handleMobileToolbarActionSelect('export')">
-                    <i class="ri-download-line mr-2 text-base text-muted-foreground" />
-                    导出
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    v-if="primaryActionLabel"
-                    class="rounded-lg px-2.5 py-2"
-                    @select="handleMobileToolbarActionSelect('primary')"
-                  >
-                    <i class="ri-add-line mr-2 text-base text-muted-foreground" />
-                    {{ primaryActionLabel }}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <Button
+                v-if="primaryActionLabel"
+                variant="default"
+                class="h-9 gap-1 px-3 text-[14px]"
+                :aria-label="primaryActionLabel"
+                @click="handleMobileToolbarActionSelect('primary')"
+              >
+                <i class="ri-add-line text-base" />
+                {{ primaryActionLabel }}
+              </Button>
             </div>
           </div>
 

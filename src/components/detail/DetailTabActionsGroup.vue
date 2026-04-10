@@ -2,12 +2,6 @@
 import { computed, useSlots } from "vue"
 
 import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
 
 type DetailTabActionMenuItem = {
@@ -40,11 +34,11 @@ const emit = defineEmits<{
 const slots = useSlots()
 const hasLeading = computed(() => Boolean(slots.leading))
 const hasTrailing = computed(() => Boolean(slots.trailing))
-const visibleMobileItems = computed(() => props.mobileItems.filter(item => !item.hidden))
+const visibleMobileItems = computed(() => props.mobileItems.filter(item => !item.hidden && item.key !== "export"))
 const quickMobileItems = computed(() => visibleMobileItems.value.filter(item => item.key === "toggle-filters" || item.key === "toggle-sort"))
-const menuMobileItems = computed(() => visibleMobileItems.value.filter(item => item.key !== "toggle-filters" && item.key !== "toggle-sort"))
+const actionMobileItems = computed(() => visibleMobileItems.value.filter(item => item.key !== "toggle-filters" && item.key !== "toggle-sort"))
 
-function isQuickMobileItemActive(item: DetailTabActionMenuItem) {
+function isMobileItemActive(item: DetailTabActionMenuItem) {
   return item.label.startsWith("隐藏") || item.label.startsWith("关闭")
 }
 </script>
@@ -60,37 +54,27 @@ function isQuickMobileItemActive(item: DetailTabActionMenuItem) {
         :disabled="item.disabled"
         :class="[
           'inline-flex size-9 items-center justify-center rounded-md bg-transparent text-muted-foreground transition-colors hover:bg-surface-tertiary hover:text-foreground active:bg-surface-secondary disabled:pointer-events-none disabled:opacity-50',
-          isQuickMobileItemActive(item) ? 'text-link' : '',
+          item.destructive ? 'text-destructive hover:text-destructive' : '',
+          isMobileItemActive(item) ? 'text-link' : '',
         ]"
         @click="emit('select', item.key)"
       >
         <i v-if="item.iconClass" :class="[item.iconClass, 'text-[17px]']" />
       </button>
 
-      <DropdownMenu v-if="menuMobileItems.length">
-        <DropdownMenuTrigger as-child>
-          <Button variant="outline" size="sm" class="h-9 gap-1 px-3 text-[14px]">
-            <i class="ri-more-2-line text-base" />
-            {{ props.mobileMenuLabel }}
-          </Button>
-        </DropdownMenuTrigger>
-
-        <DropdownMenuContent align="end" class="w-52 rounded-xl p-1.5">
-          <DropdownMenuItem
-            v-for="item in menuMobileItems"
-            :key="item.key"
-            :disabled="item.disabled"
-            class="rounded-lg px-2.5 py-2"
-            @select="emit('select', item.key)"
-          >
-            <i
-              v-if="item.iconClass"
-              :class="[item.iconClass, 'mr-2 text-base', item.destructive ? 'text-destructive' : 'text-muted-foreground']"
-            />
-            <span :class="item.destructive ? 'text-destructive' : ''">{{ item.label }}</span>
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <Button
+        v-for="item in actionMobileItems"
+        :key="item.key"
+        :variant="item.destructive ? 'outline' : 'default'"
+        class="h-9 gap-1 px-3 text-[14px]"
+        :class="item.destructive ? 'border-destructive/30 bg-background text-destructive shadow-none hover:bg-destructive/5 hover:text-destructive' : ''"
+        :disabled="item.disabled"
+        :aria-label="item.label"
+        @click="emit('select', item.key)"
+      >
+        <i v-if="item.iconClass" :class="[item.iconClass, 'text-base']" />
+        {{ item.label }}
+      </Button>
     </div>
 
     <div

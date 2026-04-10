@@ -128,7 +128,7 @@ function handleTabSelect(value: unknown) {
           <div v-if="hasTabs" class="mt-4 border-b border-border text-muted-foreground">
             <div class="flex min-w-0 items-center justify-between gap-2 pb-2 sm:hidden">
               <Select :model-value="activeTabId" @update:model-value="handleTabSelect">
-                <SelectTrigger class="h-9 max-w-[calc(100vw-11rem)] rounded-md bg-background text-[14px]">
+                <SelectTrigger class="h-9 max-w-[calc(100vw-16rem)] rounded-md bg-background text-[14px]">
                   <SelectValue placeholder="选择分页" />
                 </SelectTrigger>
                 <SelectContent>
