@@ -330,13 +330,15 @@ function handleMobileToolbarActionSelect(action: MobileToolbarActionKey) {
           <div
             v-if="hasHeading"
             :class="[
-              'min-w-0',
+              'min-w-0 flex flex-1 gap-x-2',
               hasTabs
-                ? 'flex flex-wrap items-baseline gap-x-2 gap-y-1'
-                : 'flex flex-1 items-baseline gap-x-2',
+                ? 'flex-nowrap items-baseline gap-y-1 sm:flex-wrap'
+                : 'items-baseline',
             ]"
           >
-            <h1 :class="['min-w-0 text-[40px] leading-none font-semibold text-foreground sm:text-[48px]', hasTabs ? '' : 'truncate']">{{ title }}</h1>
+            <h1 class="min-w-0 truncate text-[32px] leading-none font-semibold text-foreground sm:text-[48px] sm:overflow-visible sm:whitespace-normal sm:text-clip">
+              {{ title }}
+            </h1>
             <span v-if="description" class="hidden text-[18px] leading-none font-normal text-muted-foreground sm:inline sm:text-[20px]">{{ description }}</span>
           </div>
 

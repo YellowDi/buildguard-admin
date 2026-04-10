@@ -116,8 +116,7 @@ function handleTabSelect(value: unknown) {
               :title="props.title"
               :subtitle="props.subtitle"
               :has-actions="false"
-              layout-class="min-w-0 flex-1 justify-center"
-              title-class="min-h-8 items-center"
+              layout-class="min-w-0 flex-1"
             >
               <template #leading>
                 <button

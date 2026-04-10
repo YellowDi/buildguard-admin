@@ -8,6 +8,7 @@ const props = withDefaults(defineProps<{
   subtitle?: string
   as?: string
   hasActions?: boolean
+  singleLineTitleOnMobile?: boolean
   layoutClass?: string
   titleClass?: string
   titleTextClass?: string
@@ -17,6 +18,7 @@ const props = withDefaults(defineProps<{
   subtitle: "",
   as: "h1",
   hasActions: undefined,
+  singleLineTitleOnMobile: true,
   layoutClass: "",
   titleClass: "",
   titleTextClass: "",
@@ -45,11 +47,22 @@ const hasActions = computed(() => props.hasActions ?? Boolean(slots.actions))
         <component
           :is="props.as"
           :class="cn(
-            'flex flex-wrap items-end gap-x-3 gap-y-2 text-[24px] tracking-[-0.04em] text-foreground md:text-[28px]',
+            'text-[22px] tracking-[-0.04em] text-foreground md:text-[28px]',
+            props.singleLineTitleOnMobile
+              ? 'flex min-w-0 flex-nowrap items-end gap-x-3 gap-y-2 sm:flex-wrap'
+              : 'flex flex-wrap items-end gap-x-3 gap-y-2',
             props.titleClass,
           )"
         >
-          <span :class="cn('font-semibold leading-none', props.titleTextClass)">
+          <span
+            :class="cn(
+              'min-w-0 font-semibold leading-none',
+              props.singleLineTitleOnMobile
+                ? 'truncate sm:overflow-visible sm:whitespace-normal sm:text-clip'
+                : '',
+              props.titleTextClass,
+            )"
+          >
             {{ props.title }}
           </span>
           <span

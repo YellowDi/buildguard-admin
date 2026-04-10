@@ -107,8 +107,7 @@ const primaryActionText = "确认"
         <SectionHeader
           :title="title"
           :has-actions="false"
-          layout-class="min-w-0 flex-1 justify-center"
-          title-class="min-h-8 items-center"
+          layout-class="min-w-0 flex-1"
         >
           <template #leading>
             <TooltipWrap content="返回">
