@@ -259,7 +259,7 @@ async function loadFormOptions() {
       }
 
       if (!options.some(item => item.uuid === form.customerUuid)) {
-        form.customerUuid = options[0]?.uuid ?? ""
+        form.customerUuid = ""
       }
     } catch (error) {
       loadError.value = handleApiError(error, {
@@ -273,7 +273,11 @@ async function loadFormOptions() {
   }
 
   if (!customerUuid.value) {
-    loadError.value = isEditMode.value ? "所属客户信息缺失，无法编辑建筑。" : "所属客户信息缺失，无法创建建筑。"
+    if (!isStandaloneCreate) {
+      loadError.value = isEditMode.value ? "所属客户信息缺失，无法编辑建筑。" : "所属客户信息缺失，无法创建建筑。"
+    }
+
+    initialFormState.value = createEmptyForm()
     return
   }
 
@@ -497,7 +501,15 @@ watch(
 watch(
   () => form.customerUuid,
   (nextCustomerUuid, previousCustomerUuid) => {
-    if (isEditMode.value || routeCustomerUuid.value || !nextCustomerUuid || nextCustomerUuid === previousCustomerUuid) {
+    if (isEditMode.value || routeCustomerUuid.value || nextCustomerUuid === previousCustomerUuid) {
+      return
+    }
+
+    if (!nextCustomerUuid) {
+      customerName.value = ""
+      loadError.value = ""
+      parkOptions.value = []
+      form.parkUuid = ""
       return
     }
 

@@ -249,7 +249,7 @@ async function loadInitialOptions() {
 
     const preferredCustomerUuid = customerOptions.value.some(item => item.uuid === queryCustomerUuid.value)
       ? queryCustomerUuid.value
-      : customerOptions.value[0]?.uuid ?? ""
+      : ""
 
     form.customerUuid = preferredCustomerUuid
 

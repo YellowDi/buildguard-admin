@@ -21,6 +21,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { handleApiError } from "@/lib/api-errors"
 import { fetchCustomerDetail, fetchCustomers, type CustomerListItem } from "@/lib/customers-api"
 import { fetchInspectionPlans, type InspectionPlanListItem } from "@/lib/inspection-plans-api"
+import { fetchInspectionServices, type InspectionServiceListItem } from "@/lib/inspection-services-api"
 import { fetchParks, type ParkListItem } from "@/lib/parks-api"
 import { createRepairWorkOrder, createWorkOrder, updateWorkOrder } from "@/lib/work-orders-api"
 
@@ -34,6 +35,7 @@ type QuickNavItem = {
 type WorkOrderFormState = {
   customerUuid: string
   planUuid: string
+  serviceUuid: string
   packageName: string
   deadline: string
   status: string
@@ -48,9 +50,16 @@ type WorkOrderFormState = {
 type PlanOption = {
   uuid: string
   name: string
+  serviceUuid: string
+  serviceName: string
 }
 
 type CustomerOption = {
+  uuid: string
+  name: string
+}
+
+type ServiceOption = {
   uuid: string
   name: string
 }
@@ -66,21 +75,16 @@ const props = withDefaults(defineProps<{
   kind: "inspection",
 })
 
-const INSPECTION_STATUS_OPTIONS = [
-  { value: "1", label: "待指派" },
-  { value: "2", label: "待开始" },
-  { value: "3", label: "进行中" },
-  { value: "4", label: "报告生成中" },
-  { value: "5", label: "已结单" },
-] as const
+const DEFAULT_INSPECTION_STATUS = "1"
 
 function createEmptyForm(): WorkOrderFormState {
   return {
     customerUuid: "",
     planUuid: "",
+    serviceUuid: "",
     packageName: "",
     deadline: "",
-    status: "1",
+    status: DEFAULT_INSPECTION_STATUS,
     remark: "",
     parkUuid: "",
     title: "",
@@ -101,6 +105,7 @@ const customerLoading = ref(false)
 const relatedOptionsLoading = ref(false)
 const customerOptions = ref<CustomerOption[]>([])
 const planOptions = ref<PlanOption[]>([])
+const serviceOptions = ref<ServiceOption[]>([])
 const parkOptions = ref<ParkOption[]>([])
 const anchorItems = ref<QuickNavItem[]>([])
 const activeNavId = ref("")
@@ -110,7 +115,6 @@ let observer: IntersectionObserver | null = null
 let observerActive = false
 let suppressCustomerWatch = false
 
-const isInspectionKind = computed(() => props.kind === "inspection")
 const isRepairKind = computed(() => props.kind === "repair")
 const isEditMode = computed(() => route.name === "inspection-work-order-edit")
 const routeCustomerUuid = computed(() => {
@@ -127,7 +131,6 @@ const queryPlanUuid = computed(() => typeof route.query.planUuid === "string" ? 
 const queryPlanName = computed(() => typeof route.query.planName === "string" ? route.query.planName.trim() : "")
 const queryPackageName = computed(() => typeof route.query.packageName === "string" ? route.query.packageName.trim() : "")
 const queryDeadline = computed(() => typeof route.query.deadline === "string" ? route.query.deadline.trim() : "")
-const queryStatus = computed(() => typeof route.query.status === "string" ? route.query.status.trim() : "")
 const queryRemark = computed(() => typeof route.query.remark === "string" ? route.query.remark : "")
 const queryParkUuid = computed(() => typeof route.query.parkUuid === "string" ? route.query.parkUuid.trim() : "")
 const queryParkName = computed(() => typeof route.query.parkName === "string" ? route.query.parkName.trim() : "")
@@ -165,9 +168,8 @@ const canSubmit = computed(() => {
   return Boolean(
     normalizeText(form.customerUuid)
     && normalizeText(form.planUuid)
-    && normalizeText(form.packageName)
+    && normalizeText(form.serviceUuid)
     && normalizeText(form.deadline)
-    && normalizeText(form.status)
     && !submitting.value
     && !relatedOptionsLoading.value,
   )
@@ -301,8 +303,8 @@ async function handleInspectionCreateSubmit() {
     return
   }
 
-  if (!normalizeText(form.packageName)) {
-    toast.error("请填写检测服务名称")
+  if (!normalizeText(form.serviceUuid)) {
+    toast.error("请选择检测服务")
     return
   }
 
@@ -314,12 +316,20 @@ async function handleInspectionCreateSubmit() {
   submitting.value = true
 
   try {
+    const selectedService = serviceOptions.value.find(item => item.uuid === normalizeText(form.serviceUuid))
+    const packageName = selectedService?.name || normalizeText(form.packageName)
+
+    if (!packageName) {
+      toast.error("检测服务信息缺失")
+      return
+    }
+
     const payload = {
       PlanUuid: normalizeText(form.planUuid),
-      PackageName: normalizeText(form.packageName),
+      PackageName: packageName,
       CustomerUuid: normalizeText(form.customerUuid),
       Deadline: normalizeText(form.deadline),
-      Status: Number(form.status),
+      Status: Number(DEFAULT_INSPECTION_STATUS),
       Remark: getOptionalText(form.remark),
     }
     const result = await createWorkOrder(payload)
@@ -428,6 +438,7 @@ async function loadFormContext() {
   loadError.value = ""
   customerOptions.value = []
   planOptions.value = []
+  serviceOptions.value = []
   parkOptions.value = []
 
   try {
@@ -461,15 +472,21 @@ function loadEditContext() {
     ...createEmptyForm(),
     customerUuid: normalizeRouteField(queryCustomerUuid.value),
     planUuid: normalizeRouteField(queryPlanUuid.value),
+    serviceUuid: "",
     packageName: normalizeRouteField(queryPackageName.value),
     deadline: normalizeRouteField(queryDeadline.value),
-    status: queryStatus.value || "1",
+    status: DEFAULT_INSPECTION_STATUS,
     remark: normalizeRouteField(queryRemark.value),
   }
 
   customerName.value = queryCustomerName.value || "当前客户"
   planOptions.value = queryPlanUuid.value
-    ? [{ uuid: queryPlanUuid.value, name: queryPlanName.value || queryPlanUuid.value }]
+    ? [{
+        uuid: queryPlanUuid.value,
+        name: queryPlanName.value || queryPlanUuid.value,
+        serviceUuid: "",
+        serviceName: normalizeRouteField(queryPackageName.value),
+      }]
     : []
 
   Object.assign(form, nextForm)
@@ -488,8 +505,7 @@ async function loadFixedCustomerContext(customerUuid: string) {
       await loadParksForCustomer(customerUuid)
       applyRepairPrefill()
     } else {
-      await loadPlansForCustomer(customerUuid)
-      applyInspectionPrefill()
+      await loadRelatedOptionsForCustomer(customerUuid)
     }
 
     initialFormState.value = { ...form }
@@ -510,14 +526,21 @@ async function loadSelectableCustomerContext() {
     }
 
     const preferredCustomerUuid = normalizeText(queryCustomerUuid.value) || normalizeText(form.customerUuid)
-    const matchedCustomer = customerOptions.value.find(item => item.uuid === preferredCustomerUuid) ?? customerOptions.value[0]
+    const nextCustomer = customerOptions.value.find(item => item.uuid === preferredCustomerUuid)
 
     suppressCustomerWatch = true
-    form.customerUuid = matchedCustomer?.uuid ?? ""
-    customerName.value = matchedCustomer?.name ?? "当前客户"
+    form.customerUuid = nextCustomer?.uuid ?? ""
+    customerName.value = nextCustomer?.name ?? ""
     form.planUuid = ""
+    form.serviceUuid = ""
+    form.packageName = ""
     form.parkUuid = ""
     suppressCustomerWatch = false
+
+    if (!form.customerUuid) {
+      initialFormState.value = createEmptyForm()
+      return
+    }
 
     relatedOptionsLoading.value = true
     await loadRelatedOptionsForCustomer(form.customerUuid, true)
@@ -535,7 +558,10 @@ async function loadRelatedOptionsForCustomer(customerUuid: string, useRoutePrefi
     return
   }
 
-  await loadPlansForCustomer(customerUuid)
+  await Promise.all([
+    loadPlansForCustomer(customerUuid),
+    loadServicesForCustomer(customerUuid),
+  ])
   applyInspectionPrefill(useRoutePrefill)
 }
 
@@ -551,6 +577,21 @@ async function loadPlansForCustomer(customerUuid: string) {
 
   const plans = await fetchAllInspectionPlans(normalizedCustomerUuid)
   planOptions.value = plans.map(mapPlanOption)
+}
+
+async function loadServicesForCustomer(customerUuid: string) {
+  const normalizedCustomerUuid = normalizeText(customerUuid)
+
+  serviceOptions.value = []
+  form.serviceUuid = ""
+  form.packageName = ""
+
+  if (!normalizedCustomerUuid) {
+    return
+  }
+
+  const services = await fetchAllInspectionServices(normalizedCustomerUuid)
+  serviceOptions.value = services.map(mapServiceOption).filter(item => item.uuid)
 }
 
 async function loadParksForCustomer(customerUuid: string) {
@@ -575,10 +616,23 @@ function applyInspectionPrefill(useRoutePrefill = false) {
     ? preferredPlanUuid
     : planOptions.value[0]?.uuid ?? preferredPlanUuid
 
+  const selectedPlan = planOptions.value.find(item => item.uuid === form.planUuid)
+  const matchedQueryService = useRoutePrefill
+    ? serviceOptions.value.find(item => item.name === normalizeText(queryPackageName.value))
+    : undefined
+  const preferredServiceUuid = selectedPlan?.serviceUuid
+    || matchedQueryService?.uuid
+    || form.serviceUuid
+  const hasPreferredService = preferredServiceUuid && serviceOptions.value.some(item => item.uuid === preferredServiceUuid)
+
+  form.serviceUuid = hasPreferredService
+    ? preferredServiceUuid
+    : serviceOptions.value[0]?.uuid ?? ""
+  syncPackageNameWithSelectedService()
+
   if (useRoutePrefill) {
-    form.packageName = normalizeRouteField(queryPackageName.value)
     form.deadline = normalizeRouteField(queryDeadline.value)
-    form.status = queryStatus.value || "1"
+    form.status = DEFAULT_INSPECTION_STATUS
     form.remark = normalizeRouteField(queryRemark.value)
   }
 }
@@ -635,6 +689,36 @@ async function fetchAllInspectionPlans(customerUuid: string) {
   }
 
   return dedupePlans(allItems)
+}
+
+async function fetchAllInspectionServices(customerUuid: string) {
+  const pageSize = 200
+  const allItems: InspectionServiceListItem[] = []
+  let pageNum = 1
+  let total = 0
+
+  while (pageNum <= 20) {
+    const result = await fetchInspectionServices({
+      CustomerUuid: customerUuid,
+      PageNum: pageNum,
+      PageSize: pageSize,
+    })
+
+    if (pageNum === 1) {
+      total = result.total
+    }
+
+    const matchedItems = result.list.filter(item => normalizeText(item.CustomerUuid) === customerUuid)
+    allItems.push(...matchedItems)
+
+    if (!result.list.length || (total > 0 && pageNum * pageSize >= total)) {
+      break
+    }
+
+    pageNum += 1
+  }
+
+  return dedupeServices(allItems)
 }
 
 async function fetchAllParks(customerUuid: string) {
@@ -725,6 +809,21 @@ function dedupeParks(items: ParkListItem[]) {
   })
 }
 
+function dedupeServices(items: InspectionServiceListItem[]) {
+  const seen = new Set<string>()
+
+  return items.filter((item) => {
+    const uuid = normalizeText(item.Uuid)
+
+    if (!uuid || seen.has(uuid)) {
+      return false
+    }
+
+    seen.add(uuid)
+    return true
+  })
+}
+
 function dedupeCustomers(items: CustomerListItem[]) {
   const seen = new Set<string>()
 
@@ -744,6 +843,15 @@ function mapPlanOption(item: InspectionPlanListItem): PlanOption {
   return {
     uuid: normalizeText(item.Uuid),
     name: normalizeText(item.ServiceName) || `检测计划 ${normalizeText(item.Id) || "-"}`,
+    serviceUuid: normalizeText(item.ServiceUuid),
+    serviceName: normalizeText(item.ServiceName),
+  }
+}
+
+function mapServiceOption(item: InspectionServiceListItem): ServiceOption {
+  return {
+    uuid: normalizeText(item.Uuid),
+    name: normalizeText(item.Name) || `检测服务 ${normalizeText(item.Id) || "-"}`,
   }
 }
 
@@ -791,11 +899,17 @@ function parseIntegerField(value: string) {
   return Number.isInteger(parsed) ? parsed : null
 }
 
+function syncPackageNameWithSelectedService() {
+  const selectedService = serviceOptions.value.find(item => item.uuid === normalizeText(form.serviceUuid))
+  form.packageName = selectedService?.name ?? ""
+}
+
 function resetLocalStateForRoute() {
   loadError.value = ""
   customerName.value = ""
   customerOptions.value = []
   planOptions.value = []
+  serviceOptions.value = []
   parkOptions.value = []
   Object.assign(form, createEmptyForm())
 
@@ -879,8 +993,20 @@ watch(
       return
     }
 
+    if (!normalizeText(nextCustomerUuid)) {
+      customerName.value = ""
+      planOptions.value = []
+      serviceOptions.value = []
+      parkOptions.value = []
+      form.planUuid = ""
+      form.serviceUuid = ""
+      form.packageName = ""
+      form.parkUuid = ""
+      return
+    }
+
     const matchedCustomer = customerOptions.value.find(item => item.uuid === normalizeText(nextCustomerUuid))
-    customerName.value = matchedCustomer?.name ?? "当前客户"
+    customerName.value = matchedCustomer?.name ?? ""
 
     relatedOptionsLoading.value = true
 
@@ -889,6 +1015,39 @@ watch(
     } finally {
       relatedOptionsLoading.value = false
     }
+  },
+)
+
+watch(
+  () => form.planUuid,
+  (nextPlanUuid, previousPlanUuid) => {
+    if (isRepairKind.value || isEditMode.value || nextPlanUuid === previousPlanUuid) {
+      return
+    }
+
+    const selectedPlan = planOptions.value.find(item => item.uuid === normalizeText(nextPlanUuid))
+
+    if (!selectedPlan) {
+      return
+    }
+
+    const matchedService = serviceOptions.value.find(item => item.uuid === selectedPlan.serviceUuid)
+      ?? serviceOptions.value.find(item => item.name === selectedPlan.serviceName)
+
+    if (matchedService) {
+      form.serviceUuid = matchedService.uuid
+    }
+  },
+)
+
+watch(
+  () => form.serviceUuid,
+  () => {
+    if (isRepairKind.value || isEditMode.value) {
+      return
+    }
+
+    syncPackageNameWithSelectedService()
   },
 )
 </script>
@@ -1054,9 +1213,9 @@ watch(
                 class="w-full"
                 @focus="handleFocus('section-plan')"
               />
-              <Select v-else-if="planOptions.length" v-model="form.planUuid" :disabled="relatedOptionsLoading">
+              <Select v-else v-model="form.planUuid" :disabled="relatedOptionsLoading || !form.customerUuid || !planOptions.length">
                 <SelectTrigger id="work-order-plan" class="w-full" @focus="handleFocus('section-plan')">
-                  <SelectValue :placeholder="relatedOptionsLoading ? '正在加载检测计划...' : '请选择检测计划'" />
+                  <SelectValue :placeholder="!form.customerUuid ? '请先选择所属客户' : relatedOptionsLoading ? '正在加载检测计划...' : planOptions.length ? '请选择检测计划' : '当前客户暂无检测计划'" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem v-for="plan in planOptions" :key="plan.uuid" :value="plan.uuid">
@@ -1064,32 +1223,31 @@ watch(
                   </SelectItem>
                 </SelectContent>
               </Select>
-              <Input
-                v-else
-                id="work-order-plan"
-                v-model="form.planUuid"
-                required
-                :placeholder="relatedOptionsLoading ? '正在加载检测计划...' : '请输入检测计划 UUID'"
-                class="w-full"
-                @focus="handleFocus('section-plan')"
-              />
             </FormFieldSection>
 
             <FormFieldSection
               id="section-package"
               quick-nav-label="检测服务名称"
               label="检测服务名称"
-              label-for="work-order-package"
             >
               <Input
+                v-if="isEditMode"
                 id="work-order-package"
-                v-model="form.packageName"
-                :disabled="isEditMode"
-                :required="!isEditMode"
-                :placeholder="isEditMode ? '-' : '请输入检测服务名称'"
+                :model-value="queryPackageName || form.packageName || '-'"
+                disabled
                 class="w-full"
                 @focus="handleFocus('section-package')"
               />
+              <Select v-else v-model="form.serviceUuid" :disabled="relatedOptionsLoading || !form.customerUuid || !serviceOptions.length">
+                <SelectTrigger id="work-order-package" class="w-full" @focus="handleFocus('section-package')">
+                  <SelectValue :placeholder="!form.customerUuid ? '请先选择所属客户' : relatedOptionsLoading ? '正在加载检测服务...' : serviceOptions.length ? '请选择检测服务' : '当前客户暂无检测服务'" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem v-for="service in serviceOptions" :key="service.uuid" :value="service.uuid">
+                    {{ service.name }}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
             </FormFieldSection>
 
             <FormFieldSection
@@ -1105,23 +1263,6 @@ watch(
                 :placeholder="isEditMode ? '-' : '请选择截止时间'"
                 @focus="handleFocus('section-deadline')"
               />
-            </FormFieldSection>
-
-            <FormFieldSection
-              id="section-status"
-              quick-nav-label="状态"
-              label="状态"
-            >
-              <Select v-model="form.status" :disabled="isEditMode">
-                <SelectTrigger id="work-order-status" class="w-full" @focus="handleFocus('section-status')">
-                  <SelectValue placeholder="请选择状态" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem v-for="status in INSPECTION_STATUS_OPTIONS" :key="status.value" :value="status.value">
-                    {{ status.label }}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
             </FormFieldSection>
 
             <FormFieldSection

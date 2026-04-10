@@ -1235,7 +1235,7 @@ function resolvePreferredCustomerUuid() {
     return queryCustomerUuid.value
   }
 
-  return customerOptions.value[0]?.uuid ?? ""
+  return ""
 }
 
 function mapCustomerOption(item: CustomerListItem): CustomerOption {
