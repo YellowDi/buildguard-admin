@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from "vue"
+import { ref, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { toast } from "vue-sonner"
 
@@ -21,14 +21,19 @@ import {
 } from "@/components/ui/pagination"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 import { handleApiError } from "@/lib/api-errors"
 import { fetchBuildings } from "@/lib/buildings-api"
+import { primeParkCustomerCache, resolveParkCustomerMap } from "@/lib/park-customer-cache"
 
 type BuildingRecord = {
   id: string
   uuid: string
   parkUuid: string
   parkName: string
+  customerUuid: string
+  customerName: string
+  customerLoading: boolean
   buildingName: string
   builtTime: string
   operationTime: string
@@ -40,7 +45,7 @@ type BuildingRecord = {
   updatedAt: string
 }
 
-type LinkedDetailSheetKind = "park"
+type LinkedDetailSheetKind = "customer" | "park"
 
 const buildings = ref<BuildingRecord[]>([])
 const loading = ref(false)
@@ -141,6 +146,12 @@ const schema: TablePageSchema<BuildingRecord> = {
         defaultVisible: true,
       },
       sort: true,
+    },
+    {
+      key: "customerName",
+      label: "所属客户",
+      filterType: "text",
+      slot: "cell-customerName",
     },
     {
       key: "buildingArea",
@@ -281,6 +292,19 @@ function handleOpenParkDetail(row: unknown) {
   activeLinkedDetailCustomerUuid.value = ""
 }
 
+function handleOpenCustomerDetail(row: unknown) {
+  const currentRow = row as BuildingRecord
+
+  if (!currentRow.customerUuid) {
+    toast.error("当前建筑缺少所属客户信息，无法打开详情")
+    return
+  }
+
+  activeLinkedDetailKind.value = "customer"
+  activeLinkedDetailUuid.value = currentRow.customerUuid
+  activeLinkedDetailCustomerUuid.value = ""
+}
+
 function handleLinkedDetailSheetOpenChange(open: boolean) {
   if (!open) {
     activeLinkedDetailKind.value = null
@@ -312,16 +336,29 @@ async function loadBuildings() {
     }
 
     total.value = buildingsResult.total
-    buildings.value = buildingsResult.list.map((item, index) => {
+    const nextRows = buildingsResult.list.map((item, index) => {
       const uuid = toText(item.Uuid, `building-${index + 1}`)
       const parkUuid = toText(item.ParkUuid)
+      const directCustomerUuid = toText(item.CustomerUuid)
+      const directCustomerName = toText(item.CorpName || item.CustomerName)
       const buildingAreaValue = parseAreaValue(item.BuildingArea ?? item.BuildArea)
+      const needsCustomerHydration = Boolean(parkUuid) && (!directCustomerUuid || !directCustomerName)
+
+      if (parkUuid && directCustomerUuid && directCustomerName) {
+        primeParkCustomerCache(parkUuid, {
+          customerUuid: directCustomerUuid,
+          customerName: directCustomerName,
+        })
+      }
 
       return {
         id: uuid,
         uuid,
         parkUuid,
         parkName: toText(item.ParkName, "未关联园区"),
+        customerUuid: directCustomerUuid,
+        customerName: directCustomerName || (parkUuid ? "未关联客户" : "-"),
+        customerLoading: needsCustomerHydration,
         buildingName: toText(item.Name, "未命名建筑"),
         builtTime: toText(item.BuiltTime, "-"),
         operationTime: toText(item.OperationTime, "-"),
@@ -333,6 +370,17 @@ async function loadBuildings() {
         updatedAt: toText(item.UpdatedAt || item.CreatedAt, "-"),
       }
     })
+    const pendingParkUuids = [...new Set(
+      nextRows
+        .filter(row => row.customerLoading && row.parkUuid)
+        .map(row => row.parkUuid),
+    )]
+
+    buildings.value = nextRows
+
+    if (pendingParkUuids.length) {
+      void hydrateBuildingCustomers(requestId, pendingParkUuids)
+    }
 
     const maxPage = Math.max(1, Math.ceil((buildingsResult.total || 0) / pageSize.value))
 
@@ -354,6 +402,45 @@ async function loadBuildings() {
     if (requestId === latestRequestId) {
       loading.value = false
     }
+  }
+}
+
+async function hydrateBuildingCustomers(requestId: number, parkUuids: string[]) {
+  try {
+    const customerMap = await resolveParkCustomerMap(parkUuids)
+
+    if (requestId !== latestRequestId) {
+      return
+    }
+
+    buildings.value = buildings.value.map((row) => {
+      if (!row.customerLoading) {
+        return row
+      }
+
+      const resolvedCustomer = customerMap.get(row.parkUuid)
+      const customerUuid = row.customerUuid || resolvedCustomer?.customerUuid || ""
+      const customerName = row.customerName && row.customerName !== "未关联客户"
+        ? row.customerName
+        : resolvedCustomer?.customerName || (row.parkUuid ? "未关联客户" : "-")
+
+      return {
+        ...row,
+        customerUuid,
+        customerName: customerUuid && customerName === "未关联客户" ? "未命名客户" : customerName,
+        customerLoading: false,
+      }
+    })
+  } catch {
+    if (requestId !== latestRequestId) {
+      return
+    }
+
+    buildings.value = buildings.value.map(row => ({
+      ...row,
+      customerName: row.customerUuid ? row.customerName || "未命名客户" : row.parkUuid ? "未关联客户" : "-",
+      customerLoading: false,
+    }))
   }
 }
 
@@ -420,11 +507,27 @@ function toText(value: unknown, fallback = "") {
         <button
           type="button"
           class="inline-flex max-w-full items-center gap-1 text-left text-[#2B67F6] transition-colors hover:text-[#1D4ED8]"
-          @click="handleOpenParkDetail(row)"
+          @click.stop="handleOpenParkDetail(row)"
         >
           <span class="truncate">{{ row.parkName }}</span>
           <i class="ri-arrow-right-up-line shrink-0 text-sm" />
         </button>
+      </template>
+
+      <template #cell-customerName="{ row }">
+        <div v-if="row.customerLoading" class="flex max-w-full items-center">
+          <Skeleton class="h-4 w-24 max-w-full" />
+        </div>
+        <button
+          v-else-if="row.customerUuid"
+          type="button"
+          class="inline-flex max-w-full items-center gap-1 text-left text-[#2B67F6] transition-colors hover:text-[#1D4ED8]"
+          @click.stop="handleOpenCustomerDetail(row)"
+        >
+          <span class="truncate">{{ row.customerName }}</span>
+          <i class="ri-arrow-right-up-line shrink-0 text-sm" />
+        </button>
+        <span v-else class="truncate text-muted-foreground">{{ row.customerName }}</span>
       </template>
 
       <template #footer>

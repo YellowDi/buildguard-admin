@@ -14,6 +14,9 @@ export type BuildingListItem = {
   Id?: number
   ParkUuid?: string
   ParkName?: string
+  CustomerUuid?: string
+  CorpName?: string
+  CustomerName?: string
   Name?: string
   BuiltTime?: string
   OperationTime?: string
