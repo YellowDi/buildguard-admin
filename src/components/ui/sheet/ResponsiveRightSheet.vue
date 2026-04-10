@@ -54,7 +54,9 @@ const hasDescription = computed(() => {
 
   return Boolean(props.description?.trim())
 })
-const hasExplicitAriaDescribedBy = computed(() => Object.hasOwn(attrs, "aria-describedby"))
+const hasExplicitAriaDescribedBy = computed(() =>
+  Object.prototype.hasOwnProperty.call(attrs, "aria-describedby"),
+)
 const contentAriaDescribedBy = computed(() => {
   if (hasExplicitAriaDescribedBy.value || hasDescription.value) {
     return undefined

@@ -335,13 +335,28 @@ function handleMobileToolbarActionSelect(action: MobileToolbarActionKey) {
               'min-w-0 flex flex-1 gap-x-2',
               hasTabs
                 ? 'flex-nowrap items-baseline gap-y-1 sm:flex-wrap'
-                : 'items-baseline',
+                : 'items-baseline overflow-hidden',
             ]"
           >
-            <h1 class="min-w-0 truncate text-[32px] leading-none font-semibold text-foreground sm:text-[48px] sm:overflow-visible sm:whitespace-normal sm:text-clip">
+            <h1
+              :class="[
+                'leading-none font-semibold text-foreground',
+                hasTabs
+                  ? 'min-w-0 truncate text-[32px] sm:overflow-visible sm:whitespace-normal sm:text-clip sm:text-[48px]'
+                  : 'shrink-0 whitespace-nowrap text-[32px] sm:text-[40px] xl:text-[48px]',
+              ]"
+            >
               {{ title }}
             </h1>
-            <span v-if="description" class="hidden text-[18px] leading-none font-normal text-muted-foreground sm:inline sm:text-[20px]">{{ description }}</span>
+            <span
+              v-if="description"
+              :class="[
+                'hidden text-[18px] leading-none font-normal text-muted-foreground sm:inline sm:text-[20px]',
+                hasTabs ? '' : 'min-w-0 flex-1 truncate',
+              ]"
+            >
+              {{ description }}
+            </span>
           </div>
 
           <div
