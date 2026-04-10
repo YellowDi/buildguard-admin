@@ -9,6 +9,13 @@ import NumberFilterPopover from "@/components/table-page/TableNumberFilterPopove
 import SortPopover from "@/components/table-page/TableSortPopover.vue"
 import TagFilterPopover from "@/components/table-page/TableTagFilterPopover.vue"
 import TextFilterPopover from "@/components/table-page/TableTextFilterPopover.vue"
+import { ButtonGroup } from "@/components/ui/button-group"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { TooltipWrap } from "@/components/ui/tooltip"
 import {
@@ -27,6 +34,8 @@ import type {
   TagFilterState,
   TextFilterState,
 } from "@/components/table-page/types"
+
+type MobileToolbarActionKey = "filters" | "sort" | "export" | "primary"
 
 const props = withDefaults(defineProps<{
   title: string
@@ -82,6 +91,8 @@ const openPopover = ref<string | null>(null)
 const sortPopoverSource = ref<"toolbar" | "chip">("toolbar")
 const ghostIconButtonClass =
   "inline-flex size-8 items-center justify-center rounded-md bg-transparent text-muted-foreground transition-colors hover:bg-surface-tertiary hover:text-foreground active:bg-surface-secondary"
+const mobileTabSelectTriggerClass =
+  "h-8 max-w-[calc(100vw-11rem)] rounded-full bg-background px-3 text-[14px]"
 const ghostIconButtonActiveClass =
   "bg-transparent text-link hover:bg-surface-tertiary active:bg-surface-secondary"
 
@@ -94,6 +105,46 @@ const hasTabs = computed(() => props.tabs.length > 0)
 const hasHeading = computed(() => Boolean(props.title || props.description))
 const hasTopSurface = computed(() => hasHeading.value || hasTabs.value || props.showToolbarActions)
 const activeTabLabel = computed(() => props.tabs.find(tab => tab.active)?.label ?? props.tabs[0]?.label ?? "")
+const mobileToolbarItems = computed<Array<{
+  key: MobileToolbarActionKey
+  label: string
+  iconClass: string
+  active?: boolean
+}>>(() => {
+  const items: Array<{
+    key: MobileToolbarActionKey
+    label: string
+    iconClass: string
+    active?: boolean
+  }> = [
+    {
+      key: "filters",
+      label: props.showControls ? "隐藏筛选" : "显示筛选",
+      iconClass: "ri-filter-3-line",
+      active: props.showControls,
+    },
+    {
+      key: "sort",
+      label: props.customSortEnabled ? "关闭排序" : "启用排序",
+      iconClass: "ri-sort-asc",
+      active: props.customSortEnabled,
+    },
+  ]
+
+  if (props.primaryActionLabel) {
+    items.push({
+      key: "primary",
+      label: props.primaryActionLabel,
+      iconClass: "ri-add-line",
+    })
+  }
+
+  return items
+})
+const quickMobileToolbarItems = computed(() => mobileToolbarItems.value.filter(item => item.key === "filters" || item.key === "sort"))
+const actionMobileToolbarItems = computed(() => mobileToolbarItems.value.filter(item => item.key !== "filters" && item.key !== "sort"))
+const primaryMobileToolbarItem = computed(() => actionMobileToolbarItems.value[actionMobileToolbarItems.value.length - 1] ?? null)
+const overflowMobileToolbarItems = computed(() => actionMobileToolbarItems.value.slice(0, -1))
 const { indicatorStyle, setTabRef } = useSlidingTabIndicator({
   activeKey: activeTabLabel,
   watchSource: computed(() => props.tabs.map(tab => `${tab.label}:${Number(Boolean(tab.active))}`)),
@@ -237,7 +288,7 @@ function handleMobileTabSelect(value: unknown) {
   }
 }
 
-function handleMobileToolbarActionSelect(action: "filters" | "sort" | "export" | "primary") {
+function handleMobileToolbarActionSelect(action: MobileToolbarActionKey) {
   if (action === "filters") {
     emit("toggle-controls")
     return
@@ -287,39 +338,66 @@ function handleMobileToolbarActionSelect(action: "filters" | "sort" | "export" |
           >
             <div class="flex items-center justify-end gap-1 sm:hidden">
               <button
+                v-for="item in quickMobileToolbarItems"
+                :key="item.key"
                 type="button"
-                aria-label="筛选"
+                :aria-label="item.label"
                 :class="[
                   ghostIconButtonClass,
-                  showControls ? ghostIconButtonActiveClass : '',
+                  item.active ? ghostIconButtonActiveClass : '',
                 ]"
-                @click="handleMobileToolbarActionSelect('filters')"
+                @click="handleMobileToolbarActionSelect(item.key)"
               >
-                <i :class="['ri-filter-3-line text-[17px]', showControls ? 'text-link' : '']" />
-              </button>
-
-              <button
-                type="button"
-                aria-label="排序"
-                :class="[
-                  ghostIconButtonClass,
-                  customSortEnabled ? ghostIconButtonActiveClass : '',
-                ]"
-                @click="handleMobileToolbarActionSelect('sort')"
-              >
-                <i :class="['ri-sort-asc text-[17px]', customSortEnabled ? 'text-link' : '']" />
+                <i :class="[item.iconClass, 'text-[17px]', item.active ? 'text-link' : '']" />
               </button>
 
               <Button
-                v-if="primaryActionLabel"
+                v-if="primaryMobileToolbarItem && overflowMobileToolbarItems.length === 0"
                 variant="default"
-                class="h-9 gap-1 px-3 text-[14px]"
-                :aria-label="primaryActionLabel"
-                @click="handleMobileToolbarActionSelect('primary')"
+                size="sm"
+                class="h-8 gap-1 px-3 text-[14px]"
+                :class="primaryMobileToolbarItem.active ? 'text-link' : ''"
+                :aria-label="primaryMobileToolbarItem.label"
+                @click="handleMobileToolbarActionSelect(primaryMobileToolbarItem.key)"
               >
-                <i class="ri-add-line text-base" />
-                {{ primaryActionLabel }}
+                <i :class="[primaryMobileToolbarItem.iconClass, 'text-base']" />
+                {{ primaryMobileToolbarItem.label }}
               </Button>
+
+              <ButtonGroup v-else-if="primaryMobileToolbarItem" aria-label="移动端表格操作">
+                <Button
+                  variant="default"
+                  size="sm"
+                  class="h-8 gap-1 px-3 text-[14px]"
+                  :class="primaryMobileToolbarItem.active ? 'text-link' : ''"
+                  :aria-label="primaryMobileToolbarItem.label"
+                  @click="handleMobileToolbarActionSelect(primaryMobileToolbarItem.key)"
+                >
+                  <i :class="[primaryMobileToolbarItem.iconClass, 'text-base']" />
+                  {{ primaryMobileToolbarItem.label }}
+                </Button>
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger as-child>
+                    <Button variant="default" size="sm" class="h-8 gap-1 px-3 text-[14px]" aria-label="更多操作">
+                      更多
+                      <i class="ri-arrow-down-s-line text-base" />
+                    </Button>
+                  </DropdownMenuTrigger>
+
+                  <DropdownMenuContent align="end" class="w-52 rounded-xl p-1.5">
+                    <DropdownMenuItem
+                      v-for="item in overflowMobileToolbarItems"
+                      :key="item.key"
+                      class="rounded-lg px-2.5 py-2"
+                      @select="handleMobileToolbarActionSelect(item.key)"
+                    >
+                      <i :class="[item.iconClass, 'mr-2 text-base', item.active ? 'text-link' : 'text-muted-foreground']" />
+                      {{ item.label }}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </ButtonGroup>
             </div>
 
             <div class="hidden min-w-0 flex-wrap items-center justify-end gap-1 text-muted-foreground sm:flex sm:flex-nowrap">
@@ -387,7 +465,7 @@ function handleMobileToolbarActionSelect(action: "filters" | "sort" | "export" |
         >
           <div class="flex min-w-0 items-center justify-between gap-2 pb-2 sm:hidden">
             <Select :model-value="activeTabLabel" @update:model-value="handleMobileTabSelect">
-              <SelectTrigger class="h-9 max-w-[calc(100vw-16rem)] rounded-md bg-background text-[14px]">
+              <SelectTrigger size="sm" :class="mobileTabSelectTriggerClass">
                 <SelectValue placeholder="选择分页" />
               </SelectTrigger>
               <SelectContent>
@@ -403,39 +481,66 @@ function handleMobileToolbarActionSelect(action: "filters" | "sort" | "export" |
 
             <div v-if="props.showToolbarActions" class="ml-auto flex shrink-0 items-center justify-end gap-1">
               <button
+                v-for="item in quickMobileToolbarItems"
+                :key="item.key"
                 type="button"
-                aria-label="筛选"
+                :aria-label="item.label"
                 :class="[
                   ghostIconButtonClass,
-                  showControls ? ghostIconButtonActiveClass : '',
+                  item.active ? ghostIconButtonActiveClass : '',
                 ]"
-                @click="handleMobileToolbarActionSelect('filters')"
+                @click="handleMobileToolbarActionSelect(item.key)"
               >
-                <i :class="['ri-filter-3-line text-[17px]', showControls ? 'text-link' : '']" />
-              </button>
-
-              <button
-                type="button"
-                aria-label="排序"
-                :class="[
-                  ghostIconButtonClass,
-                  customSortEnabled ? ghostIconButtonActiveClass : '',
-                ]"
-                @click="handleMobileToolbarActionSelect('sort')"
-              >
-                <i :class="['ri-sort-asc text-[17px]', customSortEnabled ? 'text-link' : '']" />
+                <i :class="[item.iconClass, 'text-[17px]', item.active ? 'text-link' : '']" />
               </button>
 
               <Button
-                v-if="primaryActionLabel"
+                v-if="primaryMobileToolbarItem && overflowMobileToolbarItems.length === 0"
                 variant="default"
-                class="h-9 gap-1 px-3 text-[14px]"
-                :aria-label="primaryActionLabel"
-                @click="handleMobileToolbarActionSelect('primary')"
+                size="sm"
+                class="h-8 gap-1 px-3 text-[14px]"
+                :class="primaryMobileToolbarItem.active ? 'text-link' : ''"
+                :aria-label="primaryMobileToolbarItem.label"
+                @click="handleMobileToolbarActionSelect(primaryMobileToolbarItem.key)"
               >
-                <i class="ri-add-line text-base" />
-                {{ primaryActionLabel }}
+                <i :class="[primaryMobileToolbarItem.iconClass, 'text-base']" />
+                {{ primaryMobileToolbarItem.label }}
               </Button>
+
+              <ButtonGroup v-else-if="primaryMobileToolbarItem" aria-label="移动端表格操作">
+                <Button
+                  variant="default"
+                  size="sm"
+                  class="h-8 gap-1 px-3 text-[14px]"
+                  :class="primaryMobileToolbarItem.active ? 'text-link' : ''"
+                  :aria-label="primaryMobileToolbarItem.label"
+                  @click="handleMobileToolbarActionSelect(primaryMobileToolbarItem.key)"
+                >
+                  <i :class="[primaryMobileToolbarItem.iconClass, 'text-base']" />
+                  {{ primaryMobileToolbarItem.label }}
+                </Button>
+
+                <DropdownMenu>
+                  <DropdownMenuTrigger as-child>
+                    <Button variant="default" size="sm" class="h-8 gap-1 px-3 text-[14px]" aria-label="更多操作">
+                      更多
+                      <i class="ri-arrow-down-s-line text-base" />
+                    </Button>
+                  </DropdownMenuTrigger>
+
+                  <DropdownMenuContent align="end" class="w-52 rounded-xl p-1.5">
+                    <DropdownMenuItem
+                      v-for="item in overflowMobileToolbarItems"
+                      :key="item.key"
+                      class="rounded-lg px-2.5 py-2"
+                      @select="handleMobileToolbarActionSelect(item.key)"
+                    >
+                      <i :class="[item.iconClass, 'mr-2 text-base', item.active ? 'text-link' : 'text-muted-foreground']" />
+                      {{ item.label }}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </ButtonGroup>
             </div>
           </div>
 
