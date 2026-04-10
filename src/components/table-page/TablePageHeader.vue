@@ -321,20 +321,25 @@ function handleMobileToolbarActionSelect(action: MobileToolbarActionKey) {
       <div class="flex min-w-0 flex-col border-b border-border">
         <div
           v-if="hasHeading || (!hasTabs && props.showToolbarActions)"
-          class="flex min-w-0 flex-wrap items-end justify-between gap-x-4 gap-y-3"
-          :class="hasHeading ? 'pb-2' : 'pb-0'"
+          class="flex min-w-0 justify-between gap-x-4 gap-y-3"
+          :class="[hasTabs ? 'flex-wrap items-end' : 'flex-nowrap items-center', hasHeading ? 'pb-2' : 'pb-0']"
         >
           <div
             v-if="hasHeading"
-            :class="['flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-1', hasTabs ? '' : 'pb-2']"
+            :class="[
+              'min-w-0',
+              hasTabs
+                ? 'flex flex-wrap items-baseline gap-x-2 gap-y-1'
+                : 'flex flex-1 items-center gap-x-2',
+            ]"
           >
-            <h1 class="min-w-0 text-[40px] leading-none font-semibold text-foreground sm:text-[48px]">{{ title }}</h1>
+            <h1 :class="['min-w-0 text-[40px] leading-none font-semibold text-foreground sm:text-[48px]', hasTabs ? '' : 'truncate']">{{ title }}</h1>
             <span v-if="description" class="hidden text-[18px] leading-none font-normal text-muted-foreground sm:inline sm:text-[20px]">{{ description }}</span>
           </div>
 
           <div
             v-if="!hasTabs && props.showToolbarActions"
-            class="min-w-0"
+            class="ml-auto flex min-w-0 shrink-0 justify-end"
           >
             <div class="flex items-center justify-end gap-1 sm:hidden">
               <button

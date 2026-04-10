@@ -108,7 +108,40 @@ function handleTabSelect(value: unknown) {
         class="sticky top-0 z-20 mx-0 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80 sm:-mx-4"
       >
         <div data-detail-layout-header-content :class="['px-1 pt-4 sm:px-4 sm:pt-5', hasTabs || hasHeaderBottom ? '' : 'pb-4 sm:pb-5']">
+          <div
+            v-if="!hasTabs"
+            class="flex min-w-0 items-center justify-between gap-3"
+          >
+            <SectionHeader
+              :title="props.title"
+              :subtitle="props.subtitle"
+              :has-actions="false"
+              layout-class="min-w-0 flex-1 justify-center"
+              title-class="min-h-8 items-center"
+            >
+              <template #leading>
+                <button
+                  type="button"
+                  class="inline-flex size-8 items-center justify-center rounded-md text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                  :aria-label="props.backLabel"
+                  @click="emit('back')"
+                >
+                  <i class="ri-arrow-left-line text-[18px]" />
+                </button>
+              </template>
+            </SectionHeader>
+
+            <div
+              v-if="hasHeaderActionSlot"
+              class="flex min-w-0 max-w-[55vw] shrink-0 justify-end overflow-x-auto overflow-y-hidden whitespace-nowrap sm:max-w-full"
+            >
+              <slot v-if="$slots.headerActions" name="headerActions" />
+              <slot v-else name="actions" />
+            </div>
+          </div>
+
           <SectionHeader
+            v-else
             :title="props.title"
             :subtitle="props.subtitle"
             :has-actions="false"
@@ -124,11 +157,6 @@ function handleTabSelect(value: unknown) {
               </button>
             </template>
           </SectionHeader>
-
-          <div v-if="!hasTabs && hasHeaderActionSlot" class="mt-4 flex justify-end pb-2">
-            <slot v-if="$slots.headerActions" name="headerActions" />
-            <slot v-else name="actions" />
-          </div>
 
           <div v-if="hasTabs" class="mt-4 border-b border-border text-muted-foreground">
             <div class="flex min-w-0 items-center justify-between gap-2 pb-2 sm:hidden">
