@@ -322,7 +322,10 @@ function handleMobileToolbarActionSelect(action: MobileToolbarActionKey) {
         <div
           v-if="hasHeading || (!hasTabs && props.showToolbarActions)"
           class="flex min-w-0 justify-between gap-x-4 gap-y-3"
-          :class="[hasTabs ? 'flex-wrap items-end' : 'flex-nowrap items-center', hasHeading ? 'pb-2' : 'pb-0']"
+          :class="[
+            hasTabs ? 'flex-wrap items-end' : 'flex-nowrap items-center sm:items-end',
+            hasHeading ? 'pb-2' : 'pb-0',
+          ]"
         >
           <div
             v-if="hasHeading"
@@ -330,7 +333,7 @@ function handleMobileToolbarActionSelect(action: MobileToolbarActionKey) {
               'min-w-0',
               hasTabs
                 ? 'flex flex-wrap items-baseline gap-x-2 gap-y-1'
-                : 'flex flex-1 items-center gap-x-2',
+                : 'flex flex-1 items-baseline gap-x-2',
             ]"
           >
             <h1 :class="['min-w-0 text-[40px] leading-none font-semibold text-foreground sm:text-[48px]', hasTabs ? '' : 'truncate']">{{ title }}</h1>
