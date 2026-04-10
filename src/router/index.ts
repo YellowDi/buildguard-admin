@@ -54,7 +54,7 @@ const router = createRouter({
       path: "/",
       component: AppShellLayout,
       meta: {
-        title: "Workspace",
+        title: "宝京云维",
         loading: "dashboard",
       } satisfies RouteMetaConfig,
       children: [

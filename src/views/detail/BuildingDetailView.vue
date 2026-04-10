@@ -189,6 +189,21 @@ function goBack() {
   void router.push({ name: "buildings" })
 }
 
+function goToEdit() {
+  if (!buildingUuid.value || !parkUuid.value) {
+    return
+  }
+
+  void router.push({
+    name: "building-edit",
+    params: { id: buildingUuid.value },
+    query: {
+      parkUuid: parkUuid.value,
+      customerUuid: relatedCustomerUuid.value || undefined,
+    },
+  })
+}
+
 async function loadBuildingDetail(nextBuildingUuid: string, nextParkUuid: string) {
   const requestId = ++latestRequestId
 
@@ -503,6 +518,19 @@ async function loadInspectionCategoriesList() {
     empty-text="未找到该建筑信息"
     @back="goBack"
   >
+    <template #headerActions>
+      <Button
+        v-if="building"
+        variant="outline"
+        size="sm"
+        class="h-8 gap-1 border-border/80 bg-background px-3 text-[14px] font-medium shadow-none"
+        @click="goToEdit"
+      >
+        <i class="ri-edit-line text-base" />
+        修改建筑信息
+      </Button>
+    </template>
+
     <template #primary>
       <Alert v-if="errorMessage" variant="destructive" class="mb-5">
         <AlertTitle>建筑详情接口加载失败</AlertTitle>

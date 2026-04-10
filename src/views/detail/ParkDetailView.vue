@@ -160,6 +160,23 @@ function goBack() {
   void router.push({ name: "parks" })
 }
 
+function goToEdit() {
+  if (!parkUuid.value) {
+    return
+  }
+
+  void router.push({
+    name: "park-edit",
+    params: { id: parkUuid.value },
+    query: linkedCustomerUuid.value
+      ? {
+          customerUuid: linkedCustomerUuid.value,
+          customerName: toOptionalText(park.value?.CorpName) || undefined,
+        }
+      : undefined,
+  })
+}
+
 function goToBuildingDetail(buildingId: string) {
   if (!buildingId || !parkUuid.value) {
     return
@@ -271,6 +288,19 @@ function buildContactValue(name: string | null, phone?: string | null): DetailCo
     empty-text="未找到该园区信息"
     @back="goBack"
   >
+    <template #headerActions>
+      <Button
+        v-if="park"
+        variant="outline"
+        size="sm"
+        class="h-8 gap-1 border-border/80 bg-background px-3 text-[14px] font-medium shadow-none"
+        @click="goToEdit"
+      >
+        <i class="ri-edit-line text-base" />
+        修改园区信息
+      </Button>
+    </template>
+
     <template #primary>
       <Alert v-if="errorMessage" variant="destructive" class="mb-5">
         <AlertTitle>园区详情接口加载失败</AlertTitle>

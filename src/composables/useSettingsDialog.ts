@@ -428,17 +428,6 @@ const categories = computed<SettingsCategory[]>(() => [
     ],
   },
   {
-    key: "system",
-    group: "admin",
-    label: "系统",
-    description: "自定义登录页与菜单上显示的名称和标志。",
-    icon: "ri-computer-line",
-    pageTitle: "系统",
-    pageDescription:
-      "在这里修改站点名称和标志图片，登录页、左侧菜单和浏览器标签页标题会随之更新。设置保存在当前使用的浏览器中，换电脑或清除浏览器数据后需重新设置。",
-    sections: [],
-  },
-  {
     key: "apps",
     group: "admin",
     label: "应用",

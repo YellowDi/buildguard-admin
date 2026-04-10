@@ -22,7 +22,6 @@ import {
 } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import SettingsBusinessPresetsHub from "@/components/settings/SettingsBusinessPresetsHub.vue"
-import SettingsGlobalBranding from "@/components/settings/SettingsGlobalBranding.vue"
 import SettingsInspectionHub from "@/components/settings/SettingsInspectionHub.vue"
 import SettingsAppsPage from "@/components/settings/SettingsAppsPage.vue"
 import SettingsMePage from "@/components/settings/SettingsMePage.vue"
@@ -121,15 +120,6 @@ function getBooleanValue(key: keyof SettingsState) {
     :state="props.state"
     @action="emit('action', $event)"
   />
-
-  <SettingsRightPanelLayout
-    v-else-if="props.category.key === 'system'"
-    variant="title-only"
-    :title="props.category.pageTitle ?? props.category.label"
-    :description="props.category.pageDescription ?? props.category.description"
-  >
-    <SettingsGlobalBranding />
-  </SettingsRightPanelLayout>
 
   <SettingsRightPanelLayout
     v-else
