@@ -3,6 +3,9 @@ import { computed, onUnmounted, ref, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { toast } from "vue-sonner"
 
+import authLoginVisual from "@/assets/auth-login-visual.svg"
+import authOtpVisual from "@/assets/auth-otp-visual.svg"
+import authSignupVisual from "@/assets/auth-signup-visual.svg"
 import InspectionBuildingCards from "@/components/detail/InspectionBuildingCards.vue"
 import InspectionItemHistorySheet from "@/components/detail/InspectionItemHistorySheet.vue"
 import LinkedEntityDetailSheet from "@/components/detail/LinkedEntityDetailSheet.vue"
@@ -694,7 +697,7 @@ function buildInspectionItemHistoryEntries(args: {
       summary: latestSummary,
       remark: latestRemark || "当前结果来自工单详情页现有摘要字段。",
       measureValue: hasMeasureValue ? "88" : undefined,
-      photoCount: hasForcePhoto ? 3 : undefined,
+      photoUrls: hasForcePhoto ? buildInspectionHistoryPhotoUrls(3) : undefined,
       isLatest: true,
     },
     {
@@ -708,7 +711,7 @@ function buildInspectionItemHistoryEntries(args: {
         ? `复核依据：${truncateText(toText(args.detail.Standard, "判定标准已更新"), 40)}`
         : "现场执行与既有标准一致。",
       measureValue: hasMeasureValue ? "91" : undefined,
-      photoCount: hasForcePhoto ? 2 : undefined,
+      photoUrls: hasForcePhoto ? buildInspectionHistoryPhotoUrls(2) : undefined,
     },
     {
       key: `${args.inspectionItemKey}-history-2`,
@@ -721,7 +724,7 @@ function buildInspectionItemHistoryEntries(args: {
         : `上次巡检完成「${args.inspectionItemName}」标准项检查。`,
       remark: "该记录为前端样式联调 mock，用于预览历史时间轴结构。",
       measureValue: hasMeasureValue ? "89" : undefined,
-      photoCount: hasForcePhoto ? 2 : undefined,
+      photoUrls: hasForcePhoto ? buildInspectionHistoryPhotoUrls(2, 1) : undefined,
     },
   ]
 }
@@ -824,6 +827,14 @@ function formatHistoryDate(value: Date) {
 
 function padDatePart(value: number) {
   return String(value).padStart(2, "0")
+}
+
+function buildInspectionHistoryPhotoUrls(count: number, offset = 0) {
+  const gallery = [authLoginVisual, authSignupVisual, authOtpVisual]
+
+  return Array.from({ length: count }, (_, index) => (
+    gallery[(index + offset) % gallery.length]
+  ))
 }
 
 function truncateText(value: string, maxLength: number) {

@@ -64,6 +64,12 @@ export type HistoryEntryField = {
   value: string
 }
 
+export type HistoryEntryImage = {
+  key: string
+  src: string
+  alt?: string
+}
+
 export type HistoryEntry = {
   key: string
   title: string
@@ -72,6 +78,7 @@ export type HistoryEntry = {
   statusTone?: EntityHistoryTone
   summary?: string
   fields?: HistoryEntryField[]
+  images?: HistoryEntryImage[]
   isLatest?: boolean
 }
 
@@ -84,7 +91,7 @@ export type InspectionItemHistoryRecord = {
   summary?: string
   remark?: string
   measureValue?: string
-  photoCount?: number | null
+  photoUrls?: string[]
   isLatest?: boolean
 }
 

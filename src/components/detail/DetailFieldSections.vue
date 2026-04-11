@@ -170,7 +170,7 @@ function isStatusValue(value: DetailFieldValue): value is DetailStatusValue {
                 </Button>
               </template>
               <template v-else>
-                <span>{{ displayValue(row.value) }}</span>
+                <span :class="cn(row.truncate === false && 'whitespace-pre-wrap break-words')">{{ displayValue(row.value) }}</span>
                 <span
                   v-if="row.suffixHint"
                   :class="cn('ml-2 inline-flex items-center gap-1 align-middle text-xs text-muted-foreground', row.suffixHintClass)"

@@ -4,10 +4,10 @@ import { computed } from "vue"
 import EntityHistorySheet from "@/components/detail/EntityHistorySheet.vue"
 import type {
   DetailFieldSection,
-  EntityHistoryMetaBadge,
   EntityHistoryTone,
   HistoryEntry,
   HistoryEntryField,
+  HistoryEntryImage,
   InspectionItemHistoryModel,
   InspectionItemHistoryRecord,
 } from "@/components/detail/types"
@@ -42,30 +42,11 @@ const sections = computed<DetailFieldSection[]>(() => {
       key: "inspection-item-history-definition",
       title: "检测项信息",
       rows: [
-        { key: "content", label: "检测内容", value: props.model.content, truncate: false, valueClass: "leading-6" },
-        { key: "standard", label: "判定标准", value: props.model.standard, truncate: false, valueClass: "leading-6" },
+        { key: "content", label: "检测内容", value: props.model.content, truncate: false, valueClass: "leading-6 whitespace-pre-wrap break-words" },
+        { key: "standard", label: "判定标准", value: props.model.standard, truncate: false, valueClass: "leading-6 whitespace-pre-wrap break-words" },
         { key: "force-photo", label: "是否强制拍照", value: props.model.isForcePhotoText },
         { key: "measure-record", label: "是否记录实测值", value: props.model.isMeasureRecordText },
       ],
-    },
-  ]
-})
-
-const metaBadges = computed<EntityHistoryMetaBadge[]>(() => {
-  if (!props.model) {
-    return []
-  }
-
-  return [
-    {
-      key: "current-inspector",
-      label: `当前检测人 ${props.model.inspectorName}`,
-      tone: "info",
-    },
-    {
-      key: "current-score",
-      label: `当前扣分 ${props.model.scoreText}`,
-      tone: props.model.scoreText === "-" || props.model.scoreText === "0 分" ? "success" : "warning",
     },
   ]
 })
@@ -79,6 +60,7 @@ const historyEntries = computed<HistoryEntry[]>(() => (
     statusTone: resolveStatusTone(entry.resultLabel),
     summary: entry.summary,
     fields: buildEntryFields(entry),
+    images: buildEntryImages(entry),
     isLatest: entry.isLatest,
   })) ?? []
 ))
@@ -98,9 +80,16 @@ function buildEntryFields(entry: InspectionItemHistoryRecord): HistoryEntryField
     { key: `${entry.key}-inspector`, label: "检测人", value: entry.inspectorName },
     { key: `${entry.key}-score`, label: "扣分", value: entry.scoreText },
     ...(entry.measureValue ? [{ key: `${entry.key}-measure`, label: "实测值", value: entry.measureValue }] : []),
-    ...(typeof entry.photoCount === "number" ? [{ key: `${entry.key}-photos`, label: "现场照片", value: `${entry.photoCount} 张` }] : []),
     ...(entry.remark ? [{ key: `${entry.key}-remark`, label: "备注", value: entry.remark }] : []),
   ]
+}
+
+function buildEntryImages(entry: InspectionItemHistoryRecord): HistoryEntryImage[] {
+  return (entry.photoUrls ?? []).map((src, index) => ({
+    key: `${entry.key}-image-${index + 1}`,
+    src,
+    alt: `${entry.inspectorName} 现场照片 ${index + 1}`,
+  }))
 }
 
 function resolveStatusTone(label: string): EntityHistoryTone {
@@ -129,7 +118,6 @@ function resolveStatusTone(label: string): EntityHistoryTone {
     :open="open"
     :title="model?.inspectionItemName ?? '检测结果历史'"
     :description="description"
-    :meta-badges="metaBadges"
     :sections="sections"
     history-title="检测结果时间轴"
     :history-entries="historyEntries"

@@ -65,7 +65,7 @@ function badgeClass(tone: EntityHistoryTone | undefined) {
   <ResponsiveRightSheet
     :open="open"
     :show-primary="false"
-    sheet-content-class="overflow-hidden sm:max-w-2xl"
+    sheet-content-class="flex h-full max-h-full flex-col overflow-hidden sm:max-w-2xl"
     @update:open="handleOpenChange"
   >
     <template #actions>
@@ -101,7 +101,7 @@ function badgeClass(tone: EntityHistoryTone | undefined) {
       {{ props.description }}
     </template>
 
-    <div class="flex min-h-0 flex-1 flex-col">
+    <div class="min-h-0 flex-1 overflow-hidden">
       <div class="min-h-0 flex-1 space-y-6 overflow-y-auto pb-6">
         <DetailFieldSections
           v-if="hasSections"
@@ -191,6 +191,26 @@ function badgeClass(tone: EntityHistoryTone | undefined) {
                     <p class="mt-1 whitespace-pre-wrap break-words text-sm leading-6 text-foreground">
                       {{ field.value }}
                     </p>
+                  </div>
+                </div>
+
+                <div
+                  v-if="entry.images?.length"
+                  class="mt-4 border-t border-border/70 pt-4"
+                >
+                  <p class="text-xs text-muted-foreground">现场照片</p>
+                  <div class="mt-3 grid grid-cols-2 gap-3">
+                    <div
+                      v-for="image in entry.images"
+                      :key="image.key"
+                      class="overflow-hidden rounded-xl border border-border/70 bg-muted/35"
+                    >
+                      <img
+                        :src="image.src"
+                        :alt="image.alt ?? entry.title"
+                        class="h-28 w-full object-cover"
+                      >
+                    </div>
                   </div>
                 </div>
               </div>
