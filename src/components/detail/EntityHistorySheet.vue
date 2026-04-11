@@ -42,22 +42,22 @@ function handleOpenChange(open: boolean) {
 
 function badgeClass(tone: EntityHistoryTone | undefined) {
   if (tone === "info") {
-    return "border border-[#BFD3FF] bg-[#EEF4FF] text-[#2B67F6]"
+    return "border border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-900/70 dark:bg-sky-950/45 dark:text-sky-200"
   }
 
   if (tone === "success") {
-    return "border border-emerald-200 bg-emerald-50 text-emerald-700"
+    return "border border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/70 dark:bg-emerald-950/45 dark:text-emerald-200"
   }
 
   if (tone === "warning") {
-    return "border border-amber-200 bg-amber-50 text-amber-700"
+    return "border border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/70 dark:bg-amber-950/45 dark:text-amber-200"
   }
 
   if (tone === "danger") {
-    return "border border-rose-200 bg-rose-50 text-rose-700"
+    return "border border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-900/70 dark:bg-rose-950/45 dark:text-rose-200"
   }
 
-  return "border border-border/70 bg-muted text-foreground"
+  return "border border-border/70 bg-muted text-foreground dark:bg-muted/50"
 }
 </script>
 
@@ -135,7 +135,9 @@ function badgeClass(tone: EntityHistoryTone | undefined) {
               <div
                 :class="cn(
                   'absolute top-1.5 left-0 flex h-6 w-6 items-center justify-center rounded-full border bg-background shadow-xs',
-                  entry.isLatest ? 'border-[#2B67F6]/25 text-[#2B67F6]' : 'border-border/70 text-muted-foreground',
+                  entry.isLatest
+                    ? 'border-sky-200 text-sky-700 dark:border-sky-900/70 dark:bg-sky-950/30 dark:text-sky-200'
+                    : 'border-border/70 text-muted-foreground dark:bg-background',
                 )"
               >
                 <i :class="entry.isLatest ? 'ri-sparkling-2-line text-[13px]' : 'ri-history-line text-[13px]'" />
@@ -144,7 +146,9 @@ function badgeClass(tone: EntityHistoryTone | undefined) {
               <div
                 :class="cn(
                   'rounded-2xl border px-4 py-4 shadow-xs transition-colors',
-                  entry.isLatest ? 'border-[#BFD3FF] bg-[#F8FBFF]' : 'border-border/70 bg-background',
+                  entry.isLatest
+                    ? 'border-sky-200 bg-sky-50/70 dark:border-sky-900/70 dark:bg-sky-950/25'
+                    : 'border-border/70 bg-background dark:bg-card/70',
                 )"
               >
                 <div class="flex flex-wrap items-start justify-between gap-3">
@@ -154,7 +158,7 @@ function badgeClass(tone: EntityHistoryTone | undefined) {
                       <Badge
                         v-if="entry.isLatest"
                         variant="secondary"
-                        class="rounded-md border border-[#BFD3FF] bg-[#EEF4FF] px-2 py-0.5 text-[12px] font-medium text-[#2B67F6]"
+                        class="rounded-md border border-sky-200 bg-sky-50 px-2 py-0.5 text-[12px] font-medium text-sky-700 dark:border-sky-900/70 dark:bg-sky-950/45 dark:text-sky-200"
                       >
                         最新结果
                       </Badge>
