@@ -43,7 +43,7 @@
   --surface-hover-subtle: rgb(0 0 0 / 0.028);
   --surface-hover-strong: rgb(0 0 0 / 0.05);
   --sidebar-hover: rgb(0 0 0 / 0.045);
-  --top-tab-switch-active-surface: var(--brand-surface);
+  --top-tab-switch-active-surface: var(--sidebar-hover);
   --chart-1: #0075de;
   --chart-2: #2a9d99;
   --chart-3: #213183;
@@ -136,7 +136,7 @@
   --surface-hover-subtle: rgb(255 255 255 / 0.05);
   --surface-hover-strong: rgb(255 255 255 / 0.08);
   --sidebar-hover: rgb(255 255 255 / 0.08);
-  --top-tab-switch-active-surface: rgb(255 255 255 / 0.08);
+  --top-tab-switch-active-surface: var(--sidebar-hover);
   --chart-1: #4da3f0;
   --chart-2: #3dbdb9;
   --chart-3: #6878c8;

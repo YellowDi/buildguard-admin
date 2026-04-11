@@ -78,7 +78,9 @@ function getBadgeClass(tabId: string) {
       : "bg-muted text-muted-foreground"
   }
 
-  return "bg-badge text-link-foreground"
+  return props.modelValue === tabId
+    ? "bg-sidebar-active-surface text-sidebar-accent-foreground"
+    : "bg-sidebar-hover text-sidebar-foreground/72"
 }
 
 async function syncMeasurements() {
