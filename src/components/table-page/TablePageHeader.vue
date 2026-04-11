@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from "vue"
+import { toast } from "vue-sonner"
 
 import { Button } from "@/components/ui/button"
 import { useSlidingTabIndicator } from "@/composables/useSlidingTabIndicator"
@@ -14,6 +15,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
@@ -37,6 +39,16 @@ import type {
 import { toMobileActionLabel } from "@/lib/mobileActionLabel"
 
 type MobileToolbarActionKey = "filters" | "sort" | "export" | "primary"
+type TableMoreActionKey =
+  | "refresh"
+  | "columns"
+  | "density"
+  | "pinned-columns"
+  | "save-view"
+  | "manage-views"
+  | "reset-view"
+  | "audit-log"
+  | "export-records"
 
 const props = withDefaults(defineProps<{
   title: string
@@ -96,6 +108,22 @@ const mobileTabSelectTriggerClass =
   "h-8 max-w-[calc(100vw-11rem)] rounded-full bg-background px-3 text-[14px]"
 const ghostIconButtonActiveClass =
   "bg-transparent text-link hover:bg-interactive-hover active:bg-surface-secondary"
+const tableMoreActions: Array<{
+  key: TableMoreActionKey
+  label: string
+  iconClass: string
+  separated?: boolean
+}> = [
+  { key: "refresh", label: "数据刷新", iconClass: "ri-refresh-line" },
+  { key: "columns", label: "列显示设置", iconClass: "ri-layout-column-line" },
+  { key: "density", label: "表格密度", iconClass: "ri-line-height" },
+  { key: "pinned-columns", label: "固定列", iconClass: "ri-pushpin-line" },
+  { key: "save-view", label: "保存当前筛选为视图", iconClass: "ri-bookmark-line", separated: true },
+  { key: "manage-views", label: "管理视图", iconClass: "ri-folder-settings-line" },
+  { key: "reset-view", label: "重置视图", iconClass: "ri-restart-line" },
+  { key: "audit-log", label: "查看操作日志", iconClass: "ri-history-line", separated: true },
+  { key: "export-records", label: "导出记录", iconClass: "ri-download-line" },
+]
 
 const sortFields = computed(() => props.fields.filter(field => field.kind === "sort"))
 const activeFilterFields = computed(() => props.fields.filter(field => field.kind !== "sort" && field.accent))
@@ -315,6 +343,18 @@ function handleMobileToolbarActionSelect(action: MobileToolbarActionKey) {
     emit("primary-action")
   }
 }
+
+function handleTableMoreActionSelect(action: TableMoreActionKey) {
+  if (action === "export-records") {
+    emit("export-action")
+    return
+  }
+
+  const actionLabel = tableMoreActions.find(item => item.key === action)?.label ?? "该功能"
+  toast.info(`${actionLabel}暂未接入`, {
+    description: "当前仅保留入口，后续会补齐实际能力。",
+  })
+}
 </script>
 
 <template>
@@ -455,15 +495,31 @@ function handleMobileToolbarActionSelect(action: MobileToolbarActionKey) {
                   </button>
                 </TooltipWrap>
               </div>
-              <TooltipWrap content="更多">
-                <button
-                  type="button"
-                  aria-label="更多"
-                  :class="ghostIconButtonClass"
-                >
-                  <i class="ri-more-line text-base" />
-                </button>
-              </TooltipWrap>
+              <DropdownMenu>
+                <DropdownMenuTrigger as-child>
+                  <button
+                    type="button"
+                    aria-label="更多"
+                    title="更多"
+                    :class="ghostIconButtonClass"
+                  >
+                    <i class="ri-more-line text-base" />
+                  </button>
+                </DropdownMenuTrigger>
+
+                <DropdownMenuContent align="end" class="w-56 rounded-xl p-1.5">
+                  <template v-for="item in tableMoreActions" :key="item.key">
+                    <DropdownMenuSeparator v-if="item.separated" />
+                    <DropdownMenuItem
+                      class="rounded-lg px-2.5 py-2"
+                      @select="handleTableMoreActionSelect(item.key)"
+                    >
+                      <i :class="[item.iconClass, 'mr-2 text-base text-muted-foreground']" />
+                      {{ item.label }}
+                    </DropdownMenuItem>
+                  </template>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <Button
                 variant="outline"
                 class="h-8 gap-1 px-3 text-[14px]"
@@ -627,15 +683,31 @@ function handleMobileToolbarActionSelect(action: MobileToolbarActionKey) {
                   </button>
                 </TooltipWrap>
               </div>
-              <TooltipWrap content="更多">
-                <button
-                  type="button"
-                  aria-label="更多"
-                  :class="ghostIconButtonClass"
-                >
-                  <i class="ri-more-line text-base" />
-                </button>
-              </TooltipWrap>
+              <DropdownMenu>
+                <DropdownMenuTrigger as-child>
+                  <button
+                    type="button"
+                    aria-label="更多"
+                    title="更多"
+                    :class="ghostIconButtonClass"
+                  >
+                    <i class="ri-more-line text-base" />
+                  </button>
+                </DropdownMenuTrigger>
+
+                <DropdownMenuContent align="end" class="w-56 rounded-xl p-1.5">
+                  <template v-for="item in tableMoreActions" :key="item.key">
+                    <DropdownMenuSeparator v-if="item.separated" />
+                    <DropdownMenuItem
+                      class="rounded-lg px-2.5 py-2"
+                      @select="handleTableMoreActionSelect(item.key)"
+                    >
+                      <i :class="[item.iconClass, 'mr-2 text-base text-muted-foreground']" />
+                      {{ item.label }}
+                    </DropdownMenuItem>
+                  </template>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <Button
                 variant="outline"
                 class="h-8 gap-1 px-3 text-[14px]"
