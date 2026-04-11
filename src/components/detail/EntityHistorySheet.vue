@@ -123,7 +123,7 @@ function hasSingleImage(entry: HistoryEntry) {
     </template>
 
     <div class="flex min-h-0 flex-1 flex-col overflow-hidden">
-      <div class="min-h-0 flex-1 space-y-6 overflow-y-auto pb-6">
+      <div class="min-h-0 flex-1 overflow-y-auto pb-6">
         <DetailFieldSections
           v-if="hasSections"
           :sections="props.sections"
@@ -132,29 +132,30 @@ function hasSingleImage(entry: HistoryEntry) {
 
         <Separator v-if="hasSections" class="bg-border/80" />
 
-        <section class="px-4">
+        <section class="detail-accordion-module min-w-0">
           <TitleBlock
             variant="section"
             :title="props.historyTitle"
-            class="px-0 pt-1 pb-4"
+            :sticky="true"
+            sticky-top="var(--detail-layout-sticky-offset, 0px)"
+            class="detail-section-inset pt-4 pb-1"
           />
 
-          <div
+          <Accordion
             v-if="hasHistory"
-            class="space-y-0"
+            :key="defaultHistoryEntryKeys.join('-') || 'history-entries'"
+            type="multiple"
+            :default-value="defaultHistoryEntryKeys"
+            class="w-full"
           >
-            <Accordion
-              :key="defaultHistoryEntryKeys.join('-') || 'history-entries'"
-              type="multiple"
-              :default-value="defaultHistoryEntryKeys"
-              class="w-full space-y-3"
+            <AccordionItem
+              v-for="(entry, index) in props.historyEntries"
+              :key="entry.key"
+              :value="entry.key"
+              class="group border-b-0"
             >
-              <AccordionItem
-                v-for="entry in props.historyEntries"
-                :key="entry.key"
-                :value="entry.key"
-                class="overflow-hidden rounded-[12px] border border-black/10 bg-white shadow-[0_4px_18px_rgba(0,0,0,0.04),0_2.025px_7.85px_rgba(0,0,0,0.027),0_0.8px_2.93px_rgba(0,0,0,0.02),0_0.175px_1.04px_rgba(0,0,0,0.01)] data-[state=open]:border-[#4da3f0]/35 dark:border-white/10 dark:bg-[#191919] dark:shadow-[0_4px_18px_rgba(0,0,0,0.2),0_2.025px_7.85px_rgba(0,0,0,0.15),0_0.8px_2.93px_rgba(0,0,0,0.1),0_0.175px_1.04px_rgba(0,0,0,0.08)] dark:data-[state=open]:border-[#4da3f0]/35"
-              >
+              <div class="detail-section-inset py-1.5">
+                <div class="overflow-hidden rounded-[12px] border border-black/10 bg-white shadow-[0_4px_18px_rgba(0,0,0,0.04),0_2.025px_7.85px_rgba(0,0,0,0.027),0_0.8px_2.93px_rgba(0,0,0,0.02),0_0.175px_1.04px_rgba(0,0,0,0.01)] group-data-[state=open]:border-[#4da3f0]/35 dark:border-white/10 dark:bg-[#191919] dark:shadow-[0_4px_18px_rgba(0,0,0,0.2),0_2.025px_7.85px_rgba(0,0,0,0.15),0_0.8px_2.93px_rgba(0,0,0,0.1),0_0.175px_1.04px_rgba(0,0,0,0.08)] dark:group-data-[state=open]:border-[#4da3f0]/35">
                 <div
                   v-if="entry.isLatest"
                   class="h-[2px] w-full bg-[#0075de] dark:bg-[#4da3f0]"
@@ -260,11 +261,19 @@ function hasSingleImage(entry: HistoryEntry) {
                     </div>
                   </div>
                 </AccordionContent>
-              </AccordionItem>
-            </Accordion>
-          </div>
+                </div>
+              </div>
 
-          <div v-else class="pb-1">
+              <div
+                v-if="index < props.historyEntries.length - 1"
+                class="detail-section-inset"
+              >
+                <div class="w-full border-b border-dashed border-border/80" />
+              </div>
+            </AccordionItem>
+          </Accordion>
+
+          <div v-else class="flex min-h-[min(160px,30vh)] w-full min-w-0 flex-col items-center justify-center px-0 py-4">
             <Empty class="w-full border border-dashed border-black/10 bg-white/70 p-6 shadow-none dark:border-white/10 dark:bg-[#191919]">
               <EmptyHeader>
                 <EmptyMedia variant="icon">
