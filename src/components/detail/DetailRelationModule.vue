@@ -76,7 +76,7 @@ function hasNamedSlot(name?: string) {
 <template>
   <section class="detail-relation-module w-full min-w-0 max-w-full" :style="moduleStyle">
     <div class="detail-table-scroll">
-      <div class="detail-table-frame detail-relation-frame">
+      <div class="detail-table-frame detail-relation-frame" :style="{ minWidth: props.schema.mobileMinWidth ?? '100%' }">
         <TableTitleBlock
           :module-key="schema.key"
           :title="schema.title"

@@ -11,6 +11,7 @@ import DetailRelationModule from "@/components/detail/DetailRelationModule.vue"
 import MapLocationDialog from "@/components/map/MapLocationDialog.vue"
 import type { DetailFieldSection, DetailRelationModuleSchema } from "@/components/detail/types"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { TooltipWrap } from "@/components/ui/tooltip"
 import { detailBreadcrumbItems, detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
@@ -69,8 +70,8 @@ const inspectionModule = computed<DetailRelationModuleSchema<BuildingRecordRow>>
   rowKey: "id",
   columns: [
     { key: "serviceName", label: "检测服务", cellClass: "truncate" },
-    { key: "executor", label: "执行人", cellClass: "truncate text-muted-foreground" },
-    { key: "deadline", label: "截止时间", cellClass: "truncate text-muted-foreground" },
+    { key: "executor", label: "执行人" },
+    { key: "deadline", label: "截止时间", cellClass: "whitespace-nowrap text-muted-foreground" },
     { key: "actions", label: "", slot: "record-action-cell", cellClass: "flex justify-end" },
   ],
   groups: [
@@ -85,9 +86,9 @@ const inspectionModule = computed<DetailRelationModuleSchema<BuildingRecordRow>>
     description: "当前建筑还没有可展示的检测工单记录。",
     icon: "ri-file-list-3-line",
   },
-  mobileMinWidth: "100%",
-  columnTemplateMobile: "minmax(0,1.2fr) minmax(0,0.8fr) minmax(0,0.9fr) minmax(5rem,0.35fr)",
-  columnTemplateDesktop: "minmax(0,1.2fr) minmax(0,0.8fr) minmax(0,0.9fr) minmax(5rem,0.35fr)",
+  mobileMinWidth: "42rem",
+  columnTemplateMobile: "minmax(9rem,1fr) minmax(12rem,1.5fr) 8rem 2.75rem",
+  columnTemplateDesktop: "minmax(9rem,1fr) minmax(12rem,1.5fr) 8rem 2.75rem",
   columnGapMobile: "0.75rem",
   columnGapDesktop: "1rem",
 }))
@@ -97,9 +98,9 @@ const repairModule = computed<DetailRelationModuleSchema<BuildingRecordRow>>(() 
   title: "报修记录",
   rowKey: "id",
   columns: [
-    { key: "item", label: "报修类型", cellClass: "truncate" },
-    { key: "executor", label: "执行人", cellClass: "truncate text-muted-foreground" },
-    { key: "deadline", label: "创建时间", cellClass: "truncate text-muted-foreground" },
+    { key: "item", label: "报修类型", cellClass: "whitespace-nowrap text-muted-foreground" },
+    { key: "executor", label: "执行人" },
+    { key: "deadline", label: "创建时间", cellClass: "whitespace-nowrap text-muted-foreground" },
     { key: "actions", label: "", slot: "record-action-cell", cellClass: "flex justify-end" },
   ],
   groups: [
@@ -114,9 +115,9 @@ const repairModule = computed<DetailRelationModuleSchema<BuildingRecordRow>>(() 
     description: "当前建筑还没有可展示的报修工单记录。",
     icon: "ri-hammer-line",
   },
-  mobileMinWidth: "100%",
-  columnTemplateMobile: "minmax(0,1.2fr) minmax(0,0.8fr) minmax(0,0.9fr) minmax(5rem,0.35fr)",
-  columnTemplateDesktop: "minmax(0,1.2fr) minmax(0,0.8fr) minmax(0,0.9fr) minmax(5rem,0.35fr)",
+  mobileMinWidth: "42rem",
+  columnTemplateMobile: "minmax(9rem,1fr) minmax(12rem,1.5fr) 8rem 2.75rem",
+  columnTemplateDesktop: "minmax(9rem,1fr) minmax(12rem,1.5fr) 8rem 2.75rem",
   columnGapMobile: "0.75rem",
   columnGapDesktop: "1rem",
 }))
@@ -290,31 +291,41 @@ async function loadBuildingRecords(currentBuilding: BuildingListItem) {
     const normalizedBuildingName = normalizeText(currentBuildingName)
     inspectionRecords.value = inspectionResult.list
       .filter(item => normalizeText(recordText(item.BuildName, "")) === normalizedBuildingName)
-      .map((item, index) => ({
-        id: recordText(item.Uuid, `inspection-${index + 1}`),
-        uuid: recordText(item.Uuid, ""),
-        kind: "inspection" as const,
-        serviceName: recordText(item.PackageName || item.PlanName, "未命名检测工单"),
-        item: "-",
-        executor: formatInspectionExecutors(item.Executors, item.Executor),
-        deadline: formatDateOnly(recordText(item.Deadline, "-")),
-        sortTime: resolveRecordSortTime(item.UpdatedAt, item.CreatedAt, item.Deadline),
-      }))
+      .map((item, index) => {
+        const executors = normalizeExecutors(item.Executors, item.Executor)
+
+        return {
+          id: recordText(item.Uuid, `inspection-${index + 1}`),
+          uuid: recordText(item.Uuid, ""),
+          kind: "inspection" as const,
+          serviceName: recordText(item.PackageName || item.PlanName, "未命名检测工单"),
+          item: "-",
+          executors,
+          executor: formatExecutorText(executors),
+          deadline: formatDateOnly(recordText(item.Deadline, "-")),
+          sortTime: resolveRecordSortTime(item.UpdatedAt, item.CreatedAt, item.Deadline),
+        }
+      })
       .sort((left, right) => right.sortTime - left.sortTime)
       .slice(0, 5)
 
     repairRecords.value = repairResult.list
       .filter(item => normalizeText(recordText(item.BuildName, "")) === normalizedBuildingName)
-      .map((item, index) => ({
-        id: recordText(item.Uuid, `repair-${index + 1}`),
-        uuid: recordText(item.Uuid, ""),
-        kind: "repair" as const,
-        serviceName: "-",
-        item: recordText(item.Title || item.Content, "未命名报修工单"),
-        executor: recordText(item.UserName, "-"),
-        deadline: recordText(item.CreatedAt, "-"),
-        sortTime: resolveRecordSortTime(item.UpdatedAt, item.CreatedAt),
-      }))
+      .map((item, index) => {
+        const executors = normalizeExecutors(item.UserName)
+
+        return {
+          id: recordText(item.Uuid, `repair-${index + 1}`),
+          uuid: recordText(item.Uuid, ""),
+          kind: "repair" as const,
+          serviceName: "-",
+          item: recordText(item.Title || item.Content, "未命名报修工单"),
+          executors,
+          executor: formatExecutorText(executors),
+          deadline: formatDateOnly(recordText(item.CreatedAt, "-")),
+          sortTime: resolveRecordSortTime(item.UpdatedAt, item.CreatedAt),
+        }
+      })
       .sort((left, right) => right.sortTime - left.sortTime)
       .slice(0, 5)
   } catch (error) {
@@ -335,18 +346,23 @@ async function loadBuildingRecords(currentBuilding: BuildingListItem) {
   }
 }
 
-function formatInspectionExecutors(value: unknown, fallback?: unknown) {
+function normalizeExecutors(value: unknown, fallback?: unknown) {
   if (Array.isArray(value)) {
     const normalized = value
       .map(item => recordText(item, ""))
       .filter(Boolean)
 
     if (normalized.length) {
-      return normalized.join("、")
+      return normalized
     }
   }
 
-  return recordText(fallback, "-")
+  const fallbackText = recordText(fallback, "")
+  return fallbackText ? [fallbackText] : []
+}
+
+function formatExecutorText(executors: string[]) {
+  return executors.length ? executors.join("、") : "-"
 }
 
 function goToRecordDetail(row: BuildingRecordRow) {
@@ -423,6 +439,7 @@ type BuildingRecordRow = {
   serviceName: string
   item: string
   executor: string
+  executors: string[]
   deadline: string
   sortTime: number
 }
@@ -571,6 +588,32 @@ async function loadInspectionCategoriesList() {
         </Alert>
 
         <DetailRelationModule :schema="inspectionModule" use-title-block>
+          <template #executor="{ row }">
+            <TooltipWrap
+              :content="row.executors.join('、')"
+              :disabled="!row.executors.length"
+              align="start"
+              class="max-w-xs"
+            >
+              <div class="flex min-w-0 items-center gap-1.5 overflow-hidden">
+                <template v-if="row.executors.length">
+                  <Badge
+                    v-for="(executor, executorIndex) in row.executors.slice(0, 2)"
+                    :key="`${row.id}-${executorIndex}`"
+                    variant="secondary"
+                    class="max-w-[5.75rem] truncate"
+                  >
+                    {{ executor }}
+                  </Badge>
+                  <Badge v-if="row.executors.length > 2" variant="outline" class="shrink-0">
+                    +{{ row.executors.length - 2 }}
+                  </Badge>
+                </template>
+                <span v-else class="text-muted-foreground">-</span>
+              </div>
+            </TooltipWrap>
+          </template>
+
           <template #record-action-cell="{ row }">
             <TooltipWrap content="查看工单详情" :disabled="!row.uuid">
               <Button
@@ -590,6 +633,32 @@ async function loadInspectionCategoriesList() {
         <div class="h-px bg-border/80" />
 
         <DetailRelationModule :schema="repairModule" use-title-block>
+          <template #executor="{ row }">
+            <TooltipWrap
+              :content="row.executors.join('、')"
+              :disabled="!row.executors.length"
+              align="start"
+              class="max-w-xs"
+            >
+              <div class="flex min-w-0 items-center gap-1.5 overflow-hidden">
+                <template v-if="row.executors.length">
+                  <Badge
+                    v-for="(executor, executorIndex) in row.executors.slice(0, 2)"
+                    :key="`${row.id}-${executorIndex}`"
+                    variant="secondary"
+                    class="max-w-[5.75rem] truncate"
+                  >
+                    {{ executor }}
+                  </Badge>
+                  <Badge v-if="row.executors.length > 2" variant="outline" class="shrink-0">
+                    +{{ row.executors.length - 2 }}
+                  </Badge>
+                </template>
+                <span v-else class="text-muted-foreground">-</span>
+              </div>
+            </TooltipWrap>
+          </template>
+
           <template #record-action-cell="{ row }">
             <TooltipWrap content="查看工单详情" :disabled="!row.uuid">
               <Button

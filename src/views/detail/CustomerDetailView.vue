@@ -28,6 +28,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -122,6 +123,7 @@ type MaintenanceRecordRow = {
   parkName: string
   item: string
   executor: string
+  executors: string[]
   deadline: string
   deadlineFull?: string
 }
@@ -159,6 +161,7 @@ type CustomerWorkOrderRow = {
   packageName: string
   planName: string
   executor: string
+  executors: string[]
   status: string
   statusValue: number | null
   statusLabel: string
@@ -625,15 +628,15 @@ const maintenanceModule = computed<DetailRelationModuleSchema<MaintenanceRecordR
       rowKey: "id",
       columns: [
         { key: "serviceName", label: "检测服务", slot: "inspection-overview-service-cell" },
-        { key: "result", label: "检测结果" },
+        { key: "result", label: "检测结果", cellClass: "whitespace-nowrap text-muted-foreground" },
         { key: "executor", label: "执行人" },
-        { key: "deadline", label: "截止时间" },
+        { key: "deadline", label: "截止时间", cellClass: "whitespace-nowrap text-muted-foreground" },
         { key: "actions", label: "", slot: "maintenance-action-cell", headerClass: "flex justify-end", cellClass: "flex justify-end" },
       ],
       groups: [],
-      mobileMinWidth: "100%",
-      columnTemplateMobile: "minmax(0,1.2fr) minmax(0,1fr) minmax(0,0.8fr) minmax(0,0.9fr) minmax(5rem,0.35fr)",
-      columnTemplateDesktop: "minmax(0,1.2fr) minmax(0,1fr) minmax(0,0.8fr) minmax(0,0.9fr) minmax(5rem,0.35fr)",
+      mobileMinWidth: "42rem",
+      columnTemplateMobile: "minmax(9rem,1fr) 6.5rem minmax(12rem,1.5fr) 8rem 2.75rem",
+      columnTemplateDesktop: "minmax(9rem,1fr) 6.5rem minmax(12rem,1.5fr) 8rem 2.75rem",
       columnGapMobile: "0.75rem",
       columnGapDesktop: "1rem",
     }
@@ -650,15 +653,15 @@ const maintenanceModule = computed<DetailRelationModuleSchema<MaintenanceRecordR
     rowKey: "id",
     columns: [
       { key: "serviceName", label: "检测服务", slot: "inspection-overview-service-cell" },
-      { key: "result", label: "检测结果" },
+      { key: "result", label: "检测结果", cellClass: "whitespace-nowrap text-muted-foreground" },
       { key: "executor", label: "执行人" },
-      { key: "deadline", label: "截止时间" },
+      { key: "deadline", label: "截止时间", cellClass: "whitespace-nowrap text-muted-foreground" },
       { key: "actions", label: "", slot: "maintenance-action-cell", headerClass: "flex justify-end", cellClass: "flex justify-end" },
     ],
     groups: buildMaintenanceGroups(maintenanceRecords.value),
-    mobileMinWidth: "100%",
-    columnTemplateMobile: "minmax(0,1.2fr) minmax(0,1fr) minmax(0,0.8fr) minmax(0,0.9fr) minmax(5rem,0.35fr)",
-    columnTemplateDesktop: "minmax(0,1.2fr) minmax(0,1fr) minmax(0,0.8fr) minmax(0,0.9fr) minmax(5rem,0.35fr)",
+    mobileMinWidth: "42rem",
+    columnTemplateMobile: "minmax(9rem,1fr) 6.5rem minmax(12rem,1.5fr) 8rem 2.75rem",
+    columnTemplateDesktop: "minmax(9rem,1fr) 6.5rem minmax(12rem,1.5fr) 8rem 2.75rem",
     columnGapMobile: "0.75rem",
     columnGapDesktop: "1rem",
   }
@@ -677,15 +680,15 @@ const repairOverviewModule = computed<DetailRelationModuleSchema<MaintenanceReco
       rowKey: "id",
       columns: [
         { key: "location", label: "位置", slot: "repair-overview-location-cell" },
-        { key: "item", label: "报修类型" },
+        { key: "item", label: "报修类型", cellClass: "whitespace-nowrap text-muted-foreground" },
         { key: "executor", label: "执行人" },
-        { key: "deadline", label: "创建时间", slot: "repair-overview-deadline-cell" },
+        { key: "deadline", label: "创建时间", slot: "repair-overview-deadline-cell", cellClass: "whitespace-nowrap text-muted-foreground" },
         { key: "actions", label: "", slot: "maintenance-action-cell", headerClass: "flex justify-end", cellClass: "flex justify-end" },
       ],
       groups: [],
-      mobileMinWidth: "100%",
-      columnTemplateMobile: "minmax(0,1.2fr) minmax(0,1fr) minmax(0,0.8fr) minmax(0,0.9fr) minmax(5rem,0.35fr)",
-      columnTemplateDesktop: "minmax(0,1.2fr) minmax(0,1fr) minmax(0,0.8fr) minmax(0,0.9fr) minmax(5rem,0.35fr)",
+      mobileMinWidth: "42rem",
+      columnTemplateMobile: "minmax(9rem,1fr) 6.5rem minmax(12rem,1.5fr) 8rem 2.75rem",
+      columnTemplateDesktop: "minmax(9rem,1fr) 6.5rem minmax(12rem,1.5fr) 8rem 2.75rem",
       columnGapMobile: "0.75rem",
       columnGapDesktop: "1rem",
     }
@@ -702,15 +705,15 @@ const repairOverviewModule = computed<DetailRelationModuleSchema<MaintenanceReco
     rowKey: "id",
     columns: [
       { key: "location", label: "位置", slot: "repair-overview-location-cell" },
-      { key: "item", label: "报修类型" },
+      { key: "item", label: "报修类型", cellClass: "whitespace-nowrap text-muted-foreground" },
       { key: "executor", label: "执行人" },
-      { key: "deadline", label: "创建时间", slot: "repair-overview-deadline-cell" },
+      { key: "deadline", label: "创建时间", slot: "repair-overview-deadline-cell", cellClass: "whitespace-nowrap text-muted-foreground" },
       { key: "actions", label: "", slot: "maintenance-action-cell", headerClass: "flex justify-end", cellClass: "flex justify-end" },
     ],
     groups: buildMaintenanceGroups(repairOverviewRecords.value),
-    mobileMinWidth: "100%",
-    columnTemplateMobile: "minmax(0,1.2fr) minmax(0,1fr) minmax(0,0.8fr) minmax(0,0.9fr) minmax(5rem,0.35fr)",
-    columnTemplateDesktop: "minmax(0,1.2fr) minmax(0,1fr) minmax(0,0.8fr) minmax(0,0.9fr) minmax(5rem,0.35fr)",
+    mobileMinWidth: "42rem",
+    columnTemplateMobile: "minmax(9rem,1fr) 6.5rem minmax(12rem,1.5fr) 8rem 2.75rem",
+    columnTemplateDesktop: "minmax(9rem,1fr) 6.5rem minmax(12rem,1.5fr) 8rem 2.75rem",
     columnGapMobile: "0.75rem",
     columnGapDesktop: "1rem",
   }
@@ -3024,6 +3027,7 @@ function mapMaintenanceRecordRow(row: CustomerWorkOrderRow): MaintenanceRecordRo
     parkName: row.parkName !== "-" ? row.parkName : "未关联园区",
     item: row.workOrderName !== "-" ? row.workOrderName : row.planName,
     executor: row.executor,
+    executors: row.executors,
     deadline: row.deadline,
   }
 }
@@ -3048,6 +3052,7 @@ function mapRepairOverviewRecordRow(row: CustomerWorkOrderRow): MaintenanceRecor
     parkName: row.parkName !== "-" ? row.parkName : "未关联园区",
     item: row.reportTypeLabel !== "-" ? row.reportTypeLabel : "未设置",
     executor: row.executor,
+    executors: row.executors,
     deadline: formatDateOnly(row.createdAt),
     deadlineFull: row.createdAt,
   }
@@ -3252,6 +3257,7 @@ function mapInspectionWorkOrderRow(item: WorkOrderListItem, index: number): Cust
   const statusValue = toNullableNumber(item.Status)
   const score = toNullableNumber(item.Score)
   const resultValue = toNullableNumber(item.Result)
+  const executors = normalizeExecutors(item.Executors, item.Executor)
 
   return {
     id: uuid || fallbackId,
@@ -3268,7 +3274,8 @@ function mapInspectionWorkOrderRow(item: WorkOrderListItem, index: number): Cust
     buildingName: toDisplayText(item.BuildName, "-"),
     packageName: toDisplayText(item.PackageName, "-"),
     planName: toDisplayText(item.PlanName, "-"),
-    executor: formatInspectionExecutors(item.Executors, item.Executor),
+    executor: formatExecutorText(executors),
+    executors,
     status: statusValue === null ? "" : String(statusValue),
     statusValue,
     statusLabel: formatWorkOrderStatus(statusValue),
@@ -3289,18 +3296,23 @@ function mapInspectionWorkOrderRow(item: WorkOrderListItem, index: number): Cust
   }
 }
 
-function formatInspectionExecutors(value: unknown, fallback?: unknown) {
+function normalizeExecutors(value: unknown, fallback?: unknown) {
   if (Array.isArray(value)) {
     const normalized = value
       .map(item => toDisplayText(item, ""))
       .filter(Boolean)
 
     if (normalized.length) {
-      return normalized.join("、")
+      return normalized
     }
   }
 
-  return toDisplayText(fallback, "-")
+  const fallbackText = toDisplayText(fallback, "")
+  return fallbackText ? [fallbackText] : []
+}
+
+function formatExecutorText(executors: string[]) {
+  return executors.length ? executors.join("、") : "-"
 }
 
 function mapRepairWorkOrderRow(item: RepairWorkOrderListItem, index: number): CustomerWorkOrderRow {
@@ -3313,6 +3325,7 @@ function mapRepairWorkOrderRow(item: RepairWorkOrderListItem, index: number): Cu
   const createdEndAt = toDisplayText(item.CreatedEndAt, "-")
   const createdAt = toDisplayText(item.CreatedAt, createdStartAt !== "-" ? createdStartAt : "-")
   const updatedAt = toDisplayText(item.UpdatedAt, createdEndAt !== "-" ? createdEndAt : "-")
+  const executors = normalizeExecutors(item.UserName)
 
   return {
     id: uuid || fallbackId,
@@ -3328,7 +3341,8 @@ function mapRepairWorkOrderRow(item: RepairWorkOrderListItem, index: number): Cu
     buildingName: toDisplayText(item.BuildName, "-"),
     packageName: "-",
     planName: "-",
-    executor: toDisplayText(item.UserName, "-"),
+    executor: formatExecutorText(executors),
+    executors,
     status: statusValue === null ? "" : String(statusValue),
     statusValue,
     statusLabel: formatRepairWorkOrderStatus(statusValue),
@@ -4190,6 +4204,32 @@ function toDisplayText(value: unknown, fallback = "未填写") {
                   </div>
                 </template>
 
+                <template #executor="{ row }">
+                  <TooltipWrap
+                    :content="row.executors.join('、')"
+                    :disabled="!row.executors.length"
+                    align="start"
+                    class="max-w-xs"
+                  >
+                    <div class="flex min-w-0 items-center gap-1.5 overflow-hidden">
+                      <template v-if="row.executors.length">
+                        <Badge
+                          v-for="(executor, executorIndex) in row.executors.slice(0, 2)"
+                          :key="`${row.id}-${executorIndex}`"
+                          variant="secondary"
+                          class="max-w-[5.75rem] truncate"
+                        >
+                          {{ executor }}
+                        </Badge>
+                        <Badge v-if="row.executors.length > 2" variant="outline" class="shrink-0">
+                          +{{ row.executors.length - 2 }}
+                        </Badge>
+                      </template>
+                      <span v-else class="text-muted-foreground">-</span>
+                    </div>
+                  </TooltipWrap>
+                </template>
+
                 <template #maintenance-action-cell="{ row }">
                   <Button
                     variant="ghost"
@@ -4244,6 +4284,32 @@ function toDisplayText(value: unknown, fallback = "未填写") {
                     </TooltipContent>
                   </Tooltip>
                   <span v-else>{{ row.deadline }}</span>
+                </template>
+
+                <template #executor="{ row }">
+                  <TooltipWrap
+                    :content="row.executors.join('、')"
+                    :disabled="!row.executors.length"
+                    align="start"
+                    class="max-w-xs"
+                  >
+                    <div class="flex min-w-0 items-center gap-1.5 overflow-hidden">
+                      <template v-if="row.executors.length">
+                        <Badge
+                          v-for="(executor, executorIndex) in row.executors.slice(0, 2)"
+                          :key="`${row.id}-${executorIndex}`"
+                          variant="secondary"
+                          class="max-w-[5.75rem] truncate"
+                        >
+                          {{ executor }}
+                        </Badge>
+                        <Badge v-if="row.executors.length > 2" variant="outline" class="shrink-0">
+                          +{{ row.executors.length - 2 }}
+                        </Badge>
+                      </template>
+                      <span v-else class="text-muted-foreground">-</span>
+                    </div>
+                  </TooltipWrap>
                 </template>
 
                 <template #maintenance-action-cell="{ row }">
