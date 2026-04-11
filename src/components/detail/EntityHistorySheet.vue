@@ -8,6 +8,8 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import { Separator } from "@/components/ui/separator"
+import type { StatusBadgeTone } from "@/components/ui/status-badge"
+import { notionColorTokens } from "@/components/ui/status-badge"
 import { ResponsiveRightSheet } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
 
@@ -36,28 +38,119 @@ const emit = defineEmits<{
 const hasSections = computed(() => props.sections.length > 0)
 const hasHistory = computed(() => props.historyEntries.length > 0)
 
+const metaFieldLabels = new Set(["检测人", "扣分", "实测值"])
+const TIMELINE_TRACK_WIDTH_PX = 28
+const TIMELINE_NODE_TOP_PX = 12
+const TIMELINE_NODE_SIZE_PX = 28
+const TIMELINE_GAP_PX = 8
+
 function handleOpenChange(open: boolean) {
   emit("update:open", open)
 }
 
 function badgeClass(tone: EntityHistoryTone | undefined) {
   if (tone === "info") {
-    return "border border-sky-200 bg-sky-50 text-sky-700 dark:border-sky-900/70 dark:bg-sky-950/45 dark:text-sky-200"
+    return "border border-black/5 bg-[#f2f9ff] text-[#097fe8] dark:border-white/10 dark:bg-[#1a2a3a] dark:text-[#5aacf5]"
   }
 
   if (tone === "success") {
-    return "border border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/70 dark:bg-emerald-950/45 dark:text-emerald-200"
+    return "border border-transparent bg-[rgba(42,157,153,0.1)] text-[#2a9d99] dark:bg-[rgba(61,189,185,0.15)] dark:text-[#3dbdb9]"
   }
 
   if (tone === "warning") {
-    return "border border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/70 dark:bg-amber-950/45 dark:text-amber-200"
+    return "border border-transparent bg-[rgba(221,91,0,0.1)] text-[#dd5b00] dark:bg-[rgba(240,112,32,0.15)] dark:text-[#f07020]"
   }
 
   if (tone === "danger") {
-    return "border border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-900/70 dark:bg-rose-950/45 dark:text-rose-200"
+    return "border border-transparent bg-[rgba(201,64,121,0.1)] text-[#c94079] dark:bg-[rgba(255,128,213,0.15)] dark:text-[#ff80d5]"
   }
 
-  return "border border-border/70 bg-muted text-foreground dark:bg-muted/50"
+  return "border border-black/5 bg-white text-[#615d59] dark:border-white/10 dark:bg-[#232323] dark:text-[#a8a5a0]"
+}
+
+function splitEntryFields(entry: HistoryEntry) {
+  const fields = entry.fields ?? []
+
+  return {
+    meta: fields.filter(field => metaFieldLabels.has(field.label) && field.value.trim().length <= 24),
+    detail: fields.filter(field => !metaFieldLabels.has(field.label) || field.value.trim().length > 24),
+  }
+}
+
+function hasSingleImage(entry: HistoryEntry) {
+  return (entry.images?.length ?? 0) === 1
+}
+
+function resolveTimelineNodeTone(entry: HistoryEntry): StatusBadgeTone {
+  if (entry.statusTone === "success") {
+    return "green"
+  }
+
+  if (entry.statusTone === "warning") {
+    return "orange"
+  }
+
+  if (entry.statusTone === "danger") {
+    return "red"
+  }
+
+  if (entry.statusTone === "info") {
+    return "blue"
+  }
+
+  return "gray"
+}
+
+function timelineNodeIconClass(entry: HistoryEntry) {
+  if (entry.statusTone === "success") {
+    return "ri-checkbox-circle-fill"
+  }
+
+  if (entry.statusTone === "warning") {
+    return "ri-time-fill"
+  }
+
+  if (entry.statusTone === "danger") {
+    return "ri-close-circle-fill"
+  }
+
+  if (entry.statusTone === "info") {
+    return "ri-file-list-3-fill"
+  }
+
+  return "ri-file-list-3-fill"
+}
+
+function timelineNodeVars(entry: HistoryEntry) {
+  const tone = resolveTimelineNodeTone(entry)
+  const palette = notionColorTokens[tone]
+
+  return {
+    "--timeline-node-light": palette.light.icon,
+    "--timeline-node-dark": palette.dark.icon,
+  }
+}
+
+function timelineNodeStyle() {
+  return {
+    top: `${TIMELINE_NODE_TOP_PX}px`,
+    width: `${TIMELINE_TRACK_WIDTH_PX}px`,
+    height: `${TIMELINE_NODE_SIZE_PX}px`,
+  }
+}
+
+function timelineTopLineStyle() {
+  return {
+    top: "0px",
+    bottom: `${TIMELINE_NODE_TOP_PX - TIMELINE_GAP_PX}px`,
+  }
+}
+
+function timelineBottomLineStyle() {
+  return {
+    top: `${TIMELINE_NODE_TOP_PX + TIMELINE_NODE_SIZE_PX + TIMELINE_GAP_PX}px`,
+    bottom: "0px",
+  }
 }
 </script>
 
@@ -111,109 +204,144 @@ function badgeClass(tone: EntityHistoryTone | undefined) {
 
         <Separator v-if="hasSections" class="bg-border/80" />
 
-        <section class="space-y-4">
+        <section class="px-4">
           <TitleBlock
             variant="section"
             :title="props.historyTitle"
-            class="detail-section-inset pt-1 pb-1"
+            class="px-0 pt-1 pb-4"
           />
 
           <div
             v-if="hasHistory"
-            class="space-y-4 px-4 pb-1"
+            class="space-y-0"
           >
             <article
               v-for="(entry, index) in props.historyEntries"
               :key="entry.key"
-              class="relative pl-8"
+              class="grid grid-cols-[28px_minmax(0,1fr)] gap-x-4 pb-5 last:pb-0"
             >
-              <div
-                v-if="index < props.historyEntries.length - 1"
-                class="absolute top-8 left-[11px] bottom-[-1rem] w-px bg-border/80"
-              />
+              <div class="relative h-full">
+                <div
+                  v-if="index > 0"
+                  class="absolute left-1/2 w-px -translate-x-1/2 bg-black/10 dark:bg-white/10"
+                  :style="timelineTopLineStyle()"
+                />
 
-              <div
-                :class="cn(
-                  'absolute top-1.5 left-0 flex h-6 w-6 items-center justify-center rounded-full border bg-background shadow-xs',
-                  entry.isLatest
-                    ? 'border-sky-200 text-sky-700 dark:border-sky-900/70 dark:bg-sky-950/30 dark:text-sky-200'
-                    : 'border-border/70 text-muted-foreground dark:bg-background',
-                )"
-              >
-                <i :class="entry.isLatest ? 'ri-sparkling-2-line text-[13px]' : 'ri-history-line text-[13px]'" />
+                <div
+                  v-if="index < props.historyEntries.length - 1"
+                  class="absolute left-1/2 w-px -translate-x-1/2 bg-black/10 dark:bg-white/10"
+                  :style="timelineBottomLineStyle()"
+                />
+
+                <div
+                  class="absolute left-1/2 flex -translate-x-1/2 items-center justify-center"
+                  :style="timelineNodeStyle()"
+                >
+                  <i
+                    :class="cn(
+                      'text-[28px] leading-none text-(--timeline-node-light) dark:text-(--timeline-node-dark)',
+                      timelineNodeIconClass(entry),
+                    )"
+                    :style="timelineNodeVars(entry)"
+                  />
+                </div>
               </div>
 
-              <div
-                :class="cn(
-                  'rounded-2xl border px-4 py-4 shadow-xs transition-colors',
-                  entry.isLatest
-                    ? 'border-sky-200 bg-sky-50/70 dark:border-sky-900/70 dark:bg-sky-950/25'
-                    : 'border-border/70 bg-background dark:bg-card/70',
-                )"
-              >
-                <div class="flex flex-wrap items-start justify-between gap-3">
-                  <div class="min-w-0 flex-1">
-                    <div class="flex flex-wrap items-center gap-2">
-                      <h3 class="truncate text-sm font-semibold text-foreground">{{ entry.title }}</h3>
-                      <Badge
-                        v-if="entry.isLatest"
-                        variant="secondary"
-                        class="rounded-md border border-sky-200 bg-sky-50 px-2 py-0.5 text-[12px] font-medium text-sky-700 dark:border-sky-900/70 dark:bg-sky-950/45 dark:text-sky-200"
-                      >
-                        最新结果
-                      </Badge>
+              <div class="overflow-hidden rounded-[12px] border border-black/10 bg-white shadow-[0_4px_18px_rgba(0,0,0,0.04),0_2.025px_7.85px_rgba(0,0,0,0.027),0_0.8px_2.93px_rgba(0,0,0,0.02),0_0.175px_1.04px_rgba(0,0,0,0.01)] dark:border-white/10 dark:bg-[#191919] dark:shadow-[0_4px_18px_rgba(0,0,0,0.2),0_2.025px_7.85px_rgba(0,0,0,0.15),0_0.8px_2.93px_rgba(0,0,0,0.1),0_0.175px_1.04px_rgba(0,0,0,0.08)]">
+                <div
+                  v-if="entry.isLatest"
+                  class="h-[2px] w-full bg-[#0075de] dark:bg-[#4da3f0]"
+                />
+
+                <div class="px-4 py-4">
+                  <div class="flex flex-wrap items-start justify-between gap-3">
+                    <div class="min-w-0 flex-1">
+                      <div class="flex min-h-5 flex-wrap items-center gap-2">
+                        <h3 class="min-w-0 truncate text-[16px] font-semibold tracking-[-0.15px] text-[rgba(0,0,0,0.95)] dark:text-[rgba(255,255,255,0.92)]">
+                          {{ entry.title }}
+                        </h3>
+                        <Badge
+                          v-if="entry.isLatest"
+                          variant="secondary"
+                          class="rounded-full border border-black/5 bg-[#f2f9ff] px-2 py-0.5 text-[12px] font-semibold tracking-[0.125px] text-[#097fe8] dark:border-white/10 dark:bg-[#1a2a3a] dark:text-[#5aacf5]"
+                        >
+                          最新结果
+                        </Badge>
+                      </div>
+
+                      <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] font-medium text-[#615d59] dark:text-[#a8a5a0]">
+                        <span>{{ entry.timestamp }}</span>
+                        <template v-for="field in splitEntryFields(entry).meta" :key="field.key">
+                          <span class="h-1 w-1 rounded-full bg-[#a39e98] dark:bg-[#6b6763]" />
+                          <span>{{ field.label }} {{ field.value }}</span>
+                        </template>
+                      </div>
                     </div>
-                    <p class="mt-1 text-xs text-muted-foreground">{{ entry.timestamp }}</p>
-                  </div>
 
-                  <Badge
-                    v-if="entry.statusLabel"
-                    variant="secondary"
-                    :class="cn('rounded-md px-2 py-0.5 text-[12px] font-medium', badgeClass(entry.statusTone))"
-                  >
-                    {{ entry.statusLabel }}
-                  </Badge>
-                </div>
-
-                <p
-                  v-if="entry.summary"
-                  class="mt-3 text-sm leading-6 text-foreground"
-                >
-                  {{ entry.summary }}
-                </p>
-
-                <div
-                  v-if="entry.fields?.length"
-                  class="mt-4 grid gap-3 border-t border-border/70 pt-4 sm:grid-cols-2"
-                >
-                  <div
-                    v-for="field in entry.fields"
-                    :key="field.key"
-                    class="min-w-0"
-                  >
-                    <p class="text-xs text-muted-foreground">{{ field.label }}</p>
-                    <p class="mt-1 whitespace-pre-wrap break-words text-sm leading-6 text-foreground">
-                      {{ field.value }}
-                    </p>
-                  </div>
-                </div>
-
-                <div
-                  v-if="entry.images?.length"
-                  class="mt-4 border-t border-border/70 pt-4"
-                >
-                  <p class="text-xs text-muted-foreground">现场照片</p>
-                  <div class="mt-3 grid grid-cols-2 gap-3">
-                    <div
-                      v-for="image in entry.images"
-                      :key="image.key"
-                      class="overflow-hidden rounded-xl border border-border/70 bg-muted/35"
+                    <Badge
+                      v-if="entry.statusLabel"
+                      variant="secondary"
+                      :class="cn('rounded-full px-2 py-0.5 text-[12px] font-semibold tracking-[0.125px]', badgeClass(entry.statusTone))"
                     >
-                      <img
-                        :src="image.src"
-                        :alt="image.alt ?? entry.title"
-                        class="h-28 w-full object-cover"
+                      {{ entry.statusLabel }}
+                    </Badge>
+                  </div>
+
+                  <p
+                    v-if="entry.summary"
+                    class="mt-4 text-[15px] leading-7 text-[rgba(0,0,0,0.9)] dark:text-[rgba(255,255,255,0.9)]"
+                  >
+                    {{ entry.summary }}
+                  </p>
+
+                  <div
+                    v-if="splitEntryFields(entry).detail.length"
+                    class="mt-4 space-y-3"
+                  >
+                    <div
+                      v-for="field in splitEntryFields(entry).detail"
+                      :key="field.key"
+                      class="rounded-[8px] border border-black/[0.08] bg-[#f6f5f4]/85 px-3 py-2.5 dark:border-white/10 dark:bg-[#1e1e1e]"
+                    >
+                      <p class="text-[12px] font-medium tracking-[0.125px] text-[#a39e98] dark:text-[#6b6763]">
+                        {{ field.label }}
+                      </p>
+                      <p class="mt-1 whitespace-pre-wrap break-words text-[14px] leading-6 text-[rgba(0,0,0,0.88)] dark:text-[rgba(255,255,255,0.88)]">
+                        {{ field.value }}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div
+                    v-if="entry.images?.length"
+                    class="mt-5"
+                  >
+                    <p class="text-[12px] font-medium tracking-[0.125px] text-[#a39e98] dark:text-[#6b6763]">
+                      现场照片
+                    </p>
+                    <div
+                      :class="cn(
+                        'mt-3 grid gap-3',
+                        hasSingleImage(entry) ? 'grid-cols-1' : 'grid-cols-2',
+                      )"
+                    >
+                      <div
+                        v-for="image in entry.images"
+                        :key="image.key"
+                        :class="cn(
+                          'overflow-hidden rounded-[12px] border border-black/10 bg-[#f6f5f4] shadow-[0_4px_18px_rgba(0,0,0,0.04),0_2.025px_7.85px_rgba(0,0,0,0.027),0_0.8px_2.93px_rgba(0,0,0,0.02),0_0.175px_1.04px_rgba(0,0,0,0.01)] dark:border-white/10 dark:bg-[#1e1e1e] dark:shadow-[0_4px_18px_rgba(0,0,0,0.2),0_2.025px_7.85px_rgba(0,0,0,0.15),0_0.8px_2.93px_rgba(0,0,0,0.1),0_0.175px_1.04px_rgba(0,0,0,0.08)]',
+                          hasSingleImage(entry) ? 'col-span-1' : '',
+                        )"
                       >
+                        <img
+                          :src="image.src"
+                          :alt="image.alt ?? entry.title"
+                          :class="cn(
+                            'w-full object-cover',
+                            hasSingleImage(entry) ? 'h-52' : 'h-32',
+                          )"
+                        >
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -221,8 +349,8 @@ function badgeClass(tone: EntityHistoryTone | undefined) {
             </article>
           </div>
 
-          <div v-else class="px-4 pb-2">
-            <Empty class="w-full border border-dashed border-border/80 bg-muted/25 p-6 shadow-none">
+          <div v-else class="pb-1">
+            <Empty class="w-full border border-dashed border-black/10 bg-white/70 p-6 shadow-none dark:border-white/10 dark:bg-[#191919]">
               <EmptyHeader>
                 <EmptyMedia variant="icon">
                   <i class="ri-history-line text-[18px]" />
