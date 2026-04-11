@@ -118,7 +118,7 @@ watch(() => props.value.operator, () => {
         <TooltipWrap content="删除当前筛选">
           <button
             type="button"
-            class="inline-flex size-6 items-center justify-center rounded-md text-muted-foreground ring-offset-background transition hover:bg-surface-tertiary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-0"
+            class="inline-flex size-6 items-center justify-center rounded-md text-muted-foreground ring-offset-background transition hover:bg-interactive-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-0"
             aria-label="删除当前筛选"
             @click="openActionMenu = !openActionMenu"
           >
@@ -156,7 +156,7 @@ watch(() => props.value.operator, () => {
       <TooltipWrap v-if="operatorNeedsInput(value.operator) && value.query" content="清空输入内容">
         <button
           type="button"
-          class="inline-flex size-4 shrink-0 items-center justify-center rounded-full text-muted-foreground transition hover:bg-surface-tertiary hover:text-foreground"
+          class="inline-flex size-4 shrink-0 items-center justify-center rounded-full text-muted-foreground transition hover:bg-interactive-hover hover:text-foreground"
           aria-label="清空输入内容"
           @click="handleClearQuery"
         >

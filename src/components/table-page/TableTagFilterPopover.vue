@@ -91,7 +91,7 @@ function handleOptionToggle(option: string) {
         <TooltipWrap content="删除当前筛选">
           <button
             type="button"
-            class="inline-flex size-6 items-center justify-center rounded-md text-muted-foreground ring-offset-background transition hover:bg-surface-tertiary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-0"
+            class="inline-flex size-6 items-center justify-center rounded-md text-muted-foreground ring-offset-background transition hover:bg-interactive-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-0"
             aria-label="删除当前筛选"
             @click="openActionMenu = !openActionMenu"
           >
@@ -131,8 +131,8 @@ function handleOptionToggle(option: string) {
           !operatorNeedsSelection(value.operator)
             ? 'cursor-not-allowed text-muted-foreground'
             : value.values.includes(option)
-              ? 'bg-surface-tertiary text-foreground'
-              : 'text-muted-foreground hover:bg-surface-tertiary',
+              ? 'bg-interactive-hover text-foreground'
+              : 'text-muted-foreground hover:bg-interactive-hover',
         ]"
         @click="handleOptionToggle(option)"
       >

@@ -165,7 +165,7 @@ function handleDragEnd() {
         :key="rule.id"
         :class="[
           'flex items-start gap-1.5 rounded-lg transition-colors',
-          dragOverRuleId === rule.id && draggingRuleId !== rule.id ? 'bg-surface-tertiary' : '',
+          dragOverRuleId === rule.id && draggingRuleId !== rule.id ? 'bg-interactive-hover' : '',
           draggingRuleId === rule.id ? 'opacity-60' : '',
         ]"
         @dragover="handleDragOver($event, rule.id)"
@@ -175,7 +175,7 @@ function handleDragEnd() {
           <button
             type="button"
             draggable="true"
-            class="mt-0.5 inline-flex h-8 w-6 shrink-0 cursor-grab items-center justify-center rounded-sm text-muted-foreground transition hover:bg-surface-tertiary hover:text-foreground active:cursor-grabbing"
+            class="mt-0.5 inline-flex h-8 w-6 shrink-0 cursor-grab items-center justify-center rounded-sm text-muted-foreground transition hover:bg-interactive-hover hover:text-foreground active:cursor-grabbing"
             aria-label="拖动排序"
             @dragstart="handleDragStart($event, rule.id)"
             @dragend="handleDragEnd"
@@ -209,7 +209,7 @@ function handleDragEnd() {
         <TooltipWrap content="删除当前排序">
           <button
             type="button"
-            class="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition hover:bg-surface-tertiary hover:text-foreground"
+            class="inline-flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition hover:bg-interactive-hover hover:text-foreground"
             aria-label="删除当前排序"
             @click="handleRemoveSort(rule.id)"
           >
@@ -221,7 +221,7 @@ function handleDragEnd() {
 
     <button
       type="button"
-      class="mt-1 flex h-9 w-full items-center gap-2 rounded-md px-2.5 text-left text-[13px] font-medium text-foreground transition hover:bg-surface-tertiary"
+      class="mt-1 flex h-9 w-full items-center gap-2 rounded-md px-2.5 text-left text-[13px] font-medium text-foreground transition hover:bg-interactive-hover"
       @click="handleAddSort"
     >
       <i class="ri-add-line text-[18px]" />

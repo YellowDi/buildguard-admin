@@ -134,7 +134,7 @@ function handleCreateConversation() {
             v-for="item in group.items"
             :key="item.id"
             type="button"
-            class="flex w-full items-center gap-2.5 rounded-md px-3 py-2.5 text-left transition-colors hover:bg-sidebar-hover"
+            class="flex w-full items-center gap-2.5 rounded-md px-3 py-2.5 text-left transition-colors hover:bg-interactive-hover"
           >
             <i
               class="ri-chat-1-line shrink-0 text-[17px] leading-none text-muted-foreground"

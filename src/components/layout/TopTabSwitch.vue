@@ -79,8 +79,8 @@ function getBadgeClass(tabId: string) {
   }
 
   return props.modelValue === tabId
-    ? "bg-sidebar-active-surface text-sidebar-accent-foreground"
-    : "bg-sidebar-hover text-sidebar-foreground/72"
+    ? "bg-interactive-active-surface text-sidebar-accent-foreground"
+    : "bg-interactive-hover text-sidebar-foreground/72"
 }
 
 async function syncMeasurements() {

@@ -181,7 +181,7 @@ onMounted(() => {
           :key="src.type"
           role="button"
           tabindex="0"
-          class="flex w-full cursor-pointer items-center gap-2 rounded-sm px-1.5 py-1.5 text-left transition-colors hover:bg-sidebar-hover"
+          class="flex w-full cursor-pointer items-center gap-2 rounded-sm px-1.5 py-1.5 text-left transition-colors hover:bg-interactive-hover"
           :class="sourceSheetOpen && selectedSourceType === src.type ? 'bg-sidebar-accent text-sidebar-accent-foreground' : ''"
           @click="toggleSourceSheet(src)"
           @keydown.enter.prevent="toggleSourceSheet(src)"
@@ -216,7 +216,7 @@ onMounted(() => {
         <article
           v-for="event in eventsForSelectedDate"
           :key="`${event.type}-${event.uuid}`"
-          class="cursor-pointer rounded-xl px-3 py-3 transition-colors hover:bg-sidebar-hover"
+          class="cursor-pointer rounded-xl px-3 py-3 transition-colors hover:bg-interactive-hover"
           @click="navigateToDetail(event)"
         >
           <div class="flex items-start justify-between gap-2">

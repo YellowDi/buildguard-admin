@@ -91,11 +91,11 @@ const emit = defineEmits<{
 const openPopover = ref<string | null>(null)
 const sortPopoverSource = ref<"toolbar" | "chip">("toolbar")
 const ghostIconButtonClass =
-  "inline-flex size-8 items-center justify-center rounded-md bg-transparent text-muted-foreground transition-colors hover:bg-surface-tertiary hover:text-foreground active:bg-surface-secondary"
+  "inline-flex size-8 items-center justify-center rounded-md bg-transparent text-muted-foreground transition-colors hover:bg-interactive-hover hover:text-foreground active:bg-surface-secondary"
 const mobileTabSelectTriggerClass =
   "h-8 max-w-[calc(100vw-11rem)] rounded-full bg-background px-3 text-[14px]"
 const ghostIconButtonActiveClass =
-  "bg-transparent text-link hover:bg-surface-tertiary active:bg-surface-secondary"
+  "bg-transparent text-link hover:bg-interactive-hover active:bg-surface-secondary"
 
 const sortFields = computed(() => props.fields.filter(field => field.kind === "sort"))
 const activeFilterFields = computed(() => props.fields.filter(field => field.kind !== "sort" && field.accent))
@@ -584,7 +584,7 @@ function handleMobileToolbarActionSelect(action: MobileToolbarActionKey) {
                 @click="emit('tab-click', tab)"
               >
                 <span class="relative isolate inline-block">
-                  <span class="pointer-events-none absolute -inset-x-2 -inset-y-1 rounded-md transition-colors group-hover:bg-surface-tertiary" />
+                  <span class="pointer-events-none absolute -inset-x-2 -inset-y-1 rounded-md transition-colors group-hover:bg-interactive-hover" />
                   <span class="relative z-10">{{ tab.label }}</span>
                 </span>
               </button>
@@ -894,7 +894,7 @@ function handleMobileToolbarActionSelect(action: MobileToolbarActionKey) {
                   v-for="item in addableFilters"
                   :key="item"
                   type="button"
-                  class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-[13px] text-foreground transition hover:bg-surface-tertiary"
+                  class="flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-[13px] text-foreground transition hover:bg-interactive-hover"
                   @click="handleAddFilter(item)"
                 >
                   <span>{{ item }}</span>

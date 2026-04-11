@@ -121,7 +121,7 @@ function getEventDotClass(date: AppSidebarCalendarDate) {
                 <Button
                   variant="ghost"
                   size="icon-sm"
-                  class="size-6 rounded-md text-muted-foreground hover:bg-sidebar-hover hover:text-foreground"
+                  class="size-6 rounded-md text-muted-foreground hover:bg-interactive-hover hover:text-foreground"
                   aria-label="回到今天"
                   @click="goToCurrentMonth"
                 >
@@ -136,7 +136,7 @@ function getEventDotClass(date: AppSidebarCalendarDate) {
                 <Button
                   variant="ghost"
                   size="icon-sm"
-                  class="size-6 rounded-md text-muted-foreground hover:bg-sidebar-hover hover:text-foreground"
+                  class="size-6 rounded-md text-muted-foreground hover:bg-interactive-hover hover:text-foreground"
                   aria-label="转到上个月"
                   @click="goToPreviousMonth"
                 >
@@ -151,7 +151,7 @@ function getEventDotClass(date: AppSidebarCalendarDate) {
                 <Button
                   variant="ghost"
                   size="icon-sm"
-                  class="size-6 rounded-md text-muted-foreground hover:bg-sidebar-hover hover:text-foreground"
+                  class="size-6 rounded-md text-muted-foreground hover:bg-interactive-hover hover:text-foreground"
                   aria-label="转到下个月"
                   @click="goToNextMonth"
                 >
@@ -197,7 +197,7 @@ function getEventDotClass(date: AppSidebarCalendarDate) {
                   :class="cn(
                     'relative flex size-7 items-center justify-center rounded-[9px] border-0 bg-transparent p-0 text-[11px] font-medium leading-none text-foreground outline-none shadow-none transition-colors appearance-none',
                     'focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-offset-0',
-                    'hover:bg-sidebar-hover',
+                    'hover:bg-interactive-hover',
                     'data-selected:bg-card data-selected:text-foreground data-selected:shadow-(--shadow-soft)',
                     'data-outside-view:text-muted-foreground/60 data-outside-view:hover:bg-transparent',
                     'data-today:bg-date-today data-today:text-date-today-foreground data-today:shadow-none data-today:hover:bg-date-today',

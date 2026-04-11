@@ -42,8 +42,8 @@
   --surface-warm: #f6f5f4;
   --surface-hover-subtle: rgb(0 0 0 / 0.028);
   --surface-hover-strong: rgb(0 0 0 / 0.05);
-  --sidebar-hover: rgb(0 0 0 / 0.045);
-  --top-tab-switch-active-surface: var(--sidebar-hover);
+  --interactive-hover: rgb(0 0 0 / 0.045);
+  --top-tab-switch-active-surface: var(--interactive-hover);
   --chart-1: #0075de;
   --chart-2: #2a9d99;
   --chart-3: #213183;
@@ -60,7 +60,7 @@
   --sidebar-accent-foreground: #31302e;
   --sidebar-border: rgb(0 0 0 / 0.08);
   --sidebar-ring: #097fe8;
-  --sidebar-active-surface: #ffffff;
+  --interactive-active-surface: #ffffff;
   --border-whisper: rgb(0 0 0 / 0.1);
   --shadow-soft:
     0 20px 20px -10px rgb(23 23 23 / 0.04),
@@ -135,8 +135,8 @@
   --surface-warm: #1e1e1e;
   --surface-hover-subtle: rgb(255 255 255 / 0.05);
   --surface-hover-strong: rgb(255 255 255 / 0.08);
-  --sidebar-hover: rgb(255 255 255 / 0.08);
-  --top-tab-switch-active-surface: var(--sidebar-hover);
+  --interactive-hover: rgb(255 255 255 / 0.08);
+  --top-tab-switch-active-surface: var(--interactive-hover);
   --chart-1: #4da3f0;
   --chart-2: #3dbdb9;
   --chart-3: #6878c8;
@@ -153,7 +153,7 @@
   --sidebar-accent-foreground: #e8e8e8;
   --sidebar-border: rgb(255 255 255 / 0.1);
   --sidebar-ring: #5aacf5;
-  --sidebar-active-surface: rgb(255 255 255 / 0.08);
+  --interactive-active-surface: rgb(255 255 255 / 0.08);
   --border-whisper: rgb(255 255 255 / 0.1);
   --shadow-soft:
     rgb(0 0 0 / 0.2) 0 4px 18px 0,
@@ -237,9 +237,9 @@
   --color-sidebar-primary: var(--sidebar-primary);
   --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
   --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-hover: var(--sidebar-hover);
+  --color-interactive-hover: var(--interactive-hover);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-active-surface: var(--sidebar-active-surface);
+  --color-interactive-active-surface: var(--interactive-active-surface);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-link: var(--link);
@@ -433,17 +433,17 @@
 
   .sidebar-nav-active-surface {
     border-radius: 8px;
-    background: var(--sidebar-active-surface);
+    background: var(--interactive-active-surface);
     box-shadow: var(--shadow-card);
   }
 
   .sidebar-nav-hover-surface:hover,
   .sidebar-nav-hover-surface:focus-visible {
-    background: var(--sidebar-hover);
+    background: var(--interactive-hover);
   }
 
   .sidebar-nav-hover-fill {
-    background: var(--sidebar-hover);
+    background: var(--interactive-hover);
   }
 
   /**

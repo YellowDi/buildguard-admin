@@ -320,7 +320,7 @@ watch(
           <TooltipWrap content="删除当前筛选">
             <button
               type="button"
-              class="inline-flex size-6 items-center justify-center rounded-md text-muted-foreground ring-offset-background transition hover:bg-surface-tertiary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-0"
+              class="inline-flex size-6 items-center justify-center rounded-md text-muted-foreground ring-offset-background transition hover:bg-interactive-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 focus-visible:ring-offset-0"
               aria-label="删除当前筛选"
               @click="openActionMenu = !openActionMenu"
             >
@@ -362,7 +362,7 @@ watch(
             <TooltipWrap v-if="value.startDate" content="清空开始日期">
               <button
                 type="button"
-                class="ml-2 inline-flex size-5 shrink-0 items-center justify-center rounded-sm text-muted-foreground transition hover:bg-surface-tertiary hover:text-foreground"
+                class="ml-2 inline-flex size-5 shrink-0 items-center justify-center rounded-sm text-muted-foreground transition hover:bg-interactive-hover hover:text-foreground"
                 aria-label="清空开始日期"
                 @mousedown.prevent.stop
                 @click.stop="clearBetweenDateInput('start')"
@@ -385,7 +385,7 @@ watch(
             <TooltipWrap v-if="value.endDate" content="清空结束日期">
               <button
                 type="button"
-                class="ml-2 inline-flex size-5 shrink-0 items-center justify-center rounded-sm text-muted-foreground transition hover:bg-surface-tertiary hover:text-foreground"
+                class="ml-2 inline-flex size-5 shrink-0 items-center justify-center rounded-sm text-muted-foreground transition hover:bg-interactive-hover hover:text-foreground"
                 aria-label="清空结束日期"
                 @mousedown.prevent.stop
                 @click.stop="clearBetweenDateInput('end')"
@@ -419,7 +419,7 @@ watch(
             <TooltipWrap v-if="formatDisplayValue()" content="清空日期">
               <button
                 type="button"
-                class="ml-2 inline-flex size-5 shrink-0 items-center justify-center rounded-sm text-muted-foreground transition hover:bg-surface-tertiary hover:text-foreground"
+                class="ml-2 inline-flex size-5 shrink-0 items-center justify-center rounded-sm text-muted-foreground transition hover:bg-interactive-hover hover:text-foreground"
                 aria-label="清空日期"
                 @mousedown.prevent.stop
                 @click.stop="clearSingleDateInput"

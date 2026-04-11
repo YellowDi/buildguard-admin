@@ -34,7 +34,7 @@ const classes = computed(() => {
     base,
     props.selected
       ? "bg-selection text-link hover:bg-selection-hover active:bg-selection-active"
-      : "text-muted-foreground hover:bg-surface-tertiary active:bg-surface-secondary",
+      : "text-muted-foreground hover:bg-interactive-hover active:bg-surface-secondary",
     props.class,
   )
 })

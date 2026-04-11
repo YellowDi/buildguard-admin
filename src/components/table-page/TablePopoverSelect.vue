@@ -128,7 +128,7 @@ onBeforeUnmount(() => {
         :class="
           cn(
             'relative flex w-full cursor-default select-none items-center gap-2 rounded-sm py-1.5 pl-2 pr-8 text-sm outline-none transition',
-            props.modelValue === option.value ? 'bg-accent text-accent-foreground' : 'text-popover-foreground hover:bg-accent hover:text-accent-foreground',
+            props.modelValue === option.value ? 'bg-accent text-accent-foreground' : 'text-popover-foreground hover:bg-interactive-hover hover:text-popover-foreground',
           )
         "
         @click="selectValue(option.value)"

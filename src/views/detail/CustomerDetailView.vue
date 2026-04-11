@@ -503,9 +503,9 @@ const activeDetailMobileActionItems = computed(() => {
   return items
 })
 const detailToolbarButtonClass =
-  "inline-flex size-8 items-center justify-center rounded-md bg-transparent text-muted-foreground transition-colors hover:bg-surface-tertiary hover:text-foreground active:bg-surface-secondary"
+  "inline-flex size-8 items-center justify-center rounded-md bg-transparent text-muted-foreground transition-colors hover:bg-interactive-hover hover:text-foreground active:bg-surface-secondary"
 const detailToolbarButtonActiveClass =
-  "bg-transparent text-link hover:bg-surface-tertiary active:bg-surface-secondary"
+  "bg-transparent text-link hover:bg-interactive-hover active:bg-surface-secondary"
 const activeTablePage = computed(() => (
   activeTab.value === "building-assets"
     ? pagedBuildingAssetsPage
