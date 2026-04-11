@@ -16,7 +16,6 @@ import {
   getTableWrapperClass,
   TABLE_EDGE_GUTTER_DESKTOP,
   TABLE_EDGE_GUTTER_MOBILE,
-  TABLE_HORIZONTAL_SCROLL_SAFE_AREA,
   tableTheme,
 } from "@/components/table-page/tableTheme"
 import type { TableColumn, TablePageEmptyState, TableRowAction } from "@/components/table-page/types"
@@ -204,9 +203,19 @@ const stickyHeaderVisible = computed(() => (
   && stickyHeaderWidth.value > 0
   && stickyColumnWidths.value.length > 0
 ))
+const shouldMaskNativeHorizontalScrollbar = computed(() => (
+  props.fillAvailableHeight
+  && !showEmptyState.value
+  && horizontalOverflow.value
+  && hasVisibleBodyRows.value
+))
 const tableViewportClassName = computed(() => cn(
   scrollViewportClassName.value,
-  props.fillAvailableHeight ? "min-h-0 flex-1 overflow-y-auto" : "",
+  props.fillAvailableHeight ? "min-h-0 h-full overflow-y-auto" : "",
+))
+const scrollFrameClassName = computed(() => cn(
+  "relative min-w-0",
+  props.fillAvailableHeight ? "min-h-0 flex-1 overflow-hidden" : "",
 ))
 const leadingEdgeGutter = computed(() => {
   if (!props.edgeGutter) {
@@ -236,26 +245,7 @@ const tableElementStyle = computed(() => ({
   minWidth: tableInlineMinWidth.value,
   maxWidth: "none",
 }))
-const scrollViewportStyle = computed(() => {
-  const shouldMaskNativeHorizontalScrollbar = !showEmptyState.value && horizontalOverflow.value && hasVisibleBodyRows.value
-  const style: Record<string, string | undefined> = {
-    paddingBottom: shouldMaskNativeHorizontalScrollbar
-      ? `${TABLE_HORIZONTAL_SCROLL_SAFE_AREA + NATIVE_HORIZONTAL_SCROLLBAR_MASK_SIZE}px`
-      : undefined,
-    clipPath: shouldMaskNativeHorizontalScrollbar
-      ? `inset(0 0 ${NATIVE_HORIZONTAL_SCROLLBAR_MASK_SIZE}px 0)`
-      : undefined,
-  }
-
-  if (!props.listLevelTable && (embeddedViewportExpandLeft.value > 0 || embeddedViewportExpandRight.value > 0)) {
-    style.marginLeft = `-${embeddedViewportExpandLeft.value}px`
-    style.marginRight = `-${embeddedViewportExpandRight.value}px`
-    style.width = `calc(100% + ${embeddedViewportExpandLeft.value + embeddedViewportExpandRight.value}px)`
-  }
-
-  return style
-})
-const horizontalScrollbarStyle = computed(() => {
+const revealContainerStyle = computed(() => {
   const style: Record<string, string | undefined> = {}
 
   if (!props.listLevelTable && (embeddedViewportExpandLeft.value > 0 || embeddedViewportExpandRight.value > 0)) {
@@ -266,15 +256,45 @@ const horizontalScrollbarStyle = computed(() => {
 
   return style
 })
-const horizontalScrollbarContainerStyle = computed(() => {
-  if (!props.fillAvailableHeight || !horizontalOverflow.value || !hasVisibleBodyRows.value) {
-    return undefined
+const scrollFrameStyle = computed(() => (
+  props.fillAvailableHeight ? revealContainerStyle.value : undefined
+))
+const scrollViewportStyle = computed(() => {
+  const style: Record<string, string | undefined> = {
+    height: shouldMaskNativeHorizontalScrollbar.value
+      ? `calc(100% + ${NATIVE_HORIZONTAL_SCROLLBAR_MASK_SIZE}px)`
+      : undefined,
   }
 
-  return {
-    marginTop: `-${TABLE_HORIZONTAL_SCROLL_SAFE_AREA + NATIVE_HORIZONTAL_SCROLLBAR_MASK_SIZE}px`,
+  if (!props.fillAvailableHeight && !props.listLevelTable && (embeddedViewportExpandLeft.value > 0 || embeddedViewportExpandRight.value > 0)) {
+    style.marginLeft = `-${embeddedViewportExpandLeft.value}px`
+    style.marginRight = `-${embeddedViewportExpandRight.value}px`
+    style.width = `calc(100% + ${embeddedViewportExpandLeft.value + embeddedViewportExpandRight.value}px)`
   }
+
+  return style
 })
+const bottomDockStyle = computed(() => revealContainerStyle.value)
+const bottomDockClassName = computed(() => cn(
+  "min-w-0 bg-background",
+  props.fillAvailableHeight ? "shrink-0" : "",
+))
+const summaryClassName = computed(() => cn(
+  tableTheme.summary,
+  props.listLevelTable ? "px-4 sm:px-8" : "",
+))
+const summaryStyle = computed(() => (
+  props.listLevelTable ? undefined : horizontalScrollbarTrackWrapperStyle.value
+))
+const horizontalScrollbarSectionClassName = computed(() => cn(
+  props.listLevelTable ? "px-4 sm:px-8" : "",
+))
+const horizontalScrollbarSectionStyle = computed(() => (
+  props.listLevelTable ? undefined : horizontalScrollbarTrackWrapperStyle.value
+))
+const bottomDockVisible = computed(() => (
+  Boolean(props.summary) || (hasVisibleBodyRows.value && horizontalOverflow.value)
+))
 const horizontalScrollbarTrackWrapperStyle = computed(() => {
   if (props.listLevelTable) {
     return undefined
@@ -1435,96 +1455,149 @@ onBeforeUnmount(() => {
       </div>
     </Teleport>
 
-    <div
-      ref="tableWrapperRef"
-      data-table-scroll-viewport
-      :class="tableViewportClassName"
-      :style="scrollViewportStyle"
-    >
+    <div :class="scrollFrameClassName" :style="scrollFrameStyle">
       <div
-        v-if="showEmptyState"
-        :class="cn('flex w-full min-w-0 flex-col items-center justify-center px-4 py-16', props.fillAvailableHeight ? 'min-h-full' : 'min-h-[min(320px,50vh)]')"
+        ref="tableWrapperRef"
+        data-table-scroll-viewport
+        :class="tableViewportClassName"
+        :style="scrollViewportStyle"
       >
-        <Empty
-          class="w-full max-w-md flex-none border-0 bg-transparent p-6! shadow-none md:p-8!"
+        <div
+          v-if="showEmptyState"
+          :class="cn('flex w-full min-w-0 flex-col items-center justify-center px-4 py-16', props.fillAvailableHeight ? 'min-h-full' : 'min-h-[min(320px,50vh)]')"
         >
-          <EmptyHeader class="max-w-md">
-            <EmptyMedia variant="icon">
-              <i :class="[props.emptyState?.icon ?? 'ri-inbox-line', 'text-[18px]']" />
-            </EmptyMedia>
-            <EmptyTitle>{{ props.emptyState?.title ?? "暂无数据" }}</EmptyTitle>
-            <EmptyDescription>
-              {{ props.emptyState?.description ?? "当前列表还没有可展示的数据。" }}
-            </EmptyDescription>
-          </EmptyHeader>
-          <EmptyContent v-if="$slots['empty-action']">
-            <slot name="empty-action" />
-          </EmptyContent>
-        </Empty>
-      </div>
-
-      <div v-else :class="tableTheme.scrollContent">
-        <div :class="tableTheme.edgeGutter" :style="getEdgeGutterStyle(leadingEdgeGutter)" />
-        <table
-          ref="tableRef"
-          :class="tableClassName"
-          :style="tableElementStyle"
-        >
-          <thead
-            :class="
-              cn(
-                tableTheme.head,
-                (props.stickyThead || useInternalStickyThead)
-                  && 'sticky top-0 z-30 bg-background shadow-[inset_0_-1px_0_var(--border)]',
-              )
-            "
+          <Empty
+            class="w-full max-w-md flex-none border-0 bg-transparent p-6! shadow-none md:p-8!"
           >
-            <tr>
-              <th
-                v-for="(column, columnIndex) in columns"
-                :key="column.key"
-                :class="[
-                  tableTheme.headerCell.base,
-                  getResolvedColumnHeaderClass(column, columnIndex),
-                  isSelectionColumn(columnIndex) ? ['group', tableTheme.headerCell.selectionFlush] : '',
-                ]"
-              >
-                <div :class="isSelectionColumn(columnIndex) ? tableTheme.indexInline.headerLayout : ''">
-                  <div
-                    v-if="isSelectionColumn(columnIndex)"
-                    :class="tableTheme.indexInline.prefix"
-                  >
-                    <div :class="getHeaderCheckboxWrapperClass()">
-                      <Checkbox
-                        :model-value="headerCheckboxState"
-                        :disabled="rows.length === 0"
-                        :class="selectionCheckboxClass"
-                        @update:model-value="updateAllRowsSelection($event)"
-                      />
-                    </div>
-                  </div>
-                  <span :class="isSelectionColumn(columnIndex) ? tableTheme.indexInline.content : ''">
-                    {{ column.label }}
-                  </span>
-                </div>
-              </th>
-              <th v-if="hasRowActions" :class="tableTheme.actionHeader">
-                操作
-              </th>
-            </tr>
-          </thead>
+            <EmptyHeader class="max-w-md">
+              <EmptyMedia variant="icon">
+                <i :class="[props.emptyState?.icon ?? 'ri-inbox-line', 'text-[18px]']" />
+              </EmptyMedia>
+              <EmptyTitle>{{ props.emptyState?.title ?? "暂无数据" }}</EmptyTitle>
+              <EmptyDescription>
+                {{ props.emptyState?.description ?? "当前列表还没有可展示的数据。" }}
+              </EmptyDescription>
+            </EmptyHeader>
+            <EmptyContent v-if="$slots['empty-action']">
+              <slot name="empty-action" />
+            </EmptyContent>
+          </Empty>
+        </div>
 
-          <tbody :class="tableTheme.body">
-            <template v-if="showLoadingRows">
+        <div v-else :class="tableTheme.scrollContent">
+          <div :class="tableTheme.edgeGutter" :style="getEdgeGutterStyle(leadingEdgeGutter)" />
+          <table
+            ref="tableRef"
+            :class="tableClassName"
+            :style="tableElementStyle"
+          >
+            <thead
+              :class="
+                cn(
+                  tableTheme.head,
+                  (props.stickyThead || useInternalStickyThead)
+                    && 'sticky top-0 z-30 bg-background shadow-[inset_0_-1px_0_var(--border)]',
+                )
+              "
+            >
+              <tr>
+                <th
+                  v-for="(column, columnIndex) in columns"
+                  :key="column.key"
+                  :class="[
+                    tableTheme.headerCell.base,
+                    getResolvedColumnHeaderClass(column, columnIndex),
+                    isSelectionColumn(columnIndex) ? ['group', tableTheme.headerCell.selectionFlush] : '',
+                  ]"
+                >
+                  <div :class="isSelectionColumn(columnIndex) ? tableTheme.indexInline.headerLayout : ''">
+                    <div
+                      v-if="isSelectionColumn(columnIndex)"
+                      :class="tableTheme.indexInline.prefix"
+                    >
+                      <div :class="getHeaderCheckboxWrapperClass()">
+                        <Checkbox
+                          :model-value="headerCheckboxState"
+                          :disabled="rows.length === 0"
+                          :class="selectionCheckboxClass"
+                          @update:model-value="updateAllRowsSelection($event)"
+                        />
+                      </div>
+                    </div>
+                    <span :class="isSelectionColumn(columnIndex) ? tableTheme.indexInline.content : ''">
+                      {{ column.label }}
+                    </span>
+                  </div>
+                </th>
+                <th v-if="hasRowActions" :class="tableTheme.actionHeader">
+                  操作
+                </th>
+              </tr>
+            </thead>
+
+            <tbody :class="tableTheme.body">
+              <template v-if="showLoadingRows">
+                <tr
+                  v-for="rowIndex in props.loadingRowCount"
+                  :key="`loading-row-${rowIndex}`"
+                  :class="tableTheme.row"
+                  aria-hidden="true"
+                >
+                  <td
+                    v-for="(column, columnIndex) in columns"
+                    :key="`loading-row-${rowIndex}-cell-${column.key}`"
+                    :class="[
+                      tableTheme.bodyCell.base,
+                      isSelectionColumn(columnIndex) ? tableTheme.bodyCell.selectionFlush : '',
+                      columnIndex > 0 ? tableTheme.bodyCell.split : '',
+                      isRightAlignedColumn(column) && !isSelectionColumn(columnIndex) ? tableTheme.bodyCell.rightAligned : '',
+                      getResolvedColumnCellClass(column, columnIndex),
+                    ]"
+                  >
+                    <div
+                      v-if="isPrimaryColumn(columnIndex)"
+                      :class="isSelectionColumn(columnIndex) ? tableTheme.indexInline.cellLayout : 'flex min-w-0 items-center'"
+                    >
+                      <div
+                        v-if="isSelectionColumn(columnIndex)"
+                        :class="tableTheme.indexInline.prefix"
+                      >
+                        <Skeleton class="h-4 w-4 rounded-sm" />
+                      </div>
+                      <div :class="cn(isSelectionColumn(columnIndex) ? tableTheme.indexInline.content : 'min-w-0', 'flex min-w-0 items-center')">
+                        <Skeleton :class="getLoadingPrimaryLineClass(rowIndex)" />
+                      </div>
+                    </div>
+                    <div v-else :class="getLoadingCellContentClass(column, columnIndex)">
+                      <Skeleton :class="getLoadingCellWidthClass(column, columnIndex, rowIndex)" />
+                    </div>
+                  </td>
+                  <td
+                    v-if="hasRowActions"
+                    :class="tableTheme.actionCell"
+                  >
+                    <div :class="tableTheme.actionCellContent">
+                      <Skeleton :class="getLoadingActionSkeletonClass(rowIndex)" />
+                    </div>
+                  </td>
+                </tr>
+              </template>
+
               <tr
-                v-for="rowIndex in props.loadingRowCount"
-                :key="`loading-row-${rowIndex}`"
-                :class="tableTheme.row"
-                aria-hidden="true"
+                v-for="(row, index) in rows"
+                v-else-if="hasDataRows"
+                :key="getRowKey(row, index)"
+                :class="getRowClass(row, index)"
+                @mousedown="handleRowMouseDown(row, index, $event)"
+                @click="handleRowClick(row, index, $event)"
+                @mouseenter="handleRowMouseEnter(getRowKey(row, index))"
+                @mouseleave="handleRowMouseLeave(getRowKey(row, index))"
+                @focusin="handleRowFocusIn(getRowKey(row, index))"
+                @focusout="handleRowFocusOut(getRowKey(row, index), $event)"
               >
                 <td
                   v-for="(column, columnIndex) in columns"
-                  :key="`loading-row-${rowIndex}-cell-${column.key}`"
+                  :key="column.key"
                   :class="[
                     tableTheme.bodyCell.base,
                     isSelectionColumn(columnIndex) ? tableTheme.bodyCell.selectionFlush : '',
@@ -1533,273 +1606,223 @@ onBeforeUnmount(() => {
                     getResolvedColumnCellClass(column, columnIndex),
                   ]"
                 >
-                  <div
-                    v-if="isPrimaryColumn(columnIndex)"
-                    :class="isSelectionColumn(columnIndex) ? tableTheme.indexInline.cellLayout : 'flex min-w-0 items-center'"
-                  >
+                  <div :class="isSelectionColumn(columnIndex) ? tableTheme.indexInline.cellLayout : ''">
                     <div
                       v-if="isSelectionColumn(columnIndex)"
                       :class="tableTheme.indexInline.prefix"
                     >
-                      <Skeleton class="h-4 w-4 rounded-sm" />
+                      <span :class="getIndexLabelClass(row, index)">
+                        {{ index + 1 }}
+                      </span>
+                      <span :class="getIndexCheckboxWrapperClass(row, index)">
+                        <Checkbox
+                          :model-value="isRowSelected(row, index)"
+                          :class="selectionCheckboxClass"
+                          @click.stop
+                          @update:model-value="updateRowSelection(row, index, $event)"
+                        />
+                      </span>
                     </div>
-                    <div :class="cn(isSelectionColumn(columnIndex) ? tableTheme.indexInline.content : 'min-w-0', 'flex min-w-0 items-center')">
-                      <Skeleton :class="getLoadingPrimaryLineClass(rowIndex)" />
+                    <div
+                      :class="[
+                        isSelectionColumn(columnIndex) ? tableTheme.indexInline.content : '',
+                        isPrimaryColumn(columnIndex) && inlineQuickActionEnabled ? tableTheme.quickAction.layout : '',
+                      ]"
+                    >
+                      <div
+                        :class="isPrimaryColumn(columnIndex) && inlineQuickActionEnabled ? tableTheme.quickAction.content : ''"
+                      >
+                        <slot
+                          :name="column.slot ?? `cell-${column.key}`"
+                          :row="row"
+                          :value="getColumnValue(row, column.key)"
+                          :index="index"
+                        >
+                          <template v-if="column.cellRenderer?.kind === 'dual-inline'">
+                            <span :class="column.cellRenderer.primaryClass ?? tableTheme.renderers.contactPrimary">
+                              {{ getRendererValue(row, column.cellRenderer.primaryKey) }}
+                            </span>
+                            <span
+                              v-if="stringifyValue(getRendererValue(row, column.cellRenderer.secondaryKey))"
+                              :class="['ml-1', column.cellRenderer.secondaryClass ?? tableTheme.renderers.contactSecondary]"
+                            >
+                              {{ getRendererValue(row, column.cellRenderer.secondaryKey) }}
+                            </span>
+                          </template>
+
+                          <div
+                            v-else-if="column.cellRenderer?.kind === 'dual-stack'"
+                            class="flex flex-col gap-0.5"
+                          >
+                            <span :class="column.cellRenderer.primaryClass ?? tableTheme.renderers.contactPrimary">
+                              {{ getRendererValue(row, column.cellRenderer.primaryKey) }}
+                            </span>
+                            <span
+                              v-if="stringifyValue(getRendererValue(row, column.cellRenderer.secondaryKey))"
+                              :class="column.cellRenderer.secondaryClass ?? tableTheme.renderers.contactSecondary"
+                            >
+                              {{ getRendererValue(row, column.cellRenderer.secondaryKey) }}
+                            </span>
+                          </div>
+
+                          <div
+                            v-else-if="column.cellRenderer?.kind === 'array'"
+                            class="flex flex-wrap items-center gap-1"
+                          >
+                            <span
+                              v-for="(item, itemIndex) in getArrayValue(getColumnValue(row, column.key))"
+                              :key="`${column.key}-${index}-${itemIndex}`"
+                              :class="column.cellRenderer.itemClass ?? tableTheme.renderers.arrayItem"
+                            >
+                              {{ item }}<template v-if="itemIndex < getArrayValue(getColumnValue(row, column.key)).length - 1">{{ column.cellRenderer.separator ?? "、" }}</template>
+                            </span>
+                          </div>
+
+                          <div
+                            v-else-if="column.cellRenderer?.kind === 'tags'"
+                            class="flex flex-wrap items-center gap-1.5"
+                          >
+                            <span
+                              v-for="(item, itemIndex) in getArrayValue(getColumnValue(row, column.key))"
+                              :key="`${column.key}-${index}-tag-${itemIndex}`"
+                              :class="column.cellRenderer.itemClass ?? tableTheme.renderers.tagItem"
+                            >
+                              {{ item }}
+                            </span>
+                          </div>
+
+                          <div
+                            v-else-if="column.cellRenderer?.kind === 'progress'"
+                            class="flex min-w-[120px] items-center gap-2"
+                          >
+                            <div :class="column.cellRenderer.trackClass ?? tableTheme.renderers.progressTrack">
+                              <div
+                                :class="column.cellRenderer.fillClass ?? tableTheme.renderers.progressFill"
+                                :style="{ width: `${getProgressPercent(row, column)}%` }"
+                              />
+                            </div>
+                            <span :class="column.cellRenderer.labelClass ?? tableTheme.renderers.progressLabel">
+                              {{ getColumnValue(row, column.key) }}
+                            </span>
+                          </div>
+
+                          <div
+                            v-else-if="column.cellRenderer?.kind === 'metric-unit'"
+                            class="inline-flex items-baseline justify-end"
+                          >
+                            <span :class="column.cellRenderer.valueClass ?? tableTheme.renderers.metricValue">
+                              {{ getRendererValue(row, column.cellRenderer.valueKey ?? column.key) }}
+                            </span>
+                            <span
+                              v-if="hasDisplayValue(getRendererValue(row, column.cellRenderer.valueKey ?? column.key))"
+                              :class="['ml-1', column.cellRenderer.unitClass ?? tableTheme.renderers.metricUnit]"
+                            >
+                              {{ column.cellRenderer.unit }}
+                            </span>
+                          </div>
+
+                          <StatusChip
+                            v-else-if="column.cellRenderer?.kind === 'status'"
+                            :value="getRendererValue(row, column.cellRenderer.valueKey ?? column.key)"
+                            :renderer="column.cellRenderer"
+                          />
+
+                          <div
+                            v-else-if="column.cellRenderer?.kind === 'note'"
+                            :class="getNoteContentClass(column, columnIndex)"
+                          >
+                            {{ getColumnValue(row, column.key) }}
+                          </div>
+
+                          <template v-else>
+                            {{ getColumnValue(row, column.key) }}
+                          </template>
+                        </slot>
+                      </div>
+
+                      <div
+                        v-if="isPrimaryColumn(columnIndex) && inlineQuickActionEnabled"
+                        :class="getInlineQuickActionWrapperClass(row, index)"
+                      >
+                        <TooltipWrap
+                          v-for="action in inlineSecondaryActions"
+                          :key="`${getRowKey(row, index)}-${action.key}-inline`"
+                          :content="action.label"
+                        >
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            :class="tableTheme.quickAction.button"
+                            :aria-label="action.label"
+                            :title="action.label"
+                            data-row-click-ignore
+                            @mousedown.stop.prevent
+                            @click.stop="handleInlineSecondaryAction(action, row, index, $event)"
+                          >
+                            <i :class="[remixIconForTableRowAction(action.label, action.icon), 'text-[14px] leading-none']" />
+                          </Button>
+                        </TooltipWrap>
+
+                        <TooltipWrap content="在侧边预览中打开">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            :class="tableTheme.quickAction.button"
+                            aria-label="在侧边预览中打开"
+                            title="在侧边预览中打开"
+                            data-row-click-ignore
+                            @mousedown.stop.prevent
+                            @click.stop="handleInlineQuickAction(row, index, $event)"
+                          >
+                            <i class="ri-layout-right-2-line text-[14px] leading-none" />
+                          </Button>
+                        </TooltipWrap>
+                      </div>
                     </div>
-                  </div>
-                  <div v-else :class="getLoadingCellContentClass(column, columnIndex)">
-                    <Skeleton :class="getLoadingCellWidthClass(column, columnIndex, rowIndex)" />
                   </div>
                 </td>
                 <td
                   v-if="hasRowActions"
-                  :class="tableTheme.actionCell"
+                  :class="[
+                    tableTheme.actionCell,
+                    isRowSelected(row, index) ? 'bg-selection' : '',
+                  ]"
                 >
                   <div :class="tableTheme.actionCellContent">
-                    <Skeleton :class="getLoadingActionSkeletonClass(rowIndex)" />
+                    <Button
+                      v-for="action in rowActions"
+                      :key="`${getRowKey(row, index)}-${action.key}`"
+                      variant="outline"
+                      size="sm"
+                      :class="tableTheme.actionButton"
+                      @click.stop="handleRowActionClick(action, row, index)"
+                    >
+                      <i v-if="props.showRowActionIcons" :class="remixIconForTableRowAction(action.label, action.icon)" />
+                      {{ action.label }}
+                    </Button>
                   </div>
                 </td>
               </tr>
-            </template>
-
-            <tr
-              v-for="(row, index) in rows"
-              v-else-if="hasDataRows"
-              :key="getRowKey(row, index)"
-              :class="getRowClass(row, index)"
-              @mousedown="handleRowMouseDown(row, index, $event)"
-              @click="handleRowClick(row, index, $event)"
-              @mouseenter="handleRowMouseEnter(getRowKey(row, index))"
-              @mouseleave="handleRowMouseLeave(getRowKey(row, index))"
-              @focusin="handleRowFocusIn(getRowKey(row, index))"
-              @focusout="handleRowFocusOut(getRowKey(row, index), $event)"
-            >
-              <td
-                v-for="(column, columnIndex) in columns"
-                :key="column.key"
-                :class="[
-                  tableTheme.bodyCell.base,
-                  isSelectionColumn(columnIndex) ? tableTheme.bodyCell.selectionFlush : '',
-                  columnIndex > 0 ? tableTheme.bodyCell.split : '',
-                  isRightAlignedColumn(column) && !isSelectionColumn(columnIndex) ? tableTheme.bodyCell.rightAligned : '',
-                  getResolvedColumnCellClass(column, columnIndex),
-                ]"
-              >
-                <div :class="isSelectionColumn(columnIndex) ? tableTheme.indexInline.cellLayout : ''">
-                  <div
-                    v-if="isSelectionColumn(columnIndex)"
-                    :class="tableTheme.indexInline.prefix"
-                  >
-                    <span :class="getIndexLabelClass(row, index)">
-                      {{ index + 1 }}
-                    </span>
-                    <span :class="getIndexCheckboxWrapperClass(row, index)">
-                      <Checkbox
-                        :model-value="isRowSelected(row, index)"
-                        :class="selectionCheckboxClass"
-                        @click.stop
-                        @update:model-value="updateRowSelection(row, index, $event)"
-                      />
-                    </span>
-                  </div>
-                  <div
-                    :class="[
-                      isSelectionColumn(columnIndex) ? tableTheme.indexInline.content : '',
-                      isPrimaryColumn(columnIndex) && inlineQuickActionEnabled ? tableTheme.quickAction.layout : '',
-                    ]"
-                  >
-                    <div
-                      :class="isPrimaryColumn(columnIndex) && inlineQuickActionEnabled ? tableTheme.quickAction.content : ''"
-                    >
-                      <slot
-                        :name="column.slot ?? `cell-${column.key}`"
-                        :row="row"
-                        :value="getColumnValue(row, column.key)"
-                        :index="index"
-                      >
-                        <template v-if="column.cellRenderer?.kind === 'dual-inline'">
-                          <span :class="column.cellRenderer.primaryClass ?? tableTheme.renderers.contactPrimary">
-                            {{ getRendererValue(row, column.cellRenderer.primaryKey) }}
-                          </span>
-                          <span
-                            v-if="stringifyValue(getRendererValue(row, column.cellRenderer.secondaryKey))"
-                            :class="['ml-1', column.cellRenderer.secondaryClass ?? tableTheme.renderers.contactSecondary]"
-                          >
-                            {{ getRendererValue(row, column.cellRenderer.secondaryKey) }}
-                          </span>
-                        </template>
-
-                        <div
-                          v-else-if="column.cellRenderer?.kind === 'dual-stack'"
-                          class="flex flex-col gap-0.5"
-                        >
-                          <span :class="column.cellRenderer.primaryClass ?? tableTheme.renderers.contactPrimary">
-                            {{ getRendererValue(row, column.cellRenderer.primaryKey) }}
-                          </span>
-                          <span
-                            v-if="stringifyValue(getRendererValue(row, column.cellRenderer.secondaryKey))"
-                            :class="column.cellRenderer.secondaryClass ?? tableTheme.renderers.contactSecondary"
-                          >
-                            {{ getRendererValue(row, column.cellRenderer.secondaryKey) }}
-                          </span>
-                        </div>
-
-                        <div
-                          v-else-if="column.cellRenderer?.kind === 'array'"
-                          class="flex flex-wrap items-center gap-1"
-                        >
-                          <span
-                            v-for="(item, itemIndex) in getArrayValue(getColumnValue(row, column.key))"
-                            :key="`${column.key}-${index}-${itemIndex}`"
-                            :class="column.cellRenderer.itemClass ?? tableTheme.renderers.arrayItem"
-                          >
-                            {{ item }}<template v-if="itemIndex < getArrayValue(getColumnValue(row, column.key)).length - 1">{{ column.cellRenderer.separator ?? "、" }}</template>
-                          </span>
-                        </div>
-
-                        <div
-                          v-else-if="column.cellRenderer?.kind === 'tags'"
-                          class="flex flex-wrap items-center gap-1.5"
-                        >
-                          <span
-                            v-for="(item, itemIndex) in getArrayValue(getColumnValue(row, column.key))"
-                            :key="`${column.key}-${index}-tag-${itemIndex}`"
-                            :class="column.cellRenderer.itemClass ?? tableTheme.renderers.tagItem"
-                          >
-                            {{ item }}
-                          </span>
-                        </div>
-
-                        <div
-                          v-else-if="column.cellRenderer?.kind === 'progress'"
-                          class="flex min-w-[120px] items-center gap-2"
-                        >
-                          <div :class="column.cellRenderer.trackClass ?? tableTheme.renderers.progressTrack">
-                            <div
-                              :class="column.cellRenderer.fillClass ?? tableTheme.renderers.progressFill"
-                              :style="{ width: `${getProgressPercent(row, column)}%` }"
-                            />
-                          </div>
-                          <span :class="column.cellRenderer.labelClass ?? tableTheme.renderers.progressLabel">
-                            {{ getColumnValue(row, column.key) }}
-                          </span>
-                        </div>
-
-                        <div
-                          v-else-if="column.cellRenderer?.kind === 'metric-unit'"
-                          class="inline-flex items-baseline justify-end"
-                        >
-                          <span :class="column.cellRenderer.valueClass ?? tableTheme.renderers.metricValue">
-                            {{ getRendererValue(row, column.cellRenderer.valueKey ?? column.key) }}
-                          </span>
-                          <span
-                            v-if="hasDisplayValue(getRendererValue(row, column.cellRenderer.valueKey ?? column.key))"
-                            :class="['ml-1', column.cellRenderer.unitClass ?? tableTheme.renderers.metricUnit]"
-                          >
-                            {{ column.cellRenderer.unit }}
-                          </span>
-                        </div>
-
-                        <StatusChip
-                          v-else-if="column.cellRenderer?.kind === 'status'"
-                          :value="getRendererValue(row, column.cellRenderer.valueKey ?? column.key)"
-                          :renderer="column.cellRenderer"
-                        />
-
-                        <div
-                          v-else-if="column.cellRenderer?.kind === 'note'"
-                          :class="getNoteContentClass(column, columnIndex)"
-                        >
-                          {{ getColumnValue(row, column.key) }}
-                        </div>
-
-                        <template v-else>
-                          {{ getColumnValue(row, column.key) }}
-                        </template>
-                      </slot>
-                    </div>
-
-                    <div
-                      v-if="isPrimaryColumn(columnIndex) && inlineQuickActionEnabled"
-                      :class="getInlineQuickActionWrapperClass(row, index)"
-                    >
-                      <TooltipWrap
-                        v-for="action in inlineSecondaryActions"
-                        :key="`${getRowKey(row, index)}-${action.key}-inline`"
-                        :content="action.label"
-                      >
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          :class="tableTheme.quickAction.button"
-                          :aria-label="action.label"
-                          :title="action.label"
-                          data-row-click-ignore
-                          @mousedown.stop.prevent
-                          @click.stop="handleInlineSecondaryAction(action, row, index, $event)"
-                        >
-                          <i :class="[remixIconForTableRowAction(action.label, action.icon), 'text-[14px] leading-none']" />
-                        </Button>
-                      </TooltipWrap>
-
-                      <TooltipWrap content="在侧边预览中打开">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          :class="tableTheme.quickAction.button"
-                          aria-label="在侧边预览中打开"
-                          title="在侧边预览中打开"
-                          data-row-click-ignore
-                          @mousedown.stop.prevent
-                          @click.stop="handleInlineQuickAction(row, index, $event)"
-                        >
-                          <i class="ri-layout-right-2-line text-[14px] leading-none" />
-                        </Button>
-                      </TooltipWrap>
-                    </div>
-                  </div>
-                </div>
-              </td>
-              <td
-                v-if="hasRowActions"
-                :class="[
-                  tableTheme.actionCell,
-                  isRowSelected(row, index) ? 'bg-selection' : '',
-                ]"
-              >
-                <div :class="tableTheme.actionCellContent">
-                  <Button
-                    v-for="action in rowActions"
-                    :key="`${getRowKey(row, index)}-${action.key}`"
-                    variant="outline"
-                    size="sm"
-                    :class="tableTheme.actionButton"
-                    @click.stop="handleRowActionClick(action, row, index)"
-                  >
-                    <i v-if="props.showRowActionIcons" :class="remixIconForTableRowAction(action.label, action.icon)" />
-                    {{ action.label }}
-                  </Button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-        <div :class="tableTheme.edgeGutter" :style="getEdgeGutterStyle(trailingEdgeGutter)" />
+            </tbody>
+          </table>
+          <div :class="tableTheme.edgeGutter" :style="getEdgeGutterStyle(trailingEdgeGutter)" />
+        </div>
       </div>
     </div>
 
-    <div v-if="summary" :class="cn(tableTheme.summary, props.fillAvailableHeight ? 'shrink-0' : '')">
-      {{ summary }}
-    </div>
-
     <div
-      v-if="hasVisibleBodyRows && horizontalOverflow"
-      :class="cn(props.fillAvailableHeight ? 'shrink-0' : '')"
-      :style="[horizontalScrollbarStyle, horizontalScrollbarContainerStyle]"
+      v-if="bottomDockVisible"
+      :class="bottomDockClassName"
+      :style="bottomDockStyle"
     >
+      <div v-if="summary" :class="summaryClassName" :style="summaryStyle">
+        {{ summary }}
+      </div>
+
       <div
-        :class="props.listLevelTable ? 'px-4 sm:px-8' : ''"
-        :style="horizontalScrollbarTrackWrapperStyle"
+        v-if="hasVisibleBodyRows && horizontalOverflow"
+        :class="horizontalScrollbarSectionClassName"
+        :style="horizontalScrollbarSectionStyle"
       >
         <div
           ref="horizontalScrollbarTrackRef"
