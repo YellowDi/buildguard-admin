@@ -29,6 +29,8 @@ type ParkRecord = {
   customerUuid: string
   customerName: string
   parkName: string
+  buildingCount: string
+  buildingCountValue: number | null
   builtTime: string
   operationTime: string
   buildArea: string
@@ -140,6 +142,22 @@ const schema: TablePageSchema<ParkRecord> = {
         kind: "metric-unit",
         valueKey: "buildAreaValue",
         unit: "㎡",
+      },
+    },
+    {
+      key: "buildingCount",
+      label: "建筑数量",
+      filterType: "number",
+      variant: "metric",
+      filter: {
+        type: "number",
+        placeholder: "输入建筑数量",
+        value: row => row.buildingCountValue ?? "",
+      },
+      sort: {
+        label: "建筑数量",
+        kind: "metric",
+        value: row => row.buildingCountValue ?? -1,
       },
     },
     {
@@ -287,6 +305,7 @@ async function loadParks() {
     parks.value = parksResult.list.map((item, index) => {
       const uuid = toText(item.Uuid, `park-${index + 1}`)
       const buildAreaValue = parseAreaValue(item.BuildArea)
+      const buildingCountValue = getFirstNumber(item, ["BuildNum", "BuildingNum", "BuildCount", "BuildingCount", "buildingCount"])
 
       return {
         id: uuid,
@@ -294,6 +313,8 @@ async function loadParks() {
         customerUuid: toText(item.CustomerUuid),
         customerName: toText(item.CorpName, "未关联客户"),
         parkName: toText(item.Name, "未命名园区"),
+        buildingCount: buildingCountValue === null ? "-" : String(buildingCountValue),
+        buildingCountValue,
         builtTime: toText(item.BuiltTime, "-"),
         operationTime: toText(item.OperationTime, "-"),
         buildArea: buildAreaValue === null ? "-" : String(buildAreaValue),
@@ -332,6 +353,7 @@ function buildPageFilterText(row: ParkRecord) {
   return [
     row.parkName,
     row.customerName,
+    row.buildingCount,
     row.buildArea,
     row.contactName,
     row.contactPhone,
@@ -356,6 +378,26 @@ function parseAreaValue(value: unknown) {
 
   const numeric = Number(normalized.replace(/[^\d.]/g, ""))
   return Number.isFinite(numeric) ? numeric : null
+}
+
+function getFirstNumber(record: Record<string, unknown>, keys: string[]) {
+  for (const key of keys) {
+    const value = record[key]
+
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return value
+    }
+
+    if (typeof value === "string" && value.trim()) {
+      const parsed = Number(value.trim())
+
+      if (Number.isFinite(parsed)) {
+        return parsed
+      }
+    }
+  }
+
+  return null
 }
 
 function toText(value: unknown, fallback = "") {

@@ -13,7 +13,12 @@ export type ParkListItem = {
   Uuid?: string
   Id?: number
   CustomerUuid?: string
+  CorpName?: string
   Name?: string
+  BuildNum?: number
+  BuildingNum?: number
+  BuildCount?: number
+  BuildingCount?: number
   BuiltTime?: string
   OperationTime?: string
   BuildArea?: string
