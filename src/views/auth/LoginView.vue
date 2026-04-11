@@ -168,13 +168,13 @@ async function handleSubmit() {
           @contextmenu.prevent
         />
         <div
-          class="pointer-events-none absolute inset-0 bg-white/35 backdrop-blur-md"
+          class="pointer-events-none absolute inset-0 bg-background/35 backdrop-blur-md"
           aria-hidden="true"
         />
       </div>
       <div
         v-show="!showLoginVisualFallback"
-        class="pointer-events-none absolute inset-0 z-10 bg-white/35 backdrop-blur-md"
+        class="pointer-events-none absolute inset-0 z-10 bg-background/35 backdrop-blur-md"
         aria-hidden="true"
       />
     </div>

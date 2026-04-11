@@ -454,10 +454,10 @@ function getNextExecutionProgressClass(row: InspectionPlanRecord) {
   }
 
   if (diffDays <= 30) {
-    return "[&_[data-slot=progress-indicator]]:bg-orange-500/80"
+    return "[&_[data-slot=progress-indicator]]:bg-warning/80"
   }
 
-  return "[&_[data-slot=progress-indicator]]:bg-[#2383E2]"
+  return "[&_[data-slot=progress-indicator]]:bg-link"
 }
 
 function buildPageFilterText(row: InspectionPlanRecord) {
@@ -615,14 +615,14 @@ function asInspectionPlanRecord(row: Record<string, unknown>): InspectionPlanRec
         <template #cell-planName="{ row }">
           <div class="inline-flex max-w-full items-baseline gap-1.5">
             <span class="truncate text-foreground">{{ row.planName }}</span>
-            <span class="shrink-0 text-[#8C94A6]">#{{ row.code }}</span>
+            <span class="shrink-0 text-muted-foreground">#{{ row.code }}</span>
           </div>
         </template>
 
         <template #cell-customerName="{ row }">
           <button
             type="button"
-            class="inline-flex max-w-full items-center gap-1 text-left text-[#2B67F6] transition-colors hover:text-[#1D4ED8]"
+            class="inline-flex max-w-full items-center gap-1 text-left text-link transition-colors hover:text-link-hover"
             @click.stop="jumpToCustomerDetail(asInspectionPlanRecord(row))"
           >
             <span class="truncate">{{ row.customerName }}</span>
@@ -633,7 +633,7 @@ function asInspectionPlanRecord(row: Record<string, unknown>): InspectionPlanRec
         <template #cell-serviceName="{ row }">
           <button
             type="button"
-            class="inline-flex max-w-full items-center gap-1 text-left text-[#2B67F6] transition-colors hover:text-[#1D4ED8]"
+            class="inline-flex max-w-full items-center gap-1 text-left text-link transition-colors hover:text-link-hover"
             @click.stop="jumpToServiceDetail(asInspectionPlanRecord(row))"
           >
             <span class="truncate">{{ row.serviceName }}</span>
@@ -650,7 +650,7 @@ function asInspectionPlanRecord(row: Record<string, unknown>): InspectionPlanRec
               >
                 <Progress
                   :model-value="getNextExecutionProgressValue(asInspectionPlanRecord(row))"
-                  class="h-1.5 max-w-[120px] bg-[#E9EDF2] [&_[data-slot=progress-indicator]]:transition-all"
+                  class="h-1.5 max-w-[120px] bg-surface-tertiary [&_[data-slot=progress-indicator]]:transition-all"
                   :class="getNextExecutionProgressClass(asInspectionPlanRecord(row))"
                 />
                 <span class="shrink-0 text-xs text-muted-foreground">

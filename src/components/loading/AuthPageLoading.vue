@@ -48,12 +48,12 @@ import { Spinner } from "@/components/ui/spinner"
     <div class="relative hidden overflow-hidden bg-muted lg:block">
       <div
         class="absolute inset-0"
-        style="background-image: radial-gradient(circle at top left, rgba(255, 255, 255, 0.65), transparent 42%), linear-gradient(135deg, rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0.08));"
+        style="background-image: radial-gradient(circle at top left, color-mix(in srgb, var(--background) 65%, transparent), transparent 42%), linear-gradient(135deg, color-mix(in srgb, var(--background) 45%, transparent), color-mix(in srgb, var(--background) 8%, transparent));"
       />
-      <div class="absolute inset-10 bg-white/12 backdrop-blur-sm" />
-      <Skeleton class="absolute left-10 top-10 h-12 w-40 bg-white/30" />
-      <Skeleton class="absolute bottom-16 left-16 h-48 w-48 rounded-full bg-white/20" />
-      <Skeleton class="absolute right-16 top-24 h-56 w-56 rounded-full bg-white/20" />
+      <div class="absolute inset-10 bg-background/12 backdrop-blur-sm" />
+      <Skeleton class="absolute left-10 top-10 h-12 w-40 bg-background/30" />
+      <Skeleton class="absolute bottom-16 left-16 h-48 w-48 rounded-full bg-background/20" />
+      <Skeleton class="absolute right-16 top-24 h-56 w-56 rounded-full bg-background/20" />
     </div>
   </div>
 </template>

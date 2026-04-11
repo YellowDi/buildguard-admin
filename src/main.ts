@@ -63,11 +63,11 @@ function getStartupErrorMessage() {
 function renderStartupError(message: string) {
   document.body.classList.add("app-ready")
   document.body.innerHTML = `
-    <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:#f8fafc;color:#0f172a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
-      <div style="width:min(520px,100%);border:1px solid #e2e8f0;border-radius:16px;background:#ffffff;padding:24px;box-shadow:0 10px 30px rgba(15,23,42,0.08);">
-        <p style="margin:0 0 8px;font-size:14px;font-weight:600;color:#b91c1c;">启动失败</p>
+    <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:var(--surface-warm);color:var(--foreground);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+      <div style="width:min(520px,100%);border:1px solid var(--border-whisper);border-radius:16px;background:var(--card);padding:24px;box-shadow:var(--shadow-deep);">
+        <p style="margin:0 0 8px;font-size:14px;font-weight:600;color:var(--destructive);">启动失败</p>
         <h1 style="margin:0 0 12px;font-size:24px;line-height:1.3;">登录服务配置不安全或不完整</h1>
-        <p style="margin:0;font-size:14px;line-height:1.6;color:#475569;">${escapeHtml(message)}</p>
+        <p style="margin:0;font-size:14px;line-height:1.6;color:var(--muted-foreground);">${escapeHtml(message)}</p>
       </div>
     </div>
   `

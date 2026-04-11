@@ -664,7 +664,7 @@ defineExpose<ExposedActions>({
             <DropdownMenu>
               <DropdownMenuTrigger as-child>
                 <Button
-                  class="h-8 w-8 rounded-l-none border-l border-white/15 px-0 text-[14px]"
+                  class="h-8 w-8 rounded-l-none border-l border-border/60 px-0 text-[14px]"
                   aria-label="打开业务预设操作菜单"
                 >
                   <i class="ri-arrow-down-s-line text-base" />

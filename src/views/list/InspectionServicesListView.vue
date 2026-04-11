@@ -506,10 +506,10 @@ function getExpireProgressClass(row: unknown) {
   }
 
   if (diffDays <= 30) {
-    return "[&_[data-slot=progress-indicator]]:bg-orange-500/80"
+    return "[&_[data-slot=progress-indicator]]:bg-warning/80"
   }
 
-  return "[&_[data-slot=progress-indicator]]:bg-[#2383E2]"
+  return "[&_[data-slot=progress-indicator]]:bg-link"
 }
 
 function formatServiceStatus(status: unknown) {
@@ -588,24 +588,24 @@ function toText(value: unknown, fallback = "") {
 
     <TooltipProvider>
       <TablePage :page="page" :loading="loading" fill-available-height @primary-action="handleCreateInspectionService">
-        <template #cell-CorpName="{ row }">
-          <button
-            type="button"
-            class="inline-flex max-w-full items-center gap-1 text-left text-[#2B67F6] transition-colors hover:text-[#1D4ED8]"
-            @click.stop="jumpToCustomerDetail(row)"
-          >
-            <span class="truncate">{{ row.CorpName }}</span>
+      <template #cell-CorpName="{ row }">
+        <button
+          type="button"
+          class="inline-flex max-w-full items-center gap-1 text-left text-link transition-colors hover:text-link-hover"
+          @click.stop="jumpToCustomerDetail(row)"
+        >
+          <span class="truncate">{{ row.CorpName }}</span>
             <i class="ri-arrow-right-up-line shrink-0 text-sm" />
           </button>
         </template>
 
-        <template #cell-ParkName="{ row }">
-          <button
-            type="button"
-            class="inline-flex max-w-full items-center gap-1 text-left text-[#2B67F6] transition-colors hover:text-[#1D4ED8] disabled:cursor-not-allowed disabled:text-muted-foreground"
-            :disabled="row.ParkName === '-' || !row.ParkUuid"
-            @click.stop="jumpToParkDetail(row)"
-          >
+      <template #cell-ParkName="{ row }">
+        <button
+          type="button"
+          class="inline-flex max-w-full items-center gap-1 text-left text-link transition-colors hover:text-link-hover disabled:cursor-not-allowed disabled:text-muted-foreground"
+          :disabled="row.ParkName === '-' || !row.ParkUuid"
+          @click.stop="jumpToParkDetail(row)"
+        >
             <span class="truncate">{{ row.ParkName }}</span>
             <i v-if="row.ParkName !== '-' && row.ParkUuid" class="ri-arrow-right-up-line shrink-0 text-sm" />
           </button>
@@ -621,7 +621,7 @@ function toText(value: unknown, fallback = "") {
               <div class="flex min-w-[180px] items-center gap-2">
                 <Progress
                   :model-value="getExpireProgressValue(row)"
-                  class="h-1.5 max-w-[120px] bg-[#E9EDF2] **:data-[slot=progress-indicator]:transition-all"
+                  class="h-1.5 max-w-[120px] bg-surface-tertiary **:data-[slot=progress-indicator]:transition-all"
                   :class="getExpireProgressClass(row)"
                 />
                 <span class="shrink-0 text-xs text-muted-foreground">

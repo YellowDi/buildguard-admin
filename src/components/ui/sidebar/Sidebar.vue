@@ -40,7 +40,7 @@ const { state, openMobile } = useSidebar()
       data-sidebar="sidebar"
       data-mobile="true"
       :class="cn(
-        'flex h-full w-[var(--sidebar-width)] max-w-[90vw] flex-col overflow-y-auto overflow-x-hidden overscroll-y-contain bg-sidebar p-0 text-sidebar-foreground shadow-[0_18px_48px_rgba(15,23,42,0.18)] transition-transform duration-300 ease-out',
+        'flex h-full w-[var(--sidebar-width)] max-w-[90vw] flex-col overflow-y-auto overflow-x-hidden overscroll-y-contain bg-sidebar p-0 text-sidebar-foreground shadow-(--shadow-deep) transition-transform duration-300 ease-out',
         side === 'left'
           ? (openMobile ? 'translate-x-0' : '-translate-x-full')
           : (openMobile ? 'translate-x-0' : 'translate-x-full'),

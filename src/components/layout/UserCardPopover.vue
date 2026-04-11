@@ -107,7 +107,7 @@ function handleOpenSettings() {
       :align="'start'"
       :class="
         cn(
-          'w-[280px] rounded-xl border-border p-0 shadow-[0_10px_24px_rgba(15,23,42,0.08)] dark:shadow-(--shadow-card)',
+          'w-[280px] rounded-xl border-border p-0 shadow-(--shadow-soft)',
         )
       "
     >

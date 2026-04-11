@@ -3971,7 +3971,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
                 <span class="truncate text-foreground">
                   {{ row.workOrderKind === "inspection" ? toDisplayText(row.packageName, "-") : toDisplayText(row.customerName, "-") }}
                 </span>
-                <span class="shrink-0 text-[#8C94A6]">
+                <span class="shrink-0 text-muted-foreground">
                   #{{ toDisplayText(row.orderNo, "-") }}
                 </span>
               </div>
@@ -4144,10 +4144,10 @@ function toDisplayText(value: unknown, fallback = "未填写") {
                           :class="[
                             'text-[18px]',
                             row.status === '存在风险'
-                              ? 'ri-close-circle-fill text-[#EF4444]'
+                              ? 'ri-close-circle-fill text-destructive'
                               : row.status === '需重点关注'
-                                ? 'ri-time-fill text-[#F97316]'
-                                : 'ri-checkbox-circle-fill text-[#22C55E]',
+                                ? 'ri-time-fill text-warning'
+                                : 'ri-checkbox-circle-fill text-success',
                           ]"
                         />
                         <span class="truncate">{{ row.name }}</span>
@@ -4183,14 +4183,14 @@ function toDisplayText(value: unknown, fallback = "未填写") {
 
                 <template #inspection-overview-service-cell="{ row }">
                   <div class="flex min-w-0 items-center gap-2 text-foreground">
-                    <i
-                      :class="[
-                        'text-[18px]',
-                        row.status === 'pending'
-                          ? 'ri-time-fill text-[#F59E0B]'
+                        <i
+                          :class="[
+                            'text-[18px]',
+                            row.status === 'pending'
+                          ? 'ri-time-fill text-warning'
                           : row.status === 'processing'
-                            ? 'ri-loader-4-line text-[#2563EB]'
-                            : 'ri-checkbox-circle-fill text-[#22C55E]',
+                            ? 'ri-loader-4-line text-link'
+                            : 'ri-checkbox-circle-fill text-success',
                       ]"
                     />
                     <Tooltip>
@@ -4253,14 +4253,14 @@ function toDisplayText(value: unknown, fallback = "未填写") {
 
                 <template #repair-overview-location-cell="{ row }">
                   <div class="flex min-w-0 items-center gap-2 text-foreground">
-                    <i
-                      :class="[
-                        'text-[18px]',
-                        row.status === 'pending'
-                          ? 'ri-time-fill text-[#F59E0B]'
+                        <i
+                          :class="[
+                            'text-[18px]',
+                            row.status === 'pending'
+                          ? 'ri-time-fill text-warning'
                           : row.status === 'processing'
-                            ? 'ri-loader-4-line text-[#2563EB]'
-                            : 'ri-checkbox-circle-fill text-[#22C55E]',
+                            ? 'ri-loader-4-line text-link'
+                            : 'ri-checkbox-circle-fill text-success',
                       ]"
                     />
                     <Tooltip>
@@ -4613,7 +4613,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
           取消
         </AlertDialogCancel>
         <AlertDialogAction
-          class="gap-2 bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:bg-destructive/60 dark:focus-visible:ring-destructive/40"
+          class="gap-2 bg-destructive text-destructive-foreground hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:bg-destructive/60 dark:focus-visible:ring-destructive/40"
           :disabled="parkDeleteSubmitting"
           @click="confirmDeletePark"
         >

@@ -334,10 +334,10 @@ function buildContactValue(name: string | null, phone?: string | null): DetailCo
                 :class="[
                   'text-[18px]',
                   row.status === '存在风险'
-                    ? 'ri-close-circle-fill text-[#EF4444]'
+                    ? 'ri-close-circle-fill text-destructive'
                     : row.status === '需重点关注'
-                      ? 'ri-time-fill text-[#F97316]'
-                      : 'ri-checkbox-circle-fill text-[#22C55E]',
+                      ? 'ri-time-fill text-warning'
+                      : 'ri-checkbox-circle-fill text-success',
                 ]"
               />
               <span class="truncate">{{ row.name }}</span>

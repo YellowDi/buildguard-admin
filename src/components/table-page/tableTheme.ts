@@ -18,7 +18,7 @@ export const tableTheme = {
   edgeGutter: "shrink-0",
   table: "min-w-full w-full table-auto border-separate border-spacing-0 bg-background text-[14px] text-foreground",
   head: "relative z-20 text-muted-foreground",
-  headActive: "shadow-[inset_0_-1px_0_hsl(var(--border))]",
+  headActive: "shadow-[inset_0_-1px_0_var(--border)]",
   /** z 须高于根级 Dialog/Overlay（z-50），否则 Teleport 到 body 的吸顶表头会被设置弹窗挡住；设置内嵌套弹窗请用 DialogContent 的 stackAboveStickyHeader（z-[70]） */
   stickyViewport: "fixed z-[60] overflow-hidden bg-background",
   body: "text-foreground",
@@ -34,7 +34,7 @@ export const tableTheme = {
     layout: "flex min-w-0 items-center gap-2",
     content: "min-w-0 flex-1",
     slot: "ml-1 flex shrink-0 items-center gap-1",
-    button: "h-6 w-6 rounded-md border border-border/80 bg-white p-0 text-muted-foreground shadow-sm hover:border-border hover:bg-white hover:text-foreground focus-visible:border-border focus-visible:bg-white focus-visible:text-foreground",
+    button: "h-6 w-6 rounded-md border border-border/80 bg-background p-0 text-muted-foreground shadow-sm hover:border-border hover:bg-background hover:text-foreground focus-visible:border-border focus-visible:bg-background focus-visible:text-foreground",
   },
   headerCell: {
     base: "h-[38px] border-b border-border px-3 py-0 text-left font-normal whitespace-nowrap align-middle transition-colors hover:bg-surface-tertiary",

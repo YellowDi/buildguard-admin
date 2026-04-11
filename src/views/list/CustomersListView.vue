@@ -582,7 +582,7 @@ function handleLinkedDetailSheetOpenChange(open: boolean) {
       <template #cell-packageInfo="{ row }">
         <button
           type="button"
-          class="inline-flex max-w-full items-center gap-1 text-left text-[#2B67F6] transition-colors hover:text-[#1D4ED8]"
+          class="inline-flex max-w-full items-center gap-1 text-left text-link transition-colors hover:text-link-hover"
           @click="jumpToInspectionServices(row)"
         >
           <span class="truncate">{{ row.packageInfo }}</span>

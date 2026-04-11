@@ -1360,7 +1360,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
                 <TooltipTrigger as-child>
                   <DropdownMenuTrigger as-child>
                     <Button
-                      class="h-8 w-8 rounded-l-none border-l border-white/15 px-0 text-[14px]"
+                      class="h-8 w-8 rounded-l-none border-l border-border/60 px-0 text-[14px]"
                       aria-label="打开成员操作菜单"
                     >
                       <i class="ri-arrow-down-s-line text-base" />
@@ -1718,7 +1718,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
             取消
           </AlertDialogCancel>
           <AlertDialogAction
-            class="bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60"
+            class="bg-destructive text-destructive-foreground hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60"
             :disabled="deleteSubmitting"
             @click="confirmDeleteEditingMember"
           >
@@ -1741,7 +1741,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
             取消
           </AlertDialogCancel>
           <AlertDialogAction
-            class="bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60"
+            class="bg-destructive text-destructive-foreground hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60"
             :disabled="roleDeleteSubmitting"
             @click="confirmDeleteEditingRole"
           >

@@ -69,7 +69,7 @@ const ROW_CLICK_IGNORE_SELECTOR = [
   "[data-list-popover]",
   "[data-slot='button']",
 ].join(",")
-const selectionCheckboxClass = "border-[#B7C4E0] bg-white data-[state=checked]:border-[#2B67F6] data-[state=checked]:bg-[#2B67F6] data-[state=indeterminate]:border-[#2B67F6] data-[state=indeterminate]:bg-[#2B67F6] focus-visible:ring-[#2B67F6]/20"
+const selectionCheckboxClass = "border-border bg-background data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=indeterminate]:border-primary data-[state=indeterminate]:bg-primary focus-visible:ring-primary/20"
 const INLINE_PREVIEW_ACTION_LABELS = new Set(["查看详情", "查看", "查看归档"])
 
 const props = withDefaults(defineProps<{
@@ -627,7 +627,7 @@ function getRowClass(row: Record<string, unknown>, index: number) {
     tableTheme.row,
     rowClickEnabled.value ? "cursor-pointer" : "",
     isRowSelected(row, index)
-      ? "bg-[#EBF1FF] hover:bg-[#EBF1FF]"
+      ? "bg-selection hover:bg-selection"
       : isRowKeyHighlighted(rowKey)
         ? "bg-surface-hover-subtle"
         : "",
@@ -1461,7 +1461,7 @@ onBeforeUnmount(() => {
               cn(
                 tableTheme.head,
                 (props.stickyThead || useInternalStickyThead)
-                  && 'sticky top-0 z-30 bg-background shadow-[inset_0_-1px_0_hsl(var(--border))]',
+                  && 'sticky top-0 z-30 bg-background shadow-[inset_0_-1px_0_var(--border)]',
               )
             "
           >
@@ -1750,7 +1750,7 @@ onBeforeUnmount(() => {
                 v-if="hasRowActions"
                 :class="[
                   tableTheme.actionCell,
-                  isRowSelected(row, index) ? 'bg-[#EBF1FF]' : '',
+                  isRowSelected(row, index) ? 'bg-selection' : '',
                 ]"
               >
                 <div :class="tableTheme.actionCellContent">
@@ -1813,7 +1813,7 @@ onBeforeUnmount(() => {
 <style>
 [data-table-scroll-viewport] {
   scrollbar-width: auto;
-  scrollbar-color: color-mix(in srgb, hsl(var(--foreground)) 18%, transparent) transparent;
+  scrollbar-color: color-mix(in srgb, var(--foreground) 18%, transparent) transparent;
 }
 
 [data-table-scroll-viewport]::-webkit-scrollbar {
@@ -1823,7 +1823,7 @@ onBeforeUnmount(() => {
 
 [data-table-scroll-viewport]::-webkit-scrollbar-thumb {
   border-radius: 9999px;
-  background: color-mix(in srgb, hsl(var(--foreground)) 18%, transparent);
+  background: color-mix(in srgb, var(--foreground) 18%, transparent);
 }
 
 [data-table-scroll-viewport]::-webkit-scrollbar-track {

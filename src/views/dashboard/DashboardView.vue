@@ -1016,7 +1016,7 @@ function hashText(value: string) {
                         :template="componentToString(alarmStatusChartConfig, ChartTooltipContent, {
                           labelFormatter: d => formatShortDate(d),
                         })"
-                        color="#0000"
+                        color="transparent"
                       />
                     </VisXYContainer>
                   </div>

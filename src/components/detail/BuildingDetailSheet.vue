@@ -287,7 +287,7 @@ function resetState() {
           取消
         </AlertDialogCancel>
         <AlertDialogAction
-          class="gap-2 bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60"
+          class="gap-2 bg-destructive text-destructive-foreground hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60"
           :disabled="deleteSubmitting"
           @click="confirmDeleteBuilding"
         >

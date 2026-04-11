@@ -107,7 +107,7 @@ onKeyStroke("Escape", (e) => {
     <Transition name="calendar-sheet">
       <div
         v-if="open && sourceType"
-        class="fixed z-20 flex min-h-0 flex-col overflow-hidden bg-background [outline:1px_solid_rgba(84,72,49,0.08)]"
+        class="fixed z-20 flex min-h-0 flex-col overflow-hidden bg-background [outline:1px_solid_var(--border-whisper)] shadow-(--shadow-deep)"
         :style="panelFrameStyle"
         role="dialog"
         aria-modal="true"

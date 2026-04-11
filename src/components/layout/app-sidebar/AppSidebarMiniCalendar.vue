@@ -90,7 +90,7 @@ function getEventDotClass(date: AppSidebarCalendarDate) {
 
   return cn(
     "absolute bottom-1.5 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full",
-    isTodayCell ? "bg-white/95" : isOutsideView ? "bg-muted-foreground/35" : "bg-foreground/35",
+    isTodayCell ? "bg-date-today-foreground/95" : isOutsideView ? "bg-muted-foreground/35" : "bg-foreground/35",
   )
 }
 </script>
@@ -198,9 +198,9 @@ function getEventDotClass(date: AppSidebarCalendarDate) {
                     'relative flex size-7 items-center justify-center rounded-[9px] border-0 bg-transparent p-0 text-[11px] font-medium leading-none text-foreground outline-none shadow-none transition-colors appearance-none',
                     'focus-visible:ring-2 focus-visible:ring-ring/40 focus-visible:ring-offset-0',
                     'hover:bg-sidebar-hover',
-                    'data-selected:bg-white data-selected:text-foreground data-selected:shadow-(--shadow-card)',
+                    'data-selected:bg-card data-selected:text-foreground data-selected:shadow-(--shadow-soft)',
                     'data-outside-view:text-muted-foreground/60 data-outside-view:hover:bg-transparent',
-                    'data-today:bg-[#f54a3d] data-today:text-white data-today:shadow-none data-today:hover:bg-[#f54a3d]',
+                    'data-today:bg-date-today data-today:text-date-today-foreground data-today:shadow-none data-today:hover:bg-date-today',
                   )"
                 >
                   <span class="pointer-events-none flex size-full items-center justify-center">

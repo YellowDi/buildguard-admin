@@ -223,10 +223,10 @@ const showNoBuildingsHint = computed(() => (
 
 function scorePillClass(score: number) {
   if (score === 0 || score < 50) {
-    return "bg-[#FFE8D9] text-[#9A3412] dark:bg-orange-950/50 dark:text-orange-200"
+    return "bg-warning-surface text-warning-foreground"
   }
 
-  return "bg-slate-100 text-slate-800 dark:bg-muted dark:text-foreground"
+  return "bg-surface-tertiary text-foreground"
 }
 </script>
 
@@ -247,7 +247,7 @@ function scorePillClass(score: number) {
 
     <div
       v-else-if="showEmpty"
-      class="flex min-h-[200px] items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50/80 px-4 py-10 text-center text-sm text-slate-500 dark:border-border/80 dark:bg-muted/20 dark:text-muted-foreground"
+      class="flex min-h-[200px] items-center justify-center rounded-xl border border-dashed border-border bg-surface-tertiary/80 px-4 py-10 text-center text-sm text-muted-foreground"
     >
       {{ emptyText }}
     </div>
@@ -268,8 +268,7 @@ function scorePillClass(score: number) {
               :key="`ring-${ringIndex}`"
               :points="points"
               fill="none"
-              :stroke="ringIndex === gridPolygonPoints.length - 1 ? '#CBD5E1' : '#E2E8F0'"
-              class="dark:stroke-border/70 dark:last-of-type:stroke-border"
+              :stroke="ringIndex === gridPolygonPoints.length - 1 ? 'var(--chart-axis)' : 'var(--chart-grid)'"
               stroke-width="1"
             />
 
@@ -280,8 +279,7 @@ function scorePillClass(score: number) {
               :y1="cy"
               :x2="line.x2"
               :y2="line.y2"
-              stroke="#E2E8F0"
-              class="dark:stroke-border/60"
+              stroke="var(--chart-grid)"
               stroke-width="1"
             />
 
@@ -289,11 +287,11 @@ function scorePillClass(score: number) {
             <polygon
               v-if="dataPolygonPoints"
               :points="dataPolygonPoints"
-              fill="rgba(37, 99, 235, 0.14)"
-              stroke="#2563EB"
+              fill="var(--brand-surface)"
+              stroke="var(--brand)"
               stroke-width="1.75"
               stroke-linejoin="round"
-              class="dark:fill-primary/15 dark:stroke-primary"
+              fill-opacity="0.45"
             />
 
             <!-- 刻度：0 / 50 / 100（沿竖直方向 x = cx，不额外绘制轴线） -->
@@ -302,8 +300,7 @@ function scorePillClass(score: number) {
               :key="`tick-${pos.tick}`"
               :x="pos.x"
               :y="pos.y"
-              fill="#64748B"
-              class="dark:fill-muted-foreground"
+              fill="var(--chart-point)"
               text-anchor="middle"
               font-size="11"
               font-weight="500"
@@ -326,7 +323,7 @@ function scorePillClass(score: number) {
         >
           <div class="pointer-events-auto flex flex-col items-center gap-1.5 sm:flex-row sm:justify-center">
             <span
-              class="shrink-0 whitespace-nowrap text-center text-[13px] font-medium leading-tight text-slate-900 dark:text-foreground"
+              class="shrink-0 whitespace-nowrap text-center text-[13px] font-medium leading-tight text-foreground"
               :title="item.label"
             >
               {{ item.label }}
@@ -344,7 +341,7 @@ function scorePillClass(score: number) {
                 <TooltipTrigger as-child>
                   <button
                     type="button"
-                    class="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-[10px] font-semibold text-slate-500 transition hover:bg-slate-50 dark:border-border dark:bg-card dark:text-muted-foreground"
+                    class="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-border bg-card text-[10px] font-semibold text-muted-foreground transition hover:bg-accent hover:text-foreground"
                     aria-label="得分说明"
                   >
                     i
@@ -352,7 +349,7 @@ function scorePillClass(score: number) {
                 </TooltipTrigger>
                 <TooltipContent
                   side="top"
-                  class="max-w-[220px] border-0 bg-slate-900 px-3 py-2 text-xs font-normal text-white shadow-lg"
+                  class="max-w-[220px] border border-border bg-popover px-3 py-2 text-xs font-normal text-popover-foreground shadow-(--shadow-deep)"
                 >
                   该分类平均得分为 0，请结合现场检测与工单记录确认是否存在漏检或未覆盖项。
                 </TooltipContent>
@@ -362,7 +359,7 @@ function scorePillClass(score: number) {
         </div>
       </div>
 
-      <p v-if="showNoBuildingsHint" class="mt-4 text-center text-xs text-slate-500 dark:text-muted-foreground">
+      <p v-if="showNoBuildingsHint" class="mt-4 text-center text-xs text-muted-foreground">
         当前客户下暂无建筑资产，各分类按 0 分展示。
       </p>
     </TooltipProvider>

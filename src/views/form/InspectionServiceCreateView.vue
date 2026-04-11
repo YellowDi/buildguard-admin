@@ -1873,7 +1873,7 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
                         'relative flex cursor-pointer items-start gap-3 rounded-md border px-3.5 py-3 shadow-xs transition-all duration-200',
                         isBuildSelected(build.uuid)
                           ? 'border-[color:var(--theme-primary)]/50 bg-[color:var(--theme-primary)]/10 shadow-sm ring-1 ring-[color:var(--theme-primary)]/15'
-                          : 'border-border/55 bg-white hover:border-[color:var(--theme-primary)]/35 hover:bg-white hover:shadow-sm dark:bg-muted dark:hover:bg-muted/75',
+                          : 'border-border/55 bg-background hover:border-[color:var(--theme-primary)]/35 hover:bg-background hover:shadow-sm dark:bg-muted dark:hover:bg-muted/75',
                       )"
                     >
                       <Checkbox

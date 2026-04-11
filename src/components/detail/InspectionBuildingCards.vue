@@ -125,7 +125,7 @@ watch(() => props.buildings, (buildings) => {
                   <Badge
                     v-if="building.score"
                     variant="secondary"
-                    class="shrink-0 rounded-md border border-[#BFD3FF] bg-[#EEF4FF] px-2 py-0.5 text-[12px] font-semibold text-[#2B67F6]"
+                    class="shrink-0 rounded-md border border-brand-border bg-brand-surface px-2 py-0.5 text-[12px] font-semibold text-link"
                   >
                     {{ building.score }}
                   </Badge>
