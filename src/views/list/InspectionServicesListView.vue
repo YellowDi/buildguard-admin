@@ -227,7 +227,7 @@ const schema: TablePageSchema<InspectionServiceRecord> = {
   ],
   sort: {
     storageKey: "inspection-services-sort-preferences",
-    initialField: "UpdatedAt",
+    initialField: "CreatedAt",
     initialDirection: "desc",
   },
   tabs: {
