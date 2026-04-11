@@ -51,6 +51,7 @@ const ROW_CLICK_DRAG_THRESHOLD = 5
 const ALIGN_TO_HEADER_WIDE_BREAKPOINT = 2000
 const COMPACT_DETAIL_TABLE_WIDTH_THRESHOLD = 48
 const HORIZONTAL_SCROLLBAR_MIN_THUMB_SIZE = 40
+const NATIVE_HORIZONTAL_SCROLLBAR_MASK_SIZE = 18
 const ROW_CLICK_IGNORE_SELECTOR = [
   "button",
   "a[href]",
@@ -236,9 +237,13 @@ const tableElementStyle = computed(() => ({
   maxWidth: "none",
 }))
 const scrollViewportStyle = computed(() => {
+  const shouldMaskNativeHorizontalScrollbar = !showEmptyState.value && horizontalOverflow.value && hasVisibleBodyRows.value
   const style: Record<string, string | undefined> = {
-    paddingBottom: !showEmptyState.value && horizontalOverflow.value && hasVisibleBodyRows.value
-      ? `${TABLE_HORIZONTAL_SCROLL_SAFE_AREA}px`
+    paddingBottom: shouldMaskNativeHorizontalScrollbar
+      ? `${TABLE_HORIZONTAL_SCROLL_SAFE_AREA + NATIVE_HORIZONTAL_SCROLLBAR_MASK_SIZE}px`
+      : undefined,
+    clipPath: shouldMaskNativeHorizontalScrollbar
+      ? `inset(0 0 ${NATIVE_HORIZONTAL_SCROLLBAR_MASK_SIZE}px 0)`
       : undefined,
   }
 
@@ -260,6 +265,15 @@ const horizontalScrollbarStyle = computed(() => {
   }
 
   return style
+})
+const horizontalScrollbarContainerStyle = computed(() => {
+  if (!props.fillAvailableHeight || !horizontalOverflow.value || !hasVisibleBodyRows.value) {
+    return undefined
+  }
+
+  return {
+    marginTop: `-${TABLE_HORIZONTAL_SCROLL_SAFE_AREA + NATIVE_HORIZONTAL_SCROLLBAR_MASK_SIZE}px`,
+  }
 })
 const horizontalScrollbarTrackWrapperStyle = computed(() => {
   if (props.listLevelTable) {
@@ -1780,8 +1794,8 @@ onBeforeUnmount(() => {
 
     <div
       v-if="hasVisibleBodyRows && horizontalOverflow"
-      :class="cn('mt-2', props.fillAvailableHeight ? 'shrink-0' : '')"
-      :style="horizontalScrollbarStyle"
+      :class="cn(props.fillAvailableHeight ? 'shrink-0' : '')"
+      :style="[horizontalScrollbarStyle, horizontalScrollbarContainerStyle]"
     >
       <div
         :class="props.listLevelTable ? 'px-4 sm:px-8' : ''"
@@ -1832,11 +1846,16 @@ onBeforeUnmount(() => {
 
 [data-table-scroll-viewport]::-webkit-scrollbar:horizontal {
   height: 0 !important;
+  max-height: 0 !important;
+  display: none;
+  -webkit-appearance: none;
 }
 
 [data-table-scroll-viewport]::-webkit-scrollbar-track:horizontal,
 [data-table-scroll-viewport]::-webkit-scrollbar-thumb:horizontal,
 [data-table-scroll-viewport]::-webkit-scrollbar-corner {
   background: transparent;
+  border: 0;
+  box-shadow: none;
 }
 </style>
