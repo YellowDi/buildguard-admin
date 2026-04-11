@@ -1,11 +1,16 @@
 <script setup lang="ts">
-import { computed, ref } from "vue"
+import { computed, ref, watch } from "vue"
 import { useClipboard } from "@vueuse/core"
 import { toast } from "vue-sonner"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
 import { Separator } from "@/components/ui/separator"
 import { Switch } from "@/components/ui/switch"
 import {
@@ -16,6 +21,11 @@ import SettingsSection from "@/components/settings/SettingsSection.vue"
 import { SETTINGS_TABLE_PAGE_CLASS } from "@/components/settings/settingsTablePageClass"
 import TablePageTable from "@/components/table-page/TablePageTable.vue"
 import type { TableColumn } from "@/components/table-page/types"
+import {
+  DEFAULT_AVATAR_OPTIONS,
+  type DefaultAvatarKey,
+} from "@/lib/default-avatars"
+import { cn } from "@/lib/utils"
 import type {
   SettingsActionKey,
 } from "@/components/settings/types"
@@ -35,6 +45,7 @@ const props = defineProps<{
   avatarSrc?: string
   avatarFallback: string
   preferredName: string
+  selectedAvatarKey: DefaultAvatarKey
   userId: string
   // Security
   supportAccessEnabled: boolean
@@ -43,11 +54,18 @@ const props = defineProps<{
 const emit = defineEmits<{
   action: [actionKey: SettingsActionKey]
   "update:preferredName": [value: string]
+  "update:selectedAvatarKey": [value: DefaultAvatarKey]
   "update:supportAccessEnabled": [value: boolean]
 }>()
 
 // Local state for input
+const isAvatarPickerOpen = ref(false)
 const localPreferredName = ref(props.preferredName)
+const avatarOptions = DEFAULT_AVATAR_OPTIONS
+
+watch(() => props.preferredName, (value) => {
+  localPreferredName.value = value
+})
 
 // Clipboard for user ID
 const { copy } = useClipboard()
@@ -132,6 +150,16 @@ function handleSavePreferredName() {
   toast.success("偏好名称已更新")
 }
 
+function handleSelectAvatar(avatarKey: DefaultAvatarKey) {
+  if (props.selectedAvatarKey === avatarKey) {
+    isAvatarPickerOpen.value = false
+    return
+  }
+
+  emit("update:selectedAvatarKey", avatarKey)
+  isAvatarPickerOpen.value = false
+}
+
 function handleDeviceLogout(deviceId: string) {
   devices.value = devices.value.filter(d => d.id !== deviceId)
   toast.success("设备已登出")
@@ -163,23 +191,62 @@ function handleDeleteAccount() {
           description=""
           :show-header="true"
         >
-          <div class="flex items-start gap-6 py-4">
-            <!-- Avatar -->
-            <div class="flex flex-col items-center">
-              <Avatar class="size-16 rounded-sm">
-                <AvatarImage
-                  v-if="avatarSrc"
-                  :src="avatarSrc"
-                  :alt="userName"
-                  class="object-cover"
-                />
-                <AvatarFallback class="rounded-sm bg-avatar-placeholder text-xl font-semibold">
-                  {{ avatarFallback }}
-                </AvatarFallback>
-              </Avatar>
-            </div>
+          <div class="flex flex-col gap-4 py-4 sm:flex-row sm:items-start">
+            <Popover v-model:open="isAvatarPickerOpen">
+              <PopoverTrigger as-child>
+                <button
+                  type="button"
+                  class="inline-flex w-fit shrink-0 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                  aria-label="选择头像"
+                >
+                  <Avatar class="size-16 rounded-sm">
+                    <AvatarImage
+                      v-if="avatarSrc"
+                      :src="avatarSrc"
+                      :alt="userName"
+                      class="object-cover"
+                    />
+                    <AvatarFallback class="rounded-sm bg-avatar-placeholder text-xl font-semibold">
+                      {{ avatarFallback }}
+                    </AvatarFallback>
+                  </Avatar>
+                </button>
+              </PopoverTrigger>
 
-            <!-- Preferred Name -->
+              <PopoverContent
+                align="start"
+                class="w-auto rounded-xl p-3"
+              >
+                <div class="grid grid-cols-3 gap-2">
+                  <button
+                    v-for="avatar in avatarOptions"
+                    :key="avatar.key"
+                    type="button"
+                    :class="
+                      cn(
+                        'rounded-sm p-0.5 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+                        props.selectedAvatarKey === avatar.key && 'ring-2 ring-primary ring-offset-2',
+                      )
+                    "
+                    :aria-label="`选择${avatar.label}头像`"
+                    :aria-pressed="props.selectedAvatarKey === avatar.key"
+                    @click="handleSelectAvatar(avatar.key)"
+                  >
+                    <Avatar class="size-14 rounded-sm">
+                      <AvatarImage
+                        :src="avatar.src"
+                        :alt="`${avatar.label}头像`"
+                        class="object-cover"
+                      />
+                      <AvatarFallback class="rounded-sm bg-avatar-placeholder text-base font-semibold">
+                        {{ avatarFallback }}
+                      </AvatarFallback>
+                    </Avatar>
+                  </button>
+                </div>
+              </PopoverContent>
+            </Popover>
+
             <div class="flex-1 space-y-2">
               <label class="text-sm font-medium text-foreground">
                 偏好名称

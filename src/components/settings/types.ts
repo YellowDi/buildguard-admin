@@ -1,4 +1,5 @@
 import type { ThemeMode } from "@/composables/useAppTheme"
+import type { DefaultAvatarKey } from "@/lib/default-avatars"
 
 export type SettingsCategoryGroupKey = "account" | "workspace" | "feature" | "admin"
 
@@ -63,6 +64,7 @@ export type SettingsState = {
   appRelease: AppReleaseDraft
   // Me page fields
   preferredName: string
+  selectedAvatarKey: DefaultAvatarKey
   userId: string
   supportAccessEnabled: boolean
 }

@@ -2,7 +2,7 @@ import { computed, reactive, ref, watch } from "vue"
 import { toast } from "vue-sonner"
 
 import { useAppTheme } from "@/composables/useAppTheme"
-import { useCurrentUser } from "@/composables/useCurrentUser"
+import { setCurrentUserAvatar, useCurrentUser } from "@/composables/useCurrentUser"
 import { loadSettingsSnapshot } from "@/lib/settings-api"
 import type {
   SettingsActionKey,
@@ -58,6 +58,7 @@ const state = reactive<SettingsState>({
   },
   // Me page fields
   preferredName: currentUser.name,
+  selectedAvatarKey: currentUser.avatarKey,
   userId: "cdfac05d-1fde-4501-a2c5-66ab2d360bb2",
   supportAccessEnabled: false,
 })
@@ -77,6 +78,18 @@ watch(
   },
   { immediate: true },
 )
+
+watch(() => currentUser.avatarKey, (value) => {
+  if (state.selectedAvatarKey !== value) {
+    state.selectedAvatarKey = value
+  }
+}, { immediate: true })
+
+watch(() => state.selectedAvatarKey, (value) => {
+  if (currentUser.avatarKey !== value) {
+    setCurrentUserAvatar(value)
+  }
+}, { immediate: true })
 
 watch(themeMode, (value) => {
   if (state.themeMode !== value) {

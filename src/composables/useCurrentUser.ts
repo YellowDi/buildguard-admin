@@ -2,8 +2,16 @@ import { reactive, ref } from "vue"
 
 import { getApiErrorMessage } from "@/lib/api-errors"
 import { fetchCurrentUserInfo, type CurrentUserInfoResult, type CurrentUserRole } from "@/lib/current-user-api"
+import {
+  DEFAULT_AVATAR_KEY,
+  DEFAULT_AVATAR_STORAGE_KEY,
+  getDefaultAvatarSrc,
+  isDefaultAvatarKey,
+  type DefaultAvatarKey,
+} from "@/lib/default-avatars"
 
 export type CurrentUserState = {
+  avatarKey: DefaultAvatarKey
   avatarSrc: string
   corpName: string
   departmentName: string
@@ -18,8 +26,11 @@ export type CurrentUserState = {
   uuid: string
 }
 
+const initialAvatarKey = readStoredAvatarKey()
+
 const currentUser = reactive<CurrentUserState>({
-  avatarSrc: "",
+  avatarKey: initialAvatarKey,
+  avatarSrc: getDefaultAvatarSrc(initialAvatarKey),
   corpName: "",
   departmentName: "",
   email: "",
@@ -98,12 +109,18 @@ export function setCurrentUser(profile: CurrentUserInfoResult) {
   error.value = null
 }
 
+export function setCurrentUserAvatar(avatarKey: DefaultAvatarKey) {
+  writeStoredAvatarKey(avatarKey)
+  syncCurrentUserAvatar(avatarKey)
+}
+
 function applyCurrentUser(profile: CurrentUserInfoResult) {
   const employee = profile.EmployeeInfo
   const customer = profile.CustomerInfo
   const resolvedName = employee?.Name?.trim() || customer?.Name?.trim() || buildFallbackName(profile)
   const resolvedPhone = employee?.Phone?.trim() || customer?.Phone?.trim() || ""
 
+  syncCurrentUserAvatar(readStoredAvatarKey())
   currentUser.uuid = profile.Uuid?.trim() ?? ""
   currentUser.id = typeof profile.Id === "number" ? profile.Id : null
   currentUser.type = typeof profile.Type === "number" ? profile.Type : null
@@ -118,6 +135,7 @@ function applyCurrentUser(profile: CurrentUserInfoResult) {
 }
 
 function resetCurrentUser() {
+  syncCurrentUserAvatar(readStoredAvatarKey())
   currentUser.uuid = ""
   currentUser.id = null
   currentUser.type = null
@@ -159,4 +177,26 @@ function buildMissingProfileMessage(profile: CurrentUserInfoResult) {
   }
 
   return "当前账号未绑定用户档案"
+}
+
+function syncCurrentUserAvatar(avatarKey: DefaultAvatarKey) {
+  currentUser.avatarKey = avatarKey
+  currentUser.avatarSrc = getDefaultAvatarSrc(avatarKey)
+}
+
+function readStoredAvatarKey(): DefaultAvatarKey {
+  if (typeof window === "undefined") {
+    return DEFAULT_AVATAR_KEY
+  }
+
+  const stored = window.localStorage.getItem(DEFAULT_AVATAR_STORAGE_KEY)
+  return isDefaultAvatarKey(stored) ? stored : DEFAULT_AVATAR_KEY
+}
+
+function writeStoredAvatarKey(avatarKey: DefaultAvatarKey) {
+  if (typeof window === "undefined") {
+    return
+  }
+
+  window.localStorage.setItem(DEFAULT_AVATAR_STORAGE_KEY, avatarKey)
 }
