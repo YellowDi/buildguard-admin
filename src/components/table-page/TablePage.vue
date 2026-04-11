@@ -35,6 +35,7 @@ const props = defineProps({
 
 const emit = defineEmits<{
   "update:selected-row-keys": [keys: Array<string | number>]
+  "refresh-action": []
   "export-action": []
   "primary-action": []
 }>()
@@ -89,6 +90,7 @@ const slots = useSlots()
     @replace-filter="page.handleReplaceFilter"
     @remove-filter="page.handleRemoveFilter"
     @clear-all-filters="page.clearAllFilters"
+    @refresh-action="emit('refresh-action')"
     @set-custom-sort-enabled="page.customSortEnabled.value = $event"
     @update-sort-rules="page.sortRules.value = $event"
     @toggle-controls="page.showControls.value = !page.showControls.value"

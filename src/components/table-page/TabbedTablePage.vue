@@ -27,6 +27,7 @@ const props = defineProps({
 const emit = defineEmits<{
   "tab-click": [tab: HeaderTab]
   "update:selected-row-keys": [keys: Array<string | number>]
+  "refresh-action": []
   "export-action": []
   "primary-action": []
 }>()
@@ -73,6 +74,7 @@ const emit = defineEmits<{
     @replace-filter="activePage.handleReplaceFilter"
     @remove-filter="activePage.handleRemoveFilter"
     @clear-all-filters="activePage.clearAllFilters"
+    @refresh-action="emit('refresh-action')"
     @set-custom-sort-enabled="activePage.customSortEnabled.value = $event"
     @update-sort-rules="activePage.sortRules.value = $event"
     @toggle-controls="activePage.showControls.value = !activePage.showControls.value"

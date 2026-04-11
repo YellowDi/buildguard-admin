@@ -578,7 +578,13 @@ function handleLinkedDetailSheetOpenChange(open: boolean) {
       </Alert>
     </div>
 
-    <TablePage :page="page" :loading="loading" fill-available-height @primary-action="handleCreateCustomer">
+    <TablePage
+      :page="page"
+      :loading="loading"
+      fill-available-height
+      @refresh-action="loadCustomers"
+      @primary-action="handleCreateCustomer"
+    >
       <template #cell-packageInfo="{ row }">
         <button
           type="button"

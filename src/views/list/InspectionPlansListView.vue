@@ -611,7 +611,13 @@ function asInspectionPlanRecord(row: Record<string, unknown>): InspectionPlanRec
     </div>
 
     <TooltipProvider>
-      <TablePage :page="page" :loading="loading" fill-available-height @primary-action="handleCreateInspectionPlan">
+      <TablePage
+        :page="page"
+        :loading="loading"
+        fill-available-height
+        @refresh-action="loadInspectionPlans"
+        @primary-action="handleCreateInspectionPlan"
+      >
         <template #cell-planName="{ row }">
           <div class="inline-flex max-w-full items-baseline gap-1.5">
             <span class="truncate text-foreground">{{ row.planName }}</span>

@@ -84,6 +84,7 @@ const emit = defineEmits<{
   "replace-filter": [payload: { from: string; to: string; value?: DateFilterState }]
   "remove-filter": [key: string]
   "clear-all-filters": []
+  "refresh-action": []
   "set-custom-sort-enabled": [enabled: boolean]
   "update-sort-rules": [rules: SortRule[]]
   "toggle-controls": []
@@ -203,6 +204,7 @@ async function handleExportConfirm(payload: { scope: TableExportScope; format: T
           @replace-filter="emit('replace-filter', $event)"
           @remove-filter="emit('remove-filter', $event)"
           @clear-all-filters="emit('clear-all-filters')"
+          @refresh-action="emit('refresh-action')"
           @set-custom-sort-enabled="emit('set-custom-sort-enabled', $event)"
           @update-sort-rules="emit('update-sort-rules', $event)"
           @toggle-controls="emit('toggle-controls')"

@@ -1003,7 +1003,13 @@ function handleWorkOrderPreviewSheetOpenChange(open: boolean) {
       </Alert>
     </div>
 
-    <TablePage :page="page" :loading="loading" fill-available-height @primary-action="handlePrimaryAction">
+    <TablePage
+      :page="page"
+      :loading="loading"
+      fill-available-height
+      @refresh-action="loadWorkOrders"
+      @primary-action="handlePrimaryAction"
+    >
       <template #cell-orderNo="{ row }">
         <div class="inline-flex max-w-full items-baseline gap-1.5">
           <span class="truncate text-foreground">

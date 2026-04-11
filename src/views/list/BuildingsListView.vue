@@ -502,7 +502,13 @@ function toText(value: unknown, fallback = "") {
       </Alert>
     </div>
 
-    <TablePage :page="page" :loading="loading" fill-available-height @primary-action="handleCreateBuilding">
+    <TablePage
+      :page="page"
+      :loading="loading"
+      fill-available-height
+      @refresh-action="loadBuildings"
+      @primary-action="handleCreateBuilding"
+    >
       <template #cell-parkName="{ row }">
         <button
           type="button"

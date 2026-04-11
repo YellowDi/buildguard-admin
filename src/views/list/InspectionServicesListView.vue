@@ -587,7 +587,13 @@ function toText(value: unknown, fallback = "") {
     </div>
 
     <TooltipProvider>
-      <TablePage :page="page" :loading="loading" fill-available-height @primary-action="handleCreateInspectionService">
+      <TablePage
+        :page="page"
+        :loading="loading"
+        fill-available-height
+        @refresh-action="loadInspectionServices"
+        @primary-action="handleCreateInspectionService"
+      >
       <template #cell-CorpName="{ row }">
         <button
           type="button"

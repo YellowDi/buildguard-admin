@@ -86,6 +86,7 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{
   "tab-click": [tab: HeaderTab]
   "toggle-controls": []
+  "refresh-action": []
   "set-custom-sort-enabled": [enabled: boolean]
   "update-sort-rules": [rules: SortRule[]]
   "update-text-filter": [payload: { label: string; value: TextFilterState }]
@@ -345,6 +346,11 @@ function handleMobileToolbarActionSelect(action: MobileToolbarActionKey) {
 }
 
 function handleTableMoreActionSelect(action: TableMoreActionKey) {
+  if (action === "refresh") {
+    emit("refresh-action")
+    return
+  }
+
   if (action === "export-records") {
     emit("export-action")
     return
