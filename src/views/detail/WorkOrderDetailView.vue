@@ -4,13 +4,14 @@ import { useRoute, useRouter } from "vue-router"
 import { toast } from "vue-sonner"
 
 import InspectionBuildingCards from "@/components/detail/InspectionBuildingCards.vue"
+import InspectionItemHistorySheet from "@/components/detail/InspectionItemHistorySheet.vue"
 import LinkedEntityDetailSheet from "@/components/detail/LinkedEntityDetailSheet.vue"
 import DetailFieldsSkeleton from "@/components/loading/DetailFieldsSkeleton.vue"
 import DetailRelationSkeleton from "@/components/loading/DetailRelationSkeleton.vue"
 import DetailFieldSections from "@/components/detail/DetailFieldSections.vue"
 import { buildRepairWorkOrderPrimarySections, buildRepairWorkOrderSecondarySections, toText as toRepairWorkOrderText } from "@/components/detail/repairWorkOrderDetailFields"
 import { buildWorkOrderPrimarySections, buildWorkOrderSecondarySections, toText } from "@/components/detail/workOrderDetailFields"
-import type { DetailFieldSection } from "@/components/detail/types"
+import type { DetailFieldSection, InspectionItemHistoryModel } from "@/components/detail/types"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -27,6 +28,7 @@ import {
   dispatchWorkOrder,
   fetchRepairWorkOrderDetail,
   fetchWorkOrderDetail,
+  type WorkOrderBuildInspectionItem,
   type RepairWorkOrderDetailResult,
   type WorkOrderBuildInfo,
   type WorkOrderDetailResult,
@@ -69,6 +71,8 @@ const assignSubmitting = ref(false)
 const linkedDetailSheetOpen = ref(false)
 const linkedDetailSheetKind = ref<LinkedDetailSheetKind | null>(null)
 const linkedDetailSheetUuid = ref("")
+const inspectionHistorySheetOpen = ref(false)
+const selectedInspectionHistoryModel = ref<InspectionItemHistoryModel | null>(null)
 
 const workOrderUuid = computed(() => typeof route.params.id === "string" ? route.params.id.trim() : "")
 const customerUuid = computed(() => {
@@ -268,11 +272,13 @@ watch([inspectionWorkOrder, repairWorkOrder], () => {
 watch(workOrderUuid, (uuid) => {
   assignableUsersLoaded.value = false
   assignableUsers.value = []
+  resetInspectionHistorySheet()
   void loadWorkOrderDetail(uuid)
 }, { immediate: true })
 
 onUnmounted(() => {
   detailBreadcrumbTitle.value = null
+  resetInspectionHistorySheet()
 })
 
 function goBack() {
@@ -308,6 +314,7 @@ async function loadWorkOrderDetail(uuid: string) {
     inspectionServiceDetail.value = null
     customer.value = null
     inspectionItemDetailByUuid.value = {}
+    resetInspectionHistorySheet()
     errorMessage.value = "工单 Uuid 缺失，无法加载详情。"
     return
   }
@@ -317,6 +324,7 @@ async function loadWorkOrderDetail(uuid: string) {
   inspectionPlanDetail.value = null
   inspectionServiceDetail.value = null
   inspectionItemDetailByUuid.value = {}
+  resetInspectionHistorySheet()
 
   try {
     const result = props.kind === "repair"
@@ -333,6 +341,7 @@ async function loadWorkOrderDetail(uuid: string) {
       inspectionPlanDetail.value = null
       inspectionServiceDetail.value = null
       inspectionItemDetailByUuid.value = {}
+      resetInspectionHistorySheet()
     } else {
       inspectionWorkOrder.value = result as WorkOrderDetailResult
       repairWorkOrder.value = null
@@ -374,6 +383,7 @@ async function loadWorkOrderDetail(uuid: string) {
     inspectionServiceDetail.value = null
     customer.value = null
     inspectionItemDetailByUuid.value = {}
+    resetInspectionHistorySheet()
     errorMessage.value = handleApiError(error, {
       mode: "silent",
       fallback: "工单详情加载失败，请稍后重试。",
@@ -508,7 +518,7 @@ function buildInspectionWorkOrderCards(builds: WorkOrderBuildInfo[] | undefined)
   }
 
   return builds.map((build, buildIndex) => {
-    const inspectionItems = Array.isArray(build.InspectionItems) ? build.InspectionItems : []
+    const inspectionItems: WorkOrderBuildInspectionItem[] = Array.isArray(build.InspectionItems) ? build.InspectionItems : []
     const groupMap = new Map<string, {
       key: string
       title: string
@@ -517,6 +527,7 @@ function buildInspectionWorkOrderCards(builds: WorkOrderBuildInfo[] | undefined)
         name: string
         summary: string
         emptyText: string
+        onSelect: () => void
       }>
     }>()
 
@@ -531,11 +542,21 @@ function buildInspectionWorkOrderCards(builds: WorkOrderBuildInfo[] | undefined)
         items: [],
       }
 
+      const inspectionItemName = toText(item.InspectionItemName, `检测项 ${itemIndex + 1}`)
+
       nextGroup.items.push({
         key: inspectionItemUuid || `inspection-item-${itemIndex + 1}`,
-        name: toText(item.InspectionItemName, `检测项 ${itemIndex + 1}`),
+        name: inspectionItemName,
         summary: `检测人：${toText(item.UserName, "-")} · 扣分：${toText(item.Score, "-")}`,
         emptyText: "等待检测人通过 App 回传信息",
+        onSelect: () => openInspectionHistorySheet(buildInspectionItemHistoryModel({
+          buildName: toText(build.BuildName, `建筑 ${buildIndex + 1}`),
+          categoryName,
+          inspectionItemName,
+          inspectionItemKey: inspectionItemUuid || `inspection-item-${itemIndex + 1}`,
+          detail,
+          item,
+        })),
       })
 
       groupMap.set(categoryKey, nextGroup)
@@ -591,6 +612,239 @@ async function loadWorkOrderInspectionItemDetails(builds: WorkOrderBuildInfo[] |
   } finally {
     // 保留 finally，后续若需要增加状态提示时不改控制流。
   }
+}
+
+function handleInspectionHistorySheetOpenChange(open: boolean) {
+  inspectionHistorySheetOpen.value = open
+
+  if (!open) {
+    selectedInspectionHistoryModel.value = null
+  }
+}
+
+function openInspectionHistorySheet(model: InspectionItemHistoryModel) {
+  selectedInspectionHistoryModel.value = model
+  inspectionHistorySheetOpen.value = true
+}
+
+function resetInspectionHistorySheet() {
+  inspectionHistorySheetOpen.value = false
+  selectedInspectionHistoryModel.value = null
+}
+
+function buildInspectionItemHistoryModel(args: {
+  buildName: string
+  categoryName: string
+  inspectionItemName: string
+  inspectionItemKey: string
+  detail?: InspectionItemRecord
+  item: WorkOrderBuildInspectionItem
+}): InspectionItemHistoryModel {
+  const detail = args.detail
+  const inspectionItemName = args.inspectionItemName
+  const inspectorName = toText(args.item.UserName, "待回传")
+  const scoreText = formatInspectionItemScore(args.item.Score)
+
+  return {
+    key: args.inspectionItemKey,
+    buildingName: args.buildName,
+    categoryName: args.categoryName,
+    inspectionItemName,
+    inspectorName,
+    scoreText,
+    content: toText(detail?.Content, "-"),
+    standard: toText(detail?.Standard, "-"),
+    isForcePhotoText: formatBooleanFlag(detail?.IsForcePhoto),
+    isMeasureRecordText: formatBooleanFlag(detail?.IsMeasureRecord),
+    historyEntries: buildInspectionItemHistoryEntries({
+      inspectionItemKey: args.inspectionItemKey,
+      inspectionItemName,
+      inspectorName,
+      scoreText,
+      detail,
+    }),
+  }
+}
+
+function buildInspectionItemHistoryEntries(args: {
+  inspectionItemKey: string
+  inspectionItemName: string
+  inspectorName: string
+  scoreText: string
+  detail?: InspectionItemRecord
+}) {
+  const latestTimestamp = resolveHistoryTimestamp(
+    resolvedInspectionWorkOrder.value?.UpdatedAt,
+    resolvedInspectionWorkOrder.value?.CreatedAt,
+    resolvedInspectionWorkOrder.value?.Deadline,
+  )
+  const latestResultLabel = formatInspectionResultLabel(resolvedInspectionWorkOrder.value?.Result)
+  const latestRemark = toText(resolvedInspectionWorkOrder.value?.Remark, "")
+  const hasMeasureValue = toNumber(args.detail?.IsMeasureRecord) === 1
+  const hasForcePhoto = toNumber(args.detail?.IsForcePhoto) === 1
+  const latestSummary = buildLatestHistorySummary(latestResultLabel, args.inspectorName, args.scoreText)
+
+  return [
+    {
+      key: `${args.inspectionItemKey}-latest`,
+      timestamp: latestTimestamp,
+      inspectorName: args.inspectorName,
+      resultLabel: latestResultLabel,
+      scoreText: args.scoreText,
+      summary: latestSummary,
+      remark: latestRemark || "当前结果来自工单详情页现有摘要字段。",
+      measureValue: hasMeasureValue ? "88" : undefined,
+      photoCount: hasForcePhoto ? 3 : undefined,
+      isLatest: true,
+    },
+    {
+      key: `${args.inspectionItemKey}-history-1`,
+      timestamp: shiftHistoryTimestamp(latestTimestamp, 9, 2, "2026-03-28 14:10"),
+      inspectorName: "张海峰",
+      resultLabel: latestResultLabel === "异常" ? "待复核" : "正常",
+      scoreText: latestResultLabel === "异常" ? "2 分" : "0 分",
+      summary: `按既定频次完成「${args.inspectionItemName}」检测，现场记录已归档。`,
+      remark: args.detail?.Standard
+        ? `复核依据：${truncateText(toText(args.detail.Standard, "判定标准已更新"), 40)}`
+        : "现场执行与既有标准一致。",
+      measureValue: hasMeasureValue ? "91" : undefined,
+      photoCount: hasForcePhoto ? 2 : undefined,
+    },
+    {
+      key: `${args.inspectionItemKey}-history-2`,
+      timestamp: shiftHistoryTimestamp(latestTimestamp, 24, 5, "2026-03-03 09:30"),
+      inspectorName: "李文博",
+      resultLabel: "正常",
+      scoreText: "0 分",
+      summary: args.detail?.Content
+        ? `上次巡检已覆盖检测内容：${truncateText(toText(args.detail.Content, ""), 36)}`
+        : `上次巡检完成「${args.inspectionItemName}」标准项检查。`,
+      remark: "该记录为前端样式联调 mock，用于预览历史时间轴结构。",
+      measureValue: hasMeasureValue ? "89" : undefined,
+      photoCount: hasForcePhoto ? 2 : undefined,
+    },
+  ]
+}
+
+function buildLatestHistorySummary(resultLabel: string, inspectorName: string, scoreText: string) {
+  if (resultLabel === "异常") {
+    return `本次由 ${inspectorName} 回传异常结果，当前扣分 ${scoreText}，建议结合历史记录复核。`
+  }
+
+  if (resultLabel === "未反馈") {
+    return "当前尚未收到完整结果回传，本条用于预览最新记录卡片样式。"
+  }
+
+  return `本次由 ${inspectorName} 完成检测，当前扣分 ${scoreText}。`
+}
+
+function formatInspectionItemScore(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return `${value} 分`
+  }
+
+  if (typeof value === "string" && value.trim()) {
+    return value.includes("分") ? value.trim() : `${value.trim()} 分`
+  }
+
+  return "-"
+}
+
+function formatBooleanFlag(value: unknown) {
+  const normalized = toNumber(value)
+
+  if (normalized === 1) {
+    return "是"
+  }
+
+  if (normalized === 0) {
+    return "否"
+  }
+
+  return "-"
+}
+
+function formatInspectionResultLabel(value: unknown) {
+  const result = toNumber(value)
+
+  if (result === null || result === 0) return "未反馈"
+  if (result === 1) return "正常"
+  if (result === 2) return "异常"
+  if (result === 3) return "已驳回"
+
+  return `结果 ${result}`
+}
+
+function resolveHistoryTimestamp(...values: unknown[]) {
+  const firstText = values
+    .map(value => toText(value, ""))
+    .find(Boolean)
+
+  return normalizeHistoryTimestamp(firstText || "2026-04-10 16:20")
+}
+
+function shiftHistoryTimestamp(baseText: string, daysBack: number, hoursBack: number, fallback: string) {
+  const parsed = parseHistoryDate(baseText)
+
+  if (!parsed) {
+    return fallback
+  }
+
+  const next = new Date(parsed)
+  next.setDate(next.getDate() - daysBack)
+  next.setHours(next.getHours() - hoursBack)
+  return formatHistoryDate(next)
+}
+
+function normalizeHistoryTimestamp(value: string) {
+  const parsed = parseHistoryDate(value)
+  return parsed ? formatHistoryDate(parsed) : value
+}
+
+function parseHistoryDate(value: string) {
+  const normalized = value.trim()
+    .replace("T", " ")
+    .replace(/(\.\d+)?Z$/, "")
+
+  if (!normalized) {
+    return null
+  }
+
+  const parsed = new Date(normalized.replace(/-/g, "/"))
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
+function formatHistoryDate(value: Date) {
+  return [
+    value.getFullYear(),
+    padDatePart(value.getMonth() + 1),
+    padDatePart(value.getDate()),
+  ].join("-") + ` ${padDatePart(value.getHours())}:${padDatePart(value.getMinutes())}`
+}
+
+function padDatePart(value: number) {
+  return String(value).padStart(2, "0")
+}
+
+function truncateText(value: string, maxLength: number) {
+  if (value.length <= maxLength) {
+    return value
+  }
+
+  return `${value.slice(0, Math.max(0, maxLength - 1))}…`
+}
+
+function toNumber(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value
+  }
+
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value)
+    return Number.isFinite(parsed) ? parsed : null
+  }
+
+  return null
 }
 
 async function openAssignDialog() {
@@ -828,5 +1082,11 @@ async function submitAssign() {
     :uuid="linkedDetailSheetUuid"
     :customer-uuid="toText(resolvedInspectionWorkOrder?.CustomerUuid, '')"
     @update:open="handleLinkedDetailSheetOpenChange"
+  />
+
+  <InspectionItemHistorySheet
+    :open="inspectionHistorySheetOpen"
+    :model="selectedInspectionHistoryModel"
+    @update:open="handleInspectionHistorySheetOpenChange"
   />
 </template>

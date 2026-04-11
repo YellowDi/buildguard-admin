@@ -7,7 +7,6 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
-import { Skeleton } from "@/components/ui/skeleton"
 
 type InspectionBuildingCardField = {
   key: string
@@ -23,7 +22,7 @@ type InspectionBuildingCardItem = {
   loading?: boolean
   error?: string
   emptyText?: string
-  onExpand?: () => void
+  onSelect?: () => void
   onRetry?: () => void
 }
 
@@ -56,14 +55,12 @@ const props = withDefaults(defineProps<{
 })
 
 const expandedBuildingKey = ref("")
-const expandedInspectionItemKey = ref("")
 
 const displayCount = computed(() => props.count ?? props.buildings.length)
 
 watch(() => props.buildings, (buildings) => {
   if (!buildings.length) {
     expandedBuildingKey.value = ""
-    expandedInspectionItemKey.value = ""
     return
   }
 
@@ -71,39 +68,6 @@ watch(() => props.buildings, (buildings) => {
     expandedBuildingKey.value = buildings[0]?.key ?? ""
   }
 }, { immediate: true })
-
-watch(expandedBuildingKey, (nextKey) => {
-  if (!expandedInspectionItemKey.value) {
-    return
-  }
-
-  if (!nextKey || !expandedInspectionItemKey.value.startsWith(`${nextKey}::`)) {
-    expandedInspectionItemKey.value = ""
-  }
-})
-
-watch(expandedInspectionItemKey, (nextKey) => {
-  const item = nextKey ? findInspectionItemByAccordionKey(nextKey) : null
-  item?.onExpand?.()
-})
-
-function findInspectionItemByAccordionKey(key: string) {
-  for (const building of props.buildings) {
-    for (const group of building.groups) {
-      for (const item of group.items) {
-        if (buildInspectionAccordionKey(building.key, group.key, item.key) === key) {
-          return item
-        }
-      }
-    }
-  }
-
-  return null
-}
-
-function buildInspectionAccordionKey(buildingKey: string, groupKey: string, itemKey: string) {
-  return `${buildingKey}::${groupKey}::${itemKey}`
-}
 </script>
 
 <template>
@@ -205,94 +169,61 @@ function buildInspectionAccordionKey(buildingKey: string, groupKey: string, item
                       </div>
                     </div>
 
-                    <Accordion
-                      v-model="expandedInspectionItemKey"
-                      type="single"
-                      collapsible
-                      class="min-w-0 overflow-visible"
-                    >
-                      <AccordionItem
+                    <div class="space-y-1 px-1.5 pb-1.5">
+                      <div
                         v-for="item in group.items"
-                        :key="buildInspectionAccordionKey(building.key, group.key, item.key)"
-                        :value="buildInspectionAccordionKey(building.key, group.key, item.key)"
-                        class="min-w-0 overflow-x-clip border-0 bg-transparent"
+                        :key="`${building.key}-${group.key}-${item.key}`"
+                        class="min-w-0"
                       >
-                        <AccordionTrigger
-                          class="rounded-none border-0 bg-transparent px-2 py-3 text-left transition-colors hover:bg-muted/50 hover:no-underline"
+                        <button
+                          type="button"
+                          class="flex w-full min-w-0 items-start gap-3 rounded-xl px-2.5 py-3 text-left transition-colors hover:bg-muted/55 disabled:cursor-default disabled:hover:bg-transparent"
+                          :disabled="!item.onSelect"
+                          @click="item.onSelect?.()"
                         >
-                          <div class="flex min-w-0 flex-1 items-center gap-3 pr-3">
-                            <div class="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">
+                          <div class="min-w-0 flex-1">
+                            <div class="truncate text-sm font-semibold text-foreground">
                               {{ item.name }}
                             </div>
-                            <div
-                              v-if="item.summary"
-                              class="shrink-0 truncate text-xs text-muted-foreground"
-                            >
-                              {{ item.summary }}
-                            </div>
-                          </div>
-                        </AccordionTrigger>
 
-                        <AccordionContent
-                          class="rounded-none px-2 data-[state=closed]:pb-0 data-[state=closed]:pt-0 data-[state=open]:overflow-visible! data-[state=open]:bg-background data-[state=open]:pb-0 data-[state=open]:pt-0 [&>div]:pb-0 [&>div]:pt-0"
-                        >
-                          <div v-if="item.loading" class="grid gap-3">
-                            <div class="grid gap-2">
-                              <Skeleton class="h-3 w-16 rounded" />
-                              <Skeleton class="h-5 w-full rounded" />
-                              <Skeleton class="h-5 w-4/5 rounded" />
-                            </div>
-                            <div class="grid gap-2">
-                              <Skeleton class="h-3 w-16 rounded" />
-                              <Skeleton class="h-5 w-full rounded" />
-                              <Skeleton class="h-5 w-3/4 rounded" />
-                            </div>
-                            <div class="grid grid-cols-2 gap-3">
-                              <div class="space-y-2">
-                                <Skeleton class="h-3 w-14 rounded" />
-                                <Skeleton class="h-5 w-12 rounded" />
-                              </div>
-                              <div class="space-y-2">
-                                <Skeleton class="h-3 w-24 rounded" />
-                                <Skeleton class="h-5 w-12 rounded" />
-                              </div>
+                            <div class="mt-1 flex min-w-0 items-center gap-2 text-xs">
+                              <i
+                                :class="[
+                                  item.loading
+                                    ? 'ri-loader-4-line animate-spin text-muted-foreground'
+                                    : item.error
+                                      ? 'ri-error-warning-line text-destructive'
+                                      : 'ri-time-line text-muted-foreground',
+                                  'shrink-0 text-[13px]',
+                                ]"
+                              />
+                              <span
+                                :class="[
+                                  'truncate',
+                                  item.error ? 'text-destructive' : 'text-muted-foreground',
+                                ]"
+                              >
+                                {{ item.error || item.summary || item.emptyText || "-" }}
+                              </span>
                             </div>
                           </div>
 
-                          <div v-else-if="item.error" class="space-y-3">
-                            <p class="text-sm text-destructive">{{ item.error }}</p>
+                          <div class="mt-0.5 flex shrink-0 items-center gap-2">
                             <Button
-                              v-if="item.onRetry"
+                              v-if="item.error && item.onRetry"
                               type="button"
                               variant="outline"
                               size="sm"
-                              class="gap-2"
-                              @click="item.onRetry"
+                              class="h-7 px-2.5 text-xs"
+                              @click.stop="item.onRetry"
                             >
-                              <i class="ri-refresh-line text-sm" />
-                              重新加载
+                              重试
                             </Button>
+                            <i class="ri-arrow-right-s-line text-lg text-muted-foreground" />
                           </div>
-
-                          <div v-else-if="item.fields?.length" class="grid gap-3 text-sm">
-                            <div
-                              v-for="field in item.fields"
-                              :key="field.key"
-                              class="grid gap-1"
-                            >
-                              <p class="text-xs text-muted-foreground">{{ field.label }}</p>
-                              <p class="whitespace-pre-wrap wrap-break-word leading-6 text-foreground">
-                                {{ field.value }}
-                              </p>
-                            </div>
-                          </div>
-
-                          <div v-else class="text-sm text-muted-foreground">
-                            {{ item.emptyText ?? "-" }}
-                          </div>
-                        </AccordionContent>
-                      </AccordionItem>
-                    </Accordion>
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </AccordionContent>

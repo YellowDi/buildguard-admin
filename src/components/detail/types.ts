@@ -50,6 +50,58 @@ export type DetailFieldSection = {
   rows: DetailFieldRow[]
 }
 
+export type EntityHistoryTone = "neutral" | "info" | "success" | "warning" | "danger"
+
+export type EntityHistoryMetaBadge = {
+  key: string
+  label: string
+  tone?: EntityHistoryTone
+}
+
+export type HistoryEntryField = {
+  key: string
+  label: string
+  value: string
+}
+
+export type HistoryEntry = {
+  key: string
+  title: string
+  timestamp: string
+  statusLabel?: string
+  statusTone?: EntityHistoryTone
+  summary?: string
+  fields?: HistoryEntryField[]
+  isLatest?: boolean
+}
+
+export type InspectionItemHistoryRecord = {
+  key: string
+  timestamp: string
+  inspectorName: string
+  resultLabel: string
+  scoreText: string
+  summary?: string
+  remark?: string
+  measureValue?: string
+  photoCount?: number | null
+  isLatest?: boolean
+}
+
+export type InspectionItemHistoryModel = {
+  key: string
+  buildingName: string
+  categoryName: string
+  inspectionItemName: string
+  inspectorName: string
+  scoreText: string
+  content: string
+  standard: string
+  isForcePhotoText: string
+  isMeasureRecordText: string
+  historyEntries: InspectionItemHistoryRecord[]
+}
+
 // rowKey 同时支持字段名和函数，方便后续接口数据主键不统一时继续复用。
 export type DetailRelationRowKey<Row> =
   | Extract<keyof Row, string>
