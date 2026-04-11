@@ -36,7 +36,11 @@ const emit = defineEmits<{
 
 const hasSections = computed(() => props.sections.length > 0)
 const hasHistory = computed(() => props.historyEntries.length > 0)
-const defaultHistoryEntryKey = computed(() => props.historyEntries.find(entry => entry.isLatest)?.key ?? props.historyEntries[0]?.key)
+const defaultHistoryEntryKeys = computed(() => {
+  const defaultKey = props.historyEntries.find(entry => entry.isLatest)?.key ?? props.historyEntries[0]?.key
+
+  return defaultKey ? [defaultKey] : []
+})
 
 const metaFieldLabels = new Set(["检测人", "扣分", "实测值"])
 
@@ -140,10 +144,9 @@ function hasSingleImage(entry: HistoryEntry) {
             class="space-y-0"
           >
             <Accordion
-              :key="defaultHistoryEntryKey ?? 'history-entries'"
-              type="single"
-              collapsible
-              :default-value="defaultHistoryEntryKey"
+              :key="defaultHistoryEntryKeys.join('-') || 'history-entries'"
+              type="multiple"
+              :default-value="defaultHistoryEntryKeys"
               class="w-full space-y-3"
             >
               <AccordionItem
