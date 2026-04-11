@@ -152,16 +152,10 @@ function hasSingleImage(entry: HistoryEntry) {
               v-for="(entry, index) in props.historyEntries"
               :key="entry.key"
               :value="entry.key"
-              class="group border-b-0"
+              class="border-b-0"
             >
               <div class="detail-section-inset py-1.5">
-                <div class="overflow-hidden rounded-[12px] border border-black/10 bg-white shadow-[0_4px_18px_rgba(0,0,0,0.04),0_2.025px_7.85px_rgba(0,0,0,0.027),0_0.8px_2.93px_rgba(0,0,0,0.02),0_0.175px_1.04px_rgba(0,0,0,0.01)] group-data-[state=open]:border-[#4da3f0]/35 dark:border-white/10 dark:bg-[#191919] dark:shadow-[0_4px_18px_rgba(0,0,0,0.2),0_2.025px_7.85px_rgba(0,0,0,0.15),0_0.8px_2.93px_rgba(0,0,0,0.1),0_0.175px_1.04px_rgba(0,0,0,0.08)] dark:group-data-[state=open]:border-[#4da3f0]/35">
-                <div
-                  v-if="entry.isLatest"
-                  class="h-[2px] w-full bg-[#0075de] dark:bg-[#4da3f0]"
-                />
-
-                <AccordionTrigger class="px-4 py-4 text-left hover:no-underline [&>svg]:mt-1 [&>svg]:self-start [&>svg]:text-muted-foreground">
+                <AccordionTrigger class="px-0 py-4 text-left hover:no-underline [&>svg]:mt-1 [&>svg]:self-start [&>svg]:text-muted-foreground">
                   <div class="min-w-0 flex-1 pr-4">
                     <div class="flex flex-wrap items-center gap-2">
                       <h3 class="min-w-0 truncate text-[16px] font-semibold tracking-[-0.15px] text-[rgba(0,0,0,0.95)] dark:text-[rgba(255,255,255,0.92)]">
@@ -200,7 +194,7 @@ function hasSingleImage(entry: HistoryEntry) {
                   </div>
                 </AccordionTrigger>
 
-                <AccordionContent class="px-4">
+                <AccordionContent class="px-0">
                   <div class="border-t border-dashed border-black/10 pt-4 dark:border-white/10">
                     <p
                       v-if="entry.summary"
@@ -261,7 +255,6 @@ function hasSingleImage(entry: HistoryEntry) {
                     </div>
                   </div>
                 </AccordionContent>
-                </div>
               </div>
 
               <div
