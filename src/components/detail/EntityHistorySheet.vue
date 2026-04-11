@@ -4,12 +4,11 @@ import { computed } from "vue"
 import DetailFieldSections from "@/components/detail/DetailFieldSections.vue"
 import type { DetailFieldSection, EntityHistoryMetaBadge, EntityHistoryTone, HistoryEntry } from "@/components/detail/types"
 import TitleBlock from "@/components/layout/TitleBlock.vue"
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import { Separator } from "@/components/ui/separator"
-import type { StatusBadgeTone } from "@/components/ui/status-badge"
-import { notionColorTokens } from "@/components/ui/status-badge"
 import { ResponsiveRightSheet } from "@/components/ui/sheet"
 import { cn } from "@/lib/utils"
 
@@ -37,12 +36,9 @@ const emit = defineEmits<{
 
 const hasSections = computed(() => props.sections.length > 0)
 const hasHistory = computed(() => props.historyEntries.length > 0)
+const defaultHistoryEntryKey = computed(() => props.historyEntries.find(entry => entry.isLatest)?.key ?? props.historyEntries[0]?.key)
 
 const metaFieldLabels = new Set(["检测人", "扣分", "实测值"])
-const TIMELINE_TRACK_WIDTH_PX = 28
-const TIMELINE_NODE_TOP_PX = 12
-const TIMELINE_NODE_SIZE_PX = 28
-const TIMELINE_GAP_PX = 8
 
 function handleOpenChange(open: boolean) {
   emit("update:open", open)
@@ -80,85 +76,13 @@ function splitEntryFields(entry: HistoryEntry) {
 function hasSingleImage(entry: HistoryEntry) {
   return (entry.images?.length ?? 0) === 1
 }
-
-function resolveTimelineNodeTone(entry: HistoryEntry): StatusBadgeTone {
-  if (entry.statusTone === "success") {
-    return "green"
-  }
-
-  if (entry.statusTone === "warning") {
-    return "orange"
-  }
-
-  if (entry.statusTone === "danger") {
-    return "red"
-  }
-
-  if (entry.statusTone === "info") {
-    return "blue"
-  }
-
-  return "gray"
-}
-
-function timelineNodeIconClass(entry: HistoryEntry) {
-  if (entry.statusTone === "success") {
-    return "ri-checkbox-circle-fill"
-  }
-
-  if (entry.statusTone === "warning") {
-    return "ri-time-fill"
-  }
-
-  if (entry.statusTone === "danger") {
-    return "ri-close-circle-fill"
-  }
-
-  if (entry.statusTone === "info") {
-    return "ri-file-list-3-fill"
-  }
-
-  return "ri-file-list-3-fill"
-}
-
-function timelineNodeVars(entry: HistoryEntry) {
-  const tone = resolveTimelineNodeTone(entry)
-  const palette = notionColorTokens[tone]
-
-  return {
-    "--timeline-node-light": palette.light.icon,
-    "--timeline-node-dark": palette.dark.icon,
-  }
-}
-
-function timelineNodeStyle() {
-  return {
-    top: `${TIMELINE_NODE_TOP_PX}px`,
-    width: `${TIMELINE_TRACK_WIDTH_PX}px`,
-    height: `${TIMELINE_NODE_SIZE_PX}px`,
-  }
-}
-
-function timelineTopLineStyle() {
-  return {
-    top: "0px",
-    bottom: `${TIMELINE_NODE_TOP_PX - TIMELINE_GAP_PX}px`,
-  }
-}
-
-function timelineBottomLineStyle() {
-  return {
-    top: `${TIMELINE_NODE_TOP_PX + TIMELINE_NODE_SIZE_PX + TIMELINE_GAP_PX}px`,
-    bottom: "0px",
-  }
-}
 </script>
 
 <template>
   <ResponsiveRightSheet
     :open="open"
     :show-primary="false"
-    sheet-content-class="flex h-full max-h-full flex-col overflow-hidden sm:max-w-2xl"
+    sheet-content-class="flex min-h-0 flex-col overflow-hidden sm:max-w-2xl"
     @update:open="handleOpenChange"
   >
     <template #actions>
@@ -215,138 +139,126 @@ function timelineBottomLineStyle() {
             v-if="hasHistory"
             class="space-y-0"
           >
-            <article
-              v-for="(entry, index) in props.historyEntries"
-              :key="entry.key"
-              class="grid grid-cols-[28px_minmax(0,1fr)] gap-x-4 pb-5 last:pb-0"
+            <Accordion
+              :key="defaultHistoryEntryKey ?? 'history-entries'"
+              type="single"
+              collapsible
+              :default-value="defaultHistoryEntryKey"
+              class="w-full space-y-3"
             >
-              <div class="relative h-full">
-                <div
-                  v-if="index > 0"
-                  class="absolute left-1/2 w-px -translate-x-1/2 bg-black/10 dark:bg-white/10"
-                  :style="timelineTopLineStyle()"
-                />
-
-                <div
-                  v-if="index < props.historyEntries.length - 1"
-                  class="absolute left-1/2 w-px -translate-x-1/2 bg-black/10 dark:bg-white/10"
-                  :style="timelineBottomLineStyle()"
-                />
-
-                <div
-                  class="absolute left-1/2 flex -translate-x-1/2 items-center justify-center"
-                  :style="timelineNodeStyle()"
-                >
-                  <i
-                    :class="cn(
-                      'text-[28px] leading-none text-(--timeline-node-light) dark:text-(--timeline-node-dark)',
-                      timelineNodeIconClass(entry),
-                    )"
-                    :style="timelineNodeVars(entry)"
-                  />
-                </div>
-              </div>
-
-              <div class="overflow-hidden rounded-[12px] border border-black/10 bg-white shadow-[0_4px_18px_rgba(0,0,0,0.04),0_2.025px_7.85px_rgba(0,0,0,0.027),0_0.8px_2.93px_rgba(0,0,0,0.02),0_0.175px_1.04px_rgba(0,0,0,0.01)] dark:border-white/10 dark:bg-[#191919] dark:shadow-[0_4px_18px_rgba(0,0,0,0.2),0_2.025px_7.85px_rgba(0,0,0,0.15),0_0.8px_2.93px_rgba(0,0,0,0.1),0_0.175px_1.04px_rgba(0,0,0,0.08)]">
+              <AccordionItem
+                v-for="entry in props.historyEntries"
+                :key="entry.key"
+                :value="entry.key"
+                class="overflow-hidden rounded-[12px] border border-black/10 bg-white shadow-[0_4px_18px_rgba(0,0,0,0.04),0_2.025px_7.85px_rgba(0,0,0,0.027),0_0.8px_2.93px_rgba(0,0,0,0.02),0_0.175px_1.04px_rgba(0,0,0,0.01)] data-[state=open]:border-[#4da3f0]/35 dark:border-white/10 dark:bg-[#191919] dark:shadow-[0_4px_18px_rgba(0,0,0,0.2),0_2.025px_7.85px_rgba(0,0,0,0.15),0_0.8px_2.93px_rgba(0,0,0,0.1),0_0.175px_1.04px_rgba(0,0,0,0.08)] dark:data-[state=open]:border-[#4da3f0]/35"
+              >
                 <div
                   v-if="entry.isLatest"
                   class="h-[2px] w-full bg-[#0075de] dark:bg-[#4da3f0]"
                 />
 
-                <div class="px-4 py-4">
-                  <div class="flex flex-wrap items-start justify-between gap-3">
-                    <div class="min-w-0 flex-1">
-                      <div class="flex min-h-5 flex-wrap items-center gap-2">
-                        <h3 class="min-w-0 truncate text-[16px] font-semibold tracking-[-0.15px] text-[rgba(0,0,0,0.95)] dark:text-[rgba(255,255,255,0.92)]">
-                          {{ entry.title }}
-                        </h3>
-                        <Badge
-                          v-if="entry.isLatest"
-                          variant="secondary"
-                          class="rounded-full border border-black/5 bg-[#f2f9ff] px-2 py-0.5 text-[12px] font-semibold tracking-[0.125px] text-[#097fe8] dark:border-white/10 dark:bg-[#1a2a3a] dark:text-[#5aacf5]"
-                        >
-                          最新结果
-                        </Badge>
-                      </div>
-
-                      <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] font-medium text-[#615d59] dark:text-[#a8a5a0]">
-                        <span>{{ entry.timestamp }}</span>
-                        <template v-for="field in splitEntryFields(entry).meta" :key="field.key">
-                          <span class="h-1 w-1 rounded-full bg-[#a39e98] dark:bg-[#6b6763]" />
-                          <span>{{ field.label }} {{ field.value }}</span>
-                        </template>
-                      </div>
+                <AccordionTrigger class="px-4 py-4 text-left hover:no-underline [&>svg]:mt-1 [&>svg]:self-start [&>svg]:text-muted-foreground">
+                  <div class="min-w-0 flex-1 pr-4">
+                    <div class="flex flex-wrap items-center gap-2">
+                      <h3 class="min-w-0 truncate text-[16px] font-semibold tracking-[-0.15px] text-[rgba(0,0,0,0.95)] dark:text-[rgba(255,255,255,0.92)]">
+                        {{ entry.title }}
+                      </h3>
+                      <Badge
+                        v-if="entry.statusLabel"
+                        variant="secondary"
+                        :class="cn('rounded-full px-2 py-0.5 text-[12px] font-semibold tracking-[0.125px]', badgeClass(entry.statusTone))"
+                      >
+                        {{ entry.statusLabel }}
+                      </Badge>
+                      <Badge
+                        v-if="entry.isLatest"
+                        variant="secondary"
+                        class="rounded-full border border-black/5 bg-[#f2f9ff] px-2 py-0.5 text-[12px] font-semibold tracking-[0.125px] text-[#097fe8] dark:border-white/10 dark:bg-[#1a2a3a] dark:text-[#5aacf5]"
+                      >
+                        最新结果
+                      </Badge>
                     </div>
 
-                    <Badge
-                      v-if="entry.statusLabel"
-                      variant="secondary"
-                      :class="cn('rounded-full px-2 py-0.5 text-[12px] font-semibold tracking-[0.125px]', badgeClass(entry.statusTone))"
-                    >
-                      {{ entry.statusLabel }}
-                    </Badge>
-                  </div>
-
-                  <p
-                    v-if="entry.summary"
-                    class="mt-4 text-[15px] leading-7 text-[rgba(0,0,0,0.9)] dark:text-[rgba(255,255,255,0.9)]"
-                  >
-                    {{ entry.summary }}
-                  </p>
-
-                  <div
-                    v-if="splitEntryFields(entry).detail.length"
-                    class="mt-4 space-y-3"
-                  >
-                    <div
-                      v-for="field in splitEntryFields(entry).detail"
-                      :key="field.key"
-                      class="rounded-[8px] border border-black/[0.08] bg-[#f6f5f4]/85 px-3 py-2.5 dark:border-white/10 dark:bg-[#1e1e1e]"
-                    >
-                      <p class="text-[12px] font-medium tracking-[0.125px] text-[#a39e98] dark:text-[#6b6763]">
-                        {{ field.label }}
-                      </p>
-                      <p class="mt-1 whitespace-pre-wrap break-words text-[14px] leading-6 text-[rgba(0,0,0,0.88)] dark:text-[rgba(255,255,255,0.88)]">
-                        {{ field.value }}
-                      </p>
+                    <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] font-medium text-[#615d59] dark:text-[#a8a5a0]">
+                      <span>{{ entry.timestamp }}</span>
+                      <template v-for="field in splitEntryFields(entry).meta" :key="field.key">
+                        <span class="h-1 w-1 rounded-full bg-[#a39e98] dark:bg-[#6b6763]" />
+                        <span>{{ field.label }} {{ field.value }}</span>
+                      </template>
                     </div>
-                  </div>
 
-                  <div
-                    v-if="entry.images?.length"
-                    class="mt-5"
-                  >
-                    <p class="text-[12px] font-medium tracking-[0.125px] text-[#a39e98] dark:text-[#6b6763]">
-                      现场照片
+                    <p
+                      v-if="entry.summary"
+                      class="mt-3 line-clamp-2 text-[14px] leading-6 text-[rgba(0,0,0,0.72)] dark:text-[rgba(255,255,255,0.72)]"
+                    >
+                      {{ entry.summary }}
                     </p>
+                  </div>
+                </AccordionTrigger>
+
+                <AccordionContent class="px-4">
+                  <div class="border-t border-dashed border-black/10 pt-4 dark:border-white/10">
+                    <p
+                      v-if="entry.summary"
+                      class="text-[15px] leading-7 text-[rgba(0,0,0,0.9)] dark:text-[rgba(255,255,255,0.9)]"
+                    >
+                      {{ entry.summary }}
+                    </p>
+
                     <div
-                      :class="cn(
-                        'mt-3 grid gap-3',
-                        hasSingleImage(entry) ? 'grid-cols-1' : 'grid-cols-2',
-                      )"
+                      v-if="splitEntryFields(entry).detail.length"
+                      class="mt-4 space-y-3"
                     >
                       <div
-                        v-for="image in entry.images"
-                        :key="image.key"
+                        v-for="field in splitEntryFields(entry).detail"
+                        :key="field.key"
+                        class="rounded-[8px] border border-black/[0.08] bg-[#f6f5f4]/85 px-3 py-2.5 dark:border-white/10 dark:bg-[#1e1e1e]"
+                      >
+                        <p class="text-[12px] font-medium tracking-[0.125px] text-[#a39e98] dark:text-[#6b6763]">
+                          {{ field.label }}
+                        </p>
+                        <p class="mt-1 whitespace-pre-wrap break-words text-[14px] leading-6 text-[rgba(0,0,0,0.88)] dark:text-[rgba(255,255,255,0.88)]">
+                          {{ field.value }}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div
+                      v-if="entry.images?.length"
+                      class="mt-5"
+                    >
+                      <p class="text-[12px] font-medium tracking-[0.125px] text-[#a39e98] dark:text-[#6b6763]">
+                        现场照片
+                      </p>
+                      <div
                         :class="cn(
-                          'overflow-hidden rounded-[12px] border border-black/10 bg-[#f6f5f4] shadow-[0_4px_18px_rgba(0,0,0,0.04),0_2.025px_7.85px_rgba(0,0,0,0.027),0_0.8px_2.93px_rgba(0,0,0,0.02),0_0.175px_1.04px_rgba(0,0,0,0.01)] dark:border-white/10 dark:bg-[#1e1e1e] dark:shadow-[0_4px_18px_rgba(0,0,0,0.2),0_2.025px_7.85px_rgba(0,0,0,0.15),0_0.8px_2.93px_rgba(0,0,0,0.1),0_0.175px_1.04px_rgba(0,0,0,0.08)]',
-                          hasSingleImage(entry) ? 'col-span-1' : '',
+                          'mt-3 grid gap-3',
+                          hasSingleImage(entry) ? 'grid-cols-1' : 'grid-cols-2',
                         )"
                       >
-                        <img
-                          :src="image.src"
-                          :alt="image.alt ?? entry.title"
+                        <div
+                          v-for="image in entry.images"
+                          :key="image.key"
                           :class="cn(
-                            'w-full object-cover',
-                            hasSingleImage(entry) ? 'h-52' : 'h-32',
+                            'overflow-hidden rounded-[12px] border border-black/10 bg-[#f6f5f4] shadow-[0_4px_18px_rgba(0,0,0,0.04),0_2.025px_7.85px_rgba(0,0,0,0.027),0_0.8px_2.93px_rgba(0,0,0,0.02),0_0.175px_1.04px_rgba(0,0,0,0.01)] dark:border-white/10 dark:bg-[#1e1e1e] dark:shadow-[0_4px_18px_rgba(0,0,0,0.2),0_2.025px_7.85px_rgba(0,0,0,0.15),0_0.8px_2.93px_rgba(0,0,0,0.1),0_0.175px_1.04px_rgba(0,0,0,0.08)]',
+                            hasSingleImage(entry) ? 'col-span-1' : '',
                           )"
                         >
+                          <img
+                            :src="image.src"
+                            :alt="image.alt ?? entry.title"
+                            :class="cn(
+                              'w-full object-cover',
+                              hasSingleImage(entry) ? 'h-52' : 'h-32',
+                            )"
+                          >
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              </div>
-            </article>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
           </div>
 
           <div v-else class="pb-1">
