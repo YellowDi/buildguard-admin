@@ -501,6 +501,40 @@
 }
 
 @layer utilities {
+  /*
+   * Holding Shift while horizontally scrolling wide tables can promote nearby action chrome
+   * into a keyboard-focus state. Keep visible focus on text inputs / selection controls,
+   * but suppress the blue ring on buttons, tabs, sidebar items, and popup/window actions.
+   */
+  :where(
+    button:not([data-slot="checkbox"]):not([data-slot="switch"]):not([data-slot="radio-group-item"]),
+    [role="button"],
+    [role="tab"],
+    [data-slot="button"],
+    [data-slot="dialog-close"],
+    [data-slot="select-trigger"],
+    [data-slot="tabs-trigger"],
+    [data-sidebar="trigger"],
+    [data-sidebar="menu-button"],
+    [data-sidebar="menu-action"],
+    [data-sidebar="menu-sub-button"],
+    [data-sidebar="group-action"],
+    [data-sidebar="group-label"]
+  ):focus-visible {
+    outline: none;
+    box-shadow: none;
+  }
+
+  button:not([data-slot="checkbox"]):not([data-slot="switch"]):not([data-slot="radio-group-item"]):focus-visible,
+  [data-slot="button"][data-variant="outline"]:focus-visible,
+  [data-slot="select-trigger"]:focus-visible {
+    border-color: var(--input);
+  }
+
+  [data-slot="tabs-trigger"]:focus-visible {
+    border-color: transparent;
+  }
+
   .route-page-forward-enter-active,
   .route-page-forward-leave-active,
   .route-page-backward-enter-active,
