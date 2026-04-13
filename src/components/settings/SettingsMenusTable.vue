@@ -151,6 +151,7 @@ const menuStatusMap = {
 } as const
 
 const rows = ref<MenuRow[]>([])
+const menuOptionRows = ref<MenuRow[]>([])
 const loading = ref(false)
 const errorMessage = ref("")
 const searchQuery = ref("")
@@ -180,7 +181,9 @@ const apiRows = ref<ApiRow[]>([])
 const importSubmitting = ref(false)
 const apiImportInput = useTemplateRef<HTMLInputElement>("apiImportInput")
 
-const parentMenuOptions = computed(() => [...rows.value]
+const availableMenuRows = computed(() => (menuOptionRows.value.length > 0 ? menuOptionRows.value : rows.value))
+
+const parentMenuOptions = computed(() => [...availableMenuRows.value]
   .filter(row => row.uuid !== editingMenuUuid.value)
   .sort((left, right) => left.level - right.level || left.sort - right.sort || left.name.localeCompare(right.name, "zh-Hans-CN"))
   .map(row => ({
@@ -189,7 +192,7 @@ const parentMenuOptions = computed(() => [...rows.value]
     level: row.level,
   })))
 
-const buttonMenuOptions = computed(() => [...rows.value]
+const buttonMenuOptions = computed(() => [...availableMenuRows.value]
   .sort((left, right) => left.level - right.level || left.sort - right.sort || left.name.localeCompare(right.name, "zh-Hans-CN"))
   .map(row => ({
     uuid: row.uuid,
@@ -524,6 +527,7 @@ async function bootstrapSystemResources() {
   try {
     await Promise.allSettled([
       loadMenus({ manageLoading: false }),
+      loadMenuOptions(),
       loadButtons({ manageLoading: false }),
       loadApis({ manageLoading: false }),
     ])
@@ -544,7 +548,7 @@ watch(activeView, (value) => {
 })
 
 watch(() => menuForm.value.parentUuid, (value) => {
-  const parent = rows.value.find(row => row.uuid === (value === ROOT_MENU_VALUE ? "" : value))
+  const parent = availableMenuRows.value.find(row => row.uuid === (value === ROOT_MENU_VALUE ? "" : value))
   menuForm.value.level = String(parent ? parent.level + 1 : 0)
 })
 
@@ -575,6 +579,21 @@ async function loadMenus(options?: { manageLoading?: boolean, keyword?: string }
     if (manageLoading) {
       loading.value = false
     }
+  }
+}
+
+async function loadMenuOptions() {
+  try {
+    const result = await fetchMenus({
+      Name: "",
+      Status: 0,
+      PageNum: 0,
+      PageSize: 0,
+    })
+    const normalizedRows = result.list.map((item, index) => normalizeMenu(item, index))
+    menuOptionRows.value = normalizedRows.length > 0 ? normalizedRows : rows.value
+  } catch {
+    menuOptionRows.value = rows.value
   }
 }
 
@@ -760,7 +779,8 @@ function createButtonForm(): ButtonForm {
   }
 }
 
-function openCreateDialog() {
+async function openCreateDialog() {
+  await loadMenuOptions()
   menuDialogMode.value = "create"
   editDetailLoading.value = false
   editingMenuUuid.value = ""
@@ -772,8 +792,10 @@ function openCreateDialog() {
 async function ensureButtonDialogDependencies() {
   const tasks: Promise<unknown>[] = []
 
-  if (rows.value.length === 0) {
-    tasks.push(loadMenus({ manageLoading: false, keyword: "" }))
+  if (menuOptionRows.value.length === 0) {
+    tasks.push(loadMenuOptions())
+  } else {
+    tasks.push(loadMenuOptions())
   }
 
   if (apiRows.value.length === 0) {
@@ -797,6 +819,7 @@ async function openCreateButtonDialog() {
 }
 
 async function openEditDialog(row: MenuRow) {
+  await loadMenuOptions()
   menuDialogMode.value = "edit"
   editDetailLoading.value = true
   editingMenuUuid.value = row.uuid
@@ -976,7 +999,10 @@ async function submitMenu() {
       })
     }
 
-    await loadMenus()
+    await Promise.allSettled([
+      loadMenus(),
+      loadMenuOptions(),
+    ])
   } catch (error) {
     handleApiError(error, {
       title: menuDialogMode.value === "edit" ? "菜单更新失败" : "菜单创建失败",
@@ -1006,7 +1032,10 @@ async function confirmDeleteMenu() {
     toast.success("菜单已删除", {
       description: `${target?.name ?? "当前菜单"} 已从列表移除。`,
     })
-    await loadMenus()
+    await Promise.allSettled([
+      loadMenus(),
+      loadMenuOptions(),
+    ])
   } catch (error) {
     handleApiError(error, {
       title: "菜单删除失败",
