@@ -105,7 +105,7 @@ export async function fetchMenus(payload: ListMenusPayload = {}): Promise<MenusL
 
   assertApiSuccess(responsePayload, MENUS_LOAD_ERROR_MESSAGE)
 
-  const list = extractList(responsePayload)
+  const list = extractList(responsePayload).map(item => normalizeMenuRecord(item))
 
   return {
     list,
@@ -130,7 +130,7 @@ export async function fetchMenuDetail(payload: MenuDetailPayload): Promise<MenuD
 
   assertApiSuccess(responsePayload, MENU_DETAIL_ERROR_MESSAGE)
 
-  return extractDetailRecord(responsePayload) as MenuDetailResult
+  return normalizeMenuRecord(extractDetailRecord(responsePayload))
 }
 
 export async function createMenu(payload: CreateMenuPayload): Promise<CreateMenuResult> {
@@ -293,6 +293,30 @@ function extractDetailRecord(payload: unknown) {
   return {} as CreateMenuResult
 }
 
+function normalizeMenuRecord(value: unknown): MenuRecord {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    const record = value as Record<string, unknown>
+
+    return {
+      ...record,
+      Uuid: getFirstText(record, ["Uuid", "uuid", "MenuUuid", "menuUuid"]),
+      Id: getFirstNumber(record, ["Id", "id", "MenuId", "menuId"]),
+      Name: getFirstText(record, ["Name", "name", "MenuName", "menuName"]),
+      Path: getFirstText(record, ["Path", "path", "RoutePath", "routePath"]),
+      Icon: getFirstText(record, ["Icon", "icon"]),
+      ParentUuid: getFirstText(record, ["ParentUuid", "parentUuid", "PUuid", "pUuid"]),
+      ParentName: getFirstText(record, ["ParentName", "parentName", "PName", "pName"]),
+      Level: getFirstNumber(record, ["Level", "level"]),
+      Sort: getFirstNumber(record, ["Sort", "sort"]),
+      Status: getFirstNumber(record, ["Status", "status"]),
+      CreatedAt: getFirstText(record, ["CreatedAt", "createdAt", "CreateTime", "createTime"]),
+      UpdatedAt: getFirstText(record, ["UpdatedAt", "updatedAt", "UpdateTime", "updateTime"]),
+    }
+  }
+
+  return {}
+}
+
 function getOptionalNumber(value: unknown, field: string) {
   if (value === undefined || value === null || value === "") {
     return undefined
@@ -347,4 +371,40 @@ function getRequiredString(value: unknown, field: string) {
   }
 
   throw new ApiError(`请求参数校验失败：${field} 不能为空。`)
+}
+
+function getFirstText(record: Record<string, unknown>, keys: string[]) {
+  for (const key of keys) {
+    const value = record[key]
+
+    if (typeof value === "string" && value.trim()) {
+      return value.trim()
+    }
+
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return String(value)
+    }
+  }
+
+  return undefined
+}
+
+function getFirstNumber(record: Record<string, unknown>, keys: string[]) {
+  for (const key of keys) {
+    const value = record[key]
+
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return value
+    }
+
+    if (typeof value === "string" && value.trim()) {
+      const parsed = Number(value)
+
+      if (Number.isFinite(parsed)) {
+        return parsed
+      }
+    }
+  }
+
+  return undefined
 }

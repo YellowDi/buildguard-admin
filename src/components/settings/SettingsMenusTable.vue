@@ -505,7 +505,7 @@ async function loadMenus(options?: { manageLoading?: boolean }) {
       PageNum: 0,
       PageSize: 0,
     })
-    rows.value = result.list.map((item, index) => normalizeMenu(item, index))
+    rows.value = resolveParentNames(result.list.map((item, index) => normalizeMenu(item, index)))
   } catch (error) {
     errorMessage.value = handleApiError(error, {
       title: "菜单接口加载失败",
@@ -636,6 +636,17 @@ function normalizeMenu(item: MenuRecord, index: number): MenuRow {
     createdAt: formatDateTime(item.CreatedAt),
     updatedAt: formatDateTime(item.UpdatedAt),
   }
+}
+
+function resolveParentNames(items: MenuRow[]) {
+  const nameMap = new Map(items.map(item => [item.uuid, item.name]))
+
+  return items.map(item => ({
+    ...item,
+    parentName: !item.parentUuid || item.parentUuid === item.uuid || item.level <= 0
+      ? "顶级菜单"
+      : (nameMap.get(item.parentUuid) || (item.parentName && item.parentName !== item.name ? item.parentName : "顶级菜单")),
+  }))
 }
 
 function normalizeButton(item: SystemResourceRecord, index: number): ButtonRow {
