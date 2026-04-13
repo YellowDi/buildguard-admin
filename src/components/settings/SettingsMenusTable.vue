@@ -44,6 +44,12 @@ import TablePageTable from "@/components/table-page/TablePageTable.vue"
 import type { TableColumn, TablePageEmptyState } from "@/components/table-page/types"
 import { handleApiError } from "@/lib/api-errors"
 import {
+  createButton as requestButtonCreate,
+  deleteButton as requestButtonDelete,
+  fetchButtonDetail,
+  updateButton as requestButtonUpdate,
+} from "@/lib/buttons-api"
+import {
   createMenu as requestMenuCreate,
   deleteMenu as requestMenuDelete,
   fetchMenuDetail,
@@ -94,15 +100,30 @@ type SystemViewKey = "menus" | "buttons" | "apis"
 
 type ButtonRow = {
   id: string
+  uuid: string
+  numericId: number | null
   name: string
   code: string
+  menuUuid: string
   menuName: string
+  apiUuid: string
   apiName: string
+  createdAt: string
   updatedAt: string
 }
 
+type ButtonForm = {
+  name: string
+  code: string
+  menuUuid: string
+  apiUuid: string
+}
+
+type ButtonDialogMode = "create" | "edit"
+
 type ApiRow = {
   id: string
+  uuid: string
   name: string
   path: string
   method: string
@@ -116,7 +137,12 @@ const APIS_LOAD_ERROR_MESSAGE = "API 列表加载失败，请稍后重试。"
 const MENU_CREATE_ERROR_MESSAGE = "菜单创建失败，请稍后重试。"
 const MENU_UPDATE_ERROR_MESSAGE = "菜单更新失败，请稍后重试。"
 const MENU_DELETE_ERROR_MESSAGE = "菜单删除失败，请稍后重试。"
+const BUTTON_CREATE_ERROR_MESSAGE = "按钮创建失败，请稍后重试。"
+const BUTTON_UPDATE_ERROR_MESSAGE = "按钮更新失败，请稍后重试。"
+const BUTTON_DELETE_ERROR_MESSAGE = "按钮删除失败，请稍后重试。"
 const ROOT_MENU_VALUE = "__root_menu__"
+const BUTTON_MENU_UNSET = "__button_menu_unset__"
+const BUTTON_API_UNSET = "__button_api_unset__"
 const MENU_STATUS_UNSET = "__menu_status_unset__"
 const menuStatusMap = {
   启用: { tone: "green", icon: "check" },
@@ -140,6 +166,16 @@ const editingMenuUuid = ref("")
 const editingMenuUpdatedAt = ref("-")
 const menuForm = ref(createMenuForm())
 const buttonRows = ref<ButtonRow[]>([])
+const buttonDialogOpen = ref(false)
+const buttonDialogMode = ref<ButtonDialogMode>("create")
+const buttonSubmitting = ref(false)
+const buttonDetailLoading = ref(false)
+const buttonDeleteSubmitting = ref(false)
+const buttonDeleteConfirmOpen = ref(false)
+const editingButtonUuid = ref("")
+const editingButtonId = ref<number | null>(null)
+const editingButtonUpdatedAt = ref("-")
+const buttonForm = ref(createButtonForm())
 const apiRows = ref<ApiRow[]>([])
 const importSubmitting = ref(false)
 const apiImportInput = useTemplateRef<HTMLInputElement>("apiImportInput")
@@ -151,6 +187,22 @@ const parentMenuOptions = computed(() => [...rows.value]
     uuid: row.uuid,
     label: `${"— ".repeat(Math.max(0, row.level))}${row.name}`,
     level: row.level,
+  })))
+
+const buttonMenuOptions = computed(() => [...rows.value]
+  .sort((left, right) => left.level - right.level || left.sort - right.sort || left.name.localeCompare(right.name, "zh-Hans-CN"))
+  .map(row => ({
+    uuid: row.uuid,
+    label: `${"— ".repeat(Math.max(0, row.level))}${row.name}`,
+  })))
+
+const buttonApiOptions = computed(() => [...apiRows.value]
+  .sort((left, right) => left.name.localeCompare(right.name, "zh-Hans-CN") || left.path.localeCompare(right.path, "zh-Hans-CN"))
+  .map(row => ({
+    uuid: row.uuid || row.id,
+    label: row.path && row.path !== "-"
+      ? `${row.name} · ${row.path}`
+      : row.name,
   })))
 
 const columns: TableColumn[] = [
@@ -310,7 +362,7 @@ const viewTabs = computed(() => [
 
 const currentSearchPlaceholder = computed(() => {
   if (activeView.value === "buttons") {
-    return "搜索按钮名称、标识或分组"
+    return "搜索按钮名称、编码、菜单或 API"
   }
 
   if (activeView.value === "apis") {
@@ -318,6 +370,18 @@ const currentSearchPlaceholder = computed(() => {
   }
 
   return "搜索菜单名称、Path、上级菜单或 Uuid"
+})
+
+const primaryActionLabel = computed(() => {
+  if (activeView.value === "buttons") {
+    return "添加按钮"
+  }
+
+  if (activeView.value === "menus") {
+    return "添加菜单"
+  }
+
+  return ""
 })
 
 const filteredRows = computed(() => {
@@ -484,8 +548,9 @@ watch(() => menuForm.value.parentUuid, (value) => {
   menuForm.value.level = String(parent ? parent.level + 1 : 0)
 })
 
-async function loadMenus(options?: { manageLoading?: boolean }) {
+async function loadMenus(options?: { manageLoading?: boolean, keyword?: string }) {
   const manageLoading = options?.manageLoading !== false
+  const keyword = options?.keyword ?? searchQuery.value.trim()
 
   if (manageLoading) {
     loading.value = true
@@ -494,7 +559,7 @@ async function loadMenus(options?: { manageLoading?: boolean }) {
 
   try {
     const result = await fetchMenus({
-      Name: searchQuery.value.trim(),
+      Name: keyword,
       Status: 0,
       PageNum: 0,
       PageSize: 0,
@@ -575,6 +640,15 @@ function handleRefresh() {
   void loadApis()
 }
 
+function handlePrimaryAction() {
+  if (activeView.value === "buttons") {
+    void openCreateButtonDialog()
+    return
+  }
+
+  openCreateDialog()
+}
+
 function triggerApiImport() {
   if (importSubmitting.value) {
     return
@@ -633,19 +707,30 @@ function normalizeMenu(item: MenuRecord, index: number): MenuRow {
 }
 
 function normalizeButton(item: SystemResourceRecord, index: number): ButtonRow {
+  const uuid = toText(item.Uuid)
+  const numericId = toOptionalNumber(item.Id) ?? null
+
   return {
-    id: toText(item.Uuid, item.Id, `button-${index + 1}`),
+    id: toText(uuid, numericId, `button-${index + 1}`),
+    uuid,
+    numericId,
     name: toText(item.Name, `按钮 ${index + 1}`),
     code: toText(item.Code, "-"),
+    menuUuid: toText(item.MenuUuid),
     menuName: toText(item.MenuName, "未绑定菜单"),
+    apiUuid: toText(item.ApiUuid),
     apiName: toText(item.ApiName, "未绑定 API"),
+    createdAt: formatDateTime(item.CreatedAt),
     updatedAt: formatDateTime(item.UpdatedAt, item.CreatedAt),
   }
 }
 
 function normalizeApi(item: SystemResourceRecord, index: number): ApiRow {
+  const uuid = toText(item.Uuid)
+
   return {
-    id: toText(item.Uuid, item.Id, `api-${index + 1}`),
+    id: toText(uuid, item.Id, `api-${index + 1}`),
+    uuid,
     name: toText(item.Name, `API ${index + 1}`),
     path: toText(item.Path, "-"),
     method: toText(item.Method, "-"),
@@ -666,6 +751,15 @@ function createMenuForm(): MenuForm {
   }
 }
 
+function createButtonForm(): ButtonForm {
+  return {
+    name: "",
+    code: "",
+    menuUuid: BUTTON_MENU_UNSET,
+    apiUuid: BUTTON_API_UNSET,
+  }
+}
+
 function openCreateDialog() {
   menuDialogMode.value = "create"
   editDetailLoading.value = false
@@ -673,6 +767,33 @@ function openCreateDialog() {
   editingMenuUpdatedAt.value = "-"
   menuForm.value = createMenuForm()
   menuDialogOpen.value = true
+}
+
+async function ensureButtonDialogDependencies() {
+  const tasks: Promise<unknown>[] = []
+
+  if (rows.value.length === 0) {
+    tasks.push(loadMenus({ manageLoading: false, keyword: "" }))
+  }
+
+  if (apiRows.value.length === 0) {
+    tasks.push(loadApis({ manageLoading: false }))
+  }
+
+  if (tasks.length > 0) {
+    await Promise.allSettled(tasks)
+  }
+}
+
+async function openCreateButtonDialog() {
+  await ensureButtonDialogDependencies()
+  buttonDialogMode.value = "create"
+  buttonDetailLoading.value = false
+  editingButtonUuid.value = ""
+  editingButtonId.value = null
+  editingButtonUpdatedAt.value = "-"
+  buttonForm.value = createButtonForm()
+  buttonDialogOpen.value = true
 }
 
 async function openEditDialog(row: MenuRow) {
@@ -724,6 +845,55 @@ async function openEditDialog(row: MenuRow) {
   }
 }
 
+async function openEditButtonDialog(row: ButtonRow) {
+  await ensureButtonDialogDependencies()
+  buttonDialogMode.value = "edit"
+  buttonDetailLoading.value = true
+  editingButtonUuid.value = row.uuid
+  editingButtonId.value = row.numericId
+  editingButtonUpdatedAt.value = row.updatedAt || "-"
+  buttonForm.value = {
+    name: row.name,
+    code: row.code === "-" ? "" : row.code,
+    menuUuid: row.menuUuid || BUTTON_MENU_UNSET,
+    apiUuid: row.apiUuid || BUTTON_API_UNSET,
+  }
+  buttonDialogOpen.value = true
+
+  try {
+    const detail = await fetchButtonDetail({
+      Uuid: row.uuid || undefined,
+      Id: row.numericId ?? undefined,
+    })
+
+    const detailUuid = toText(detail.Uuid, row.uuid)
+    const detailId = toOptionalNumber(detail.Id) ?? row.numericId
+
+    if (editingButtonUuid.value !== row.uuid && editingButtonId.value !== row.numericId) {
+      return
+    }
+
+    editingButtonUuid.value = detailUuid
+    editingButtonId.value = detailId ?? null
+    buttonForm.value = {
+      name: toText(detail.Name, row.name),
+      code: toText(detail.Code, row.code === "-" ? "" : row.code),
+      menuUuid: toText(detail.MenuUuid) || BUTTON_MENU_UNSET,
+      apiUuid: toText(detail.ApiUuid) || BUTTON_API_UNSET,
+    }
+    editingButtonUpdatedAt.value = formatDateTime(detail.UpdatedAt, row.updatedAt)
+  } catch (error) {
+    handleApiError(error, {
+      title: "按钮详情加载失败",
+      fallback: "按钮详情加载失败，请稍后重试。",
+    })
+  } finally {
+    if (editingButtonUuid.value === row.uuid || editingButtonId.value === row.numericId) {
+      buttonDetailLoading.value = false
+    }
+  }
+}
+
 function toggleSearch() {
   if (searchExpanded.value) {
     searchQuery.value = ""
@@ -746,8 +916,22 @@ function closeMenuDialog() {
   menuForm.value = createMenuForm()
 }
 
+function closeButtonDialog() {
+  buttonDialogOpen.value = false
+  buttonDeleteConfirmOpen.value = false
+  buttonDetailLoading.value = false
+  editingButtonUuid.value = ""
+  editingButtonId.value = null
+  editingButtonUpdatedAt.value = "-"
+  buttonForm.value = createButtonForm()
+}
+
 function promptDeleteMenu() {
   deleteConfirmOpen.value = true
+}
+
+function promptDeleteButton() {
+  buttonDeleteConfirmOpen.value = true
 }
 
 async function submitMenu() {
@@ -833,12 +1017,95 @@ async function confirmDeleteMenu() {
   }
 }
 
+async function submitButton() {
+  buttonSubmitting.value = true
+
+  try {
+    const payload = {
+      Name: buttonForm.value.name.trim(),
+      Code: buttonForm.value.code.trim(),
+      MenuUuid: buttonForm.value.menuUuid === BUTTON_MENU_UNSET ? "" : buttonForm.value.menuUuid.trim(),
+      ApiUuid: buttonForm.value.apiUuid === BUTTON_API_UNSET ? "" : buttonForm.value.apiUuid.trim(),
+    }
+
+    if (buttonDialogMode.value === "edit") {
+      const result = await requestButtonUpdate({
+        Uuid: editingButtonUuid.value || undefined,
+        Id: editingButtonId.value ?? undefined,
+        ...payload,
+      })
+
+      closeButtonDialog()
+      toast.success("按钮已更新", {
+        description: `${buttonForm.value.name.trim() || "当前按钮"} 已更新${toText(result.Uuid) ? `，Uuid：${toText(result.Uuid)}` : ""}。`,
+      })
+    } else {
+      const result = await requestButtonCreate(payload)
+
+      closeButtonDialog()
+      toast.success("按钮已创建", {
+        description: `${buttonForm.value.name.trim() || "按钮"} 已创建${toText(result.Uuid) ? `，Uuid：${toText(result.Uuid)}` : ""}。`,
+      })
+    }
+
+    await loadButtons()
+  } catch (error) {
+    handleApiError(error, {
+      title: buttonDialogMode.value === "edit" ? "按钮更新失败" : "按钮创建失败",
+      fallback: buttonDialogMode.value === "edit" ? BUTTON_UPDATE_ERROR_MESSAGE : BUTTON_CREATE_ERROR_MESSAGE,
+    })
+  } finally {
+    buttonSubmitting.value = false
+  }
+}
+
+async function confirmDeleteButton() {
+  if (!editingButtonUuid.value && editingButtonId.value === null) {
+    toast.error("缺少按钮标识，无法删除")
+    return
+  }
+
+  const target = buttonRows.value.find(row =>
+    (editingButtonUuid.value && row.uuid === editingButtonUuid.value)
+    || (editingButtonId.value !== null && row.numericId === editingButtonId.value))
+
+  buttonDeleteSubmitting.value = true
+
+  try {
+    await requestButtonDelete({
+      Uuid: editingButtonUuid.value || undefined,
+      Id: editingButtonId.value ?? undefined,
+    })
+    buttonDeleteConfirmOpen.value = false
+    closeButtonDialog()
+    toast.success("按钮已删除", {
+      description: `${target?.name ?? "当前按钮"} 已从列表移除。`,
+    })
+    await loadButtons()
+  } catch (error) {
+    handleApiError(error, {
+      title: "按钮删除失败",
+      fallback: BUTTON_DELETE_ERROR_MESSAGE,
+    })
+  } finally {
+    buttonDeleteSubmitting.value = false
+  }
+}
+
 function asMenuRow(row: Record<string, unknown>) {
   return row as MenuRow
 }
 
-function handleRowClick(row: Record<string, unknown>) {
+function asButtonRow(row: Record<string, unknown>) {
+  return row as ButtonRow
+}
+
+function handleMenuRowClick(row: Record<string, unknown>) {
   openEditDialog(asMenuRow(row))
+}
+
+function handleButtonRowClick(row: Record<string, unknown>) {
+  void openEditButtonDialog(asButtonRow(row))
 }
 
 function normalizeStatus(value: unknown) {
@@ -946,12 +1213,12 @@ function formatDateTime(...values: unknown[]) {
           </Button>
 
           <Button
-            v-if="activeView === 'menus'"
+            v-if="activeView === 'menus' || activeView === 'buttons'"
             class="h-8 gap-1 rounded-md px-3 text-[14px]"
-            @click="openCreateDialog"
+            @click="handlePrimaryAction"
           >
             <i class="ri-add-line text-base" />
-            <span>添加菜单</span>
+            <span>{{ primaryActionLabel }}</span>
           </Button>
         </div>
       </SettingsToolbarRow>
@@ -978,7 +1245,7 @@ function formatDateTime(...values: unknown[]) {
       :show-row-action-icons="true"
       :columns="currentColumns"
       :rows="currentRows"
-      :on-row-click="activeView === 'menus' ? handleRowClick : undefined"
+      :on-row-click="activeView === 'menus' ? handleMenuRowClick : (activeView === 'buttons' ? handleButtonRowClick : undefined)"
       :table-class="SETTINGS_TABLE_PAGE_CLASS"
       :empty-state="tableEmptyState"
     >
@@ -989,6 +1256,16 @@ function formatDateTime(...values: unknown[]) {
           size="sm"
           class="ml-auto h-8 gap-1 rounded-md px-2.5 text-[13px]"
           @click.stop="openEditDialog(asMenuRow(rawRow))"
+        >
+          <i class="ri-edit-line text-base" />
+          <span>编辑</span>
+        </Button>
+        <Button
+          v-else-if="activeView === 'buttons'"
+          variant="outline"
+          size="sm"
+          class="ml-auto h-8 gap-1 rounded-md px-2.5 text-[13px]"
+          @click.stop="openEditButtonDialog(asButtonRow(rawRow))"
         >
           <i class="ri-edit-line text-base" />
           <span>编辑</span>
@@ -1115,6 +1392,109 @@ function formatDateTime(...values: unknown[]) {
       </DialogContent>
     </Dialog>
 
+    <Dialog :open="buttonDialogOpen" @update:open="($event ? (buttonDialogOpen = true) : closeButtonDialog())">
+      <DialogContent class="sm:max-w-[560px]">
+        <DialogHeader>
+          <DialogTitle>{{ buttonDialogMode === "edit" ? "编辑按钮" : "添加按钮" }}</DialogTitle>
+          <DialogDescription>
+            {{
+              buttonDialogMode === "edit"
+                ? `更新时间：${editingButtonUpdatedAt}`
+                : "填写按钮信息后会调用按钮新建接口。"
+            }}
+          </DialogDescription>
+        </DialogHeader>
+
+        <form class="grid gap-4" @submit.prevent="submitButton">
+          <fieldset :disabled="buttonDialogMode === 'edit' && buttonDetailLoading" class="grid gap-4">
+            <div class="grid gap-4 sm:grid-cols-2">
+              <div class="grid gap-2">
+                <label class="text-sm font-medium text-foreground" for="button-name">按钮名称</label>
+                <Input id="button-name" v-model="buttonForm.name" placeholder="例如：新增成员" />
+              </div>
+
+              <div class="grid gap-2">
+                <label class="text-sm font-medium text-foreground" for="button-code">按钮编码</label>
+                <Input id="button-code" v-model="buttonForm.code" placeholder="例如：member:add" />
+              </div>
+            </div>
+
+            <div class="grid gap-4 sm:grid-cols-2">
+              <div class="grid gap-2">
+                <label class="text-sm font-medium text-foreground" for="button-menu">所属菜单</label>
+                <Select v-model="buttonForm.menuUuid">
+                  <SelectTrigger id="button-menu" class="w-full">
+                    <SelectValue placeholder="选择所属菜单" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem :value="BUTTON_MENU_UNSET">
+                      不绑定菜单
+                    </SelectItem>
+                    <SelectItem
+                      v-for="option in buttonMenuOptions"
+                      :key="option.uuid"
+                      :value="option.uuid"
+                    >
+                      {{ option.label }}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div class="grid gap-2">
+                <label class="text-sm font-medium text-foreground" for="button-api">关联 API</label>
+                <Select v-model="buttonForm.apiUuid">
+                  <SelectTrigger id="button-api" class="w-full">
+                    <SelectValue placeholder="选择关联 API" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem :value="BUTTON_API_UNSET">
+                      不绑定 API
+                    </SelectItem>
+                    <SelectItem
+                      v-for="option in buttonApiOptions"
+                      :key="option.uuid"
+                      :value="option.uuid"
+                    >
+                      {{ option.label }}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </fieldset>
+
+          <DialogFooter
+            :class="[
+              'pt-2 flex-col-reverse gap-2 sm:flex-row sm:items-center',
+              buttonDialogMode === 'edit' ? 'sm:justify-between' : 'sm:justify-end',
+            ]"
+          >
+            <Button
+              v-if="buttonDialogMode === 'edit'"
+              type="button"
+              variant="outline"
+              class="w-full gap-1 border-destructive/30 bg-background font-medium text-destructive shadow-none hover:bg-destructive/5 hover:text-destructive sm:w-auto"
+              :disabled="buttonSubmitting || buttonDeleteSubmitting || buttonDetailLoading"
+              @click="promptDeleteButton"
+            >
+              <i class="ri-delete-bin-line text-base" />
+              <span>删除按钮</span>
+            </Button>
+
+            <div class="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row">
+              <Button type="button" variant="outline" :disabled="buttonSubmitting || buttonDeleteSubmitting" @click="closeButtonDialog">
+                取消
+              </Button>
+              <Button type="submit" :disabled="buttonSubmitting || buttonDeleteSubmitting || buttonDetailLoading">
+                {{ buttonSubmitting ? (buttonDialogMode === "edit" ? "保存中..." : "创建中...") : (buttonDialogMode === "edit" ? "保存修改" : "创建按钮") }}
+              </Button>
+            </div>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+
     <AlertDialog :open="deleteConfirmOpen" @update:open="deleteConfirmOpen = $event">
       <AlertDialogContent>
         <AlertDialogHeader>
@@ -1130,6 +1510,26 @@ function formatDateTime(...values: unknown[]) {
           <AlertDialogAction :disabled="deleteSubmitting" @click="confirmDeleteMenu">
             <i v-if="deleteSubmitting" class="ri-loader-4-line animate-spin text-base" />
             <span>{{ deleteSubmitting ? "删除中..." : "确认删除" }}</span>
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
+    <AlertDialog :open="buttonDeleteConfirmOpen" @update:open="buttonDeleteConfirmOpen = $event">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>确认删除按钮？</AlertDialogTitle>
+          <AlertDialogDescription>
+            该操作会删除当前按钮，且不可撤销。确认后将立即提交删除请求。
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel :disabled="buttonDeleteSubmitting">
+            取消
+          </AlertDialogCancel>
+          <AlertDialogAction :disabled="buttonDeleteSubmitting" @click="confirmDeleteButton">
+            <i v-if="buttonDeleteSubmitting" class="ri-loader-4-line animate-spin text-base" />
+            <span>{{ buttonDeleteSubmitting ? "删除中..." : "确认删除" }}</span>
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
