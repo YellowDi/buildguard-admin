@@ -46,6 +46,7 @@ import { handleApiError } from "@/lib/api-errors"
 import {
   createMenu as requestMenuCreate,
   deleteMenu as requestMenuDelete,
+  fetchMenuDetail,
   fetchMenus,
   type MenuRecord,
   updateMenu as requestMenuUpdate,
@@ -132,6 +133,7 @@ const activeView = ref<SystemViewKey>("menus")
 const menuDialogOpen = ref(false)
 const menuDialogMode = ref<MenuDialogMode>("create")
 const menuSubmitting = ref(false)
+const editDetailLoading = ref(false)
 const deleteSubmitting = ref(false)
 const deleteConfirmOpen = ref(false)
 const editingMenuUuid = ref("")
@@ -672,13 +674,15 @@ function createMenuForm(): MenuForm {
 
 function openCreateDialog() {
   menuDialogMode.value = "create"
+  editDetailLoading.value = false
   editingMenuUuid.value = ""
   menuForm.value = createMenuForm()
   menuDialogOpen.value = true
 }
 
-function openEditDialog(row: MenuRow) {
+async function openEditDialog(row: MenuRow) {
   menuDialogMode.value = "edit"
+  editDetailLoading.value = true
   editingMenuUuid.value = row.uuid
   menuForm.value = {
     name: row.name,
@@ -690,6 +694,37 @@ function openEditDialog(row: MenuRow) {
     status: row.status === "禁用" ? "2" : "1",
   }
   menuDialogOpen.value = true
+
+  try {
+    const detail = await fetchMenuDetail({
+      Uuid: row.uuid,
+    })
+
+    if (editingMenuUuid.value !== row.uuid) {
+      return
+    }
+
+    menuForm.value = {
+      name: toText(detail.Name, row.name),
+      path: toText(detail.Path),
+      icon: toText(detail.Icon),
+      parentUuid: toText(detail.ParentUuid) || ROOT_MENU_VALUE,
+      level: String(toNumber(detail.Level, row.level)),
+      sort: String(toNumber(detail.Sort, row.sort)),
+      status: detail.Status === undefined || detail.Status === null
+        ? MENU_STATUS_UNSET
+        : String(toNumber(detail.Status)),
+    }
+  } catch (error) {
+    handleApiError(error, {
+      title: "菜单详情加载失败",
+      fallback: "菜单详情加载失败，请稍后重试。",
+    })
+  } finally {
+    if (editingMenuUuid.value === row.uuid) {
+      editDetailLoading.value = false
+    }
+  }
 }
 
 function toggleSearch() {
@@ -708,6 +743,7 @@ function toggleSearch() {
 function closeMenuDialog() {
   menuDialogOpen.value = false
   deleteConfirmOpen.value = false
+  editDetailLoading.value = false
   editingMenuUuid.value = ""
   menuForm.value = createMenuForm()
 }
@@ -967,82 +1003,88 @@ function formatDateTime(...values: unknown[]) {
         <DialogHeader>
           <DialogTitle>{{ menuDialogMode === "edit" ? "编辑菜单" : "添加菜单" }}</DialogTitle>
           <DialogDescription>
-            {{ menuDialogMode === "edit" ? "修改菜单基础信息后会调用菜单更新接口。" : "填写菜单基础信息后会调用菜单新建接口。" }}
+            {{
+              menuDialogMode === "edit"
+                ? (editDetailLoading ? "正在加载菜单详情，请稍候后再保存。" : "修改菜单基础信息后会调用菜单更新接口。")
+                : "填写菜单基础信息后会调用菜单新建接口。"
+            }}
           </DialogDescription>
         </DialogHeader>
 
         <form class="grid gap-4" @submit.prevent="submitMenu">
-          <div class="grid gap-4 sm:grid-cols-2">
-            <div class="grid gap-2">
-              <label class="text-sm font-medium text-foreground" for="menu-name">菜单名称</label>
-              <Input id="menu-name" v-model="menuForm.name" placeholder="例如：系统设置" />
+          <fieldset :disabled="menuDialogMode === 'edit' && editDetailLoading" class="grid gap-4">
+            <div class="grid gap-4 sm:grid-cols-2">
+              <div class="grid gap-2">
+                <label class="text-sm font-medium text-foreground" for="menu-name">菜单名称</label>
+                <Input id="menu-name" v-model="menuForm.name" placeholder="例如：系统设置" />
+              </div>
+
+              <div class="grid gap-2">
+                <label class="text-sm font-medium text-foreground" for="menu-path">菜单 Path</label>
+                <Input id="menu-path" v-model="menuForm.path" placeholder="例如：/settings/system" />
+              </div>
             </div>
 
-            <div class="grid gap-2">
-              <label class="text-sm font-medium text-foreground" for="menu-path">菜单 Path</label>
-              <Input id="menu-path" v-model="menuForm.path" placeholder="例如：/settings/system" />
-            </div>
-          </div>
+            <div class="grid gap-4 sm:grid-cols-2">
+              <div class="grid gap-2">
+                <label class="text-sm font-medium text-foreground" for="menu-icon">图标</label>
+                <Input id="menu-icon" v-model="menuForm.icon" placeholder="例如：ri-settings-3-line" />
+              </div>
 
-          <div class="grid gap-4 sm:grid-cols-2">
-            <div class="grid gap-2">
-              <label class="text-sm font-medium text-foreground" for="menu-icon">图标</label>
-              <Input id="menu-icon" v-model="menuForm.icon" placeholder="例如：ri-settings-3-line" />
-            </div>
-
-            <div class="grid gap-2">
-              <label class="text-sm font-medium text-foreground" for="menu-parent">上级菜单</label>
-              <Select v-model="menuForm.parentUuid">
-                <SelectTrigger id="menu-parent" class="w-full">
-                  <SelectValue placeholder="选择上级菜单，留空则为顶级菜单" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem :value="ROOT_MENU_VALUE">
-                    顶级菜单
-                  </SelectItem>
-                  <SelectItem
-                    v-for="option in parentMenuOptions"
-                    :key="option.uuid"
-                    :value="option.uuid"
-                  >
-                    {{ option.label }}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div class="grid gap-4 sm:grid-cols-3">
-            <div class="grid gap-2">
-              <label class="text-sm font-medium text-foreground" for="menu-level">层级</label>
-              <Input id="menu-level" v-model="menuForm.level" placeholder="0" />
+              <div class="grid gap-2">
+                <label class="text-sm font-medium text-foreground" for="menu-parent">上级菜单</label>
+                <Select v-model="menuForm.parentUuid">
+                  <SelectTrigger id="menu-parent" class="w-full">
+                    <SelectValue placeholder="选择上级菜单，留空则为顶级菜单" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem :value="ROOT_MENU_VALUE">
+                      顶级菜单
+                    </SelectItem>
+                    <SelectItem
+                      v-for="option in parentMenuOptions"
+                      :key="option.uuid"
+                      :value="option.uuid"
+                    >
+                      {{ option.label }}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
-            <div class="grid gap-2">
-              <label class="text-sm font-medium text-foreground" for="menu-sort">排序</label>
-              <Input id="menu-sort" v-model="menuForm.sort" placeholder="0" />
-            </div>
+            <div class="grid gap-4 sm:grid-cols-3">
+              <div class="grid gap-2">
+                <label class="text-sm font-medium text-foreground" for="menu-level">层级</label>
+                <Input id="menu-level" v-model="menuForm.level" placeholder="0" />
+              </div>
 
-            <div class="grid gap-2">
-              <label class="text-sm font-medium text-foreground" for="menu-status">状态</label>
-              <Select v-model="menuForm.status">
-                <SelectTrigger id="menu-status" class="w-full">
-                  <SelectValue placeholder="选择状态" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem :value="MENU_STATUS_UNSET">
-                    未设置
-                  </SelectItem>
-                  <SelectItem value="1">
-                    启用
-                  </SelectItem>
-                  <SelectItem value="2">
-                    禁用
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+              <div class="grid gap-2">
+                <label class="text-sm font-medium text-foreground" for="menu-sort">排序</label>
+                <Input id="menu-sort" v-model="menuForm.sort" placeholder="0" />
+              </div>
+
+              <div class="grid gap-2">
+                <label class="text-sm font-medium text-foreground" for="menu-status">状态</label>
+                <Select v-model="menuForm.status">
+                  <SelectTrigger id="menu-status" class="w-full">
+                    <SelectValue placeholder="选择状态" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem :value="MENU_STATUS_UNSET">
+                      未设置
+                    </SelectItem>
+                    <SelectItem value="1">
+                      启用
+                    </SelectItem>
+                    <SelectItem value="2">
+                      禁用
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-          </div>
+          </fieldset>
 
           <DialogFooter
             :class="[
@@ -1055,7 +1097,7 @@ function formatDateTime(...values: unknown[]) {
               type="button"
               variant="outline"
               class="w-full gap-1 border-destructive/30 bg-background font-medium text-destructive shadow-none hover:bg-destructive/5 hover:text-destructive sm:w-auto"
-              :disabled="menuSubmitting || deleteSubmitting"
+              :disabled="menuSubmitting || deleteSubmitting || editDetailLoading"
               @click="promptDeleteMenu"
             >
               <i class="ri-delete-bin-line text-base" />
@@ -1066,7 +1108,7 @@ function formatDateTime(...values: unknown[]) {
               <Button type="button" variant="outline" :disabled="menuSubmitting || deleteSubmitting" @click="closeMenuDialog">
                 取消
               </Button>
-              <Button type="submit" :disabled="menuSubmitting || deleteSubmitting">
+              <Button type="submit" :disabled="menuSubmitting || deleteSubmitting || editDetailLoading">
                 {{ menuSubmitting ? (menuDialogMode === "edit" ? "保存中..." : "创建中...") : (menuDialogMode === "edit" ? "保存修改" : "创建菜单") }}
               </Button>
             </div>

@@ -1,5 +1,5 @@
 import { ApiError, assertApiSuccess, createHttpError, readResponseBody } from "@/lib/api-errors"
-import { API_PATHS, buildApiHeaders, buildApiUrl } from "@/lib/api"
+import { API_PATHS, buildApiHeaders, buildApiRequestUrl, buildApiUrl } from "@/lib/api"
 
 type MenusListEnvelope = {
   Total?: number
@@ -29,6 +29,13 @@ export type MenusListResult = {
   list: MenuRecord[]
   total: number
 }
+
+export type MenuDetailPayload = {
+  Uuid?: string
+  [property: string]: unknown
+}
+
+export type MenuDetailResult = MenuRecord
 
 export type ListMenusPayload = {
   Name?: string
@@ -65,10 +72,12 @@ export type CreateMenuResult = {
 }
 
 const MENUS_API_URL = buildApiUrl(API_PATHS.menusList)
+const MENU_DETAIL_API_URL = API_PATHS.menuDetail
 const MENU_CREATE_API_URL = buildApiUrl(API_PATHS.menuCreate)
 const MENU_UPDATE_API_URL = buildApiUrl(API_PATHS.menuUpdate)
 const MENU_DELETE_API_URL = buildApiUrl(API_PATHS.menuDelete)
 const MENUS_LOAD_ERROR_MESSAGE = "菜单列表加载失败，请稍后重试。"
+const MENU_DETAIL_ERROR_MESSAGE = "菜单详情加载失败，请稍后重试。"
 const MENU_CREATE_ERROR_MESSAGE = "菜单创建失败，请稍后重试。"
 const MENU_UPDATE_ERROR_MESSAGE = "菜单更新失败，请稍后重试。"
 const MENU_DELETE_ERROR_MESSAGE = "菜单删除失败，请稍后重试。"
@@ -102,6 +111,26 @@ export async function fetchMenus(payload: ListMenusPayload = {}): Promise<MenusL
     list,
     total: extractTotal(responsePayload, list.length),
   }
+}
+
+export async function fetchMenuDetail(payload: MenuDetailPayload): Promise<MenuDetailResult> {
+  const url = buildApiRequestUrl(MENU_DETAIL_API_URL)
+
+  url.searchParams.set("Uuid", getRequiredString(payload.Uuid, "Uuid"))
+
+  const response = await fetch(url.toString(), {
+    method: "GET",
+    headers: buildApiHeaders(),
+  })
+  const responsePayload = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responsePayload, MENU_DETAIL_ERROR_MESSAGE)
+  }
+
+  assertApiSuccess(responsePayload, MENU_DETAIL_ERROR_MESSAGE)
+
+  return extractDetailRecord(responsePayload) as MenuDetailResult
 }
 
 export async function createMenu(payload: CreateMenuPayload): Promise<CreateMenuResult> {
