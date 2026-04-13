@@ -137,6 +137,7 @@ const editDetailLoading = ref(false)
 const deleteSubmitting = ref(false)
 const deleteConfirmOpen = ref(false)
 const editingMenuUuid = ref("")
+const editingMenuUpdatedAt = ref("-")
 const menuForm = ref(createMenuForm())
 const buttonRows = ref<ButtonRow[]>([])
 const apiRows = ref<ApiRow[]>([])
@@ -192,13 +193,6 @@ const columns: TableColumn[] = [
       kind: "status",
       map: menuStatusMap,
     },
-  },
-  {
-    key: "updatedAt",
-    label: "更新时间",
-    filterType: "text",
-    tone: "muted",
-    width: "fill",
   },
   {
     key: "actions",
@@ -505,7 +499,7 @@ async function loadMenus(options?: { manageLoading?: boolean }) {
       PageNum: 0,
       PageSize: 0,
     })
-    rows.value = resolveParentNames(result.list.map((item, index) => normalizeMenu(item, index)))
+    rows.value = result.list.map((item, index) => normalizeMenu(item, index))
   } catch (error) {
     errorMessage.value = handleApiError(error, {
       title: "菜单接口加载失败",
@@ -638,17 +632,6 @@ function normalizeMenu(item: MenuRecord, index: number): MenuRow {
   }
 }
 
-function resolveParentNames(items: MenuRow[]) {
-  const nameMap = new Map(items.map(item => [item.uuid, item.name]))
-
-  return items.map(item => ({
-    ...item,
-    parentName: !item.parentUuid || item.parentUuid === item.uuid || item.level <= 0
-      ? "顶级菜单"
-      : (nameMap.get(item.parentUuid) || (item.parentName && item.parentName !== item.name ? item.parentName : "顶级菜单")),
-  }))
-}
-
 function normalizeButton(item: SystemResourceRecord, index: number): ButtonRow {
   return {
     id: toText(item.Uuid, item.Id, `button-${index + 1}`),
@@ -687,6 +670,7 @@ function openCreateDialog() {
   menuDialogMode.value = "create"
   editDetailLoading.value = false
   editingMenuUuid.value = ""
+  editingMenuUpdatedAt.value = "-"
   menuForm.value = createMenuForm()
   menuDialogOpen.value = true
 }
@@ -695,6 +679,7 @@ async function openEditDialog(row: MenuRow) {
   menuDialogMode.value = "edit"
   editDetailLoading.value = true
   editingMenuUuid.value = row.uuid
+  editingMenuUpdatedAt.value = row.updatedAt || "-"
   menuForm.value = {
     name: row.name,
     path: row.path === "-" ? "" : row.path,
@@ -726,6 +711,7 @@ async function openEditDialog(row: MenuRow) {
         ? MENU_STATUS_UNSET
         : String(toNumber(detail.Status)),
     }
+    editingMenuUpdatedAt.value = formatDateTime(detail.UpdatedAt, row.updatedAt)
   } catch (error) {
     handleApiError(error, {
       title: "菜单详情加载失败",
@@ -756,6 +742,7 @@ function closeMenuDialog() {
   deleteConfirmOpen.value = false
   editDetailLoading.value = false
   editingMenuUuid.value = ""
+  editingMenuUpdatedAt.value = "-"
   menuForm.value = createMenuForm()
 }
 
@@ -1016,7 +1003,7 @@ function formatDateTime(...values: unknown[]) {
           <DialogDescription>
             {{
               menuDialogMode === "edit"
-                ? (editDetailLoading ? "正在加载菜单详情，请稍候后再保存。" : "修改菜单基础信息后会调用菜单更新接口。")
+                ? `更新时间：${editingMenuUpdatedAt}`
                 : "填写菜单基础信息后会调用菜单新建接口。"
             }}
           </DialogDescription>
