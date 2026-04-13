@@ -1391,7 +1391,11 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div ref="tableOuterRef" :class="cn(wrapperClassName, props.fillAvailableHeight ? 'h-full min-h-0 flex flex-col' : '')">
+  <div
+    ref="tableOuterRef"
+    data-table-outer
+    :class="cn(wrapperClassName, props.fillAvailableHeight ? 'h-full min-h-0 flex flex-col' : '')"
+  >
     <!-- fixed 克隆挂到 body，与 getBoundingClientRect 视口坐标一致；避免嵌套 overflow/transform 导致吸顶错位 -->
     <Teleport v-if="stickyHeaderVisible" to="body">
       <div
@@ -1484,7 +1488,7 @@ onBeforeUnmount(() => {
           </Empty>
         </div>
 
-        <div v-else :class="tableTheme.scrollContent">
+        <div v-else data-table-scroll-content :class="tableTheme.scrollContent">
           <div :class="tableTheme.edgeGutter" :style="getEdgeGutterStyle(leadingEdgeGutter)" />
           <table
             ref="tableRef"
@@ -1884,5 +1888,21 @@ onBeforeUnmount(() => {
   background: transparent;
   border: 0;
   box-shadow: none;
+}
+
+[data-settings-auto-width] [data-table-outer] {
+  width: max-content;
+  min-width: 100%;
+  max-width: none;
+}
+
+[data-settings-auto-width] [data-table-scroll-viewport] {
+  width: max-content;
+  min-width: 100%;
+  max-width: none;
+}
+
+[data-settings-auto-width] [data-table-scroll-content] {
+  min-width: max-content;
 }
 </style>

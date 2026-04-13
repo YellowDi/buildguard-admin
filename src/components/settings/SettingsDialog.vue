@@ -30,12 +30,12 @@ const {
       :show-close-button="false"
       :class="
         cn(
-          'w-[min(1040px,calc(100vw-1rem))] max-w-[min(1040px,calc(100vw-1rem))] sm:w-[min(1040px,calc(100vw-2rem))] sm:max-w-[min(1040px,calc(100vw-2rem))] xl:w-[min(1040px,calc(100vw-5rem))] xl:max-w-[min(1040px,calc(100vw-5rem))] gap-0 overflow-hidden rounded-[20px] bg-background p-0 shadow-(--shadow-card)',
+          'w-fit min-w-[min(1040px,calc(100vw-1rem))] max-w-[calc(100vw-1rem)] sm:min-w-[min(1040px,calc(100vw-2rem))] sm:max-w-[calc(100vw-2rem)] xl:min-w-[min(1040px,calc(100vw-5rem))] xl:max-w-[calc(100vw-5rem)] gap-0 overflow-hidden rounded-[20px] bg-background p-0 shadow-(--shadow-card)',
           'h-[760px]',
         )
       "
     >
-      <div class="grid h-full min-h-0 grid-cols-[228px_minmax(0,1fr)] xl:grid-cols-[244px_minmax(0,1fr)]">
+      <div class="grid h-full min-h-0 grid-cols-[228px_auto] xl:grid-cols-[244px_auto]">
         <SettingsSidebar
           :categories="categories"
           :active-key="activeKey"
