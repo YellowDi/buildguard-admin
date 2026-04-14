@@ -5,7 +5,7 @@ import TitleBlock from "@/components/layout/TitleBlock.vue"
 import TableStatusChip from "@/components/table-page/TableStatusChip.vue"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import type { DetailContactValue, DetailFieldSection, DetailFieldValue, DetailStatusValue } from "@/components/detail/types"
+import type { DetailContactValue, DetailFieldRow, DetailFieldSection, DetailFieldValue, DetailStatusValue } from "@/components/detail/types"
 import { remixIconForDetailFieldAction } from "@/lib/actionIcons"
 import { cn } from "@/lib/utils"
 
@@ -51,6 +51,13 @@ function isContactValue(value: DetailFieldValue): value is DetailContactValue {
 function isStatusValue(value: DetailFieldValue): value is DetailStatusValue {
   return Boolean(value && typeof value === "object" && "kind" in value && value.kind === "status")
 }
+
+function shouldTruncateValueContainer(row: DetailFieldRow) {
+  if (row.truncate === false) return false
+  if (row.action || row.suffixAction || row.linkAction || row.imageUrl) return false
+  if (isContactValue(row.value) || isStatusValue(row.value)) return false
+  return true
+}
 </script>
 
 <template>
@@ -78,7 +85,7 @@ function isStatusValue(value: DetailFieldValue): value is DetailStatusValue {
             )"
           >
             <div class="detail-field-row__label">{{ row.label }}</div>
-            <div :class="cn('detail-field-row__value', row.truncate !== false && 'truncate', !row.action && !row.suffixAction && !row.linkAction && isEmptyLikeValue(row.value) && 'detail-field-row__value--empty', row.valueClass)">
+            <div :class="cn('detail-field-row__value', shouldTruncateValueContainer(row) && 'truncate', !row.action && !row.suffixAction && !row.linkAction && isEmptyLikeValue(row.value) && 'detail-field-row__value--empty', row.valueClass)">
               <template v-if="isContactValue(row.value) && row.suffixAction">
                 <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
                   <div class="min-w-0 flex-1">
