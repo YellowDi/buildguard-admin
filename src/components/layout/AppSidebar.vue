@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from "vue"
+import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue"
 import { useRoute } from "vue-router"
 import {
   Sidebar,
@@ -8,10 +8,7 @@ import {
   SidebarHeader,
   SidebarRail,
 } from "@/components/ui/sidebar"
-import AppSidebarCalendarPanel from "@/components/layout/app-sidebar/AppSidebarCalendarPanel.vue"
-import AppSidebarConversationPanel from "@/components/layout/app-sidebar/AppSidebarConversationPanel.vue"
 import AppSidebarHomeNav from "@/components/layout/app-sidebar/AppSidebarHomeNav.vue"
-import AppSidebarInboxPanel from "@/components/layout/app-sidebar/AppSidebarInboxPanel.vue"
 import AppSidebarTopBar from "@/components/layout/app-sidebar/AppSidebarTopBar.vue"
 import type {
   AppSidebarConversationItem,
@@ -19,11 +16,15 @@ import type {
   AppSidebarNavItem,
   AppSidebarTopTabId,
 } from "@/components/layout/app-sidebar/types"
-import GlobalCommand from "@/components/layout/GlobalCommand.vue"
 import UserCardPopover from "@/components/layout/UserCardPopover.vue"
 import { useSettingsDialog } from "@/composables/useSettingsDialog"
 import conversationsData from "@/mocks/ai-conversations.json"
 import inboxData from "@/mocks/inbox.json"
+
+const AppSidebarCalendarPanel = defineAsyncComponent(() => import("@/components/layout/app-sidebar/AppSidebarCalendarPanel.vue"))
+const AppSidebarConversationPanel = defineAsyncComponent(() => import("@/components/layout/app-sidebar/AppSidebarConversationPanel.vue"))
+const AppSidebarInboxPanel = defineAsyncComponent(() => import("@/components/layout/app-sidebar/AppSidebarInboxPanel.vue"))
+const GlobalCommand = defineAsyncComponent(() => import("@/components/layout/GlobalCommand.vue"))
 
 const props = defineProps<{
   mobileOpen?: boolean
@@ -153,6 +154,28 @@ function handleSearch() {
   isSearchDialogOpen.value = true
 }
 
+function handleGlobalKeydown(event: KeyboardEvent) {
+  const isCommandShortcut = (event.metaKey || event.ctrlKey)
+    && !event.altKey
+    && !event.shiftKey
+    && event.key.toLowerCase() === "k"
+
+  if (!isCommandShortcut) {
+    return
+  }
+
+  event.preventDefault()
+  isSearchDialogOpen.value = true
+}
+
+onMounted(() => {
+  window.addEventListener("keydown", handleGlobalKeydown)
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener("keydown", handleGlobalKeydown)
+})
+
 watch(() => route.fullPath, () => {
   if (isBusinessRoute(route.path)) {
     selectedTopTab.value = "home"
@@ -242,5 +265,5 @@ watch(() => route.fullPath, () => {
     <SidebarRail />
   </Sidebar>
 
-  <GlobalCommand v-model:open="isSearchDialogOpen" />
+  <GlobalCommand v-if="isSearchDialogOpen" v-model:open="isSearchDialogOpen" />
 </template>

@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { defineAsyncComponent } from "vue"
+
 import { cn } from "@/lib/utils"
 import {
   Alert,
@@ -21,12 +23,8 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
-import SettingsBusinessPresetsHub from "@/components/settings/SettingsBusinessPresetsHub.vue"
-import SettingsInspectionHub from "@/components/settings/SettingsInspectionHub.vue"
 import SettingsAppsPage from "@/components/settings/SettingsAppsPage.vue"
 import SettingsMePage from "@/components/settings/SettingsMePage.vue"
-import SettingsMenusTable from "@/components/settings/SettingsMenusTable.vue"
-import SettingsMembersTable from "@/components/settings/SettingsMembersTable.vue"
 import SettingsPreferencesPage from "@/components/settings/SettingsPreferencesPage.vue"
 import SettingsRightPanelLayout from "@/components/settings/SettingsRightPanelLayout.vue"
 import SettingsSection from "@/components/settings/SettingsSection.vue"
@@ -40,6 +38,11 @@ import type {
   StringSettingsKey,
   SettingsToggleItem,
 } from "@/components/settings/types"
+
+const SettingsBusinessPresetsHub = defineAsyncComponent(() => import("@/components/settings/SettingsBusinessPresetsHub.vue"))
+const SettingsInspectionHub = defineAsyncComponent(() => import("@/components/settings/SettingsInspectionHub.vue"))
+const SettingsMenusTable = defineAsyncComponent(() => import("@/components/settings/SettingsMenusTable.vue"))
+const SettingsMembersTable = defineAsyncComponent(() => import("@/components/settings/SettingsMembersTable.vue"))
 
 const props = defineProps<{
   category: SettingsCategory

@@ -5,7 +5,6 @@ import { setCurrentUser } from "@/composables/useCurrentUser"
 import { ApiError } from "@/lib/api-errors"
 import { fetchCurrentUserInfo } from "@/lib/current-user-api"
 import { getAuthState, getAuthToken, notifyAuthExpired } from "@/lib/auth"
-import AppShellLayout from "@/layouts/AppShellLayout.vue"
 
 type BreadcrumbMetaItem = {
   title: string
@@ -52,7 +51,7 @@ const router = createRouter({
     },
     {
       path: "/",
-      component: AppShellLayout,
+      component: () => import("@/layouts/AppShellLayout.vue"),
       meta: {
         title: "宝京云维",
         loading: "dashboard",
