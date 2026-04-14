@@ -2185,6 +2185,8 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
                 </label>
               </div>
 
+              <Separator class="bg-border/70" />
+
               <div v-if="roleDetailLoading" class="rounded-xl border border-dashed border-border/70 px-4 py-3 text-sm text-muted-foreground">
                 正在加载权限组详情并回填表单...
               </div>
@@ -2272,6 +2274,8 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
                   <span>全选按钮</span>
                 </label>
               </div>
+
+              <Separator class="bg-border/70" />
 
               <div v-if="selectedMenuPermissionPanels.length === 0" class="py-6 text-sm text-muted-foreground">
                 先从中间列选择页面，右侧才会显示对应页面及按钮。
