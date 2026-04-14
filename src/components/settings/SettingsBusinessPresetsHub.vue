@@ -714,6 +714,12 @@ defineExpose<ExposedActions>({
         :table-class="SETTINGS_TABLE_PAGE_CLASS"
         :empty-state="emptyState"
       >
+        <template #cell-remark="{ value }">
+          <div class="min-w-0 w-full max-w-full truncate text-muted-foreground" :title="String(value ?? '')">
+            {{ value }}
+          </div>
+        </template>
+
         <template #cell-actions="{ row: rawRow }">
           <div class="flex justify-end">
             <Button

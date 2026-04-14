@@ -512,6 +512,13 @@
 }
 
 @layer utilities {
+  .border-shadow {
+    box-shadow:
+      0px 0px 0px 1px rgba(0, 0, 0, 0.06),
+      0px 1px 2px -1px rgba(0, 0, 0, 0.06),
+      0px 2px 4px 0px rgba(0, 0, 0, 0.04);
+  }
+
   /*
    * Holding Shift while horizontally scrolling wide tables can promote nearby action chrome
    * into a keyboard-focus state. Keep visible focus on text inputs / selection controls,
