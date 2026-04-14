@@ -725,7 +725,7 @@ defineExpose<ExposedActions>({
             <Button
               variant="outline"
               size="sm"
-              class="h-8 gap-1 rounded-md px-2.5 text-[13px]"
+              class="h-7 gap-1.5 rounded-md px-2.5 text-[13px]"
               @click.stop="openEditItemDialog(rawRow as DictEntryDisplayRow)"
             >
               <i class="ri-edit-line text-base" />

@@ -558,7 +558,7 @@ defineExpose({
             <Button
               variant="outline"
               size="sm"
-              class="h-8 gap-1 rounded-md px-2.5 text-[13px]"
+              class="h-7 gap-1.5 rounded-md px-2.5 text-[13px]"
               @click.stop="openEditMajor(asMajorRow(rawRow))"
             >
               <i class="ri-edit-line text-base" />
@@ -592,7 +592,7 @@ defineExpose({
             <Button
               variant="outline"
               size="sm"
-              class="h-8 gap-1 rounded-md px-2.5 text-[13px]"
+              class="h-7 gap-1.5 rounded-md px-2.5 text-[13px]"
               @click.stop="openEditCategory(asCategoryRow(rawRow))"
             >
               <i class="ri-edit-line text-base" />
