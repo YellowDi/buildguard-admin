@@ -2146,7 +2146,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
 
     <Dialog :open="roleDialogOpen" @update:open="($event ? (roleDialogOpen = true) : closeRoleDialog())">
       <DialogContent class="flex h-[90vh] max-h-[90vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-[1120px]">
-        <DialogHeader class="border-b border-border/70 px-6 pt-6 pb-4">
+        <DialogHeader class="border-b border-border/70 p-4">
           <DialogTitle>{{ editingRoleId === null ? "添加权限组" : "编辑权限组" }}</DialogTitle>
           <DialogDescription>
             {{ editingRoleId === null ? "填写基础信息，并预配置页面访问和操作按钮的可见范围。" : "调整权限组基础信息，并预览后续接入权限接口后的页面与按钮控制范围。" }}
@@ -2435,21 +2435,18 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
 
           <Separator class="bg-border/70" />
 
-          <DialogFooter :class="editingRoleId === null ? 'px-6 py-4' : 'px-6 py-4 sm:justify-between'">
-            <div class="text-xs leading-5 text-muted-foreground sm:max-w-[420px]">
-              当前阶段仅做权限配置样式展示；点击保存时，仍只会调用权限组名称与备注相关接口。
-            </div>
+          <DialogFooter :class="editingRoleId === null ? 'p-4 justify-end' : 'p-4 sm:justify-between'">
+            <Button
+              v-if="editingRoleId !== null"
+              type="button"
+              variant="outline"
+              class="font-medium text-destructive hover:bg-destructive/5 hover:text-destructive"
+              :disabled="roleDetailLoading || roleSubmitting || roleDeleteSubmitting"
+              @click="promptDeleteEditingRole"
+            >
+              {{ roleDeleteSubmitting ? "删除中..." : "删除权限组" }}
+            </Button>
             <div class="flex items-center justify-end gap-2">
-              <Button
-                v-if="editingRoleId !== null"
-                type="button"
-                variant="outline"
-                class="font-medium text-destructive hover:bg-destructive/5 hover:text-destructive"
-                :disabled="roleDetailLoading || roleSubmitting || roleDeleteSubmitting"
-                @click="promptDeleteEditingRole"
-              >
-                {{ roleDeleteSubmitting ? "删除中..." : "删除权限组" }}
-              </Button>
               <Button type="button" variant="outline" :disabled="roleDetailLoading || roleSubmitting || roleDeleteSubmitting" @click="closeRoleDialog">
                 取消
               </Button>

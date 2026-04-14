@@ -2211,7 +2211,7 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
       </template>
       <template #title>{{ currentBuildingEditorTitle }}</template>
 
-      <div class="flex min-h-0 flex-1 flex-col overflow-hidden px-0 pb-4 pt-4">
+      <div class="flex min-h-0 flex-1 flex-col overflow-hidden px-0 pb-4 pt-4 sm:px-3">
         <p class="mb-4 text-sm leading-6 text-muted-foreground">
           当前面板只会修改这栋建筑的检测项，不影响其他已选建筑。
         </p>
