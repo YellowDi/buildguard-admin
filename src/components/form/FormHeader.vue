@@ -124,7 +124,7 @@ const primaryActionText = "确认"
         </SectionHeader>
 
         <div v-if="hasActions" class="flex min-w-0 max-w-[55vw] shrink-0 justify-end sm:max-w-full">
-          <div class="flex min-w-0 max-w-full items-center justify-end gap-2 overflow-x-auto overflow-y-hidden whitespace-nowrap sm:hidden">
+          <div class="flex min-w-0 max-w-full items-center justify-end gap-2 overflow-x-auto px-1 py-1 whitespace-nowrap sm:hidden">
             <slot name="actions" />
 
           <Button
@@ -264,7 +264,7 @@ const primaryActionText = "确认"
           </AlertDialog>
         </div>
 
-          <div class="hidden min-w-0 max-w-full items-center justify-end gap-2 overflow-x-auto overflow-y-hidden whitespace-nowrap sm:flex">
+          <div class="hidden min-w-0 max-w-full items-center justify-end gap-2 overflow-x-auto px-1 py-1 whitespace-nowrap sm:flex">
             <Button
               v-for="action in regularActions"
               :key="action.key"

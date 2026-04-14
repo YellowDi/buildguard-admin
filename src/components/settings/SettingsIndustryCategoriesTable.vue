@@ -744,7 +744,7 @@ defineExpose({
                 type="button"
                 variant="outline"
                 size="sm"
-                class="h-9 shrink-0 gap-1 px-3 sm:self-auto"
+                class="h-8 shrink-0 gap-1 px-3 sm:self-auto"
                 @click="openCreateMajorBesideCategoryForm"
               >
                 <i class="ri-folder-add-line text-base" />
@@ -806,7 +806,7 @@ defineExpose({
                 type="button"
                 variant="outline"
                 size="sm"
-                class="h-9 shrink-0 gap-1 px-3 sm:self-auto"
+                class="h-8 shrink-0 gap-1 px-3 sm:self-auto"
                 @click="openCreateMajorBesideCategoryForm"
               >
                 <i class="ri-folder-add-line text-base" />

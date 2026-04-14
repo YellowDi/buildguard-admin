@@ -282,7 +282,7 @@ function handleDeleteAccount() {
               <div class="flex w-[196px] shrink-0 items-center justify-end xl:w-[220px]">
                 <Button
                   variant="outline"
-                  class="h-9 shrink-0 rounded-md px-3.5"
+                  class="h-8 shrink-0 rounded-md px-3.5"
                   @click="emit('action', 'manage-email')"
                 >
                   管理电子邮件地址
@@ -305,7 +305,7 @@ function handleDeleteAccount() {
               <div class="flex w-[196px] shrink-0 items-center justify-end xl:w-[220px]">
                 <Button
                   variant="outline"
-                  class="h-9 shrink-0 rounded-md px-3.5"
+                  class="h-8 shrink-0 rounded-md px-3.5"
                   @click="emit('action', 'change-password')"
                 >
                   更改密码
@@ -328,7 +328,7 @@ function handleDeleteAccount() {
               <div class="flex w-[196px] shrink-0 items-center justify-end xl:w-[220px]">
                 <Button
                   variant="outline"
-                  class="h-9 shrink-0 rounded-md px-3.5"
+                  class="h-8 shrink-0 rounded-md px-3.5"
                   @click="emit('action', 'add-2fa')"
                 >
                   添加验证方法
@@ -351,7 +351,7 @@ function handleDeleteAccount() {
               <div class="flex w-[196px] shrink-0 items-center justify-end xl:w-[220px]">
                 <Button
                   variant="outline"
-                  class="h-9 shrink-0 rounded-md px-3.5"
+                  class="h-8 shrink-0 rounded-md px-3.5"
                   @click="emit('action', 'add-passkey')"
                 >
                   添加密钥
@@ -401,7 +401,7 @@ function handleDeleteAccount() {
               <div class="flex shrink-0 items-center justify-end">
                 <Button
                   variant="outline"
-                  class="h-9 shrink-0 rounded-md px-3.5 font-medium text-destructive hover:bg-destructive/5 hover:text-destructive"
+                  class="h-8 shrink-0 rounded-md px-3.5 font-medium text-destructive hover:bg-destructive/5 hover:text-destructive"
                   @click="handleDeleteAccount"
                 >
                   删除我的账号
@@ -431,7 +431,7 @@ function handleDeleteAccount() {
               <div class="flex shrink-0 items-center justify-end">
                 <Button
                   variant="outline"
-                  class="h-9 shrink-0 rounded-md px-3.5 font-medium text-destructive hover:bg-destructive/5 hover:text-destructive"
+                  class="h-8 shrink-0 rounded-md px-3.5 font-medium text-destructive hover:bg-destructive/5 hover:text-destructive"
                   @click="handleLogoutAllDevices"
                 >
                   从所有设备登出
