@@ -2167,13 +2167,11 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
               </Alert>
 
               <div class="space-y-2">
-                <div class="flex items-center gap-2">
+                <div class="flex min-w-0 items-center gap-2 whitespace-nowrap">
                   <h3 class="text-sm font-semibold text-foreground">待选页面</h3>
+                  <span class="text-xs text-muted-foreground">勾选后进入右侧并配置按钮</span>
                   <span v-if="rolePermissionResourcesLoading" class="text-xs text-muted-foreground">加载中...</span>
                 </div>
-                <p class="text-xs leading-5 text-muted-foreground">
-                  选择后会流转到右侧，并在对应页面下展示可选按钮。
-                </p>
 
                 <label class="inline-flex items-center gap-2 text-sm text-foreground">
                   <Checkbox
@@ -2200,7 +2198,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
                   <div
                     v-for="group in menuPermissionGroups"
                     :key="group.key"
-                    class="border-b border-border/60 pb-2 last:border-b-0"
+                    class="border-b border-dashed border-border/60 pb-2 last:border-b-0"
                   >
                     <div class="mb-1 flex items-center gap-2">
                       <Checkbox
@@ -2260,11 +2258,12 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
             </div>
 
             <div class="space-y-3 md:relative md:flex md:min-h-0 md:flex-col md:overflow-hidden md:px-5 md:pt-4 md:pb-0">
-              <div class="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p class="text-sm font-medium text-foreground">已选页面与按钮</p>
-                  <p class="text-xs text-muted-foreground">页面选中后，在这里继续选择可操作按钮</p>
+              <div class="space-y-2">
+                <div class="flex min-w-0 items-center gap-2 whitespace-nowrap">
+                  <h3 class="text-sm font-semibold text-foreground">已选页面与按钮</h3>
+                  <span class="text-xs text-muted-foreground">按页面继续勾选可操作按钮</span>
                 </div>
+
                 <label class="inline-flex items-center gap-2 text-sm text-foreground">
                   <Checkbox
                     :model-value="buttonSelectionState"
@@ -2286,7 +2285,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
                   <div
                     v-for="menu in selectedMenuPermissionPanels"
                     :key="menu.uuid || menu.id"
-                    class="border-b border-border/70 pb-4 last:border-b-0"
+                    class="border-b border-dashed border-border/70 pb-4 last:border-b-0"
                   >
                     <div class="flex items-start justify-between gap-3 py-1">
                       <div class="min-w-0">
