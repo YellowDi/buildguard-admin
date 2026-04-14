@@ -31,6 +31,10 @@ const props = defineProps({
     type: Number,
     default: 8,
   },
+  pinRowActions: {
+    type: Boolean,
+    default: true,
+  },
 })
 
 const emit = defineEmits<{
@@ -85,6 +89,7 @@ const slots = useSlots()
     :fill-available-height="props.fillAvailableHeight"
     :loading="props.loading"
     :loading-row-count="props.loadingRowCount"
+    :pin-row-actions="props.pinRowActions"
     @tab-click="page.handleTabClick"
     @add-filter="page.handleAddFilter"
     @replace-filter="page.handleReplaceFilter"

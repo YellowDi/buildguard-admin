@@ -103,6 +103,8 @@ const props = withDefaults(defineProps<{
   showRowActionIcons?: boolean
   /** 超宽窗口下让表格滚动视口与页面标题区宽度对齐。 */
   alignToHeaderAtWide?: boolean
+  /** 横向溢出时将操作列固定到滚动视口右侧。 */
+  pinRowActions?: boolean
   /** 让表格自身占满可用高度，并将滚动限制在表格内部。 */
   fillAvailableHeight?: boolean
   /** 首屏加载时保留真实表头，仅在 tbody 渲染占位行。 */
@@ -122,6 +124,7 @@ const props = withDefaults(defineProps<{
   edgeGutter: true,
   showRowActionIcons: false,
   alignToHeaderAtWide: false,
+  pinRowActions: true,
   fillAvailableHeight: false,
   loading: false,
   loadingRowCount: 8,
@@ -157,6 +160,7 @@ const stickyHeaderWidth = ref(0)
 const stickyTableWidth = ref(0)
 const stickyScrollLeft = ref(0)
 const stickyColumnWidths = ref<number[]>([])
+const actionColumnWidth = ref(0)
 const horizontalScrollContentWidth = ref(0)
 const horizontalScrollViewportWidth = ref(0)
 const hoveredRowKey = ref<RowSelectionKey | null>(null)
@@ -202,6 +206,15 @@ const stickyHeaderVisible = computed(() => (
   && stickyHeaderActive.value
   && stickyHeaderWidth.value > 0
   && stickyColumnWidths.value.length > 0
+))
+const pinRowActionsActive = computed(() => (
+  props.pinRowActions
+  && hasRowActions.value
+  && horizontalOverflow.value
+))
+const showPinnedActionFade = computed(() => (
+  pinRowActionsActive.value
+  && stickyScrollLeft.value < horizontalScrollMax.value - 1
 ))
 const shouldMaskNativeHorizontalScrollbar = computed(() => (
   props.fillAvailableHeight
@@ -863,6 +876,53 @@ function getStickyCellStyle(columnIndex: number) {
   }
 }
 
+function getActionColumnStyle(fallbackWidth?: number) {
+  const width = fallbackWidth ?? actionColumnWidth.value
+
+  if (!width) {
+    return undefined
+  }
+
+  const fadeWidth = Math.max(24, Math.min(96, Math.round(width * 0.45)))
+
+  return {
+    width: `${width}px`,
+    minWidth: `${width}px`,
+    maxWidth: `${width}px`,
+    "--table-pinned-action-fade-width": `${fadeWidth}px`,
+  }
+}
+
+function getActionHeaderClass(isStickyClone = false) {
+  if (!pinRowActionsActive.value) {
+    return []
+  }
+
+  return [
+    tableTheme.pinnedAction.base,
+    showPinnedActionFade.value ? tableTheme.pinnedAction.fade : "",
+    tableTheme.pinnedAction.headerBorder,
+    isStickyClone ? tableTheme.pinnedAction.headerClone : tableTheme.pinnedAction.header,
+  ]
+}
+
+function getActionCellClass(options?: { selected?: boolean; loading?: boolean }) {
+  if (!pinRowActionsActive.value) {
+    return []
+  }
+
+  return [
+    tableTheme.pinnedAction.base,
+    showPinnedActionFade.value ? tableTheme.pinnedAction.fade : "",
+    tableTheme.pinnedAction.bodyBorder,
+    options?.selected
+      ? tableTheme.pinnedAction.bodySelected
+      : options?.loading
+        ? tableTheme.pinnedAction.loading
+        : tableTheme.pinnedAction.body,
+  ]
+}
+
 function getEdgeGutterStyle(size: number) {
   return {
     width: `${size}px`,
@@ -1074,6 +1134,17 @@ function clearStickyState() {
   stickyColumnWidths.value = []
 }
 
+function syncActionColumnWidth(headerCells?: HTMLElement[]) {
+  if (!hasRowActions.value) {
+    actionColumnWidth.value = 0
+    return
+  }
+
+  const targetCells = headerCells ?? getHeaderCells()
+  const measuredWidth = targetCells[props.columns.length]?.getBoundingClientRect().width ?? 0
+  actionColumnWidth.value = Math.max(0, Math.ceil(measuredWidth))
+}
+
 function syncHorizontalScrollState(measuredOverflow?: boolean) {
   if (!tableWrapperRef.value || !tableRef.value) {
     horizontalOverflow.value = false
@@ -1192,11 +1263,13 @@ async function syncTableLayoutState() {
     await nextTick()
   }
 
+  const headerCells = getHeaderCells()
+  syncActionColumnWidth(headerCells)
   syncHorizontalScrollState(measuredOverflow)
-  syncStickyHeaderState()
+  syncStickyHeaderState(headerCells)
 }
 
-function syncStickyHeaderState() {
+function syncStickyHeaderState(headerCells?: HTMLElement[]) {
   if (useInternalStickyThead.value) {
     clearStickyState()
     return
@@ -1207,15 +1280,15 @@ function syncStickyHeaderState() {
     return
   }
 
-  const headerCells = getHeaderCells()
-  if (!headerCells.length) {
+  const resolvedHeaderCells = headerCells ?? getHeaderCells()
+  if (!resolvedHeaderCells.length) {
     clearStickyState()
     return
   }
 
   const wrapperRect = tableWrapperRef.value.getBoundingClientRect()
   const stickyLine = getScrollRootTop() + getStickyTopOffset()
-  const headerHeight = headerCells[0]?.getBoundingClientRect().height ?? 41
+  const headerHeight = resolvedHeaderCells[0]?.getBoundingClientRect().height ?? 41
 
   stickyHeaderLeft.value = props.listLevelTable
     ? wrapperRect.left
@@ -1223,12 +1296,16 @@ function syncStickyHeaderState() {
   stickyHeaderTop.value = stickyLine
   stickyTableWidth.value = tableRef.value.scrollWidth
   stickyScrollLeft.value = tableWrapperRef.value.scrollLeft
-  stickyColumnWidths.value = headerCells.map(cell => cell.getBoundingClientRect().width)
+  stickyColumnWidths.value = resolvedHeaderCells.map(cell => cell.getBoundingClientRect().width)
   const wrapperWidth = props.listLevelTable
     ? wrapperRect.width
     : wrapperRect.width + embeddedViewportExpandLeft.value + embeddedViewportExpandRight.value
   stickyHeaderWidth.value = wrapperWidth
   stickyHeaderActive.value = wrapperRect.top <= stickyLine && wrapperRect.bottom > stickyLine + headerHeight
+}
+
+function handleStickyScroll() {
+  syncStickyHeaderState()
 }
 
 function handleWrapperScroll() {
@@ -1262,11 +1339,11 @@ function detachScrollRootListener() {
   }
 
   if (scrollRoot === window) {
-    window.removeEventListener("scroll", syncStickyHeaderState)
+    window.removeEventListener("scroll", handleStickyScroll)
     return
   }
 
-  scrollRoot.removeEventListener("scroll", syncStickyHeaderState)
+  scrollRoot.removeEventListener("scroll", handleStickyScroll)
 }
 
 function attachScrollRootListener() {
@@ -1287,11 +1364,11 @@ function attachScrollRootListener() {
   scrollRoot = nextScrollRoot
 
   if (scrollRoot === window) {
-    window.addEventListener("scroll", syncStickyHeaderState, { passive: true })
+    window.addEventListener("scroll", handleStickyScroll, { passive: true })
     return
   }
 
-  scrollRoot.addEventListener("scroll", syncStickyHeaderState, { passive: true })
+  scrollRoot.addEventListener("scroll", handleStickyScroll, { passive: true })
 }
 
 function scheduleStickySync() {
@@ -1446,8 +1523,8 @@ onBeforeUnmount(() => {
                 </th>
                 <th
                   v-if="hasRowActions"
-                  :class="[tableTheme.actionHeader, tableTheme.actionHeaderSticky]"
-                  :style="getStickyCellStyle(columns.length)"
+                  :class="[tableTheme.actionHeader, tableTheme.actionHeaderSticky, getActionHeaderClass(true)]"
+                  :style="getActionColumnStyle(stickyColumnWidths[columns.length])"
                 >
                   操作
                 </th>
@@ -1533,7 +1610,11 @@ onBeforeUnmount(() => {
                     </span>
                   </div>
                 </th>
-                <th v-if="hasRowActions" :class="tableTheme.actionHeader">
+                <th
+                  v-if="hasRowActions"
+                  :class="[tableTheme.actionHeader, getActionHeaderClass()]"
+                  :style="getActionColumnStyle()"
+                >
                   操作
                 </th>
               </tr>
@@ -1578,7 +1659,8 @@ onBeforeUnmount(() => {
                   </td>
                   <td
                     v-if="hasRowActions"
-                    :class="tableTheme.actionCell"
+                    :class="[tableTheme.actionCell, getActionCellClass({ loading: true })]"
+                    :style="getActionColumnStyle()"
                   >
                     <div :class="tableTheme.actionCellContent">
                       <Skeleton :class="getLoadingActionSkeletonClass(rowIndex)" />
@@ -1789,8 +1871,9 @@ onBeforeUnmount(() => {
                   v-if="hasRowActions"
                   :class="[
                     tableTheme.actionCell,
-                    isRowSelected(row, index) ? 'bg-selection' : '',
+                    getActionCellClass({ selected: isRowSelected(row, index) }),
                   ]"
+                  :style="getActionColumnStyle()"
                 >
                   <div :class="tableTheme.actionCellContent">
                     <Button

@@ -164,6 +164,7 @@ export type TableSection = {
   rows: Record<string, unknown>[]
   rowKey: string | ((row: Record<string, unknown>, index: number) => string | number)
   rowActions?: TableRowAction[]
+  pinRowActions?: boolean
   onRowClick?: (row: Record<string, unknown>, index: number) => void
   onQuickAction?: (row: Record<string, unknown>, index: number) => void
   summary?: string

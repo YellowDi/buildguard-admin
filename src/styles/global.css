@@ -41,6 +41,7 @@
   --surface-tertiary: #fbfaf8;
   --surface-warm: #f6f5f4;
   --surface-hover-subtle: rgb(0 0 0 / 0.028);
+  --surface-hover-subtle-solid: #f8f8f8;
   --surface-hover-strong: rgb(0 0 0 / 0.05);
   --interactive-hover: rgb(0 0 0 / 0.045);
   --top-tab-switch-active-surface: var(--interactive-hover);
@@ -136,6 +137,7 @@
   --surface-tertiary: #252525;
   --surface-warm: #1e1e1e;
   --surface-hover-subtle: rgb(255 255 255 / 0.05);
+  --surface-hover-subtle-solid: #252525;
   --surface-hover-strong: rgb(255 255 255 / 0.08);
   --interactive-hover: rgb(255 255 255 / 0.08);
   --top-tab-switch-active-surface: var(--interactive-hover);
@@ -227,6 +229,7 @@
   --color-surface-tertiary: var(--surface-tertiary);
   --color-surface-warm: var(--surface-warm);
   --color-surface-hover-subtle: var(--surface-hover-subtle);
+  --color-surface-hover-subtle-solid: var(--surface-hover-subtle-solid);
   --color-surface-hover-strong: var(--surface-hover-strong);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);

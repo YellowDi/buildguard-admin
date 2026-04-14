@@ -70,12 +70,14 @@ const props = withDefaults(defineProps<{
   fillAvailableHeight?: boolean
   loading?: boolean
   loadingRowCount?: number
+  pinRowActions?: boolean
 }>(), {
   showToolbarActions: true,
   listLevelTable: true,
   fillAvailableHeight: false,
   loading: false,
   loadingRowCount: 8,
+  pinRowActions: true,
 })
 
 const emit = defineEmits<{
@@ -250,6 +252,7 @@ async function handleExportConfirm(payload: { scope: TableExportScope; format: T
                 :align-to-header-at-wide="props.listLevelTable"
                 :list-level-table="props.listLevelTable"
                 :fill-available-height="false"
+                :pin-row-actions="section.pinRowActions ?? props.pinRowActions"
                 @update:selected-row-keys="emit('update:selected-row-keys', $event)"
               >
                 <template
@@ -282,6 +285,7 @@ async function handleExportConfirm(payload: { scope: TableExportScope; format: T
               :fill-available-height="props.fillAvailableHeight"
               :loading="props.loading"
               :loading-row-count="props.loadingRowCount"
+              :pin-row-actions="props.pinRowActions"
               @update:selected-row-keys="emit('update:selected-row-keys', $event)"
             >
               <template
