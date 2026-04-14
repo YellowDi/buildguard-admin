@@ -449,8 +449,7 @@
     box-shadow: var(--shadow-card);
   }
 
-  .sidebar-nav-hover-surface:hover,
-  .sidebar-nav-hover-surface:focus-visible {
+  .sidebar-nav-hover-surface:hover {
     background: var(--interactive-hover);
   }
 
@@ -534,7 +533,9 @@
     [data-sidebar="group-label"]
   ):focus-visible {
     outline: none;
-    box-shadow: none;
+    --tw-ring-shadow: 0 0 #0000;
+    --tw-ring-offset-shadow: 0 0 #0000;
+    --tw-inset-ring-shadow: 0 0 #0000;
   }
 
   button:not([data-slot="checkbox"]):not([data-slot="switch"]):not([data-slot="radio-group-item"]):focus-visible,
