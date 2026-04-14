@@ -163,6 +163,14 @@ type PermissionButtonRow = {
   menuName: string
 }
 
+type PermissionMenuGroup = {
+  key: string
+  title: string
+  path: string
+  rows: Array<PermissionMenuRow & { depth: number }>
+  visibleRows: Array<PermissionMenuRow & { depth: number }>
+}
+
 const MEMBERS_LOAD_ERROR_MESSAGE = "成员列表加载失败，请稍后重试。"
 const MEMBER_STATUS_UPDATE_ERROR_MESSAGE = "成员状态更新失败，请稍后重试。"
 const MEMBER_UPDATE_ERROR_MESSAGE = "成员信息更新失败，请稍后重试。"
@@ -462,12 +470,7 @@ const menuPermissionGroups = computed(() => {
   const rows = [...permissionMenuRows.value]
     .sort((left, right) => left.level - right.level || left.sort - right.sort || left.name.localeCompare(right.name, "zh-Hans-CN"))
 
-  const groups = new Map<string, {
-    key: string
-    title: string
-    path: string
-    rows: Array<PermissionMenuRow & { depth: number }>
-  }>()
+  const groups = new Map<string, PermissionMenuGroup>()
 
   const resolveRoot = (row: PermissionMenuRow) => {
     let current = row
@@ -503,10 +506,22 @@ const menuPermissionGroups = computed(() => {
         ...row,
         depth,
       }],
+      visibleRows: [],
     })
   })
 
   return Array.from(groups.values())
+    .map((group) => {
+      const hasNestedRows = group.rows.some(row => row.depth > 0)
+      const visibleRows = hasNestedRows
+        ? group.rows.filter(row => !(row.depth === 0 && row.name === group.title && row.path === group.path))
+        : group.rows
+
+      return {
+        ...group,
+        visibleRows,
+      }
+    })
     .sort((left, right) => left.title.localeCompare(right.title, "zh-Hans-CN"))
 })
 
@@ -1056,6 +1071,46 @@ function toggleMenuButtons(menuUuid: string, checked: boolean) {
     })
   }
 
+  roleForm.value.selectedButtonKeys = Array.from(nextSelectedButtons)
+}
+
+function getPermissionGroupSelectionState(group: PermissionMenuGroup): boolean | "indeterminate" {
+  if (group.visibleRows.length === 0) {
+    return false
+  }
+
+  const selectedCount = group.visibleRows.filter(row => selectedMenuSet.value.has(row.uuid)).length
+
+  if (selectedCount === 0) {
+    return false
+  }
+
+  if (selectedCount >= group.visibleRows.length) {
+    return true
+  }
+
+  return "indeterminate"
+}
+
+function togglePermissionGroupRows(group: PermissionMenuGroup, checked: boolean) {
+  rolePermissionTouched.value = true
+
+  const nextSelectedMenus = new Set(roleForm.value.selectedMenuUuids)
+  const nextSelectedButtons = new Set(roleForm.value.selectedButtonKeys)
+
+  group.visibleRows.forEach((row) => {
+    if (checked) {
+      nextSelectedMenus.add(row.uuid)
+      return
+    }
+
+    nextSelectedMenus.delete(row.uuid)
+    getMenuButtonKeys(row.uuid).forEach((buttonKey) => {
+      nextSelectedButtons.delete(buttonKey)
+    })
+  })
+
+  roleForm.value.selectedMenuUuids = Array.from(nextSelectedMenus)
   roleForm.value.selectedButtonKeys = Array.from(nextSelectedButtons)
 }
 
@@ -2030,7 +2085,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
 
         <form class="flex min-h-0 flex-1 flex-col" @submit.prevent="submitRole">
           <div class="grid min-h-0 flex-1 gap-4 overflow-y-auto px-5 py-4 md:grid-cols-[280px_minmax(0,0.95fr)_minmax(0,1.25fr)] md:gap-0 md:overflow-hidden md:px-0 md:py-0">
-            <div class="space-y-4 md:min-h-0 md:overflow-hidden md:border-r md:border-border/70 md:px-5 md:py-4">
+            <div class="space-y-4 md:min-h-0 md:overflow-hidden md:border-r md:border-border/70 md:px-5 md:pt-4 md:pb-0">
               <section class="space-y-3">
                 <div class="flex items-start justify-between gap-3">
                   <div class="space-y-1">
@@ -2100,7 +2155,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
               </section>
             </div>
 
-            <div class="space-y-3 md:flex md:min-h-0 md:flex-col md:overflow-hidden md:border-r md:border-border/70 md:px-5 md:py-4">
+            <div class="space-y-3 md:flex md:min-h-0 md:flex-col md:overflow-hidden md:border-r md:border-border/70 md:px-5 md:pt-4 md:pb-0">
               <Alert
                 v-if="rolePermissionResourcesErrorMessage"
                 variant="destructive"
@@ -2111,16 +2166,14 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
                 <AlertDescription>{{ rolePermissionResourcesErrorMessage }}</AlertDescription>
               </Alert>
 
-              <div class="flex flex-wrap items-start justify-between gap-3">
-                <div class="space-y-1">
-                  <div class="flex items-center gap-2">
-                    <h3 class="text-sm font-semibold text-foreground">待选页面</h3>
-                    <span v-if="rolePermissionResourcesLoading" class="text-xs text-muted-foreground">加载中...</span>
-                  </div>
-                  <p class="text-xs leading-5 text-muted-foreground">
-                    选择后会流转到右侧，并在对应页面下展示可选按钮。
-                  </p>
+              <div class="space-y-2">
+                <div class="flex items-center gap-2">
+                  <h3 class="text-sm font-semibold text-foreground">待选页面</h3>
+                  <span v-if="rolePermissionResourcesLoading" class="text-xs text-muted-foreground">加载中...</span>
                 </div>
+                <p class="text-xs leading-5 text-muted-foreground">
+                  选择后会流转到右侧，并在对应页面下展示可选按钮。
+                </p>
 
                 <label class="inline-flex items-center gap-2 text-sm text-foreground">
                   <Checkbox
@@ -2145,48 +2198,57 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
                   <div
                     v-for="group in menuPermissionGroups"
                     :key="group.key"
-                    class="border-b border-border/60 pb-3 last:border-b-0"
+                    class="border-b border-border/60 pb-2 last:border-b-0"
                   >
-                    <button
-                      type="button"
-                      class="mb-1 flex w-full items-center justify-between gap-3 py-1 text-left"
-                      @click="togglePermissionGroup(group.key)"
-                    >
-                      <span class="flex min-w-0 items-center gap-2">
+                    <div class="mb-1 flex items-center gap-2">
+                      <Checkbox
+                        :model-value="getPermissionGroupSelectionState(group)"
+                        @update:model-value="togglePermissionGroupRows(group, $event === true)"
+                      />
+                      <button
+                        type="button"
+                        class="flex min-w-0 flex-1 items-center gap-2 py-1 text-left"
+                        @click="togglePermissionGroup(group.key)"
+                      >
+                        <span class="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
+                          {{ group.title }}
+                          <span class="ml-1 text-[11px] font-normal text-muted-foreground">{{ group.path || "顶级导航分组" }}</span>
+                        </span>
+                        <span class="text-xs text-muted-foreground">
+                          {{ group.visibleRows.filter(item => selectedMenuSet.has(item.uuid)).length }}/{{ group.visibleRows.length }}
+                        </span>
                         <i
-                          class="ri-arrow-right-s-line text-sm text-muted-foreground transition-transform"
+                          class="ri-arrow-right-s-line shrink-0 text-sm text-muted-foreground transition-transform"
                           :class="isPermissionGroupCollapsed(group.key) ? '' : 'rotate-90'"
                         />
-                        <span class="min-w-0">
-                          <span class="block truncate text-sm font-medium text-foreground">{{ group.title }}</span>
-                          <span class="block truncate text-xs text-muted-foreground">{{ group.path || "顶级导航分组" }}</span>
-                        </span>
-                      </span>
-                      <span class="text-xs text-muted-foreground">
-                        {{ group.rows.filter(item => selectedMenuSet.has(item.uuid)).length }}/{{ group.rows.length }}
-                      </span>
-                    </button>
+                      </button>
+                    </div>
 
                     <div v-if="!isPermissionGroupCollapsed(group.key)" class="grid gap-1">
                       <label
-                        v-for="row in group.rows"
+                        v-for="row in group.visibleRows"
                         :key="row.id"
-                        class="flex items-start gap-3 py-2"
+                        class="flex items-center gap-2 py-1.5"
                         :style="{ paddingLeft: `${row.depth * 18}px` }"
                       >
+                        <i
+                          v-if="row.depth > 0"
+                          class="ri-corner-down-right-line shrink-0 text-[12px] text-muted-foreground"
+                        />
+                        <span v-else class="w-3 shrink-0" />
                         <Checkbox
                           :model-value="selectedMenuSet.has(row.uuid)"
                           @update:model-value="updateRoleMenuSelection(row.uuid, $event === true)"
                         />
-                        <span class="min-w-0 flex-1">
-                          <span class="flex items-center gap-2">
-                            <span class="truncate text-sm text-foreground">{{ row.name }}</span>
-                            <span class="text-[11px] text-muted-foreground">L{{ row.level }}</span>
-                          </span>
-                          <span class="mt-0.5 block truncate font-mono text-[12px] text-muted-foreground">{{ row.path }}</span>
-                          <span v-if="row.depth > 0" class="mt-0.5 block text-[11px] text-muted-foreground">
-                            {{ row.parentName }}
-                          </span>
+                        <span class="min-w-0 flex flex-1 items-center gap-2 overflow-hidden leading-none">
+                          <Tooltip>
+                            <TooltipTrigger as-child>
+                              <span :class="row.depth === 0 ? 'font-medium text-foreground' : 'text-foreground'" class="truncate text-sm">
+                                {{ row.name }}
+                              </span>
+                            </TooltipTrigger>
+                            <TooltipContent>{{ row.path }}</TooltipContent>
+                          </Tooltip>
                         </span>
                       </label>
                     </div>
@@ -2195,7 +2257,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
               </div>
             </div>
 
-            <div class="space-y-3 md:flex md:min-h-0 md:flex-col md:overflow-hidden md:px-5 md:py-4">
+            <div class="space-y-3 md:flex md:min-h-0 md:flex-col md:overflow-hidden md:px-5 md:pt-4 md:pb-0">
               <div class="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <p class="text-sm font-medium text-foreground">已选页面与按钮</p>
