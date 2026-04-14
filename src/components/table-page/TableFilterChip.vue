@@ -20,11 +20,11 @@ const props = withDefaults(defineProps<{
 
 const classes = computed(() => {
   const base =
-    "inline-flex h-6 shrink-0 items-center gap-1 rounded-full px-2.5 text-[14px] transition-colors outline-none"
+    "inline-flex h-6 shrink-0 items-center gap-1 rounded-full px-2.5 text-[14px] transition-[background-color,color,box-shadow,transform] duration-180 ease-out outline-none active:scale-[0.98] motion-reduce:active:scale-100"
 
   if (props.variant === "ghost") {
     return cn(
-      "inline-flex h-6 shrink-0 items-center gap-1 rounded-md px-2 text-[14px] transition-colors outline-none",
+      "inline-flex h-6 shrink-0 items-center gap-1 rounded-md px-2 text-[14px] transition-[background-color,color,box-shadow,transform] duration-180 ease-out outline-none active:scale-[0.98] motion-reduce:active:scale-100",
       "text-muted-foreground hover:bg-transparent hover:text-foreground active:text-foreground",
       props.class,
     )

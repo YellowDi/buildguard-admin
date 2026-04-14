@@ -37,7 +37,7 @@ export const tableTheme = {
     button: "h-6 w-6 rounded-md border-0 bg-background p-0 text-muted-foreground border-shadow hover:bg-accent hover:text-accent-foreground focus-visible:bg-accent focus-visible:text-accent-foreground",
   },
   headerCell: {
-    base: "h-[38px] px-3 py-0 text-left font-normal whitespace-nowrap align-middle transition-colors hover:bg-surface-tertiary",
+    base: "h-[38px] px-3 py-0 text-left font-normal whitespace-nowrap align-middle transition-colors hover:bg-surface-hover-subtle",
     /** 序号/checkbox 列：去掉 px-3 左侧 12px，与滚动区左缘对齐（右侧仍保留 pr-3） */
     selectionFlush: "!pl-0",
     sticky: "sticky z-20 bg-background bg-clip-padding",
@@ -48,7 +48,7 @@ export const tableTheme = {
     split: "border-l",
     rightAligned: "text-right",
   },
-  actionHeader: "h-[38px] w-px whitespace-nowrap border-l border-border px-3 py-0 text-left font-normal text-muted-foreground align-middle transition-colors hover:bg-surface-tertiary",
+  actionHeader: "h-[38px] w-px whitespace-nowrap border-l border-border px-3 py-0 text-left font-normal text-muted-foreground align-middle transition-colors hover:bg-surface-hover-subtle",
   actionHeaderSticky: "bg-background bg-clip-padding",
   actionCell: "h-[42px] border-b border-l border-border px-3 py-0 align-middle whitespace-nowrap",
   actionCellContent: "flex items-center justify-end",
@@ -59,7 +59,7 @@ export const tableTheme = {
     fade: "before:pointer-events-none before:absolute before:top-px before:bottom-px before:left-0 before:w-[var(--table-pinned-action-fade-width,2.5rem)] before:-translate-x-full before:bg-gradient-to-l before:from-background before:to-transparent",
     headerBorder: "!border-b-0 after:pointer-events-none after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-border",
     bodyBorder: "!border-b-0 after:pointer-events-none after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-border",
-    header: "z-30 hover:bg-surface-tertiary",
+    header: "z-30 hover:bg-surface-hover-subtle",
     headerClone: "z-30",
     body: "z-10 bg-background hover:bg-background group-hover:bg-background",
     bodySelected: "bg-selection hover:bg-selection group-hover:bg-selection",

@@ -25,7 +25,7 @@ const emit = defineEmits<{
   <div class="p-2">
     <RouterLink
       to="/"
-      class="flex items-center gap-3 rounded-lg px-2 py-1.5 transition-colors hover:bg-interactive-hover hover:text-sidebar-accent-foreground"
+      class="flex items-center gap-3 rounded-lg px-2 py-1.5 transition-[background-color,color,box-shadow,transform] duration-180 ease-out hover:bg-interactive-hover hover:text-sidebar-accent-foreground hover:shadow-(--shadow-border) active:scale-[0.98] motion-reduce:active:scale-100"
     >
       <BrandLogo />
       <i class="ri-arrow-down-s-line text-base" />
@@ -44,7 +44,7 @@ const emit = defineEmits<{
       <TooltipWrap content="搜索">
         <button
           type="button"
-          class="top-tab-switch-icon-button ml-auto flex h-8 w-8 items-center justify-center rounded-full text-sidebar-foreground/52 hover:text-sidebar-accent-foreground"
+          class="top-tab-switch-icon-button ml-auto flex h-10 w-10 items-center justify-center rounded-full text-sidebar-foreground/52 hover:text-sidebar-accent-foreground"
           aria-label="搜索"
           @click="emit('search')"
         >

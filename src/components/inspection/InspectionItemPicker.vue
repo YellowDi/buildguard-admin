@@ -159,7 +159,7 @@ function updateInspectionSelected(uuid: string, checked: boolean | "indeterminat
             <label
               v-for="item in group.items"
               :key="item.uuid"
-              class="relative flex cursor-pointer items-start gap-3 rounded-md border border-border/55 bg-background px-3.5 py-3.5 shadow-xs transition-all duration-200 hover:border-(--theme-primary)/35 hover:bg-background dark:bg-muted dark:hover:bg-muted/75 hover:shadow-sm"
+              class="relative flex cursor-pointer items-start gap-3 rounded-md border border-border/55 bg-background px-3.5 py-3.5 shadow-xs transition-[border-color,background-color,box-shadow,transform] duration-200 ease-out hover:border-(--theme-primary)/35 hover:bg-background hover:-translate-y-px dark:bg-muted dark:hover:bg-muted/75 hover:shadow-sm"
               :class="isInspectionSelected(item.uuid) ? 'border-(--theme-primary)/50 bg-(--theme-primary)/10 shadow-sm ring-1 ring-(--theme-primary)/15' : ''"
             >
               <Checkbox

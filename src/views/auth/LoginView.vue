@@ -80,10 +80,10 @@ async function handleSubmit() {
 </script>
 
 <template>
-  <div class="grid min-h-svh lg:grid-cols-2">
+  <div class="grid min-h-svh bg-[radial-gradient(circle_at_top_left,_rgba(0,117,222,0.08),_transparent_32%),linear-gradient(180deg,_rgba(255,255,255,0.98),_rgba(246,249,252,0.96))] lg:grid-cols-2">
     <div class="flex flex-col gap-4 p-6 md:p-10">
       <div class="flex justify-center gap-2 md:justify-start">
-        <RouterLink to="/login" class="flex items-center gap-2 font-medium">
+        <RouterLink to="/login" class="flex items-center gap-2 rounded-xl px-2 py-1.5 font-medium transition-[background-color,color] duration-180 ease-out hover:bg-background/70">
           <BrandLogo
             image-class="size-8"
             text-class="truncate text-base font-semibold"
@@ -92,26 +92,27 @@ async function handleSubmit() {
       </div>
 
       <div class="flex flex-1 items-center justify-center">
-        <div class="w-full max-w-xs">
-          <Card class="border-none bg-transparent shadow-none">
-            <CardHeader class="px-0 text-center">
-              <CardTitle class="text-2xl">
+        <div class="w-full max-w-sm">
+          <Card class="rounded-[calc(var(--radius)+10px)] border-transparent bg-background/82 py-0 shadow-(--shadow-deep) backdrop-blur-md">
+            <CardHeader class="px-6 pt-6 text-center">
+              <CardTitle class="text-2xl tracking-tight">
                 后台登录
               </CardTitle>
-              <CardDescription>
+              <CardDescription class="mt-1">
                 使用手机号或用户名加密码登录后台管理平台
               </CardDescription>
             </CardHeader>
-            <CardContent class="px-0">
+            <CardContent class="px-6 pb-6">
               <form class="grid gap-6" @submit.prevent="handleSubmit">
                 <div class="grid gap-6">
                   <div class="grid gap-2">
-                    <label class="text-sm font-medium" for="account">账户</label>
+                    <label class="text-sm font-medium text-foreground/88" for="account">账户</label>
                     <Input
                       id="account"
                       v-model="form.account"
                       type="text"
                       inputmode="text"
+                      class="shadow-(--shadow-border) hover:shadow-(--shadow-border-hover)"
                       placeholder="请输入手机号或用户名"
                       autocomplete="username"
                       required
@@ -119,18 +120,19 @@ async function handleSubmit() {
                   </div>
 
                   <div class="grid gap-2">
-                    <label class="text-sm font-medium" for="password">密码</label>
+                    <label class="text-sm font-medium text-foreground/88" for="password">密码</label>
                     <Input
                       id="password"
                       v-model="form.password"
                       type="password"
+                      class="shadow-(--shadow-border) hover:shadow-(--shadow-border-hover)"
                       placeholder="请输入密码"
                       autocomplete="current-password"
                       required
                     />
                   </div>
 
-                  <Button type="submit" class="w-full" :disabled="isSubmitting">
+                  <Button type="submit" class="mt-1 h-11 w-full shadow-(--shadow-border) hover:shadow-(--shadow-border-hover)" :disabled="isSubmitting">
                     {{ isSubmitting ? "登录中..." : "登录" }}
                   </Button>
 
@@ -163,18 +165,18 @@ async function handleSubmit() {
         <img
           :src="loginVisual"
           alt=""
-          class="absolute inset-0 h-full w-full object-cover"
+          class="absolute inset-0 h-full w-full object-cover outline outline-1 -outline-offset-1 outline-black/10"
           aria-hidden="true"
           @contextmenu.prevent
         />
         <div
-          class="pointer-events-none absolute inset-0 bg-background/35 backdrop-blur-md"
+          class="pointer-events-none absolute inset-0 bg-background/30 backdrop-blur-md"
           aria-hidden="true"
         />
       </div>
       <div
         v-show="!showLoginVisualFallback"
-        class="pointer-events-none absolute inset-0 z-10 bg-background/35 backdrop-blur-md"
+        class="pointer-events-none absolute inset-0 z-10 bg-[linear-gradient(180deg,rgba(255,255,255,0.12),rgba(255,255,255,0.32))] backdrop-blur-[3px]"
         aria-hidden="true"
       />
     </div>

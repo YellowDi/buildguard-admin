@@ -77,6 +77,14 @@
     rgb(0 0 0 / 0.02) 0 7px 15px 0,
     rgb(0 0 0 / 0.04) 0 14px 28px 0,
     rgb(0 0 0 / 0.05) 0 23px 52px 0;
+  --shadow-border:
+    0 0 0 1px rgb(15 23 42 / 0.06),
+    0 1px 2px -1px rgb(15 23 42 / 0.08),
+    0 6px 14px -10px rgb(15 23 42 / 0.16);
+  --shadow-border-hover:
+    0 0 0 1px rgb(15 23 42 / 0.08),
+    0 2px 4px -2px rgb(15 23 42 / 0.09),
+    0 12px 24px -16px rgb(15 23 42 / 0.18);
   --shadow-card: var(--shadow-soft);
   --link: var(--theme-primary);
   --link-hover: var(--brand-hover);
@@ -170,6 +178,10 @@
     rgb(0 0 0 / 0.2) 0 7px 15px 0,
     rgb(0 0 0 / 0.25) 0 14px 28px 0,
     rgb(0 0 0 / 0.3) 0 23px 52px 0;
+  --shadow-border: 0 0 0 1px rgb(255 255 255 / 0.08);
+  --shadow-border-hover:
+    0 0 0 1px rgb(255 255 255 / 0.14),
+    0 10px 18px -14px rgb(0 0 0 / 0.44);
   --shadow-card: var(--shadow-soft);
   --link: var(--theme-primary);
   --link-hover: var(--brand-hover);
@@ -281,6 +293,26 @@
 
   body {
     @apply bg-background text-foreground;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  [data-slot="card-title"],
+  [data-slot="dialog-title"],
+  [data-slot="sheet-title"] {
+    text-wrap: balance;
+  }
+
+  p,
+  [data-slot="card-description"],
+  [data-slot="dialog-description"],
+  [data-slot="sheet-description"] {
+    text-wrap: pretty;
   }
 
   ::selection {
@@ -386,7 +418,6 @@
     transition:
       width 280ms cubic-bezier(0.22, 1, 0.36, 1),
       color 160ms ease-out;
-    will-change: width;
   }
 
   .top-tab-switch-bg {
@@ -405,7 +436,6 @@
       opacity 180ms ease-out,
       transform 180ms cubic-bezier(0.22, 1, 0.36, 1),
       margin-left 180ms cubic-bezier(0.22, 1, 0.36, 1);
-    will-change: max-width, opacity, transform;
   }
 
   .top-tab-switch-badge {
@@ -446,7 +476,7 @@
   .sidebar-nav-active-surface {
     border-radius: 8px;
     background: var(--interactive-active-surface);
-    box-shadow: var(--shadow-card);
+    box-shadow: var(--shadow-border);
   }
 
   .sidebar-nav-hover-surface:hover {
@@ -522,17 +552,11 @@
   }
 
   .border-shadow {
-    box-shadow:
-      0px 0px 0px 1px rgba(0, 0, 0, 0.06),
-      0px 1px 2px -1px rgba(0, 0, 0, 0.06),
-      0px 2px 4px 0px rgba(0, 0, 0, 0.04);
+    box-shadow: var(--shadow-border);
   }
 
   .border-shadow:hover {
-    box-shadow:
-      0px 0px 0px 1px rgba(0, 0, 0, 0.08),
-      0px 1px 2px -1px rgba(0, 0, 0, 0.08),
-      0px 2px 4px 0px rgba(0, 0, 0, 0.06);
+    box-shadow: var(--shadow-border-hover);
   }
 
   /*

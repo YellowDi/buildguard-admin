@@ -135,7 +135,7 @@ onBeforeUnmount(() => {
       :aria-selected="props.modelValue === tab.id"
       :aria-pressed="props.modelValue === tab.id"
       :tabindex="props.modelValue === tab.id ? 0 : -1"
-      class="top-tab-switch-shell relative h-8 shrink-0 overflow-hidden rounded-full text-[14px] font-medium"
+      class="top-tab-switch-shell relative h-8 shrink-0 overflow-hidden rounded-full text-[14px] font-medium after:pointer-events-none after:absolute after:left-1/2 after:top-1/2 after:size-10 after:-translate-x-1/2 after:-translate-y-1/2 after:content-['']"
       :style="{ width: `${props.collapseInactive
         ? (props.modelValue === tab.id ? (measuredWidths[index] ?? COLLAPSED_TAB_WIDTH) : COLLAPSED_TAB_WIDTH)
         : (measuredWidths[index] ?? LABEL_ONLY_TAB_MIN_WIDTH)}px` }"

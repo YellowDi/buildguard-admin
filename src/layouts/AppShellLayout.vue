@@ -66,12 +66,12 @@ function closeMobileSidebar() {
     <button
       v-if="mobileSidebarOpen"
       type="button"
-      class="fixed inset-0 z-20 hidden bg-transparent opacity-100 max-[999px]:block max-[999px]:touch-none"
+      class="fixed inset-0 z-20 hidden bg-background/28 opacity-100 backdrop-blur-[2px] max-[999px]:block max-[999px]:touch-none"
       aria-label="关闭侧边栏"
       @click="closeMobileSidebar"
     />
     <div
-      class="relative z-10 flex h-svh min-w-0 flex-1 flex-col overflow-hidden bg-background transition-transform duration-300 ease-out"
+      class="relative z-10 flex h-svh min-w-0 flex-1 flex-col overflow-hidden bg-background transition-transform duration-300 ease-[cubic-bezier(0.2,0,0,1)]"
       :class="mobileSidebarOpen ? 'max-[999px]:translate-x-[255px] max-[999px]:pointer-events-none' : ''"
       @click="mobileSidebarOpen && closeMobileSidebar()"
     >
@@ -79,7 +79,7 @@ function closeMobileSidebar() {
         :on-toggle-mobile-sidebar="toggleMobileSidebar"
         :on-toggle-desktop-sidebar="toggleSidebar"
       />
-      <main class="flex min-w-0 min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 pb-4 pt-0">
+      <main class="flex min-w-0 min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 pb-4 pt-2">
         <RouterView v-slot="{ Component }">
           <RouteLoadingFallback
             v-if="showContentFallback"

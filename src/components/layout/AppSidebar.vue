@@ -166,7 +166,7 @@ watch(() => route.fullPath, () => {
 
 <template>
   <aside
-    class="fixed inset-y-0 left-0 z-30 flex w-[255px] max-w-[90vw] flex-col overflow-y-auto overflow-x-hidden overscroll-y-contain bg-sidebar text-sidebar-foreground transition-transform duration-300 ease-out min-[1000px]:hidden"
+    class="fixed inset-y-0 left-0 z-30 flex w-[255px] max-w-[90vw] flex-col overflow-y-auto overflow-x-hidden overscroll-y-contain border-r border-sidebar-border/75 bg-sidebar/96 text-sidebar-foreground shadow-(--shadow-deep) transition-transform duration-300 ease-[cubic-bezier(0.2,0,0,1)] min-[1000px]:hidden"
     :class="props.mobileOpen ? 'translate-x-0' : '-translate-x-full'"
   >
     <div class="flex min-h-0 flex-1 flex-col">
@@ -177,7 +177,7 @@ watch(() => route.fullPath, () => {
         @search="handleSearch"
       />
 
-      <div class="min-h-0 flex-1 overflow-x-visible p-2">
+      <div class="min-h-0 flex-1 overflow-x-visible px-2 pb-2">
         <AppSidebarHomeNav
           v-if="selectedTopTab === 'home'"
           :items="businessItems"
@@ -197,7 +197,7 @@ watch(() => route.fullPath, () => {
         />
       </div>
 
-      <div class="shrink-0 p-2">
+      <div class="shrink-0 px-2 pb-2">
         <UserCardPopover />
       </div>
     </div>

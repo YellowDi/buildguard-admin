@@ -656,7 +656,7 @@ function asInspectionPlanRecord(row: Record<string, unknown>): InspectionPlanRec
               >
                 <Progress
                   :model-value="getNextExecutionProgressValue(asInspectionPlanRecord(row))"
-                  class="h-1.5 max-w-[120px] bg-surface-tertiary [&_[data-slot=progress-indicator]]:transition-all"
+                  class="h-1.5 max-w-[120px] bg-surface-tertiary [&_[data-slot=progress-indicator]]:transition-[transform,background-color]"
                   :class="getNextExecutionProgressClass(asInspectionPlanRecord(row))"
                 />
                 <span class="shrink-0 text-xs text-muted-foreground">

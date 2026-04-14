@@ -120,7 +120,7 @@ const visibleTrailingItems = computed(() => {
     <TooltipWrap content="打开侧边栏">
       <button
         type="button"
-        class="-ml-1 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-foreground transition-colors hover:bg-accent hover:text-accent-foreground min-[1000px]:hidden"
+        class="-ml-1 inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-foreground transition-[background-color,color,transform] duration-180 ease-out hover:bg-accent hover:text-accent-foreground active:scale-[0.96] motion-reduce:active:scale-100 min-[1000px]:hidden"
         aria-label="打开侧边栏"
         @click.stop="props.onToggleMobileSidebar?.()"
       >
@@ -130,7 +130,7 @@ const visibleTrailingItems = computed(() => {
     <TooltipWrap content="切换侧边栏">
       <button
         type="button"
-        class="-ml-1 hidden h-7 w-7 shrink-0 items-center justify-center rounded-md text-foreground transition-colors hover:bg-accent hover:text-accent-foreground min-[1000px]:inline-flex"
+        class="-ml-1 hidden h-7 w-7 shrink-0 items-center justify-center rounded-md text-foreground transition-[background-color,color,transform] duration-180 ease-out hover:bg-accent hover:text-accent-foreground active:scale-[0.96] motion-reduce:active:scale-100 min-[1000px]:inline-flex"
         aria-label="切换侧边栏"
         @click.stop="props.onToggleDesktopSidebar?.()"
       >
@@ -145,7 +145,7 @@ const visibleTrailingItems = computed(() => {
             <BreadcrumbLink as-child>
               <RouterLink
                 to="/"
-                class="inline-flex rounded-md p-1 text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                class="inline-flex rounded-md p-1 text-foreground transition-[background-color,color,transform] duration-180 ease-out hover:bg-accent hover:text-accent-foreground active:scale-[0.96] motion-reduce:active:scale-100"
                 aria-label="返回首页"
               >
                 <BrandLogo label="" image-class="size-6" />
@@ -180,7 +180,7 @@ const visibleTrailingItems = computed(() => {
               <TooltipWrap content="展开面包屑">
                 <button
                   type="button"
-                  class="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                  class="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-[background-color,color,transform] duration-180 ease-out hover:bg-accent hover:text-accent-foreground active:scale-[0.96] motion-reduce:active:scale-100"
                   aria-label="展开面包屑"
                 >
                   <BreadcrumbEllipsis class="h-8 w-8" />

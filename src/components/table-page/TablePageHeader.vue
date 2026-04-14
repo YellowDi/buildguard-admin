@@ -106,7 +106,7 @@ const sortPopoverSource = ref<"toolbar" | "chip">("toolbar")
 const ghostIconButtonClass =
   "inline-flex size-8 items-center justify-center rounded-md bg-transparent text-muted-foreground transition-colors hover:bg-interactive-hover hover:text-foreground active:bg-surface-secondary"
 const mobileTabSelectTriggerClass =
-  "h-8 max-w-[calc(100vw-11rem)] rounded-full bg-background px-3 text-[14px]"
+  "h-8 max-w-[calc(100vw-11rem)] rounded-full bg-background/92 px-3 text-[14px] shadow-(--shadow-border)"
 const ghostIconButtonActiveClass =
   "bg-transparent text-link hover:bg-interactive-hover active:bg-surface-secondary"
 const tableMoreActions: Array<{
@@ -428,6 +428,7 @@ function handleTableMoreActionSelect(action: TableMoreActionKey) {
                 v-if="primaryMobileToolbarItem && overflowMobileToolbarItems.length === 0"
                 variant="default"
                 size="sm"
+                static
                 class="h-8 gap-1 px-3 text-[14px]"
                 :class="primaryMobileToolbarItem.active ? 'text-link' : ''"
                 :aria-label="primaryMobileToolbarItem.label"
@@ -441,6 +442,7 @@ function handleTableMoreActionSelect(action: TableMoreActionKey) {
                 <Button
                   variant="default"
                   size="sm"
+                  static
                   class="h-8 gap-1 px-3 text-[14px]"
                   :class="primaryMobileToolbarItem.active ? 'text-link' : ''"
                   :aria-label="primaryMobileToolbarItem.label"
@@ -452,7 +454,7 @@ function handleTableMoreActionSelect(action: TableMoreActionKey) {
 
                 <DropdownMenu>
                   <DropdownMenuTrigger as-child>
-                    <Button variant="default" size="icon-sm" class="size-8" aria-label="更多操作">
+                    <Button static variant="default" size="icon-sm" class="size-8" aria-label="更多操作">
                       <i class="ri-arrow-down-s-line text-base" />
                     </Button>
                   </DropdownMenuTrigger>
@@ -528,6 +530,7 @@ function handleTableMoreActionSelect(action: TableMoreActionKey) {
               </DropdownMenu>
               <Button
                 variant="outline"
+                static
                 class="h-8 gap-1 px-3 text-[14px]"
                 @click="emit('export-action')"
               >
@@ -537,6 +540,7 @@ function handleTableMoreActionSelect(action: TableMoreActionKey) {
               <Button
                 v-if="primaryActionLabel"
                 variant="default"
+                static
                 class="h-8 gap-1 px-3 text-[14px]"
                 @click="emit('primary-action')"
               >
@@ -586,6 +590,7 @@ function handleTableMoreActionSelect(action: TableMoreActionKey) {
                 v-if="primaryMobileToolbarItem && overflowMobileToolbarItems.length === 0"
                 variant="default"
                 size="sm"
+                static
                 class="h-8 gap-1 px-3 text-[14px]"
                 :class="primaryMobileToolbarItem.active ? 'text-link' : ''"
                 :aria-label="primaryMobileToolbarItem.label"
@@ -599,6 +604,7 @@ function handleTableMoreActionSelect(action: TableMoreActionKey) {
                 <Button
                   variant="default"
                   size="sm"
+                  static
                   class="h-8 gap-1 px-3 text-[14px]"
                   :class="primaryMobileToolbarItem.active ? 'text-link' : ''"
                   :aria-label="primaryMobileToolbarItem.label"
@@ -610,7 +616,7 @@ function handleTableMoreActionSelect(action: TableMoreActionKey) {
 
                 <DropdownMenu>
                   <DropdownMenuTrigger as-child>
-                    <Button variant="default" size="icon-sm" class="size-8" aria-label="更多操作">
+                    <Button static variant="default" size="icon-sm" class="size-8" aria-label="更多操作">
                       <i class="ri-arrow-down-s-line text-base" />
                     </Button>
                   </DropdownMenuTrigger>
@@ -641,6 +647,7 @@ function handleTableMoreActionSelect(action: TableMoreActionKey) {
                 :aria-pressed="tab.active"
                 :class="[
                   'group relative px-3 pb-[11px] text-muted-foreground transition-colors hover:text-foreground',
+                  'duration-180 ease-out',
                   tab.active ? 'font-semibold text-foreground' : '',
                 ]"
                 @click="emit('tab-click', tab)"
@@ -716,6 +723,7 @@ function handleTableMoreActionSelect(action: TableMoreActionKey) {
               </DropdownMenu>
               <Button
                 variant="outline"
+                static
                 class="h-8 gap-1 px-3 text-[14px]"
                 @click="emit('export-action')"
               >
@@ -725,6 +733,7 @@ function handleTableMoreActionSelect(action: TableMoreActionKey) {
               <Button
                 v-if="primaryActionLabel"
                 variant="default"
+                static
                 class="h-8 gap-1 px-3 text-[14px]"
                 @click="emit('primary-action')"
               >
@@ -738,16 +747,16 @@ function handleTableMoreActionSelect(action: TableMoreActionKey) {
     </div>
 
     <Transition
-      enter-active-class="overflow-hidden transition-all duration-200 ease-out"
+      enter-active-class="overflow-hidden transition-[max-height,opacity,transform] duration-200 ease-out"
       enter-from-class="max-h-0 opacity-0 -translate-y-1"
       enter-to-class="max-h-16 opacity-100 translate-y-0"
-      leave-active-class="overflow-hidden transition-all duration-150 ease-in"
+      leave-active-class="overflow-hidden transition-[max-height,opacity,transform] duration-150 ease-in"
       leave-from-class="max-h-16 opacity-100 translate-y-0"
       leave-to-class="max-h-0 opacity-0 -translate-y-1"
     >
-        <div v-if="showControls" :class="props.listLevelTable ? 'px-4 py-2 sm:px-8' : 'py-2'">
-          <div class="flex flex-wrap items-center gap-0.5 text-[14px] text-muted-foreground">
-            <div class="flex min-w-0 flex-wrap items-center gap-0.5">
+        <div v-if="showControls" :class="props.listLevelTable ? 'px-4 py-2.5 sm:px-8' : 'py-2.5'">
+          <div class="flex flex-wrap items-center gap-1 text-[14px] text-muted-foreground">
+            <div class="flex min-w-0 flex-wrap items-center gap-1">
               <slot name="controls-prefix" />
               <template v-for="field in sortFields" :key="field.key">
               <Popover

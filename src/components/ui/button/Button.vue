@@ -14,6 +14,7 @@ defineOptions({
 interface Props extends PrimitiveProps {
   variant?: ButtonVariants["variant"]
   size?: ButtonVariants["size"]
+  static?: boolean
   class?: HTMLAttributes["class"]
 }
 
@@ -40,10 +41,15 @@ const resolvedType = computed(() => {
     data-slot="button"
     :data-variant="variant"
     :data-size="size"
+    :data-static="props.static ? 'true' : undefined"
     :as="as"
     :as-child="asChild"
     :type="resolvedType"
-    :class="cn(buttonVariants({ variant, size }), props.class)"
+    :class="cn(
+      buttonVariants({ variant, size }),
+      !props.static && 'active:enabled:scale-[0.96] motion-reduce:active:scale-100',
+      props.class,
+    )"
   >
     <slot />
   </Primitive>

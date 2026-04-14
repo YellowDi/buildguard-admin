@@ -56,7 +56,7 @@ function isActive(item: AppSidebarNavItem): boolean {
         :to="item.path"
         type="button"
         :class="[
-          'group flex h-9 w-full items-center gap-3 rounded-lg px-3 text-left text-sm font-medium transition-colors outline-none focus:outline-none focus-visible:outline-none',
+          'group flex h-9 w-full items-center gap-3 rounded-lg px-3 text-left text-sm font-medium transition-[background-color,color,box-shadow,transform] duration-180 ease-out outline-none focus:outline-none focus-visible:outline-none active:scale-[0.98] motion-reduce:active:scale-100',
           isActive(item)
             ? activeItemClass
             : 'sidebar-nav-hover-surface hover:text-sidebar-accent-foreground',
