@@ -123,6 +123,8 @@
   overflow: hidden;
   background: var(--background);
   box-shadow: var(--shadow-soft);
+  outline: 1px solid rgba(0, 0, 0, 0.1);
+  outline-offset: -1px;
 }
 
 .detail-field-row__image {
@@ -131,6 +133,10 @@
   max-width: 100px;
   height: auto;
   margin-top: 0;
+}
+
+.dark .detail-field-row__image-frame {
+  outline-color: rgba(255, 255, 255, 0.1);
 }
 
 .detail-field-row__value--empty {
