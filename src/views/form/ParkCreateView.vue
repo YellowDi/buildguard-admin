@@ -565,7 +565,7 @@ watch(
                   type="button"
                   variant="outline"
                   size="sm"
-                  class="pointer-events-auto h-8 shrink-0 gap-1 rounded-md px-2.5 text-xs shadow-sm"
+                  class="pointer-events-auto h-8 shrink-0 gap-1 rounded-md px-2.5 text-xs"
                   @click.stop="mapPickerOpen = true"
                 >
                   <i class="ri-map-pin-line text-[15px]" />

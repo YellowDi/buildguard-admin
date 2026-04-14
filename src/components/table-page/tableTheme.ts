@@ -34,7 +34,7 @@ export const tableTheme = {
     layout: "flex min-w-0 items-center gap-2",
     content: "min-w-0 flex-1",
     slot: "ml-1 flex shrink-0 items-center gap-1",
-    button: "h-6 w-6 rounded-md border border-border/80 bg-background p-0 text-muted-foreground shadow-sm hover:border-border hover:bg-background hover:text-foreground focus-visible:border-border focus-visible:bg-background focus-visible:text-foreground",
+    button: "h-6 w-6 rounded-md border-0 bg-background p-0 text-muted-foreground border-shadow hover:bg-accent hover:text-accent-foreground focus-visible:bg-accent focus-visible:text-accent-foreground",
   },
   headerCell: {
     base: "h-[38px] px-3 py-0 text-left font-normal whitespace-nowrap align-middle transition-colors hover:bg-surface-tertiary",
@@ -53,7 +53,7 @@ export const tableTheme = {
   actionCell: "h-[42px] border-b border-l border-border px-3 py-0 align-middle whitespace-nowrap",
   actionCellContent: "flex items-center justify-end",
   actionCellButtons: "inline-flex items-center gap-1.5",
-  actionButton: "pointer-events-auto h-7 gap-1.5 px-2.5 text-[13px] border-border/80 bg-background/95 shadow-sm",
+  actionButton: "pointer-events-auto h-7 gap-1.5 px-2.5 text-[13px]",
   pinnedAction: {
     base: "sticky right-0 isolate bg-background bg-clip-padding",
     fade: "before:pointer-events-none before:absolute before:top-px before:bottom-px before:left-0 before:w-[var(--table-pinned-action-fade-width,2.5rem)] before:-translate-x-full before:bg-gradient-to-l before:from-background before:to-transparent",

@@ -674,7 +674,7 @@ defineExpose({
             <Button
               type="button"
               variant="outline"
-              class="w-full gap-1 border-destructive/30 bg-background font-medium text-destructive shadow-none hover:bg-destructive/5 hover:text-destructive sm:w-auto"
+              class="w-full gap-1 font-medium text-destructive hover:bg-destructive/5 hover:text-destructive sm:w-auto"
               @click="promptDeleteEditingMajor"
             >
               <i class="ri-delete-bin-line text-base" />
@@ -826,7 +826,7 @@ defineExpose({
             <Button
               type="button"
               variant="outline"
-              class="w-full gap-1 border-destructive/30 bg-background font-medium text-destructive shadow-none hover:bg-destructive/5 hover:text-destructive sm:w-auto"
+              class="w-full gap-1 font-medium text-destructive hover:bg-destructive/5 hover:text-destructive sm:w-auto"
               @click="promptDeleteEditingCategory"
             >
               <i class="ri-delete-bin-line text-base" />

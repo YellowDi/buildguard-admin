@@ -541,7 +541,7 @@ async function loadInspectionCategoriesList() {
         v-if="building"
         variant="outline"
         size="sm"
-        class="h-8 gap-1 border-border/80 bg-background px-3 text-[14px] font-medium shadow-none"
+        class="h-8 gap-1 px-3 text-[14px] font-medium"
         @click="goToEdit"
       >
         <i class="ri-edit-line text-base" />

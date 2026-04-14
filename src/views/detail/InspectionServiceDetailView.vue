@@ -746,7 +746,7 @@ function readFileAsDataUrl(file: File) {
           <Button
             variant="outline"
             size="sm"
-            class="h-8 gap-1 border-destructive/50 bg-background px-3 text-[14px] font-medium text-destructive shadow-none hover:bg-destructive/10 hover:text-destructive"
+            class="h-8 gap-1 px-3 text-[14px] font-medium text-destructive hover:bg-destructive/10 hover:text-destructive"
             @click="deleteConfirmOpen = true"
           >
             <i class="ri-delete-bin-line text-base" />
@@ -782,7 +782,7 @@ function readFileAsDataUrl(file: File) {
         <Button
           variant="outline"
           size="sm"
-          class="h-8 gap-1 border-border/80 bg-background px-3 text-[14px] font-medium shadow-none"
+          class="h-8 gap-1 px-3 text-[14px] font-medium"
           @click="goToEdit"
         >
           <i class="ri-edit-line text-base" />

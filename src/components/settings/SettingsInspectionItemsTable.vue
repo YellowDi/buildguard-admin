@@ -901,7 +901,7 @@ defineExpose({
             <Button
               type="button"
               variant="outline"
-              class="border-destructive/30 bg-background font-medium text-destructive shadow-none hover:bg-destructive/5 hover:text-destructive"
+              class="font-medium text-destructive hover:bg-destructive/5 hover:text-destructive"
               :disabled="editDetailLoading || editSubmitting || deleteSubmitting"
               @click="promptDeleteEditingItem"
             >

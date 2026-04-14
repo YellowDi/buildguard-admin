@@ -401,7 +401,7 @@ function handleDeleteAccount() {
               <div class="flex shrink-0 items-center justify-end">
                 <Button
                   variant="outline"
-                  class="h-9 shrink-0 rounded-md border-destructive/30 bg-background px-3.5 font-medium text-destructive shadow-none hover:bg-destructive/5 hover:text-destructive"
+                  class="h-9 shrink-0 rounded-md px-3.5 font-medium text-destructive hover:bg-destructive/5 hover:text-destructive"
                   @click="handleDeleteAccount"
                 >
                   删除我的账号
@@ -431,7 +431,7 @@ function handleDeleteAccount() {
               <div class="flex shrink-0 items-center justify-end">
                 <Button
                   variant="outline"
-                  class="h-9 shrink-0 rounded-md border-destructive/30 bg-background px-3.5 font-medium text-destructive shadow-none hover:bg-destructive/5 hover:text-destructive"
+                  class="h-9 shrink-0 rounded-md px-3.5 font-medium text-destructive hover:bg-destructive/5 hover:text-destructive"
                   @click="handleLogoutAllDevices"
                 >
                   从所有设备登出

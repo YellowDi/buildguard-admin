@@ -3774,7 +3774,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
             <Button
               variant="outline"
               size="sm"
-              class="h-8 gap-1 border-destructive/30 bg-background px-3 text-[14px] font-medium text-destructive shadow-none hover:bg-destructive/5 hover:text-destructive"
+            class="h-8 gap-1 px-3 text-[14px] font-medium text-destructive hover:bg-destructive/5 hover:text-destructive"
               @click="deleteConfirmOpen = true"
             >
               <i class="ri-delete-bin-line text-base" />
@@ -3810,7 +3810,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
             v-if="activeDetailTabActions.addPark"
             variant="outline"
             size="sm"
-            class="h-8 gap-1 border-border/80 bg-background px-3 text-[14px] font-medium shadow-none"
+            class="h-8 gap-1 px-3 text-[14px] font-medium"
             @click="goToCreatePark"
           >
             <i class="ri-add-line text-base" />
@@ -3820,7 +3820,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
             v-if="activeDetailTabActions.addBuilding"
             variant="outline"
             size="sm"
-            class="h-8 gap-1 border-border/80 bg-background px-3 text-[14px] font-medium shadow-none"
+            class="h-8 gap-1 px-3 text-[14px] font-medium"
             @click="handleAddBuilding"
           >
             <i class="ri-building-line text-base" />
@@ -3830,7 +3830,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
             v-if="activeDetailTabActions.addWorkOrder"
             variant="outline"
             size="sm"
-            class="h-8 gap-1 border-border/80 bg-background px-3 text-[14px] font-medium shadow-none"
+            class="h-8 gap-1 px-3 text-[14px] font-medium"
             @click="handleAddWorkOrder"
           >
             <i class="ri-file-add-line text-base" />
@@ -3840,7 +3840,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
             v-if="activeDetailTabActions.addRepairWorkOrder"
             variant="outline"
             size="sm"
-            class="h-8 gap-1 border-border/80 bg-background px-3 text-[14px] font-medium shadow-none"
+            class="h-8 gap-1 px-3 text-[14px] font-medium"
             @click="handleAddRepairWorkOrder"
           >
             <i class="ri-hammer-line text-base" />
@@ -3850,7 +3850,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
             v-if="activeDetailTabActions.addMonitoring"
             variant="outline"
             size="sm"
-            class="h-8 gap-1 border-border/80 bg-background px-3 text-[14px] font-medium shadow-none"
+            class="h-8 gap-1 px-3 text-[14px] font-medium"
             @click="handleAddMonitoring"
           >
             <i class="ri-radar-line text-base" />
@@ -3860,7 +3860,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
             v-if="activeDetailTabActions.addSubAccount"
             variant="outline"
             size="sm"
-            class="h-8 gap-1 border-border/80 bg-background px-3 text-[14px] font-medium shadow-none"
+            class="h-8 gap-1 px-3 text-[14px] font-medium"
             @click="handleAddSubAccount"
           >
             <i class="ri-user-add-line text-base" />
@@ -3870,7 +3870,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
             v-if="activeDetailTabActions.editCustomer"
             variant="outline"
             size="sm"
-            class="h-8 gap-1 border-border/80 bg-background px-3 text-[14px] font-medium shadow-none"
+            class="h-8 gap-1 px-3 text-[14px] font-medium"
             @click="goToCustomerEdit"
           >
             <i class="ri-edit-line text-base" />
@@ -3880,7 +3880,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
             v-if="activeDetailTabActions.back"
             variant="outline"
             size="sm"
-            class="h-8 gap-1 border-border/80 bg-background px-3 text-[14px] font-medium shadow-none"
+            class="h-8 gap-1 px-3 text-[14px] font-medium"
             @click="goBack"
           >
             <i class="ri-arrow-left-line text-base" />
@@ -4551,7 +4551,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
           <Button
             variant="outline"
             size="sm"
-            class="h-8 gap-1 rounded-md border-destructive/40 text-destructive hover:border-destructive/60 hover:bg-destructive/5 hover:text-destructive"
+            class="h-8 gap-1 rounded-md text-destructive hover:bg-destructive/5 hover:text-destructive"
             :disabled="parkDeleteSubmitting"
             @click="promptDeletePark"
           >

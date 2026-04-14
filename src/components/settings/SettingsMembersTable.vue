@@ -1586,7 +1586,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
               v-if="editingRoleId !== null"
               type="button"
               variant="outline"
-              class="border-destructive/30 bg-background font-medium text-destructive shadow-none hover:bg-destructive/5 hover:text-destructive"
+              class="font-medium text-destructive hover:bg-destructive/5 hover:text-destructive"
               :disabled="roleDetailLoading || roleSubmitting || roleDeleteSubmitting"
               @click="promptDeleteEditingRole"
             >
@@ -1686,7 +1686,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
             <Button
               type="button"
               variant="outline"
-              class="border-destructive/30 bg-background font-medium text-destructive shadow-none hover:bg-destructive/5 hover:text-destructive"
+              class="font-medium text-destructive hover:bg-destructive/5 hover:text-destructive"
               :disabled="editDetailLoading || editSubmitting || deleteSubmitting"
               @click="promptDeleteEditingMember"
             >

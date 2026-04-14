@@ -233,7 +233,7 @@ function resetState() {
           <Button
             variant="outline"
             size="sm"
-            class="h-8 rounded-md border-destructive/40 text-destructive hover:border-destructive/60 hover:bg-destructive/5 hover:text-destructive"
+            class="h-8 rounded-md text-destructive hover:bg-destructive/5 hover:text-destructive"
             :disabled="deleteSubmitting"
             @click="promptDeleteBuilding"
           >

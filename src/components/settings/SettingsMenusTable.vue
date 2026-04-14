@@ -1400,7 +1400,7 @@ function formatDateTime(...values: unknown[]) {
               v-if="menuDialogMode === 'edit'"
               type="button"
               variant="outline"
-              class="w-full gap-1 border-destructive/30 bg-background font-medium text-destructive shadow-none hover:bg-destructive/5 hover:text-destructive sm:w-auto"
+              class="w-full gap-1 font-medium text-destructive hover:bg-destructive/5 hover:text-destructive sm:w-auto"
               :disabled="menuSubmitting || deleteSubmitting || editDetailLoading"
               @click="promptDeleteMenu"
             >
@@ -1503,7 +1503,7 @@ function formatDateTime(...values: unknown[]) {
               v-if="buttonDialogMode === 'edit'"
               type="button"
               variant="outline"
-              class="w-full gap-1 border-destructive/30 bg-background font-medium text-destructive shadow-none hover:bg-destructive/5 hover:text-destructive sm:w-auto"
+              class="w-full gap-1 font-medium text-destructive hover:bg-destructive/5 hover:text-destructive sm:w-auto"
               :disabled="buttonSubmitting || buttonDeleteSubmitting || buttonDetailLoading"
               @click="promptDeleteButton"
             >
