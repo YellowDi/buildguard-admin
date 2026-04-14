@@ -242,7 +242,6 @@ const permissionButtonRows = ref<PermissionButtonRow[]>([])
 const rolePermissionResourcesLoading = ref(false)
 const rolePermissionResourcesLoaded = ref(false)
 const rolePermissionResourcesErrorMessage = ref("")
-const rolePermissionTouched = ref(false)
 const collapsedPermissionGroupKeys = ref<string[]>([])
 const globalPermissionOptions = computed(() => buildPermissionOptions(MEMBER_USER_TYPE_OPTIONS.map(option => ({
   label: option.label,
@@ -1004,121 +1003,7 @@ function isButtonSelectable(button: PermissionButtonRow) {
   return !button.menuUuid || selectedMenuSet.value.has(button.menuUuid)
 }
 
-function getRolePermissionScope(roleName: string) {
-  const keyword = roleName.trim().toLowerCase()
-
-  if (!keyword) {
-    return "default"
-  }
-
-  if (keyword.includes("超级") || keyword.includes("管理员") || keyword.includes("admin")) {
-    return "full"
-  }
-
-  if (keyword.includes("查看") || keyword.includes("审计") || keyword.includes("访客")) {
-    return "readonly"
-  }
-
-  if (keyword.includes("检修") || keyword.includes("巡检")) {
-    return "inspection"
-  }
-
-  if (keyword.includes("运营") || keyword.includes("调度")) {
-    return "ops"
-  }
-
-  return "default"
-}
-
-function matchesPermissionKeywords(value: string, keywords: string[]) {
-  const normalized = value.trim().toLowerCase()
-  return keywords.some(keyword => normalized.includes(keyword))
-}
-
-function buildRolePermissionPreview(roleName = "") {
-  const scope = getRolePermissionScope(roleName)
-  const availableMenus = permissionMenuRows.value
-    .filter(row => !matchesPermissionKeywords(row.path, ["login", "signup", "otp"]))
-    .sort((left, right) => left.level - right.level || left.sort - right.sort || left.name.localeCompare(right.name, "zh-Hans-CN"))
-
-  if (availableMenus.length === 0) {
-    return {
-      selectedMenuUuids: [],
-      selectedButtonKeys: [],
-    }
-  }
-
-  const operationalKeywords = ["dashboard", "monitor", "work", "inspection", "service", "customer", "park", "building"]
-  const readonlyMenuSet = new Set(availableMenus
-    .filter(row => !matchesPermissionKeywords(`${row.path} ${row.name}`, ["create", "新增", "添加"]))
-    .map(row => row.uuid)
-    .filter(Boolean))
-
-  const operationalMenuSet = new Set(availableMenus
-    .filter(row => matchesPermissionKeywords(`${row.path} ${row.name}`, operationalKeywords))
-    .map(row => row.uuid)
-    .filter(Boolean))
-
-  let selectedMenuUuids = availableMenus
-    .slice(0, Math.min(6, availableMenus.length))
-    .map(row => row.uuid)
-    .filter(Boolean)
-
-  if (scope === "full") {
-    selectedMenuUuids = availableMenus.map(row => row.uuid).filter(Boolean)
-  } else if (scope === "readonly") {
-    selectedMenuUuids = Array.from(readonlyMenuSet)
-  } else if (scope === "inspection") {
-    selectedMenuUuids = availableMenus
-      .filter(row => matchesPermissionKeywords(`${row.path} ${row.name}`, ["inspection", "巡检", "检修", "building", "work"]))
-      .map(row => row.uuid)
-      .filter(Boolean)
-  } else if (scope === "ops") {
-    selectedMenuUuids = Array.from(operationalMenuSet)
-  }
-
-  const selectedMenuSetValue = new Set(selectedMenuUuids)
-  const selectableButtons = permissionButtonRows.value.filter(row => !row.menuUuid || selectedMenuSetValue.has(row.menuUuid))
-
-  let selectedButtonKeys = selectableButtons
-    .slice(0, Math.min(8, selectableButtons.length))
-    .map(row => row.id)
-
-  if (scope === "full") {
-    selectedButtonKeys = selectableButtons.map(row => row.id)
-  } else if (scope === "readonly") {
-    selectedButtonKeys = selectableButtons
-      .filter(row => matchesPermissionKeywords(`${row.name} ${row.code}`, ["view", "detail", "export", "查询", "查看", "详情", "导出"]))
-      .map(row => row.id)
-  } else if (scope === "inspection") {
-    selectedButtonKeys = selectableButtons
-      .filter(row => matchesPermissionKeywords(`${row.name} ${row.code}`, ["view", "detail", "export", "start", "submit", "edit", "查看", "详情", "导出", "开始", "提交", "编辑"]))
-      .map(row => row.id)
-  } else if (scope === "ops") {
-    selectedButtonKeys = selectableButtons
-      .filter(row => !matchesPermissionKeywords(`${row.name} ${row.code}`, ["delete", "删除"]))
-      .map(row => row.id)
-  }
-
-  return {
-    selectedMenuUuids: Array.from(new Set(selectedMenuUuids)),
-    selectedButtonKeys: Array.from(new Set(selectedButtonKeys)),
-  }
-}
-
-function applyRolePermissionPreview(roleName = "", options?: { force?: boolean }) {
-  if (rolePermissionTouched.value && options?.force !== true) {
-    return
-  }
-
-  const preview = buildRolePermissionPreview(roleName)
-  roleForm.value.selectedMenuUuids = preview.selectedMenuUuids
-  roleForm.value.selectedButtonKeys = preview.selectedButtonKeys
-}
-
 function updateRoleMenuSelection(menuUuid: string, checked: boolean) {
-  rolePermissionTouched.value = true
-
   const nextSelectedMenus = new Set(roleForm.value.selectedMenuUuids)
 
   if (checked) {
@@ -1141,8 +1026,6 @@ function updateRoleMenuSelection(menuUuid: string, checked: boolean) {
 }
 
 function updateRoleButtonSelection(buttonKey: string, checked: boolean) {
-  rolePermissionTouched.value = true
-
   const nextSelectedButtons = new Set(roleForm.value.selectedButtonKeys)
 
   if (checked) {
@@ -1155,8 +1038,6 @@ function updateRoleButtonSelection(buttonKey: string, checked: boolean) {
 }
 
 function toggleMenuButtons(menuUuid: string, checked: boolean) {
-  rolePermissionTouched.value = true
-
   const nextSelectedButtons = new Set(roleForm.value.selectedButtonKeys)
   const menuButtonKeys = getMenuButtonKeys(menuUuid)
 
@@ -1216,8 +1097,6 @@ function getPermissionGroupSelectionState(group: PermissionMenuGroup): boolean |
 }
 
 function togglePermissionGroupRows(group: PermissionMenuGroup, checked: boolean) {
-  rolePermissionTouched.value = true
-
   const nextSelectedMenus = new Set(roleForm.value.selectedMenuUuids)
   const nextSelectedButtons = new Set(roleForm.value.selectedButtonKeys)
 
@@ -1238,7 +1117,6 @@ function togglePermissionGroupRows(group: PermissionMenuGroup, checked: boolean)
 }
 
 function toggleAllMenus(checked: boolean) {
-  rolePermissionTouched.value = true
   roleForm.value.selectedMenuUuids = checked
     ? permissionMenuRows.value.map(row => row.uuid).filter(Boolean)
     : []
@@ -1249,19 +1127,12 @@ function toggleAllMenus(checked: boolean) {
 }
 
 function toggleAllButtons(checked: boolean) {
-  rolePermissionTouched.value = true
-
   if (!checked) {
     roleForm.value.selectedButtonKeys = []
     return
   }
 
   roleForm.value.selectedButtonKeys = selectableButtonRows.value.map(row => row.id)
-}
-
-function applySuggestedPermissions() {
-  rolePermissionTouched.value = false
-  applyRolePermissionPreview(roleForm.value.name, { force: true })
 }
 
 function isPermissionGroupCollapsed(groupKey: string) {
@@ -1495,13 +1366,11 @@ async function openRoleDialog() {
   editingRoleUuid.value = ""
   roleDetailLoading.value = false
   roleDeleteConfirmOpen.value = false
-  rolePermissionTouched.value = false
   roleForm.value = createRoleForm()
   roleDialogOpen.value = true
   await ensureRolePermissionResources({
     force: Boolean(rolePermissionResourcesErrorMessage.value),
   })
-  applyRolePermissionPreview("", { force: true })
 }
 
 async function openEditRoleDialog(role: RoleRow) {
@@ -1509,13 +1378,11 @@ async function openEditRoleDialog(role: RoleRow) {
   editingRoleUuid.value = role.uuid
   roleDetailLoading.value = false
   roleDeleteConfirmOpen.value = false
-  rolePermissionTouched.value = false
   applyRoleSnapshot(role)
   roleDialogOpen.value = true
   await ensureRolePermissionResources({
     force: Boolean(rolePermissionResourcesErrorMessage.value),
   })
-  applyRolePermissionPreview(role.name, { force: true })
 
   if (role.uuid) {
     void loadEditRoleDetail(role)
@@ -1528,7 +1395,6 @@ function closeRoleDialog() {
   editingRoleUuid.value = ""
   roleDetailLoading.value = false
   roleDeleteConfirmOpen.value = false
-  rolePermissionTouched.value = false
 }
 
 function openEditMemberDialog(member: MemberRow) {
@@ -1747,7 +1613,6 @@ async function loadEditRoleDetail(role: RoleRow) {
     editingRoleUuid.value = role.uuid
 
     applyRoleSnapshot(role)
-    applyRolePermissionPreview(role.name)
   } catch (error) {
     handleApiError(error, {
       title: "角色详情加载失败",
@@ -2210,23 +2075,11 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
           <div class="grid min-h-0 flex-1 gap-4 overflow-y-auto px-5 py-4 md:grid-cols-[280px_minmax(0,0.95fr)_minmax(0,1.25fr)] md:gap-0 md:overflow-hidden md:divide-x md:divide-border/70 md:px-0 md:py-0">
             <div class="space-y-4 md:relative md:min-h-0 md:overflow-hidden md:px-5 md:pt-4 md:pb-0">
               <section class="space-y-3">
-                <div class="flex items-start justify-between gap-3">
-                  <div class="space-y-1">
-                    <h3 class="text-sm font-semibold text-foreground">基础信息</h3>
-                    <p class="text-xs leading-5 text-muted-foreground">
-                      当前保存仍只提交名称和备注，页面与按钮权限先用于前端展示。
-                    </p>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    class="h-8 rounded-lg px-3 text-[12px]"
-                    :disabled="rolePermissionResourcesLoading"
-                    @click="applySuggestedPermissions"
-                  >
-                    生成建议权限
-                  </Button>
+                <div class="space-y-1">
+                  <h3 class="text-sm font-semibold text-foreground">基础信息</h3>
+                  <p class="text-xs leading-5 text-muted-foreground">
+                    当前保存仍只提交名称和备注，页面与按钮权限先用于前端展示。
+                  </p>
                 </div>
 
                 <div class="grid gap-3">
