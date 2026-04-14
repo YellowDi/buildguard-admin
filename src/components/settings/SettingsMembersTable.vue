@@ -2075,7 +2075,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
     </Dialog>
 
     <Dialog :open="roleDialogOpen" @update:open="($event ? (roleDialogOpen = true) : closeRoleDialog())">
-      <DialogContent class="flex h-[90vh] max-h-[90vh] flex-col overflow-hidden p-0 sm:max-w-[1120px]">
+      <DialogContent class="flex h-[90vh] max-h-[90vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-[1120px]">
         <DialogHeader class="border-b border-border/70 px-6 pt-6 pb-4">
           <DialogTitle>{{ editingRoleId === null ? "添加权限组" : "编辑权限组" }}</DialogTitle>
           <DialogDescription>
@@ -2084,8 +2084,8 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
         </DialogHeader>
 
         <form class="flex min-h-0 flex-1 flex-col" @submit.prevent="submitRole">
-          <div class="grid min-h-0 flex-1 gap-4 overflow-y-auto px-5 py-4 md:grid-cols-[280px_minmax(0,0.95fr)_minmax(0,1.25fr)] md:gap-0 md:overflow-hidden md:px-0 md:py-0">
-            <div class="space-y-4 md:min-h-0 md:overflow-hidden md:border-r md:border-border/70 md:px-5 md:pt-4 md:pb-0">
+          <div class="grid min-h-0 flex-1 gap-4 overflow-y-auto px-5 py-4 md:grid-cols-[280px_minmax(0,0.95fr)_minmax(0,1.25fr)] md:gap-0 md:overflow-hidden md:divide-x md:divide-border/70 md:px-0 md:py-0">
+            <div class="space-y-4 md:relative md:min-h-0 md:overflow-hidden md:px-5 md:pt-4 md:pb-0">
               <section class="space-y-3">
                 <div class="flex items-start justify-between gap-3">
                   <div class="space-y-1">
@@ -2155,7 +2155,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
               </section>
             </div>
 
-            <div class="space-y-3 md:flex md:min-h-0 md:flex-col md:overflow-hidden md:border-r md:border-border/70 md:px-5 md:pt-4 md:pb-0">
+            <div class="space-y-3 md:relative md:flex md:min-h-0 md:flex-col md:overflow-hidden md:px-5 md:pt-4 md:pb-0">
               <Alert
                 v-if="rolePermissionResourcesErrorMessage"
                 variant="destructive"
@@ -2257,7 +2257,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
               </div>
             </div>
 
-            <div class="space-y-3 md:flex md:min-h-0 md:flex-col md:overflow-hidden md:px-5 md:pt-4 md:pb-0">
+            <div class="space-y-3 md:relative md:flex md:min-h-0 md:flex-col md:overflow-hidden md:px-5 md:pt-4 md:pb-0">
               <div class="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <p class="text-sm font-medium text-foreground">已选页面与按钮</p>
