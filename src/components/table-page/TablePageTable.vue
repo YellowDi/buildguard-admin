@@ -1593,6 +1593,7 @@ onBeforeUnmount(() => {
               :class="
                 cn(
                   tableTheme.head,
+                  tableTheme.headActive,
                   (props.stickyThead || useInternalStickyThead)
                     && 'sticky top-0 z-30 bg-background shadow-[inset_0_-1px_0_var(--border)]',
                 )
