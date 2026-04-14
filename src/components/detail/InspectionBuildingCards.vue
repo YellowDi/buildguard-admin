@@ -115,7 +115,7 @@ watch(() => props.buildings, (buildings) => {
               v-for="building in props.buildings"
               :key="building.key"
               :value="building.key"
-              class="mb-3 min-w-0 overflow-x-clip rounded-md border border-border/55 bg-muted shadow-xs last:mb-0 dark:shadow-(--shadow-card)"
+              class="mb-3 min-w-0 overflow-x-clip rounded-2xl border border-border/55 bg-muted shadow-xs last:mb-0 dark:shadow-(--shadow-card)"
             >
               <AccordionTrigger class="bg-transparent px-3.5 py-3 text-left hover:no-underline">
                 <div class="flex min-w-0 flex-1 items-center gap-3 pr-3">
@@ -142,7 +142,7 @@ watch(() => props.buildings, (buildings) => {
                   当前建筑暂无绑定检测项。
                 </div>
 
-                <div v-else class="overflow-hidden rounded-md bg-background shadow-(--shadow-card)">
+                <div v-else class="overflow-hidden rounded-lg bg-background shadow-(--shadow-card)">
                   <div
                     v-for="(group, groupIndex) in building.groups"
                     :key="`${building.key}-${group.key}`"
