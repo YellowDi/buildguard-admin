@@ -41,7 +41,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
+import { Separator } from "@/components/ui/separator"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import {
   Select,
@@ -50,7 +52,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
 import { handleApiError } from "@/lib/api-errors"
+import { fetchMenus, type MenuRecord } from "@/lib/menus-api"
 import {
   createMember as requestMemberCreate,
   deleteMember as requestMemberDelete,
@@ -66,6 +70,7 @@ import {
   getRoleDetail,
   updateRole as requestRoleUpdate,
 } from "@/lib/roles-api"
+import { fetchSystemButtons, type SystemResourceRecord } from "@/lib/system-resources-api"
 import { SETTINGS_TABLE_PAGE_CLASS } from "@/components/settings/settingsTablePageClass"
 import TablePageTable from "@/components/table-page/TablePageTable.vue"
 import type { TableColumn, TablePageEmptyState } from "@/components/table-page/types"
@@ -116,6 +121,8 @@ type ManualMemberForm = {
 type RoleForm = {
   name: string
   remark: string
+  selectedMenuUuids: string[]
+  selectedButtonKeys: string[]
 }
 
 type EditMemberForm = {
@@ -135,6 +142,26 @@ type MemberActionKey =
   | "view"
   | "invite"
   | "disable"
+
+type PermissionMenuRow = {
+  id: string
+  uuid: string
+  name: string
+  path: string
+  parentUuid: string
+  parentName: string
+  level: number
+  sort: number
+}
+
+type PermissionButtonRow = {
+  id: string
+  uuid: string
+  name: string
+  code: string
+  menuUuid: string
+  menuName: string
+}
 
 const MEMBERS_LOAD_ERROR_MESSAGE = "成员列表加载失败，请稍后重试。"
 const MEMBER_STATUS_UPDATE_ERROR_MESSAGE = "成员状态更新失败，请稍后重试。"
@@ -177,6 +204,13 @@ const deleteConfirmOpen = ref(false)
 const editPermissionGroupOptions = ref<PermissionOption[]>([])
 const searchExpanded = ref(false)
 const searchQuery = ref("")
+const permissionMenuRows = ref<PermissionMenuRow[]>([])
+const permissionButtonRows = ref<PermissionButtonRow[]>([])
+const rolePermissionResourcesLoading = ref(false)
+const rolePermissionResourcesLoaded = ref(false)
+const rolePermissionResourcesErrorMessage = ref("")
+const rolePermissionTouched = ref(false)
+const collapsedPermissionGroupKeys = ref<string[]>([])
 const globalPermissionOptions = computed(() => buildPermissionOptions(MEMBER_USER_TYPE_OPTIONS.map(option => ({
   label: option.label,
 }))))
@@ -419,6 +453,106 @@ const currentErrorMessage = computed(() => (
   activeView.value === "roles" ? rolesErrorMessage.value : errorMessage.value
 ))
 
+const selectedMenuSet = computed(() => new Set(roleForm.value.selectedMenuUuids))
+const selectedButtonSet = computed(() => new Set(roleForm.value.selectedButtonKeys))
+
+const menuRowsByUuid = computed(() => new Map(permissionMenuRows.value.map(row => [row.uuid, row])))
+
+const menuPermissionGroups = computed(() => {
+  const rows = [...permissionMenuRows.value]
+    .sort((left, right) => left.level - right.level || left.sort - right.sort || left.name.localeCompare(right.name, "zh-Hans-CN"))
+
+  const groups = new Map<string, {
+    key: string
+    title: string
+    path: string
+    rows: Array<PermissionMenuRow & { depth: number }>
+  }>()
+
+  const resolveRoot = (row: PermissionMenuRow) => {
+    let current = row
+    let guard = 0
+
+    while (current.parentUuid && menuRowsByUuid.value.has(current.parentUuid) && guard < 16) {
+      current = menuRowsByUuid.value.get(current.parentUuid) as PermissionMenuRow
+      guard += 1
+    }
+
+    return current
+  }
+
+  rows.forEach((row) => {
+    const root = resolveRoot(row)
+    const depth = Math.max(0, row.level - root.level)
+    const key = root.uuid || root.id
+    const current = groups.get(key)
+
+    if (current) {
+      current.rows.push({
+        ...row,
+        depth,
+      })
+      return
+    }
+
+    groups.set(key, {
+      key,
+      title: root.name,
+      path: root.path,
+      rows: [{
+        ...row,
+        depth,
+      }],
+    })
+  })
+
+  return Array.from(groups.values())
+    .sort((left, right) => left.title.localeCompare(right.title, "zh-Hans-CN"))
+})
+
+const selectableButtonRows = computed(() => permissionButtonRows.value.filter((row) => (
+  !row.menuUuid || selectedMenuSet.value.has(row.menuUuid)
+)))
+
+const selectedPermissionMenus = computed(() => permissionMenuRows.value
+  .filter(row => row.uuid && selectedMenuSet.value.has(row.uuid))
+  .sort((left, right) => left.level - right.level || left.sort - right.sort || left.name.localeCompare(right.name, "zh-Hans-CN")))
+
+const selectedMenuPermissionPanels = computed(() => selectedPermissionMenus.value.map(menu => ({
+  ...menu,
+  buttons: permissionButtonRows.value
+    .filter(button => button.menuUuid === menu.uuid)
+    .sort((left, right) => left.name.localeCompare(right.name, "zh-Hans-CN") || left.code.localeCompare(right.code, "zh-Hans-CN")),
+})))
+
+const selectedMenuCount = computed(() => roleForm.value.selectedMenuUuids.length)
+const selectedButtonCount = computed(() => roleForm.value.selectedButtonKeys.filter(key => selectableButtonRows.value.some(row => row.id === key)).length)
+const menuSelectionState = computed<boolean | "indeterminate">(() => {
+  if (permissionMenuRows.value.length === 0 || selectedMenuCount.value === 0) {
+    return false
+  }
+
+  if (selectedMenuCount.value >= permissionMenuRows.value.length) {
+    return true
+  }
+
+  return "indeterminate"
+})
+
+const buttonSelectionState = computed<boolean | "indeterminate">(() => {
+  if (selectableButtonRows.value.length === 0 || selectedButtonCount.value === 0) {
+    return false
+  }
+
+  if (selectedButtonCount.value >= selectableButtonRows.value.length) {
+    return true
+  }
+
+  return "indeterminate"
+})
+
+let rolePermissionResourcesPromise: Promise<void> | null = null
+
 async function loadAllData() {
   await Promise.allSettled([
     loadMembers(),
@@ -461,6 +595,71 @@ async function loadRoles() {
     })
   } finally {
     rolesLoading.value = false
+  }
+}
+
+async function ensureRolePermissionResources(options?: { force?: boolean }) {
+  const force = options?.force === true
+
+  if (!force && rolePermissionResourcesLoaded.value) {
+    return
+  }
+
+  if (rolePermissionResourcesPromise) {
+    return rolePermissionResourcesPromise
+  }
+
+  rolePermissionResourcesLoading.value = true
+  rolePermissionResourcesErrorMessage.value = ""
+
+  rolePermissionResourcesPromise = (async () => {
+    const [menusResult, buttonsResult] = await Promise.allSettled([
+      fetchMenus({
+        Name: "",
+        Status: 0,
+        PageNum: 0,
+        PageSize: 0,
+      }),
+      fetchSystemButtons(),
+    ])
+
+    let errorMessages: string[] = []
+
+    if (menusResult.status === "fulfilled") {
+      permissionMenuRows.value = menusResult.value.list.map((item, index) => normalizePermissionMenu(item, index))
+    } else {
+      permissionMenuRows.value = []
+      errorMessages = [
+        ...errorMessages,
+        handleApiError(menusResult.reason, {
+          mode: "silent",
+          fallback: "页面权限列表加载失败，请稍后重试。",
+        }),
+      ]
+    }
+
+    if (buttonsResult.status === "fulfilled") {
+      permissionButtonRows.value = buttonsResult.value.list.map((item, index) => normalizePermissionButton(item, index))
+    } else {
+      permissionButtonRows.value = []
+      errorMessages = [
+        ...errorMessages,
+        handleApiError(buttonsResult.reason, {
+          mode: "silent",
+          fallback: "按钮权限列表加载失败，请稍后重试。",
+        }),
+      ]
+    }
+
+    rolePermissionResourcesLoaded.value = true
+    rolePermissionResourcesErrorMessage.value = errorMessages.join(" ")
+  })()
+
+  try {
+    await rolePermissionResourcesPromise
+  } finally {
+    rolePermissionResourcesPromise = null
+    rolePermissionResourcesLoading.value = false
   }
 }
 
@@ -532,6 +731,34 @@ function normalizeRoleRow(raw: unknown, index: number): RoleRow {
     remark: toText(record.Remark, record.remark, "-"),
     createdAt: toText(record.CreatedAt, record.createdAt, "-"),
     updatedAt: toText(record.UpdatedAt, record.updatedAt, "-"),
+  }
+}
+
+function normalizePermissionMenu(raw: MenuRecord, index: number): PermissionMenuRow {
+  const id = toNumber(raw.Id, index + 1)
+
+  return {
+    id: toText(raw.Uuid, `permission-menu-${id}`),
+    uuid: toText(raw.Uuid),
+    name: toText(raw.Name, `页面 ${id}`),
+    path: toText(raw.Path, "/"),
+    parentUuid: toText(raw.ParentUuid),
+    parentName: toText(raw.ParentName, "顶级页面"),
+    level: toNumber(raw.Level, 0),
+    sort: toNumber(raw.Sort, 0),
+  }
+}
+
+function normalizePermissionButton(raw: SystemResourceRecord, index: number): PermissionButtonRow {
+  const numericId = toNumber(raw.Id, index + 1)
+
+  return {
+    id: toText(raw.Uuid, raw.Id, `permission-button-${numericId}`),
+    uuid: toText(raw.Uuid),
+    name: toText(raw.Name, `按钮 ${numericId}`),
+    code: toText(raw.Code, "-"),
+    menuUuid: toText(raw.MenuUuid),
+    menuName: toText(raw.MenuName, "未绑定页面"),
   }
 }
 
@@ -651,6 +878,225 @@ function getAssignablePermissionOptions(member: MemberRow) {
       ? [{ label: member.permissionGroup }]
       : []),
   ])
+}
+
+function getMenuButtonKeys(menuUuid: string) {
+  return permissionButtonRows.value
+    .filter(row => row.menuUuid === menuUuid)
+    .map(row => row.id)
+}
+
+function isButtonSelectable(button: PermissionButtonRow) {
+  return !button.menuUuid || selectedMenuSet.value.has(button.menuUuid)
+}
+
+function getRolePermissionScope(roleName: string) {
+  const keyword = roleName.trim().toLowerCase()
+
+  if (!keyword) {
+    return "default"
+  }
+
+  if (keyword.includes("超级") || keyword.includes("管理员") || keyword.includes("admin")) {
+    return "full"
+  }
+
+  if (keyword.includes("查看") || keyword.includes("审计") || keyword.includes("访客")) {
+    return "readonly"
+  }
+
+  if (keyword.includes("检修") || keyword.includes("巡检")) {
+    return "inspection"
+  }
+
+  if (keyword.includes("运营") || keyword.includes("调度")) {
+    return "ops"
+  }
+
+  return "default"
+}
+
+function matchesPermissionKeywords(value: string, keywords: string[]) {
+  const normalized = value.trim().toLowerCase()
+  return keywords.some(keyword => normalized.includes(keyword))
+}
+
+function buildRolePermissionPreview(roleName = "") {
+  const scope = getRolePermissionScope(roleName)
+  const availableMenus = permissionMenuRows.value
+    .filter(row => !matchesPermissionKeywords(row.path, ["login", "signup", "otp"]))
+    .sort((left, right) => left.level - right.level || left.sort - right.sort || left.name.localeCompare(right.name, "zh-Hans-CN"))
+
+  if (availableMenus.length === 0) {
+    return {
+      selectedMenuUuids: [],
+      selectedButtonKeys: [],
+    }
+  }
+
+  const operationalKeywords = ["dashboard", "monitor", "work", "inspection", "service", "customer", "park", "building"]
+  const readonlyMenuSet = new Set(availableMenus
+    .filter(row => !matchesPermissionKeywords(`${row.path} ${row.name}`, ["create", "新增", "添加"]))
+    .map(row => row.uuid)
+    .filter(Boolean))
+
+  const operationalMenuSet = new Set(availableMenus
+    .filter(row => matchesPermissionKeywords(`${row.path} ${row.name}`, operationalKeywords))
+    .map(row => row.uuid)
+    .filter(Boolean))
+
+  let selectedMenuUuids = availableMenus
+    .slice(0, Math.min(6, availableMenus.length))
+    .map(row => row.uuid)
+    .filter(Boolean)
+
+  if (scope === "full") {
+    selectedMenuUuids = availableMenus.map(row => row.uuid).filter(Boolean)
+  } else if (scope === "readonly") {
+    selectedMenuUuids = Array.from(readonlyMenuSet)
+  } else if (scope === "inspection") {
+    selectedMenuUuids = availableMenus
+      .filter(row => matchesPermissionKeywords(`${row.path} ${row.name}`, ["inspection", "巡检", "检修", "building", "work"]))
+      .map(row => row.uuid)
+      .filter(Boolean)
+  } else if (scope === "ops") {
+    selectedMenuUuids = Array.from(operationalMenuSet)
+  }
+
+  const selectedMenuSetValue = new Set(selectedMenuUuids)
+  const selectableButtons = permissionButtonRows.value.filter(row => !row.menuUuid || selectedMenuSetValue.has(row.menuUuid))
+
+  let selectedButtonKeys = selectableButtons
+    .slice(0, Math.min(8, selectableButtons.length))
+    .map(row => row.id)
+
+  if (scope === "full") {
+    selectedButtonKeys = selectableButtons.map(row => row.id)
+  } else if (scope === "readonly") {
+    selectedButtonKeys = selectableButtons
+      .filter(row => matchesPermissionKeywords(`${row.name} ${row.code}`, ["view", "detail", "export", "查询", "查看", "详情", "导出"]))
+      .map(row => row.id)
+  } else if (scope === "inspection") {
+    selectedButtonKeys = selectableButtons
+      .filter(row => matchesPermissionKeywords(`${row.name} ${row.code}`, ["view", "detail", "export", "start", "submit", "edit", "查看", "详情", "导出", "开始", "提交", "编辑"]))
+      .map(row => row.id)
+  } else if (scope === "ops") {
+    selectedButtonKeys = selectableButtons
+      .filter(row => !matchesPermissionKeywords(`${row.name} ${row.code}`, ["delete", "删除"]))
+      .map(row => row.id)
+  }
+
+  return {
+    selectedMenuUuids: Array.from(new Set(selectedMenuUuids)),
+    selectedButtonKeys: Array.from(new Set(selectedButtonKeys)),
+  }
+}
+
+function applyRolePermissionPreview(roleName = "", options?: { force?: boolean }) {
+  if (rolePermissionTouched.value && options?.force !== true) {
+    return
+  }
+
+  const preview = buildRolePermissionPreview(roleName)
+  roleForm.value.selectedMenuUuids = preview.selectedMenuUuids
+  roleForm.value.selectedButtonKeys = preview.selectedButtonKeys
+}
+
+function updateRoleMenuSelection(menuUuid: string, checked: boolean) {
+  rolePermissionTouched.value = true
+
+  const nextSelectedMenus = new Set(roleForm.value.selectedMenuUuids)
+
+  if (checked) {
+    nextSelectedMenus.add(menuUuid)
+  } else {
+    nextSelectedMenus.delete(menuUuid)
+  }
+
+  roleForm.value.selectedMenuUuids = Array.from(nextSelectedMenus)
+
+  if (!checked) {
+    const nextSelectedButtons = new Set(roleForm.value.selectedButtonKeys)
+
+    getMenuButtonKeys(menuUuid).forEach((buttonKey) => {
+      nextSelectedButtons.delete(buttonKey)
+    })
+
+    roleForm.value.selectedButtonKeys = Array.from(nextSelectedButtons)
+  }
+}
+
+function updateRoleButtonSelection(buttonKey: string, checked: boolean) {
+  rolePermissionTouched.value = true
+
+  const nextSelectedButtons = new Set(roleForm.value.selectedButtonKeys)
+
+  if (checked) {
+    nextSelectedButtons.add(buttonKey)
+  } else {
+    nextSelectedButtons.delete(buttonKey)
+  }
+
+  roleForm.value.selectedButtonKeys = Array.from(nextSelectedButtons)
+}
+
+function toggleMenuButtons(menuUuid: string, checked: boolean) {
+  rolePermissionTouched.value = true
+
+  const nextSelectedButtons = new Set(roleForm.value.selectedButtonKeys)
+  const menuButtonKeys = getMenuButtonKeys(menuUuid)
+
+  if (checked) {
+    menuButtonKeys.forEach((buttonKey) => {
+      nextSelectedButtons.add(buttonKey)
+    })
+  } else {
+    menuButtonKeys.forEach((buttonKey) => {
+      nextSelectedButtons.delete(buttonKey)
+    })
+  }
+
+  roleForm.value.selectedButtonKeys = Array.from(nextSelectedButtons)
+}
+
+function toggleAllMenus(checked: boolean) {
+  rolePermissionTouched.value = true
+  roleForm.value.selectedMenuUuids = checked
+    ? permissionMenuRows.value.map(row => row.uuid).filter(Boolean)
+    : []
+
+  if (!checked) {
+    roleForm.value.selectedButtonKeys = []
+  }
+}
+
+function toggleAllButtons(checked: boolean) {
+  rolePermissionTouched.value = true
+
+  if (!checked) {
+    roleForm.value.selectedButtonKeys = []
+    return
+  }
+
+  roleForm.value.selectedButtonKeys = selectableButtonRows.value.map(row => row.id)
+}
+
+function applySuggestedPermissions() {
+  rolePermissionTouched.value = false
+  applyRolePermissionPreview(roleForm.value.name, { force: true })
+}
+
+function isPermissionGroupCollapsed(groupKey: string) {
+  return collapsedPermissionGroupKeys.value.includes(groupKey)
+}
+
+function togglePermissionGroup(groupKey: string) {
+  if (isPermissionGroupCollapsed(groupKey)) {
+    collapsedPermissionGroupKeys.value = collapsedPermissionGroupKeys.value.filter(key => key !== groupKey)
+    return
+  }
+
+  collapsedPermissionGroupKeys.value = [...collapsedPermissionGroupKeys.value, groupKey]
 }
 
 function getDepartmentMatch(departmentName: string) {
@@ -800,7 +1246,7 @@ function handleMemberAction(actionKey: MemberActionKey, member?: MemberRow) {
   }
 
   if (actionKey === "create-role") {
-    openRoleDialog()
+    void openRoleDialog()
     return
   }
 
@@ -845,6 +1291,8 @@ function createRoleForm(): RoleForm {
   return {
     name: "",
     remark: "",
+    selectedMenuUuids: [],
+    selectedButtonKeys: [],
   }
 }
 
@@ -864,22 +1312,32 @@ function openManualMemberDialog() {
   manualDialogOpen.value = true
 }
 
-function openRoleDialog() {
+async function openRoleDialog() {
   editingRoleId.value = null
   editingRoleUuid.value = ""
   roleDetailLoading.value = false
   roleDeleteConfirmOpen.value = false
+  rolePermissionTouched.value = false
   roleForm.value = createRoleForm()
   roleDialogOpen.value = true
+  await ensureRolePermissionResources({
+    force: Boolean(rolePermissionResourcesErrorMessage.value),
+  })
+  applyRolePermissionPreview("", { force: true })
 }
 
-function openEditRoleDialog(role: RoleRow) {
+async function openEditRoleDialog(role: RoleRow) {
   editingRoleId.value = role.id
   editingRoleUuid.value = role.uuid
   roleDetailLoading.value = false
   roleDeleteConfirmOpen.value = false
+  rolePermissionTouched.value = false
   applyRoleSnapshot(role)
   roleDialogOpen.value = true
+  await ensureRolePermissionResources({
+    force: Boolean(rolePermissionResourcesErrorMessage.value),
+  })
+  applyRolePermissionPreview(role.name, { force: true })
 
   if (role.uuid) {
     void loadEditRoleDetail(role)
@@ -892,6 +1350,7 @@ function closeRoleDialog() {
   editingRoleUuid.value = ""
   roleDetailLoading.value = false
   roleDeleteConfirmOpen.value = false
+  rolePermissionTouched.value = false
 }
 
 function openEditMemberDialog(member: MemberRow) {
@@ -1083,6 +1542,8 @@ function applyRoleSnapshot(role: RoleRow) {
   roleForm.value = {
     name: role.name,
     remark: role.remark === "-" ? "" : role.remark,
+    selectedMenuUuids: roleForm.value.selectedMenuUuids,
+    selectedButtonKeys: roleForm.value.selectedButtonKeys,
   }
 }
 
@@ -1108,6 +1569,7 @@ async function loadEditRoleDetail(role: RoleRow) {
     editingRoleUuid.value = role.uuid
 
     applyRoleSnapshot(role)
+    applyRolePermissionPreview(role.name)
   } catch (error) {
     handleApiError(error, {
       title: "角色详情加载失败",
@@ -1558,41 +2020,284 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
     </Dialog>
 
     <Dialog :open="roleDialogOpen" @update:open="($event ? (roleDialogOpen = true) : closeRoleDialog())">
-      <DialogContent class="sm:max-w-[520px]">
-        <DialogHeader>
+      <DialogContent class="flex h-[90vh] max-h-[90vh] flex-col overflow-hidden p-0 sm:max-w-[1120px]">
+        <DialogHeader class="border-b border-border/70 px-6 pt-6 pb-4">
           <DialogTitle>{{ editingRoleId === null ? "添加权限组" : "编辑权限组" }}</DialogTitle>
           <DialogDescription>
-            {{ editingRoleId === null ? "填写权限组名称和备注后，将调用权限组新建接口保存。" : "修改权限组名称和备注后，保存时会调用权限组更新接口。" }}
+            {{ editingRoleId === null ? "填写基础信息，并预配置页面访问和操作按钮的可见范围。" : "调整权限组基础信息，并预览后续接入权限接口后的页面与按钮控制范围。" }}
           </DialogDescription>
         </DialogHeader>
 
-        <form class="grid gap-4" @submit.prevent="submitRole">
-          <p v-if="roleDetailLoading" class="text-sm text-muted-foreground">
-            正在加载权限组详情并回填表单...
-          </p>
+        <form class="flex min-h-0 flex-1 flex-col" @submit.prevent="submitRole">
+          <div class="grid min-h-0 flex-1 gap-4 overflow-y-auto px-5 py-4 md:grid-cols-[280px_minmax(0,0.95fr)_minmax(0,1.25fr)] md:gap-0 md:overflow-hidden md:px-0 md:py-0">
+            <div class="space-y-4 md:min-h-0 md:overflow-hidden md:border-r md:border-border/70 md:px-5 md:py-4">
+              <section class="space-y-3">
+                <div class="flex items-start justify-between gap-3">
+                  <div class="space-y-1">
+                    <h3 class="text-sm font-semibold text-foreground">基础信息</h3>
+                    <p class="text-xs leading-5 text-muted-foreground">
+                      当前保存仍只提交名称和备注，页面与按钮权限先用于前端展示。
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    class="h-8 rounded-lg px-3 text-[12px]"
+                    :disabled="rolePermissionResourcesLoading"
+                    @click="applySuggestedPermissions"
+                  >
+                    生成建议权限
+                  </Button>
+                </div>
 
-          <div class="grid gap-2">
-            <label class="text-sm font-medium text-foreground" for="role-name">权限组名称</label>
-            <Input id="role-name" v-model="roleForm.name" :disabled="roleDetailLoading" placeholder="请输入权限组名称" />
+                <div class="grid gap-3">
+                  <div class="grid gap-2">
+                    <label class="text-sm font-medium text-foreground" for="role-name">权限组名称</label>
+                    <Input id="role-name" v-model="roleForm.name" :disabled="roleDetailLoading" placeholder="请输入权限组名称" />
+                  </div>
+
+                  <div class="grid gap-2">
+                    <label class="text-sm font-medium text-foreground" for="role-remark">备注</label>
+                    <Textarea
+                      id="role-remark"
+                      v-model="roleForm.remark"
+                      :disabled="roleDetailLoading"
+                      rows="5"
+                      placeholder="请输入权限组备注，例如：可查看巡检与工单，但不包含删除操作。"
+                    />
+                  </div>
+                </div>
+              </section>
+
+              <Separator class="bg-border/70" />
+
+              <section class="space-y-3">
+                <div class="space-y-1">
+                  <h3 class="text-sm font-semibold text-foreground">权限概览</h3>
+                  <p class="text-xs leading-5 text-muted-foreground">
+                    用于模拟后续权限接口接入后的配置效果。
+                  </p>
+                </div>
+
+                <div class="grid gap-2 text-sm">
+                  <div class="flex items-center justify-between gap-3 border-b border-border/60 py-2">
+                    <span class="text-muted-foreground">已选页面</span>
+                    <span class="font-medium text-foreground">{{ selectedMenuCount }} / {{ permissionMenuRows.length }}</span>
+                  </div>
+
+                  <div class="flex items-center justify-between gap-3 border-b border-border/60 py-2">
+                    <span class="text-muted-foreground">已选按钮</span>
+                    <span class="font-medium text-foreground">{{ selectedButtonCount }} / {{ selectableButtonRows.length }}</span>
+                  </div>
+
+                  <div class="pt-1">
+                    <p class="text-xs leading-5 text-muted-foreground">
+                      取消页面访问后，该页面下的操作按钮会同步取消选中，避免出现“按钮可见但页面不可达”的展示状态。
+                    </p>
+                  </div>
+                </div>
+              </section>
+            </div>
+
+            <div class="space-y-3 md:flex md:min-h-0 md:flex-col md:overflow-hidden md:border-r md:border-border/70 md:px-5 md:py-4">
+              <Alert
+                v-if="rolePermissionResourcesErrorMessage"
+                variant="destructive"
+                class="border-destructive/20 bg-destructive/3"
+              >
+                <i class="ri-error-warning-line text-base" />
+                <AlertTitle>权限资源加载失败</AlertTitle>
+                <AlertDescription>{{ rolePermissionResourcesErrorMessage }}</AlertDescription>
+              </Alert>
+
+              <div class="flex flex-wrap items-start justify-between gap-3">
+                <div class="space-y-1">
+                  <div class="flex items-center gap-2">
+                    <h3 class="text-sm font-semibold text-foreground">待选页面</h3>
+                    <span v-if="rolePermissionResourcesLoading" class="text-xs text-muted-foreground">加载中...</span>
+                  </div>
+                  <p class="text-xs leading-5 text-muted-foreground">
+                    选择后会流转到右侧，并在对应页面下展示可选按钮。
+                  </p>
+                </div>
+
+                <label class="inline-flex items-center gap-2 text-sm text-foreground">
+                  <Checkbox
+                    :model-value="menuSelectionState"
+                    :disabled="permissionMenuRows.length === 0"
+                    @update:model-value="toggleAllMenus($event === true)"
+                  />
+                  <span>全选页面</span>
+                </label>
+              </div>
+
+              <div v-if="roleDetailLoading" class="rounded-xl border border-dashed border-border/70 px-4 py-3 text-sm text-muted-foreground">
+                正在加载权限组详情并回填表单...
+              </div>
+
+              <div v-if="menuPermissionGroups.length === 0 && !rolePermissionResourcesLoading" class="border-b border-border/60 py-4 text-sm text-muted-foreground">
+                暂无可配置页面。
+              </div>
+
+              <div v-else class="min-h-0 flex-1 overflow-y-auto pr-5 md:mr-[-20px] [scrollbar-gutter:stable]">
+                <div class="space-y-4 md:pr-4">
+                  <div
+                    v-for="group in menuPermissionGroups"
+                    :key="group.key"
+                    class="border-b border-border/60 pb-3 last:border-b-0"
+                  >
+                    <button
+                      type="button"
+                      class="mb-1 flex w-full items-center justify-between gap-3 py-1 text-left"
+                      @click="togglePermissionGroup(group.key)"
+                    >
+                      <span class="flex min-w-0 items-center gap-2">
+                        <i
+                          class="ri-arrow-right-s-line text-sm text-muted-foreground transition-transform"
+                          :class="isPermissionGroupCollapsed(group.key) ? '' : 'rotate-90'"
+                        />
+                        <span class="min-w-0">
+                          <span class="block truncate text-sm font-medium text-foreground">{{ group.title }}</span>
+                          <span class="block truncate text-xs text-muted-foreground">{{ group.path || "顶级导航分组" }}</span>
+                        </span>
+                      </span>
+                      <span class="text-xs text-muted-foreground">
+                        {{ group.rows.filter(item => selectedMenuSet.has(item.uuid)).length }}/{{ group.rows.length }}
+                      </span>
+                    </button>
+
+                    <div v-if="!isPermissionGroupCollapsed(group.key)" class="grid gap-1">
+                      <label
+                        v-for="row in group.rows"
+                        :key="row.id"
+                        class="flex items-start gap-3 py-2"
+                        :style="{ paddingLeft: `${row.depth * 18}px` }"
+                      >
+                        <Checkbox
+                          :model-value="selectedMenuSet.has(row.uuid)"
+                          @update:model-value="updateRoleMenuSelection(row.uuid, $event === true)"
+                        />
+                        <span class="min-w-0 flex-1">
+                          <span class="flex items-center gap-2">
+                            <span class="truncate text-sm text-foreground">{{ row.name }}</span>
+                            <span class="text-[11px] text-muted-foreground">L{{ row.level }}</span>
+                          </span>
+                          <span class="mt-0.5 block truncate font-mono text-[12px] text-muted-foreground">{{ row.path }}</span>
+                          <span v-if="row.depth > 0" class="mt-0.5 block text-[11px] text-muted-foreground">
+                            {{ row.parentName }}
+                          </span>
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="space-y-3 md:flex md:min-h-0 md:flex-col md:overflow-hidden md:px-5 md:py-4">
+              <div class="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <p class="text-sm font-medium text-foreground">已选页面与按钮</p>
+                  <p class="text-xs text-muted-foreground">页面选中后，在这里继续选择可操作按钮</p>
+                </div>
+                <label class="inline-flex items-center gap-2 text-sm text-foreground">
+                  <Checkbox
+                    :model-value="buttonSelectionState"
+                    :disabled="selectableButtonRows.length === 0"
+                    @update:model-value="toggleAllButtons($event === true)"
+                  />
+                  <span>全选按钮</span>
+                </label>
+              </div>
+
+              <div v-if="selectedMenuPermissionPanels.length === 0" class="py-6 text-sm text-muted-foreground">
+                先从中间列选择页面，右侧才会显示对应页面及按钮。
+              </div>
+
+              <div v-else class="min-h-0 flex-1 overflow-y-auto pr-5 md:mr-[-20px] [scrollbar-gutter:stable]">
+                <div class="space-y-4 md:pr-4">
+                  <div
+                    v-for="menu in selectedMenuPermissionPanels"
+                    :key="menu.uuid || menu.id"
+                    class="border-b border-border/70 pb-4 last:border-b-0"
+                  >
+                    <div class="flex items-start justify-between gap-3 py-1">
+                      <div class="min-w-0">
+                        <div class="flex items-center gap-2">
+                          <p class="truncate text-sm font-medium text-foreground">{{ menu.name }}</p>
+                          <span class="text-[11px] text-muted-foreground">L{{ menu.level }}</span>
+                        </div>
+                        <p class="mt-0.5 truncate font-mono text-[12px] text-muted-foreground">{{ menu.path }}</p>
+                        <p class="mt-1 text-xs text-muted-foreground">{{ menu.parentName || "顶级页面" }}</p>
+                      </div>
+                      <div class="flex items-center gap-2">
+                        <Button
+                          v-if="menu.buttons.length > 0"
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          class="h-7 px-2 text-[12px] text-muted-foreground"
+                          @click="toggleMenuButtons(menu.uuid, true)"
+                        >
+                          本页全选按钮
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          class="h-7 px-2 text-[12px] text-muted-foreground"
+                          @click="updateRoleMenuSelection(menu.uuid, false)"
+                        >
+                          移除
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div v-if="menu.buttons.length === 0" class="pt-2 text-xs text-muted-foreground">
+                      当前页面下暂无可配置按钮。
+                    </div>
+
+                    <div v-else class="mt-2 grid gap-x-5 gap-y-1 md:grid-cols-2">
+                      <label
+                        v-for="button in menu.buttons"
+                        :key="button.id"
+                        class="flex items-start gap-3 py-2"
+                      >
+                        <Checkbox
+                          :model-value="selectedButtonSet.has(button.id)"
+                          :disabled="!isButtonSelectable(button)"
+                          @update:model-value="updateRoleButtonSelection(button.id, $event === true)"
+                        />
+                        <span class="min-w-0 flex-1">
+                          <span class="truncate text-sm text-foreground">{{ button.name }}</span>
+                          <span class="mt-0.5 block truncate font-mono text-[12px] text-muted-foreground">{{ button.code }}</span>
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div class="grid gap-2">
-            <label class="text-sm font-medium text-foreground" for="role-remark">备注</label>
-            <Input id="role-remark" v-model="roleForm.remark" :disabled="roleDetailLoading" placeholder="请输入权限组备注" />
-          </div>
+          <Separator class="bg-border/70" />
 
-          <DialogFooter :class="editingRoleId === null ? 'pt-2' : 'pt-2 sm:justify-between'">
-            <Button
-              v-if="editingRoleId !== null"
-              type="button"
-              variant="outline"
-              class="font-medium text-destructive hover:bg-destructive/5 hover:text-destructive"
-              :disabled="roleDetailLoading || roleSubmitting || roleDeleteSubmitting"
-              @click="promptDeleteEditingRole"
-            >
-              {{ roleDeleteSubmitting ? "删除中..." : "删除权限组" }}
-            </Button>
+          <DialogFooter :class="editingRoleId === null ? 'px-6 py-4' : 'px-6 py-4 sm:justify-between'">
+            <div class="text-xs leading-5 text-muted-foreground sm:max-w-[420px]">
+              当前阶段仅做权限配置样式展示；点击保存时，仍只会调用权限组名称与备注相关接口。
+            </div>
             <div class="flex items-center justify-end gap-2">
+              <Button
+                v-if="editingRoleId !== null"
+                type="button"
+                variant="outline"
+                class="font-medium text-destructive hover:bg-destructive/5 hover:text-destructive"
+                :disabled="roleDetailLoading || roleSubmitting || roleDeleteSubmitting"
+                @click="promptDeleteEditingRole"
+              >
+                {{ roleDeleteSubmitting ? "删除中..." : "删除权限组" }}
+              </Button>
               <Button type="button" variant="outline" :disabled="roleDetailLoading || roleSubmitting || roleDeleteSubmitting" @click="closeRoleDialog">
                 取消
               </Button>
