@@ -175,6 +175,22 @@ type PermissionMenuGroup = {
   visibleRows: Array<PermissionMenuRow & { depth: number }>
 }
 
+type SelectedPermissionMenuPanel = PermissionMenuRow & {
+  depth: number
+  rootKey: string
+  rootName: string
+  rootPath: string
+  buttons: PermissionPanelButtonRow[]
+}
+
+type SelectedPermissionMenuGroup = {
+  key: string
+  title: string
+  path: string
+  panels: SelectedPermissionMenuPanel[]
+  visiblePanels: SelectedPermissionMenuPanel[]
+}
+
 const MEMBERS_LOAD_ERROR_MESSAGE = "成员列表加载失败，请稍后重试。"
 const MEMBER_STATUS_UPDATE_ERROR_MESSAGE = "成员状态更新失败，请稍后重试。"
 const MEMBER_UPDATE_ERROR_MESSAGE = "成员信息更新失败，请稍后重试。"
@@ -555,7 +571,7 @@ const selectedPermissionMenus = computed(() => permissionMenuRows.value
   .filter(row => row.uuid && selectedMenuSet.value.has(row.uuid))
   .sort((left, right) => left.level - right.level || left.sort - right.sort || left.name.localeCompare(right.name, "zh-Hans-CN")))
 
-const selectedMenuPermissionPanels = computed(() => {
+const selectedMenuPermissionPanels = computed<SelectedPermissionMenuPanel[]>(() => {
   const buttonRowsByMenu = new Map<string, PermissionPanelButtonRow[]>()
 
   allPermissionButtonRows.value
@@ -574,7 +590,9 @@ const selectedMenuPermissionPanels = computed(() => {
       return {
         ...menu,
         depth: Math.max(0, menu.level - root.level),
+        rootKey: root.uuid || root.id,
         rootName: root.name,
+        rootPath: root.path,
         buttons: buttonRowsByMenu.get(menu.uuid) ?? [],
       }
     })
@@ -584,6 +602,41 @@ const selectedMenuPermissionPanels = computed(() => {
       || left.sort - right.sort
       || left.name.localeCompare(right.name, "zh-Hans-CN")
     ))
+})
+
+const selectedMenuPermissionGroups = computed<SelectedPermissionMenuGroup[]>(() => {
+  const groups = new Map<string, SelectedPermissionMenuGroup>()
+
+  selectedMenuPermissionPanels.value.forEach((panel) => {
+    const current = groups.get(panel.rootKey)
+
+    if (current) {
+      current.panels.push(panel)
+      return
+    }
+
+    groups.set(panel.rootKey, {
+      key: panel.rootKey,
+      title: panel.rootName,
+      path: panel.rootPath,
+      panels: [panel],
+      visiblePanels: [],
+    })
+  })
+
+  return Array.from(groups.values())
+    .map((group) => {
+      const hasNestedPanels = group.panels.some(panel => panel.depth > 0)
+      const visiblePanels = hasNestedPanels
+        ? group.panels.filter(panel => !(panel.depth === 0 && panel.name === group.title && panel.path === group.path))
+        : group.panels
+
+      return {
+        ...group,
+        visiblePanels,
+      }
+    })
+    .sort((left, right) => left.title.localeCompare(right.title, "zh-Hans-CN"))
 })
 
 const selectedMenuCount = computed(() => roleForm.value.selectedMenuUuids.length)
@@ -2346,86 +2399,86 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
 
               <Separator class="bg-border/70" />
 
-              <div v-if="selectedMenuPermissionPanels.length === 0" class="py-6 text-sm text-muted-foreground">
+              <div v-if="selectedMenuPermissionGroups.length === 0" class="py-6 text-sm text-muted-foreground">
                 先从中间列选择页面，右侧才会显示对应页面及按钮。
               </div>
 
               <div v-else class="min-h-0 flex-1 overflow-y-auto pr-5 md:mr-[-20px] [scrollbar-gutter:stable]">
                 <div class="space-y-3 md:pr-4">
                   <div
-                    v-for="menu in selectedMenuPermissionPanels"
-                    :key="menu.uuid || menu.id"
+                    v-for="group in selectedMenuPermissionGroups"
+                    :key="group.key"
                     class="border-b border-dashed border-border/70 pb-2 last:border-b-0"
                   >
-                    <label
-                      class="flex items-center gap-2 py-1.5"
-                      :style="{ paddingLeft: `${menu.depth * 18}px` }"
-                    >
-                      <i
-                        v-if="menu.depth > 0"
-                        class="ri-corner-down-right-line shrink-0 text-[12px] text-muted-foreground"
-                      />
-                      <span v-else class="w-3 shrink-0" />
-                      <Checkbox
-                        :model-value="selectedMenuSet.has(menu.uuid)"
-                        @update:model-value="updateRoleMenuSelection(menu.uuid, $event === true)"
-                      />
-                      <span class="min-w-0 flex flex-1 items-center gap-2 overflow-hidden leading-none">
-                        <Tooltip>
-                          <TooltipTrigger as-child>
-                            <span :class="menu.depth === 0 ? 'font-medium text-foreground' : 'text-foreground'" class="truncate text-sm">
-                              {{ menu.name }}
-                            </span>
-                          </TooltipTrigger>
-                          <TooltipContent>{{ menu.path }}</TooltipContent>
-                        </Tooltip>
+                    <div class="mb-1 flex items-center gap-2 py-1">
+                      <span class="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
+                        {{ group.title }}
+                        <span class="ml-1 text-[11px] font-normal text-muted-foreground">{{ group.path || "顶级导航分组" }}</span>
                       </span>
-                      <span class="text-[11px] text-muted-foreground">
-                        {{ getSelectedMenuButtonCount(menu.uuid) }}/{{ menu.buttons.length }}
-                      </span>
-                    </label>
+                      <span class="text-xs text-muted-foreground">{{ group.visiblePanels.length }} 页</span>
+                    </div>
 
                     <div class="grid gap-1">
-                      <label
-                        class="flex items-center gap-2 py-1.5 text-xs text-muted-foreground"
-                        :style="{ paddingLeft: `${(menu.depth + 1) * 18}px` }"
-                      >
-                        <i class="ri-corner-down-right-line shrink-0 text-[12px] text-muted-foreground" />
-                        <Checkbox
-                          :model-value="getMenuButtonSelectionState(menu.uuid)"
-                          :disabled="menu.buttons.length === 0"
-                          @update:model-value="toggleMenuButtons(menu.uuid, $event === true)"
-                        />
-                        <span class="truncate">本页全选按钮</span>
-                      </label>
-
-                      <label
-                        v-for="button in menu.buttons"
-                        :key="button.id"
-                        class="flex items-center gap-2 py-1.5"
-                        :style="{ paddingLeft: `${(menu.depth + 1) * 18}px` }"
-                      >
-                        <i class="ri-corner-down-right-line shrink-0 text-[12px] text-muted-foreground" />
-                        <Checkbox
-                          :model-value="selectedButtonSet.has(button.id)"
-                          :disabled="!isButtonSelectable(button)"
-                          @update:model-value="updateRoleButtonSelection(button.id, $event === true)"
-                        />
-                        <span class="min-w-0 flex flex-1 items-center gap-2 overflow-hidden leading-none">
-                          <Tooltip>
-                            <TooltipTrigger as-child>
-                              <span class="truncate text-sm text-foreground">{{ button.name }}</span>
-                            </TooltipTrigger>
-                            <TooltipContent>{{ button.code }}</TooltipContent>
-                          </Tooltip>
-                          <span
-                            v-if="button.isDemo"
-                            class="shrink-0 rounded-full border border-dashed border-border/80 px-1.5 py-0.5 text-[10px] leading-none text-muted-foreground"
-                          >
-                            测试
+                      <template v-for="menu in group.visiblePanels" :key="menu.uuid || menu.id">
+                        <label
+                          class="flex items-center gap-2 py-1.5"
+                          :style="{ paddingLeft: `${menu.depth * 18}px` }"
+                        >
+                          <i
+                            v-if="menu.depth > 0"
+                            class="ri-corner-down-right-line shrink-0 text-[12px] text-muted-foreground"
+                          />
+                          <span v-else class="w-3 shrink-0" />
+                          <Checkbox
+                            :model-value="getMenuButtonSelectionState(menu.uuid)"
+                            :disabled="menu.buttons.length === 0"
+                            @update:model-value="toggleMenuButtons(menu.uuid, $event === true)"
+                          />
+                          <span class="min-w-0 flex flex-1 items-center gap-2 overflow-hidden leading-none">
+                            <Tooltip>
+                              <TooltipTrigger as-child>
+                                <span :class="menu.depth === 0 ? 'font-medium text-foreground' : 'text-foreground'" class="truncate text-sm">
+                                  {{ menu.name }}
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>{{ menu.path }}</TooltipContent>
+                            </Tooltip>
                           </span>
-                        </span>
-                      </label>
+                          <span class="text-[11px] text-muted-foreground">
+                            {{ getSelectedMenuButtonCount(menu.uuid) }}/{{ menu.buttons.length }}
+                          </span>
+                        </label>
+
+                        <div v-if="menu.buttons.length > 0" class="grid gap-1">
+                          <label
+                            v-for="button in menu.buttons"
+                            :key="button.id"
+                            class="flex items-center gap-2 py-1.5"
+                            :style="{ paddingLeft: `${(menu.depth + 1) * 18}px` }"
+                          >
+                            <i class="ri-corner-down-right-line shrink-0 text-[12px] text-muted-foreground" />
+                            <Checkbox
+                              :model-value="selectedButtonSet.has(button.id)"
+                              :disabled="!isButtonSelectable(button)"
+                              @update:model-value="updateRoleButtonSelection(button.id, $event === true)"
+                            />
+                            <span class="min-w-0 flex flex-1 items-center gap-2 overflow-hidden leading-none">
+                              <Tooltip>
+                                <TooltipTrigger as-child>
+                                  <span class="truncate text-sm text-foreground">{{ button.name }}</span>
+                                </TooltipTrigger>
+                                <TooltipContent>{{ button.code }}</TooltipContent>
+                              </Tooltip>
+                              <span
+                                v-if="button.isDemo"
+                                class="shrink-0 rounded-full border border-dashed border-border/80 px-1.5 py-0.5 text-[10px] leading-none text-muted-foreground"
+                              >
+                                测试
+                              </span>
+                            </span>
+                          </label>
+                        </div>
+                      </template>
                     </div>
                   </div>
                 </div>
