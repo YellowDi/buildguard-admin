@@ -80,6 +80,8 @@
   --link: var(--theme-primary);
   --link-hover: var(--brand-hover);
   --link-foreground: #ffffff;
+  --text-selection-background: #000000;
+  --text-selection-foreground: #ffffff;
   --selection: #f2f9ff;
   --selection-hover: #e8f3ff;
   --selection-active: #dcecff;
@@ -170,6 +172,8 @@
   --link: var(--theme-primary);
   --link-hover: var(--brand-hover);
   --link-foreground: #191919;
+  --text-selection-background: #ffffff;
+  --text-selection-foreground: #000000;
   --selection: #1f282d;
   --selection-hover: #243241;
   --selection-active: #293b4e;
@@ -277,8 +281,13 @@
   }
 
   ::selection {
-    background: var(--selection);
-    color: var(--foreground);
+    background: var(--text-selection-background);
+    color: var(--text-selection-foreground);
+  }
+
+  ::-moz-selection {
+    background: var(--text-selection-background);
+    color: var(--text-selection-foreground);
   }
 
   #app {
