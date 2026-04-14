@@ -290,7 +290,7 @@ const scrollViewportStyle = computed(() => {
 })
 const bottomDockStyle = computed(() => revealContainerStyle.value)
 const bottomDockClassName = computed(() => cn(
-  "min-w-0 bg-background",
+  "relative z-[31] min-w-0 bg-background",
   props.fillAvailableHeight ? "shrink-0" : "",
 ))
 const summaryClassName = computed(() => cn(
@@ -301,6 +301,7 @@ const summaryStyle = computed(() => (
   props.listLevelTable ? undefined : horizontalScrollbarTrackWrapperStyle.value
 ))
 const horizontalScrollbarSectionClassName = computed(() => cn(
+  "relative",
   props.listLevelTable ? "px-4 sm:px-8" : "",
 ))
 const horizontalScrollbarSectionStyle = computed(() => (
@@ -350,7 +351,7 @@ const horizontalScrollbarThumbOffset = computed(() => {
 })
 const horizontalScrollbarThumbStyle = computed(() => ({
   width: `${horizontalScrollbarThumbWidth.value}px`,
-  transform: `translateX(${horizontalScrollbarThumbOffset.value}px)`,
+  transform: `translate(${horizontalScrollbarThumbOffset.value}px, -50%)`,
 }))
 const stickyContentWidth = computed(() => (
   stickyTableWidth.value + leadingEdgeGutter.value + trailingEdgeGutter.value
