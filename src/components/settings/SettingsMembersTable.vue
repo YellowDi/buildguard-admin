@@ -163,6 +163,10 @@ type PermissionButtonRow = {
   menuName: string
 }
 
+type PermissionPanelButtonRow = PermissionButtonRow & {
+  isDemo?: boolean
+}
+
 type PermissionMenuGroup = {
   key: string
   title: string
@@ -183,6 +187,11 @@ const MEMBER_USER_TYPE_OPTIONS = [
   { label: "后台", value: 1 },
   { label: "检修", value: 2 },
   { label: "维修", value: 3 },
+] as const
+const ROLE_PERMISSION_DEMO_BUTTONS = [
+  { name: "测试查看按钮", code: "demo-view" },
+  { name: "测试编辑按钮", code: "demo-edit" },
+  { name: "测试导出按钮", code: "demo-export" },
 ] as const
 
 const rows = ref<MemberRow[]>([])
@@ -466,26 +475,26 @@ const selectedButtonSet = computed(() => new Set(roleForm.value.selectedButtonKe
 
 const menuRowsByUuid = computed(() => new Map(permissionMenuRows.value.map(row => [row.uuid, row])))
 
+function resolvePermissionMenuRoot(row: PermissionMenuRow) {
+  let current = row
+  let guard = 0
+
+  while (current.parentUuid && menuRowsByUuid.value.has(current.parentUuid) && guard < 16) {
+    current = menuRowsByUuid.value.get(current.parentUuid) as PermissionMenuRow
+    guard += 1
+  }
+
+  return current
+}
+
 const menuPermissionGroups = computed(() => {
   const rows = [...permissionMenuRows.value]
     .sort((left, right) => left.level - right.level || left.sort - right.sort || left.name.localeCompare(right.name, "zh-Hans-CN"))
 
   const groups = new Map<string, PermissionMenuGroup>()
 
-  const resolveRoot = (row: PermissionMenuRow) => {
-    let current = row
-    let guard = 0
-
-    while (current.parentUuid && menuRowsByUuid.value.has(current.parentUuid) && guard < 16) {
-      current = menuRowsByUuid.value.get(current.parentUuid) as PermissionMenuRow
-      guard += 1
-    }
-
-    return current
-  }
-
   rows.forEach((row) => {
-    const root = resolveRoot(row)
+    const root = resolvePermissionMenuRoot(row)
     const depth = Math.max(0, row.level - root.level)
     const key = root.uuid || root.id
     const current = groups.get(key)
@@ -525,7 +534,20 @@ const menuPermissionGroups = computed(() => {
     .sort((left, right) => left.title.localeCompare(right.title, "zh-Hans-CN"))
 })
 
-const selectableButtonRows = computed(() => permissionButtonRows.value.filter((row) => (
+const allPermissionButtonRows = computed<PermissionPanelButtonRow[]>(() => [
+  ...permissionButtonRows.value,
+  ...permissionMenuRows.value.flatMap(menu => ROLE_PERMISSION_DEMO_BUTTONS.map(button => ({
+    id: `permission-button-demo-${menu.uuid}-${button.code}`,
+    uuid: `permission-button-demo-${menu.uuid}-${button.code}`,
+    name: button.name,
+    code: button.code,
+    menuUuid: menu.uuid,
+    menuName: menu.name,
+    isDemo: true,
+  }))),
+])
+
+const selectableButtonRows = computed(() => allPermissionButtonRows.value.filter((row) => (
   !row.menuUuid || selectedMenuSet.value.has(row.menuUuid)
 )))
 
@@ -533,12 +555,36 @@ const selectedPermissionMenus = computed(() => permissionMenuRows.value
   .filter(row => row.uuid && selectedMenuSet.value.has(row.uuid))
   .sort((left, right) => left.level - right.level || left.sort - right.sort || left.name.localeCompare(right.name, "zh-Hans-CN")))
 
-const selectedMenuPermissionPanels = computed(() => selectedPermissionMenus.value.map(menu => ({
-  ...menu,
-  buttons: permissionButtonRows.value
-    .filter(button => button.menuUuid === menu.uuid)
-    .sort((left, right) => left.name.localeCompare(right.name, "zh-Hans-CN") || left.code.localeCompare(right.code, "zh-Hans-CN")),
-})))
+const selectedMenuPermissionPanels = computed(() => {
+  const buttonRowsByMenu = new Map<string, PermissionPanelButtonRow[]>()
+
+  allPermissionButtonRows.value
+    .slice()
+    .sort((left, right) => left.name.localeCompare(right.name, "zh-Hans-CN") || left.code.localeCompare(right.code, "zh-Hans-CN"))
+    .forEach((button) => {
+      const current = buttonRowsByMenu.get(button.menuUuid) ?? []
+      current.push(button)
+      buttonRowsByMenu.set(button.menuUuid, current)
+    })
+
+  return selectedPermissionMenus.value
+    .map((menu) => {
+      const root = resolvePermissionMenuRoot(menu)
+
+      return {
+        ...menu,
+        depth: Math.max(0, menu.level - root.level),
+        rootName: root.name,
+        buttons: buttonRowsByMenu.get(menu.uuid) ?? [],
+      }
+    })
+    .sort((left, right) => (
+      left.rootName.localeCompare(right.rootName, "zh-Hans-CN")
+      || left.level - right.level
+      || left.sort - right.sort
+      || left.name.localeCompare(right.name, "zh-Hans-CN")
+    ))
+})
 
 const selectedMenuCount = computed(() => roleForm.value.selectedMenuUuids.length)
 const selectedButtonCount = computed(() => roleForm.value.selectedButtonKeys.filter(key => selectableButtonRows.value.some(row => row.id === key)).length)
@@ -896,7 +942,7 @@ function getAssignablePermissionOptions(member: MemberRow) {
 }
 
 function getMenuButtonKeys(menuUuid: string) {
-  return permissionButtonRows.value
+  return allPermissionButtonRows.value
     .filter(row => row.menuUuid === menuUuid)
     .map(row => row.id)
 }
@@ -1072,6 +1118,30 @@ function toggleMenuButtons(menuUuid: string, checked: boolean) {
   }
 
   roleForm.value.selectedButtonKeys = Array.from(nextSelectedButtons)
+}
+
+function getSelectedMenuButtonCount(menuUuid: string) {
+  return getMenuButtonKeys(menuUuid).filter(buttonKey => selectedButtonSet.value.has(buttonKey)).length
+}
+
+function getMenuButtonSelectionState(menuUuid: string): boolean | "indeterminate" {
+  const menuButtonKeys = getMenuButtonKeys(menuUuid)
+
+  if (menuButtonKeys.length === 0) {
+    return false
+  }
+
+  const selectedCount = getSelectedMenuButtonCount(menuUuid)
+
+  if (selectedCount === 0) {
+    return false
+  }
+
+  if (selectedCount >= menuButtonKeys.length) {
+    return true
+  }
+
+  return "indeterminate"
 }
 
 function getPermissionGroupSelectionState(group: PermissionMenuGroup): boolean | "indeterminate" {
@@ -2281,62 +2351,79 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
               </div>
 
               <div v-else class="min-h-0 flex-1 overflow-y-auto pr-5 md:mr-[-20px] [scrollbar-gutter:stable]">
-                <div class="space-y-4 md:pr-4">
+                <div class="space-y-3 md:pr-4">
                   <div
                     v-for="menu in selectedMenuPermissionPanels"
                     :key="menu.uuid || menu.id"
-                    class="border-b border-dashed border-border/70 pb-4 last:border-b-0"
+                    class="border-b border-dashed border-border/70 pb-2 last:border-b-0"
                   >
-                    <div class="flex items-start justify-between gap-3 py-1">
-                      <div class="min-w-0">
-                        <div class="flex items-center gap-2">
-                          <p class="truncate text-sm font-medium text-foreground">{{ menu.name }}</p>
-                          <span class="text-[11px] text-muted-foreground">L{{ menu.level }}</span>
-                        </div>
-                        <p class="mt-0.5 truncate font-mono text-[12px] text-muted-foreground">{{ menu.path }}</p>
-                        <p class="mt-1 text-xs text-muted-foreground">{{ menu.parentName || "顶级页面" }}</p>
-                      </div>
-                      <div class="flex items-center gap-2">
-                        <Button
-                          v-if="menu.buttons.length > 0"
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          class="h-7 px-2 text-[12px] text-muted-foreground"
-                          @click="toggleMenuButtons(menu.uuid, true)"
-                        >
-                          本页全选按钮
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          class="h-7 px-2 text-[12px] text-muted-foreground"
-                          @click="updateRoleMenuSelection(menu.uuid, false)"
-                        >
-                          移除
-                        </Button>
-                      </div>
-                    </div>
+                    <label
+                      class="flex items-center gap-2 py-1.5"
+                      :style="{ paddingLeft: `${menu.depth * 18}px` }"
+                    >
+                      <i
+                        v-if="menu.depth > 0"
+                        class="ri-corner-down-right-line shrink-0 text-[12px] text-muted-foreground"
+                      />
+                      <span v-else class="w-3 shrink-0" />
+                      <Checkbox
+                        :model-value="selectedMenuSet.has(menu.uuid)"
+                        @update:model-value="updateRoleMenuSelection(menu.uuid, $event === true)"
+                      />
+                      <span class="min-w-0 flex flex-1 items-center gap-2 overflow-hidden leading-none">
+                        <Tooltip>
+                          <TooltipTrigger as-child>
+                            <span :class="menu.depth === 0 ? 'font-medium text-foreground' : 'text-foreground'" class="truncate text-sm">
+                              {{ menu.name }}
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent>{{ menu.path }}</TooltipContent>
+                        </Tooltip>
+                      </span>
+                      <span class="text-[11px] text-muted-foreground">
+                        {{ getSelectedMenuButtonCount(menu.uuid) }}/{{ menu.buttons.length }}
+                      </span>
+                    </label>
 
-                    <div v-if="menu.buttons.length === 0" class="pt-2 text-xs text-muted-foreground">
-                      当前页面下暂无可配置按钮。
-                    </div>
+                    <div class="grid gap-1">
+                      <label
+                        class="flex items-center gap-2 py-1.5 text-xs text-muted-foreground"
+                        :style="{ paddingLeft: `${(menu.depth + 1) * 18}px` }"
+                      >
+                        <i class="ri-corner-down-right-line shrink-0 text-[12px] text-muted-foreground" />
+                        <Checkbox
+                          :model-value="getMenuButtonSelectionState(menu.uuid)"
+                          :disabled="menu.buttons.length === 0"
+                          @update:model-value="toggleMenuButtons(menu.uuid, $event === true)"
+                        />
+                        <span class="truncate">本页全选按钮</span>
+                      </label>
 
-                    <div v-else class="mt-2 grid gap-x-5 gap-y-1 md:grid-cols-2">
                       <label
                         v-for="button in menu.buttons"
                         :key="button.id"
-                        class="flex items-start gap-3 py-2"
+                        class="flex items-center gap-2 py-1.5"
+                        :style="{ paddingLeft: `${(menu.depth + 1) * 18}px` }"
                       >
+                        <i class="ri-corner-down-right-line shrink-0 text-[12px] text-muted-foreground" />
                         <Checkbox
                           :model-value="selectedButtonSet.has(button.id)"
                           :disabled="!isButtonSelectable(button)"
                           @update:model-value="updateRoleButtonSelection(button.id, $event === true)"
                         />
-                        <span class="min-w-0 flex-1">
-                          <span class="truncate text-sm text-foreground">{{ button.name }}</span>
-                          <span class="mt-0.5 block truncate font-mono text-[12px] text-muted-foreground">{{ button.code }}</span>
+                        <span class="min-w-0 flex flex-1 items-center gap-2 overflow-hidden leading-none">
+                          <Tooltip>
+                            <TooltipTrigger as-child>
+                              <span class="truncate text-sm text-foreground">{{ button.name }}</span>
+                            </TooltipTrigger>
+                            <TooltipContent>{{ button.code }}</TooltipContent>
+                          </Tooltip>
+                          <span
+                            v-if="button.isDemo"
+                            class="shrink-0 rounded-full border border-dashed border-border/80 px-1.5 py-0.5 text-[10px] leading-none text-muted-foreground"
+                          >
+                            测试
+                          </span>
                         </span>
                       </label>
                     </div>
