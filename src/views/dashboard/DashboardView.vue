@@ -257,9 +257,9 @@ const statsCards = computed(() => [
 ])
 
 const chartShellClass = "group flex h-full min-w-0 w-full flex-col gap-2 rounded-xl p-0 transition-colors hover:bg-surface-tertiary sm:p-2"
-const chartCardClass = "flex h-full min-w-0 w-full flex-col gap-0 overflow-hidden border-border/60 bg-surface-tertiary py-0 shadow-none transition-[background-color,box-shadow] group-hover:bg-card group-hover:shadow-sm"
+const chartCardClass = "flex h-full min-w-0 w-full flex-col gap-0 overflow-hidden border-border/60 bg-surface-tertiary py-0 shadow-none transition-[background-color,border-color,box-shadow] group-hover:border-transparent group-hover:bg-card group-hover:shadow-(--shadow-card)"
 const statsShellClass = "group flex min-w-0 w-full flex-col gap-2 rounded-xl p-0 transition-colors hover:bg-surface-tertiary sm:p-2"
-const statsCardClass = "flex min-w-0 w-full flex-col overflow-hidden border-border/60 bg-surface-tertiary py-0 shadow-none transition-[background-color,box-shadow] group-hover:bg-card group-hover:shadow-sm"
+const statsCardClass = "flex min-w-0 w-full flex-col overflow-hidden border-border/60 bg-surface-tertiary py-0 shadow-none transition-[background-color,border-color,box-shadow] group-hover:border-transparent group-hover:bg-card group-hover:shadow-(--shadow-card)"
 const chartHeaderClass = "flex items-center px-0 sm:min-h-8 sm:pl-2 sm:pr-0"
 const chartTitleClass = "text-sm font-semibold tracking-tight text-foreground"
 const chartContentClass = "flex min-w-0 flex-1 flex-col p-2 sm:p-4"
@@ -267,7 +267,7 @@ const chartContainerClass = "aspect-auto min-w-0 w-full justify-start"
 const chartBodyClass = "h-[260px] min-w-0 w-full sm:h-[300px]"
 const chartMainBodyClass = "h-[220px] min-w-0 w-full sm:h-[250px]"
 const dashboardTrendShellClass = "group flex min-w-0 w-full flex-col gap-2 rounded-xl p-0 transition-colors hover:bg-surface-tertiary sm:p-2"
-const dashboardTrendCardClass = "flex min-w-0 w-full flex-col gap-0 overflow-hidden border-border/60 bg-surface-tertiary py-0 shadow-none transition-[background-color,box-shadow] group-hover:bg-card group-hover:shadow-sm"
+const dashboardTrendCardClass = "flex min-w-0 w-full flex-col gap-0 overflow-hidden border-border/60 bg-surface-tertiary py-0 shadow-none transition-[background-color,border-color,box-shadow] group-hover:border-transparent group-hover:bg-card group-hover:shadow-(--shadow-card)"
 const dashboardTrendContentClass = "flex min-w-0 flex-col p-2 sm:p-4"
 const buildingRiskTabs = [
   { id: "high-risk", label: "高危" },
@@ -822,7 +822,7 @@ function hashText(value: string) {
                 <SelectValue placeholder="过去 12 个月" />
               </SelectTrigger>
 
-              <SelectContent class="rounded-xl">
+              <SelectContent class="rounded-xl border-0 shadow-(--shadow-card)">
                 <SelectItem value="12m" class="rounded-lg">
                   过去 12 个月
                 </SelectItem>
