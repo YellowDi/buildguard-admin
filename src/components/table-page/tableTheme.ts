@@ -51,7 +51,8 @@ export const tableTheme = {
   actionHeader: "h-[38px] w-px whitespace-nowrap border-l border-border px-3 py-0 text-left font-normal text-muted-foreground align-middle transition-colors hover:bg-surface-tertiary",
   actionHeaderSticky: "bg-background bg-clip-padding",
   actionCell: "h-[42px] border-b border-l border-border px-3 py-0 align-middle whitespace-nowrap",
-  actionCellContent: "flex items-center justify-end gap-1.5",
+  actionCellContent: "flex items-center justify-end",
+  actionCellButtons: "inline-flex items-center gap-1.5",
   actionButton: "pointer-events-auto h-7 gap-1.5 px-2.5 text-[13px] border-border/80 bg-background/95 shadow-sm",
   pinnedAction: {
     base: "sticky right-0 isolate bg-background bg-clip-padding",

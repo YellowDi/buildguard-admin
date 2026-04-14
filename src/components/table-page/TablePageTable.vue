@@ -161,6 +161,7 @@ const stickyTableWidth = ref(0)
 const stickyScrollLeft = ref(0)
 const stickyColumnWidths = ref<number[]>([])
 const actionColumnWidth = ref(0)
+const actionColumnFadeWidth = ref(0)
 const horizontalScrollContentWidth = ref(0)
 const horizontalScrollViewportWidth = ref(0)
 const hoveredRowKey = ref<RowSelectionKey | null>(null)
@@ -883,13 +884,11 @@ function getActionColumnStyle(fallbackWidth?: number) {
     return undefined
   }
 
-  const fadeWidth = Math.max(24, Math.min(96, Math.round(width * 0.45)))
-
   return {
     width: `${width}px`,
     minWidth: `${width}px`,
     maxWidth: `${width}px`,
-    "--table-pinned-action-fade-width": `${fadeWidth}px`,
+    "--table-pinned-action-fade-width": `${actionColumnFadeWidth.value}px`,
   }
 }
 
@@ -1137,12 +1136,29 @@ function clearStickyState() {
 function syncActionColumnWidth(headerCells?: HTMLElement[]) {
   if (!hasRowActions.value) {
     actionColumnWidth.value = 0
+    actionColumnFadeWidth.value = 0
     return
   }
 
   const targetCells = headerCells ?? getHeaderCells()
-  const measuredWidth = targetCells[props.columns.length]?.getBoundingClientRect().width ?? 0
+  const headerWidth = targetCells[props.columns.length]?.getBoundingClientRect().width ?? 0
+  const contentElement = tableRef.value?.querySelector("[data-table-action-buttons]") as HTMLElement | null
+  const actionCell = contentElement?.closest("[data-table-action-cell]") as HTMLElement | null
+
+  if (!contentElement || !actionCell || typeof window === "undefined") {
+    actionColumnWidth.value = Math.max(0, Math.ceil(headerWidth))
+    actionColumnFadeWidth.value = 0
+    return
+  }
+
+  const cellStyles = window.getComputedStyle(actionCell)
+  const paddingLeft = Number.parseFloat(cellStyles.paddingLeft || "0")
+  const paddingRight = Number.parseFloat(cellStyles.paddingRight || "0")
+  const contentWidth = Math.ceil(contentElement.getBoundingClientRect().width)
+  const measuredWidth = Math.max(headerWidth, contentWidth + paddingLeft + paddingRight)
+
   actionColumnWidth.value = Math.max(0, Math.ceil(measuredWidth))
+  actionColumnFadeWidth.value = Math.max(0, Math.round(measuredWidth - contentWidth - paddingRight))
 }
 
 function syncHorizontalScrollState(measuredOverflow?: boolean) {
@@ -1661,9 +1677,12 @@ onBeforeUnmount(() => {
                     v-if="hasRowActions"
                     :class="[tableTheme.actionCell, getActionCellClass({ loading: true })]"
                     :style="getActionColumnStyle()"
+                    data-table-action-cell
                   >
                     <div :class="tableTheme.actionCellContent">
-                      <Skeleton :class="getLoadingActionSkeletonClass(rowIndex)" />
+                      <div :class="tableTheme.actionCellButtons" data-table-action-buttons>
+                        <Skeleton :class="getLoadingActionSkeletonClass(rowIndex)" />
+                      </div>
                     </div>
                   </td>
                 </tr>
@@ -1874,19 +1893,22 @@ onBeforeUnmount(() => {
                     getActionCellClass({ selected: isRowSelected(row, index) }),
                   ]"
                   :style="getActionColumnStyle()"
+                  data-table-action-cell
                 >
                   <div :class="tableTheme.actionCellContent">
-                    <Button
-                      v-for="action in rowActions"
-                      :key="`${getRowKey(row, index)}-${action.key}`"
-                      variant="outline"
-                      size="sm"
-                      :class="tableTheme.actionButton"
-                      @click.stop="handleRowActionClick(action, row, index)"
-                    >
-                      <i v-if="props.showRowActionIcons" :class="remixIconForTableRowAction(action.label, action.icon)" />
-                      {{ action.label }}
-                    </Button>
+                    <div :class="tableTheme.actionCellButtons" data-table-action-buttons>
+                      <Button
+                        v-for="action in rowActions"
+                        :key="`${getRowKey(row, index)}-${action.key}`"
+                        variant="outline"
+                        size="sm"
+                        :class="tableTheme.actionButton"
+                        @click.stop="handleRowActionClick(action, row, index)"
+                      >
+                        <i v-if="props.showRowActionIcons" :class="remixIconForTableRowAction(action.label, action.icon)" />
+                        {{ action.label }}
+                      </Button>
+                    </div>
                   </div>
                 </td>
               </tr>
