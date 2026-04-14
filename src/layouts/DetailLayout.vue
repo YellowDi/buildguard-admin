@@ -132,10 +132,12 @@ function handleTabSelect(value: unknown) {
 
             <div
               v-if="hasHeaderActionSlot"
-              class="flex min-w-0 max-w-[55vw] shrink-0 justify-end overflow-x-auto overflow-y-hidden whitespace-nowrap sm:max-w-full"
+              class="flex min-w-0 max-w-[55vw] shrink-0 justify-end sm:max-w-full"
             >
-              <slot v-if="$slots.headerActions" name="headerActions" />
-              <slot v-else name="actions" />
+              <div class="-mx-1 -my-1 min-w-0 overflow-x-auto px-1 py-1 whitespace-nowrap sm:mx-0 sm:my-0 sm:overflow-visible sm:px-0 sm:py-1">
+                <slot v-if="$slots.headerActions" name="headerActions" />
+                <slot v-else name="actions" />
+              </div>
             </div>
           </div>
 
