@@ -20,7 +20,6 @@ import {
 } from "@/components/ui/dialog"
 import { FieldDescription, FieldGroup, FieldLegend, FieldSet } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import {
   Select,
@@ -324,6 +323,9 @@ const currentBuildingEditor = computed(() =>
 )
 const currentBuildingEditorTitle = computed(() =>
   currentBuildingEditor.value?.buildName || "建筑检测项",
+)
+const currentScoreLimitConfig = computed(() =>
+  buildingConfigs.value.find(config => config.buildUuid === activeScoreLimitBuildUuid.value) ?? null,
 )
 const categoryScoreLimitFeatureDisabledReason = computed(() => {
   if (inspectionCategoryLoading.value) {
@@ -1260,7 +1262,7 @@ function normalizeInspectionCategoryOption(item: InspectionCategoryRecord, index
   const name = normalizeText(item.Name) || `分类 ${normalizeText(item.Id) || index + 1}`
 
   return {
-    uuid: normalizeText(item.Uuid) || `inspection-category-name:${name}`,
+    uuid: resolveInspectionCategoryKey(normalizeText(item.Uuid), name),
     name,
   }
 }
@@ -1349,7 +1351,11 @@ function mapServiceDetailBuildToConfig(
         return []
       }
 
-      const categoryUuid = normalizeText((category as { Uuid?: unknown }).Uuid)
+      const categoryName = normalizeText((category as { Name?: unknown }).Name)
+      const categoryUuid = resolveInspectionCategoryKey(
+        normalizeText((category as { Uuid?: unknown }).Uuid),
+        categoryName,
+      )
       const score = normalizeScoreLimitValue((category as { Score?: unknown }).Score)
 
       if (!categoryUuid || score === null) {
@@ -1391,18 +1397,21 @@ function buildInspectionServiceBuildInfosPayload() {
       const fallbackCategory = inspection.categoryName
         ? inspectionCategoryByName.value.get(inspection.categoryName)
         : undefined
-      const categoryUuid = inspection.categoryUuid || fallbackCategory?.uuid || ""
+      const categoryUuid = resolveInspectionCategoryKey(
+        inspection.categoryUuid || fallbackCategory?.uuid || "",
+        fallbackCategory?.name || inspection.categoryName || "未分类",
+      )
       const categoryName = fallbackCategory?.name || inspection.categoryName || "未分类"
 
       if (!categoryUuid && !categoryName) {
         continue
       }
 
-      const categoryKey = categoryUuid || `category-name:${categoryName}`
+      const categoryKey = categoryUuid
       const current = categoryMap.get(categoryKey) ?? {
-        uuid: categoryUuid,
+        uuid: isSyntheticInspectionCategoryKey(categoryUuid) ? "" : categoryUuid,
         name: categoryName,
-        score: config.categoryScoreLimitByCategoryUuid[categoryUuid] ?? getDefaultCategoryScoreLimit(categoryUuid),
+        score: config.categoryScoreLimitByCategoryUuid[categoryKey] ?? getDefaultCategoryScoreLimit(categoryKey),
         items: [],
       }
 
@@ -1438,7 +1447,10 @@ function buildTemplateCategoryScoreLimitMap(template: TemplateOption) {
     const fallbackCategory = inspection.categoryName
       ? inspectionCategoryByName.value.get(inspection.categoryName)
       : undefined
-    const categoryUuid = itemOption?.categoryUuid || fallbackCategory?.uuid || ""
+    const categoryUuid = resolveInspectionCategoryKey(
+      itemOption?.categoryUuid || fallbackCategory?.uuid || "",
+      fallbackCategory?.name || inspection.categoryName,
+    )
 
     if (!categoryUuid) {
       continue
@@ -1463,7 +1475,10 @@ function getInspectionCategoriesForConfig(config: InspectionServiceBuildingConfi
     const fallbackCategory = inspection.categoryName
       ? inspectionCategoryByName.value.get(inspection.categoryName)
       : undefined
-    const categoryUuid = inspection.categoryUuid || fallbackCategory?.uuid || ""
+    const categoryUuid = resolveInspectionCategoryKey(
+      inspection.categoryUuid || fallbackCategory?.uuid || "",
+      fallbackCategory?.name || inspection.categoryName || "未分类",
+    )
     const categoryName = fallbackCategory?.name || inspection.categoryName || "未分类"
 
     if (!categoryUuid || categories.has(categoryUuid)) {
@@ -1520,7 +1535,7 @@ function getBuildingScoreLimitSummary(config: InspectionServiceBuildingConfig) {
 
   const previewNames = categoryUuids
     .slice(0, 2)
-    .map(uuid => inspectionCategoryNameByUuid.value.get(uuid) || "未命名分类")
+    .map(uuid => resolveInspectionCategoryName(uuid))
 
   if (categoryUuids.length > 2) {
     return `${previewNames.join("、")} 等 ${categoryUuids.length} 个分类已自定义分数上限。`
@@ -1533,6 +1548,35 @@ function getDefaultCategoryScoreLimit(categoryUuid: string): InspectionCategoryS
   return categoryUuid in globalCategoryScoreLimits.value
     ? globalCategoryScoreLimits.value[categoryUuid]
     : null
+}
+
+function resolveInspectionCategoryKey(categoryUuid: string, categoryName: string) {
+  const normalizedUuid = normalizeText(categoryUuid)
+
+  if (normalizedUuid) {
+    return normalizedUuid
+  }
+
+  const normalizedName = normalizeText(categoryName)
+  return normalizedName ? `inspection-category-name:${normalizedName}` : ""
+}
+
+function isSyntheticInspectionCategoryKey(categoryKey: string) {
+  return categoryKey.startsWith("inspection-category-name:")
+}
+
+function resolveInspectionCategoryName(categoryKey: string) {
+  const matchedName = inspectionCategoryNameByUuid.value.get(categoryKey)
+
+  if (matchedName) {
+    return matchedName
+  }
+
+  if (isSyntheticInspectionCategoryKey(categoryKey)) {
+    return categoryKey.slice("inspection-category-name:".length) || "未命名分类"
+  }
+
+  return "未命名分类"
 }
 
 function resolveInspectionCategoryScoreLimit(item: InspectionCategoryRecord) {
@@ -1975,84 +2019,27 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
                       编辑检测项
                     </Button>
 
-                    <Popover
-                      :open="activeScoreLimitBuildUuid === config.buildUuid"
-                      @update:open="handleScoreLimitPopoverOpenChange(config.buildUuid, $event)"
-                    >
-                      <Tooltip>
-                        <TooltipTrigger as-child>
-                          <PopoverTrigger as-child>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              type="button"
-                              class="size-7 px-0"
-                              :disabled="Boolean(getCategoryScoreLimitActionDisabledReason(config)) || Boolean(legacyMultiParkMessage)"
-                              aria-label="配置分数上限"
-                            >
-                              <i class="ri-settings-3-line text-[13px]" />
-                              <span class="sr-only">分数上限</span>
-                            </Button>
-                          </PopoverTrigger>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          {{ getCategoryScoreLimitActionDisabledReason(config) || "配置分数上限" }}
-                        </TooltipContent>
-                      </Tooltip>
-
-                      <PopoverContent class="w-[min(100vw-2rem,28rem)] p-0" align="end">
-                        <div class="border-b border-border/60 px-4 py-3">
-                          <p class="text-sm font-semibold text-foreground">分数上限</p>
-                          <p class="mt-1 text-xs leading-5 text-muted-foreground">
-                            未改动时将使用各分类的预设分数上限。
-                          </p>
-                        </div>
-
-                        <div class="max-h-[26rem] overflow-y-auto px-4 py-2">
-                          <div
-                            v-if="!getInspectionCategoriesForConfig(config).length"
-                            class="py-6 text-sm text-muted-foreground"
+                    <Tooltip>
+                      <TooltipTrigger as-child>
+                        <span class="inline-flex">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            type="button"
+                            class="size-7 px-0"
+                            :disabled="Boolean(getCategoryScoreLimitActionDisabledReason(config)) || Boolean(legacyMultiParkMessage)"
+                            aria-label="配置分数上限"
+                            @click="handleScoreLimitPopoverOpenChange(config.buildUuid, true)"
                           >
-                            当前建筑暂无已选检测项分类可配置。
-                          </div>
-                          <div
-                            v-for="category in getInspectionCategoriesForConfig(config)"
-                            :key="`${config.buildUuid}-${category.uuid}`"
-                            class="flex items-center justify-between gap-4 border-b border-dashed border-border/60 py-3 last:border-b-0"
-                          >
-                            <label
-                              :for="`score-limit-${config.buildUuid}-${category.uuid}`"
-                              class="min-w-0 flex-1 text-sm font-medium text-foreground"
-                            >
-                              {{ category.name }}
-                            </label>
-                            <Input
-                              :id="`score-limit-${config.buildUuid}-${category.uuid}`"
-                              type="number"
-                              min="0"
-                              inputmode="numeric"
-                              :model-value="scoreLimitDraftForms[category.uuid]?.scoreLimit ?? ''"
-                              class="h-8 w-28 shrink-0 text-right tabular-nums"
-                              @update:model-value="updateScoreLimitField(category.uuid, 'scoreLimit', $event)"
-                            />
-                          </div>
-                        </div>
-
-                        <div class="flex flex-wrap items-center justify-between gap-2 border-t border-border/60 p-4">
-                          <Button size="sm" variant="outline" type="button" @click="resetScoreLimitDraft">
-                            恢复初始
+                            <i class="ri-settings-3-line text-[13px]" />
+                            <span class="sr-only">分数上限</span>
                           </Button>
-                          <div class="flex flex-wrap gap-2">
-                            <Button size="sm" variant="outline" type="button" @click="clearScoreLimitOverrides(config.buildUuid)">
-                              清空自定义
-                            </Button>
-                            <Button size="sm" type="button" @click="saveScoreLimitDraft(config.buildUuid)">
-                              保存上限
-                            </Button>
-                          </div>
-                        </div>
-                      </PopoverContent>
-                    </Popover>
+                        </span>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        {{ getCategoryScoreLimitActionDisabledReason(config) || "配置分数上限" }}
+                      </TooltipContent>
+                    </Tooltip>
                   </div>
                 </div>
 
@@ -2070,6 +2057,70 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
 
       </div>
     </div>
+
+    <Dialog :open="Boolean(currentScoreLimitConfig)" @update:open="!$event && closeScoreLimitPopover()">
+      <DialogContent class="max-w-xl gap-0 p-0">
+        <DialogHeader class="border-b border-border/60 p-4">
+          <DialogTitle>配置分数上限</DialogTitle>
+          <DialogDescription>
+            {{ currentScoreLimitConfig?.buildName || "当前建筑" }} 未改动时将使用各分类的预设分数上限。
+          </DialogDescription>
+        </DialogHeader>
+
+        <div class="max-h-[70vh] overflow-y-auto px-4 py-2">
+          <div
+            v-if="currentScoreLimitConfig && !getInspectionCategoriesForConfig(currentScoreLimitConfig).length"
+            class="py-6 text-sm text-muted-foreground"
+          >
+            当前建筑暂无已选检测项分类可配置。
+          </div>
+          <div
+            v-for="category in (currentScoreLimitConfig ? getInspectionCategoriesForConfig(currentScoreLimitConfig) : [])"
+            :key="`${currentScoreLimitConfig?.buildUuid || 'score-limit'}-${category.uuid}`"
+            class="flex items-center justify-between gap-4 border-b border-dashed border-border/60 py-3 last:border-b-0"
+          >
+            <label
+              :for="`score-limit-${currentScoreLimitConfig?.buildUuid || 'score-limit'}-${category.uuid}`"
+              class="min-w-0 flex-1 text-sm font-medium text-foreground"
+            >
+              {{ category.name }}
+            </label>
+            <Input
+              :id="`score-limit-${currentScoreLimitConfig?.buildUuid || 'score-limit'}-${category.uuid}`"
+              type="number"
+              min="0"
+              inputmode="numeric"
+              :model-value="scoreLimitDraftForms[category.uuid]?.scoreLimit ?? ''"
+              class="h-8 w-28 shrink-0 text-right tabular-nums"
+              @update:model-value="updateScoreLimitField(category.uuid, 'scoreLimit', $event)"
+            />
+          </div>
+        </div>
+
+        <DialogFooter class="border-t border-border/60 p-4">
+          <Button size="sm" variant="outline" type="button" @click="resetScoreLimitDraft">
+            恢复初始
+          </Button>
+          <Button
+            v-if="currentScoreLimitConfig"
+            size="sm"
+            variant="outline"
+            type="button"
+            @click="clearScoreLimitOverrides(currentScoreLimitConfig.buildUuid)"
+          >
+            清空自定义
+          </Button>
+          <Button
+            v-if="currentScoreLimitConfig"
+            size="sm"
+            type="button"
+            @click="saveScoreLimitDraft(currentScoreLimitConfig.buildUuid)"
+          >
+            保存上限
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
 
     <Dialog v-model:open="templateLibraryOpen">
       <DialogContent class="max-w-4xl gap-0 p-0">
