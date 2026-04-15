@@ -169,7 +169,7 @@ watch(() => props.buildings, (buildings) => {
                       </div>
                     </div>
 
-                    <div class="space-y-1 px-1.5 pb-1.5">
+                    <div class="space-y-0.5 px-1.5 pb-1.5">
                       <div
                         v-for="item in group.items"
                         :key="`${building.key}-${group.key}-${item.key}`"
@@ -177,16 +177,16 @@ watch(() => props.buildings, (buildings) => {
                       >
                         <button
                           type="button"
-                          class="flex w-full min-w-0 items-start gap-3 rounded-xl px-2.5 py-3 text-left transition-colors hover:bg-muted/55 disabled:cursor-default disabled:hover:bg-transparent"
+                          class="flex w-full min-w-0 items-center gap-2 rounded-lg px-2 py-2 text-left transition-colors hover:bg-muted/50 disabled:cursor-default disabled:hover:bg-transparent"
                           :disabled="!item.onSelect"
                           @click="item.onSelect?.()"
                         >
-                          <div class="min-w-0 flex-1">
-                            <div class="truncate text-sm font-semibold text-foreground">
+                          <div class="flex min-w-0 flex-1 items-center gap-2.5">
+                            <div class="min-w-0 flex-1 truncate text-[13px] font-medium text-foreground">
                               {{ item.name }}
                             </div>
 
-                            <div class="mt-1 flex min-w-0 items-center gap-2 text-xs">
+                            <div class="flex min-w-0 max-w-[50%] shrink items-center gap-1.5 text-[11px] text-muted-foreground">
                               <i
                                 :class="[
                                   item.loading
@@ -194,12 +194,12 @@ watch(() => props.buildings, (buildings) => {
                                     : item.error
                                       ? 'ri-error-warning-line text-destructive'
                                       : 'ri-time-line text-muted-foreground',
-                                  'shrink-0 text-[13px]',
+                                  'shrink-0 text-[12px]',
                                 ]"
                               />
                               <span
                                 :class="[
-                                  'truncate',
+                                  'truncate whitespace-nowrap',
                                   item.error ? 'text-destructive' : 'text-muted-foreground',
                                 ]"
                               >
@@ -208,18 +208,18 @@ watch(() => props.buildings, (buildings) => {
                             </div>
                           </div>
 
-                          <div class="mt-0.5 flex shrink-0 items-center gap-2">
+                          <div class="flex shrink-0 items-center gap-1.5 self-center">
                             <Button
                               v-if="item.error && item.onRetry"
                               type="button"
                               variant="outline"
                               size="sm"
-                              class="h-7 px-2.5 text-xs"
+                              class="h-6 rounded-md px-2 text-[11px]"
                               @click.stop="item.onRetry"
                             >
                               重试
                             </Button>
-                            <i class="ri-arrow-right-s-line text-lg text-muted-foreground" />
+                            <i class="ri-arrow-right-s-line text-base text-muted-foreground/80" />
                           </div>
                         </button>
                       </div>

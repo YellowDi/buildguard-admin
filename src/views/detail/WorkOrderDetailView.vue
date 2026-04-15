@@ -515,6 +515,17 @@ function formatBuildScore(value: unknown) {
   return ""
 }
 
+function formatInspectionItemCompactSummary(userName: unknown, score: unknown) {
+  const inspectorName = toText(userName, "待回传")
+  const scoreText = formatInspectionItemScore(score)
+
+  if (scoreText === "-") {
+    return inspectorName
+  }
+
+  return `${inspectorName} · ${scoreText.replace(/\s+/g, "")}`
+}
+
 function buildInspectionWorkOrderCards(builds: WorkOrderBuildInfo[] | undefined) {
   if (!Array.isArray(builds) || !builds.length) {
     return []
@@ -550,8 +561,8 @@ function buildInspectionWorkOrderCards(builds: WorkOrderBuildInfo[] | undefined)
       nextGroup.items.push({
         key: inspectionItemUuid || `inspection-item-${itemIndex + 1}`,
         name: inspectionItemName,
-        summary: `检测人：${toText(item.UserName, "-")} · 扣分：${toText(item.Score, "-")}`,
-        emptyText: "等待检测人通过 App 回传信息",
+        summary: formatInspectionItemCompactSummary(item.UserName, item.Score),
+        emptyText: "待回传",
         onSelect: () => openInspectionHistorySheet(buildInspectionItemHistoryModel({
           buildName: toText(build.BuildName, `建筑 ${buildIndex + 1}`),
           categoryName,
