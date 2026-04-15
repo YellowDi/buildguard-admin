@@ -19,6 +19,10 @@ const route = useRoute()
 const showContentFallback = computed(() =>
   isRouteLoading.value && loadingKind.value !== "auth" && loadingKind.value !== "table",
 )
+const useCompactMainTopPadding = computed(() => {
+  const routeKind = resolveRouteLoadingKind(route.meta.loading)
+  return routeKind !== "detail" && routeKind !== "form"
+})
 const routeTransitionName = ref("route-page-fade")
 const currentRouteKind = ref<RouteLoadingKind | null>(resolveRouteLoadingKind(route.meta.loading))
 
@@ -82,7 +86,12 @@ function closeMobileSidebar() {
         :on-toggle-mobile-sidebar="toggleMobileSidebar"
         :on-toggle-desktop-sidebar="toggleSidebar"
       />
-      <main class="flex min-w-0 min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 pb-4 pt-2">
+      <main
+        :class="[
+          'flex min-w-0 min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 pb-4',
+          useCompactMainTopPadding ? 'pt-2' : 'pt-0',
+        ]"
+      >
         <RouterView v-slot="{ Component }">
           <RouteLoadingFallback
             v-if="showContentFallback"
