@@ -27,6 +27,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
+import { ResponsiveRightSheet } from "@/components/ui/sheet"
 import { TooltipWrap } from "@/components/ui/tooltip"
 import { detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
 import DetailLayout from "@/layouts/DetailLayout.vue"
@@ -50,6 +51,13 @@ type InspectionServiceBuildingRow = {
   name: string
 }
 
+type ActiveInspectionItemDetail = {
+  uuid: string
+  buildName: string
+  categoryName: string
+  inspectionItemName: string
+}
+
 const route = useRoute()
 const router = useRouter()
 
@@ -65,6 +73,7 @@ const buildingDetailSheetOpen = ref(false)
 const activeBuildingUuid = ref("")
 const activeParkUuid = ref("")
 const linkedDetailSheetOpen = ref(false)
+const inspectionItemDetailSheetOpen = ref(false)
 const uploadContractForm = ref({
   contractEndTime: "",
   contractFile: "",
@@ -72,6 +81,7 @@ const uploadContractForm = ref({
 })
 const linkedDetailSheetKind = ref<"customer" | "service" | "plan" | "park" | null>(null)
 const linkedDetailSheetUuid = ref("")
+const activeInspectionItemDetail = ref<ActiveInspectionItemDetail | null>(null)
 let latestRequestId = 0
 const inspectionItemDetailByUuid = ref<Record<string, InspectionItemRecord>>({})
 const inspectionItemDetailLoadingByUuid = ref<Record<string, boolean>>({})
@@ -142,6 +152,54 @@ const fieldSections = computed<DetailFieldSection[]>(() => {
 const buildingInspectionCards = computed(() => buildBuildingInspectionCards(detail.value?.BuildInfos ?? detail.value?.Builds))
 const buildingGroups = computed(() => buildParkGroups(detail.value?.BuildInfos ?? detail.value?.Builds))
 const buildingCount = computed(() => buildingGroups.value.reduce((sum, group) => sum + group.rows.length, 0))
+const inspectionItemSheetTitle = computed(() => (
+  activeInspectionItemDetail.value?.inspectionItemName || "检测项详情"
+))
+const inspectionItemSheetDescription = computed(() => {
+  const current = activeInspectionItemDetail.value
+
+  if (!current) {
+    return ""
+  }
+
+  return `${current.buildName} · ${current.categoryName}`
+})
+const activeInspectionItemUuid = computed(() => activeInspectionItemDetail.value?.uuid || "")
+const activeInspectionItemLoading = computed(() => (
+  Boolean(activeInspectionItemUuid.value && inspectionItemDetailLoadingByUuid.value[activeInspectionItemUuid.value])
+))
+const activeInspectionItemError = computed(() => (
+  activeInspectionItemUuid.value ? inspectionItemDetailErrorByUuid.value[activeInspectionItemUuid.value] || "" : ""
+))
+const activeInspectionItemSections = computed<DetailFieldSection[]>(() => {
+  const current = activeInspectionItemDetail.value
+
+  if (!current) {
+    return []
+  }
+
+  return [
+    {
+      key: "inspection-item-basic",
+      title: "基础信息",
+      rows: [
+        { key: "build-name", label: "建筑", value: current.buildName },
+        { key: "category-name", label: "检测分类", value: current.categoryName },
+        { key: "inspection-item-name", label: "检测项名称", value: current.inspectionItemName },
+        { key: "force-photo", label: "是否强制拍照", value: resolveInspectionItemForcePhoto(current.uuid) },
+        { key: "measure-record", label: "是否记录实测值", value: resolveInspectionItemMeasureRecord(current.uuid) },
+      ],
+    },
+    {
+      key: "inspection-item-definition",
+      title: "检测定义",
+      rows: [
+        { key: "content", label: "检测内容", value: resolveInspectionItemContent(current.uuid), truncate: false, valueClass: "leading-6 whitespace-pre-wrap break-words" },
+        { key: "standard", label: "判定标准", value: resolveInspectionItemStandard(current.uuid), truncate: false, valueClass: "leading-6 whitespace-pre-wrap break-words" },
+      ],
+    },
+  ]
+})
 
 watch(detail, (current) => {
   detailBreadcrumbTitle.value = toOptionalText(current?.Name)
@@ -193,6 +251,23 @@ function handleLinkedDetailSheetOpenChange(open: boolean) {
   if (!open) {
     linkedDetailSheetKind.value = null
     linkedDetailSheetUuid.value = ""
+  }
+}
+
+function handleInspectionItemDetailSheetOpenChange(open: boolean) {
+  inspectionItemDetailSheetOpen.value = open
+
+  if (!open) {
+    activeInspectionItemDetail.value = null
+  }
+}
+
+async function openInspectionItemDetailSheet(args: ActiveInspectionItemDetail) {
+  activeInspectionItemDetail.value = args
+  inspectionItemDetailSheetOpen.value = true
+
+  if (args.uuid) {
+    await ensureInspectionItemDetailLoaded(args.uuid)
   }
 }
 
@@ -441,11 +516,17 @@ function buildInspectionGroups(
         return {
           key: inspectionUuid || `${categoryUuid || categoryName}-${itemIndex + 1}`,
           name: inspectionName,
+          hideSummary: true,
           loading: Boolean(inspectionUuid && inspectionItemDetailLoadingByUuid.value[inspectionUuid]),
           error: inspectionUuid ? inspectionItemDetailErrorByUuid.value[inspectionUuid] || "" : "",
-          onExpand: inspectionUuid ? () => {
-            void ensureInspectionItemDetailLoaded(inspectionUuid)
-          } : undefined,
+          onSelect: () => {
+            void openInspectionItemDetailSheet({
+              uuid: inspectionUuid,
+              buildName: toText(build.BuildName, `建筑 ${buildIndex + 1}`),
+              categoryName,
+              inspectionItemName: inspectionName,
+            })
+          },
           onRetry: inspectionUuid ? () => {
             void ensureInspectionItemDetailLoaded(inspectionUuid)
           } : undefined,
@@ -967,4 +1048,47 @@ function readFileAsDataUrl(file: File) {
     :customer-uuid="customerUuid"
     @update:open="handleLinkedDetailSheetOpenChange"
   />
+
+  <ResponsiveRightSheet
+    :open="inspectionItemDetailSheetOpen"
+    :show-primary="false"
+    sheet-content-class="overflow-hidden sm:max-w-xl"
+    @update:open="handleInspectionItemDetailSheetOpenChange"
+  >
+    <template #actions>
+      <div class="flex items-center gap-1">
+        <TooltipWrap content="关闭检测项详情" side="right">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            class="h-8 w-8 rounded-md text-muted-foreground hover:text-foreground"
+            @click="handleInspectionItemDetailSheetOpenChange(false)"
+          >
+            <i class="ri-arrow-right-double-line text-[16px]" />
+            <span class="sr-only">关闭检测项详情</span>
+          </Button>
+        </TooltipWrap>
+      </div>
+    </template>
+    <template #title>{{ inspectionItemSheetTitle }}</template>
+    <template v-if="inspectionItemSheetDescription" #description>
+      {{ inspectionItemSheetDescription }}
+    </template>
+
+    <div class="overflow-y-auto">
+      <Alert v-if="activeInspectionItemError" variant="destructive" class="mb-4">
+        <AlertTitle>检测项详情加载失败</AlertTitle>
+        <AlertDescription>{{ activeInspectionItemError }}</AlertDescription>
+      </Alert>
+
+      <DetailFieldsSkeleton v-if="activeInspectionItemLoading" :sections="2" :rows-per-section="3" />
+
+      <DetailFieldSections
+        v-else-if="activeInspectionItemDetail"
+        :sections="activeInspectionItemSections"
+        use-title-block
+      />
+    </div>
+  </ResponsiveRightSheet>
 </template>

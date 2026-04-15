@@ -19,6 +19,7 @@ type InspectionBuildingCardItem = {
   name: string
   summary?: string
   fields?: InspectionBuildingCardField[]
+  hideSummary?: boolean
   loading?: boolean
   error?: string
   emptyText?: string
@@ -186,7 +187,10 @@ watch(() => props.buildings, (buildings) => {
                               {{ item.name }}
                             </div>
 
-                            <div class="flex min-w-0 max-w-[50%] shrink items-center gap-1.5 text-[11px] text-muted-foreground">
+                            <div
+                              v-if="!item.hideSummary"
+                              class="flex min-w-0 max-w-[50%] shrink items-center gap-1.5 text-[11px] text-muted-foreground"
+                            >
                               <i
                                 :class="[
                                   item.loading
