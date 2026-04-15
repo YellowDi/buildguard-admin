@@ -324,11 +324,6 @@ async function submitUploadContract() {
     return
   }
 
-  if (!uploadContractForm.value.contractFile) {
-    toast.error("请先上传合同文件")
-    return
-  }
-
   uploadingContract.value = true
 
   try {
@@ -882,11 +877,11 @@ function readFileAsDataUrl(file: File) {
   </DetailLayout>
 
   <Dialog v-model:open="uploadContractDialogOpen">
-    <DialogContent class="overflow-hidden sm:max-w-[520px]">
+    <DialogContent class="sm:max-w-[520px]">
       <DialogHeader>
         <DialogTitle>上传合同</DialogTitle>
         <DialogDescription>
-          请填写合同到期时间并上传合同文件。
+          可仅填写合同到期时间；如需补充或替换合同文件，可选择上传。
         </DialogDescription>
       </DialogHeader>
 
@@ -902,7 +897,7 @@ function readFileAsDataUrl(file: File) {
         </div>
 
         <div class="space-y-2">
-          <p class="text-sm text-foreground">合同文件</p>
+          <p class="text-sm text-foreground">合同文件（选填）</p>
           <input
             ref="uploadContractFileInputRef"
             type="file"
@@ -910,7 +905,7 @@ function readFileAsDataUrl(file: File) {
             accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp"
             @change="handleContractFileChange"
           >
-          <div class="grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-3 overflow-hidden">
+          <div class="grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-3">
             <Button
               type="button"
               variant="outline"
