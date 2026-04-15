@@ -13,6 +13,7 @@ export type InspectionCategoryRecord = {
   Uuid?: string
   Id?: number
   Name?: string
+  Content?: string
   Score?: number
   Total?: number
   [property: string]: unknown
@@ -25,6 +26,7 @@ export type InspectionCategoriesListResult = {
 
 export type CreateInspectionCategoryPayload = {
   Name: string
+  Content?: string
   Score: number
   [property: string]: unknown
 }
@@ -37,6 +39,7 @@ export type InspectionCategoryDetailPayload = {
 export type UpdateInspectionCategoryPayload = {
   Uuid: string
   Name: string
+  Content?: string
   Score: number
   [property: string]: unknown
 }
@@ -86,6 +89,7 @@ export async function createInspectionCategory(payload: CreateInspectionCategory
     }),
     body: JSON.stringify({
       Name: getRequiredString(payload.Name, "Name"),
+      Content: getOptionalString(payload.Content) ?? "",
       Score: getRequiredNonNegativeInteger(payload.Score, "Score"),
     }),
   })
@@ -126,6 +130,7 @@ export async function updateInspectionCategory(payload: UpdateInspectionCategory
     body: JSON.stringify({
       Uuid: getRequiredString(payload.Uuid, "Uuid"),
       Name: getRequiredString(payload.Name, "Name"),
+      Content: getOptionalString(payload.Content) ?? "",
       Score: getRequiredNonNegativeInteger(payload.Score, "Score"),
     }),
   })
@@ -237,6 +242,19 @@ function getRequiredString(value: unknown, fieldName: string) {
   }
 
   throw new TypeError(`${fieldName} is required`)
+}
+
+function getOptionalString(value: unknown) {
+  if (value === undefined || value === null) {
+    return undefined
+  }
+
+  if (typeof value === "string") {
+    const normalized = value.trim()
+    return normalized || undefined
+  }
+
+  throw new TypeError("String value is invalid")
 }
 
 function getRequiredNonNegativeInteger(value: unknown, fieldName: string) {

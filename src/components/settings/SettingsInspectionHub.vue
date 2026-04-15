@@ -56,7 +56,7 @@ const currentSearchPlaceholder = computed(() => {
   }
 
   if (activeTab.value === "categories") {
-    return "搜索分类名称、ID 或 Uuid"
+    return "搜索分类名称、ID、内容或 Uuid"
   }
 
   return "搜索模板名称、UUID、检测项"

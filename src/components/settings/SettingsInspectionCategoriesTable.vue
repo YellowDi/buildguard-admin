@@ -31,6 +31,7 @@ import SettingsToolbarRow from "@/components/settings/SettingsToolbarRow.vue"
 import SettingsToolbarRefreshSlot from "@/components/settings/SettingsToolbarRefreshSlot.vue"
 import SettingsToolbarSearchInput from "@/components/settings/SettingsToolbarSearchInput.vue"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { SETTINGS_TABLE_PAGE_CLASS } from "@/components/settings/settingsTablePageClass"
 import TablePageTable from "@/components/table-page/TablePageTable.vue"
 import type { TableColumn, TablePageEmptyState } from "@/components/table-page/types"
@@ -64,12 +65,14 @@ type InspectionCategoryRow = {
   id: number
   uuid: string
   name: string
+  content: string
   scoreLimit: InspectionCategoryScoreLimit
   scoreLimitSearchText: string
 }
 
 type InspectionCategoryForm = {
   name: string
+  content: string
   scoreLimit: string
 }
 
@@ -112,12 +115,18 @@ const columns: TableColumn[] = [
     cellClass: "font-medium text-foreground",
   },
   {
+    key: "content",
+    label: "分类介绍",
+    filterType: "text",
+    tone: "muted",
+    width: "fill",
+  },
+  {
     key: "scoreLimitDisplay",
     label: "分数上限",
     filterType: "none",
     tone: "muted",
     slot: "cell-score-limit",
-    width: "fill",
   },
   {
     key: "actions",
@@ -140,6 +149,7 @@ const filteredRows = computed(() => {
   return rows.value.filter(row => [
     String(row.id),
     row.name,
+    row.content,
     row.scoreLimitSearchText,
     row.uuid,
   ].some(field => field.toLowerCase().includes(query)))
@@ -211,6 +221,7 @@ async function openEditDialog(row: InspectionCategoryRow) {
   editingCategoryId.value = row.id
   editForm.value = {
     name: row.name,
+    content: row.content,
     scoreLimit: formatScoreLimitFieldValue(row.scoreLimit),
   }
   editFormTouched.value = false
@@ -231,6 +242,7 @@ async function openEditDialog(row: InspectionCategoryRow) {
     if (editingCategoryId.value === row.id && !editFormTouched.value) {
       editForm.value = {
         name: detailRow.name,
+        content: detailRow.content,
         scoreLimit: formatScoreLimitFieldValue(detailRow.scoreLimit),
       }
     }
@@ -277,6 +289,7 @@ async function submitCreate() {
   try {
     const response = await createInspectionCategory({
       Name: createForm.value.name.trim(),
+      Content: createForm.value.content.trim(),
       Score: nextScoreLimit,
     })
 
@@ -286,6 +299,7 @@ async function submitCreate() {
       ...response,
       Id: nextId,
       Name: createForm.value.name.trim(),
+      Content: createForm.value.content.trim(),
       Score: nextScoreLimit,
       Uuid: nextUuid,
     }, rows.value.length)
@@ -332,10 +346,12 @@ async function submitEdit() {
     await updateInspectionCategory({
       Uuid: currentRow.uuid,
       Name: editForm.value.name.trim(),
+      Content: editForm.value.content.trim(),
       Score: nextScoreLimit,
     })
 
     currentRow.name = editForm.value.name.trim()
+    currentRow.content = editForm.value.content.trim()
     currentRow.scoreLimit = nextScoreLimit
     currentRow.scoreLimitSearchText = buildScoreLimitSearchText(nextScoreLimit)
     closeEditDialog()
@@ -414,6 +430,7 @@ function normalizeInspectionCategory(
     id,
     uuid,
     name: toText(item.Name, fallbackRow?.name || `分类 ${id}`),
+    content: toOptionalText(item.Content, fallbackRow?.content || ""),
     scoreLimit,
     scoreLimitSearchText: buildScoreLimitSearchText(scoreLimit),
   }
@@ -423,9 +440,14 @@ function toText(value: unknown, fallback = "") {
   return typeof value === "string" && value.trim() ? value.trim() : fallback
 }
 
+function toOptionalText(value: unknown, fallback = "") {
+  return typeof value === "string" ? value.trim() : fallback
+}
+
 function createInspectionCategoryForm(): InspectionCategoryForm {
   return {
     name: "",
+    content: "",
     scoreLimit: "",
   }
 }
@@ -498,7 +520,7 @@ defineExpose({
         <SettingsToolbarSearchInput
           v-model="searchQuery"
           :expanded="searchExpanded"
-          placeholder="搜索分类名称、ID 或分数上限"
+          placeholder="搜索分类名称、ID、内容或分数上限"
           @toggle="toggleSearch"
         />
 
@@ -546,6 +568,12 @@ defineExpose({
       :table-class="SETTINGS_TABLE_PAGE_CLASS"
       :empty-state="tableEmptyState"
     >
+      <template #cell-content="{ row: rawRow }">
+        <span class="text-sm leading-6 text-muted-foreground">
+          {{ asInspectionCategoryRow(rawRow).content || "-" }}
+        </span>
+      </template>
+
       <template #cell-score-limit="{ row: rawRow }">
         <InspectionCategoryScoreLimitInline :limit="asInspectionCategoryRow(rawRow).scoreLimit" />
       </template>
@@ -567,7 +595,7 @@ defineExpose({
       <DialogContent class="sm:max-w-[640px]">
         <DialogHeader>
           <DialogTitle>添加检测项分类</DialogTitle>
-          <DialogDescription>添加一个检测项分类，并填写该分类的分数上限。</DialogDescription>
+          <DialogDescription>添加一个检测项分类，并填写内容和分数上限。</DialogDescription>
         </DialogHeader>
 
         <form class="grid gap-4" @submit.prevent>
@@ -577,6 +605,16 @@ defineExpose({
               id="create-inspection-category-name"
               v-model="createForm.name"
               placeholder="例如：消防设施"
+            />
+          </div>
+
+          <div class="grid gap-2">
+            <label class="text-sm font-medium text-foreground" for="create-inspection-category-content">分类介绍</label>
+            <Textarea
+              id="create-inspection-category-content"
+              v-model="createForm.content"
+              rows="4"
+              placeholder="请输入内容"
             />
           </div>
 
@@ -616,7 +654,7 @@ defineExpose({
         <DialogHeader>
           <DialogTitle>修改检测项分类</DialogTitle>
           <DialogDescription>
-            {{ editDetailLoading ? "正在同步分类详情..." : "更新当前分类名称和分数上限，调整后会同步应用到分类列表中。" }}
+            {{ editDetailLoading ? "正在同步分类详情..." : "更新当前分类名称、内容和分数上限，调整后会同步应用到分类列表中。" }}
           </DialogDescription>
         </DialogHeader>
 
@@ -629,6 +667,18 @@ defineExpose({
               :disabled="editSubmitting || deleteSubmitting"
               placeholder="例如：消防设施"
               @update:model-value="updateEditForm('name', String($event))"
+            />
+          </div>
+
+          <div class="grid gap-2">
+            <label class="text-sm font-medium text-foreground" for="edit-inspection-category-content">分类介绍</label>
+            <Textarea
+              id="edit-inspection-category-content"
+              :model-value="editForm.content"
+              :disabled="editDetailLoading || editSubmitting || deleteSubmitting"
+              rows="4"
+              placeholder="请输入内容"
+              @update:model-value="updateEditForm('content', String($event))"
             />
           </div>
 
