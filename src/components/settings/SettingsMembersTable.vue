@@ -2131,18 +2131,18 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
               </section>
             </div>
 
-            <div class="space-y-3 md:relative md:flex md:min-h-0 md:flex-col md:overflow-hidden md:px-5 md:pt-4 md:pb-0">
+            <div class="md:relative md:flex md:min-h-0 md:flex-col md:overflow-hidden md:px-5 md:pt-4 md:pb-0">
               <Alert
                 v-if="rolePermissionResourcesErrorMessage"
                 variant="destructive"
-                class="border-destructive/20 bg-destructive/3"
+                class="mb-3 border-destructive/20 bg-destructive/3"
               >
                 <i class="ri-error-warning-line text-base" />
                 <AlertTitle>权限资源加载失败</AlertTitle>
                 <AlertDescription>{{ rolePermissionResourcesErrorMessage }}</AlertDescription>
               </Alert>
 
-              <div class="space-y-2">
+              <div class="space-y-2 pb-3">
                 <div class="flex min-w-0 items-center gap-2 whitespace-nowrap">
                   <h3 class="text-sm font-semibold text-foreground">待选页面</h3>
                   <span class="text-xs text-muted-foreground">勾选后进入右侧并配置按钮</span>
@@ -2170,7 +2170,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
               </div>
 
               <div v-else class="min-h-0 flex-1 overflow-y-auto pr-5 md:mr-[-20px] [scrollbar-gutter:stable]">
-                <div class="space-y-4 md:pr-4">
+                <div class="space-y-4 py-3 md:pr-4">
                   <div
                     v-for="group in menuPermissionGroups"
                     :key="group.key"
@@ -2233,8 +2233,8 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
               </div>
             </div>
 
-            <div class="space-y-3 md:relative md:flex md:min-h-0 md:flex-col md:overflow-hidden md:px-5 md:pt-4 md:pb-0">
-              <div class="space-y-2">
+            <div class="md:relative md:flex md:min-h-0 md:flex-col md:overflow-hidden md:px-5 md:pt-4 md:pb-0">
+              <div class="space-y-2 pb-3">
                 <div class="flex min-w-0 items-center gap-2 whitespace-nowrap">
                   <h3 class="text-sm font-semibold text-foreground">已选页面与按钮</h3>
                   <span class="text-xs text-muted-foreground">按页面继续勾选可操作按钮</span>
@@ -2257,7 +2257,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
               </div>
 
               <div v-else class="min-h-0 flex-1 overflow-y-auto pr-5 md:mr-[-20px] [scrollbar-gutter:stable]">
-                <div class="space-y-3 md:pr-4">
+                <div class="space-y-3 py-3 md:pr-4">
                   <div
                     v-for="group in selectedMenuPermissionGroups"
                     :key="group.key"
