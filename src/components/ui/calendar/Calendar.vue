@@ -33,7 +33,7 @@ const yearRange = computed(() => {
 
   return props.yearRange ?? createYearRange({
     start: props?.minValue ?? baseDate.cycle("year", -100),
-    end: props?.maxValue ?? baseDate,
+    end: props?.maxValue ?? baseDate.cycle("year", 10),
   })
 })
 

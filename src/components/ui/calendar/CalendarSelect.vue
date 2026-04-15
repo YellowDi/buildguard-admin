@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from "vue"
+import { nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue"
 import { Check, ChevronDown } from "lucide-vue-next"
 
 import { cn } from "@/lib/utils"
@@ -25,6 +25,7 @@ const emit = defineEmits<{
 }>()
 
 const rootRef = ref<HTMLElement>()
+const contentRef = ref<HTMLElement>()
 const open = ref(false)
 
 function toggleOpen() {
@@ -38,6 +39,25 @@ function close() {
 function selectValue(value: number) {
   emit("update:modelValue", value)
   close()
+}
+
+function scrollSelectedOptionIntoView() {
+  const contentEl = contentRef.value
+
+  if (!contentEl) {
+    return
+  }
+
+  const selectedEl = contentEl.querySelector<HTMLElement>("[data-selected='true']")
+
+  if (!selectedEl) {
+    return
+  }
+
+  const targetScrollTop = selectedEl.offsetTop - (contentEl.clientHeight - selectedEl.offsetHeight) / 2
+  const maxScrollTop = Math.max(contentEl.scrollHeight - contentEl.clientHeight, 0)
+
+  contentEl.scrollTop = Math.min(Math.max(targetScrollTop, 0), maxScrollTop)
 }
 
 function handleDocumentPointerDown(event: PointerEvent) {
@@ -59,6 +79,15 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   document.removeEventListener("pointerdown", handleDocumentPointerDown)
+})
+
+watch(open, async (isOpen) => {
+  if (!isOpen) {
+    return
+  }
+
+  await nextTick()
+  scrollSelectedOptionIntoView()
 })
 </script>
 
@@ -82,6 +111,7 @@ onBeforeUnmount(() => {
 
     <div
       v-if="open"
+      ref="contentRef"
       :class="
         cn(
           'absolute left-0 top-[calc(100%+6px)] z-50 min-w-full overflow-hidden rounded-md bg-popover p-1 text-popover-foreground shadow-[var(--shadow-card)]',
@@ -102,6 +132,7 @@ onBeforeUnmount(() => {
             modelValue === option.value ? 'bg-accent text-accent-foreground' : 'hover:bg-accent hover:text-accent-foreground',
           )
         "
+        :data-selected="modelValue === option.value"
         @click="selectValue(option.value)"
       >
         <span class="whitespace-nowrap">{{ option.label }}</span>
