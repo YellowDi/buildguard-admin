@@ -7,6 +7,7 @@ import authLoginVisual from "@/assets/auth-login-visual.svg"
 import authOtpVisual from "@/assets/auth-otp-visual.svg"
 import authSignupVisual from "@/assets/auth-signup-visual.svg"
 import InspectionBuildingCards from "@/components/detail/InspectionBuildingCards.vue"
+import InspectionBuildingCardsV2 from "@/components/detail/InspectionBuildingCardsV2.vue"
 import InspectionItemHistorySheet from "@/components/detail/InspectionItemHistorySheet.vue"
 import LinkedEntityDetailSheet from "@/components/detail/LinkedEntityDetailSheet.vue"
 import DetailFieldsSkeleton from "@/components/loading/DetailFieldsSkeleton.vue"
@@ -39,6 +40,26 @@ import {
 
 type WorkOrderDetailKind = "inspection" | "repair"
 type LinkedDetailSheetKind = "customer" | "service" | "plan" | "park"
+type InspectionBuildingCardV2Status = "pending" | "processing" | "completed"
+type InspectionBuildingCardV2Row = {
+  key: string
+  name: string
+  categoryName: string
+  scoreText: string
+  scoreValue: number | null
+  onSelect: () => void
+}
+type InspectionBuildingCardV2Building = {
+  key: string
+  buildName: string
+  status: InspectionBuildingCardV2Status
+  completedCount: number
+  totalCount: number
+  progressValue: number
+  deadlineText: string
+  scoreText: string
+  items: InspectionBuildingCardV2Row[]
+}
 
 const props = withDefaults(defineProps<{
   kind?: WorkOrderDetailKind
@@ -148,6 +169,12 @@ const secondarySections = computed<DetailFieldSection[]>(() => {
   return buildWorkOrderSecondarySections(resolvedInspectionWorkOrder.value)
 })
 
+const inspectionBuildingCardsV2 = computed(() => (
+  buildInspectionWorkOrderCardsV2(
+    resolvedInspectionWorkOrder.value?.Builds,
+    resolvedInspectionWorkOrder.value?.Deadline,
+  )
+))
 const inspectionBuildingCards = computed(() => buildInspectionWorkOrderCards(resolvedInspectionWorkOrder.value?.Builds))
 
 function openRepairCustomerDetail() {
@@ -586,6 +613,57 @@ function buildInspectionWorkOrderCards(builds: WorkOrderBuildInfo[] | undefined)
   })
 }
 
+function buildInspectionWorkOrderCardsV2(
+  builds: WorkOrderBuildInfo[] | undefined,
+  deadline: unknown,
+): InspectionBuildingCardV2Building[] {
+  if (!Array.isArray(builds) || !builds.length) {
+    return []
+  }
+
+  const deadlineText = formatInspectionCardDeadline(deadline)
+
+  return builds.map((build, buildIndex) => {
+    const inspectionItems: WorkOrderBuildInspectionItem[] = Array.isArray(build.InspectionItems) ? build.InspectionItems : []
+    const completedCount = inspectionItems.filter(item => isInspectionItemCompleted(item)).length
+    const totalCount = inspectionItems.length
+
+    return {
+      key: toText(build.BuildUuid, `work-order-build-v2-${buildIndex + 1}`),
+      buildName: toText(build.BuildName, `建筑 ${buildIndex + 1}`),
+      status: resolveInspectionBuildStatus(completedCount, totalCount),
+      completedCount,
+      totalCount,
+      progressValue: totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0,
+      deadlineText,
+      scoreText: formatInspectionCardBuildingScore(build.Score),
+      items: inspectionItems.map((item, itemIndex) => {
+        const inspectionItemUuid = toText(item.InspectionItemUuid, "")
+        const detail = inspectionItemUuid ? inspectionItemDetailByUuid.value[inspectionItemUuid] : undefined
+        const categoryName = toText(detail?.CategoryName, toText(item.CategoryName, "未分类"))
+        const inspectionItemName = toText(item.InspectionItemName, `检测项 ${itemIndex + 1}`)
+        const scoreValue = toNumber(item.Score)
+
+        return {
+          key: inspectionItemUuid || `inspection-item-v2-${itemIndex + 1}`,
+          name: inspectionItemName,
+          categoryName,
+          scoreValue,
+          scoreText: formatInspectionCardDeduction(scoreValue),
+          onSelect: () => openInspectionHistorySheet(buildInspectionItemHistoryModel({
+            buildName: toText(build.BuildName, `建筑 ${buildIndex + 1}`),
+            categoryName,
+            inspectionItemName,
+            inspectionItemKey: inspectionItemUuid || `inspection-item-${itemIndex + 1}`,
+            detail,
+            item,
+          })),
+        }
+      }),
+    }
+  })
+}
+
 async function loadWorkOrderInspectionItemDetails(builds: WorkOrderBuildInfo[] | undefined, requestId: number) {
   const inspectionItemUuids = Array.from(new Set(
     (Array.isArray(builds) ? builds : [])
@@ -762,6 +840,55 @@ function formatInspectionItemScore(value: unknown) {
   }
 
   return "-"
+}
+
+function formatInspectionCardDeadline(value: unknown) {
+  return toText(value, "-") || "-"
+}
+
+function formatInspectionCardBuildingScore(value: unknown) {
+  const score = toNumber(value)
+
+  if (score === null) {
+    return "-"
+  }
+
+  if (Number.isInteger(score)) {
+    return String(score)
+  }
+
+  return score.toFixed(1).replace(/\.0$/, "")
+}
+
+function formatInspectionCardDeduction(value: number | null) {
+  if (value === null) {
+    return "-"
+  }
+
+  if (Number.isInteger(value)) {
+    return `${value} 分`
+  }
+
+  return `${value.toFixed(1).replace(/\.0$/, "")} 分`
+}
+
+function isInspectionItemCompleted(item: WorkOrderBuildInspectionItem) {
+  return toNumber(item.Score) !== null && Boolean(toText(item.UserName, ""))
+}
+
+function resolveInspectionBuildStatus(
+  completedCount: number,
+  totalCount: number,
+): InspectionBuildingCardV2Status {
+  if (totalCount > 0 && completedCount >= totalCount) {
+    return "completed"
+  }
+
+  if (completedCount > 0) {
+    return "processing"
+  }
+
+  return "pending"
 }
 
 function formatBooleanFlag(value: unknown) {
@@ -1036,8 +1163,15 @@ async function submitAssign() {
         </div>
 
         <div v-else-if="!loading && hasWorkOrder" class="pb-5">
+          <InspectionBuildingCardsV2
+            :buildings="inspectionBuildingCardsV2"
+            title="建筑与检测项"
+            empty-title="暂无建筑检测项"
+            empty-description="当前工单还没有返回建筑与检测项数据。"
+          />
           <InspectionBuildingCards
             :buildings="inspectionBuildingCards"
+            title="原条目样式（保留）"
             empty-title="暂无建筑检测项"
             empty-description="当前工单还没有返回建筑与检测项数据。"
           />
