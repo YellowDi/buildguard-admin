@@ -65,6 +65,26 @@ function isExpanded(buildingKey: string) {
   return expandedBuildingKey.value === buildingKey
 }
 
+function handleBaseCardClick(buildingKey: string) {
+  if (typeof window !== "undefined") {
+    const selectedText = window.getSelection?.()?.toString().trim() ?? ""
+    if (selectedText) {
+      return
+    }
+  }
+
+  toggleBuilding(buildingKey)
+}
+
+function handleBaseCardKeydown(event: KeyboardEvent, buildingKey: string) {
+  if (event.key !== "Enter" && event.key !== " ") {
+    return
+  }
+
+  event.preventDefault()
+  toggleBuilding(buildingKey)
+}
+
 function resolveStatusIcon(status: InspectionBuildingStatus) {
   if (status === "completed") {
     return "ri-checkbox-circle-fill"
@@ -87,6 +107,51 @@ function resolveScoreTone(scoreValue: number | null) {
   }
 
   return "text-[#9aa0a7]"
+}
+
+function handleExpandBeforeEnter(element: Element) {
+  const target = element as HTMLElement
+  target.style.height = "0"
+  target.style.opacity = "0"
+  target.style.overflow = "hidden"
+}
+
+function handleExpandEnter(element: Element) {
+  const target = element as HTMLElement
+  target.style.transition = "height 220ms cubic-bezier(0.2, 0, 0, 1), opacity 180ms ease-out"
+  target.style.height = `${target.scrollHeight}px`
+  target.style.opacity = "1"
+}
+
+function handleExpandAfterEnter(element: Element) {
+  const target = element as HTMLElement
+  target.style.height = "auto"
+  target.style.opacity = "1"
+  target.style.overflow = ""
+  target.style.transition = ""
+}
+
+function handleExpandBeforeLeave(element: Element) {
+  const target = element as HTMLElement
+  target.style.height = `${target.scrollHeight}px`
+  target.style.opacity = "1"
+  target.style.overflow = "hidden"
+}
+
+function handleExpandLeave(element: Element) {
+  const target = element as HTMLElement
+  target.style.transition = "height 180ms cubic-bezier(0.4, 0, 1, 1), opacity 140ms ease-in"
+  void target.offsetHeight
+  target.style.height = "0"
+  target.style.opacity = "0"
+}
+
+function handleExpandAfterLeave(element: Element) {
+  const target = element as HTMLElement
+  target.style.height = ""
+  target.style.opacity = ""
+  target.style.overflow = ""
+  target.style.transition = ""
 }
 </script>
 
@@ -130,11 +195,13 @@ function resolveScoreTone(scoreValue: number | null) {
             :key="building.key"
             class="overflow-hidden rounded-[20px] border border-black/4.5 bg-[#faf9f7] text-[#202126]"
           >
-            <button
-              type="button"
-              class="block w-full rounded-[16px] bg-white px-4 py-3.5 text-left shadow-[0_1px_2px_rgba(17,24,39,0.04),0_5px_10px_rgba(17,24,39,0.05)] transition-shadow duration-180 ease-out"
+            <div
+              role="button"
+              tabindex="0"
+              class="block w-full rounded-[16px] bg-white px-4 py-3.5 text-left shadow-[0_1px_2px_rgba(17,24,39,0.04),0_5px_10px_rgba(17,24,39,0.05)]"
               :aria-expanded="isExpanded(building.key)"
-              @click="toggleBuilding(building.key)"
+              @click="handleBaseCardClick(building.key)"
+              @keydown="handleBaseCardKeydown($event, building.key)"
             >
               <div class="flex min-w-0 items-start gap-3">
                 <div class="min-w-0 flex-1">
@@ -169,15 +236,15 @@ function resolveScoreTone(scoreValue: number | null) {
                   </div>
                 </div>
               </div>
-            </button>
+            </div>
 
             <Transition
-              enter-active-class="transition-[opacity,transform] duration-200 ease-[cubic-bezier(0.2,0,0,1)]"
-              enter-from-class="translate-y-1 opacity-0"
-              enter-to-class="translate-y-0 opacity-100"
-              leave-active-class="transition-[opacity,transform] duration-150 ease-in"
-              leave-from-class="translate-y-0 opacity-100"
-              leave-to-class="translate-y-1 opacity-0"
+              @before-enter="handleExpandBeforeEnter"
+              @enter="handleExpandEnter"
+              @after-enter="handleExpandAfterEnter"
+              @before-leave="handleExpandBeforeLeave"
+              @leave="handleExpandLeave"
+              @after-leave="handleExpandAfterLeave"
             >
               <div
                 v-if="isExpanded(building.key)"
@@ -194,32 +261,35 @@ function resolveScoreTone(scoreValue: number | null) {
                   v-else
                   class="overflow-hidden"
                 >
-                  <button
-                    v-for="item in building.items"
-                    :key="`${building.key}-${item.key}`"
-                    type="button"
-                    class="flex min-h-10 w-full items-center justify-between gap-4 border-b border-black/5 px-4 py-2.5 text-left transition-colors duration-180 ease-out last:border-b-0 hover:bg-black/1.5"
-                    :disabled="!item.onSelect"
-                    @click="item.onSelect?.()"
-                  >
-                    <div class="flex min-w-0 items-center gap-2.5 overflow-hidden whitespace-nowrap">
-                      <div class="truncate whitespace-nowrap text-[14px] font-medium text-[#1e1f23]">
-                        {{ item.name }}
-                      </div>
-                      <div class="truncate whitespace-nowrap text-[13px] text-[#979ca5]">
-                        {{ item.categoryName }}
-                      </div>
-                    </div>
-
-                    <div
-                      :class="[
-                        'shrink-0 whitespace-nowrap text-[14px] font-medium tabular-nums',
-                        resolveScoreTone(item.scoreValue),
-                      ]"
+                  <TransitionGroup name="inspection-item-stagger" tag="div">
+                    <button
+                      v-for="(item, itemIndex) in building.items"
+                      :key="`${building.key}-${item.key}`"
+                      type="button"
+                      class="flex min-h-10 w-full items-center justify-between gap-4 border-b border-black/5 px-4 py-2.5 text-left transition-colors duration-180 ease-out last:border-b-0 hover:bg-black/1.5"
+                      :style="{ '--item-delay': `${220 + itemIndex * 36}ms` }"
+                      :disabled="!item.onSelect"
+                      @click="item.onSelect?.()"
                     >
-                      {{ item.scoreText }}
-                    </div>
-                  </button>
+                      <div class="flex min-w-0 items-center gap-2.5 overflow-hidden whitespace-nowrap">
+                        <div class="truncate whitespace-nowrap text-[14px] font-medium text-[#1e1f23]">
+                          {{ item.name }}
+                        </div>
+                        <div class="truncate whitespace-nowrap text-[13px] text-[#979ca5]">
+                          {{ item.categoryName }}
+                        </div>
+                      </div>
+
+                      <div
+                        :class="[
+                          'shrink-0 whitespace-nowrap text-[14px] font-medium tabular-nums',
+                          resolveScoreTone(item.scoreValue),
+                        ]"
+                      >
+                        {{ item.scoreText }}
+                      </div>
+                    </button>
+                  </TransitionGroup>
                 </div>
               </div>
             </Transition>
@@ -232,6 +302,7 @@ function resolveScoreTone(scoreValue: number | null) {
               <button
                 type="button"
                 class="inline-flex items-center gap-1.5 whitespace-nowrap text-[12px] font-medium text-[#8f949c] transition-colors duration-180 hover:text-[#1f2024]"
+                :aria-expanded="isExpanded(building.key)"
                 @click="toggleBuilding(building.key)"
               >
                 {{ isExpanded(building.key) ? "收起详情" : "查看更多详情" }}
@@ -255,3 +326,22 @@ function resolveScoreTone(scoreValue: number | null) {
     </div>
   </section>
 </template>
+
+<style scoped>
+.inspection-item-stagger-enter-active {
+  transition:
+    opacity 180ms ease-out,
+    transform 220ms cubic-bezier(0.2, 0, 0, 1);
+  transition-delay: var(--item-delay);
+}
+
+.inspection-item-stagger-enter-from {
+  opacity: 0;
+  transform: translateY(6px);
+}
+
+.inspection-item-stagger-enter-to {
+  opacity: 1;
+  transform: translateY(0);
+}
+</style>
