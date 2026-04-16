@@ -6,7 +6,7 @@ import { toast } from "vue-sonner"
 import { Badge } from "@/components/ui/badge"
 import BuildingDetailSheet from "@/components/detail/BuildingDetailSheet.vue"
 import DetailFieldSections from "@/components/detail/DetailFieldSections.vue"
-import InspectionBuildingCards from "@/components/detail/InspectionBuildingCards.vue"
+import InspectionBuildingCardsLegacy from "@/components/detail/InspectionBuildingCardsLegacy.vue"
 import LinkedEntityDetailSheet from "@/components/detail/LinkedEntityDetailSheet.vue"
 import TitleBlock from "@/components/layout/TitleBlock.vue"
 import FormDatePicker from "@/components/form/FormDatePicker.vue"
@@ -948,7 +948,7 @@ function readFileAsDataUrl(file: File) {
       </div>
 
       <div v-else-if="detail" class="space-y-5 pb-5">
-        <InspectionBuildingCards
+        <InspectionBuildingCardsLegacy
           :buildings="buildingInspectionCards"
           empty-title="暂无服务建筑"
           empty-description="当前检测服务还没有配置建筑。"

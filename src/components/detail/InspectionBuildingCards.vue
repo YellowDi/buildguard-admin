@@ -2,73 +2,158 @@
 import { computed, ref, watch } from "vue"
 
 import TitleBlock from "@/components/layout/TitleBlock.vue"
-import InspectionCategoryScoreLimitInline from "@/components/inspection/InspectionCategoryScoreLimitInline.vue"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
+import { Progress } from "@/components/ui/progress"
 
-type InspectionBuildingCardField = {
-  key: string
-  label: string
-  value: string
-}
+type InspectionBuildingStatus = "pending" | "processing" | "completed"
 
-type InspectionBuildingCardItem = {
+type InspectionBuildingCardV2Item = {
   key: string
   name: string
-  summary?: string
-  fields?: InspectionBuildingCardField[]
-  hideSummary?: boolean
-  loading?: boolean
-  error?: string
-  emptyText?: string
+  categoryName: string
+  scoreText: string
+  scoreValue: number | null
   onSelect?: () => void
-  onRetry?: () => void
 }
 
-type InspectionBuildingCardGroup = {
-  key: string
-  title: string
-  scoreLimit?: number | null
-  items: InspectionBuildingCardItem[]
-}
-
-type InspectionBuildingCardBuilding = {
+type InspectionBuildingCardV2Building = {
   key: string
   buildName: string
-  summary: string
-  score?: string
-  groups: InspectionBuildingCardGroup[]
+  status: InspectionBuildingStatus
+  completedCount: number
+  totalCount: number
+  progressValue: number
+  deadlineText: string
+  scoreText: string
+  items: InspectionBuildingCardV2Item[]
 }
 
 const props = withDefaults(defineProps<{
   title?: string
   count?: number
-  buildings: InspectionBuildingCardBuilding[]
+  buildings: InspectionBuildingCardV2Building[]
   emptyTitle?: string
   emptyDescription?: string
 }>(), {
   title: "建筑与检测项",
   count: undefined,
-  emptyTitle: "暂无服务建筑",
+  emptyTitle: "暂无建筑检测项",
   emptyDescription: "当前暂无可展示的建筑检测项数据。",
 })
 
-const expandedBuildingKey = ref("")
+const expandedBuildingKeys = ref<string[]>([])
 
 const displayCount = computed(() => props.count ?? props.buildings.length)
 
 watch(() => props.buildings, (buildings) => {
   if (!buildings.length) {
-    expandedBuildingKey.value = ""
+    expandedBuildingKeys.value = []
     return
   }
 
-  if (!buildings.some(building => building.key === expandedBuildingKey.value)) {
-    expandedBuildingKey.value = buildings[0]?.key ?? ""
-  }
+  const validKeys = new Set(buildings.map(building => building.key))
+  expandedBuildingKeys.value = expandedBuildingKeys.value.filter(key => validKeys.has(key))
 }, { immediate: true })
+
+function toggleBuilding(buildingKey: string) {
+  expandedBuildingKeys.value = expandedBuildingKeys.value.includes(buildingKey)
+    ? expandedBuildingKeys.value.filter(key => key !== buildingKey)
+    : [...expandedBuildingKeys.value, buildingKey]
+}
+
+function isExpanded(buildingKey: string) {
+  return expandedBuildingKeys.value.includes(buildingKey)
+}
+
+function handleBaseCardClick(buildingKey: string) {
+  if (typeof window !== "undefined") {
+    const selectedText = window.getSelection?.()?.toString().trim() ?? ""
+    if (selectedText) {
+      return
+    }
+  }
+
+  toggleBuilding(buildingKey)
+}
+
+function handleBaseCardKeydown(event: KeyboardEvent, buildingKey: string) {
+  if (event.key !== "Enter" && event.key !== " ") {
+    return
+  }
+
+  event.preventDefault()
+  toggleBuilding(buildingKey)
+}
+
+function resolveStatusIcon(status: InspectionBuildingStatus) {
+  if (status === "completed") {
+    return "ri-checkbox-circle-fill"
+  }
+
+  if (status === "processing") {
+    return "ri-loader-4-line"
+  }
+
+  return "ri-time-line"
+}
+
+function resolveScoreTone(scoreValue: number | null) {
+  if (scoreValue === null) {
+    return "text-[#202126]"
+  }
+
+  if (scoreValue > 0) {
+    return "text-[#1f2937]"
+  }
+
+  return "text-[#9aa0a7]"
+}
+
+function handleExpandBeforeEnter(element: Element) {
+  const target = element as HTMLElement
+  target.style.height = "0"
+  target.style.opacity = "0"
+  target.style.overflow = "hidden"
+}
+
+function handleExpandEnter(element: Element) {
+  const target = element as HTMLElement
+  target.style.transition = "height 220ms cubic-bezier(0.2, 0, 0, 1), opacity 180ms ease-out"
+  target.style.height = `${target.scrollHeight}px`
+  target.style.opacity = "1"
+}
+
+function handleExpandAfterEnter(element: Element) {
+  const target = element as HTMLElement
+  target.style.height = "auto"
+  target.style.opacity = "1"
+  target.style.overflow = ""
+  target.style.transition = ""
+}
+
+function handleExpandBeforeLeave(element: Element) {
+  const target = element as HTMLElement
+  target.style.height = `${target.scrollHeight}px`
+  target.style.opacity = "1"
+  target.style.overflow = "hidden"
+}
+
+function handleExpandLeave(element: Element) {
+  const target = element as HTMLElement
+  target.style.transition = "height 180ms cubic-bezier(0.4, 0, 1, 1), opacity 140ms ease-in"
+  void target.offsetHeight
+  target.style.height = "0"
+  target.style.opacity = "0"
+}
+
+function handleExpandAfterLeave(element: Element) {
+  const target = element as HTMLElement
+  target.style.height = ""
+  target.style.opacity = ""
+  target.style.overflow = ""
+  target.style.transition = ""
+}
 </script>
 
 <template>
@@ -78,7 +163,7 @@ watch(() => props.buildings, (buildings) => {
         <TitleBlock
           variant="section"
           :title="props.title"
-          class="detail-section-inset pt-4 pb-1"
+          class="detail-section-inset pt-4 pb-3"
         >
           <template #append>
             <Badge
@@ -94,7 +179,7 @@ watch(() => props.buildings, (buildings) => {
           v-if="props.buildings.length === 0"
           class="flex min-h-[min(160px,30vh)] w-full min-w-0 flex-col items-center justify-center px-4 py-12"
         >
-          <Empty class="w-full max-w-md flex-none border-0 bg-transparent shadow-none p-6! md:p-8!">
+          <Empty class="w-full max-w-md flex-none border-0 bg-transparent p-6! shadow-none md:p-8!">
             <EmptyHeader class="max-w-md">
               <EmptyMedia variant="icon">
                 <i class="ri-building-line text-[18px]" />
@@ -105,136 +190,159 @@ watch(() => props.buildings, (buildings) => {
           </Empty>
         </div>
 
-        <div v-else class="detail-group-stack">
-          <Accordion
-            v-model="expandedBuildingKey"
-            type="single"
-            collapsible
-            class="pb-2"
+        <div v-else class="detail-group-stack space-y-4 pb-2">
+          <article
+            v-for="building in props.buildings"
+            :key="building.key"
+            class="overflow-hidden rounded-[20px] border border-black/4.5 bg-[#faf9f7] text-[#202126]"
           >
-            <AccordionItem
-              v-for="building in props.buildings"
-              :key="building.key"
-              :value="building.key"
-              class="mb-3 min-w-0 overflow-x-clip rounded-2xl border border-border/55 bg-muted shadow-xs last:mb-0 dark:shadow-(--shadow-card)"
+            <div
+              role="button"
+              tabindex="0"
+              class="block w-full rounded-[16px] bg-white px-4 py-3.5 text-left shadow-[0_1px_2px_rgba(17,24,39,0.04),0_5px_10px_rgba(17,24,39,0.05)]"
+              :aria-expanded="isExpanded(building.key)"
+              @click="handleBaseCardClick(building.key)"
+              @keydown="handleBaseCardKeydown($event, building.key)"
             >
-              <AccordionTrigger class="bg-transparent px-3.5 py-3 text-left hover:no-underline">
-                <div class="flex min-w-0 flex-1 items-center gap-3 pr-3">
-                  <div class="min-w-0 flex-1 truncate text-sm font-semibold text-foreground">
-                    {{ building.buildName }}
+              <div class="flex min-w-0 items-start gap-3">
+                <div class="min-w-0 flex-1">
+                  <div class="flex min-w-0 items-center gap-2.5">
+                    <i
+                      :class="[
+                        resolveStatusIcon(building.status),
+                        building.status === 'processing' ? 'animate-spin' : '',
+                        'shrink-0 text-[15px] text-[#8f949c]',
+                      ]"
+                    />
+                    <div class="truncate whitespace-nowrap text-[18px] font-semibold tracking-[-0.025em] text-[#17181c]">
+                      {{ building.buildName }}
+                    </div>
                   </div>
-                  <Badge
-                    v-if="building.score"
-                    variant="secondary"
-                    class="shrink-0 rounded-md border border-brand-border bg-brand-surface px-2 py-0.5 text-[12px] font-semibold text-link"
-                  >
-                    {{ building.score }}
-                  </Badge>
-                  <div class="shrink-0 truncate text-xs text-muted-foreground">
-                    {{ building.summary }}
+
+                  <Progress
+                    :model-value="building.progressValue"
+                    class="mt-3.5 h-[6px] rounded-full bg-[#ebecef] **:data-[slot=progress-indicator]:bg-[#1d1d20]"
+                  />
+
+                  <div class="mt-3 flex min-w-0 items-center justify-between gap-3 whitespace-nowrap text-[12px] text-[#a0a4ac]">
+                    <div class="min-w-0 truncate tabular-nums">
+                      <span class="text-[#2b2d33]">{{ building.completedCount }}</span>
+                      <span> 已完成 / </span>
+                      <span>{{ building.totalCount }}</span>
+                      <span> 总检测项</span>
+                    </div>
+                    <div class="shrink-0 truncate tabular-nums text-right">
+                      {{ building.deadlineText }}
+                    </div>
                   </div>
                 </div>
-              </AccordionTrigger>
+              </div>
+            </div>
 
-              <AccordionContent
-                class="bg-transparent data-[state=closed]:p-0 data-[state=open]:overflow-visible! data-[state=open]:px-2 data-[state=open]:pb-2 data-[state=open]:pt-0 [&>div]:pb-0 [&>div]:pt-0"
+            <Transition
+              @before-enter="handleExpandBeforeEnter"
+              @enter="handleExpandEnter"
+              @after-enter="handleExpandAfterEnter"
+              @before-leave="handleExpandBeforeLeave"
+              @leave="handleExpandLeave"
+              @after-leave="handleExpandAfterLeave"
+            >
+              <div
+                v-if="isExpanded(building.key)"
+                class="bg-transparent pb-0 pt-3"
               >
-                <div v-if="building.groups.length === 0" class="py-2 text-sm text-muted-foreground">
-                  当前建筑暂无绑定检测项。
+                <div
+                  v-if="building.items.length === 0"
+                  class="px-4 py-1 text-sm text-[#8f949c]"
+                >
+                  当前建筑暂无检测项。
                 </div>
 
-                <div v-else class="overflow-hidden rounded-lg bg-background shadow-(--shadow-card)">
-                  <div
-                    v-for="(group, groupIndex) in building.groups"
-                    :key="`${building.key}-${group.key}`"
-                    :class="[
-                      'space-y-3',
-                      groupIndex === 0 ? 'pt-3' : 'pt-2',
-                    ]"
-                  >
-                    <div class="flex min-w-0 items-center gap-3 px-2">
-                      <div class="flex min-w-0 items-center gap-2">
-                        <div class="truncate text-sm font-semibold text-muted-foreground">{{ group.title }}</div>
-                        <Badge
-                          variant="secondary"
-                          class="min-w-6 justify-center rounded-md px-1.5 py-0.5 text-[12px] font-medium leading-none"
-                        >
-                          {{ group.items.length }}
-                        </Badge>
+                <div
+                  v-else
+                  class="overflow-hidden"
+                >
+                  <TransitionGroup name="inspection-item-stagger" tag="div">
+                    <button
+                      v-for="(item, itemIndex) in building.items"
+                      :key="`${building.key}-${item.key}`"
+                      type="button"
+                      class="flex min-h-10 w-full items-center justify-between gap-4 border-b border-black/5 px-4 py-2.5 text-left transition-colors duration-180 ease-out last:border-b-0 hover:bg-black/1.5"
+                      :style="{ '--item-delay': `${220 + itemIndex * 36}ms` }"
+                      :disabled="!item.onSelect"
+                      @click="item.onSelect?.()"
+                    >
+                      <div class="flex min-w-0 items-center gap-2.5 overflow-hidden whitespace-nowrap">
+                        <div class="truncate whitespace-nowrap text-[14px] font-medium text-[#1e1f23]">
+                          {{ item.name }}
+                        </div>
+                        <div class="truncate whitespace-nowrap text-[13px] text-[#979ca5]">
+                          {{ item.categoryName }}
+                        </div>
                       </div>
 
-                      <div class="h-px flex-1 bg-border/80" />
-
-                      <div v-if="group.scoreLimit !== undefined" class="flex shrink-0 items-center">
-                        <InspectionCategoryScoreLimitInline :limit="group.scoreLimit" />
-                      </div>
-                    </div>
-
-                    <div class="space-y-0.5 px-1.5 pb-1.5">
                       <div
-                        v-for="item in group.items"
-                        :key="`${building.key}-${group.key}-${item.key}`"
-                        class="min-w-0"
+                        :class="[
+                          'shrink-0 whitespace-nowrap text-[14px] font-medium tabular-nums',
+                          resolveScoreTone(item.scoreValue),
+                        ]"
                       >
-                        <button
-                          type="button"
-                          class="flex w-full min-w-0 items-center gap-2 rounded-lg px-2 py-2 text-left transition-colors hover:bg-muted/50 disabled:cursor-default disabled:hover:bg-transparent"
-                          :disabled="!item.onSelect"
-                          @click="item.onSelect?.()"
-                        >
-                          <div class="flex min-w-0 flex-1 items-center gap-2.5">
-                            <div class="min-w-0 flex-1 truncate text-[13px] font-medium text-foreground">
-                              {{ item.name }}
-                            </div>
-
-                            <div
-                              v-if="!item.hideSummary"
-                              class="flex min-w-0 max-w-[50%] shrink items-center gap-1.5 text-[11px] text-muted-foreground"
-                            >
-                              <i
-                                :class="[
-                                  item.loading
-                                    ? 'ri-loader-4-line animate-spin text-muted-foreground'
-                                    : item.error
-                                      ? 'ri-error-warning-line text-destructive'
-                                      : 'ri-time-line text-muted-foreground',
-                                  'shrink-0 text-[12px]',
-                                ]"
-                              />
-                              <span
-                                :class="[
-                                  'truncate whitespace-nowrap',
-                                  item.error ? 'text-destructive' : 'text-muted-foreground',
-                                ]"
-                              >
-                                {{ item.error || item.summary || item.emptyText || "-" }}
-                              </span>
-                            </div>
-                          </div>
-
-                          <div class="flex shrink-0 items-center gap-1.5 self-center">
-                            <Button
-                              v-if="item.error && item.onRetry"
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              class="h-6 rounded-md px-2 text-[11px]"
-                              @click.stop="item.onRetry"
-                            >
-                              重试
-                            </Button>
-                            <i class="ri-arrow-right-s-line text-base text-muted-foreground/80" />
-                          </div>
-                        </button>
+                        {{ item.scoreText }}
                       </div>
-                    </div>
-                  </div>
+                    </button>
+                  </TransitionGroup>
                 </div>
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
+              </div>
+            </Transition>
+
+            <div
+              :class="[
+                'flex items-center justify-between gap-3 px-4 py-2.5',
+              ]"
+            >
+              <button
+                type="button"
+                class="inline-flex items-center gap-1.5 whitespace-nowrap text-[12px] font-medium text-[#8f949c] transition-colors duration-180 hover:text-[#1f2024]"
+                :aria-expanded="isExpanded(building.key)"
+                @click="toggleBuilding(building.key)"
+              >
+                {{ isExpanded(building.key) ? "收起详情" : "查看更多详情" }}
+                <i :class="isExpanded(building.key) ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line'" class="text-[15px]" />
+              </button>
+
+              <div class="shrink-0 text-right tabular-nums">
+                <div
+                  :class="[
+                    'whitespace-nowrap text-[17px] font-semibold tracking-[-0.02em]',
+                    resolveScoreTone(null),
+                  ]"
+                >
+                  {{ building.scoreText }}
+                </div>
+              </div>
+            </div>
+          </article>
         </div>
       </div>
     </div>
   </section>
 </template>
+
+<style scoped>
+.inspection-item-stagger-enter-active {
+  transition:
+    opacity 180ms ease-out,
+    transform 220ms cubic-bezier(0.2, 0, 0, 1);
+  transition-delay: var(--item-delay);
+}
+
+.inspection-item-stagger-enter-from {
+  opacity: 0;
+  transform: translateY(6px);
+}
+
+.inspection-item-stagger-enter-to {
+  opacity: 1;
+  transform: translateY(0);
+}
+</style>

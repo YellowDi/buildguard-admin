@@ -7,7 +7,6 @@ import authLoginVisual from "@/assets/auth-login-visual.svg"
 import authOtpVisual from "@/assets/auth-otp-visual.svg"
 import authSignupVisual from "@/assets/auth-signup-visual.svg"
 import InspectionBuildingCards from "@/components/detail/InspectionBuildingCards.vue"
-import InspectionBuildingCardsV2 from "@/components/detail/InspectionBuildingCardsV2.vue"
 import InspectionItemHistorySheet from "@/components/detail/InspectionItemHistorySheet.vue"
 import LinkedEntityDetailSheet from "@/components/detail/LinkedEntityDetailSheet.vue"
 import DetailFieldsSkeleton from "@/components/loading/DetailFieldsSkeleton.vue"
@@ -169,13 +168,12 @@ const secondarySections = computed<DetailFieldSection[]>(() => {
   return buildWorkOrderSecondarySections(resolvedInspectionWorkOrder.value)
 })
 
-const inspectionBuildingCardsV2 = computed(() => (
-  buildInspectionWorkOrderCardsV2(
+const inspectionBuildingCards = computed(() => (
+  buildInspectionWorkOrderCards(
     resolvedInspectionWorkOrder.value?.Builds,
     resolvedInspectionWorkOrder.value?.Deadline,
   )
 ))
-const inspectionBuildingCards = computed(() => buildInspectionWorkOrderCards(resolvedInspectionWorkOrder.value?.Builds))
 
 function openRepairCustomerDetail() {
   const targetCustomerUuid = toRepairWorkOrderText(repairWorkOrder.value?.CustomerUuid) || customerUuid.value
@@ -530,90 +528,7 @@ function toMemberText(value: unknown, fallback = "") {
   return fallback
 }
 
-function formatBuildScore(value: unknown) {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return `建筑分数 ${value}`
-  }
-
-  if (typeof value === "string" && value.trim()) {
-    return `建筑分数 ${value.trim()}`
-  }
-
-  return ""
-}
-
-function formatInspectionItemCompactSummary(userName: unknown, score: unknown) {
-  const inspectorName = toText(userName, "待回传")
-  const scoreText = formatInspectionItemScore(score)
-
-  if (scoreText === "-") {
-    return inspectorName
-  }
-
-  return `${inspectorName} · ${scoreText.replace(/\s+/g, "")}`
-}
-
-function buildInspectionWorkOrderCards(builds: WorkOrderBuildInfo[] | undefined) {
-  if (!Array.isArray(builds) || !builds.length) {
-    return []
-  }
-
-  return builds.map((build, buildIndex) => {
-    const inspectionItems: WorkOrderBuildInspectionItem[] = Array.isArray(build.InspectionItems) ? build.InspectionItems : []
-    const groupMap = new Map<string, {
-      key: string
-      title: string
-      items: Array<{
-        key: string
-        name: string
-        summary: string
-        emptyText: string
-        onSelect: () => void
-      }>
-    }>()
-
-    inspectionItems.forEach((item, itemIndex) => {
-      const inspectionItemUuid = toText(item.InspectionItemUuid, "")
-      const detail = inspectionItemUuid ? inspectionItemDetailByUuid.value[inspectionItemUuid] : undefined
-      const categoryName = toText(detail?.CategoryName, toText(item.CategoryName, "检测项"))
-      const categoryKey = toText(detail?.CategoryUuid, toText(item.CategoryUuid, `category-${categoryName}`))
-      const nextGroup = groupMap.get(categoryKey) ?? {
-        key: categoryKey,
-        title: categoryName,
-        items: [],
-      }
-
-      const inspectionItemName = toText(item.InspectionItemName, `检测项 ${itemIndex + 1}`)
-
-      nextGroup.items.push({
-        key: inspectionItemUuid || `inspection-item-${itemIndex + 1}`,
-        name: inspectionItemName,
-        summary: formatInspectionItemCompactSummary(item.UserName, item.Score),
-        emptyText: "待回传",
-        onSelect: () => openInspectionHistorySheet(buildInspectionItemHistoryModel({
-          buildName: toText(build.BuildName, `建筑 ${buildIndex + 1}`),
-          categoryName,
-          inspectionItemName,
-          inspectionItemKey: inspectionItemUuid || `inspection-item-${itemIndex + 1}`,
-          detail,
-          item,
-        })),
-      })
-
-      groupMap.set(categoryKey, nextGroup)
-    })
-
-    return {
-      key: toText(build.BuildUuid, `work-order-build-${buildIndex + 1}`),
-      buildName: toText(build.BuildName, `建筑 ${buildIndex + 1}`),
-      score: formatBuildScore(build.Score),
-      summary: `${inspectionItems.length} 个检测项`,
-      groups: Array.from(groupMap.values()),
-    }
-  })
-}
-
-function buildInspectionWorkOrderCardsV2(
+function buildInspectionWorkOrderCards(
   builds: WorkOrderBuildInfo[] | undefined,
   deadline: unknown,
 ): InspectionBuildingCardV2Building[] {
@@ -629,7 +544,7 @@ function buildInspectionWorkOrderCardsV2(
     const totalCount = inspectionItems.length
 
     return {
-      key: toText(build.BuildUuid, `work-order-build-v2-${buildIndex + 1}`),
+      key: toText(build.BuildUuid, `work-order-build-${buildIndex + 1}`),
       buildName: toText(build.BuildName, `建筑 ${buildIndex + 1}`),
       status: resolveInspectionBuildStatus(completedCount, totalCount),
       completedCount,
@@ -645,7 +560,7 @@ function buildInspectionWorkOrderCardsV2(
         const scoreValue = toNumber(item.Score)
 
         return {
-          key: inspectionItemUuid || `inspection-item-v2-${itemIndex + 1}`,
+          key: inspectionItemUuid || `inspection-item-${itemIndex + 1}`,
           name: inspectionItemName,
           categoryName,
           scoreValue,
@@ -1163,15 +1078,9 @@ async function submitAssign() {
         </div>
 
         <div v-else-if="!loading && hasWorkOrder" class="pb-5">
-          <InspectionBuildingCardsV2
-            :buildings="inspectionBuildingCardsV2"
-            title="建筑与检测项"
-            empty-title="暂无建筑检测项"
-            empty-description="当前工单还没有返回建筑与检测项数据。"
-          />
           <InspectionBuildingCards
             :buildings="inspectionBuildingCards"
-            title="原条目样式（保留）"
+            title="建筑与检测项"
             empty-title="暂无建筑检测项"
             empty-description="当前工单还没有返回建筑与检测项数据。"
           />
