@@ -97,7 +97,7 @@ function resolveScoreTone(scoreValue: number | null) {
         <TitleBlock
           variant="section"
           :title="props.title"
-          class="detail-section-inset pt-4 pb-1"
+          class="detail-section-inset pt-4 pb-3"
         >
           <template #append>
             <Badge
@@ -128,11 +128,11 @@ function resolveScoreTone(scoreValue: number | null) {
           <article
             v-for="building in props.buildings"
             :key="building.key"
-            class="overflow-hidden rounded-[20px] border border-black/[0.045] bg-[#faf9f7] text-[#202126]"
+            class="overflow-hidden rounded-[20px] border border-black/4.5 bg-[#faf9f7] text-[#202126]"
           >
             <button
               type="button"
-              class="block w-full rounded-[16px] bg-white px-4 py-3.5 text-left shadow-[0_1px_2px_rgba(17,24,39,0.04),0_5px_10px_rgba(17,24,39,0.05)] transition-[box-shadow] duration-180 ease-out"
+              class="block w-full rounded-[16px] bg-white px-4 py-3.5 text-left shadow-[0_1px_2px_rgba(17,24,39,0.04),0_5px_10px_rgba(17,24,39,0.05)] transition-shadow duration-180 ease-out"
               :aria-expanded="isExpanded(building.key)"
               @click="toggleBuilding(building.key)"
             >
@@ -153,7 +153,7 @@ function resolveScoreTone(scoreValue: number | null) {
 
                   <Progress
                     :model-value="building.progressValue"
-                    class="mt-3.5 h-[6px] rounded-full bg-[#ebecef] [&_[data-slot=progress-indicator]]:bg-[#1d1d20]"
+                    class="mt-3.5 h-[6px] rounded-full bg-[#ebecef] **:data-[slot=progress-indicator]:bg-[#1d1d20]"
                   />
 
                   <div class="mt-3 flex min-w-0 items-center justify-between gap-3 whitespace-nowrap text-[12px] text-[#a0a4ac]">
@@ -198,7 +198,7 @@ function resolveScoreTone(scoreValue: number | null) {
                     v-for="item in building.items"
                     :key="`${building.key}-${item.key}`"
                     type="button"
-                    class="flex min-h-10 w-full items-center justify-between gap-4 border-b border-black/[0.05] px-4 py-2.5 text-left transition-colors duration-180 ease-out last:border-b-0 hover:bg-black/[0.015]"
+                    class="flex min-h-10 w-full items-center justify-between gap-4 border-b border-black/5 px-4 py-2.5 text-left transition-colors duration-180 ease-out last:border-b-0 hover:bg-black/1.5"
                     :disabled="!item.onSelect"
                     @click="item.onSelect?.()"
                   >
