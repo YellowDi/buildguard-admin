@@ -43,7 +43,7 @@ function updateRelease<K extends keyof AppReleaseDraft>(field: K, value: AppRele
 <template>
   <SettingsRightPanelLayout
     variant="title-only"
-    title="应用"
+    title="应用更新"
     description="维护移动平台用户端 app 的版本号、更新日志和分发地址。"
   >
     <section class="space-y-7">

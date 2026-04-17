@@ -440,10 +440,10 @@ const categories = computed<SettingsCategory[]>(() => [
   {
     key: "apps",
     group: "admin",
-    label: "应用",
+    label: "应用更新",
     description: "维护移动端版本号、更新日志和下载地址。",
     icon: "ri-smartphone-line",
-    pageTitle: "应用",
+    pageTitle: "应用更新",
     pageDescription: "维护 Android 与 iOS 用户端版本信息，后续可直接对接更新接口。",
     sections: [],
   },
