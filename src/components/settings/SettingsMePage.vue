@@ -182,7 +182,7 @@ function handleDeleteAccount() {
     />
 
     <div class="min-h-0 flex-1 overflow-y-auto px-3 pb-4 sm:px-4">
-      <div class="space-y-6">
+      <div class="mx-auto w-full max-w-4xl space-y-6">
         <!-- 账号 -->
         <SettingsSection
           title="账号"

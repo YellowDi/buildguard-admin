@@ -25,7 +25,7 @@ const props = withDefaults(defineProps<{
 
 <template>
   <div class="sticky top-0 z-[6] shrink-0 bg-background px-3 pt-4 pb-3 sm:px-4">
-    <div class="flex flex-col gap-3">
+    <div class="mx-auto flex w-full max-w-4xl flex-col gap-3">
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>

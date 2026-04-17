@@ -79,7 +79,7 @@ function isItemDisabled(key: string) {
     />
 
     <div class="min-h-0 flex-1 overflow-y-auto px-3 pb-4 sm:px-4">
-      <div class="space-y-8">
+      <div class="mx-auto w-full max-w-4xl space-y-8">
         <SettingsSection
           v-for="section in props.category.sections"
           :key="section.key"
