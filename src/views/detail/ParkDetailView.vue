@@ -102,6 +102,7 @@ const buildingModule = computed<DetailRelationModuleSchema<BuildingRow>>(() => (
       rows: buildings.value,
     },
   ],
+  rowAction: row => goToBuildingDetail(row.id),
   emptyState: {
     title: "暂无建筑",
     description: "当前园区还没有配置建筑信息。",

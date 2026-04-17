@@ -34,6 +34,7 @@ const displayCount = computed(() => (
 const hasRows = computed(() => displayCount.value > 0)
 
 const trailingColumns = computed(() => props.schema.columns.slice(1))
+const hasRowAction = computed(() => typeof props.schema.rowAction === "function")
 
 function getRowKey(row: RelationRow, index: number) {
   if (typeof props.schema.rowKey === "function") {
@@ -68,6 +69,60 @@ function isEmptyLikeValue(value: unknown) {
 
 function hasNamedSlot(name?: string) {
   return Boolean(name && slots[name])
+}
+
+function isInteractiveTarget(target: EventTarget | null, currentTarget?: EventTarget | null) {
+  if (!(target instanceof HTMLElement)) {
+    return false
+  }
+
+  const interactiveAncestor = target.closest(
+    "button, a, input, select, textarea, summary, label, [role='button'], [role='link'], [data-detail-relation-ignore-row-click='true']",
+  )
+
+  if (!interactiveAncestor) {
+    return false
+  }
+
+  return interactiveAncestor !== currentTarget
+}
+
+function hasActiveTextSelection() {
+  if (typeof window === "undefined" || typeof window.getSelection !== "function") {
+    return false
+  }
+
+  const selection = window.getSelection()
+  return Boolean(selection && !selection.isCollapsed && selection.toString().trim())
+}
+
+function handleRowClick(event: MouseEvent, row: RelationRow) {
+  if (!props.schema.rowAction) {
+    return
+  }
+
+  if (isInteractiveTarget(event.target, event.currentTarget) || hasActiveTextSelection()) {
+    return
+  }
+
+  props.schema.rowAction(row)
+}
+
+function handleRowKeydown(event: KeyboardEvent, row: RelationRow) {
+  if (!props.schema.rowAction) {
+    return
+  }
+
+  if (isInteractiveTarget(event.target, event.currentTarget)) {
+    return
+  }
+
+  if (event.key !== "Enter" && event.key !== " ") {
+    return
+  }
+
+  event.preventDefault()
+  props.schema.rowAction(row)
 }
 
 // cell 的默认回退顺序固定为：slot > value(row) > row[key]。
@@ -142,7 +197,14 @@ function hasNamedSlot(name?: string) {
             <div
               v-for="(row, rowIndex) in group.rows"
               :key="`${group.key}-${getRowKey(row, rowIndex)}`"
-              class="detail-relation-row detail-table-grid detail-relation-grid detail-section-inset items-center text-[14px] transition-colors hover:bg-surface-hover-strong"
+              :class="cn(
+                'detail-relation-row detail-table-grid detail-relation-grid detail-section-inset items-center text-[14px] transition-colors hover:bg-surface-hover-strong',
+                hasRowAction && 'cursor-pointer active:bg-surface-secondary/80',
+              )"
+              :tabindex="hasRowAction ? 0 : undefined"
+              :role="hasRowAction ? 'button' : undefined"
+              @click="handleRowClick($event, row)"
+              @keydown="handleRowKeydown($event, row)"
             >
               <div
                 v-for="column in schema.columns"

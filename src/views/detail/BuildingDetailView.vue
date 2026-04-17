@@ -90,6 +90,7 @@ const inspectionModule = computed<DetailRelationModuleSchema<BuildingRecordRow>>
       rows: inspectionRecords.value,
     },
   ],
+  rowAction: row => goToRecordDetail(row),
   emptyState: {
     title: "暂无检测记录",
     description: "当前建筑还没有可展示的检测工单记录。",
@@ -129,6 +130,7 @@ const repairModule = computed<DetailRelationModuleSchema<BuildingRecordRow>>(() 
       rows: repairRecords.value,
     },
   ],
+  rowAction: row => goToRecordDetail(row),
   emptyState: {
     title: "暂无报修记录",
     description: "当前建筑还没有可展示的报修工单记录。",

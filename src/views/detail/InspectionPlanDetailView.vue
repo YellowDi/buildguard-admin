@@ -193,6 +193,7 @@ const workOrdersModule = computed<DetailRelationModuleSchema<InspectionPlanWorkO
       rows: workOrders.value,
     },
   ],
+  rowAction: row => openWorkOrderPreview(row),
 }))
 
 watch(detail, (current) => {

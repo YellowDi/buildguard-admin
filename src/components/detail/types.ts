@@ -129,6 +129,8 @@ export type DetailRelationGroup<Row extends Record<string, unknown> = Record<str
   rows: Row[]
 }
 
+export type DetailRelationRowAction<Row extends Record<string, unknown> = Record<string, unknown>> = (row: Row) => void
+
 export type DetailRelationModuleSchema<Row extends Record<string, unknown> = Record<string, unknown>> = {
   key: string
   title: string
@@ -141,6 +143,7 @@ export type DetailRelationModuleSchema<Row extends Record<string, unknown> = Rec
   columns: DetailRelationColumn<Row>[]
   groups: DetailRelationGroup<Row>[]
   rowKey: DetailRelationRowKey<Row>
+  rowAction?: DetailRelationRowAction<Row>
   mobileMinWidth?: string
   columnTemplateMobile: string
   columnTemplateDesktop?: string
