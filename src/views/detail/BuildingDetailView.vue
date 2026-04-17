@@ -11,7 +11,6 @@ import DetailRelationModule from "@/components/detail/DetailRelationModule.vue"
 import MapLocationDialog from "@/components/map/MapLocationDialog.vue"
 import type { DetailFieldSection, DetailRelationModuleSchema } from "@/components/detail/types"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { TooltipWrap } from "@/components/ui/tooltip"
 import { detailBreadcrumbItems, detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
@@ -70,8 +69,18 @@ const inspectionModule = computed<DetailRelationModuleSchema<BuildingRecordRow>>
   rowKey: "id",
   columns: [
     { key: "serviceName", label: "检测服务", cellClass: "truncate" },
-    { key: "executor", label: "执行人" },
-    { key: "deadline", label: "截止时间", cellClass: "whitespace-nowrap text-muted-foreground" },
+    {
+      key: "executor",
+      label: "执行人",
+      headerClass: "text-center",
+      cellClass: "flex min-w-0 items-center justify-center overflow-hidden text-center",
+    },
+    {
+      key: "deadline",
+      label: "截止时间",
+      headerClass: "text-center",
+      cellClass: "flex min-w-0 items-center justify-center overflow-hidden text-center whitespace-nowrap text-muted-foreground",
+    },
     { key: "actions", label: "", slot: "record-action-cell", cellClass: "flex justify-end" },
   ],
   groups: [
@@ -99,8 +108,18 @@ const repairModule = computed<DetailRelationModuleSchema<BuildingRecordRow>>(() 
   rowKey: "id",
   columns: [
     { key: "item", label: "报修类型", cellClass: "whitespace-nowrap text-muted-foreground" },
-    { key: "executor", label: "执行人" },
-    { key: "deadline", label: "创建时间", cellClass: "whitespace-nowrap text-muted-foreground" },
+    {
+      key: "executor",
+      label: "执行人",
+      headerClass: "text-center",
+      cellClass: "flex min-w-0 items-center justify-center overflow-hidden text-center",
+    },
+    {
+      key: "deadline",
+      label: "创建时间",
+      headerClass: "text-center",
+      cellClass: "flex min-w-0 items-center justify-center overflow-hidden text-center whitespace-nowrap text-muted-foreground",
+    },
     { key: "actions", label: "", slot: "record-action-cell", cellClass: "flex justify-end" },
   ],
   groups: [
@@ -365,6 +384,22 @@ function formatExecutorText(executors: string[]) {
   return executors.length ? executors.join("、") : "-"
 }
 
+function formatExecutorSummary(executors: string[]) {
+  if (!executors.length) {
+    return "-"
+  }
+
+  if (executors.length === 1) {
+    return executors[0]
+  }
+
+  return `${executors[0]} 等 ${executors.length} 人`
+}
+
+function buildExecutorTooltip(executors: string[]) {
+  return executors.length ? executors.join("、") : ""
+}
+
 function goToRecordDetail(row: BuildingRecordRow) {
   if (!row.uuid) {
     return
@@ -589,29 +624,13 @@ async function loadInspectionCategoriesList() {
 
         <DetailRelationModule :schema="inspectionModule" use-title-block>
           <template #executor="{ row }">
-            <TooltipWrap
-              :content="row.executors.join('、')"
-              :disabled="!row.executors.length"
-              align="start"
-              class="max-w-xs"
-            >
-              <div class="flex min-w-0 items-center gap-1.5 overflow-hidden">
-                <template v-if="row.executors.length">
-                  <Badge
-                    v-for="(executor, executorIndex) in row.executors.slice(0, 2)"
-                    :key="`${row.id}-${executorIndex}`"
-                    variant="secondary"
-                    class="max-w-[5.75rem] truncate"
-                  >
-                    {{ executor }}
-                  </Badge>
-                  <Badge v-if="row.executors.length > 2" variant="outline" class="shrink-0">
-                    +{{ row.executors.length - 2 }}
-                  </Badge>
-                </template>
-                <span v-else class="text-muted-foreground">-</span>
-              </div>
-            </TooltipWrap>
+            <div class="flex w-full min-w-0 items-center justify-center">
+              <TooltipWrap :content="buildExecutorTooltip(row.executors)" :disabled="!row.executors.length" align="center" class="max-w-sm">
+                <span class="block min-w-0 max-w-full truncate">
+                  {{ formatExecutorSummary(row.executors) }}
+                </span>
+              </TooltipWrap>
+            </div>
           </template>
 
           <template #record-action-cell="{ row }">
@@ -634,29 +653,13 @@ async function loadInspectionCategoriesList() {
 
         <DetailRelationModule :schema="repairModule" use-title-block>
           <template #executor="{ row }">
-            <TooltipWrap
-              :content="row.executors.join('、')"
-              :disabled="!row.executors.length"
-              align="start"
-              class="max-w-xs"
-            >
-              <div class="flex min-w-0 items-center gap-1.5 overflow-hidden">
-                <template v-if="row.executors.length">
-                  <Badge
-                    v-for="(executor, executorIndex) in row.executors.slice(0, 2)"
-                    :key="`${row.id}-${executorIndex}`"
-                    variant="secondary"
-                    class="max-w-[5.75rem] truncate"
-                  >
-                    {{ executor }}
-                  </Badge>
-                  <Badge v-if="row.executors.length > 2" variant="outline" class="shrink-0">
-                    +{{ row.executors.length - 2 }}
-                  </Badge>
-                </template>
-                <span v-else class="text-muted-foreground">-</span>
-              </div>
-            </TooltipWrap>
+            <div class="flex w-full min-w-0 items-center justify-center">
+              <TooltipWrap :content="buildExecutorTooltip(row.executors)" :disabled="!row.executors.length" align="center" class="max-w-sm">
+                <span class="block min-w-0 max-w-full truncate">
+                  {{ formatExecutorSummary(row.executors) }}
+                </span>
+              </TooltipWrap>
+            </div>
           </template>
 
           <template #record-action-cell="{ row }">

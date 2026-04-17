@@ -28,7 +28,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -628,9 +627,24 @@ const maintenanceModule = computed<DetailRelationModuleSchema<MaintenanceRecordR
       rowKey: "id",
       columns: [
         { key: "serviceName", label: "检测服务", slot: "inspection-overview-service-cell" },
-        { key: "result", label: "检测结果", cellClass: "whitespace-nowrap text-muted-foreground" },
-        { key: "executor", label: "执行人" },
-        { key: "deadline", label: "截止时间", cellClass: "whitespace-nowrap text-muted-foreground" },
+        {
+          key: "result",
+          label: "检测结果",
+          headerClass: "text-center",
+          cellClass: "flex min-w-0 items-center justify-center overflow-hidden text-center whitespace-nowrap text-muted-foreground",
+        },
+        {
+          key: "executor",
+          label: "执行人",
+          headerClass: "text-center",
+          cellClass: "flex min-w-0 items-center justify-center overflow-hidden text-center",
+        },
+        {
+          key: "deadline",
+          label: "截止时间",
+          headerClass: "text-center",
+          cellClass: "flex min-w-0 items-center justify-center overflow-hidden text-center whitespace-nowrap text-muted-foreground",
+        },
         { key: "actions", label: "", slot: "maintenance-action-cell", headerClass: "flex justify-end", cellClass: "flex justify-end" },
       ],
       groups: [],
@@ -653,9 +667,24 @@ const maintenanceModule = computed<DetailRelationModuleSchema<MaintenanceRecordR
     rowKey: "id",
     columns: [
       { key: "serviceName", label: "检测服务", slot: "inspection-overview-service-cell" },
-      { key: "result", label: "检测结果", cellClass: "whitespace-nowrap text-muted-foreground" },
-      { key: "executor", label: "执行人" },
-      { key: "deadline", label: "截止时间", cellClass: "whitespace-nowrap text-muted-foreground" },
+      {
+        key: "result",
+        label: "检测结果",
+        headerClass: "text-center",
+        cellClass: "flex min-w-0 items-center justify-center overflow-hidden text-center whitespace-nowrap text-muted-foreground",
+      },
+      {
+        key: "executor",
+        label: "执行人",
+        headerClass: "text-center",
+        cellClass: "flex min-w-0 items-center justify-center overflow-hidden text-center",
+      },
+      {
+        key: "deadline",
+        label: "截止时间",
+        headerClass: "text-center",
+        cellClass: "flex min-w-0 items-center justify-center overflow-hidden text-center whitespace-nowrap text-muted-foreground",
+      },
       { key: "actions", label: "", slot: "maintenance-action-cell", headerClass: "flex justify-end", cellClass: "flex justify-end" },
     ],
     groups: buildMaintenanceGroups(maintenanceRecords.value),
@@ -680,9 +709,25 @@ const repairOverviewModule = computed<DetailRelationModuleSchema<MaintenanceReco
       rowKey: "id",
       columns: [
         { key: "location", label: "位置", slot: "repair-overview-location-cell" },
-        { key: "item", label: "报修类型", cellClass: "whitespace-nowrap text-muted-foreground" },
-        { key: "executor", label: "执行人" },
-        { key: "deadline", label: "创建时间", slot: "repair-overview-deadline-cell", cellClass: "whitespace-nowrap text-muted-foreground" },
+        {
+          key: "item",
+          label: "报修类型",
+          headerClass: "text-center",
+          cellClass: "flex min-w-0 items-center justify-center overflow-hidden text-center whitespace-nowrap text-muted-foreground",
+        },
+        {
+          key: "executor",
+          label: "执行人",
+          headerClass: "text-center",
+          cellClass: "flex min-w-0 items-center justify-center overflow-hidden text-center",
+        },
+        {
+          key: "deadline",
+          label: "创建时间",
+          slot: "repair-overview-deadline-cell",
+          headerClass: "text-center",
+          cellClass: "flex min-w-0 items-center justify-center overflow-hidden text-center whitespace-nowrap text-muted-foreground",
+        },
         { key: "actions", label: "", slot: "maintenance-action-cell", headerClass: "flex justify-end", cellClass: "flex justify-end" },
       ],
       groups: [],
@@ -705,9 +750,25 @@ const repairOverviewModule = computed<DetailRelationModuleSchema<MaintenanceReco
     rowKey: "id",
     columns: [
       { key: "location", label: "位置", slot: "repair-overview-location-cell" },
-      { key: "item", label: "报修类型", cellClass: "whitespace-nowrap text-muted-foreground" },
-      { key: "executor", label: "执行人" },
-      { key: "deadline", label: "创建时间", slot: "repair-overview-deadline-cell", cellClass: "whitespace-nowrap text-muted-foreground" },
+      {
+        key: "item",
+        label: "报修类型",
+        headerClass: "text-center",
+        cellClass: "flex min-w-0 items-center justify-center overflow-hidden text-center whitespace-nowrap text-muted-foreground",
+      },
+      {
+        key: "executor",
+        label: "执行人",
+        headerClass: "text-center",
+        cellClass: "flex min-w-0 items-center justify-center overflow-hidden text-center",
+      },
+      {
+        key: "deadline",
+        label: "创建时间",
+        slot: "repair-overview-deadline-cell",
+        headerClass: "text-center",
+        cellClass: "flex min-w-0 items-center justify-center overflow-hidden text-center whitespace-nowrap text-muted-foreground",
+      },
       { key: "actions", label: "", slot: "maintenance-action-cell", headerClass: "flex justify-end", cellClass: "flex justify-end" },
     ],
     groups: buildMaintenanceGroups(repairOverviewRecords.value),
@@ -3315,6 +3376,22 @@ function formatExecutorText(executors: string[]) {
   return executors.length ? executors.join("、") : "-"
 }
 
+function formatExecutorSummary(executors: string[]) {
+  if (!executors.length) {
+    return "-"
+  }
+
+  if (executors.length === 1) {
+    return executors[0]
+  }
+
+  return `${executors[0]} 等 ${executors.length} 人`
+}
+
+function buildExecutorTooltip(executors: string[]) {
+  return executors.length ? executors.join("、") : ""
+}
+
 function mapRepairWorkOrderRow(item: RepairWorkOrderListItem, index: number): CustomerWorkOrderRow {
   const uuid = toDisplayText(item.Uuid, toDisplayText(item.Id, `repair-${index + 1}`))
   const fallbackId = toDisplayText(item.Id, `repair-${index + 1}`)
@@ -4205,29 +4282,13 @@ function toDisplayText(value: unknown, fallback = "未填写") {
                 </template>
 
                 <template #executor="{ row }">
-                  <TooltipWrap
-                    :content="row.executors.join('、')"
-                    :disabled="!row.executors.length"
-                    align="start"
-                    class="max-w-xs"
-                  >
-                    <div class="flex min-w-0 items-center gap-1.5 overflow-hidden">
-                      <template v-if="row.executors.length">
-                        <Badge
-                          v-for="(executor, executorIndex) in row.executors.slice(0, 2)"
-                          :key="`${row.id}-${executorIndex}`"
-                          variant="secondary"
-                          class="max-w-[5.75rem] truncate"
-                        >
-                          {{ executor }}
-                        </Badge>
-                        <Badge v-if="row.executors.length > 2" variant="outline" class="shrink-0">
-                          +{{ row.executors.length - 2 }}
-                        </Badge>
-                      </template>
-                      <span v-else class="text-muted-foreground">-</span>
-                    </div>
-                  </TooltipWrap>
+                  <div class="flex w-full min-w-0 items-center justify-center">
+                    <TooltipWrap :content="buildExecutorTooltip(row.executors)" :disabled="!row.executors.length" align="center" class="max-w-sm">
+                      <span class="block min-w-0 max-w-full truncate">
+                        {{ formatExecutorSummary(row.executors) }}
+                      </span>
+                    </TooltipWrap>
+                  </div>
                 </template>
 
                 <template #maintenance-action-cell="{ row }">
@@ -4287,29 +4348,13 @@ function toDisplayText(value: unknown, fallback = "未填写") {
                 </template>
 
                 <template #executor="{ row }">
-                  <TooltipWrap
-                    :content="row.executors.join('、')"
-                    :disabled="!row.executors.length"
-                    align="start"
-                    class="max-w-xs"
-                  >
-                    <div class="flex min-w-0 items-center gap-1.5 overflow-hidden">
-                      <template v-if="row.executors.length">
-                        <Badge
-                          v-for="(executor, executorIndex) in row.executors.slice(0, 2)"
-                          :key="`${row.id}-${executorIndex}`"
-                          variant="secondary"
-                          class="max-w-[5.75rem] truncate"
-                        >
-                          {{ executor }}
-                        </Badge>
-                        <Badge v-if="row.executors.length > 2" variant="outline" class="shrink-0">
-                          +{{ row.executors.length - 2 }}
-                        </Badge>
-                      </template>
-                      <span v-else class="text-muted-foreground">-</span>
-                    </div>
-                  </TooltipWrap>
+                  <div class="flex w-full min-w-0 items-center justify-center">
+                    <TooltipWrap :content="buildExecutorTooltip(row.executors)" :disabled="!row.executors.length" align="center" class="max-w-sm">
+                      <span class="block min-w-0 max-w-full truncate">
+                        {{ formatExecutorSummary(row.executors) }}
+                      </span>
+                    </TooltipWrap>
+                  </div>
                 </template>
 
                 <template #maintenance-action-cell="{ row }">
