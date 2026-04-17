@@ -14,6 +14,7 @@ type RelationRow = Record<string, unknown>
 const props = defineProps<{
   schema: DetailRelationModuleSchema<any>
   useTitleBlock?: boolean
+  hideTitleBlock?: boolean
 }>()
 
 const slots = useSlots()
@@ -78,6 +79,7 @@ function hasNamedSlot(name?: string) {
     <div class="detail-table-scroll">
       <div class="detail-table-frame detail-relation-frame" :style="{ minWidth: props.schema.mobileMinWidth ?? '100%' }">
         <TableTitleBlock
+          v-if="!props.hideTitleBlock"
           :module-key="schema.key"
           :title="schema.title"
           :count="displayCount"

@@ -3,16 +3,17 @@ import { computed, onUnmounted, ref, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { toast } from "vue-sonner"
 
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Badge } from "@/components/ui/badge"
-import BuildingDetailSheet from "@/components/detail/BuildingDetailSheet.vue"
+import DetailRelationModule from "@/components/detail/DetailRelationModule.vue"
 import DetailFieldSections from "@/components/detail/DetailFieldSections.vue"
-import InspectionBuildingCardsLegacy from "@/components/detail/InspectionBuildingCardsLegacy.vue"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import LinkedEntityDetailSheet from "@/components/detail/LinkedEntityDetailSheet.vue"
 import TitleBlock from "@/components/layout/TitleBlock.vue"
 import FormDatePicker from "@/components/form/FormDatePicker.vue"
 import DetailFieldsSkeleton from "@/components/loading/DetailFieldsSkeleton.vue"
 import DetailRelationSkeleton from "@/components/loading/DetailRelationSkeleton.vue"
-import type { DetailContactValue, DetailFieldSection, DetailStatusValue } from "@/components/detail/types"
+import type { DetailContactValue, DetailFieldSection, DetailRelationModuleSchema, DetailStatusValue } from "@/components/detail/types"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import {
   AlertDialog,
@@ -42,13 +43,27 @@ import {
   updateInspectionServiceContract,
 } from "@/lib/inspection-services-api"
 
-type InspectionCategoryScoreLimit = number | null
-
-type InspectionServiceBuildingRow = {
+type InspectionServiceInspectionTableRow = {
   id: string
-  buildUuid: string
+  inspectionUuid: string
+  inspectionItemName: string
+  forcePhotoState: InspectionFlagDisplayState
+  forcePhotoText: string
+  measureRecordState: InspectionFlagDisplayState
+  measureRecordText: string
+  buildName: string
+  categoryName: string
+}
+
+type InspectionFlagDisplayState = "yes" | "no" | "loading" | "unknown"
+
+type InspectionParkModuleGroup = {
+  key: string
+  title: string
   parkUuid: string
-  name: string
+  buildCount: number
+  inspectionCount: number
+  modules: DetailRelationModuleSchema<InspectionServiceInspectionTableRow>[]
 }
 
 type ActiveInspectionItemDetail = {
@@ -69,9 +84,6 @@ const deleteSubmitting = ref(false)
 const uploadContractDialogOpen = ref(false)
 const uploadingContract = ref(false)
 const uploadContractFileInputRef = ref<HTMLInputElement | null>(null)
-const buildingDetailSheetOpen = ref(false)
-const activeBuildingUuid = ref("")
-const activeParkUuid = ref("")
 const linkedDetailSheetOpen = ref(false)
 const inspectionItemDetailSheetOpen = ref(false)
 const uploadContractForm = ref({
@@ -86,6 +98,8 @@ let latestRequestId = 0
 const inspectionItemDetailByUuid = ref<Record<string, InspectionItemRecord>>({})
 const inspectionItemDetailLoadingByUuid = ref<Record<string, boolean>>({})
 const inspectionItemDetailErrorByUuid = ref<Record<string, string>>({})
+const expandedParkGroupKey = ref("")
+const expandedBuildingModuleKeys = ref<string[]>([])
 
 const inspectionServiceUuid = computed(() => typeof route.params.id === "string" ? route.params.id.trim() : "")
 const customerUuid = computed(() => {
@@ -149,9 +163,20 @@ const fieldSections = computed<DetailFieldSection[]>(() => {
   ]
 })
 
-const buildingInspectionCards = computed(() => buildBuildingInspectionCards(detail.value?.BuildInfos ?? detail.value?.Builds))
-const buildingGroups = computed(() => buildParkGroups(detail.value?.BuildInfos ?? detail.value?.Builds))
-const buildingCount = computed(() => buildingGroups.value.reduce((sum, group) => sum + group.rows.length, 0))
+const inspectionItemMetaByUuid = computed<Record<string, InspectionItemRecord>>(() => (
+  buildInspectionItemMetaByUuid(detail.value)
+))
+const parkInspectionModuleGroups = computed<InspectionParkModuleGroup[]>(() => (
+  buildParkInspectionModuleGroups(detail.value?.BuildInfos ?? detail.value?.Builds)
+))
+const buildingInspectionModules = computed<DetailRelationModuleSchema<InspectionServiceInspectionTableRow>[]>(() => (
+  parkInspectionModuleGroups.value.flatMap(group => group.modules)
+))
+const inspectionOverviewCount = computed(() => (
+  buildingInspectionModules.value.reduce((sum, module) => (
+    sum + (module.count ?? module.groups.reduce((groupSum, group) => groupSum + group.rows.length, 0))
+  ), 0)
+))
 const inspectionItemSheetTitle = computed(() => (
   activeInspectionItemDetail.value?.inspectionItemName || "检测项详情"
 ))
@@ -205,6 +230,31 @@ watch(detail, (current) => {
   detailBreadcrumbTitle.value = toOptionalText(current?.Name)
 })
 
+watch(buildingInspectionModules, (modules) => {
+  if (!modules.length) {
+    expandedBuildingModuleKeys.value = []
+    return
+  }
+
+  const validKeys = new Set(modules.map(module => String(module.key)))
+  const nextExpandedKeys = expandedBuildingModuleKeys.value.filter(key => validKeys.has(key))
+
+  expandedBuildingModuleKeys.value = nextExpandedKeys.length
+    ? nextExpandedKeys
+    : [String(modules[0]?.key ?? "")]
+}, { immediate: true })
+
+watch(parkInspectionModuleGroups, (groups) => {
+  if (!groups.length) {
+    expandedParkGroupKey.value = ""
+    return
+  }
+
+  if (!groups.some(group => group.key === expandedParkGroupKey.value)) {
+    expandedParkGroupKey.value = groups[0]?.key ?? ""
+  }
+}, { immediate: true })
+
 watch(inspectionServiceUuid, (nextUuid) => {
   void loadInspectionServiceDetail(nextUuid)
 }, { immediate: true })
@@ -226,23 +276,6 @@ function goToCustomerDetail() {
   linkedDetailSheetKind.value = "customer"
   linkedDetailSheetUuid.value = customerUuid.value
   linkedDetailSheetOpen.value = true
-}
-
-function goToBuildingDetail(row: InspectionServiceBuildingRow) {
-  if (!row.buildUuid || !row.parkUuid) {
-    return
-  }
-  activeBuildingUuid.value = row.buildUuid
-  activeParkUuid.value = row.parkUuid
-  buildingDetailSheetOpen.value = true
-}
-
-function handleBuildingDetailSheetOpenChange(open: boolean) {
-  buildingDetailSheetOpen.value = open
-  if (!open) {
-    activeBuildingUuid.value = ""
-    activeParkUuid.value = ""
-  }
 }
 
 function handleLinkedDetailSheetOpenChange(open: boolean) {
@@ -445,6 +478,7 @@ async function loadInspectionServiceDetail(uuid: string) {
     }
 
     detail.value = detailResult
+    void preloadMissingInspectionItemFlags(detailResult, requestId)
   } catch (error) {
     if (requestId !== latestRequestId) {
       return
@@ -462,35 +496,87 @@ async function loadInspectionServiceDetail(uuid: string) {
   }
 }
 
-function buildParkGroups(builds: InspectionServiceListItem["Builds"]) {
+function buildInspectionItemMetaByUuid(serviceDetail: InspectionServiceListItem | null) {
+  const items = Array.isArray(serviceDetail?.Inspections) ? serviceDetail.Inspections : []
+  const metaMap: Record<string, InspectionItemRecord> = {}
+
+  items.forEach((item) => {
+    const inspectionUuid = toText(item.InspectionUuid ?? item.Uuid, "")
+
+    if (!inspectionUuid) {
+      return
+    }
+
+    metaMap[inspectionUuid] = item
+  })
+
+  return metaMap
+}
+
+function buildBuildingInspectionModule(
+  build: NonNullable<InspectionServiceListItem["Builds"]>[number],
+  buildIndex: number,
+) {
+  const buildName = toText(build.BuildName, `建筑 ${buildIndex + 1}`)
+  const buildKey = toText(build.BuildUuid, `inspection-service-build-${buildIndex + 1}`)
+  const groups = buildInspectionTableGroups(build, buildIndex)
+
+  return {
+    key: buildKey || `inspection-service-build-${buildIndex + 1}`,
+    title: buildName,
+    count: groups.reduce((sum, group) => sum + group.rows.length, 0),
+    rowKey: "id",
+    columns: [
+      { key: "inspectionItemName", label: "检测项", slot: "inspection-item-name-cell" },
+      { key: "forcePhotoText", label: "是否强制拍照", cellClass: "flex justify-center whitespace-nowrap text-muted-foreground" },
+      { key: "measureRecordText", label: "是否记录实测值", cellClass: "flex justify-center whitespace-nowrap text-muted-foreground" },
+    ],
+    groups,
+    emptyState: {
+      title: "暂无建筑检测项",
+      description: "当前建筑暂无检测项。",
+      icon: "ri-file-list-3-line",
+    },
+    mobileMinWidth: "36rem",
+    columnTemplateMobile: "minmax(12rem,1fr) 7rem 7rem",
+    columnTemplateDesktop: "minmax(12rem,1fr) 7rem 7rem",
+    columnGapMobile: "0.75rem",
+    columnGapDesktop: "1rem",
+  } satisfies DetailRelationModuleSchema<InspectionServiceInspectionTableRow>
+}
+
+function buildParkInspectionModuleGroups(
+  builds: InspectionServiceListItem["Builds"],
+) {
   if (!Array.isArray(builds) || !builds.length) {
     return []
   }
 
-  const parkMap = new Map<string, InspectionServiceBuildingRow[]>()
+  const parkMap = new Map<string, InspectionParkModuleGroup>()
 
-  builds.forEach((build, index) => {
+  builds.forEach((build, buildIndex) => {
     const parkName = toText(build.ParkName, "未命名园区")
-    const rows = parkMap.get(parkName) ?? []
-
-    rows.push({
-      id: toText(build.BuildUuid, `${parkName}-${index + 1}`),
-      buildUuid: toText(build.BuildUuid, ""),
+    const parkKey = toText(build.ParkUuid, "") || `inspection-park-${parkName}`
+    const group = parkMap.get(parkKey) ?? {
+      key: parkKey,
+      title: parkName,
       parkUuid: toText(build.ParkUuid, ""),
-      name: toText(build.BuildName, "未命名建筑"),
-    })
+      buildCount: 0,
+      inspectionCount: 0,
+      modules: [],
+    }
 
-    parkMap.set(parkName, rows)
+    const module = buildBuildingInspectionModule(build, buildIndex)
+    group.modules.push(module)
+    group.buildCount += 1
+    group.inspectionCount += module.count ?? module.groups.reduce((sum, itemGroup) => sum + itemGroup.rows.length, 0)
+    parkMap.set(parkKey, group)
   })
 
-  return Array.from(parkMap.entries()).map(([parkName, rows]) => ({
-    key: parkName,
-    title: parkName,
-    rows,
-  }))
+  return Array.from(parkMap.values())
 }
 
-function buildInspectionGroups(
+function buildInspectionTableGroups(
   build: NonNullable<InspectionServiceListItem["Builds"]>[number],
   buildIndex: number,
 ) {
@@ -500,106 +586,84 @@ function buildInspectionGroups(
     return []
   }
 
-  return categories.map((category, categoryIndex) => {
-    const categoryName = toText(category.Name, "未分类")
-    const categoryUuid = toText(category.Uuid, "") || `inspection-category-name:${categoryName}`
-    const items = Array.isArray(category.List) ? category.List : []
+  return categories
+    .map((category, categoryIndex) => {
+      const categoryName = toText(category.Name, "未分类")
+      const categoryUuid = toText(category.Uuid, "") || `inspection-category-name:${categoryName}`
+      const items = Array.isArray(category.List) ? category.List : []
+      const buildName = toText(build.BuildName, `建筑 ${buildIndex + 1}`)
 
-    return {
-      key: categoryUuid || `inspection-category-${buildIndex + 1}-${categoryIndex + 1}`,
-      title: categoryName,
-      scoreLimit: normalizeInspectionCategoryScore(category.Score),
-      items: items.map((item, itemIndex) => {
-        const inspectionUuid = toText(item.Uuid, "")
-        const inspectionName = toText(item.Name, `检测项 ${itemIndex + 1}`)
+      return {
+        key: categoryUuid || `inspection-category-${buildIndex + 1}-${categoryIndex + 1}`,
+        title: categoryName,
+        rows: items.map((item, itemIndex) => {
+          const inspectionUuid = toText(item.Uuid, "")
+          const inspectionName = toText(item.Name, `检测项 ${itemIndex + 1}`)
 
-        return {
-          key: inspectionUuid || `${categoryUuid || categoryName}-${itemIndex + 1}`,
-          name: inspectionName,
-          hideSummary: true,
-          loading: Boolean(inspectionUuid && inspectionItemDetailLoadingByUuid.value[inspectionUuid]),
-          error: inspectionUuid ? inspectionItemDetailErrorByUuid.value[inspectionUuid] || "" : "",
-          onSelect: () => {
-            void openInspectionItemDetailSheet({
-              uuid: inspectionUuid,
-              buildName: toText(build.BuildName, `建筑 ${buildIndex + 1}`),
-              categoryName,
-              inspectionItemName: inspectionName,
-            })
-          },
-          onRetry: inspectionUuid ? () => {
-            void ensureInspectionItemDetailLoaded(inspectionUuid)
-          } : undefined,
-          fields: [
-            {
-              key: "content",
-              label: "检测内容",
-              value: resolveInspectionItemContent(inspectionUuid),
-            },
-            {
-              key: "standard",
-              label: "检测标准",
-              value: resolveInspectionItemStandard(inspectionUuid),
-            },
-            {
-              key: "force-photo",
-              label: "强制拍照",
-              value: resolveInspectionItemForcePhoto(inspectionUuid),
-            },
-            {
-              key: "measure-record",
-              label: "是否测量数据记录",
-              value: resolveInspectionItemMeasureRecord(inspectionUuid),
-            },
-          ],
-        }
-      }),
-    }
-  })
+          return {
+            id: inspectionUuid || `${categoryUuid || categoryName}-${itemIndex + 1}`,
+            inspectionUuid,
+            inspectionItemName: inspectionName,
+            forcePhotoState: resolveInspectionItemForcePhotoState(inspectionUuid),
+            forcePhotoText: resolveInspectionItemForcePhotoText(inspectionUuid, true),
+            measureRecordState: resolveInspectionItemMeasureRecordState(inspectionUuid),
+            measureRecordText: resolveInspectionItemMeasureRecordText(inspectionUuid, true),
+            buildName,
+            categoryName,
+          }
+        }),
+      }
+    })
+    .filter(group => group.rows.length > 0)
 }
 
-function buildBuildingInspectionCards(
-  builds: InspectionServiceListItem["Builds"],
-) {
-  if (!Array.isArray(builds) || !builds.length) {
+async function preloadMissingInspectionItemFlags(serviceDetail: InspectionServiceListItem, requestId: number) {
+  const inspectionUuids = collectInspectionUuidsMissingFlags(serviceDetail)
+
+  if (!inspectionUuids.length) {
+    return
+  }
+
+  await Promise.allSettled(inspectionUuids.map(uuid => ensureInspectionItemDetailLoaded(uuid, requestId)))
+}
+
+function collectInspectionUuidsMissingFlags(serviceDetail: InspectionServiceListItem) {
+  const builds = Array.isArray(serviceDetail.BuildInfos) ? serviceDetail.BuildInfos : serviceDetail.Builds
+  const directMetaByUuid = buildInspectionItemMetaByUuid(serviceDetail)
+  const inspectionUuids = new Set<string>()
+
+  if (!Array.isArray(builds)) {
     return []
   }
 
-  return builds.map((build, index) => {
-    const buildUuid = toText(build.BuildUuid, `inspection-service-build-${index + 1}`)
-    const buildName = toText(build.BuildName, `建筑 ${index + 1}`)
-    const inspectionGroups = buildInspectionGroups(build, index)
+  builds.forEach((build) => {
+    const categories = Array.isArray(build.List) ? build.List : []
 
-    return {
-      key: buildUuid || `inspection-service-build-${index + 1}`,
-      buildName,
-      summary: `${inspectionGroups.length} 个检测分类 · ${getBuildingInspectionCount(inspectionGroups)} 个检测项`,
-      groups: inspectionGroups,
-    }
+    categories.forEach((category) => {
+      const items = Array.isArray(category.List) ? category.List : []
+
+      items.forEach((item) => {
+        const inspectionUuid = toText(item.Uuid, "")
+
+        if (!inspectionUuid) {
+          return
+        }
+
+        const meta = directMetaByUuid[inspectionUuid]
+        const hasForcePhoto = meta?.IsForcePhoto !== undefined && meta?.IsForcePhoto !== null
+        const hasMeasureRecord = meta?.IsMeasureRecord !== undefined && meta?.IsMeasureRecord !== null
+
+        if (!hasForcePhoto || !hasMeasureRecord) {
+          inspectionUuids.add(inspectionUuid)
+        }
+      })
+    })
   })
+
+  return Array.from(inspectionUuids)
 }
 
-function normalizeInspectionCategoryScore(value: unknown) {
-  if (typeof value === "number" && Number.isFinite(value) && value >= 0) {
-    return Math.round(value)
-  }
-
-  if (typeof value === "string" && value.trim()) {
-    const parsed = Number(value)
-
-    if (Number.isFinite(parsed) && parsed >= 0) {
-      return Math.round(parsed)
-    }
-  }
-
-  return null
-}
-
-function getBuildingInspectionCount(groups: Array<{ items: unknown[] }>) {
-  return groups.reduce((sum, group) => sum + group.items.length, 0)
-}
-
-async function ensureInspectionItemDetailLoaded(inspectionUuid: string) {
+async function ensureInspectionItemDetailLoaded(inspectionUuid: string, requestId = latestRequestId) {
   const normalizedInspectionUuid = inspectionUuid.trim()
 
   if (!normalizedInspectionUuid) {
@@ -623,15 +687,23 @@ async function ensureInspectionItemDetailLoaded(inspectionUuid: string) {
   }
 
   try {
-    const detail = await getInspectionItemDetail({
+    const inspectionItemDetail = await getInspectionItemDetail({
       Uuid: normalizedInspectionUuid,
     })
 
+    if (requestId !== latestRequestId) {
+      return
+    }
+
     inspectionItemDetailByUuid.value = {
       ...inspectionItemDetailByUuid.value,
-      [normalizedInspectionUuid]: detail,
+      [normalizedInspectionUuid]: inspectionItemDetail,
     }
   } catch (error) {
+    if (requestId !== latestRequestId) {
+      return
+    }
+
     inspectionItemDetailErrorByUuid.value = {
       ...inspectionItemDetailErrorByUuid.value,
       [normalizedInspectionUuid]: handleApiError(error, {
@@ -640,6 +712,10 @@ async function ensureInspectionItemDetailLoaded(inspectionUuid: string) {
       }),
     }
   } finally {
+    if (requestId !== latestRequestId) {
+      return
+    }
+
     inspectionItemDetailLoadingByUuid.value = {
       ...inspectionItemDetailLoadingByUuid.value,
       [normalizedInspectionUuid]: false,
@@ -648,7 +724,27 @@ async function ensureInspectionItemDetailLoaded(inspectionUuid: string) {
 }
 
 function getInspectionItemDetailValue(inspectionUuid: string) {
-  return inspectionUuid ? inspectionItemDetailByUuid.value[inspectionUuid] : undefined
+  if (!inspectionUuid) {
+    return undefined
+  }
+
+  const directMeta = inspectionItemMetaByUuid.value[inspectionUuid]
+  const loadedMeta = inspectionItemDetailByUuid.value[inspectionUuid]
+
+  if (!directMeta) {
+    return loadedMeta
+  }
+
+  if (!loadedMeta) {
+    return directMeta
+  }
+
+  return {
+    ...loadedMeta,
+    ...Object.fromEntries(
+      Object.entries(directMeta).filter(([, value]) => value !== undefined),
+    ),
+  }
 }
 
 function resolveInspectionItemContent(inspectionUuid: string) {
@@ -662,13 +758,103 @@ function resolveInspectionItemStandard(inspectionUuid: string) {
 }
 
 function resolveInspectionItemForcePhoto(inspectionUuid: string) {
-  const detail = getInspectionItemDetailValue(inspectionUuid)
-  return detail ? formatInspectionFlag(detail.IsForcePhoto) : "-"
+  return resolveInspectionItemForcePhotoText(inspectionUuid)
 }
 
 function resolveInspectionItemMeasureRecord(inspectionUuid: string) {
+  return resolveInspectionItemMeasureRecordText(inspectionUuid)
+}
+
+function resolveInspectionItemForcePhotoState(inspectionUuid: string): InspectionFlagDisplayState {
+  return resolveInspectionItemFlagState(getInspectionItemDetailValue(inspectionUuid)?.IsForcePhoto, inspectionUuid)
+}
+
+function resolveInspectionItemMeasureRecordState(inspectionUuid: string): InspectionFlagDisplayState {
+  return resolveInspectionItemFlagState(getInspectionItemDetailValue(inspectionUuid)?.IsMeasureRecord, inspectionUuid)
+}
+
+function resolveInspectionItemForcePhotoText(inspectionUuid: string, allowLoading = false) {
   const detail = getInspectionItemDetailValue(inspectionUuid)
-  return detail ? formatInspectionFlag(detail.IsMeasureRecord) : "-"
+  if (detail?.IsForcePhoto !== undefined && detail?.IsForcePhoto !== null) {
+    return formatInspectionFlag(detail.IsForcePhoto)
+  }
+
+  if (allowLoading && inspectionUuid && inspectionItemDetailLoadingByUuid.value[inspectionUuid]) {
+    return "加载中..."
+  }
+
+  return "-"
+}
+
+function resolveInspectionItemFlagState(value: unknown, inspectionUuid: string): InspectionFlagDisplayState {
+  if (value === 1 || value === "1" || value === true) {
+    return "yes"
+  }
+
+  if (value === 2 || value === "2" || value === false) {
+    return "no"
+  }
+
+  if (inspectionUuid && inspectionItemDetailLoadingByUuid.value[inspectionUuid]) {
+    return "loading"
+  }
+
+  return "unknown"
+}
+
+function getFlagIconClass(state: InspectionFlagDisplayState) {
+  if (state === "yes") {
+    return "ri-check-line"
+  }
+
+  if (state === "no") {
+    return "ri-close-line"
+  }
+
+  if (state === "loading") {
+    return "ri-loader-4-line animate-spin"
+  }
+
+  return "ri-subtract-line"
+}
+
+function getRelationModuleStyle(schema: DetailRelationModuleSchema<InspectionServiceInspectionTableRow>) {
+  return {
+    "--detail-relation-columns-mobile": schema.columnTemplateMobile,
+    "--detail-relation-columns-desktop": schema.columnTemplateDesktop ?? schema.columnTemplateMobile,
+    "--detail-relation-grid-gap-mobile": schema.columnGapMobile ?? "0.75rem",
+    "--detail-relation-grid-gap-desktop": schema.columnGapDesktop ?? schema.columnGapMobile ?? "1rem",
+  }
+}
+
+function isBuildingModuleExpanded(moduleKey: string | number) {
+  return expandedBuildingModuleKeys.value.includes(String(moduleKey))
+}
+
+function setBuildingModuleExpanded(moduleKey: string | number, open: boolean) {
+  const normalizedKey = String(moduleKey)
+
+  if (open) {
+    if (!expandedBuildingModuleKeys.value.includes(normalizedKey)) {
+      expandedBuildingModuleKeys.value = [...expandedBuildingModuleKeys.value, normalizedKey]
+    }
+    return
+  }
+
+  expandedBuildingModuleKeys.value = expandedBuildingModuleKeys.value.filter(key => key !== normalizedKey)
+}
+
+function resolveInspectionItemMeasureRecordText(inspectionUuid: string, allowLoading = false) {
+  const detail = getInspectionItemDetailValue(inspectionUuid)
+  if (detail?.IsMeasureRecord !== undefined && detail?.IsMeasureRecord !== null) {
+    return formatInspectionFlag(detail.IsMeasureRecord)
+  }
+
+  if (allowLoading && inspectionUuid && inspectionItemDetailLoadingByUuid.value[inspectionUuid]) {
+    return "加载中..."
+  }
+
+  return "-"
 }
 
 function buildStatusValue(status: unknown): DetailStatusValue {
@@ -883,62 +1069,6 @@ function readFileAsDataUrl(file: File) {
 
       <div v-else-if="detail" class="pb-5">
         <DetailFieldSections :sections="fieldSections" use-title-block />
-
-        <div class="h-px bg-border/80" />
-
-        <section class="detail-field-section detail-field-section--after-separator">
-          <TitleBlock
-            variant="section"
-            title="服务建筑"
-            :sticky="true"
-            sticky-top="var(--detail-layout-sticky-offset, 0px)"
-            class="detail-section-inset pt-4 pb-1"
-          >
-            <template #append>
-              <Badge
-                variant="secondary"
-                class="min-w-6 justify-center rounded-md px-1.5 py-0.5 text-[12px] font-medium leading-none"
-              >
-                {{ buildingCount }}
-              </Badge>
-            </template>
-          </TitleBlock>
-
-          <div v-if="buildingGroups.length === 0" class="detail-section-inset py-6 text-sm text-muted-foreground">
-            当前检测服务还没有配置关联建筑。
-          </div>
-
-          <div v-else class="detail-group-stack">
-            <div v-for="group in buildingGroups" :key="group.key">
-              <div class="detail-group-divider-row detail-section-inset flex min-w-0 items-center gap-3">
-                <div class="min-w-0 truncate text-[14px] font-medium text-muted-foreground">{{ group.title }}</div>
-                <div class="h-px flex-1 bg-border/80" />
-              </div>
-
-              <div
-                v-for="row in group.rows"
-                :key="`${group.key}-${row.id}`"
-                class="detail-section-inset flex min-w-0 items-center justify-between gap-3 py-2 text-[14px] transition-colors hover:bg-surface-hover-strong"
-              >
-                <div class="min-w-0 truncate text-foreground">
-                  {{ row.name }}
-                </div>
-                <TooltipWrap content="建筑详情" :disabled="!row.buildUuid || !row.parkUuid">
-                  <Button
-                    variant="ghost"
-                    size="icon-sm"
-                    class="h-7 w-7 rounded-md text-muted-foreground hover:text-foreground"
-                    :disabled="!row.buildUuid || !row.parkUuid"
-                    @click="goToBuildingDetail(row)"
-                  >
-                    <i class="ri-more-2-line text-[18px]" />
-                    <span class="sr-only">建筑详情</span>
-                  </Button>
-                </TooltipWrap>
-              </div>
-            </div>
-          </div>
-        </section>
       </div>
     </template>
 
@@ -947,12 +1077,160 @@ function readFileAsDataUrl(file: File) {
         <DetailRelationSkeleton :two-data-columns="false" :rows-per-group="3" />
       </div>
 
-      <div v-else-if="detail" class="space-y-5 pb-5">
-        <InspectionBuildingCardsLegacy
-          :buildings="buildingInspectionCards"
-          empty-title="暂无服务建筑"
-          empty-description="当前检测服务还没有配置建筑。"
-        />
+      <div v-else-if="detail" class="space-y-2 pb-5">
+        <TitleBlock
+          variant="section"
+          title="检测项概览"
+          class="detail-section-inset pt-2 pb-0"
+        >
+          <template #append>
+            <Badge
+              variant="secondary"
+              class="min-w-6 justify-center rounded-md px-1.5 py-0.5 text-[12px] font-medium leading-none"
+            >
+              {{ inspectionOverviewCount }}
+            </Badge>
+          </template>
+        </TitleBlock>
+
+        <Accordion
+          v-if="parkInspectionModuleGroups.length"
+          v-model="expandedParkGroupKey"
+          type="single"
+          collapsible
+          class="w-full"
+        >
+          <AccordionItem
+            v-for="(parkGroup, parkIndex) in parkInspectionModuleGroups"
+            :key="parkGroup.key"
+            :value="parkGroup.key"
+            class="border-b-0"
+          >
+            <div class="detail-section-inset flex items-center gap-3">
+              <AccordionTrigger class="min-w-0 flex-1 justify-start py-3 text-left hover:no-underline [&>svg]:order-first [&>svg]:mr-2 [&>svg]:ml-0">
+                <div class="min-w-0 pr-3">
+                  <div class="flex min-w-0 items-center gap-2">
+                    <div class="detail-field-section__heading truncate">{{ parkGroup.title }}</div>
+                    <span class="shrink-0 text-[12px] text-muted-foreground">
+                      {{ parkGroup.buildCount }} 栋建筑 · {{ parkGroup.inspectionCount }} 个检测项
+                    </span>
+                  </div>
+                </div>
+              </AccordionTrigger>
+            </div>
+
+            <AccordionContent>
+              <div class="pb-4">
+                <div>
+                  <div
+                    v-for="module in parkGroup.modules"
+                    :key="module.key"
+                    class="overflow-x-clip border-t border-border/80 first:border-t-0"
+                  >
+                    <Collapsible
+                      :open="isBuildingModuleExpanded(module.key)"
+                      @update:open="setBuildingModuleExpanded(module.key, $event)"
+                    >
+                      <template #default="{ open }">
+                        <CollapsibleTrigger as-child>
+                          <button
+                            type="button"
+                            class="block w-full bg-transparent text-left transition-colors hover:bg-surface-hover-strong"
+                            :style="getRelationModuleStyle(module)"
+                          >
+                            <div class="detail-section-inset">
+                              <div class="detail-table-heading-row detail-table-grid detail-relation-grid items-center">
+                                <div :class="['flex min-w-0 items-center gap-2', !open && 'col-span-3']">
+                                  <i
+                                    :class="open ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line'"
+                                    class="shrink-0 text-[16px] text-muted-foreground"
+                                  />
+                                  <h2 class="min-w-0 truncate text-[14px] font-medium text-foreground">{{ module.title }}</h2>
+                                  <Badge
+                                    variant="secondary"
+                                    class="min-w-6 justify-center rounded-md px-1.5 py-0.5 text-[12px] font-medium leading-none"
+                                  >
+                                    {{ module.count ?? module.groups.reduce((sum, group) => sum + group.rows.length, 0) }}
+                                  </Badge>
+                                </div>
+                                <div
+                                  v-if="open"
+                                  class="flex min-w-0 justify-center whitespace-nowrap text-[12px] text-muted-foreground"
+                                >
+                                  强制拍照
+                                </div>
+                                <div
+                                  v-if="open"
+                                  class="flex min-w-0 justify-center whitespace-nowrap text-[12px] text-muted-foreground"
+                                >
+                                  记录实测值
+                                </div>
+                              </div>
+                            </div>
+                          </button>
+                        </CollapsibleTrigger>
+
+                        <CollapsibleContent class="bg-transparent pb-3 [&>div]:pb-0 [&>div]:pt-0">
+                          <DetailRelationModule
+                            :schema="module"
+                            hide-title-block
+                          >
+                            <template #inspection-item-name-cell="{ row }">
+                              <button
+                                type="button"
+                                class="block w-full min-w-0 truncate text-left text-foreground transition-colors hover:text-link disabled:cursor-default disabled:text-foreground"
+                                :disabled="!row.inspectionUuid"
+                                @click="void openInspectionItemDetailSheet({
+                                  uuid: row.inspectionUuid,
+                                  buildName: row.buildName,
+                                  categoryName: row.categoryName,
+                                  inspectionItemName: row.inspectionItemName,
+                                })"
+                              >
+                                {{ row.inspectionItemName }}
+                              </button>
+                            </template>
+
+                            <template #forcePhotoText="{ row }">
+                              <span
+                                class="inline-flex items-center justify-center"
+                                :aria-label="row.forcePhotoText"
+                              >
+                                <i
+                                  :class="getFlagIconClass(row.forcePhotoState)"
+                                  class="text-[17px] leading-none text-muted-foreground"
+                                />
+                              </span>
+                            </template>
+
+                            <template #measureRecordText="{ row }">
+                              <span
+                                class="inline-flex items-center justify-center"
+                                :aria-label="row.measureRecordText"
+                              >
+                                <i
+                                  :class="getFlagIconClass(row.measureRecordState)"
+                                  class="text-[17px] leading-none text-muted-foreground"
+                                />
+                              </span>
+                            </template>
+                          </DetailRelationModule>
+                        </CollapsibleContent>
+                      </template>
+                    </Collapsible>
+                  </div>
+                </div>
+              </div>
+            </AccordionContent>
+
+            <div
+              v-if="parkIndex < parkInspectionModuleGroups.length - 1"
+              class="detail-section-inset"
+            >
+              <div class="w-full border-b border-dashed border-border/80" />
+            </div>
+          </AccordionItem>
+        </Accordion>
       </div>
     </template>
   </DetailLayout>
@@ -1032,14 +1310,6 @@ function readFileAsDataUrl(file: File) {
       </DialogFooter>
     </DialogContent>
   </Dialog>
-
-  <BuildingDetailSheet
-    :open="buildingDetailSheetOpen"
-    :building-uuid="activeBuildingUuid"
-    :park-uuid="activeParkUuid"
-    :customer-uuid="customerUuid"
-    @update:open="handleBuildingDetailSheetOpenChange"
-  />
 
   <LinkedEntityDetailSheet
     :open="linkedDetailSheetOpen"
