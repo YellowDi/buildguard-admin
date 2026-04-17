@@ -53,7 +53,6 @@ import { cn } from "@/lib/utils"
 
 type InspectionServiceBaseForm = {
   customerUuid: string
-  parkUuid: string
   name: string
   level: string
   managerName: string
@@ -116,7 +115,6 @@ type InspectionCategoryScoreLimit = number | null
 function createEmptyBaseForm(): InspectionServiceBaseForm {
   return {
     customerUuid: "",
-    parkUuid: "",
     name: "",
     level: "",
     managerName: "",
@@ -128,7 +126,6 @@ function createEmptyBaseForm(): InspectionServiceBaseForm {
 function cloneBaseForm(source: InspectionServiceBaseForm): InspectionServiceBaseForm {
   return {
     customerUuid: source.customerUuid,
-    parkUuid: source.parkUuid,
     name: source.name,
     level: source.level,
     managerName: source.managerName,
@@ -162,7 +159,6 @@ const form = reactive<InspectionServiceBaseForm>(createEmptyBaseForm())
 const initialBaseForm = ref<InspectionServiceBaseForm>(createEmptyBaseForm())
 const initialBuildingConfigs = ref<InspectionServiceBuildingConfig[]>([])
 const initialBatchTemplateUuid = ref("")
-const initialLegacyMultiParkMessage = ref("")
 
 const loadError = ref("")
 const submitting = ref(false)
@@ -193,11 +189,10 @@ const batchTemplateUuid = ref("")
 const buildingEditorOpen = ref(false)
 const activeBuildingEditorUuid = ref("")
 const buildingEditorDraftUuids = ref<string[]>([])
-const expandedBuildGroupKey = ref("")
+const expandedBuildGroupKeys = ref<string[]>([])
 const activeScoreLimitBuildUuid = ref("")
 const scoreLimitDraftForms = ref<Record<string, InspectionServiceCategoryScoreLimitForm>>({})
 const suppressCustomerWatch = ref(false)
-const legacyMultiParkMessage = ref("")
 
 let latestCustomerContextRequestId = 0
 let latestDetailRequestId = 0
@@ -291,9 +286,6 @@ const groupedBuildingParks = computed(() => {
     })
     .filter(group => group.builds.length > 0)
 })
-const activeBuildingParkGroup = computed(() =>
-  groupedBuildingParks.value.find(group => group.parkUuid === form.parkUuid) ?? null,
-)
 const sortedBuildingConfigs = computed(() => {
   const orderMap = new Map(buildingOptions.value.map((item, index) => [item.uuid, index]))
 
@@ -316,8 +308,47 @@ const sortedBuildingConfigs = computed(() => {
     return leftOrder - rightOrder
   })
 })
+const selectedBuildingParkGroups = computed(() => {
+  const parkOrderMap = new Map(groupedBuildingParks.value.map((group, index) => [group.parkUuid, index]))
+  const groups = new Map<string, {
+    parkUuid: string
+    parkName: string
+    builds: InspectionServiceBuildingConfig[]
+  }>()
+
+  for (const config of sortedBuildingConfigs.value) {
+    const groupKey = config.parkUuid || `park-name:${config.parkName}`
+    const current = groups.get(groupKey) ?? {
+      parkUuid: config.parkUuid,
+      parkName: config.parkName || "未命名园区",
+      builds: [],
+    }
+
+    current.builds.push(config)
+    groups.set(groupKey, current)
+  }
+
+  return Array.from(groups.values()).sort((left, right) => {
+    const leftOrder = parkOrderMap.get(left.parkUuid)
+    const rightOrder = parkOrderMap.get(right.parkUuid)
+
+    if (leftOrder === undefined && rightOrder === undefined) {
+      return left.parkName.localeCompare(right.parkName, "zh-Hans-CN")
+    }
+
+    if (leftOrder === undefined) {
+      return 1
+    }
+
+    if (rightOrder === undefined) {
+      return -1
+    }
+
+    return leftOrder - rightOrder
+  })
+})
 const selectedBuildCount = computed(() => buildingConfigs.value.length)
-const isParkSelectionLocked = computed(() => selectedBuildCount.value > 0 && Boolean(form.parkUuid))
+const selectedParkCount = computed(() => selectedBuildingParkGroups.value.length)
 const currentBuildingEditor = computed(() =>
   buildingConfigs.value.find(config => config.buildUuid === activeBuildingEditorUuid.value) ?? null,
 )
@@ -348,7 +379,7 @@ type InspectionCategoryDraftOption = {
   name: string
 }
 
-const isInteractionLocked = computed(() => loadingDetail.value || Boolean(legacyMultiParkMessage.value))
+const isInteractionLocked = computed(() => loadingDetail.value)
 const canSubmit = computed(() =>
   Boolean(
     normalizeText(form.customerUuid)
@@ -358,7 +389,6 @@ const canSubmit = computed(() =>
     && normalizeText(form.managerPhone)
     && buildingConfigs.value.length > 0
     && selectedInspectionUuidsForSubmit.value.length > 0
-    && !legacyMultiParkMessage.value
     && !submitting.value
     && !loadingDetail.value
     && !customerLoading.value
@@ -390,59 +420,23 @@ watch(
   groupedBuildingParks,
   (groups) => {
     if (!groups.length) {
-      expandedBuildGroupKey.value = ""
+      expandedBuildGroupKeys.value = []
       return
     }
 
-    const preferredGroup = groups.find(group => group.parkUuid === form.parkUuid)
+    const groupKeySet = new Set(groups.map(group => group.key))
+    const nextExpandedKeys = expandedBuildGroupKeys.value.filter(key => groupKeySet.has(key))
 
-    if (preferredGroup) {
-      expandedBuildGroupKey.value = preferredGroup.key
-      return
+    if (!nextExpandedKeys.length) {
+      nextExpandedKeys.push(groups[0]?.key ?? "")
     }
 
-    if (!groups.some(group => group.key === expandedBuildGroupKey.value)) {
-      expandedBuildGroupKey.value = groups[0]?.key ?? ""
-      form.parkUuid = groups[0]?.parkUuid ?? ""
-      return
+    if (
+      nextExpandedKeys.length !== expandedBuildGroupKeys.value.length
+      || nextExpandedKeys.some((key, index) => key !== expandedBuildGroupKeys.value[index])
+    ) {
+      expandedBuildGroupKeys.value = nextExpandedKeys.filter(Boolean)
     }
-
-    const expandedGroup = groups.find(group => group.key === expandedBuildGroupKey.value)
-    if (expandedGroup && !form.parkUuid) {
-      form.parkUuid = expandedGroup.parkUuid
-    }
-  },
-  { immediate: true },
-)
-
-watch(
-  expandedBuildGroupKey,
-  (nextKey) => {
-    if (isParkSelectionLocked.value || !nextKey) {
-      return
-    }
-
-    const matchedGroup = groupedBuildingParks.value.find(group => group.key === nextKey)
-    if (matchedGroup) {
-      form.parkUuid = matchedGroup.parkUuid
-    }
-  },
-)
-
-watch(
-  selectedBuildCount,
-  (count) => {
-    if (count > 0) {
-      return
-    }
-
-    if (activeBuildingParkGroup.value) {
-      form.parkUuid = activeBuildingParkGroup.value.parkUuid
-      return
-    }
-
-    const expandedGroup = groupedBuildingParks.value.find(group => group.key === expandedBuildGroupKey.value)
-    form.parkUuid = expandedGroup?.parkUuid ?? ""
   },
   { immediate: true },
 )
@@ -455,7 +449,6 @@ watch(
     }
 
     batchTemplateUuid.value = ""
-    legacyMultiParkMessage.value = ""
     void loadCustomerScopedOptions(customerUuid)
   },
 )
@@ -536,12 +529,7 @@ function addBuildingConfig(build: BuildOption) {
     return
   }
 
-  if (isParkSelectionLocked.value && form.parkUuid && build.parkUuid !== form.parkUuid) {
-    return
-  }
-
   const nextInspectionUuids = [...selectedTemplateInspectionUuids.value]
-  form.parkUuid = build.parkUuid
 
   buildingConfigs.value = [...buildingConfigs.value, {
     buildUuid: build.uuid,
@@ -566,11 +554,6 @@ function removeBuildingConfig(buildUuid: string) {
 
   if (activeScoreLimitBuildUuid.value === buildUuid) {
     closeScoreLimitPopover()
-  }
-
-  if (!buildingConfigs.value.length) {
-    const expandedGroup = groupedBuildingParks.value.find(group => group.key === expandedBuildGroupKey.value)
-    form.parkUuid = expandedGroup?.parkUuid ?? ""
   }
 }
 
@@ -762,11 +745,6 @@ async function handleSubmit() {
     return
   }
 
-  if (legacyMultiParkMessage.value) {
-    toast.error(legacyMultiParkMessage.value)
-    return
-  }
-
   if (!selectedInspectionUuidsForSubmit.value.length) {
     toast.error("请至少配置一个检测项")
     return
@@ -827,11 +805,9 @@ async function handleReset() {
   suppressCustomerWatch.value = true
   Object.assign(form, cloneBaseForm(initialBaseForm.value))
   batchTemplateUuid.value = initialBatchTemplateUuid.value
-  legacyMultiParkMessage.value = initialLegacyMultiParkMessage.value
   suppressCustomerWatch.value = false
 
   await loadCustomerScopedOptions(initialBaseForm.value.customerUuid, {
-    keepParkUuid: initialBaseForm.value.parkUuid,
     keepBuildingConfigs: cloneBuildingConfigs(initialBuildingConfigs.value),
   })
 }
@@ -881,7 +857,6 @@ async function loadInitialOptions() {
 async function loadCustomerScopedOptions(
   customerUuid: string,
   options: {
-    keepParkUuid?: string
     keepBuildingConfigs?: InspectionServiceBuildingConfig[]
   } = {},
 ) {
@@ -893,7 +868,6 @@ async function loadCustomerScopedOptions(
   parkOptions.value = []
   buildingOptions.value = []
   buildingConfigs.value = []
-  form.parkUuid = ""
 
   if (!normalizedCustomerUuid) {
     return
@@ -919,9 +893,6 @@ async function loadCustomerScopedOptions(
 
     buildingOptions.value = nextBuildingOptions
     parkOptions.value = nextParkOptions
-    form.parkUuid = nextParkOptions.some(item => item.uuid === options.keepParkUuid)
-      ? normalizeText(options.keepParkUuid)
-      : ""
     buildingConfigs.value = reconcileBuildingConfigs(options.keepBuildingConfigs ?? [], nextBuildingOptions)
   } catch (error) {
     if (requestId !== latestCustomerContextRequestId) {
@@ -966,14 +937,9 @@ async function loadInspectionServiceForEdit(uuid: string) {
         nextBuildingConfigs.push(mappedConfig)
       }
     }
-    const parkKeys = Array.from(new Set(nextBuildingConfigs.map(config => config.parkUuid).filter(Boolean)))
-    const parkNames = Array.from(new Set(nextBuildingConfigs.map(config => config.parkName).filter(Boolean)))
-    const hasLegacyMultiParkConflict = parkKeys.length > 1
-
     suppressCustomerWatch.value = true
     Object.assign(form, {
       customerUuid: nextCustomerUuid,
-      parkUuid: hasLegacyMultiParkConflict ? "" : nextBuildingConfigs[0]?.parkUuid || "",
       name: normalizeText(detail.Name),
       level: normalizeText(detail.Level),
       managerName: normalizeText(detail.ManagerName),
@@ -981,13 +947,9 @@ async function loadInspectionServiceForEdit(uuid: string) {
       remark: normalizeText(detail.Remark),
     })
     batchTemplateUuid.value = normalizeText(detail.TemplateUuid)
-    legacyMultiParkMessage.value = hasLegacyMultiParkConflict
-      ? `当前历史检测服务关联了多个园区（${parkNames.join("、")}），新页面仅支持单园区配置。为避免误删历史数据，当前页面已切换为只读兼容模式。`
-      : ""
 
     if (nextCustomerUuid) {
       await loadCustomerScopedOptions(nextCustomerUuid, {
-        keepParkUuid: form.parkUuid,
         keepBuildingConfigs: nextBuildingConfigs,
       })
     }
@@ -1020,7 +982,6 @@ function syncInitialSnapshots() {
   initialBaseForm.value = cloneBaseForm(form)
   initialBuildingConfigs.value = cloneBuildingConfigs(buildingConfigs.value)
   initialBatchTemplateUuid.value = batchTemplateUuid.value
-  initialLegacyMultiParkMessage.value = legacyMultiParkMessage.value
 }
 
 async function fetchAllCustomers() {
@@ -1667,12 +1628,10 @@ function resetLocalStateForRoute() {
   batchTemplateUuid.value = ""
   closeBuildingEditor()
   closeScoreLimitPopover()
-  legacyMultiParkMessage.value = ""
   Object.assign(form, createEmptyBaseForm())
   initialBaseForm.value = createEmptyBaseForm()
   initialBuildingConfigs.value = []
   initialBatchTemplateUuid.value = ""
-  initialLegacyMultiParkMessage.value = ""
 }
 
 function dedupeByUuid<T extends { Uuid?: unknown }>(items: T[]) {
@@ -1778,7 +1737,7 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
           label="所属客户"
           layout="vertical"
         >
-          <Select v-model="form.customerUuid" :disabled="customerLoading || !customerOptions.length || Boolean(legacyMultiParkMessage)">
+          <Select v-model="form.customerUuid" :disabled="customerLoading || !customerOptions.length">
             <SelectTrigger id="inspection-service-customer" class="w-full">
               <SelectValue :placeholder="customerLoading ? '正在加载客户...' : '请选择所属客户'" />
             </SelectTrigger>
@@ -1854,17 +1813,10 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
           id="section-builds"
           quick-nav-label="服务建筑"
           label="服务建筑"
-          description="直接展开园区并勾选建筑；一旦选中某个园区内建筑，其他园区会锁定。"
+          description="直接展开园区并勾选建筑；右侧会按园区归类展示已选建筑，便于跨园区配置。"
           layout="vertical"
         >
-          <div v-if="legacyMultiParkMessage">
-            <Alert variant="destructive">
-              <AlertTitle>历史记录为多园区配置</AlertTitle>
-              <AlertDescription>{{ legacyMultiParkMessage }}</AlertDescription>
-            </Alert>
-          </div>
-
-          <div v-else-if="!groupedBuildingParks.length" class="border border-dashed border-border/60 px-4 py-6 text-sm text-muted-foreground">
+          <div v-if="!groupedBuildingParks.length" class="border border-dashed border-border/60 px-4 py-6 text-sm text-muted-foreground">
             当前客户下暂无可选建筑。
           </div>
 
@@ -1883,24 +1835,17 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
             </template>
 
             <Accordion
-              v-model="expandedBuildGroupKey"
-              type="single"
-              collapsible
+              v-model="expandedBuildGroupKeys"
+              type="multiple"
               class="space-y-3"
             >
               <AccordionItem
                 v-for="group in groupedBuildingParks"
                 :key="group.key"
                 :value="group.key"
-                :class="cn(
-                  'overflow-hidden rounded-md border border-border/55 bg-muted shadow-xs data-[state=open]:bg-muted dark:bg-card dark:data-[state=open]:bg-card',
-                  isParkSelectionLocked && form.parkUuid !== group.parkUuid && 'opacity-55',
-                )"
+                class="overflow-hidden rounded-md border border-border/55 bg-muted shadow-xs data-[state=open]:bg-muted dark:bg-card dark:data-[state=open]:bg-card"
               >
-                <AccordionTrigger
-                  class="px-3.5 py-3 text-left hover:no-underline"
-                  :disabled="isParkSelectionLocked && form.parkUuid !== group.parkUuid"
-                >
+                <AccordionTrigger class="px-3.5 py-3 text-left hover:no-underline">
                   <div class="flex min-w-0 items-center gap-2">
                     <span class="truncate text-sm font-semibold text-foreground">{{ group.parkName }}</span>
                     <span class="shrink-0 text-xs text-muted-foreground">
@@ -1922,7 +1867,6 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
                     >
                       <Checkbox
                         :model-value="isBuildSelected(build.uuid)"
-                        :disabled="Boolean(legacyMultiParkMessage)"
                         class="mt-0.5"
                         @update:model-value="updateBuildChecked(build, $event)"
                       />
@@ -1965,6 +1909,7 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
           <div class="flex items-center justify-between gap-3">
             <h3 class="text-sm font-semibold text-foreground">
               已选 {{ selectedBuildCount }} 栋建筑
+              <span class="text-muted-foreground">/ {{ selectedParkCount }} 个园区</span>
             </h3>
 
             <Button
@@ -1972,7 +1917,7 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
               variant="outline"
               type="button"
               class="h-7 px-2 text-xs"
-              :disabled="!groupedBuildingParks.length || relatedOptionsLoading || Boolean(legacyMultiParkMessage)"
+              :disabled="!groupedBuildingParks.length || relatedOptionsLoading"
               :title="selectedBatchTemplateName ? `当前模板：${selectedBatchTemplateName}` : '使用模板'"
               @click="handleUseBuildingTemplate"
             >
@@ -1984,73 +1929,90 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
           </div>
 
           <div class="mt-4">
-            <div v-if="!sortedBuildingConfigs.length" class="border border-dashed border-border/60 px-4 py-8 text-center">
+            <div v-if="!selectedBuildingParkGroups.length" class="border border-dashed border-border/60 px-4 py-8 text-center">
               <p class="text-sm font-medium text-foreground">还没有选中建筑</p>
               <p class="mt-2 text-sm leading-6 text-muted-foreground">
-                勾选建筑后，这里会列出对应的配置卡片，便于逐栋编辑检测项和分数上限。
+                勾选建筑后，这里会按园区列出对应的配置卡片，便于逐栋编辑检测项和分数上限。
               </p>
             </div>
 
             <div v-else class="grid gap-4">
-              <article
-                v-for="config in sortedBuildingConfigs"
-                :key="config.buildUuid"
-                class="rounded-md border border-border/60 bg-background p-3 transition-colors hover:bg-accent/30"
+              <section
+                v-for="group in selectedBuildingParkGroups"
+                :key="group.parkUuid || group.parkName"
+                class="rounded-md border border-border/70 bg-muted p-3"
               >
-                <div class="flex items-start justify-between gap-2">
-                  <div class="min-w-0 flex-1">
-                    <h4 class="line-clamp-2 text-sm font-semibold leading-5 text-foreground">
-                      {{ config.buildName }}
+                <div class="flex items-center justify-between gap-3 border-b border-dashed border-border/60 pb-3">
+                  <div class="min-w-0">
+                    <h4 class="truncate text-sm font-semibold text-foreground">
+                      {{ group.parkName }}
                     </h4>
-                    <p class="mt-0.5 text-xs leading-5 text-muted-foreground">
-                      {{ getBuildingScoreLimitSummary(config) }}
+                    <p class="mt-0.5 text-xs text-muted-foreground">
+                      已选 {{ group.builds.length }} 栋建筑
                     </p>
                   </div>
-                  <div class="flex shrink-0 items-center gap-1">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      type="button"
-                      class="h-7 gap-1 px-2 text-xs"
-                      :disabled="Boolean(legacyMultiParkMessage)"
-                      @click="openBuildingEditor(config)"
-                    >
-                      <i class="ri-edit-line text-[13px]" />
-                      编辑检测项
-                    </Button>
-
-                    <Tooltip>
-                      <TooltipTrigger as-child>
-                        <span class="inline-flex">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            type="button"
-                            class="size-7 px-0"
-                            :disabled="Boolean(getCategoryScoreLimitActionDisabledReason(config)) || Boolean(legacyMultiParkMessage)"
-                            aria-label="配置分数上限"
-                            @click="handleScoreLimitPopoverOpenChange(config.buildUuid, true)"
-                          >
-                            <i class="ri-settings-3-line text-[13px]" />
-                            <span class="sr-only">分数上限</span>
-                          </Button>
-                        </span>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        {{ getCategoryScoreLimitActionDisabledReason(config) || "配置分数上限" }}
-                      </TooltipContent>
-                    </Tooltip>
-                  </div>
                 </div>
 
-                <div class="mt-3">
-                  <span class="text-[11px] text-muted-foreground">检测项</span>
-                  <p class="mt-1 text-xs leading-5 text-muted-foreground">
-                    {{ getBuildingInspectionSummary(config) }}
-                  </p>
-                </div>
+                <div class="mt-3 grid gap-3">
+                  <article
+                    v-for="config in group.builds"
+                    :key="config.buildUuid"
+                    class="rounded-md border border-border/60 bg-background p-3 transition-colors hover:bg-accent/30"
+                  >
+                    <div class="flex items-start justify-between gap-2">
+                      <div class="min-w-0 flex-1">
+                        <h5 class="line-clamp-2 text-sm font-semibold leading-5 text-foreground">
+                          {{ config.buildName }}
+                        </h5>
+                        <p class="mt-0.5 text-xs leading-5 text-muted-foreground">
+                          {{ getBuildingScoreLimitSummary(config) }}
+                        </p>
+                      </div>
+                      <div class="flex shrink-0 items-center gap-1">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          type="button"
+                          class="h-7 gap-1 px-2 text-xs"
+                          @click="openBuildingEditor(config)"
+                        >
+                          <i class="ri-edit-line text-[13px]" />
+                          编辑检测项
+                        </Button>
 
-              </article>
+                        <Tooltip>
+                          <TooltipTrigger as-child>
+                            <span class="inline-flex">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                type="button"
+                                class="size-7 px-0"
+                                :disabled="Boolean(getCategoryScoreLimitActionDisabledReason(config))"
+                                aria-label="配置分数上限"
+                                @click="handleScoreLimitPopoverOpenChange(config.buildUuid, true)"
+                              >
+                                <i class="ri-settings-3-line text-[13px]" />
+                                <span class="sr-only">分数上限</span>
+                              </Button>
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {{ getCategoryScoreLimitActionDisabledReason(config) || "配置分数上限" }}
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
+                    </div>
+
+                    <div class="mt-3">
+                      <span class="text-[11px] text-muted-foreground">检测项</span>
+                      <p class="mt-1 text-xs leading-5 text-muted-foreground">
+                        {{ getBuildingInspectionSummary(config) }}
+                      </p>
+                    </div>
+                  </article>
+                </div>
+              </section>
             </div>
           </div>
         </section>
