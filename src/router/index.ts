@@ -348,6 +348,15 @@ const router = createRouter({
           } satisfies RouteMetaConfig,
         },
         {
+          path: "media-library",
+          name: "media-library",
+          component: () => import("@/views/list/MediaLibraryListView.vue"),
+          meta: {
+            title: "媒体库",
+            loading: "table",
+          } satisfies RouteMetaConfig,
+        },
+        {
           path: "inspection-services/:id",
           name: "inspection-service-detail",
           component: () => import("@/views/detail/InspectionServiceDetailView.vue"),

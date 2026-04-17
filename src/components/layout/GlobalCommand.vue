@@ -76,6 +76,15 @@ const pageSearchItems: SearchItem[] = [
     to: "/inspection-plans",
   },
   {
+    id: "page-media-library",
+    label: "媒体库",
+    subtitle: "查看媒体库页面",
+    icon: "ri-book-shelf-line",
+    type: "页面",
+    value: "媒体库 查看媒体库页面 media library assets materials",
+    to: "/media-library",
+  },
+  {
     id: "page-inspection-work-orders",
     label: "检测工单",
     subtitle: "查看检测工单列表",
