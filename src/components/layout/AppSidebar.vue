@@ -122,6 +122,7 @@ const inboxGroups = inboxData as AppSidebarInboxGroup[]
 const conversationItems = conversationsData as AppSidebarConversationItem[]
 const selectedTopTab = ref<AppSidebarTopTabId>("home")
 const isSearchDialogOpen = ref(false)
+const sidebarModeTransitionName = ref("sidebar-mode-forward")
 const isSettingsRoute = computed(() => route.name === "settings")
 const settingsActiveKey = computed<SettingsCategoryKey>(() => {
   const category = route.params.category
@@ -209,6 +210,16 @@ watch(() => route.fullPath, () => {
     emit("close-mobile")
   }
 }, { immediate: true })
+
+watch(isSettingsRoute, (nextValue, previousValue) => {
+  if (previousValue === undefined || nextValue === previousValue) {
+    return
+  }
+
+  sidebarModeTransitionName.value = nextValue
+    ? "sidebar-mode-forward"
+    : "sidebar-mode-backward"
+})
 </script>
 
 <template>
@@ -216,115 +227,119 @@ watch(() => route.fullPath, () => {
     class="fixed inset-y-0 left-0 z-30 flex w-[255px] max-w-[90vw] flex-col overflow-y-auto overflow-x-hidden overscroll-y-contain border-r border-sidebar-border/75 bg-sidebar/96 text-sidebar-foreground transition-transform duration-300 ease-[cubic-bezier(0.2,0,0,1)] min-[1000px]:hidden"
     :class="props.mobileOpen ? 'translate-x-0 shadow-none' : '-translate-x-full pointer-events-none shadow-none'"
   >
-    <div v-if="isSettingsRoute" class="flex min-h-0 flex-1 flex-col">
-      <SettingsSidebar
-        :categories="categories"
-        :active-key="settingsActiveKey"
-        class="min-h-0 flex-1 border-r-0"
-        @update:active-key="handleSettingsCategoryChange"
-      >
-        <template #top>
-          <button
-            type="button"
-            class="inline-flex h-9 items-center gap-2 rounded-md px-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-            @click="handleLeaveSettings"
-          >
-            <i class="ri-arrow-left-line text-base" />
-            <span>返回</span>
-          </button>
-        </template>
-      </SettingsSidebar>
-    </div>
-    <div v-else class="flex min-h-0 flex-1 flex-col">
-      <AppSidebarTopBar
-        :tabs="topTabs"
-        :model-value="selectedTopTab"
-        @update:model-value="handleTopTabUpdate"
-        @search="handleSearch"
-      />
-
-      <div class="min-h-0 flex-1 overflow-x-visible px-2 pb-2">
-        <AppSidebarHomeNav
-          v-if="selectedTopTab === 'home'"
-          :items="businessItems"
-          :active-path="activePath"
-          @toggle-item="toggleItem"
-        />
-        <AppSidebarConversationPanel
-          v-else-if="selectedTopTab === 'conversation'"
-          :items="conversationItems"
-        />
-        <AppSidebarInboxPanel
-          v-else-if="selectedTopTab === 'inbox'"
-          :groups="inboxGroups"
-        />
-        <AppSidebarCalendarPanel
-          v-else
-        />
+    <Transition :name="sidebarModeTransitionName" mode="out-in">
+      <div v-if="isSettingsRoute" key="mobile-settings" class="sidebar-mode-panel flex min-h-0 flex-1 flex-col">
+        <SettingsSidebar
+          :categories="categories"
+          :active-key="settingsActiveKey"
+          class="min-h-0 flex-1 border-r-0"
+          @update:active-key="handleSettingsCategoryChange"
+        >
+          <template #top>
+            <button
+              type="button"
+              class="inline-flex h-9 items-center gap-2 rounded-md px-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+              @click="handleLeaveSettings"
+            >
+              <i class="ri-arrow-left-line text-base" />
+              <span>返回</span>
+            </button>
+          </template>
+        </SettingsSidebar>
       </div>
-
-      <div class="shrink-0 px-2 pb-2">
-        <UserCardPopover />
-      </div>
-    </div>
-  </aside>
-
-  <Sidebar collapsible="offcanvas" class="z-40 bg-transparent max-[999px]:hidden">
-    <template v-if="isSettingsRoute">
-      <SettingsSidebar
-        :categories="categories"
-        :active-key="settingsActiveKey"
-        class="min-h-0 flex-1 border-r-0"
-        @update:active-key="handleSettingsCategoryChange"
-      >
-        <template #top>
-          <button
-            type="button"
-            class="inline-flex h-9 items-center gap-2 rounded-md px-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-            @click="handleLeaveSettings"
-          >
-            <i class="ri-arrow-left-line text-base" />
-            <span>返回</span>
-          </button>
-        </template>
-      </SettingsSidebar>
-    </template>
-    <template v-else>
-      <SidebarHeader class="shrink-0 pb-0">
+      <div v-else key="mobile-business" class="sidebar-mode-panel flex min-h-0 flex-1 flex-col">
         <AppSidebarTopBar
           :tabs="topTabs"
           :model-value="selectedTopTab"
           @update:model-value="handleTopTabUpdate"
           @search="handleSearch"
         />
-      </SidebarHeader>
 
-      <SidebarContent class="min-h-0 overflow-x-visible">
-        <AppSidebarHomeNav
-          v-if="selectedTopTab === 'home'"
-          :items="businessItems"
-          :active-path="activePath"
-          class="p-2"
-          @toggle-item="toggleItem"
-        />
-        <AppSidebarConversationPanel
-          v-else-if="selectedTopTab === 'conversation'"
-          :items="conversationItems"
-        />
-        <AppSidebarInboxPanel
-          v-else-if="selectedTopTab === 'inbox'"
-          :groups="inboxGroups"
-        />
-        <AppSidebarCalendarPanel
-          v-else
-          class="p-2"
-        />
-      </SidebarContent>
+        <div class="min-h-0 flex-1 overflow-x-visible px-2 pb-2">
+          <AppSidebarHomeNav
+            v-if="selectedTopTab === 'home'"
+            :items="businessItems"
+            :active-path="activePath"
+            @toggle-item="toggleItem"
+          />
+          <AppSidebarConversationPanel
+            v-else-if="selectedTopTab === 'conversation'"
+            :items="conversationItems"
+          />
+          <AppSidebarInboxPanel
+            v-else-if="selectedTopTab === 'inbox'"
+            :groups="inboxGroups"
+          />
+          <AppSidebarCalendarPanel
+            v-else
+          />
+        </div>
 
-      <SidebarFooter class="shrink-0">
-        <UserCardPopover />
-      </SidebarFooter>
-    </template>
+        <div class="shrink-0 px-2 pb-2">
+          <UserCardPopover />
+        </div>
+      </div>
+    </Transition>
+  </aside>
+
+  <Sidebar collapsible="offcanvas" class="z-40 bg-transparent max-[999px]:hidden">
+    <Transition :name="sidebarModeTransitionName" mode="out-in">
+      <div v-if="isSettingsRoute" key="desktop-settings" class="sidebar-mode-panel flex min-h-0 flex-1 flex-col">
+        <SettingsSidebar
+          :categories="categories"
+          :active-key="settingsActiveKey"
+          class="min-h-0 flex-1 border-r-0"
+          @update:active-key="handleSettingsCategoryChange"
+        >
+          <template #top>
+            <button
+              type="button"
+              class="inline-flex h-9 items-center gap-2 rounded-md px-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+              @click="handleLeaveSettings"
+            >
+              <i class="ri-arrow-left-line text-base" />
+              <span>返回</span>
+            </button>
+          </template>
+        </SettingsSidebar>
+      </div>
+      <div v-else key="desktop-business" class="sidebar-mode-panel flex min-h-0 flex-1 flex-col">
+        <SidebarHeader class="shrink-0 pb-0">
+          <AppSidebarTopBar
+            :tabs="topTabs"
+            :model-value="selectedTopTab"
+            @update:model-value="handleTopTabUpdate"
+            @search="handleSearch"
+          />
+        </SidebarHeader>
+
+        <SidebarContent class="min-h-0 overflow-x-visible">
+          <AppSidebarHomeNav
+            v-if="selectedTopTab === 'home'"
+            :items="businessItems"
+            :active-path="activePath"
+            class="p-2"
+            @toggle-item="toggleItem"
+          />
+          <AppSidebarConversationPanel
+            v-else-if="selectedTopTab === 'conversation'"
+            :items="conversationItems"
+          />
+          <AppSidebarInboxPanel
+            v-else-if="selectedTopTab === 'inbox'"
+            :groups="inboxGroups"
+          />
+          <AppSidebarCalendarPanel
+            v-else
+            class="p-2"
+          />
+        </SidebarContent>
+
+        <SidebarFooter class="shrink-0">
+          <UserCardPopover />
+        </SidebarFooter>
+      </div>
+    </Transition>
 
     <SidebarRail />
   </Sidebar>
