@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, watch } from "vue"
+import { computed, onBeforeUnmount, watch } from "vue"
 import { useRoute } from "vue-router"
 
 import SettingsContent from "@/components/settings/SettingsContent.vue"
+import { detailBreadcrumbItems, detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
 import { useSettings } from "@/composables/useSettings"
 import { DEFAULT_SETTINGS_CATEGORY_KEY, isSettingsCategoryKey, type SettingsCategoryKey } from "@/components/settings/types"
 
@@ -26,6 +27,26 @@ watch(routeCategoryKey, (value) => {
   setActiveKey(value)
   void ensureSettingsLoaded()
 }, { immediate: true })
+
+watch(activeCategory, (category) => {
+  const currentLabel = category.pageTitle ?? category.label
+
+  detailBreadcrumbItems.value = [
+    {
+      title: "设置",
+      to: { name: "settings", params: { category: DEFAULT_SETTINGS_CATEGORY_KEY } },
+    },
+    {
+      title: currentLabel,
+    },
+  ]
+  detailBreadcrumbTitle.value = null
+}, { immediate: true })
+
+onBeforeUnmount(() => {
+  detailBreadcrumbItems.value = null
+  detailBreadcrumbTitle.value = null
+})
 </script>
 
 <template>

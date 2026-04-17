@@ -5,7 +5,6 @@ const props = defineProps<{
   variant: "with-tabs" | "title-only"
   title: string
   description?: string | null
-  currentLabel?: string
 }>()
 </script>
 
@@ -15,7 +14,6 @@ const props = defineProps<{
     <SettingsPageHeader
       :title="props.title"
       :description="props.description"
-      :current-label="props.currentLabel"
     >
       <slot v-if="props.variant === 'with-tabs'" name="toolbar" />
     </SettingsPageHeader>
