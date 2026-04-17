@@ -189,8 +189,8 @@ watch(() => route.fullPath, () => {
 
 <template>
   <aside
-    class="fixed inset-y-0 left-0 z-30 flex w-[255px] max-w-[90vw] flex-col overflow-y-auto overflow-x-hidden overscroll-y-contain border-r border-sidebar-border/75 bg-sidebar/96 text-sidebar-foreground shadow-(--shadow-deep) transition-transform duration-300 ease-[cubic-bezier(0.2,0,0,1)] min-[1000px]:hidden"
-    :class="props.mobileOpen ? 'translate-x-0' : '-translate-x-full'"
+    class="fixed inset-y-0 left-0 z-30 flex w-[255px] max-w-[90vw] flex-col overflow-y-auto overflow-x-hidden overscroll-y-contain border-r border-sidebar-border/75 bg-sidebar/96 text-sidebar-foreground transition-transform duration-300 ease-[cubic-bezier(0.2,0,0,1)] min-[1000px]:hidden"
+    :class="props.mobileOpen ? 'translate-x-0 shadow-none' : '-translate-x-full pointer-events-none shadow-none'"
   >
     <div class="flex min-h-0 flex-1 flex-col">
       <AppSidebarTopBar
