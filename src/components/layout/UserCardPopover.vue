@@ -13,14 +13,12 @@ import { useSidebar } from "@/components/ui/sidebar"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useAppTheme } from "@/composables/useAppTheme"
 import { clearCurrentUser, useCurrentUser } from "@/composables/useCurrentUser"
-import { useSettingsDialog } from "@/composables/useSettingsDialog"
 import { clearAuthToken } from "@/lib/auth"
 import { cn } from "@/lib/utils"
 
 const router = useRouter()
 const { state } = useSidebar()
 const { themeMode, themeOptions } = useAppTheme()
-const { openSettingsDialog } = useSettingsDialog()
 const { currentUser: user, error, hasLoaded, isLoading } = useCurrentUser()
 
 const open = ref(false)
@@ -73,7 +71,7 @@ function handleLogout() {
 
 function handleOpenSettings() {
   open.value = false
-  openSettingsDialog()
+  void router.push({ name: "settings", params: { category: "me" } })
 }
 </script>
 

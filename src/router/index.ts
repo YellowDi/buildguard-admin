@@ -1,6 +1,8 @@
 import { createRouter, createWebHistory } from "vue-router"
 
+import { DEFAULT_SETTINGS_CATEGORY_KEY, isSettingsCategoryKey } from "@/components/settings/types"
 import { beginRouteLoading, endRouteLoading, type RouteLoadingKind } from "@/composables/useRouteLoadingState"
+import { rememberSettingsBackTarget } from "@/composables/useSettingsNavigation"
 import { setCurrentUser } from "@/composables/useCurrentUser"
 import { ApiError } from "@/lib/api-errors"
 import { fetchCurrentUserInfo } from "@/lib/current-user-api"
@@ -485,6 +487,35 @@ const router = createRouter({
             ] satisfies BreadcrumbMetaItem[],
           } satisfies RouteMetaConfig,
         },
+        {
+          path: "settings/:category?",
+          name: "settings",
+          component: () => import("@/views/settings/SettingsView.vue"),
+          beforeEnter: (to) => {
+            const category = typeof to.params.category === "string"
+              ? to.params.category
+              : ""
+
+            if (isSettingsCategoryKey(category)) {
+              return true
+            }
+
+            return {
+              name: "settings",
+              params: { category: DEFAULT_SETTINGS_CATEGORY_KEY },
+              query: to.query,
+              hash: to.hash,
+              replace: true,
+            }
+          },
+          meta: {
+            title: "设置",
+            loading: "table",
+            breadcrumb: [
+              { title: "设置" },
+            ] satisfies BreadcrumbMetaItem[],
+          } satisfies RouteMetaConfig,
+        },
       ],
     },
   ],
@@ -499,7 +530,7 @@ function resolveRouteLoadingKind(value: unknown): RouteLoadingKind {
 let validatedAuthToken = ""
 let pendingSessionValidation: Promise<"valid" | "invalid" | "unknown"> | null = null
 
-router.beforeEach(async (to) => {
+router.beforeEach(async (to, from) => {
   const isAuthRoute = to.name === "login" || to.name === "signup" || to.name === "otp"
   const authState = getAuthState()
   const token = getAuthToken()
@@ -554,6 +585,10 @@ router.beforeEach(async (to) => {
       : "/"
 
     return redirect
+  }
+
+  if (to.name === "settings" && from.name) {
+    rememberSettingsBackTarget(from)
   }
 
   beginRouteLoading(resolveRouteLoadingKind(to.meta.loading))

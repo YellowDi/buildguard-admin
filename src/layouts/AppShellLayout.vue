@@ -1,19 +1,15 @@
 <script setup lang="ts">
-import { computed, defineAsyncComponent, ref, watch } from "vue"
+import { computed, ref, watch } from "vue"
 import { useRoute } from "vue-router"
 
 import AppHeader from "@/components/layout/AppHeader.vue"
 import AppSidebar from "@/components/layout/AppSidebar.vue"
 import RouteLoadingFallback from "@/components/loading/RouteLoadingFallback.vue"
 import { useRouteLoadingState, type RouteLoadingKind } from "@/composables/useRouteLoadingState"
-import { useSettingsDialog } from "@/composables/useSettingsDialog"
 import { SidebarProvider } from "@/components/ui/sidebar"
-
-const SettingsDialog = defineAsyncComponent(() => import("@/components/settings/SettingsDialog.vue"))
 
 const mobileSidebarOpen = ref(false)
 const { isRouteLoading, loadingKind } = useRouteLoadingState()
-const { isOpen: isSettingsDialogOpen } = useSettingsDialog()
 const route = useRoute()
 
 const showContentFallback = computed(() =>
@@ -109,6 +105,5 @@ function closeMobileSidebar() {
         </RouterView>
       </main>
     </div>
-    <SettingsDialog v-if="isSettingsDialogOpen" />
   </SidebarProvider>
 </template>

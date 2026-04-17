@@ -16,7 +16,7 @@ import { Switch } from "@/components/ui/switch"
 import {
   TooltipWrap,
 } from "@/components/ui/tooltip"
-import TitleBlock from "@/components/layout/TitleBlock.vue"
+import SettingsPageHeader from "@/components/settings/SettingsPageHeader.vue"
 import SettingsSection from "@/components/settings/SettingsSection.vue"
 import { SETTINGS_TABLE_PAGE_CLASS } from "@/components/settings/settingsTablePageClass"
 import TablePageTable from "@/components/table-page/TablePageTable.vue"
@@ -176,12 +176,10 @@ function handleDeleteAccount() {
 
 <template>
   <div class="flex min-h-0 flex-1 flex-col">
-    <div class="sticky top-0 z-[6] shrink-0 bg-background px-3 pt-4 pb-3 sm:px-4">
-      <TitleBlock
-        title="我"
-        description="管理你的档案、登录信息和设备"
-      />
-    </div>
+    <SettingsPageHeader
+      title="我"
+      description="管理你的档案、登录信息和设备"
+    />
 
     <div class="min-h-0 flex-1 overflow-y-auto px-3 pb-4 sm:px-4">
       <div class="space-y-6">

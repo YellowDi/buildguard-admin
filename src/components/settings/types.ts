@@ -3,17 +3,26 @@ import type { DefaultAvatarKey } from "@/lib/default-avatars"
 
 export type SettingsCategoryGroupKey = "account" | "workspace" | "feature" | "admin"
 
-export type SettingsCategoryKey =
-  | "me"
-  | "preferences"
-  | "apps"
-  | "general"
-  | "members"
-  | "developer"
-  | "business-presets"
-  | "inspection-items"
-  | "notifications"
-  | "security"
+export const SETTINGS_CATEGORY_KEYS = [
+  "me",
+  "preferences",
+  "apps",
+  "general",
+  "members",
+  "developer",
+  "business-presets",
+  "inspection-items",
+  "notifications",
+  "security",
+] as const
+
+export type SettingsCategoryKey = (typeof SETTINGS_CATEGORY_KEYS)[number]
+
+export const DEFAULT_SETTINGS_CATEGORY_KEY: SettingsCategoryKey = "me"
+
+export function isSettingsCategoryKey(value: string): value is SettingsCategoryKey {
+  return (SETTINGS_CATEGORY_KEYS as readonly string[]).includes(value)
+}
 
 export type SettingsActionKey =
   | "save-profile"

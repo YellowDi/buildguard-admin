@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue"
-import { useRoute } from "vue-router"
+import { useRoute, useRouter } from "vue-router"
 import {
   Sidebar,
   SidebarContent,
@@ -17,7 +17,10 @@ import type {
   AppSidebarTopTabId,
 } from "@/components/layout/app-sidebar/types"
 import UserCardPopover from "@/components/layout/UserCardPopover.vue"
-import { useSettingsDialog } from "@/composables/useSettingsDialog"
+import SettingsSidebar from "@/components/settings/SettingsSidebar.vue"
+import { useSettings } from "@/composables/useSettings"
+import { useSettingsNavigation } from "@/composables/useSettingsNavigation"
+import { DEFAULT_SETTINGS_CATEGORY_KEY, isSettingsCategoryKey, type SettingsCategoryKey } from "@/components/settings/types"
 import conversationsData from "@/mocks/ai-conversations.json"
 import inboxData from "@/mocks/inbox.json"
 
@@ -35,7 +38,9 @@ const emit = defineEmits<{
 }>()
 
 const route = useRoute()
-const { openSettingsDialog } = useSettingsDialog()
+const router = useRouter()
+const { categories } = useSettings()
+const { settingsBackTarget } = useSettingsNavigation()
 
 const topTabs: Array<{ id: AppSidebarTopTabId, label: string, icon: string }> = [
   {
@@ -109,7 +114,7 @@ const businessItems = reactive<AppSidebarNavItem[]>([
   {
     label: "设置",
     icon: "ri-settings-3-line",
-    action: "open-settings",
+    path: "/settings/me",
   },
 ])
 
@@ -117,6 +122,13 @@ const inboxGroups = inboxData as AppSidebarInboxGroup[]
 const conversationItems = conversationsData as AppSidebarConversationItem[]
 const selectedTopTab = ref<AppSidebarTopTabId>("home")
 const isSearchDialogOpen = ref(false)
+const isSettingsRoute = computed(() => route.name === "settings")
+const settingsActiveKey = computed<SettingsCategoryKey>(() => {
+  const category = route.params.category
+  return typeof category === "string" && isSettingsCategoryKey(category)
+    ? category
+    : DEFAULT_SETTINGS_CATEGORY_KEY
+})
 
 const activePath = computed(() => {
   const navActivePath = typeof route.meta.navActivePath === "string"
@@ -127,13 +139,25 @@ const activePath = computed(() => {
 })
 function toggleItem(item: AppSidebarNavItem) {
   if (!item.children?.length) {
-    if (item.action === "open-settings") {
-      openSettingsDialog()
-    }
     return
   }
 
   item.open = !item.open
+}
+
+function handleSettingsCategoryChange(nextKey: SettingsCategoryKey) {
+  if (nextKey === settingsActiveKey.value) {
+    return
+  }
+
+  void router.push({
+    name: "settings",
+    params: { category: nextKey },
+  })
+}
+
+function handleLeaveSettings() {
+  void router.push(settingsBackTarget.value)
 }
 
 function selectTopTab(tabId: AppSidebarTopTabId) {
@@ -192,7 +216,26 @@ watch(() => route.fullPath, () => {
     class="fixed inset-y-0 left-0 z-30 flex w-[255px] max-w-[90vw] flex-col overflow-y-auto overflow-x-hidden overscroll-y-contain border-r border-sidebar-border/75 bg-sidebar/96 text-sidebar-foreground transition-transform duration-300 ease-[cubic-bezier(0.2,0,0,1)] min-[1000px]:hidden"
     :class="props.mobileOpen ? 'translate-x-0 shadow-none' : '-translate-x-full pointer-events-none shadow-none'"
   >
-    <div class="flex min-h-0 flex-1 flex-col">
+    <div v-if="isSettingsRoute" class="flex min-h-0 flex-1 flex-col">
+      <SettingsSidebar
+        :categories="categories"
+        :active-key="settingsActiveKey"
+        class="min-h-0 flex-1 border-r-0"
+        @update:active-key="handleSettingsCategoryChange"
+      >
+        <template #top>
+          <button
+            type="button"
+            class="inline-flex h-9 items-center gap-2 rounded-md px-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            @click="handleLeaveSettings"
+          >
+            <i class="ri-arrow-left-line text-base" />
+            <span>返回</span>
+          </button>
+        </template>
+      </SettingsSidebar>
+    </div>
+    <div v-else class="flex min-h-0 flex-1 flex-col">
       <AppSidebarTopBar
         :tabs="topTabs"
         :model-value="selectedTopTab"
@@ -227,40 +270,61 @@ watch(() => route.fullPath, () => {
   </aside>
 
   <Sidebar collapsible="offcanvas" class="z-40 bg-transparent max-[999px]:hidden">
-    <SidebarHeader class="shrink-0 pb-0">
-      <AppSidebarTopBar
-        :tabs="topTabs"
-        :model-value="selectedTopTab"
-        @update:model-value="handleTopTabUpdate"
-        @search="handleSearch"
-      />
-    </SidebarHeader>
+    <template v-if="isSettingsRoute">
+      <SettingsSidebar
+        :categories="categories"
+        :active-key="settingsActiveKey"
+        class="min-h-0 flex-1 border-r-0"
+        @update:active-key="handleSettingsCategoryChange"
+      >
+        <template #top>
+          <button
+            type="button"
+            class="inline-flex h-9 items-center gap-2 rounded-md px-2 text-sm font-medium text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+            @click="handleLeaveSettings"
+          >
+            <i class="ri-arrow-left-line text-base" />
+            <span>返回</span>
+          </button>
+        </template>
+      </SettingsSidebar>
+    </template>
+    <template v-else>
+      <SidebarHeader class="shrink-0 pb-0">
+        <AppSidebarTopBar
+          :tabs="topTabs"
+          :model-value="selectedTopTab"
+          @update:model-value="handleTopTabUpdate"
+          @search="handleSearch"
+        />
+      </SidebarHeader>
 
-    <SidebarContent class="min-h-0 overflow-x-visible">
-      <AppSidebarHomeNav
-        v-if="selectedTopTab === 'home'"
-        :items="businessItems"
-        :active-path="activePath"
-        class="p-2"
-        @toggle-item="toggleItem"
-      />
-      <AppSidebarConversationPanel
-        v-else-if="selectedTopTab === 'conversation'"
-        :items="conversationItems"
-      />
-      <AppSidebarInboxPanel
-        v-else-if="selectedTopTab === 'inbox'"
-        :groups="inboxGroups"
-      />
-      <AppSidebarCalendarPanel
-        v-else
-        class="p-2"
-      />
-    </SidebarContent>
+      <SidebarContent class="min-h-0 overflow-x-visible">
+        <AppSidebarHomeNav
+          v-if="selectedTopTab === 'home'"
+          :items="businessItems"
+          :active-path="activePath"
+          class="p-2"
+          @toggle-item="toggleItem"
+        />
+        <AppSidebarConversationPanel
+          v-else-if="selectedTopTab === 'conversation'"
+          :items="conversationItems"
+        />
+        <AppSidebarInboxPanel
+          v-else-if="selectedTopTab === 'inbox'"
+          :groups="inboxGroups"
+        />
+        <AppSidebarCalendarPanel
+          v-else
+          class="p-2"
+        />
+      </SidebarContent>
 
-    <SidebarFooter class="shrink-0">
-      <UserCardPopover />
-    </SidebarFooter>
+      <SidebarFooter class="shrink-0">
+        <UserCardPopover />
+      </SidebarFooter>
+    </template>
 
     <SidebarRail />
   </Sidebar>

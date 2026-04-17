@@ -4,11 +4,11 @@ import { toast } from "vue-sonner"
 import { useAppTheme } from "@/composables/useAppTheme"
 import { setCurrentUserAvatar, useCurrentUser } from "@/composables/useCurrentUser"
 import { loadSettingsSnapshot } from "@/lib/settings-api"
-import type {
-  SettingsActionKey,
-  SettingsCategory,
-  SettingsCategoryKey,
-  SettingsState,
+import {
+  type SettingsActionKey,
+  type SettingsCategory,
+  type SettingsCategoryKey,
+  type SettingsState,
 } from "@/components/settings/types"
 
 const { themeMode } = useAppTheme()
@@ -56,7 +56,6 @@ const state = reactive<SettingsState>({
     packageType: "apk",
     platform: "android",
   },
-  // Me page fields
   preferredName: currentUser.name,
   selectedAvatarKey: currentUser.avatarKey,
   userId: "cdfac05d-1fde-4501-a2c5-66ab2d360bb2",
@@ -114,7 +113,7 @@ const categories = computed<SettingsCategory[]>(() => [
     icon: "ri-user-line",
     avatarSrc: currentUser.avatarSrc,
     avatarFallback: currentUser.name.charAt(0).toUpperCase(),
-    sections: [], // Me page uses custom component
+    sections: [],
   },
   {
     key: "preferences",
@@ -370,12 +369,10 @@ const categories = computed<SettingsCategory[]>(() => [
     key: "business-presets",
     group: "feature",
     label: "业务预设",
-    description:
-      "集中维护行业分类等基础信息与分类项，统一选项口径，便于录入、管理与统计。",
+    description: "集中维护行业分类等基础信息与分类项，统一选项口径，便于录入、管理与统计。",
     icon: "ri-stack-line",
     pageTitle: "业务预设",
-    pageDescription:
-      "在此为业务预先配置基础信息与分类，统一预设选项与展示口径，便于日常管理、对比与统计分析。",
+    pageDescription: "在此为业务预先配置基础信息与分类，统一预设选项与展示口径，便于日常管理、对比与统计分析。",
     sections: [],
   },
   {
@@ -454,12 +451,10 @@ const categories = computed<SettingsCategory[]>(() => [
     key: "developer",
     group: "admin",
     label: "开发者",
-    description:
-      "查看并维护后台路由、操作权限与接口元数据，支撑权限策略与前后端联调。",
+    description: "查看并维护后台路由、操作权限与接口元数据，支撑权限策略与前后端联调。",
     icon: "ri-braces-line",
     pageTitle: "开发者",
-    pageDescription:
-      "查看并维护后台路由、操作权限与接口元数据，支撑权限策略与前后端联调。",
+    pageDescription: "查看并维护后台路由、操作权限与接口元数据，支撑权限策略与前后端联调。",
     sections: [],
   },
   {
@@ -535,7 +530,6 @@ const categories = computed<SettingsCategory[]>(() => [
   },
 ])
 
-const isOpen = ref(false)
 const activeKey = ref<SettingsCategoryKey>("me")
 const settingsLoaded = ref(false)
 
@@ -556,22 +550,6 @@ async function ensureSettingsLoaded() {
   } catch {
     settingsLoaded.value = false
   }
-}
-
-function openSettingsDialog(nextKey?: SettingsCategoryKey) {
-  if (nextKey) {
-    activeKey.value = nextKey
-  }
-  void ensureSettingsLoaded()
-  isOpen.value = true
-}
-
-function closeSettingsDialog() {
-  isOpen.value = false
-}
-
-function setSettingsDialogOpen(value: boolean) {
-  isOpen.value = value
 }
 
 function setActiveKey(nextKey: SettingsCategoryKey) {
@@ -673,17 +651,14 @@ function runAction(actionKey: SettingsActionKey) {
   })
 }
 
-export function useSettingsDialog() {
+export function useSettings() {
   return {
     activeCategory,
     activeKey,
     categories,
-    closeSettingsDialog,
-    isOpen,
-    openSettingsDialog,
+    ensureSettingsLoaded,
     runAction,
     setActiveKey,
-    setSettingsDialogOpen,
     state,
   }
 }

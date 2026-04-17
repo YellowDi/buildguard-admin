@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue"
+import type { HTMLAttributes } from "vue"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
@@ -12,6 +13,7 @@ import type {
 const props = defineProps<{
   categories: SettingsCategory[]
   activeKey: SettingsCategoryKey
+  class?: HTMLAttributes["class"]
 }>()
 
 const emit = defineEmits<{
@@ -41,7 +43,7 @@ const groupedCategories = computed(() =>
 </script>
 
 <template>
-  <aside class="flex min-h-0 flex-col border-r border-sidebar-border bg-sidebar p-2 text-sidebar-foreground">
+  <aside :class="cn('flex min-h-0 flex-col border-r border-sidebar-border bg-sidebar p-2 text-sidebar-foreground', props.class)">
     <div class="flex items-center pb-4">
       <slot name="top" />
     </div>
