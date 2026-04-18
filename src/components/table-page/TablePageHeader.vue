@@ -126,6 +126,11 @@ const tableMoreActions: Array<{
   { key: "audit-log", label: "查看操作日志", iconClass: "ri-history-line", separated: true },
   { key: "export-records", label: "导出记录", iconClass: "ri-download-line" },
 ]
+const placeholderBulkActions = [
+  { label: "批量修改", iconClass: "ri-edit-line", danger: false },
+  { label: "导出", iconClass: "ri-download-line", danger: false },
+  { label: "删除", iconClass: "ri-delete-bin-line", danger: true },
+] as const
 
 const sortFields = computed(() => props.fields.filter(field => field.kind === "sort"))
 const activeFilterFields = computed(() => props.fields.filter(field => field.kind !== "sort" && field.accent))
@@ -779,13 +784,18 @@ function handlePlaceholderBulkAction(actionLabel: string) {
                 </div>
                 <slot name="bulk-actions" :selected-rows-count="props.selectedRowsCount">
                   <Button
+                    v-for="action in placeholderBulkActions"
+                    :key="action.label"
                     variant="outline"
                     static
-                    class="h-8 gap-1 px-3 text-[14px] leading-none whitespace-nowrap"
-                    @click="handlePlaceholderBulkAction('批量操作')"
+                    :class="[
+                      'h-8 gap-1 px-3 text-[14px] leading-none whitespace-nowrap',
+                      action.danger ? 'text-destructive hover:text-destructive' : '',
+                    ]"
+                    @click="handlePlaceholderBulkAction(action.label)"
                   >
-                    <i class="ri-stack-line text-base" />
-                    批量操作
+                    <i :class="[action.iconClass, 'text-base']" />
+                    {{ action.label }}
                   </Button>
                 </slot>
               </ButtonGroup>
