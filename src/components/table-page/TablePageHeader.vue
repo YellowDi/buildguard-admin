@@ -20,13 +20,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { TooltipWrap } from "@/components/ui/tooltip"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import type { SortFieldOption, SortRule } from "@/components/table-page/sort.types"
 import type {
   DateFilterState,
@@ -106,8 +99,6 @@ const openPopover = ref<string | null>(null)
 const sortPopoverSource = ref<"toolbar" | "chip">("toolbar")
 const ghostIconButtonClass =
   "inline-flex size-8 items-center justify-center rounded-md bg-transparent text-muted-foreground transition-colors hover:bg-interactive-hover hover:text-foreground active:bg-surface-secondary"
-const mobileTabSelectTriggerClass =
-  "h-8 max-w-[calc(100vw-11rem)] rounded-full bg-background/92 px-3 text-[14px] shadow-(--shadow-border)"
 const ghostIconButtonActiveClass =
   "bg-transparent text-link hover:bg-interactive-hover active:bg-surface-secondary"
 const tableMoreActions: Array<{
@@ -184,6 +175,10 @@ const quickMobileToolbarItems = computed(() => mobileToolbarItems.value.filter(i
 const actionMobileToolbarItems = computed(() => mobileToolbarItems.value.filter(item => item.key !== "filters" && item.key !== "sort"))
 const primaryMobileToolbarItem = computed(() => actionMobileToolbarItems.value[actionMobileToolbarItems.value.length - 1] ?? null)
 const overflowMobileToolbarItems = computed(() => actionMobileToolbarItems.value.slice(0, -1))
+const mobileTabsScrollViewportRef = ref<HTMLElement | null>(null)
+const mobileTabsOverflowLeft = ref(false)
+const mobileTabsOverflowRight = ref(false)
+let mobileTabsResizeObserver: ResizeObserver | null = null
 const tabsScrollViewportRef = ref<HTMLElement | null>(null)
 const tabsOverflowLeft = ref(false)
 const tabsOverflowRight = ref(false)
@@ -193,6 +188,10 @@ const controlsOverflowLeft = ref(false)
 const controlsOverflowRight = ref(false)
 let controlsResizeObserver: ResizeObserver | null = null
 const { indicatorStyle, setTabRef } = useSlidingTabIndicator({
+  activeKey: activeTabLabel,
+  watchSource: computed(() => props.tabs.map(tab => `${tab.label}:${Number(Boolean(tab.active))}`)),
+})
+const { indicatorStyle: mobileIndicatorStyle, setTabRef: setMobileTabRef } = useSlidingTabIndicator({
   activeKey: activeTabLabel,
   watchSource: computed(() => props.tabs.map(tab => `${tab.label}:${Number(Boolean(tab.active))}`)),
 })
@@ -324,17 +323,6 @@ function handleClearAllFilters() {
   closePopover()
 }
 
-function handleMobileTabSelect(value: unknown) {
-  if (typeof value !== "string" || !value) {
-    return
-  }
-
-  const targetTab = props.tabs.find(tab => tab.label === value)
-  if (targetTab) {
-    emit("tab-click", targetTab)
-  }
-}
-
 function handleMobileToolbarActionSelect(action: MobileToolbarActionKey) {
   if (action === "filters") {
     emit("toggle-controls")
@@ -401,6 +389,23 @@ function handleControlsScroll() {
   syncControlsOverflowState()
 }
 
+function syncMobileTabsOverflowState() {
+  const element = mobileTabsScrollViewportRef.value
+  if (!element) {
+    mobileTabsOverflowLeft.value = false
+    mobileTabsOverflowRight.value = false
+    return
+  }
+
+  const maxScrollLeft = Math.max(0, element.scrollWidth - element.clientWidth)
+  mobileTabsOverflowLeft.value = element.scrollLeft > 2
+  mobileTabsOverflowRight.value = maxScrollLeft - element.scrollLeft > 2
+}
+
+function handleMobileTabsScroll() {
+  syncMobileTabsOverflowState()
+}
+
 function syncTabsOverflowState() {
   const element = tabsScrollViewportRef.value
   if (!element) {
@@ -420,8 +425,16 @@ function handleTabsScroll() {
 
 onMounted(() => {
   nextTick(() => {
+    syncMobileTabsOverflowState()
     syncTabsOverflowState()
     syncControlsOverflowState()
+
+    if (typeof ResizeObserver !== "undefined" && mobileTabsScrollViewportRef.value) {
+      mobileTabsResizeObserver = new ResizeObserver(() => {
+        syncMobileTabsOverflowState()
+      })
+      mobileTabsResizeObserver.observe(mobileTabsScrollViewportRef.value)
+    }
 
     if (typeof ResizeObserver !== "undefined" && tabsScrollViewportRef.value) {
       tabsResizeObserver = new ResizeObserver(() => {
@@ -438,15 +451,19 @@ onMounted(() => {
     }
   })
 
+  window.addEventListener("resize", syncMobileTabsOverflowState)
   window.addEventListener("resize", syncTabsOverflowState)
   window.addEventListener("resize", syncControlsOverflowState)
 })
 
 onBeforeUnmount(() => {
+  mobileTabsResizeObserver?.disconnect()
+  mobileTabsResizeObserver = null
   tabsResizeObserver?.disconnect()
   tabsResizeObserver = null
   controlsResizeObserver?.disconnect()
   controlsResizeObserver = null
+  window.removeEventListener("resize", syncMobileTabsOverflowState)
   window.removeEventListener("resize", syncTabsOverflowState)
   window.removeEventListener("resize", syncControlsOverflowState)
 })
@@ -475,6 +492,7 @@ watch(
   ],
   () => {
     nextTick(() => {
+      syncMobileTabsOverflowState()
       syncTabsOverflowState()
     })
   },
@@ -673,23 +691,52 @@ watch(
           v-if="hasTabs"
           class="text-muted-foreground"
         >
-          <div class="flex min-w-0 items-center justify-between gap-2 pb-2 sm:hidden">
-            <Select :model-value="activeTabLabel" @update:model-value="handleMobileTabSelect">
-              <SelectTrigger size="sm" :class="mobileTabSelectTriggerClass">
-                <SelectValue placeholder="选择分页" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem
-                  v-for="tab in tabs"
-                  :key="tab.label"
-                  :value="tab.label"
-                >
-                  {{ tab.label }}
-                </SelectItem>
-              </SelectContent>
-            </Select>
+          <div class="flex min-w-0 items-end gap-2 sm:hidden">
+            <div class="relative min-w-0 flex-1 overflow-visible pt-1">
+              <div
+                ref="mobileTabsScrollViewportRef"
+                data-table-header-tabs-scroll
+                class="min-w-0 -mt-1 overflow-x-auto whitespace-nowrap pt-1"
+                @scroll="handleMobileTabsScroll"
+              >
+                <nav class="relative flex min-w-max flex-nowrap items-center text-[14px]">
+                  <button
+                    v-for="tab in tabs"
+                    :key="tab.label"
+                    :ref="(element) => setMobileTabRef(tab.label, element)"
+                    type="button"
+                    :aria-pressed="tab.active"
+                    :class="[
+                      'group relative shrink-0 px-3 pb-[11px] text-muted-foreground transition-colors hover:text-foreground',
+                      'duration-180 ease-out',
+                      tab.active ? 'font-semibold text-foreground' : '',
+                    ]"
+                    @click="emit('tab-click', tab)"
+                  >
+                    <span class="relative isolate inline-block">
+                      <span class="pointer-events-none absolute -inset-x-2 -inset-y-1 rounded-md transition-colors group-hover:bg-interactive-hover" />
+                      <span class="relative z-10">{{ tab.label }}</span>
+                    </span>
+                  </button>
+                  <span
+                    aria-hidden="true"
+                    class="pointer-events-none absolute bottom-0 left-0 h-0.5 rounded-full bg-foreground transition-[transform,width,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
+                    :style="mobileIndicatorStyle"
+                  />
+                </nav>
+              </div>
 
-            <div v-if="props.showToolbarActions" class="ml-auto flex shrink-0 items-center justify-end gap-1">
+              <div
+                v-if="mobileTabsOverflowLeft"
+                class="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 bg-gradient-to-r from-background via-background/88 to-transparent"
+              />
+              <div
+                v-if="mobileTabsOverflowRight"
+                class="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-background via-background/92 to-transparent"
+              />
+            </div>
+
+            <div v-if="props.showToolbarActions" class="ml-auto flex shrink-0 items-center justify-end gap-1 pb-2">
               <button
                 v-for="item in quickMobileToolbarItems"
                 :key="item.key"
@@ -760,7 +807,7 @@ watch(
               <div
                 ref="tabsScrollViewportRef"
                 data-table-header-tabs-scroll
-                class="min-w-0 overflow-x-auto overflow-y-visible whitespace-nowrap"
+                class="min-w-0 -mt-1 overflow-x-auto whitespace-nowrap pt-1"
                 @scroll="handleTabsScroll"
               >
                 <nav class="relative flex min-w-max flex-nowrap items-center text-[14px]">
