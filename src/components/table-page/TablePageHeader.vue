@@ -184,6 +184,10 @@ const quickMobileToolbarItems = computed(() => mobileToolbarItems.value.filter(i
 const actionMobileToolbarItems = computed(() => mobileToolbarItems.value.filter(item => item.key !== "filters" && item.key !== "sort"))
 const primaryMobileToolbarItem = computed(() => actionMobileToolbarItems.value[actionMobileToolbarItems.value.length - 1] ?? null)
 const overflowMobileToolbarItems = computed(() => actionMobileToolbarItems.value.slice(0, -1))
+const tabsScrollViewportRef = ref<HTMLElement | null>(null)
+const tabsOverflowLeft = ref(false)
+const tabsOverflowRight = ref(false)
+let tabsResizeObserver: ResizeObserver | null = null
 const controlsScrollViewportRef = ref<HTMLElement | null>(null)
 const controlsOverflowLeft = ref(false)
 const controlsOverflowRight = ref(false)
@@ -397,9 +401,34 @@ function handleControlsScroll() {
   syncControlsOverflowState()
 }
 
+function syncTabsOverflowState() {
+  const element = tabsScrollViewportRef.value
+  if (!element) {
+    tabsOverflowLeft.value = false
+    tabsOverflowRight.value = false
+    return
+  }
+
+  const maxScrollLeft = Math.max(0, element.scrollWidth - element.clientWidth)
+  tabsOverflowLeft.value = element.scrollLeft > 2
+  tabsOverflowRight.value = maxScrollLeft - element.scrollLeft > 2
+}
+
+function handleTabsScroll() {
+  syncTabsOverflowState()
+}
+
 onMounted(() => {
   nextTick(() => {
+    syncTabsOverflowState()
     syncControlsOverflowState()
+
+    if (typeof ResizeObserver !== "undefined" && tabsScrollViewportRef.value) {
+      tabsResizeObserver = new ResizeObserver(() => {
+        syncTabsOverflowState()
+      })
+      tabsResizeObserver.observe(tabsScrollViewportRef.value)
+    }
 
     if (typeof ResizeObserver !== "undefined" && controlsScrollViewportRef.value) {
       controlsResizeObserver = new ResizeObserver(() => {
@@ -409,12 +438,16 @@ onMounted(() => {
     }
   })
 
+  window.addEventListener("resize", syncTabsOverflowState)
   window.addEventListener("resize", syncControlsOverflowState)
 })
 
 onBeforeUnmount(() => {
+  tabsResizeObserver?.disconnect()
+  tabsResizeObserver = null
   controlsResizeObserver?.disconnect()
   controlsResizeObserver = null
+  window.removeEventListener("resize", syncTabsOverflowState)
   window.removeEventListener("resize", syncControlsOverflowState)
 })
 
@@ -430,6 +463,19 @@ watch(
   () => {
     nextTick(() => {
       syncControlsOverflowState()
+    })
+  },
+)
+
+watch(
+  () => [
+    props.showToolbarActions,
+    props.tabs.length,
+    activeTabLabel.value,
+  ],
+  () => {
+    nextTick(() => {
+      syncTabsOverflowState()
     })
   },
 )
@@ -709,32 +755,50 @@ watch(
             </div>
           </div>
 
-          <div class="hidden min-w-0 flex-wrap items-end gap-x-6 gap-y-3 sm:flex">
-            <nav class="relative flex min-w-0 flex-[999_1_24rem] flex-wrap items-center text-[14px]">
-              <button
-                v-for="tab in tabs"
-                :key="tab.label"
-                :ref="(element) => setTabRef(tab.label, element)"
-                type="button"
-                :aria-pressed="tab.active"
-                :class="[
-                  'group relative px-3 pb-[11px] text-muted-foreground transition-colors hover:text-foreground',
-                  'duration-180 ease-out',
-                  tab.active ? 'font-semibold text-foreground' : '',
-                ]"
-                @click="emit('tab-click', tab)"
+          <div class="hidden min-w-0 items-end gap-3 sm:flex sm:flex-nowrap">
+            <div class="relative min-w-0 flex-[999_1_24rem] overflow-visible">
+              <div
+                ref="tabsScrollViewportRef"
+                data-table-header-tabs-scroll
+                class="min-w-0 overflow-x-auto overflow-y-visible whitespace-nowrap"
+                @scroll="handleTabsScroll"
               >
-                <span class="relative isolate inline-block">
-                  <span class="pointer-events-none absolute -inset-x-2 -inset-y-1 rounded-md transition-colors group-hover:bg-interactive-hover" />
-                  <span class="relative z-10">{{ tab.label }}</span>
-                </span>
-              </button>
-              <span
-                aria-hidden="true"
-                class="pointer-events-none absolute bottom-0 left-0 h-0.5 rounded-full bg-foreground transition-[transform,width,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
-                :style="indicatorStyle"
+                <nav class="relative flex min-w-max flex-nowrap items-center text-[14px]">
+                  <button
+                    v-for="tab in tabs"
+                    :key="tab.label"
+                    :ref="(element) => setTabRef(tab.label, element)"
+                    type="button"
+                    :aria-pressed="tab.active"
+                    :class="[
+                      'group relative shrink-0 px-3 pb-[11px] text-muted-foreground transition-colors hover:text-foreground',
+                      'duration-180 ease-out',
+                      tab.active ? 'font-semibold text-foreground' : '',
+                    ]"
+                    @click="emit('tab-click', tab)"
+                  >
+                    <span class="relative isolate inline-block">
+                      <span class="pointer-events-none absolute -inset-x-2 -inset-y-1 rounded-md transition-colors group-hover:bg-interactive-hover" />
+                      <span class="relative z-10">{{ tab.label }}</span>
+                    </span>
+                  </button>
+                  <span
+                    aria-hidden="true"
+                    class="pointer-events-none absolute bottom-0 left-0 h-0.5 rounded-full bg-foreground transition-[transform,width,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
+                    :style="indicatorStyle"
+                  />
+                </nav>
+              </div>
+
+              <div
+                v-if="tabsOverflowLeft"
+                class="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 bg-gradient-to-r from-background via-background/88 to-transparent"
               />
-            </nav>
+              <div
+                v-if="tabsOverflowRight"
+                class="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-background via-background/92 to-transparent"
+              />
+            </div>
 
             <div
               v-if="props.showToolbarActions"
@@ -1127,7 +1191,18 @@ watch(
   -ms-overflow-style: none;
 }
 
+[data-table-header-tabs-scroll] {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
 [data-table-header-controls-scroll]::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+[data-table-header-tabs-scroll]::-webkit-scrollbar {
   width: 0;
   height: 0;
   display: none;
