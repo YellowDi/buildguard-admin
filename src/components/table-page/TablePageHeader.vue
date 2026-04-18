@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from "vue"
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue"
 import { toast } from "vue-sonner"
 
 import { Button } from "@/components/ui/button"
@@ -184,6 +184,10 @@ const quickMobileToolbarItems = computed(() => mobileToolbarItems.value.filter(i
 const actionMobileToolbarItems = computed(() => mobileToolbarItems.value.filter(item => item.key !== "filters" && item.key !== "sort"))
 const primaryMobileToolbarItem = computed(() => actionMobileToolbarItems.value[actionMobileToolbarItems.value.length - 1] ?? null)
 const overflowMobileToolbarItems = computed(() => actionMobileToolbarItems.value.slice(0, -1))
+const controlsScrollViewportRef = ref<HTMLElement | null>(null)
+const controlsOverflowLeft = ref(false)
+const controlsOverflowRight = ref(false)
+let controlsResizeObserver: ResizeObserver | null = null
 const { indicatorStyle, setTabRef } = useSlidingTabIndicator({
   activeKey: activeTabLabel,
   watchSource: computed(() => props.tabs.map(tab => `${tab.label}:${Number(Boolean(tab.active))}`)),
@@ -375,6 +379,60 @@ function handlePlaceholderBulkAction(actionLabel: string) {
     description: "当前仅保留批量操作入口，后续会补齐实际能力。",
   })
 }
+
+function syncControlsOverflowState() {
+  const element = controlsScrollViewportRef.value
+  if (!element) {
+    controlsOverflowLeft.value = false
+    controlsOverflowRight.value = false
+    return
+  }
+
+  const maxScrollLeft = Math.max(0, element.scrollWidth - element.clientWidth)
+  controlsOverflowLeft.value = element.scrollLeft > 2
+  controlsOverflowRight.value = maxScrollLeft - element.scrollLeft > 2
+}
+
+function handleControlsScroll() {
+  syncControlsOverflowState()
+}
+
+onMounted(() => {
+  nextTick(() => {
+    syncControlsOverflowState()
+
+    if (typeof ResizeObserver !== "undefined" && controlsScrollViewportRef.value) {
+      controlsResizeObserver = new ResizeObserver(() => {
+        syncControlsOverflowState()
+      })
+      controlsResizeObserver.observe(controlsScrollViewportRef.value)
+    }
+  })
+
+  window.addEventListener("resize", syncControlsOverflowState)
+})
+
+onBeforeUnmount(() => {
+  controlsResizeObserver?.disconnect()
+  controlsResizeObserver = null
+  window.removeEventListener("resize", syncControlsOverflowState)
+})
+
+watch(
+  () => [
+    props.showControls,
+    hasSelectedRows.value,
+    sortFields.value.length,
+    activeFilterFields.value.length,
+    inactiveFilterFields.value.length,
+    addableFilters.value.length,
+  ],
+  () => {
+    nextTick(() => {
+      syncControlsOverflowState()
+    })
+  },
+)
 </script>
 
 <template>
@@ -802,8 +860,14 @@ function handlePlaceholderBulkAction(actionLabel: string) {
             </div>
           </div>
 
-          <div class="flex flex-wrap items-center gap-1 text-[14px] text-muted-foreground">
-            <div class="flex min-w-0 flex-wrap items-center gap-1">
+          <div class="relative min-w-0 overflow-visible">
+            <div
+              ref="controlsScrollViewportRef"
+              data-table-header-controls-scroll
+              class="min-w-0 overflow-x-auto overflow-y-visible whitespace-nowrap"
+              @scroll="handleControlsScroll"
+            >
+              <div class="flex min-w-max flex-nowrap items-center gap-1 pr-6 text-[14px] text-muted-foreground">
               <template v-if="showControls">
                 <slot name="controls-prefix" />
 
@@ -1040,9 +1104,32 @@ function handlePlaceholderBulkAction(actionLabel: string) {
                 </Popover>
               </template>
             </div>
+            </div>
+
+            <div
+              v-if="controlsOverflowLeft"
+              class="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 bg-gradient-to-r from-background via-background/88 to-transparent"
+            />
+            <div
+              v-if="controlsOverflowRight"
+              class="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-background via-background/92 to-transparent"
+            />
           </div>
         </div>
       </div>
     </Transition>
   </div>
 </template>
+
+<style>
+[data-table-header-controls-scroll] {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+[data-table-header-controls-scroll]::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+</style>
