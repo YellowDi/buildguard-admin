@@ -38,6 +38,7 @@ const props = withDefaults(defineProps<{
   sortRules: SortRule[]
   sortFieldOptions?: SortFieldOption[]
   primaryActionLabel?: string
+  selectedRowsCount?: number
   textFilters: Record<string, TextFilterState>
   numberFilters: Record<string, NumberFilterState>
   tagFilters: Record<string, TagFilterState>
@@ -53,7 +54,6 @@ const props = withDefaults(defineProps<{
   selectedRows?: Record<string, unknown>[]
   rowKey: string | ((row: Record<string, unknown>, index: number) => string | number)
   selectedRowKeys?: Array<string | number>
-  selectedRowsCount?: number
   filteredRowsCount?: number
   totalRowsCount?: number
   currentFiltersSummary?: string[]
@@ -193,6 +193,7 @@ async function handleExportConfirm(payload: { scope: TableExportScope; format: T
           :sort-rules="props.sortRules"
           :sort-field-options="props.sortFieldOptions"
           :primary-action-label="props.primaryActionLabel"
+          :selected-rows-count="props.selectedRowsCount"
           :text-filters="props.textFilters"
           :number-filters="props.numberFilters"
           :tag-filters="props.tagFilters"
@@ -219,6 +220,9 @@ async function handleExportConfirm(payload: { scope: TableExportScope; format: T
         >
           <template v-if="slots['controls-prefix']" #controls-prefix>
             <slot name="controls-prefix" />
+          </template>
+          <template v-if="slots['bulk-actions']" #bulk-actions="slotProps">
+            <slot name="bulk-actions" v-bind="slotProps" />
           </template>
         </Header>
 
