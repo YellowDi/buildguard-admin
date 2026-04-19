@@ -1422,7 +1422,9 @@ function stopObservingStickyLayout() {
 
 watch(() => props.columns, scheduleStickySync, { deep: true })
 watch(() => props.rows, scheduleStickySync, { deep: true })
+watch(() => props.rowActions, scheduleStickySync, { deep: true })
 watch(() => props.showIndex, scheduleStickySync)
+watch(() => props.showRowActionIcons, scheduleStickySync)
 watch(() => hasRowActions.value, scheduleStickySync)
 watch(() => props.stickyHeader, scheduleStickySync)
 watch(() => props.fillAvailableHeight, scheduleStickySync)

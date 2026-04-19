@@ -50,8 +50,8 @@ export const tableTheme = {
   },
   actionHeader: "h-[38px] w-px whitespace-nowrap border-l border-border px-3 py-0 text-left font-normal text-muted-foreground align-middle transition-colors hover:bg-surface-hover-subtle",
   actionHeaderSticky: "bg-background bg-clip-padding",
-  actionCell: "h-[42px] border-b border-l border-border px-3 py-0 align-middle whitespace-nowrap",
-  actionCellContent: "flex items-center justify-end",
+  actionCell: "h-[42px] w-px border-b border-l border-border px-3 py-0 align-middle whitespace-nowrap",
+  actionCellContent: "ml-auto flex w-fit items-center",
   actionCellButtons: "inline-flex items-center gap-1.5",
   actionButton: "pointer-events-auto h-7 gap-1.5 px-2.5 text-[13px]",
   pinnedAction: {
