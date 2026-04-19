@@ -940,35 +940,46 @@ watch(
       <div v-if="hasControlsRow" :class="props.listLevelTable ? 'px-4 py-2.5 sm:px-8 overflow-visible' : 'py-2.5 overflow-visible'">
         <div :class="['relative min-h-8 overflow-visible', hasSelectedRows ? '-ml-2 pl-2' : '']">
           <div
-            v-if="hasSelectedRows"
             class="pointer-events-none absolute left-1 top-1/2 z-20 flex w-max max-w-full -translate-y-1/2 overflow-visible"
           >
-            <div class="pointer-events-auto flex min-w-0 max-w-full items-center py-1">
-              <ButtonGroup
-                aria-label="批量操作"
-                class="-translate-y-1 overflow-hidden bg-background/96 shadow-sm ring-1 ring-border/60 backdrop-blur supports-backdrop-filter:bg-background/88"
+            <Transition
+              enter-active-class="transition-[opacity,transform] duration-220 ease-[cubic-bezier(0.22,1,0.36,1)]"
+              enter-from-class="opacity-0 scale-[0.985]"
+              enter-to-class="opacity-100 scale-100"
+              leave-active-class="transition-[opacity,transform] duration-150 ease-[cubic-bezier(0.4,0,1,1)]"
+              leave-from-class="opacity-100 scale-100"
+              leave-to-class="opacity-0 scale-[0.99]"
+            >
+              <div
+                v-if="hasSelectedRows"
+                class="pointer-events-auto flex min-w-0 max-w-full items-center py-1 origin-left will-change-[transform,opacity]"
               >
-                <div class="inline-flex h-8 items-center rounded-l-md bg-background px-3 text-[14px] leading-none font-medium text-foreground whitespace-nowrap">
-                  已选 {{ props.selectedRowsCount }} 项
-                </div>
-                <slot name="bulk-actions" :selected-rows-count="props.selectedRowsCount">
-                  <Button
-                    v-for="action in placeholderBulkActions"
-                    :key="action.label"
-                    variant="outline"
-                    static
-                    :class="[
-                      'h-8 gap-1 px-3 text-[14px] leading-none whitespace-nowrap',
-                      action.danger ? 'text-destructive hover:text-destructive' : '',
-                    ]"
-                    @click="handlePlaceholderBulkAction(action.label)"
-                  >
-                    <i :class="[action.iconClass, 'text-base']" />
-                    {{ action.label }}
-                  </Button>
-                </slot>
-              </ButtonGroup>
-            </div>
+                <ButtonGroup
+                  aria-label="批量操作"
+                  class="-translate-y-1 overflow-hidden bg-background/96 shadow-sm ring-1 ring-border/60 backdrop-blur supports-backdrop-filter:bg-background/88"
+                >
+                  <div class="inline-flex h-8 items-center rounded-l-md bg-background px-3 text-[14px] leading-none font-medium text-foreground whitespace-nowrap">
+                    已选 {{ props.selectedRowsCount }} 项
+                  </div>
+                  <slot name="bulk-actions" :selected-rows-count="props.selectedRowsCount">
+                    <Button
+                      v-for="action in placeholderBulkActions"
+                      :key="action.label"
+                      variant="outline"
+                      static
+                      :class="[
+                        'h-8 gap-1 px-3 text-[14px] leading-none whitespace-nowrap',
+                        action.danger ? 'text-destructive hover:text-destructive' : '',
+                      ]"
+                      @click="handlePlaceholderBulkAction(action.label)"
+                    >
+                      <i :class="[action.iconClass, 'text-base']" />
+                      {{ action.label }}
+                    </Button>
+                  </slot>
+                </ButtonGroup>
+              </div>
+            </Transition>
           </div>
 
           <div class="relative min-w-0 overflow-visible">
