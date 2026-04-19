@@ -938,7 +938,13 @@ watch(
       leave-to-class="max-h-0 opacity-0 -translate-y-1"
     >
       <div v-if="hasControlsRow" :class="props.listLevelTable ? 'px-4 py-2.5 sm:px-8 overflow-visible' : 'py-2.5 overflow-visible'">
-        <div :class="['relative min-h-8 overflow-visible', hasSelectedRows ? '-ml-2 pl-2' : '']">
+        <div
+          :class="[
+            'relative overflow-visible',
+            showControls ? 'min-h-6' : 'min-h-8',
+            hasSelectedRows ? '-ml-2 pl-2' : '',
+          ]"
+        >
           <div
             class="pointer-events-none absolute left-1 top-1/2 z-20 flex w-max max-w-full -translate-y-1/2 overflow-visible"
           >
