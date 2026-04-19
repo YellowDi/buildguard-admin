@@ -962,7 +962,7 @@ watch(
               >
                 <ButtonGroup
                   aria-label="批量操作"
-                  class="-translate-y-1 overflow-hidden bg-background/96 shadow-sm ring-1 ring-border/60 backdrop-blur supports-backdrop-filter:bg-background/88"
+                  class="translate-y-px overflow-hidden bg-background/96 shadow-sm ring-1 ring-border/60 backdrop-blur supports-backdrop-filter:bg-background/88"
                 >
                   <div class="inline-flex h-8 items-center rounded-l-md bg-background px-3 text-[14px] leading-none font-medium text-foreground whitespace-nowrap">
                     已选 {{ props.selectedRowsCount }} 项
