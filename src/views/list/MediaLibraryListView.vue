@@ -9,12 +9,6 @@ import SettingsToolbarSearchInput from "@/components/settings/SettingsToolbarSea
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ResponsiveRightSheet } from "@/components/ui/sheet"
@@ -27,22 +21,18 @@ import {
   type MediaCategoryNode,
   type MediaModuleKey,
   type MediaStatus,
-  type VideoChapter,
-  type VideoCollection,
   type VideoItem,
   type VideoMediaViewKey,
 } from "@/lib/media-library-mock"
 import { cn } from "@/lib/utils"
 
 type SheetMode = "preview" | "edit" | "create"
-type SheetEntityKind = "collection" | "chapter" | "video" | "article"
+type SheetEntityKind = "video" | "article"
 
 type MediaEditorForm = {
   kind: SheetEntityKind
   title: string
   categoryId: string
-  collectionId: string
-  chapterId: string
   cover: string
   summary: string
   duration: string
@@ -63,8 +53,7 @@ type CategoryTreeRow = {
 }
 
 type VideoListEntry =
-  | { kind: "collection"; id: string; title: string; summary: string; categoryId: string; status: MediaStatus; featured: boolean; sortOrder: number; updatedAt: string; meta: string }
-  | { kind: "video"; id: string; title: string; summary: string; categoryId: string; status: MediaStatus; featured: boolean; sortOrder: number; updatedAt: string; meta: string }
+  { kind: "video"; id: string; title: string; summary: string; categoryId: string; status: MediaStatus; featured: boolean; sortOrder: number; updatedAt: string; meta: string }
 
 type SwitchTab = {
   id: string
@@ -102,8 +91,6 @@ const coverAccentClasses = [
 const initialState = createMediaLibraryMockState()
 const videoCategories = ref(initialState.videoCategories)
 const articleCategories = ref(initialState.articleCategories)
-const videoCollections = ref(initialState.videoCollections)
-const videoChapters = ref(initialState.videoChapters)
 const videoItems = ref(initialState.videoItems)
 const articleItems = ref(initialState.articleItems)
 
@@ -121,15 +108,15 @@ const expandedCategoryIds = reactive<Record<MediaModuleKey, string[]>>({
 
 const sheetOpen = ref(false)
 const sheetMode = ref<SheetMode>("preview")
-const sheetEntityKind = ref<SheetEntityKind>("collection")
+const sheetEntityKind = ref<SheetEntityKind>("video")
 const activeEntityId = ref("")
-const formState = reactive<MediaEditorForm>(createEmptyForm("collection"))
+const formState = reactive<MediaEditorForm>(createEmptyForm("video"))
 
 const normalizedSearch = computed(() => searchQuery.value.trim().toLowerCase())
 const currentViewTabs = computed(() => activeModule.value === "videos" ? videoViewTabs : articleViewTabs)
 const currentView = computed(() => activeModule.value === "videos" ? activeVideoView.value : activeArticleView.value)
 const currentSearchPlaceholder = computed(() => activeModule.value === "videos"
-  ? "搜索视频标题、合集、章节、分类或摘要"
+  ? "搜索视频标题、分类或摘要"
   : "搜索文章标题、分类、标签或摘要")
 const currentSelectedCategoryId = computed(() => (
   activeModule.value === "videos" ? selectedVideoCategoryId.value : selectedArticleCategoryId.value
@@ -139,7 +126,7 @@ const moduleSwitchTabs = computed<SwitchTab[]>(() => [
     id: "videos",
     label: "视频",
     icon: "ri-movie-2-line",
-    badge: videoCollections.value.length + videoItems.value.length,
+    badge: videoItems.value.length,
   },
   {
     id: "articles",
@@ -151,69 +138,11 @@ const moduleSwitchTabs = computed<SwitchTab[]>(() => [
 
 const allVideoCategories = computed(() => flattenCategoryTree(videoCategories.value))
 const allArticleCategories = computed(() => flattenCategoryTree(articleCategories.value))
-const videoCategoryMap = computed(() => new Map(allVideoCategories.value.map(node => [node.id, node])))
-const articleCategoryMap = computed(() => new Map(allArticleCategories.value.map(node => [node.id, node])))
 const videoLeafCategories = computed(() => allVideoCategories.value.filter(node => !node.children?.length))
 const articleLeafCategories = computed(() => allArticleCategories.value.filter(node => !node.children?.length))
 
-const videoCollectionMap = computed(() => new Map(videoCollections.value.map(item => [item.id, item])))
-const videoChapterMap = computed(() => new Map(videoChapters.value.map(item => [item.id, item])))
 const videoItemMap = computed(() => new Map(videoItems.value.map(item => [item.id, item])))
 const articleItemMap = computed(() => new Map(articleItems.value.map(item => [item.id, item])))
-
-const chaptersByCollectionId = computed(() => {
-  const groups = new Map<string, VideoChapter[]>()
-
-  for (const chapter of videoChapters.value) {
-    const entries = groups.get(chapter.collectionId) ?? []
-    entries.push(chapter)
-    groups.set(chapter.collectionId, entries)
-  }
-
-  for (const entries of groups.values()) {
-    entries.sort((left, right) => left.sortOrder - right.sortOrder || left.title.localeCompare(right.title, "zh-CN"))
-  }
-
-  return groups
-})
-
-const videosByChapterId = computed(() => {
-  const groups = new Map<string, VideoItem[]>()
-
-  for (const item of videoItems.value) {
-    const entries = groups.get(item.chapterId) ?? []
-    entries.push(item)
-    groups.set(item.chapterId, entries)
-  }
-
-  for (const entries of groups.values()) {
-    entries.sort((left, right) => left.sortOrder - right.sortOrder || right.updatedAt.localeCompare(left.updatedAt))
-  }
-
-  return groups
-})
-
-const collectionChapterCountById = computed(() => {
-  const counts = new Map<string, number>()
-
-  for (const collection of videoCollections.value) {
-    counts.set(collection.id, (chaptersByCollectionId.value.get(collection.id) ?? []).length)
-  }
-
-  return counts
-})
-
-const collectionVideoCountById = computed(() => {
-  const counts = new Map<string, number>()
-
-  for (const collection of videoCollections.value) {
-    const chapterIds = (chaptersByCollectionId.value.get(collection.id) ?? []).map(chapter => chapter.id)
-    const total = chapterIds.reduce((sum, chapterId) => sum + (videosByChapterId.value.get(chapterId) ?? []).length, 0)
-    counts.set(collection.id, total)
-  }
-
-  return counts
-})
 
 const selectedVideoCategoryIds = computed(() => resolveSelectedCategoryIds(
   selectedVideoCategoryId.value,
@@ -226,7 +155,7 @@ const selectedArticleCategoryIds = computed(() => resolveSelectedCategoryIds(
 
 const videoCategoryCounts = computed(() => buildCategoryCounts(
   videoCategories.value,
-  videoCollections.value.map(collection => collection.categoryId).concat(videoItems.value.map(item => item.categoryId)),
+  videoItems.value.map(item => item.categoryId),
 ))
 const articleCategoryCounts = computed(() => buildCategoryCounts(
   articleCategories.value,
@@ -247,45 +176,6 @@ const visibleCurrentCategoryRows = computed(() => (
   activeModule.value === "videos" ? visibleVideoCategoryRows.value : visibleArticleCategoryRows.value
 ))
 
-const filteredVideoCollections = computed(() => {
-  const query = normalizedSearch.value
-
-  return [...videoCollections.value]
-    .filter((collection) => {
-      if (!matchesSelectedCategory(collection.categoryId, selectedVideoCategoryIds.value)) {
-        return false
-      }
-
-      if (!query) {
-        return true
-      }
-
-      if (matchesQuery(query, [
-        collection.title,
-        collection.summary,
-        collection.cover,
-        getCategoryPathLabel("videos", collection.categoryId),
-      ])) {
-        return true
-      }
-
-      return (chaptersByCollectionId.value.get(collection.id) ?? []).some((chapter) => {
-        if (matchesQuery(query, [chapter.title, chapter.summary])) {
-          return true
-        }
-
-        return (videosByChapterId.value.get(chapter.id) ?? []).some(video => matchesSelectedCategory(video.categoryId, selectedVideoCategoryIds.value)
-          && matchesQuery(query, [
-            video.title,
-            video.summary,
-            video.cover,
-            getCategoryPathLabel("videos", video.categoryId),
-          ]))
-      })
-    })
-    .sort(compareBySortOrder)
-})
-
 const filteredVideoItems = computed(() => {
   const query = normalizedSearch.value
 
@@ -299,17 +189,10 @@ const filteredVideoItems = computed(() => {
         return true
       }
 
-      const chapter = videoChapterMap.value.get(item.chapterId)
-      const collection = chapter ? videoCollectionMap.value.get(chapter.collectionId) : null
-
       return matchesQuery(query, [
         item.title,
         item.summary,
         item.cover,
-        chapter?.title,
-        chapter?.summary,
-        collection?.title,
-        collection?.summary,
         getCategoryPathLabel("videos", item.categoryId),
       ])
     })
@@ -317,18 +200,6 @@ const filteredVideoItems = computed(() => {
 })
 
 const filteredVideoListEntries = computed<VideoListEntry[]>(() => {
-  const collectionEntries: VideoListEntry[] = filteredVideoCollections.value.map(collection => ({
-    kind: "collection",
-    id: collection.id,
-    title: collection.title,
-    summary: collection.summary,
-    categoryId: collection.categoryId,
-    status: collection.status,
-    featured: collection.featured,
-    sortOrder: collection.sortOrder,
-    updatedAt: collection.updatedAt,
-    meta: `${collectionChapterCountById.value.get(collection.id) ?? 0} 章 · ${collectionVideoCountById.value.get(collection.id) ?? 0} 个视频`,
-  }))
   const videoEntries: VideoListEntry[] = filteredVideoItems.value.map(item => ({
     kind: "video",
     id: item.id,
@@ -342,7 +213,7 @@ const filteredVideoListEntries = computed<VideoListEntry[]>(() => {
     meta: buildVideoPlacement(item),
   }))
 
-  return [...collectionEntries, ...videoEntries].sort(compareBySortOrder)
+  return videoEntries.sort(compareBySortOrder)
 })
 
 const filteredArticles = computed(() => {
@@ -370,19 +241,8 @@ const filteredArticles = computed(() => {
     .sort(compareBySortOrder)
 })
 
-const activeCollection = computed(() => videoCollectionMap.value.get(activeEntityId.value) ?? null)
-const activeChapter = computed(() => videoChapterMap.value.get(activeEntityId.value) ?? null)
 const activeVideo = computed(() => videoItemMap.value.get(activeEntityId.value) ?? null)
 const activeArticle = computed(() => articleItemMap.value.get(activeEntityId.value) ?? null)
-
-const formCollectionOptions = computed(() => [...videoCollections.value].sort(compareBySortOrder))
-const formChapterOptions = computed(() => {
-  if (!formState.collectionId) {
-    return []
-  }
-
-  return chaptersByCollectionId.value.get(formState.collectionId) ?? []
-})
 
 const sheetTitle = computed(() => {
   if (sheetMode.value === "create") {
@@ -399,7 +259,7 @@ const sheetTitle = computed(() => {
 const sheetDescription = computed(() => {
   if (sheetMode.value === "create") {
     return activeModule.value === "videos"
-      ? "先用 mock 数据把教程结构、摘要和首页分发字段定下来。"
+      ? "先用 mock 数据把视频标题、摘要和首页分发字段定下来。"
       : "先用 Markdown 组织正文、摘要和首页推荐信息。"
   }
 
@@ -423,54 +283,6 @@ watch(activeModule, () => {
   searchExpanded.value = false
   sheetOpen.value = false
 })
-
-watch(
-  () => formState.collectionId,
-  (collectionId) => {
-    if (sheetMode.value === "preview") {
-      return
-    }
-
-    if (formState.kind === "chapter") {
-      return
-    }
-
-    if (formState.kind !== "video") {
-      return
-    }
-
-    const collection = videoCollectionMap.value.get(collectionId)
-
-    if (collection) {
-      formState.categoryId = collection.categoryId
-    }
-
-    const chapterIds = (chaptersByCollectionId.value.get(collectionId) ?? []).map(chapter => chapter.id)
-    if (!chapterIds.includes(formState.chapterId)) {
-      formState.chapterId = chapterIds[0] ?? ""
-    }
-  },
-)
-
-watch(
-  () => formState.chapterId,
-  (chapterId) => {
-    if (sheetMode.value === "preview" || formState.kind !== "video" || !chapterId) {
-      return
-    }
-
-    const chapter = videoChapterMap.value.get(chapterId)
-    if (!chapter) {
-      return
-    }
-
-    formState.collectionId = chapter.collectionId
-    const collection = videoCollectionMap.value.get(chapter.collectionId)
-    if (collection) {
-      formState.categoryId = collection.categoryId
-    }
-  },
-)
 
 function toggleSearch() {
   if (searchExpanded.value && searchQuery.value) {
@@ -531,31 +343,15 @@ function openCreate(kind: SheetEntityKind, defaults: Partial<MediaEditorForm> = 
 
   const fallbackVideoCategory = resolveLeafCategoryId(selectedVideoCategoryId.value, videoCategories.value)
   const fallbackArticleCategory = resolveLeafCategoryId(selectedArticleCategoryId.value, articleCategories.value)
-  const fallbackCollectionId = defaults.collectionId
-    ?? filteredVideoCollections.value[0]?.id
-    ?? formCollectionOptions.value[0]?.id
-    ?? ""
-  const fallbackChapterId = defaults.chapterId
-    ?? (chaptersByCollectionId.value.get(fallbackCollectionId) ?? [])[0]?.id
-    ?? ""
 
   applyForm(createEmptyForm(kind, {
     categoryId: kind === "article" ? fallbackArticleCategory : fallbackVideoCategory,
-    collectionId: kind === "chapter" || kind === "video" ? fallbackCollectionId : "",
-    chapterId: kind === "video" ? fallbackChapterId : "",
     markdown: kind === "article" ? "# 新文章标题\n\n请先输入摘要和正文。" : "",
     sortOrder: kind === "article"
       ? (articleItems.value[0]?.sortOrder ?? 0) + 1
-      : (videoItems.value[0]?.sortOrder ?? videoCollections.value[0]?.sortOrder ?? 0) + 1,
+      : (videoItems.value[0]?.sortOrder ?? 0) + 1,
     ...defaults,
   }))
-
-  if (kind === "video" && fallbackCollectionId) {
-    const collection = videoCollectionMap.value.get(fallbackCollectionId)
-    if (collection) {
-      formState.categoryId = collection.categoryId
-    }
-  }
 
   sheetOpen.value = true
 }
@@ -572,49 +368,15 @@ function openEdit(kind: SheetEntityKind, id: string) {
   sheetEntityKind.value = kind
   activeEntityId.value = id
 
-  if (kind === "collection") {
-    const entity = videoCollectionMap.value.get(id)
-    if (!entity) {
-      return
-    }
-
-    applyForm(createEmptyForm("collection", {
-      title: entity.title,
-      categoryId: entity.categoryId,
-      cover: entity.cover,
-      summary: entity.summary,
-      status: entity.status,
-      featured: entity.featured,
-      sortOrder: entity.sortOrder,
-    }))
-  }
-
-  if (kind === "chapter") {
-    const entity = videoChapterMap.value.get(id)
-    if (!entity) {
-      return
-    }
-
-    applyForm(createEmptyForm("chapter", {
-      title: entity.title,
-      collectionId: entity.collectionId,
-      summary: entity.summary,
-      sortOrder: entity.sortOrder,
-    }))
-  }
-
   if (kind === "video") {
     const entity = videoItemMap.value.get(id)
-    const chapter = entity ? videoChapterMap.value.get(entity.chapterId) : null
-    if (!entity || !chapter) {
+    if (!entity) {
       return
     }
 
     applyForm(createEmptyForm("video", {
       title: entity.title,
       categoryId: entity.categoryId,
-      collectionId: chapter.collectionId,
-      chapterId: entity.chapterId,
       cover: entity.cover,
       duration: entity.duration,
       summary: entity.summary,
@@ -664,77 +426,19 @@ function saveCurrentForm() {
     return
   }
 
-  if (formState.kind === "collection" && !formState.categoryId) {
-    toast.error("请选择合集分类")
-    return
-  }
-
-  if (formState.kind === "chapter" && !formState.collectionId) {
-    toast.error("请选择所属合集")
-    return
-  }
-
-  if (formState.kind === "video" && (!formState.collectionId || !formState.chapterId)) {
-    toast.error("请选择视频所属的合集和章节")
-    return
-  }
-
-  if (formState.kind === "article" && !formState.categoryId) {
-    toast.error("请选择文章分类")
+  if (!formState.categoryId) {
+    toast.error(formState.kind === "article" ? "请选择文章分类" : "请选择视频分类")
     return
   }
 
   const timestamp = formatNow()
 
-  if (formState.kind === "collection") {
-    const created = sheetMode.value === "create"
-    const next: VideoCollection = {
-      id: sheetMode.value === "edit" ? activeEntityId.value : createId("collection"),
-      title: formState.title.trim(),
-      categoryId: formState.categoryId,
-      cover: formState.cover.trim() || formState.title.trim(),
-      summary: formState.summary.trim(),
-      status: formState.status,
-      featured: formState.featured,
-      sortOrder: Number(formState.sortOrder) || 0,
-      chapterCount: collectionChapterCountById.value.get(activeEntityId.value) ?? 0,
-      videoCount: collectionVideoCountById.value.get(activeEntityId.value) ?? 0,
-      updatedAt: timestamp,
-    }
-
-    upsertById(videoCollections.value, next)
-    activeEntityId.value = next.id
-    sheetMode.value = "preview"
-    sheetEntityKind.value = "collection"
-    toast.success(created ? "合集已创建" : "合集已保存")
-    return
-  }
-
-  if (formState.kind === "chapter") {
-    const created = sheetMode.value === "create"
-    const next: VideoChapter = {
-      id: sheetMode.value === "edit" ? activeEntityId.value : createId("chapter"),
-      collectionId: formState.collectionId,
-      title: formState.title.trim(),
-      sortOrder: Number(formState.sortOrder) || 0,
-      summary: formState.summary.trim(),
-    }
-
-    upsertById(videoChapters.value, next)
-    activeEntityId.value = next.id
-    sheetMode.value = "preview"
-    sheetEntityKind.value = "chapter"
-    toast.success(created ? "章节已创建" : "章节已保存")
-    return
-  }
-
   if (formState.kind === "video") {
     const created = sheetMode.value === "create"
-    const collection = videoCollectionMap.value.get(formState.collectionId)
     const next: VideoItem = {
       id: sheetMode.value === "edit" ? activeEntityId.value : createId("video"),
-      chapterId: formState.chapterId,
-      categoryId: formState.categoryId || collection?.categoryId || "",
+      chapterId: "",
+      categoryId: formState.categoryId,
       title: formState.title.trim(),
       cover: formState.cover.trim() || formState.title.trim(),
       duration: formState.duration.trim() || "05:00",
@@ -787,14 +491,6 @@ function isActiveEntity(kind: SheetEntityKind, id: string) {
 }
 
 function getPreviewTitle() {
-  if (sheetEntityKind.value === "collection") {
-    return activeCollection.value?.title ?? "合集详情"
-  }
-
-  if (sheetEntityKind.value === "chapter") {
-    return activeChapter.value?.title ?? "章节详情"
-  }
-
   if (sheetEntityKind.value === "video") {
     return activeVideo.value?.title ?? "视频详情"
   }
@@ -803,14 +499,6 @@ function getPreviewTitle() {
 }
 
 function getPreviewDescription() {
-  if (sheetEntityKind.value === "collection" && activeCollection.value) {
-    return `${getCategoryPathLabel("videos", activeCollection.value.categoryId)} · ${collectionChapterCountById.value.get(activeCollection.value.id) ?? 0} 章`
-  }
-
-  if (sheetEntityKind.value === "chapter" && activeChapter.value) {
-    return buildChapterPlacement(activeChapter.value)
-  }
-
   if (sheetEntityKind.value === "video" && activeVideo.value) {
     return buildVideoPlacement(activeVideo.value)
   }
@@ -824,10 +512,6 @@ function getPreviewDescription() {
 
 function getEntityLabel(kind: SheetEntityKind) {
   switch (kind) {
-    case "collection":
-      return "合集"
-    case "chapter":
-      return "章节"
     case "video":
       return "视频"
     case "article":
@@ -866,18 +550,7 @@ function getCategoryPathLabel(module: MediaModuleKey, categoryId: string) {
 }
 
 function buildVideoPlacement(item: VideoItem) {
-  const chapter = videoChapterMap.value.get(item.chapterId)
-  const collection = chapter ? videoCollectionMap.value.get(chapter.collectionId) : null
-  return [collection?.title, chapter?.title, item.duration].filter(Boolean).join(" · ")
-}
-
-function buildChapterPlacement(item: VideoChapter) {
-  const collection = videoCollectionMap.value.get(item.collectionId)
-  return [collection?.title, `${(videosByChapterId.value.get(item.id) ?? []).length} 个视频`].filter(Boolean).join(" · ")
-}
-
-function openDefaultVideoCreate() {
-  openCreate("collection")
+  return [getCategoryPathLabel("videos", item.categoryId), item.duration].filter(Boolean).join(" · ")
 }
 
 function matchesSelectedCategory(categoryId: string, selectedIds: Set<string> | null) {
@@ -915,8 +588,6 @@ function createEmptyForm(kind: SheetEntityKind, overrides: Partial<MediaEditorFo
     kind,
     title: "",
     categoryId: "",
-    collectionId: "",
-    chapterId: "",
     cover: "",
     summary: "",
     duration: "05:00",
@@ -1233,27 +904,7 @@ function escapeHtml(value: string) {
             @toggle="toggleSearch"
           />
 
-          <DropdownMenu v-if="activeModule === 'videos'">
-            <DropdownMenuTrigger as-child>
-              <Button size="sm" class="h-8 rounded-md px-3">
-                <i class="ri-add-line text-base" />
-                <span>添加</span>
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" class="w-[220px] rounded-xl p-1.5">
-              <DropdownMenuItem class="rounded-lg px-2.5 py-2" @select="openDefaultVideoCreate">
-                新建合集
-              </DropdownMenuItem>
-              <DropdownMenuItem class="rounded-lg px-2.5 py-2" @select="openCreate('chapter')">
-                新建章节
-              </DropdownMenuItem>
-              <DropdownMenuItem class="rounded-lg px-2.5 py-2" @select="openCreate('video')">
-                新建视频
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          <Button v-else size="sm" class="h-8 rounded-md px-3" @click="openCreate('article')">
+          <Button size="sm" class="h-8 rounded-md px-3" @click="openCreate(activeModule === 'videos' ? 'video' : 'article')">
             <i class="ri-add-line text-base" />
             <span>添加</span>
           </Button>
@@ -1317,179 +968,78 @@ function escapeHtml(value: string) {
       <main class="min-h-0 min-w-0 flex-1 overflow-y-auto pt-4">
         <section
           v-if="activeModule === 'videos' && currentView === 'grid'"
-          class="space-y-6"
+          class="space-y-3"
         >
-          <div class="space-y-3">
-            <div class="flex items-center justify-between gap-3">
-              <div>
-                <h3 class="text-lg font-semibold tracking-tight text-foreground">
-                  教程合集
-                </h3>
-                <p class="text-sm text-muted-foreground">
-                  先用合集承接教程主题，再在结构视图里维护章节和视频。
-                </p>
-              </div>
-              <Badge variant="outline" class="rounded-md border-border/80 bg-background px-2.5 py-1 text-[11px] text-muted-foreground">
-                {{ filteredVideoCollections.length }} 个合集
-              </Badge>
+          <div class="flex items-center justify-between gap-3">
+            <div>
+              <h3 class="text-lg font-semibold tracking-tight text-foreground">
+                视频内容
+              </h3>
+              <p class="text-sm text-muted-foreground">
+                直接维护封面摘要、时长、分类和首页推荐字段。
+              </p>
             </div>
-
-            <div v-if="filteredVideoCollections.length" class="grid gap-4 xl:grid-cols-2">
-              <article
-                v-for="collection in filteredVideoCollections"
-                :key="collection.id"
-                class="rounded-xl border border-border/70 bg-background p-4"
-                :class="isActiveEntity('collection', collection.id) ? 'border-foreground/20 bg-accent/20' : ''"
-              >
-                <div class="flex items-start justify-between gap-3">
-                  <div class="min-w-0">
-                    <div class="flex flex-wrap items-center gap-2">
-                      <Badge :class="cn('border-border bg-background', getCoverTone(collection.title).accent)">
-                        教程合集
-                      </Badge>
-                      <Badge :class="getStatusBadgeClass(collection.status)">
-                        {{ getStatusLabel(collection.status) }}
-                      </Badge>
-                      <Badge
-                        v-if="collection.featured"
-                        class="border-amber-200 bg-amber-50 text-amber-700"
-                      >
-                        首页推荐
-                      </Badge>
-                    </div>
-                    <h4 class="mt-3 text-lg font-semibold tracking-tight text-foreground">
-                      {{ collection.title }}
-                    </h4>
-                    <p class="mt-1 text-xs text-muted-foreground">
-                      {{ collection.cover }}
-                    </p>
-                  </div>
-                  <span class="shrink-0 text-xs text-muted-foreground">
-                    {{ collection.updatedAt }}
-                  </span>
-                </div>
-
-                <p class="media-card-summary mt-3 text-sm leading-6 text-muted-foreground">
-                  {{ collection.summary }}
-                </p>
-
-                <div class="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                  <span>{{ getCategoryPathLabel('videos', collection.categoryId) }}</span>
-                  <span>·</span>
-                  <span>{{ collectionChapterCountById.get(collection.id) ?? 0 }} 章</span>
-                  <span>·</span>
-                  <span>{{ collectionVideoCountById.get(collection.id) ?? 0 }} 个视频</span>
-                  <span>·</span>
-                  <span>排序 {{ collection.sortOrder }}</span>
-                </div>
-
-                <dl class="mt-4 grid grid-cols-3 gap-2 border-t border-border/70 pt-3">
-                  <div>
-                    <dt class="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">章节</dt>
-                    <dd class="mt-1 text-lg font-semibold">{{ collectionChapterCountById.get(collection.id) ?? 0 }}</dd>
-                  </div>
-                  <div>
-                    <dt class="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">视频</dt>
-                    <dd class="mt-1 text-lg font-semibold">{{ collectionVideoCountById.get(collection.id) ?? 0 }}</dd>
-                  </div>
-                  <div>
-                    <dt class="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">排序</dt>
-                    <dd class="mt-1 text-lg font-semibold">{{ collection.sortOrder }}</dd>
-                  </div>
-                </dl>
-
-                <div class="mt-4 flex items-center justify-end gap-2">
-                  <div class="flex items-center gap-2">
-                    <Button variant="ghost" size="sm" class="rounded-md" @click="openPreview('collection', collection.id)">
-                      预览
-                    </Button>
-                    <Button size="sm" class="rounded-md" @click="openEdit('collection', collection.id)">
-                      编辑
-                    </Button>
-                  </div>
-                </div>
-              </article>
-            </div>
-
-            <div v-else class="rounded-xl border border-dashed border-border bg-background px-6 py-12 text-center">
-              <i class="ri-folder-open-line text-3xl text-muted-foreground" />
-              <p class="mt-3 text-base font-medium">当前筛选下没有合集</p>
-              <p class="mt-2 text-sm text-muted-foreground">试试切换分类、清空搜索，或者直接新建一个教程合集。</p>
-            </div>
+            <Badge variant="outline" class="rounded-md border-border/80 bg-background px-2.5 py-1 text-[11px] text-muted-foreground">
+              {{ filteredVideoItems.length }} 个视频
+            </Badge>
           </div>
 
-          <div class="space-y-3">
-            <div class="flex items-center justify-between gap-3">
-              <div>
-                <h3 class="text-lg font-semibold tracking-tight text-foreground">
-                  视频条目
-                </h3>
-                <p class="text-sm text-muted-foreground">
-                  关注封面摘要、时长和首页推荐字段，先把内容运营信息补齐。
-                </p>
+          <div v-if="filteredVideoItems.length" class="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
+            <article
+              v-for="item in filteredVideoItems"
+              :key="item.id"
+              class="rounded-xl border border-border/70 bg-background p-3"
+              :class="isActiveEntity('video', item.id) ? 'border-foreground/20 bg-accent/20' : ''"
+            >
+              <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <Badge :class="cn('border-border bg-background', getCoverTone(item.title).accent)">
+                      {{ item.duration }}
+                    </Badge>
+                    <Badge :class="getStatusBadgeClass(item.status)">
+                      {{ getStatusLabel(item.status) }}
+                    </Badge>
+                    <Badge v-if="item.featured" class="border-amber-200 bg-amber-50 text-amber-700">
+                      首页推荐
+                    </Badge>
+                  </div>
+                  <h4 class="mt-3 text-base font-semibold tracking-tight text-foreground">
+                    {{ item.title }}
+                  </h4>
+                  <p class="mt-1 text-xs text-muted-foreground">
+                    {{ item.cover }}
+                  </p>
+                </div>
+                <span class="shrink-0 text-[11px] text-muted-foreground">
+                  排序 {{ item.sortOrder }}
+                </span>
               </div>
-              <Badge variant="outline" class="rounded-md border-border/80 bg-background px-2.5 py-1 text-[11px] text-muted-foreground">
-                {{ filteredVideoItems.length }} 个视频
-              </Badge>
-            </div>
 
-            <div v-if="filteredVideoItems.length" class="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
-              <article
-                v-for="item in filteredVideoItems"
-                :key="item.id"
-                class="rounded-xl border border-border/70 bg-background p-3"
-                :class="isActiveEntity('video', item.id) ? 'border-foreground/20 bg-accent/20' : ''"
-              >
-                <div class="flex items-start justify-between gap-3">
-                  <div class="min-w-0">
-                    <div class="flex flex-wrap items-center gap-2">
-                      <Badge :class="cn('border-border bg-background', getCoverTone(item.title).accent)">
-                        {{ item.duration }}
-                      </Badge>
-                      <Badge :class="getStatusBadgeClass(item.status)">
-                        {{ getStatusLabel(item.status) }}
-                      </Badge>
-                      <Badge v-if="item.featured" class="border-amber-200 bg-amber-50 text-amber-700">
-                        首页推荐
-                      </Badge>
-                    </div>
-                    <h4 class="mt-3 text-base font-semibold tracking-tight text-foreground">
-                      {{ item.title }}
-                    </h4>
-                    <p class="mt-1 text-xs text-muted-foreground">
-                      {{ item.cover }}
-                    </p>
-                  </div>
-                  <span class="shrink-0 text-[11px] text-muted-foreground">
-                    排序 {{ item.sortOrder }}
-                  </span>
+              <p class="media-card-summary mt-3 text-sm leading-6 text-muted-foreground">
+                {{ item.summary }}
+              </p>
+
+              <div class="mt-3 text-xs leading-5 text-muted-foreground">
+                {{ buildVideoPlacement(item) }}
+              </div>
+
+              <div class="mt-4 flex items-center justify-between gap-2 border-t border-border/70 pt-3">
+                <span class="text-xs text-muted-foreground">更新于 {{ item.updatedAt }}</span>
+                <div class="flex items-center gap-2">
+                  <Button variant="ghost" size="sm" class="rounded-md" @click="openPreview('video', item.id)">
+                    预览
+                  </Button>
+                  <Button size="sm" class="rounded-md" @click="openEdit('video', item.id)">
+                    编辑
+                  </Button>
                 </div>
+              </div>
+            </article>
+          </div>
 
-                <p class="media-card-summary mt-3 text-sm leading-6 text-muted-foreground">
-                  {{ item.summary }}
-                </p>
-
-                <div class="mt-3 text-xs leading-5 text-muted-foreground">
-                  {{ buildVideoPlacement(item) }}
-                </div>
-
-                <div class="mt-4 flex items-center justify-between gap-2 border-t border-border/70 pt-3">
-                  <span class="text-xs text-muted-foreground">更新于 {{ item.updatedAt }}</span>
-                  <div class="flex items-center gap-2">
-                    <Button variant="ghost" size="sm" class="rounded-md" @click="openPreview('video', item.id)">
-                      预览
-                    </Button>
-                    <Button size="sm" class="rounded-md" @click="openEdit('video', item.id)">
-                      编辑
-                    </Button>
-                  </div>
-                </div>
-              </article>
-            </div>
-
-            <div v-else class="rounded-xl border border-dashed border-border bg-background px-6 py-10 text-center text-sm text-muted-foreground">
-              当前筛选下没有视频条目。
-            </div>
+          <div v-else class="rounded-xl border border-dashed border-border bg-background px-6 py-10 text-center text-sm text-muted-foreground">
+            当前筛选下没有视频内容。
           </div>
         </section>
 
@@ -1507,16 +1057,12 @@ function escapeHtml(value: string) {
               v-for="entry in filteredVideoListEntries"
               :key="`${entry.kind}-${entry.id}`"
               class="flex flex-col gap-3 px-4 py-4 transition-colors hover:bg-slate-50/80 lg:flex-row lg:items-center"
-              :class="entry.kind === 'collection' && isActiveEntity('collection', entry.id)
-                ? 'bg-accent/30'
-                : entry.kind === 'video' && isActiveEntity('video', entry.id)
-                  ? 'bg-accent/30'
-                  : ''"
+              :class="isActiveEntity('video', entry.id) ? 'bg-accent/30' : ''"
             >
               <div class="min-w-0 flex-1">
                 <div class="flex flex-wrap items-center gap-2">
                   <Badge variant="outline" class="border-border/80 bg-background text-muted-foreground">
-                    {{ entry.kind === "collection" ? "合集" : "视频" }}
+                    视频
                   </Badge>
                   <Badge :class="getStatusBadgeClass(entry.status)">
                     {{ getStatusLabel(entry.status) }}
@@ -1771,118 +1317,7 @@ function escapeHtml(value: string) {
 
       <div class="min-h-0 overflow-y-auto px-1 pb-1">
         <div v-if="sheetMode === 'preview'" class="space-y-5">
-          <template v-if="sheetEntityKind === 'collection' && activeCollection">
-            <div
-              class="rounded-xl border border-border/70 px-5 py-5"
-              :class="getCoverTone(activeCollection.title).surface"
-            >
-              <Badge :class="cn('border-border bg-background', getCoverTone(activeCollection.title).accent)">
-                教程合集
-              </Badge>
-              <p class="mt-6 text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                {{ activeCollection.cover }}
-              </p>
-              <h3 class="mt-2 text-3xl font-semibold tracking-tight text-foreground">
-                {{ activeCollection.title }}
-              </h3>
-            </div>
-
-            <div class="grid gap-3 md:grid-cols-2">
-              <div class="rounded-lg border border-border/70 bg-muted/20 p-4">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">分类路径</p>
-                <p class="mt-2 text-sm leading-6">{{ getCategoryPathLabel('videos', activeCollection.categoryId) }}</p>
-              </div>
-              <div class="rounded-lg border border-border/70 bg-muted/20 p-4">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">首页分发</p>
-                <div class="mt-2 flex flex-wrap items-center gap-2">
-                  <Badge :class="getStatusBadgeClass(activeCollection.status)">
-                    {{ getStatusLabel(activeCollection.status) }}
-                  </Badge>
-                  <Badge v-if="activeCollection.featured" class="border-amber-200 bg-amber-50 text-amber-700">
-                    首页推荐
-                  </Badge>
-                  <Badge variant="outline" class="border-border/80 bg-background text-muted-foreground">
-                    排序 {{ activeCollection.sortOrder }}
-                  </Badge>
-                </div>
-              </div>
-            </div>
-
-            <div class="rounded-lg border border-border/70 bg-background p-4">
-              <p class="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">内容简介</p>
-              <p class="mt-3 text-sm leading-7 text-foreground">
-                {{ activeCollection.summary }}
-              </p>
-            </div>
-
-            <div class="grid gap-3 md:grid-cols-3">
-              <div class="rounded-lg border border-border/70 bg-background p-4">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">章节数</p>
-                <p class="mt-2 text-2xl font-semibold">{{ collectionChapterCountById.get(activeCollection.id) ?? 0 }}</p>
-              </div>
-              <div class="rounded-lg border border-border/70 bg-background p-4">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">视频数</p>
-                <p class="mt-2 text-2xl font-semibold">{{ collectionVideoCountById.get(activeCollection.id) ?? 0 }}</p>
-              </div>
-              <div class="rounded-lg border border-border/70 bg-background p-4">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">更新时间</p>
-                <p class="mt-2 text-sm leading-6">{{ activeCollection.updatedAt }}</p>
-              </div>
-            </div>
-          </template>
-
-          <template v-else-if="sheetEntityKind === 'chapter' && activeChapter">
-            <div class="rounded-xl border border-border/70 bg-muted/20 p-5">
-              <Badge variant="outline" class="border-border/80 bg-background text-muted-foreground">
-                教程章节
-              </Badge>
-              <h3 class="mt-4 text-2xl font-semibold tracking-tight">
-                {{ activeChapter.title }}
-              </h3>
-              <p class="mt-2 text-sm leading-6 text-muted-foreground">
-                {{ buildChapterPlacement(activeChapter) }}
-              </p>
-            </div>
-
-            <div class="rounded-lg border border-border/70 bg-background p-4">
-              <p class="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">章节说明</p>
-              <p class="mt-3 text-sm leading-7">
-                {{ activeChapter.summary }}
-              </p>
-            </div>
-
-            <div class="rounded-lg border border-border/70 bg-background p-4">
-              <div class="flex items-center justify-between gap-3">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">章节视频</p>
-                <Badge variant="outline" class="border-border/80 bg-background text-muted-foreground">
-                  {{ (videosByChapterId.get(activeChapter.id) ?? []).length }} 个视频
-                </Badge>
-              </div>
-              <div class="mt-3 space-y-2">
-                <button
-                  v-for="item in videosByChapterId.get(activeChapter.id) ?? []"
-                  :key="item.id"
-                  type="button"
-                  class="flex w-full items-center justify-between gap-3 rounded-lg border border-border/70 px-3 py-2.5 text-left transition-colors hover:bg-muted/20"
-                  @click="openPreview('video', item.id)"
-                >
-                  <div class="min-w-0">
-                    <div class="truncate text-sm font-medium">
-                      {{ item.title }}
-                    </div>
-                    <div class="text-xs text-muted-foreground">
-                      {{ item.duration }}
-                    </div>
-                  </div>
-                  <Badge :class="getStatusBadgeClass(item.status)">
-                    {{ getStatusLabel(item.status) }}
-                  </Badge>
-                </button>
-              </div>
-            </div>
-          </template>
-
-          <template v-else-if="sheetEntityKind === 'video' && activeVideo">
+          <template v-if="sheetEntityKind === 'video' && activeVideo">
             <div
               class="rounded-xl border border-border/70 px-5 py-5"
               :class="getCoverTone(activeVideo.title).surface"
@@ -1905,8 +1340,8 @@ function escapeHtml(value: string) {
 
             <div class="grid gap-3 md:grid-cols-2">
               <div class="rounded-lg border border-border/70 bg-background p-4">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">所在位置</p>
-                <p class="mt-2 text-sm leading-6">{{ buildVideoPlacement(activeVideo) }}</p>
+                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">分类路径</p>
+                <p class="mt-2 text-sm leading-6">{{ getCategoryPathLabel('videos', activeVideo.categoryId) }}</p>
               </div>
               <div class="rounded-lg border border-border/70 bg-background p-4">
                 <p class="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">首页分发</p>
@@ -1996,7 +1431,7 @@ function escapeHtml(value: string) {
                 <Input v-model="formState.title" placeholder="输入标题" />
               </label>
 
-              <label v-if="formState.kind === 'collection' || formState.kind === 'video' || formState.kind === 'article'" class="space-y-2">
+              <label class="space-y-2">
                 <span class="text-sm font-medium text-foreground">分类</span>
                 <Select v-model="formState.categoryId">
                   <SelectTrigger class="w-full">
@@ -2014,43 +1449,12 @@ function escapeHtml(value: string) {
                 </Select>
               </label>
 
-              <label v-if="formState.kind === 'chapter' || formState.kind === 'video'" class="space-y-2">
-                <span class="text-sm font-medium text-foreground">所属合集</span>
-                <Select v-model="formState.collectionId">
-                  <SelectTrigger class="w-full">
-                    <SelectValue placeholder="请选择合集" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem
-                      v-for="collection in formCollectionOptions"
-                      :key="collection.id"
-                      :value="collection.id"
-                    >
-                      {{ collection.title }}
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </label>
-
               <label v-if="formState.kind === 'video'" class="space-y-2">
-                <span class="text-sm font-medium text-foreground">所属章节</span>
-                <Select v-model="formState.chapterId">
-                  <SelectTrigger class="w-full">
-                    <SelectValue placeholder="请选择章节" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem
-                      v-for="chapter in formChapterOptions"
-                      :key="chapter.id"
-                      :value="chapter.id"
-                    >
-                      {{ chapter.title }}
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
+                <span class="text-sm font-medium text-foreground">封面文案</span>
+                <Input v-model="formState.cover" placeholder="封面主文案或主题词" />
               </label>
 
-              <label v-if="formState.kind !== 'chapter'" class="space-y-2">
+              <label v-else class="space-y-2">
                 <span class="text-sm font-medium text-foreground">封面文案</span>
                 <Input v-model="formState.cover" placeholder="封面主文案或主题词" />
               </label>
