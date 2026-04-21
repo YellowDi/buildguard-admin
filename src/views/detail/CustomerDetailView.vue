@@ -66,6 +66,7 @@ import DetailLayout from "@/layouts/DetailLayout.vue"
 import { handleApiError } from "@/lib/api-errors"
 import { fetchMembers } from "@/lib/members-api"
 import { hasValidLatLng } from "@/lib/map-coordinates"
+import { getWorkOrderStatusLabel } from "@/lib/work-order-status"
 import { fetchBuildings, type BuildingListItem } from "@/lib/buildings-api"
 import {
   appendCustomerSubAccountLocalRecord,
@@ -3128,7 +3129,7 @@ function mapMaintenanceStatus(row: CustomerWorkOrderRow): MaintenanceRecordRow["
     return "completed"
   }
 
-  if (row.statusValue === 3 || row.statusValue === 4) {
+  if (row.statusValue === 3 || row.statusValue === 4 || row.statusValue === 6) {
     return "processing"
   }
 
@@ -3247,24 +3248,7 @@ function buildRepairWorkOrdersFilterText(row: CustomerWorkOrderRow) {
 }
 
 function formatWorkOrderStatus(status: number | null) {
-  if (status === null) {
-    return "未知状态"
-  }
-
-  switch (status) {
-    case 1:
-      return "待指派"
-    case 2:
-      return "待开始"
-    case 3:
-      return "进行中"
-    case 4:
-      return "报告生成中"
-    case 5:
-      return "已结单"
-    default:
-      return `状态 ${status}`
-  }
+  return getWorkOrderStatusLabel(status)
 }
 
 function formatWorkOrderResult(result: number | null) {
@@ -3445,24 +3429,7 @@ function mapRepairWorkOrderRow(item: RepairWorkOrderListItem, index: number): Cu
 }
 
 function formatRepairWorkOrderStatus(status: number | null) {
-  if (status === null) {
-    return "未知状态"
-  }
-
-  switch (status) {
-    case 1:
-      return "待指派"
-    case 2:
-      return "待开始"
-    case 3:
-      return "进行中"
-    case 4:
-      return "报告生成中"
-    case 5:
-      return "已结单"
-    default:
-      return `状态 ${status}`
-  }
+  return getWorkOrderStatusLabel(status)
 }
 
 function formatRepairReportTypeLabel(value: number | null) {

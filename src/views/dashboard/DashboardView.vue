@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/select"
 import { fetchBuildings, type BuildingListItem } from "@/lib/buildings-api"
 import { fetchInspectionPlans, type InspectionPlanListItem } from "@/lib/inspection-plans-api"
+import { isCompletedWorkOrderStatus } from "@/lib/work-order-status"
 import { fetchWorkOrders, type WorkOrderListItem } from "@/lib/work-orders-api"
 import { handleApiError } from "@/lib/api-errors"
 import alarmArchivesData from "@/mocks/alarm-archives.json"
@@ -577,7 +578,7 @@ function resolveWorkOrderStage(item: WorkOrderListItem) {
   const status = toFiniteNumber(item.Status)
   const result = toFiniteNumber(item.Result)
 
-  if (status === 5 || (status === null && result === 1)) {
+  if (isCompletedWorkOrderStatus(status) || (status === null && result === 1)) {
     return "completed"
   }
 
@@ -589,7 +590,7 @@ function resolveWorkOrderStage(item: WorkOrderListItem) {
     return "pending-execute"
   }
 
-  if (status === 3 || status === 4) {
+  if (status === 3 || status === 4 || status === 6) {
     return "executing"
   }
 

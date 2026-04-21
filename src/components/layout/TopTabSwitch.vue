@@ -26,8 +26,6 @@ const emit = defineEmits<{
 }>()
 
 const COLLAPSED_TAB_WIDTH = 32
-const LABEL_ONLY_TAB_MIN_WIDTH = 0
-
 const measureRefs = ref<Array<HTMLElement | null>>([])
 const measuredWidths = ref<number[]>([])
 const hoveredTabId = ref<string | null>(null)
@@ -46,17 +44,34 @@ function setMeasureRef(element: Element | ComponentPublicInstance | null, index:
 }
 
 function updateMeasurements() {
+  if (!props.collapseInactive) {
+    measuredWidths.value = []
+    return
+  }
+
   measuredWidths.value = props.tabs.map((_, index) => {
     const measureElement = measureRefs.value[index]
     if (!measureElement) {
-      return props.collapseInactive ? COLLAPSED_TAB_WIDTH : LABEL_ONLY_TAB_MIN_WIDTH
+      return COLLAPSED_TAB_WIDTH
     }
 
     return Math.max(
       Math.ceil(measureElement.getBoundingClientRect().width),
-      props.collapseInactive ? COLLAPSED_TAB_WIDTH : LABEL_ONLY_TAB_MIN_WIDTH,
+      COLLAPSED_TAB_WIDTH,
     )
   })
+}
+
+function getTabStyle(index: number) {
+  if (!props.collapseInactive) {
+    return undefined
+  }
+
+  return {
+    width: `${props.modelValue === props.tabs[index]?.id
+      ? (measuredWidths.value[index] ?? COLLAPSED_TAB_WIDTH)
+      : COLLAPSED_TAB_WIDTH}px`,
+  }
 }
 
 function isEmphasized(tabId: string) {
@@ -126,7 +141,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="flex items-center gap-0.5" role="tablist" :aria-label="props.ariaLabel">
+  <div class="flex w-fit items-center gap-0.5" role="tablist" :aria-label="props.ariaLabel">
     <button
       v-for="(tab, index) in props.tabs"
       :key="tab.id"
@@ -135,10 +150,11 @@ onBeforeUnmount(() => {
       :aria-selected="props.modelValue === tab.id"
       :aria-pressed="props.modelValue === tab.id"
       :tabindex="props.modelValue === tab.id ? 0 : -1"
-      class="top-tab-switch-shell relative h-8 shrink-0 overflow-hidden rounded-full text-[14px] font-medium after:pointer-events-none after:absolute after:left-1/2 after:top-1/2 after:size-10 after:-translate-x-1/2 after:-translate-y-1/2 after:content-['']"
-      :style="{ width: `${props.collapseInactive
-        ? (props.modelValue === tab.id ? (measuredWidths[index] ?? COLLAPSED_TAB_WIDTH) : COLLAPSED_TAB_WIDTH)
-        : (measuredWidths[index] ?? LABEL_ONLY_TAB_MIN_WIDTH)}px` }"
+      :class="[
+        'top-tab-switch-shell relative h-8 shrink-0 overflow-hidden rounded-full text-[14px] font-medium after:pointer-events-none after:absolute after:left-1/2 after:top-1/2 after:size-10 after:-translate-x-1/2 after:-translate-y-1/2 after:content-[\'\']',
+        props.collapseInactive ? '' : 'inline-flex w-auto items-center',
+      ]"
+      :style="getTabStyle(index)"
       @click="emit('update:modelValue', tab.id)"
       @mouseenter="hoveredTabId = tab.id"
       @mouseleave="hoveredTabId = null"
@@ -151,95 +167,124 @@ onBeforeUnmount(() => {
         aria-hidden="true"
       />
 
-      <span
-        :ref="element => setMeasureRef(element, index)"
-        :class="[
-          'pointer-events-none absolute left-0 top-0 flex h-8 w-max items-center rounded-full opacity-0',
-          props.collapseInactive && tab.icon ? 'pl-[30px] pr-2' : 'px-2.5',
-        ]"
-        aria-hidden="true"
-      >
-        <template v-if="props.collapseInactive && tab.icon">
-          <span class="flex min-w-0 items-center whitespace-nowrap">
-            <span class="leading-4">{{ tab.label }}</span>
+      <template v-if="props.collapseInactive">
+        <span
+          :ref="element => setMeasureRef(element, index)"
+          :class="[
+            'pointer-events-none absolute left-0 top-0 flex h-8 w-max items-center rounded-full opacity-0',
+            tab.icon ? 'pl-[30px] pr-2' : 'px-2.5',
+          ]"
+          aria-hidden="true"
+        >
+          <template v-if="tab.icon">
+            <span class="flex min-w-0 items-center whitespace-nowrap">
+              <span class="leading-4">{{ tab.label }}</span>
+              <span
+                v-if="tab.badge !== undefined"
+                :class="[
+                  'ml-2 flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full px-1 text-center text-[10px] font-semibold leading-none',
+                  getBadgeClass(tab.id),
+                ]"
+              >
+                {{ tab.badge }}
+              </span>
+            </span>
+          </template>
+          <template v-else>
+            <i v-if="tab.icon" :class="[tab.icon, 'shrink-0 text-[17px] leading-none']" />
+            <span :class="[tab.icon ? 'ml-2' : '', 'flex items-center whitespace-nowrap']">
+              <span class="leading-4">{{ tab.label }}</span>
+              <span
+                v-if="tab.badge !== undefined"
+                :class="[
+                  'ml-2 flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full px-1 text-center text-[10px] font-semibold leading-none',
+                  getBadgeClass(tab.id),
+                ]"
+              >
+                {{ tab.badge }}
+              </span>
+            </span>
+          </template>
+        </span>
+
+        <span
+          v-if="tab.icon"
+          class="absolute top-1/2 left-[7.5px] z-10 flex w-[17px] -translate-y-1/2 items-center justify-center"
+        >
+          <i
+            :class="[
+              tab.icon,
+              'shrink-0 text-[17px] leading-none transition-colors duration-160 ease-out',
+              getLabelClass(tab.id),
+            ]"
+          />
+        </span>
+
+        <span
+          :class="[
+            'absolute inset-y-0 left-0 z-10 flex items-center overflow-hidden whitespace-nowrap',
+            tab.icon ? 'pl-[30px] pr-2' : 'px-2.5',
+          ]"
+        >
+          <span
+            class="top-tab-switch-content flex h-full min-h-0 items-center overflow-hidden whitespace-nowrap"
+            :class="props.modelValue === tab.id
+              ? 'ml-0 max-w-[120px] translate-x-0 opacity-100 [transition-delay:110ms]'
+              : 'ml-0 max-w-0 translate-x-1 opacity-0 [transition-delay:0ms]'"
+          >
+            <span
+              :class="[
+                'min-w-0 truncate leading-4 transition-colors duration-160 ease-out',
+                getLabelClass(tab.id),
+              ]"
+            >
+              {{ tab.label }}
+            </span>
+
             <span
               v-if="tab.badge !== undefined"
               :class="[
-                'ml-2 flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full px-1 text-center text-[10px] font-semibold leading-none',
+                'top-tab-switch-badge flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full px-1 text-center text-[10px] font-semibold leading-none',
                 getBadgeClass(tab.id),
+                props.modelValue === tab.id
+                  ? 'ml-2 scale-100 opacity-100 [transition-delay:120ms]'
+                  : 'ml-0 scale-75 opacity-0 [transition-delay:0ms]',
               ]"
             >
               {{ tab.badge }}
             </span>
           </span>
-        </template>
-        <template v-else>
-          <i v-if="tab.icon" :class="[tab.icon, 'shrink-0 text-[17px] leading-none']" />
-          <span :class="[tab.icon ? 'ml-2' : '', 'flex items-center whitespace-nowrap']">
-            <span class="leading-4">{{ tab.label }}</span>
-            <span
-              v-if="tab.badge !== undefined"
-              :class="[
-                'ml-2 flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full px-1 text-center text-[10px] font-semibold leading-none',
-                getBadgeClass(tab.id),
-              ]"
-            >
-              {{ tab.badge }}
-            </span>
-          </span>
-        </template>
-      </span>
+        </span>
+      </template>
 
       <span
-        v-if="props.collapseInactive && tab.icon"
-        class="absolute top-1/2 left-[7.5px] z-10 flex w-[17px] -translate-y-1/2 items-center justify-center"
+        v-else
+        class="relative z-10 inline-flex h-full items-center gap-2 whitespace-nowrap px-2.5"
       >
         <i
+          v-if="tab.icon"
           :class="[
             tab.icon,
             'shrink-0 text-[17px] leading-none transition-colors duration-160 ease-out',
             getLabelClass(tab.id),
           ]"
         />
-      </span>
-
-      <span
-        :class="[
-          'absolute inset-y-0 left-0 z-10 flex items-center overflow-hidden whitespace-nowrap',
-          props.collapseInactive && tab.icon ? 'pl-[30px] pr-2' : 'px-2.5',
-        ]"
-      >
         <span
-          class="top-tab-switch-content flex h-full min-h-0 items-center overflow-hidden whitespace-nowrap"
-          :class="props.collapseInactive
-            ? (props.modelValue === tab.id
-              ? 'ml-0 max-w-[120px] translate-x-0 opacity-100 [transition-delay:110ms]'
-              : 'ml-0 max-w-0 translate-x-1 opacity-0 [transition-delay:0ms]')
-            : 'ml-0 max-w-[180px] translate-x-0 opacity-100'"
+          :class="[
+            'leading-4 transition-colors duration-160 ease-out',
+            getLabelClass(tab.id),
+          ]"
         >
-          <span
-            :class="[
-              'min-w-0 truncate leading-4 transition-colors duration-160 ease-out',
-              getLabelClass(tab.id),
-            ]"
-          >
-            {{ tab.label }}
-          </span>
-
-          <span
-            v-if="tab.badge !== undefined"
-            :class="[
-              'top-tab-switch-badge flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full px-1 text-center text-[10px] font-semibold leading-none',
-              getBadgeClass(tab.id),
-              props.collapseInactive
-                ? (props.modelValue === tab.id
-                  ? 'ml-2 scale-100 opacity-100 [transition-delay:120ms]'
-                  : 'ml-0 scale-75 opacity-0 [transition-delay:0ms]')
-                : 'ml-2 scale-100 opacity-100',
-            ]"
-          >
-            {{ tab.badge }}
-          </span>
+          {{ tab.label }}
+        </span>
+        <span
+          v-if="tab.badge !== undefined"
+          :class="[
+            'flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full px-1 text-center text-[10px] font-semibold leading-none',
+            getBadgeClass(tab.id),
+          ]"
+        >
+          {{ tab.badge }}
         </span>
       </span>
     </button>

@@ -29,6 +29,7 @@ import { detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
 import DetailLayout from "@/layouts/DetailLayout.vue"
 import { handleApiError } from "@/lib/api-errors"
 import { toMobileActionLabel } from "@/lib/mobileActionLabel"
+import { getWorkOrderStatusLabel } from "@/lib/work-order-status"
 import { deleteInspectionPlan, fetchInspectionPlanDetail, type InspectionPlanListItem } from "@/lib/inspection-plans-api"
 import { fetchWorkOrders, type WorkOrderListItem } from "@/lib/work-orders-api"
 
@@ -451,17 +452,7 @@ function formatExecutorSummary(executors: string[]) {
 }
 
 function formatWorkOrderStatus(value: number | null) {
-  if (value === null) {
-    return "未知状态"
-  }
-
-  if (value === 1) return "待指派"
-  if (value === 2) return "待开始"
-  if (value === 3) return "进行中"
-  if (value === 4) return "报告生成中"
-  if (value === 5) return "已结单"
-
-  return `状态 ${value}`
+  return getWorkOrderStatusLabel(value)
 }
 
 function formatWorkOrderResult(value: number | null) {

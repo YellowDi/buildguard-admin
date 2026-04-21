@@ -329,7 +329,7 @@ async function handleInspectionCreateSubmit() {
       PackageName: packageName,
       CustomerUuid: normalizeText(form.customerUuid),
       Deadline: normalizeText(form.deadline),
-      Status: Number(DEFAULT_INSPECTION_STATUS),
+      Status: parseIntegerField(form.status) ?? Number(DEFAULT_INSPECTION_STATUS),
       Remark: getOptionalText(form.remark),
     }
     const result = await createWorkOrder(payload)

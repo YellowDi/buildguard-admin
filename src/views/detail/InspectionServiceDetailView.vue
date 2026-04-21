@@ -131,6 +131,11 @@ const fieldSections = computed<DetailFieldSection[]>(() => {
         },
         { key: "template-name", label: "模板名称", value: toText(current.TemplateName, "-") },
         {
+          key: "contract-start-time",
+          label: "合同开始时间",
+          value: toText(current.StartTime, "-"),
+        },
+        {
           key: "contract-end-time",
           label: "合同到期时间",
           value: toText(current.ContractEndTime, "-"),

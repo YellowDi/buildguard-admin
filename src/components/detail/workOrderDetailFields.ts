@@ -1,6 +1,7 @@
 import type { DetailContactValue, DetailFieldSection, DetailStatusValue } from "@/components/detail/types"
 import { workOrderStatusMap } from "@/components/table-page/statusPresets"
 import type { CustomerDetailResult } from "@/lib/customers-api"
+import { getWorkOrderStatusLabel } from "@/lib/work-order-status"
 import type { WorkOrderDetailResult } from "@/lib/work-orders-api"
 
 export function buildWorkOrderPrimarySections(
@@ -144,15 +145,7 @@ function toNumber(value: unknown) {
 
 function formatWorkOrderStatus(value: unknown) {
   const status = toNumber(value)
-
-  if (status === null) return "-"
-  if (status === 1) return "待指派"
-  if (status === 2) return "待开始"
-  if (status === 3) return "进行中"
-  if (status === 4) return "报告生成中"
-  if (status === 5) return "已结单"
-
-  return `状态 ${status}`
+  return getWorkOrderStatusLabel(status, "-")
 }
 
 function buildWorkOrderStatusValue(value: unknown): DetailStatusValue {

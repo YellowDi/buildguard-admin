@@ -45,6 +45,7 @@ export const workOrderStatusMap = {
   处理中: { tone: "orange", icon: "clock" },
   进行中: { tone: "green", icon: "clock" },
   报告生成中: { tone: "blue", icon: "clock" },
+  复检: { tone: "yellow", icon: "clock" },
   已完成: { tone: "green", icon: "check" },
   已结单: { tone: "green", icon: "check" },
   已关闭: { tone: "gray", icon: "minus" },

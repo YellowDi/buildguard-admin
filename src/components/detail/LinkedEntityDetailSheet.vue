@@ -93,6 +93,7 @@ const sections = computed<DetailFieldSection[]>(() => {
           { key: "level", label: "套餐等级", value: toText(serviceDetail.value.Level, "-") },
           { key: "customer-name", label: "客户名称", value: toText(serviceDetail.value.CorpName || serviceDetail.value.CustomerName, "未绑定客户") },
           { key: "template-name", label: "模板名称", value: toText(serviceDetail.value.TemplateName, "-") },
+          { key: "contract-start-time", label: "合同开始时间", value: toText(serviceDetail.value.StartTime, "-") },
           {
             key: "contract-end-time",
             label: "合同到期时间",

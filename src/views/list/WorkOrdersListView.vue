@@ -15,6 +15,7 @@ import type { TablePageSchema } from "@/components/table-page/types"
 import { useRouteTableSearch } from "@/composables/useRouteTableSearch"
 import { handleApiError } from "@/lib/api-errors"
 import { fetchMembers } from "@/lib/members-api"
+import { getWorkOrderStatusLabel } from "@/lib/work-order-status"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   dispatchWorkOrder,
@@ -558,22 +559,8 @@ function formatStatusLabel(kind: WorkOrderPageKind, value: number | null) {
   if (value === null) {
     return "未知状态"
   }
-
-  if (kind === "inspection") {
-    if (value === 1) return "待指派"
-    if (value === 2) return "待开始"
-    if (value === 3) return "进行中"
-    if (value === 4) return "报告生成中"
-    if (value === 5) return "已结单"
-  }
-
-  if (value === 1) return "待指派"
-  if (value === 2) return "待开始"
-  if (value === 3) return "进行中"
-  if (value === 4) return "报告生成中"
-  if (value === 5) return "已结单"
-
-  return `状态 ${value}`
+  void kind
+  return getWorkOrderStatusLabel(value)
 }
 
 function formatResultLabel(value: number | null, kind: WorkOrderPageKind) {

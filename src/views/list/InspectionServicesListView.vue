@@ -38,10 +38,10 @@ type InspectionServiceRecord = {
   Name: string
   Level: string
   CorpName: string
+  StartTime: string
   ParkUuid: string
   ExpireAt: string
   ServiceStatus: string
-  InspectionQuota: string
   ParkName: string
   CreatedAt: string
   UpdatedAt: string
@@ -161,7 +161,7 @@ const schema: TablePageSchema<InspectionServiceRecord> = {
     },
     {
       key: "ExpireAt",
-      label: "到期时间",
+      label: "合同时间",
       filterType: "time",
       tone: "muted",
       slot: "cell-ExpireAt",
@@ -179,16 +179,6 @@ const schema: TablePageSchema<InspectionServiceRecord> = {
       filter: {
         type: "text",
         placeholder: "输入服务状态",
-      },
-      sort: true,
-    },
-    {
-      key: "InspectionQuota",
-      label: "检测服务总检测次数/剩余次数",
-      filterType: "text",
-      filter: {
-        type: "text",
-        placeholder: "输入检测次数",
       },
       sort: true,
     },
@@ -263,9 +253,9 @@ function buildPageFilterText(row: InspectionServiceRecord) {
     row.Name,
     row.Level,
     row.CorpName,
+    row.StartTime,
     row.ExpireAt,
     row.ServiceStatus,
-    row.InspectionQuota,
     row.ParkName,
     row.CreatedAt,
     row.UpdatedAt,
@@ -334,13 +324,10 @@ function normalizeInspectionServiceRecord(item: InspectionServiceListItem, index
     Level: toText(item.Level, "未分级"),
     // 接口字段从 CustomerName 调整为 CorpName
     CorpName: toText(item.CorpName || item.CustomerName, "未绑定客户"),
+    StartTime: toText(item.StartTime, "-"),
     ParkUuid: park.uuid,
     ExpireAt: toText(item.ContractEndTime, "-"),
     ServiceStatus: formatServiceStatus(item.Status),
-    InspectionQuota: formatInspectionQuota(
-      getFirstText(item, ["TotalInspectionCount", "InspectionTotalCount", "PackageTotalInspectionCount", "TotalCount"]),
-      getFirstText(item, ["RemainInspectionCount", "RemainingInspectionCount", "PackageRemainInspectionCount", "RemainCount"]),
-    ),
     ParkName: park.name || "-",
     CreatedAt: toText(item.CreatedAt, "-"),
     UpdatedAt: toText(item.UpdatedAt, "-"),
@@ -410,36 +397,20 @@ function resolveInspectionServicePark(item: InspectionServiceListItem) {
   }
 }
 
-function getFirstText(
-  record: Record<string, unknown>,
-  keys: string[],
-  fallback = "",
-) {
-  for (const key of keys) {
-    const value = toText(record[key])
-
-    if (value) {
-      return value
-    }
-  }
-
-  return fallback
-}
-
-function formatInspectionQuota(total: string, remaining: string) {
-  if (!total && !remaining) {
-    return "- / -"
-  }
-
-  return `${total || "-"} / ${remaining || "-"}`
-}
-
 function getExpireDateValue(row: unknown) {
   if (!row || typeof row !== "object" || !("ExpireAt" in row)) {
     return ""
   }
 
   return toText(row.ExpireAt, "")
+}
+
+function getStartDateValue(row: unknown) {
+  if (!row || typeof row !== "object" || !("StartTime" in row)) {
+    return ""
+  }
+
+  return toText(row.StartTime, "")
 }
 
 function parseDateTime(value: string) {
@@ -456,60 +427,82 @@ function parseDateTime(value: string) {
   return date
 }
 
-function getRemainingDaysLabel(row: unknown) {
-  const expireAt = parseDateTime(getExpireDateValue(row))
-  if (!expireAt) {
-    return "-"
-  }
-
-  const now = new Date()
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
-  const startOfExpireDay = new Date(expireAt.getFullYear(), expireAt.getMonth(), expireAt.getDate()).getTime()
-  const diffDays = Math.floor((startOfExpireDay - startOfToday) / (1000 * 60 * 60 * 24))
-
-  if (diffDays < 0) {
-    return `逾期 ${Math.abs(diffDays)} 天`
-  }
-
-  return `剩余 ${diffDays} 天`
+function getStartOfDayTimestamp(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime()
 }
 
-function getExpireProgressValue(row: unknown) {
-  const expireAt = parseDateTime(getExpireDateValue(row))
-  if (!expireAt) {
-    return 0
-  }
-
-  const now = new Date()
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
-  const startOfExpireDay = new Date(expireAt.getFullYear(), expireAt.getMonth(), expireAt.getDate()).getTime()
-  const diffDays = Math.floor((startOfExpireDay - startOfToday) / (1000 * 60 * 60 * 24))
-  const windowDays = 365
-  const progress = (Math.max(0, Math.min(windowDays, diffDays)) / windowDays) * 100
-
-  return Math.round(progress)
+function getDateDiffInDays(target: Date, baseTimestamp: number) {
+  return Math.floor((getStartOfDayTimestamp(target) - baseTimestamp) / (1000 * 60 * 60 * 24))
 }
 
-function getExpireProgressClass(row: unknown) {
+function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value))
+}
+
+function getContractTimeline(row: unknown) {
+  const startAt = parseDateTime(getStartDateValue(row))
   const expireAt = parseDateTime(getExpireDateValue(row))
-  if (!expireAt) {
-    return "[&_[data-slot=progress-indicator]]:bg-muted-foreground/40"
+
+  if (!startAt || !expireAt) {
+    return {
+      progress: 0,
+      label: "无数据",
+      progressClass: "[&_[data-slot=progress-indicator]]:bg-muted-foreground/40",
+      tooltip: {
+        start: getStartDateValue(row) || "-",
+        end: getExpireDateValue(row) || "-",
+        status: "合同时间无数据",
+      },
+    }
   }
 
   const now = new Date()
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
-  const startOfExpireDay = new Date(expireAt.getFullYear(), expireAt.getMonth(), expireAt.getDate()).getTime()
-  const diffDays = Math.floor((startOfExpireDay - startOfToday) / (1000 * 60 * 60 * 24))
+  const startOfToday = getStartOfDayTimestamp(now)
+  const daysUntilExpire = getDateDiffInDays(expireAt, startOfToday)
+  const daysUntilStart = getDateDiffInDays(startAt, startOfToday)
+  const totalDurationDays = Math.max(1, getDateDiffInDays(expireAt, getStartOfDayTimestamp(startAt)))
 
-  if (diffDays < 0) {
-    return "[&_[data-slot=progress-indicator]]:bg-destructive/70"
+  if (daysUntilStart > 0) {
+    return {
+      progress: 0,
+      label: `还有 ${daysUntilStart} 天开始`,
+      progressClass: "[&_[data-slot=progress-indicator]]:bg-muted-foreground/45",
+      tooltip: {
+        start: getStartDateValue(row) || "-",
+        end: getExpireDateValue(row) || "-",
+        status: `合同未开始，距开始还有 ${daysUntilStart} 天`,
+      },
+    }
   }
 
-  if (diffDays <= 30) {
-    return "[&_[data-slot=progress-indicator]]:bg-warning/80"
+  if (daysUntilExpire < 0) {
+    return {
+      progress: 100,
+      label: `逾期 ${Math.abs(daysUntilExpire)} 天`,
+      progressClass: "[&_[data-slot=progress-indicator]]:bg-destructive/70",
+      tooltip: {
+        start: getStartDateValue(row) || "-",
+        end: getExpireDateValue(row) || "-",
+        status: `合同已结束，已逾期 ${Math.abs(daysUntilExpire)} 天`,
+      },
+    }
   }
 
-  return "[&_[data-slot=progress-indicator]]:bg-link"
+  const elapsedDays = clamp(getDateDiffInDays(now, getStartOfDayTimestamp(startAt)), 0, totalDurationDays)
+  const progress = Math.round((elapsedDays / totalDurationDays) * 100)
+
+  return {
+    progress,
+    label: `剩余 ${daysUntilExpire} 天`,
+    progressClass: daysUntilExpire <= 30
+      ? "[&_[data-slot=progress-indicator]]:bg-warning/80"
+      : "[&_[data-slot=progress-indicator]]:bg-link",
+    tooltip: {
+      start: getStartDateValue(row) || "-",
+      end: getExpireDateValue(row) || "-",
+      status: `合同进行中，剩余 ${daysUntilExpire} 天`,
+    },
+  }
 }
 
 function formatServiceStatus(status: unknown) {
@@ -624,19 +617,21 @@ function toText(value: unknown, fallback = "") {
         <template #cell-ExpireAt="{ row }">
           <Tooltip>
             <TooltipTrigger as-child>
-              <div class="flex min-w-[180px] items-center gap-2">
+              <div class="flex min-w-[220px] items-center gap-2">
                 <Progress
-                  :model-value="getExpireProgressValue(row)"
+                  :model-value="getContractTimeline(row).progress"
                   class="h-1.5 max-w-[120px] bg-surface-tertiary **:data-[slot=progress-indicator]:transition-[transform,background-color]"
-                  :class="getExpireProgressClass(row)"
+                  :class="getContractTimeline(row).progressClass"
                 />
                 <span class="shrink-0 text-xs text-muted-foreground">
-                  {{ getRemainingDaysLabel(row) }}
+                  {{ getContractTimeline(row).label }}
                 </span>
               </div>
             </TooltipTrigger>
-            <TooltipContent side="top" align="start">
-              到期时间：{{ row.ExpireAt || "-" }}
+            <TooltipContent side="top" align="start" class="space-y-1">
+              <p>开始时间：{{ getContractTimeline(row).tooltip.start }}</p>
+              <p>到期时间：{{ getContractTimeline(row).tooltip.end }}</p>
+              <p>状态说明：{{ getContractTimeline(row).tooltip.status }}</p>
             </TooltipContent>
           </Tooltip>
         </template>
