@@ -10,7 +10,6 @@ import SettingsToolbarRow from "@/components/settings/SettingsToolbarRow.vue"
 import SettingsToolbarSearchInput from "@/components/settings/SettingsToolbarSearchInput.vue"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
 import videoPreviewAsset from "@/assets/video.png"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -242,8 +241,8 @@ const sheetTitle = computed(() => {
 const sheetDescription = computed(() => {
   if (sheetMode.value === "create") {
     return activeModule.value === "videos"
-      ? "先用 mock 数据把视频标题、摘要和首页分发字段定下来。"
-      : "先用 Markdown 组织正文、摘要和首页推荐信息。"
+      ? "先用 mock 数据把视频标题、摘要和基础信息定下来。"
+      : "先用 Markdown 组织正文、摘要和基础信息。"
   }
 
   if (sheetMode.value === "edit") {
@@ -273,7 +272,6 @@ const videoPreviewSections = computed<DetailFieldSection[]>(() => {
         { key: "category", label: "分类", value: getCategoryPathLabel("videos", activeVideo.value.categoryId) },
         { key: "status", label: "状态", value: getStatusLabel(activeVideo.value.status) },
         { key: "duration", label: "时长", value: activeVideo.value.duration || "—" },
-        { key: "featured", label: "首页推荐", value: activeVideo.value.featured ? "是" : "否" },
         { key: "sortOrder", label: "排序", value: `${activeVideo.value.sortOrder}` },
         { key: "updatedAt", label: "更新时间", value: activeVideo.value.updatedAt },
         { key: "summary", label: "摘要", value: activeVideo.value.summary || "—", truncate: false, valueClass: "leading-6" },
@@ -293,7 +291,6 @@ const articlePreviewSections = computed<DetailFieldSection[]>(() => {
         { key: "cover", label: "封面文案", value: activeArticle.value.cover || "—" },
         { key: "category", label: "分类", value: getCategoryPathLabel("articles", activeArticle.value.categoryId) },
         { key: "status", label: "状态", value: getStatusLabel(activeArticle.value.status) },
-        { key: "featured", label: "首页推荐", value: activeArticle.value.featured ? "是" : "否" },
         { key: "sortOrder", label: "排序", value: `${activeArticle.value.sortOrder}` },
         { key: "updatedAt", label: "更新时间", value: activeArticle.value.updatedAt },
         { key: "summary", label: "摘要", value: activeArticle.value.summary || "—", truncate: false, valueClass: "leading-6" },
@@ -1265,10 +1262,26 @@ function escapeHtml(value: string) {
           </template>
         </div>
 
-        <div v-else class="space-y-5">
-          <section class="rounded-xl border border-border/70 bg-background p-4">
-            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">基础信息</p>
-            <div class="mt-4 grid gap-4 md:grid-cols-2">
+        <div v-else class="space-y-4 px-4 pb-4 pt-1">
+          <div class="grid gap-4 md:grid-cols-2">
+            <div
+              v-if="formState.kind === 'video'"
+              class="space-y-3 md:col-span-2"
+            >
+              <label class="space-y-2">
+                <span class="text-sm font-medium text-foreground">视频文件</span>
+                <div class="border border-dashed border-border/80 px-4 py-5">
+                  <div class="flex flex-wrap items-center gap-3">
+                    <Button type="button" variant="outline" class="rounded-md">
+                      <i class="ri-upload-2-line text-sm" />
+                      <span>上传视频</span>
+                    </Button>
+                    <span class="text-sm text-muted-foreground">暂未选择文件</span>
+                  </div>
+                </div>
+              </label>
+            </div>
+
               <label class="space-y-2 md:col-span-2">
                 <span class="text-sm font-medium text-foreground">标题</span>
                 <Input v-model="formState.title" placeholder="输入标题" />
@@ -1330,62 +1343,33 @@ function escapeHtml(value: string) {
                 <Input v-model="formState.sortOrder" type="number" placeholder="输入排序权重" />
               </label>
 
-              <label class="space-y-2 md:col-span-2">
+              <label
+                v-if="formState.kind === 'video'"
+                class="space-y-2 md:col-span-2"
+              >
                 <span class="text-sm font-medium text-foreground">摘要</span>
                 <Textarea
                   v-model="formState.summary"
                   class="min-h-[108px]"
-                  :placeholder="formState.kind === 'article' ? '输入文章摘要，用于首页和列表概览' : '输入内容简介，说明适用场景和主要收益'"
+                  placeholder="输入内容简介，说明适用场景和主要收益"
                 />
               </label>
-            </div>
-          </section>
-
-          <section class="rounded-xl border border-border/70 bg-background p-4">
-            <div class="flex items-center justify-between gap-3">
-              <div>
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">首页分发</p>
-                <p class="mt-1 text-sm text-muted-foreground">这部分字段先用来模拟 app 首页运营配置。</p>
-              </div>
-              <label class="flex items-center gap-2 rounded-md border border-border/70 bg-muted/20 px-3 py-2 text-sm font-medium">
-                <Checkbox v-model:checked="formState.featured" />
-                首页推荐
+            
+            <template v-if="formState.kind === 'article'">
+              <label class="space-y-2">
+                <span class="text-sm font-medium text-foreground">标签</span>
+                <Input v-model="formState.tagsText" placeholder="多个标签使用英文逗号分隔" />
               </label>
-            </div>
-          </section>
-
-          <section
-            v-if="formState.kind === 'article'"
-            class="rounded-xl border border-border/70 bg-background p-4"
-          >
-            <p class="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">文章正文</p>
-            <div class="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-              <div class="space-y-4">
-                <label class="space-y-2">
-                  <span class="text-sm font-medium text-foreground">标签</span>
-                  <Input v-model="formState.tagsText" placeholder="多个标签使用英文逗号分隔" />
-                </label>
-                <label class="space-y-2">
-                  <span class="text-sm font-medium text-foreground">Markdown</span>
-                  <Textarea
-                    v-model="formState.markdown"
-                    class="min-h-[360px] font-mono text-sm"
-                    placeholder="输入 Markdown 正文"
-                  />
-                </label>
-              </div>
-
-              <div class="rounded-lg border border-border/70 bg-muted/20 p-4">
-                <div class="flex items-center justify-between gap-3">
-                  <span class="text-sm font-medium">实时预览</span>
-                  <Badge variant="outline" class="border-border/80 bg-background text-muted-foreground">
-                    Markdown
-                  </Badge>
-                </div>
-                <div class="media-markdown mt-4" v-html="previewMarkdownHtml" />
-              </div>
-            </div>
-          </section>
+              <label class="space-y-2 md:col-span-2">
+                <span class="text-sm font-medium text-foreground">Markdown</span>
+                <Textarea
+                  v-model="formState.markdown"
+                  class="min-h-[560px] font-mono text-sm"
+                  placeholder="输入 Markdown 正文"
+                />
+              </label>
+            </template>
+          </div>
         </div>
       </div>
     </ResponsiveRightSheet>
