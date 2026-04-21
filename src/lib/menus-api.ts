@@ -200,14 +200,13 @@ function normalizeWritePayload(payload: CreateMenuPayload | UpdateMenuPayload) {
 }
 
 export async function deleteMenu(payload: DeleteMenuPayload) {
-  const response = await fetch(MENU_DELETE_API_URL, {
+  const url = buildApiRequestUrl(API_PATHS.menuDelete)
+
+  url.searchParams.set("Uuid", getRequiredString(payload.Uuid, "Uuid"))
+
+  const response = await fetch(url.toString(), {
     method: "POST",
-    headers: buildApiHeaders({
-      "Content-Type": "application/json",
-    }),
-    body: JSON.stringify({
-      Uuid: getRequiredString(payload.Uuid, "Uuid"),
-    }),
+    headers: buildApiHeaders(),
   })
   const responsePayload = await readResponseBody(response)
 

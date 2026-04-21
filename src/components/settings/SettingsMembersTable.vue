@@ -1998,7 +1998,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
     </TablePageTable>
 
     <Dialog :open="manualDialogOpen" @update:open="manualDialogOpen = $event">
-      <DialogContent class="sm:max-w-[520px]">
+      <DialogContent stack-above-sticky-header class="sm:max-w-[520px]">
         <DialogHeader>
           <DialogTitle>手动添加成员</DialogTitle>
           <DialogDescription>
@@ -2063,7 +2063,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
     </Dialog>
 
     <Dialog :open="roleDialogOpen" @update:open="($event ? (roleDialogOpen = true) : closeRoleDialog())">
-      <DialogContent class="flex h-[90vh] max-h-[90vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-[1120px]">
+      <DialogContent stack-above-sticky-header class="flex h-[90vh] max-h-[90vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-[1120px]">
         <DialogHeader class="border-b border-border/70 p-4">
           <DialogTitle>{{ editingRoleId === null ? "添加权限组" : "编辑权限组" }}</DialogTitle>
           <DialogDescription>
@@ -2366,7 +2366,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
     </Dialog>
 
     <Dialog :open="editDialogOpen" @update:open="($event ? (editDialogOpen = true) : closeEditDialog())">
-      <DialogContent class="sm:max-w-[520px]">
+      <DialogContent stack-above-sticky-header class="sm:max-w-[520px]">
         <DialogHeader>
           <DialogTitle>编辑用户信息</DialogTitle>
           <DialogDescription>
@@ -2466,7 +2466,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
     </Dialog>
 
     <AlertDialog :open="deleteConfirmOpen" @update:open="deleteConfirmOpen = $event">
-      <AlertDialogContent>
+      <AlertDialogContent stack-above-sticky-header>
         <AlertDialogHeader>
           <AlertDialogTitle>确认删除用户？</AlertDialogTitle>
           <AlertDialogDescription>
@@ -2489,7 +2489,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
     </AlertDialog>
 
     <AlertDialog :open="roleDeleteConfirmOpen" @update:open="roleDeleteConfirmOpen = $event">
-      <AlertDialogContent>
+      <AlertDialogContent stack-above-sticky-header>
         <AlertDialogHeader>
           <AlertDialogTitle>确认删除权限组？</AlertDialogTitle>
           <AlertDialogDescription>

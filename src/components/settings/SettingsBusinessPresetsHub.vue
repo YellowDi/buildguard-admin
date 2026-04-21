@@ -737,7 +737,7 @@ defineExpose<ExposedActions>({
     </section>
 
     <Dialog :open="createTypeOpen" @update:open="createTypeOpen = $event">
-      <DialogContent class="sm:max-w-[520px]">
+      <DialogContent stack-above-sticky-header class="sm:max-w-[520px]">
         <DialogHeader>
           <DialogTitle>添加字典类型</DialogTitle>
           <DialogDescription>
@@ -787,7 +787,7 @@ defineExpose<ExposedActions>({
     </Dialog>
 
     <Dialog :open="editTypeOpen" @update:open="editTypeOpen = $event">
-      <DialogContent class="sm:max-w-[520px]">
+      <DialogContent stack-above-sticky-header class="sm:max-w-[520px]">
         <DialogHeader>
           <DialogTitle>编辑字典类型</DialogTitle>
           <DialogDescription>
@@ -837,7 +837,7 @@ defineExpose<ExposedActions>({
     </Dialog>
 
     <Dialog :open="createItemOpen" @update:open="createItemOpen = $event">
-      <DialogContent class="sm:max-w-[520px]">
+      <DialogContent stack-above-sticky-header class="sm:max-w-[520px]">
         <DialogHeader>
           <DialogTitle>添加字典条目</DialogTitle>
           <DialogDescription>
@@ -891,7 +891,7 @@ defineExpose<ExposedActions>({
     </Dialog>
 
     <Dialog :open="editItemOpen" @update:open="($event ? (editItemOpen = true) : closeEditItemDialog())">
-      <DialogContent class="sm:max-w-[520px]">
+      <DialogContent stack-above-sticky-header class="sm:max-w-[520px]">
         <DialogHeader>
           <DialogTitle>编辑字典条目</DialogTitle>
           <DialogDescription>
@@ -957,7 +957,7 @@ defineExpose<ExposedActions>({
     </Dialog>
 
     <AlertDialog :open="deleteTypeOpen" @update:open="deleteTypeOpen = $event">
-      <AlertDialogContent>
+      <AlertDialogContent stack-above-sticky-header>
         <AlertDialogHeader>
           <AlertDialogTitle>删除当前字典类型？</AlertDialogTitle>
           <AlertDialogDescription>
@@ -974,7 +974,7 @@ defineExpose<ExposedActions>({
     </AlertDialog>
 
     <AlertDialog :open="deleteItemOpen" @update:open="deleteItemOpen = $event">
-      <AlertDialogContent>
+      <AlertDialogContent stack-above-sticky-header>
         <AlertDialogHeader>
           <AlertDialogTitle>删除当前字典条目？</AlertDialogTitle>
           <AlertDialogDescription>

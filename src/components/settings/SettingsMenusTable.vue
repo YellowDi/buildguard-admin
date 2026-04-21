@@ -1303,7 +1303,7 @@ function formatDateTime(...values: unknown[]) {
     </TablePageTable>
 
     <Dialog :open="menuDialogOpen" @update:open="($event ? (menuDialogOpen = true) : closeMenuDialog())">
-      <DialogContent class="sm:max-w-[560px]">
+      <DialogContent stack-above-sticky-header class="sm:max-w-[560px]">
         <DialogHeader>
           <DialogTitle>{{ menuDialogMode === "edit" ? "编辑菜单" : "添加菜单" }}</DialogTitle>
           <DialogDescription>
@@ -1422,7 +1422,7 @@ function formatDateTime(...values: unknown[]) {
     </Dialog>
 
     <Dialog :open="buttonDialogOpen" @update:open="($event ? (buttonDialogOpen = true) : closeButtonDialog())">
-      <DialogContent class="sm:max-w-[560px]">
+      <DialogContent stack-above-sticky-header class="sm:max-w-[560px]">
         <DialogHeader>
           <DialogTitle>{{ buttonDialogMode === "edit" ? "编辑按钮" : "添加按钮" }}</DialogTitle>
           <DialogDescription>
@@ -1525,7 +1525,7 @@ function formatDateTime(...values: unknown[]) {
     </Dialog>
 
     <AlertDialog :open="deleteConfirmOpen" @update:open="deleteConfirmOpen = $event">
-      <AlertDialogContent>
+      <AlertDialogContent stack-above-sticky-header>
         <AlertDialogHeader>
           <AlertDialogTitle>确认删除菜单？</AlertDialogTitle>
           <AlertDialogDescription>
@@ -1545,7 +1545,7 @@ function formatDateTime(...values: unknown[]) {
     </AlertDialog>
 
     <AlertDialog :open="buttonDeleteConfirmOpen" @update:open="buttonDeleteConfirmOpen = $event">
-      <AlertDialogContent>
+      <AlertDialogContent stack-above-sticky-header>
         <AlertDialogHeader>
           <AlertDialogTitle>确认删除按钮？</AlertDialogTitle>
           <AlertDialogDescription>

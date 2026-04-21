@@ -490,7 +490,7 @@ defineExpose({
     </TablePageTable>
 
     <Dialog :open="createDialogOpen" @update:open="($event ? (createDialogOpen = true) : closeDialog())">
-      <DialogContent class="max-w-4xl gap-0 p-0">
+      <DialogContent stack-above-sticky-header class="max-w-4xl gap-0 p-0">
         <DialogHeader class="p-4">
           <DialogTitle>{{ editingTemplateUuid ? "编辑检测模板" : "添加检测模板" }}</DialogTitle>
           <DialogDescription>
@@ -558,7 +558,7 @@ defineExpose({
     </Dialog>
 
     <AlertDialog :open="deleteConfirmOpen" @update:open="deleteConfirmOpen = $event">
-      <AlertDialogContent>
+      <AlertDialogContent stack-above-sticky-header>
         <AlertDialogHeader>
           <AlertDialogTitle>确认删除检测项模板？</AlertDialogTitle>
           <AlertDialogDescription>

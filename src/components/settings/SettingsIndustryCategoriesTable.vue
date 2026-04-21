@@ -604,7 +604,7 @@ defineExpose({
     </div>
 
     <Dialog :open="createMajorOpen" @update:open="createMajorOpen = $event">
-      <DialogContent class="sm:max-w-[520px]">
+      <DialogContent stack-above-sticky-header class="sm:max-w-[520px]">
         <DialogHeader>
           <DialogTitle>添加行业大类</DialogTitle>
           <DialogDescription>
@@ -644,7 +644,7 @@ defineExpose({
     </Dialog>
 
     <Dialog :open="editMajorOpen" @update:open="editMajorOpen = $event">
-      <DialogContent class="sm:max-w-[520px]">
+      <DialogContent stack-above-sticky-header class="sm:max-w-[520px]">
         <DialogHeader>
           <DialogTitle>编辑行业大类</DialogTitle>
           <DialogDescription>
@@ -695,7 +695,7 @@ defineExpose({
     </Dialog>
 
     <AlertDialog :open="deleteMajorOpen" @update:open="deleteMajorOpen = $event">
-      <AlertDialogContent>
+      <AlertDialogContent stack-above-sticky-header>
         <AlertDialogHeader>
           <AlertDialogTitle>删除该行业大类？</AlertDialogTitle>
           <AlertDialogDescription>
@@ -712,7 +712,7 @@ defineExpose({
     </AlertDialog>
 
     <Dialog :open="createCategoryOpen" @update:open="createCategoryOpen = $event">
-      <DialogContent class="sm:max-w-[520px]">
+      <DialogContent stack-above-sticky-header class="sm:max-w-[520px]">
         <DialogHeader>
           <DialogTitle>添加行业分类</DialogTitle>
           <DialogDescription>
@@ -774,7 +774,7 @@ defineExpose({
     </Dialog>
 
     <Dialog :open="editCategoryOpen" @update:open="editCategoryOpen = $event">
-      <DialogContent class="sm:max-w-[520px]">
+      <DialogContent stack-above-sticky-header class="sm:max-w-[520px]">
         <DialogHeader>
           <DialogTitle>编辑行业分类</DialogTitle>
           <DialogDescription>
@@ -847,7 +847,7 @@ defineExpose({
     </Dialog>
 
     <AlertDialog :open="deleteCategoryOpen" @update:open="deleteCategoryOpen = $event">
-      <AlertDialogContent>
+      <AlertDialogContent stack-above-sticky-header>
         <AlertDialogHeader>
           <AlertDialogTitle>删除该行业分类？</AlertDialogTitle>
           <AlertDialogDescription>

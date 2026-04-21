@@ -592,7 +592,7 @@ defineExpose({
     </TablePageTable>
 
     <Dialog :open="createDialogOpen" @update:open="createDialogOpen = $event">
-      <DialogContent class="sm:max-w-[640px]">
+      <DialogContent stack-above-sticky-header class="sm:max-w-[640px]">
         <DialogHeader>
           <DialogTitle>添加检测项分类</DialogTitle>
           <DialogDescription>添加一个检测项分类，并填写内容和分数上限。</DialogDescription>
@@ -650,7 +650,7 @@ defineExpose({
     </Dialog>
 
     <Dialog :open="editDialogOpen" @update:open="$event ? (editDialogOpen = true) : closeEditDialog()">
-      <DialogContent class="sm:max-w-[640px]">
+      <DialogContent stack-above-sticky-header class="sm:max-w-[640px]">
         <DialogHeader>
           <DialogTitle>修改检测项分类</DialogTitle>
           <DialogDescription>
@@ -729,7 +729,7 @@ defineExpose({
     </Dialog>
 
     <AlertDialog :open="deleteConfirmOpen" @update:open="deleteConfirmOpen = $event">
-      <AlertDialogContent>
+      <AlertDialogContent stack-above-sticky-header>
         <AlertDialogHeader>
           <AlertDialogTitle>删除检测项分类？</AlertDialogTitle>
           <AlertDialogDescription>
