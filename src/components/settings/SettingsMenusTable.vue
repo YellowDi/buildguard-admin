@@ -183,17 +183,15 @@ const apiImportInput = useTemplateRef<HTMLInputElement>("apiImportInput")
 
 const availableMenuRows = computed(() => (menuOptionRows.value.length > 0 ? menuOptionRows.value : rows.value))
 
-const parentMenuOptions = computed(() => [...availableMenuRows.value]
+const parentMenuOptions = computed(() => availableMenuRows.value
   .filter(row => row.uuid !== editingMenuUuid.value)
-  .sort((left, right) => left.level - right.level || left.sort - right.sort || left.name.localeCompare(right.name, "zh-Hans-CN"))
   .map(row => ({
     uuid: row.uuid,
     label: `${"— ".repeat(Math.max(0, row.level))}${row.name}`,
     level: row.level,
   })))
 
-const buttonMenuOptions = computed(() => [...availableMenuRows.value]
-  .sort((left, right) => left.level - right.level || left.sort - right.sort || left.name.localeCompare(right.name, "zh-Hans-CN"))
+const buttonMenuOptions = computed(() => availableMenuRows.value
   .map(row => ({
     uuid: row.uuid,
     label: `${"— ".repeat(Math.max(0, row.level))}${row.name}`,
@@ -568,7 +566,7 @@ async function loadMenus(options?: { manageLoading?: boolean, keyword?: string }
       PageNum: 0,
       PageSize: 0,
     })
-    rows.value = result.list.map((item, index) => normalizeMenu(item, index))
+    rows.value = sortMenuRows(result.list.map((item, index) => normalizeMenu(item, index)))
   } catch (error) {
     errorMessage.value = handleApiError(error, {
       title: "菜单接口加载失败",
@@ -590,7 +588,7 @@ async function loadMenuOptions() {
       PageNum: 0,
       PageSize: 0,
     })
-    const normalizedRows = result.list.map((item, index) => normalizeMenu(item, index))
+    const normalizedRows = sortMenuRows(result.list.map((item, index) => normalizeMenu(item, index)))
     menuOptionRows.value = normalizedRows.length > 0 ? normalizedRows : rows.value
   } catch {
     menuOptionRows.value = rows.value
@@ -723,6 +721,75 @@ function normalizeMenu(item: MenuRecord, index: number): MenuRow {
     createdAt: formatDateTime(item.CreatedAt),
     updatedAt: formatDateTime(item.UpdatedAt),
   }
+}
+
+function sortMenuRows(menuRows: MenuRow[]) {
+  if (menuRows.length <= 1) {
+    return menuRows
+  }
+
+  const rowMap = new Map(menuRows.map(row => [row.uuid, row]))
+  const childrenByParent = new Map<string, MenuRow[]>()
+
+  for (const row of menuRows) {
+    const parentUuid = resolveMenuParentUuid(row, rowMap)
+    const siblings = childrenByParent.get(parentUuid)
+
+    if (siblings) {
+      siblings.push(row)
+      continue
+    }
+
+    childrenByParent.set(parentUuid, [row])
+  }
+
+  for (const siblings of childrenByParent.values()) {
+    siblings.sort(compareMenuRows)
+  }
+
+  const orderedRows: MenuRow[] = []
+  const visited = new Set<string>()
+
+  const visit = (row: MenuRow) => {
+    if (!row.uuid || visited.has(row.uuid)) {
+      return
+    }
+
+    visited.add(row.uuid)
+    orderedRows.push(row)
+
+    for (const child of childrenByParent.get(row.uuid) ?? []) {
+      visit(child)
+    }
+  }
+
+  for (const root of childrenByParent.get("") ?? []) {
+    visit(root)
+  }
+
+  // 兜底处理异常父子关系或脏数据，避免节点丢失。
+  for (const row of [...menuRows].sort(compareMenuRows)) {
+    visit(row)
+  }
+
+  return orderedRows
+}
+
+function resolveMenuParentUuid(row: MenuRow, rowMap: Map<string, MenuRow>) {
+  const parentUuid = row.parentUuid.trim()
+
+  if (!parentUuid || parentUuid === row.uuid || !rowMap.has(parentUuid)) {
+    return ""
+  }
+
+  return parentUuid
+}
+
+function compareMenuRows(left: MenuRow, right: MenuRow) {
+  return left.sort - right.sort
+    || left.level - right.level
+    || left.name.localeCompare(right.name, "zh-Hans-CN")
+    || left.id - right.id
 }
 
 function normalizeButton(item: SystemResourceRecord, index: number): ButtonRow {
