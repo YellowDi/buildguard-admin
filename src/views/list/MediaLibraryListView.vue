@@ -996,33 +996,37 @@ function escapeHtml(value: string) {
           v-else-if="activeModule === 'videos' && currentView === 'list'"
           class="space-y-0"
         >
-          <div v-if="filteredVideoItems.length">
-            <button
+          <div v-if="filteredVideoItems.length" class="space-y-1">
+            <div
               v-for="item in filteredVideoItems"
               :key="item.id"
-              type="button"
-              class="group flex w-full items-center gap-3 border-b border-dashed border-border/80 py-3 text-left transition-colors duration-180 ease-out hover:bg-accent/12 last:border-b-0"
-              :class="isActiveEntity('video', item.id) ? 'bg-accent/20' : ''"
-              @click="openPreview('video', item.id)"
+              class="border-b border-dashed border-border/80 pb-1 last:border-b-0"
             >
-              <div class="relative size-14 shrink-0 overflow-hidden rounded-md bg-muted/40">
-                <img
-                  class="h-full w-full object-cover transition-transform duration-200 ease-out group-hover:scale-[1.03]"
-                  :src="videoPreviewAsset"
-                  alt=""
-                  aria-hidden="true"
-                />
-                <div class="absolute inset-0 bg-black/0 transition-colors duration-180 ease-out group-hover:bg-black/10" aria-hidden="true" />
-                <span class="absolute right-1.5 bottom-1.5 flex size-5 items-center justify-center rounded-full bg-black/62 text-white opacity-0 transition-[opacity,transform] duration-180 ease-out group-hover:translate-y-0 group-hover:opacity-100 translate-y-0.5">
-                  <i class="ri-play-fill translate-x-[0.5px] text-[11px] leading-none" />
-                </span>
-              </div>
-              <div class="min-w-0 flex-1">
-                <h4 class="truncate text-sm font-medium text-foreground transition-colors duration-180 ease-out group-hover:text-foreground/88">
-                  {{ item.title }}
-                </h4>
-              </div>
-            </button>
+              <button
+                type="button"
+                class="group flex w-full items-center gap-3 rounded-lg p-2 text-left transition-colors duration-180 ease-out"
+                :class="isActiveEntity('video', item.id) ? 'bg-muted/60' : 'bg-transparent hover:bg-muted/45'"
+                @click="openPreview('video', item.id)"
+              >
+                <div class="relative size-14 shrink-0 overflow-hidden rounded-md bg-muted/40">
+                  <img
+                    class="h-full w-full object-cover transition-transform duration-200 ease-out group-hover:scale-[1.03]"
+                    :src="videoPreviewAsset"
+                    alt=""
+                    aria-hidden="true"
+                  />
+                  <div class="absolute inset-0 bg-black/0 transition-colors duration-180 ease-out group-hover:bg-black/10" aria-hidden="true" />
+                  <span class="absolute right-1.5 bottom-1.5 flex size-5 items-center justify-center rounded-full bg-black/62 text-white opacity-0 transition-[opacity,transform] duration-180 ease-out group-hover:translate-y-0 group-hover:opacity-100 translate-y-0.5">
+                    <i class="ri-play-fill translate-x-[0.5px] text-[11px] leading-none" />
+                  </span>
+                </div>
+                <div class="min-w-0 flex-1">
+                  <h4 class="truncate text-sm font-medium text-foreground transition-colors duration-180 ease-out group-hover:text-foreground/88">
+                    {{ item.title }}
+                  </h4>
+                </div>
+              </button>
+            </div>
           </div>
 
           <div v-else class="py-14 text-center text-sm text-muted-foreground">
