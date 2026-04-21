@@ -53,9 +53,6 @@ type CategoryTreeRow = {
   count: number
 }
 
-type VideoListEntry =
-  { kind: "video"; id: string; title: string; summary: string; categoryId: string; status: MediaStatus; featured: boolean; sortOrder: number; updatedAt: string; meta: string }
-
 type SwitchTab = {
   id: string
   label: string
@@ -198,23 +195,6 @@ const filteredVideoItems = computed(() => {
       ])
     })
     .sort(compareBySortOrder)
-})
-
-const filteredVideoListEntries = computed<VideoListEntry[]>(() => {
-  const videoEntries: VideoListEntry[] = filteredVideoItems.value.map(item => ({
-    kind: "video",
-    id: item.id,
-    title: item.title,
-    summary: item.summary,
-    categoryId: item.categoryId,
-    status: item.status,
-    featured: item.featured,
-    sortOrder: item.sortOrder,
-    updatedAt: item.updatedAt,
-    meta: buildVideoPlacement(item),
-  }))
-
-  return videoEntries.sort(compareBySortOrder)
 })
 
 const filteredArticles = computed(() => {
@@ -1014,79 +994,38 @@ function escapeHtml(value: string) {
 
         <section
           v-else-if="activeModule === 'videos' && currentView === 'list'"
-          class="rounded-xl border border-border/70 bg-background"
+          class="space-y-0"
         >
-          <div class="border-b border-border/70 px-4 py-3">
-            <h3 class="text-lg font-semibold tracking-tight">内容列表</h3>
-            <p class="text-sm text-muted-foreground">更适合快速检查状态、推荐位和排序权重。</p>
-          </div>
-
-          <div v-if="filteredVideoListEntries.length" class="divide-y divide-border/70">
-            <article
-              v-for="entry in filteredVideoListEntries"
-              :key="`${entry.kind}-${entry.id}`"
-              class="flex flex-col gap-3 px-4 py-4 transition-colors hover:bg-slate-50/80 lg:flex-row lg:items-center"
-              :class="isActiveEntity('video', entry.id) ? 'bg-accent/30' : ''"
+          <div v-if="filteredVideoItems.length">
+            <button
+              v-for="item in filteredVideoItems"
+              :key="item.id"
+              type="button"
+              class="group flex w-full items-center gap-3 border-b border-dashed border-border/80 py-3 text-left transition-colors duration-180 ease-out hover:bg-accent/12 last:border-b-0"
+              :class="isActiveEntity('video', item.id) ? 'bg-accent/20' : ''"
+              @click="openPreview('video', item.id)"
             >
-              <div class="min-w-0 flex-1">
-                <div class="flex flex-wrap items-center gap-2">
-                  <Badge variant="outline" class="border-border/80 bg-background text-muted-foreground">
-                    视频
-                  </Badge>
-                  <Badge :class="getStatusBadgeClass(entry.status)">
-                    {{ getStatusLabel(entry.status) }}
-                  </Badge>
-                  <Badge v-if="entry.featured" class="border-amber-200 bg-amber-50 text-amber-700">
-                    首页推荐
-                  </Badge>
-                </div>
-
-                <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
-                  <h4 class="text-base font-semibold tracking-tight text-foreground">
-                    {{ entry.title }}
-                  </h4>
-                  <span class="text-xs text-muted-foreground">
-                    {{ getCategoryPathLabel('videos', entry.categoryId) }}
-                  </span>
-                </div>
-
-                <p class="media-card-summary mt-2 text-sm leading-6 text-muted-foreground">
-                  {{ entry.summary }}
-                </p>
-              </div>
-
-              <div class="flex min-w-0 flex-wrap items-center gap-3 lg:shrink-0 lg:justify-end">
-                <div class="rounded-lg bg-muted/30 px-3 py-2 text-xs leading-5 text-muted-foreground">
-                  {{ entry.meta }}
-                </div>
-                <div class="rounded-lg border border-border/70 bg-muted/20 px-3 py-2 text-xs font-semibold text-foreground">
-                  排序 {{ entry.sortOrder }}
-                </div>
-                <span class="text-xs text-muted-foreground">
-                  {{ entry.updatedAt }}
+              <div class="relative size-14 shrink-0 overflow-hidden rounded-md bg-muted/40">
+                <img
+                  class="h-full w-full object-cover transition-transform duration-200 ease-out group-hover:scale-[1.03]"
+                  :src="videoPreviewAsset"
+                  alt=""
+                  aria-hidden="true"
+                />
+                <div class="absolute inset-0 bg-black/0 transition-colors duration-180 ease-out group-hover:bg-black/10" aria-hidden="true" />
+                <span class="absolute right-1.5 bottom-1.5 flex size-5 items-center justify-center rounded-full bg-black/62 text-white opacity-0 transition-[opacity,transform] duration-180 ease-out group-hover:translate-y-0 group-hover:opacity-100 translate-y-0.5">
+                  <i class="ri-play-fill translate-x-[0.5px] text-[11px] leading-none" />
                 </span>
-                <div class="flex items-center gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    class="rounded-md"
-                    @click="openPreview(entry.kind, entry.id)"
-                  >
-                    预览
-                  </Button>
-                  <Button
-                    size="sm"
-                    class="rounded-md"
-                    @click="openEdit(entry.kind, entry.id)"
-                  >
-                    编辑
-                  </Button>
-                </div>
               </div>
-            </article>
+              <div class="min-w-0 flex-1">
+                <h4 class="truncate text-sm font-medium text-foreground transition-colors duration-180 ease-out group-hover:text-foreground/88">
+                  {{ item.title }}
+                </h4>
+              </div>
+            </button>
           </div>
 
-          <div v-else class="px-6 py-14 text-center text-sm text-muted-foreground">
+          <div v-else class="py-14 text-center text-sm text-muted-foreground">
             当前筛选下没有可展示的列表内容。
           </div>
         </section>
