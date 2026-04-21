@@ -420,7 +420,7 @@ const previewMarkdownHtml = computed(() => {
 
 watch(activeModule, () => {
   searchQuery.value = ""
-  searchExpanded.value = true
+  searchExpanded.value = false
   sheetOpen.value = false
 })
 
@@ -1211,7 +1211,7 @@ function escapeHtml(value: string) {
       </SettingsToolbarRow>
     </SettingsPageHeader>
 
-    <div class="flex min-h-0 flex-1 gap-8 overflow-hidden px-3 pb-4 sm:px-4">
+    <div class="mx-auto flex min-h-0 w-full max-w-4xl flex-1 gap-8 overflow-hidden pb-4">
       <aside class="w-[240px] shrink-0 overflow-y-auto pt-4">
         <div class="mb-2 flex items-center justify-between gap-2 px-1">
           <p class="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
