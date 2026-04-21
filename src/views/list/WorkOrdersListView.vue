@@ -236,6 +236,7 @@ function buildPageFilterText(row: WorkOrderRecord) {
   return [
     row.orderNo,
     row.customerName,
+    row.parkName,
     row.packageName,
     row.planName,
     row.executor,
@@ -636,6 +637,16 @@ function createInspectionColumns(): TablePageSchema<WorkOrderRecord>["columns"] 
         type: "text",
         placeholder: "输入客户名称",
         defaultVisible: true,
+      },
+      sort: true,
+    },
+    {
+      key: "parkName",
+      label: "园区",
+      filterType: "text",
+      filter: {
+        type: "text",
+        placeholder: "输入园区名称",
       },
       sort: true,
     },
