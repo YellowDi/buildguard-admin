@@ -1036,148 +1036,81 @@ function escapeHtml(value: string) {
 
         <section
           v-else-if="activeModule === 'articles' && currentView === 'grid'"
-          class="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3"
+          class="space-y-0"
         >
-          <article
-            v-for="item in filteredArticles"
-            :key="item.id"
-            class="rounded-xl border border-border/70 bg-background p-4"
-            :class="isActiveEntity('article', item.id) ? 'border-foreground/20 bg-accent/20' : ''"
-          >
-            <div class="flex items-start justify-between gap-3">
-              <div class="min-w-0">
-                <div class="flex flex-wrap items-center gap-2">
-                  <Badge :class="getStatusBadgeClass(item.status)">
-                    {{ getStatusLabel(item.status) }}
-                  </Badge>
-                  <Badge
-                    v-if="item.featured"
-                    class="border-amber-200 bg-amber-50 text-amber-700"
-                  >
-                    首页推荐
-                  </Badge>
-                </div>
-                <h3 class="mt-3 text-lg font-semibold tracking-tight text-foreground">
-                  {{ item.title }}
-                </h3>
-                <p class="mt-1 text-xs text-muted-foreground">
-                  {{ item.cover }}
-                </p>
-              </div>
-              <span class="shrink-0 text-xs text-muted-foreground">
-                {{ item.updatedAt }}
-              </span>
-            </div>
-
-            <p class="media-card-summary mt-3 text-sm leading-6 text-muted-foreground">
-              {{ item.summary }}
-            </p>
-
-            <div class="mt-4 flex flex-wrap items-center gap-2">
-              <Badge variant="outline" class="border-border/80 bg-background text-muted-foreground">
-                {{ getCategoryPathLabel('articles', item.categoryId) }}
-              </Badge>
-              <Badge
-                v-for="tag in item.tags"
-                :key="tag"
-                variant="outline"
-                class="border-border/80 bg-muted/25 text-muted-foreground"
+          <div v-if="filteredArticles.length" class="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
+            <button
+              v-for="item in filteredArticles"
+              :key="item.id"
+              type="button"
+              class="group block text-left outline-none focus-visible:ring-2 focus-visible:ring-foreground/20 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              @click="openPreview('article', item.id)"
+            >
+              <div
+                class="relative aspect-[3/4] overflow-hidden rounded-[18px] border border-border/70 bg-slate-100 transition-colors duration-200 ease-out"
+                :class="isActiveEntity('article', item.id) ? 'ring-2 ring-foreground/18 ring-offset-2 ring-offset-background' : 'group-hover:border-border'"
               >
-                {{ tag }}
-              </Badge>
-            </div>
+                <img
+                  class="absolute inset-0 h-full w-full object-cover"
+                  :src="videoPreviewAsset"
+                  alt=""
+                  aria-hidden="true"
+                />
+                <div class="absolute inset-0 bg-black/8" aria-hidden="true" />
+                <div class="absolute inset-x-0 bottom-0 h-[52%] bg-gradient-to-t from-black/66 via-black/28 to-transparent" aria-hidden="true" />
 
-            <div class="mt-4 border-t border-border/70 pt-3">
-              <div class="media-markdown media-markdown-preview" v-html="renderMockMarkdown(item.markdown)" />
-            </div>
-
-            <div class="mt-4 flex items-center justify-end gap-2">
-              <div class="flex items-center gap-2">
-                <Button variant="ghost" size="sm" class="rounded-md" @click="openPreview('article', item.id)">
-                  预览
-                </Button>
-                <Button size="sm" class="rounded-md" @click="openEdit('article', item.id)">
-                  编辑
-                </Button>
+                <div class="absolute inset-x-0 bottom-0 p-4">
+                  <h4 class="text-[16px] leading-[1.25] font-semibold tracking-[-0.02em] text-white [text-shadow:0_2px_8px_rgba(0,0,0,0.28)]">
+                    {{ item.title }}
+                  </h4>
+                </div>
               </div>
-            </div>
-          </article>
+            </button>
+          </div>
 
-          <div
-            v-if="!filteredArticles.length"
-            class="col-span-full rounded-xl border border-dashed border-border bg-background px-6 py-12 text-center text-sm text-muted-foreground"
-          >
+          <div v-else class="rounded-xl border border-dashed border-border bg-background px-6 py-10 text-center text-sm text-muted-foreground">
             当前筛选下没有图文文章。
           </div>
         </section>
 
         <section
           v-else
-          class="rounded-xl border border-border/70 bg-background"
+          class="space-y-0"
         >
-          <div class="border-b border-border/70 px-4 py-3">
-            <h3 class="text-lg font-semibold tracking-tight">文章列表</h3>
-            <p class="text-sm text-muted-foreground">更适合检查发布状态、标签和首页推荐字段。</p>
-          </div>
-
-          <div v-if="filteredArticles.length" class="divide-y divide-border/70">
-            <article
+          <div v-if="filteredArticles.length" class="space-y-1">
+            <div
               v-for="item in filteredArticles"
               :key="item.id"
-              class="flex flex-col gap-3 px-4 py-4 transition-colors hover:bg-slate-50/80 lg:flex-row lg:items-center"
-              :class="isActiveEntity('article', item.id) ? 'bg-accent/30' : ''"
+              class="border-b border-dashed border-border/80 pb-1 last:border-b-0"
             >
-              <div class="min-w-0 flex-1">
-                <div class="flex flex-wrap items-center gap-2">
-                  <Badge :class="getStatusBadgeClass(item.status)">
-                    {{ getStatusLabel(item.status) }}
-                  </Badge>
-                  <Badge v-if="item.featured" class="border-amber-200 bg-amber-50 text-amber-700">
-                    首页推荐
-                  </Badge>
-                  <Badge variant="outline" class="border-border/80 bg-background text-muted-foreground">
-                    {{ getCategoryPathLabel('articles', item.categoryId) }}
-                  </Badge>
+              <button
+                type="button"
+                class="group flex w-full items-center gap-3 rounded-lg p-2 text-left transition-colors duration-180 ease-out"
+                :class="isActiveEntity('article', item.id) ? 'bg-muted/60' : 'bg-transparent hover:bg-muted/45'"
+                @click="openPreview('article', item.id)"
+              >
+                <div class="relative size-14 shrink-0 overflow-hidden rounded-md bg-muted/40">
+                  <img
+                    class="h-full w-full object-cover transition-transform duration-200 ease-out group-hover:scale-[1.03]"
+                    :src="videoPreviewAsset"
+                    alt=""
+                    aria-hidden="true"
+                  />
+                  <div class="absolute inset-0 bg-black/0 transition-colors duration-180 ease-out group-hover:bg-black/8" aria-hidden="true" />
+                  <span class="absolute right-1.5 bottom-1.5 flex size-5 items-center justify-center rounded-full bg-background/88 text-muted-foreground opacity-0 transition-opacity duration-180 ease-out group-hover:opacity-100">
+                    <i class="ri-article-line text-[11px] leading-none" />
+                  </span>
                 </div>
-
-                <h4 class="mt-2 text-base font-semibold tracking-tight text-foreground">
-                  {{ item.title }}
-                </h4>
-                <p class="media-card-summary mt-2 text-sm leading-6 text-muted-foreground">
-                  {{ item.summary }}
-                </p>
-                <div class="mt-3 flex flex-wrap items-center gap-2">
-                  <Badge
-                    v-for="tag in item.tags"
-                    :key="tag"
-                    variant="outline"
-                    class="border-border/80 bg-muted/25 text-muted-foreground"
-                  >
-                    {{ tag }}
-                  </Badge>
+                <div class="min-w-0 flex-1">
+                  <h4 class="truncate text-sm font-medium text-foreground transition-colors duration-180 ease-out group-hover:text-foreground/88">
+                    {{ item.title }}
+                  </h4>
                 </div>
-              </div>
-
-              <div class="flex flex-wrap items-center gap-3 lg:shrink-0 lg:justify-end">
-                <div class="rounded-lg bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
-                  排序 {{ item.sortOrder }}
-                </div>
-                <span class="text-xs text-muted-foreground">
-                  {{ item.updatedAt }}
-                </span>
-                <div class="flex items-center gap-2">
-                  <Button variant="ghost" size="sm" class="rounded-md" @click="openPreview('article', item.id)">
-                    预览
-                  </Button>
-                  <Button size="sm" class="rounded-md" @click="openEdit('article', item.id)">
-                    编辑
-                  </Button>
-                </div>
-              </div>
-            </article>
+              </button>
+            </div>
           </div>
 
-          <div v-else class="px-6 py-14 text-center text-sm text-muted-foreground">
+          <div v-else class="py-14 text-center text-sm text-muted-foreground">
             当前筛选下没有文章内容。
           </div>
         </section>
