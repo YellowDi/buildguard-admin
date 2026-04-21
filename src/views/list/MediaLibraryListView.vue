@@ -2,6 +2,8 @@
 import { computed, reactive, ref, watch } from "vue"
 import { toast } from "vue-sonner"
 
+import DetailFieldSections from "@/components/detail/DetailFieldSections.vue"
+import type { DetailFieldSection } from "@/components/detail/types"
 import TopTabSwitch from "@/components/layout/TopTabSwitch.vue"
 import SettingsPageHeader from "@/components/settings/SettingsPageHeader.vue"
 import SettingsToolbarRow from "@/components/settings/SettingsToolbarRow.vue"
@@ -257,6 +259,48 @@ const previewMarkdownHtml = computed(() => {
   }
 
   return renderMockMarkdown(formState.markdown)
+})
+
+const videoPreviewSections = computed<DetailFieldSection[]>(() => {
+  if (!activeVideo.value) return []
+
+  return [
+    {
+      key: "video-preview-fields",
+      title: "",
+      rows: [
+        { key: "cover", label: "封面文案", value: activeVideo.value.cover || "—" },
+        { key: "category", label: "分类", value: getCategoryPathLabel("videos", activeVideo.value.categoryId) },
+        { key: "status", label: "状态", value: getStatusLabel(activeVideo.value.status) },
+        { key: "duration", label: "时长", value: activeVideo.value.duration || "—" },
+        { key: "featured", label: "首页推荐", value: activeVideo.value.featured ? "是" : "否" },
+        { key: "sortOrder", label: "排序", value: `${activeVideo.value.sortOrder}` },
+        { key: "updatedAt", label: "更新时间", value: activeVideo.value.updatedAt },
+        { key: "summary", label: "摘要", value: activeVideo.value.summary || "—", truncate: false, valueClass: "leading-6" },
+      ],
+    },
+  ]
+})
+
+const articlePreviewSections = computed<DetailFieldSection[]>(() => {
+  if (!activeArticle.value) return []
+
+  return [
+    {
+      key: "article-preview-fields",
+      title: "",
+      rows: [
+        { key: "cover", label: "封面文案", value: activeArticle.value.cover || "—" },
+        { key: "category", label: "分类", value: getCategoryPathLabel("articles", activeArticle.value.categoryId) },
+        { key: "status", label: "状态", value: getStatusLabel(activeArticle.value.status) },
+        { key: "featured", label: "首页推荐", value: activeArticle.value.featured ? "是" : "否" },
+        { key: "sortOrder", label: "排序", value: `${activeArticle.value.sortOrder}` },
+        { key: "updatedAt", label: "更新时间", value: activeArticle.value.updatedAt },
+        { key: "summary", label: "摘要", value: activeArticle.value.summary || "—", truncate: false, valueClass: "leading-6" },
+        { key: "tags", label: "标签", value: activeArticle.value.tags.length ? activeArticle.value.tags.join("、") : "—", truncate: false },
+      ],
+    },
+  ]
 })
 
 watch(activeModule, () => {
@@ -1120,7 +1164,7 @@ function escapeHtml(value: string) {
     <ResponsiveRightSheet
       :open="sheetOpen"
       :show-primary="false"
-      sheet-content-class="overflow-hidden sm:max-w-2xl"
+      sheet-content-class="flex min-h-0 flex-col overflow-hidden sm:max-w-2xl"
       :title="sheetTitle"
       :description="sheetDescription"
       @update:open="sheetOpen = $event"
@@ -1160,109 +1204,63 @@ function escapeHtml(value: string) {
         </div>
       </template>
 
-      <div class="min-h-0 overflow-y-auto px-1 pb-1">
+      <div class="min-h-0 flex-1 overflow-y-auto">
         <div v-if="sheetMode === 'preview'" class="space-y-5">
           <template v-if="sheetEntityKind === 'video' && activeVideo">
             <div
-              class="rounded-xl border border-border/70 px-5 py-5"
-              :class="getCoverTone(activeVideo.title).surface"
+              class="overflow-hidden border border-border/70 bg-background"
             >
-              <div class="flex items-center justify-between gap-3">
-                <Badge :class="getStatusBadgeClass(activeVideo.status)">
-                  {{ getStatusLabel(activeVideo.status) }}
-                </Badge>
-                <Badge class="border-border bg-background text-foreground">
-                  {{ activeVideo.duration }}
-                </Badge>
-              </div>
-              <p class="mt-6 text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                {{ activeVideo.cover }}
-              </p>
-              <h3 class="mt-2 text-3xl font-semibold tracking-tight text-foreground">
-                {{ activeVideo.title }}
-              </h3>
-            </div>
-
-            <div class="grid gap-3 md:grid-cols-2">
-              <div class="rounded-lg border border-border/70 bg-background p-4">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">分类路径</p>
-                <p class="mt-2 text-sm leading-6">{{ getCategoryPathLabel('videos', activeVideo.categoryId) }}</p>
-              </div>
-              <div class="rounded-lg border border-border/70 bg-background p-4">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">首页分发</p>
-                <div class="mt-2 flex flex-wrap items-center gap-2">
-                  <Badge :class="getStatusBadgeClass(activeVideo.status)">
-                    {{ getStatusLabel(activeVideo.status) }}
-                  </Badge>
-                  <Badge v-if="activeVideo.featured" class="border-amber-200 bg-amber-50 text-amber-700">
-                    首页推荐
-                  </Badge>
-                  <Badge variant="outline" class="border-border/80 bg-background text-muted-foreground">
-                    排序 {{ activeVideo.sortOrder }}
-                  </Badge>
+              <div class="relative aspect-video bg-slate-950">
+                <img
+                  class="absolute inset-0 h-full w-full object-cover"
+                  :src="videoPreviewAsset"
+                  alt=""
+                  aria-hidden="true"
+                />
+                <div class="absolute inset-0 bg-black/10" aria-hidden="true" />
+                <div class="absolute inset-0 flex items-center justify-center">
+                  <span class="flex size-11 items-center justify-center rounded-full bg-white/92 text-slate-900">
+                    <i class="ri-play-fill translate-x-[1px] text-[22px] leading-none" />
+                  </span>
                 </div>
               </div>
             </div>
 
-            <div class="rounded-lg border border-border/70 bg-background p-4">
-              <p class="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">视频简介</p>
-              <p class="mt-3 text-sm leading-7">
-                {{ activeVideo.summary }}
-              </p>
-            </div>
+            <DetailFieldSections
+              :sections="videoPreviewSections"
+              compact
+              :show-section-titles="false"
+              label-width-mobile="5.5rem"
+              label-width-desktop="92px"
+            />
           </template>
 
           <template v-else-if="sheetEntityKind === 'article' && activeArticle">
-            <div
-              class="rounded-xl border border-border/70 px-5 py-5"
-              :class="getCoverTone(activeArticle.title).surface"
-            >
-              <div class="flex flex-wrap items-center gap-2">
-                <Badge :class="getStatusBadgeClass(activeArticle.status)">
-                  {{ getStatusLabel(activeArticle.status) }}
-                </Badge>
-                <Badge v-if="activeArticle.featured" class="border-amber-200 bg-amber-50 text-amber-700">
-                  首页推荐
-                </Badge>
-              </div>
-              <p class="mt-6 text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                {{ activeArticle.cover }}
-              </p>
-              <h3 class="mt-2 text-3xl font-semibold tracking-tight text-foreground">
-                {{ activeArticle.title }}
-              </h3>
+            <div class="overflow-hidden border border-border/70 bg-background">
+              <img
+                class="aspect-video w-full object-cover"
+                :src="videoPreviewAsset"
+                alt=""
+                aria-hidden="true"
+              />
             </div>
 
-            <div class="rounded-lg border border-border/70 bg-background p-4">
-              <p class="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">文章摘要</p>
-              <p class="mt-3 text-sm leading-7">
-                {{ activeArticle.summary }}
-              </p>
+            <div class="px-4 py-3">
+              <div class="media-markdown" v-html="previewMarkdownHtml" />
             </div>
 
-            <div class="grid gap-3 md:grid-cols-2">
-              <div class="rounded-lg border border-border/70 bg-background p-4">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">分类路径</p>
-                <p class="mt-2 text-sm leading-6">{{ getCategoryPathLabel('articles', activeArticle.categoryId) }}</p>
-              </div>
-              <div class="rounded-lg border border-border/70 bg-background p-4">
-                <p class="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">标签</p>
-                <div class="mt-2 flex flex-wrap items-center gap-2">
-                  <Badge
-                    v-for="tag in activeArticle.tags"
-                    :key="tag"
-                    variant="outline"
-                    class="border-border/80 bg-muted/25 text-muted-foreground"
-                  >
-                    {{ tag }}
-                  </Badge>
-                </div>
-              </div>
-            </div>
+            <DetailFieldSections
+              :sections="articlePreviewSections"
+              compact
+              :show-section-titles="false"
+              label-width-mobile="5.5rem"
+              label-width-desktop="92px"
+            />
+          </template>
 
-            <div class="rounded-lg border border-border/70 bg-background p-4">
-              <p class="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Markdown 预览</p>
-              <div class="media-markdown mt-4" v-html="previewMarkdownHtml" />
+          <template v-else-if="sheetEntityKind === 'article' && !activeArticle">
+            <div class="text-sm text-muted-foreground">
+              暂无文章内容。
             </div>
           </template>
         </div>
