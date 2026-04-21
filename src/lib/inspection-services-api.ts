@@ -59,6 +59,7 @@ export type InspectionServiceListItem = {
   Id?: number
   Name?: string
   Status?: number
+  StartTime?: string
   ContractEndTime?: string
   ContractFile?: string
   CustomerId?: number
@@ -109,6 +110,8 @@ export type InspectionServiceCreatePayload = {
   Level: string
   ManagerName: string
   ManagerPhone: string
+  StartTime?: string
+  ContractEndTime?: string
   BuildInfos: InspectionServiceBuildInfoWriteItem[]
   Remark?: string
 }
@@ -210,6 +213,8 @@ export async function createInspectionService(
     Level: getRequiredString(payload.Level, "Level"),
     ManagerName: getRequiredString(payload.ManagerName, "ManagerName"),
     ManagerPhone: getRequiredString(payload.ManagerPhone, "ManagerPhone"),
+    StartTime: getOptionalString(payload.StartTime),
+    ContractEndTime: getOptionalString(payload.ContractEndTime),
     BuildInfos: getRequiredBuildInfos(payload.BuildInfos, "BuildInfos"),
     Remark: getOptionalString(payload.Remark),
   }
@@ -242,6 +247,8 @@ export async function updateInspectionService(
     Level: getRequiredString(payload.Level, "Level"),
     ManagerName: getRequiredString(payload.ManagerName, "ManagerName"),
     ManagerPhone: getRequiredString(payload.ManagerPhone, "ManagerPhone"),
+    StartTime: getOptionalString(payload.StartTime),
+    ContractEndTime: getOptionalString(payload.ContractEndTime),
     BuildInfos: getRequiredBuildInfos(payload.BuildInfos, "BuildInfos"),
     Remark: getOptionalString(payload.Remark),
   }
@@ -476,6 +483,7 @@ function normalizeInspectionServiceListItem(value: unknown): InspectionServiceLi
   return {
     ...record,
     Status: status,
+    StartTime: getOptionalString(record.StartTime),
     ContractEndTime: contractEndTime,
     ContractFile: getOptionalString(record.ContractFile),
     CustomerId: normalizeOptionalNumberLike(record.CustomerId),

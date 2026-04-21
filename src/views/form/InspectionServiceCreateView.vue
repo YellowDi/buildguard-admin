@@ -4,6 +4,7 @@ import { useRoute, useRouter } from "vue-router"
 import { toast } from "vue-sonner"
 
 import InspectionItemPicker from "@/components/inspection/InspectionItemPicker.vue"
+import FormDatePicker from "@/components/form/FormDatePicker.vue"
 import FormFieldSection from "@/components/form/FormFieldSection.vue"
 import FormHeader from "@/components/form/FormHeader.vue"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
@@ -57,6 +58,8 @@ type InspectionServiceBaseForm = {
   level: string
   managerName: string
   managerPhone: string
+  startTime: string
+  contractEndTime: string
   remark: string
 }
 
@@ -119,6 +122,8 @@ function createEmptyBaseForm(): InspectionServiceBaseForm {
     level: "",
     managerName: "",
     managerPhone: "",
+    startTime: "",
+    contractEndTime: "",
     remark: "",
   }
 }
@@ -130,6 +135,8 @@ function cloneBaseForm(source: InspectionServiceBaseForm): InspectionServiceBase
     level: source.level,
     managerName: source.managerName,
     managerPhone: source.managerPhone,
+    startTime: source.startTime,
+    contractEndTime: source.contractEndTime,
     remark: source.remark,
   }
 }
@@ -759,6 +766,8 @@ async function handleSubmit() {
       Level: normalizeText(form.level),
       ManagerName: normalizeText(form.managerName),
       ManagerPhone: normalizeText(form.managerPhone),
+      StartTime: getOptionalText(form.startTime),
+      ContractEndTime: getOptionalText(form.contractEndTime),
       BuildInfos: buildInspectionServiceBuildInfosPayload(),
       Remark: getOptionalText(form.remark),
     }
@@ -944,6 +953,8 @@ async function loadInspectionServiceForEdit(uuid: string) {
       level: normalizeText(detail.Level),
       managerName: normalizeText(detail.ManagerName),
       managerPhone: normalizeText(detail.ManagerPhone),
+      startTime: normalizeText(detail.StartTime),
+      contractEndTime: normalizeText(detail.ContractEndTime),
       remark: normalizeText(detail.Remark),
     })
     batchTemplateUuid.value = normalizeText(detail.TemplateUuid)
@@ -1734,19 +1745,21 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
         <FormFieldSection
           id="section-customer"
           quick-nav-label="所属客户"
-          label="所属客户"
           layout="vertical"
         >
-          <Select v-model="form.customerUuid" :disabled="customerLoading || !customerOptions.length">
-            <SelectTrigger id="inspection-service-customer" class="w-full">
-              <SelectValue :placeholder="customerLoading ? '正在加载客户...' : '请选择所属客户'" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem v-for="customer in customerOptions" :key="customer.uuid" :value="customer.uuid">
-                {{ customer.name }}
-              </SelectItem>
-            </SelectContent>
-          </Select>
+          <label class="grid gap-3">
+            <span class="text-sm font-medium text-foreground">所属客户</span>
+            <Select v-model="form.customerUuid" :disabled="customerLoading || !customerOptions.length">
+              <SelectTrigger id="inspection-service-customer" class="w-full">
+                <SelectValue :placeholder="customerLoading ? '正在加载客户...' : '请选择所属客户'" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem v-for="customer in customerOptions" :key="customer.uuid" :value="customer.uuid">
+                  {{ customer.name }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </label>
         </FormFieldSection>
 
         <FormFieldSection
@@ -1755,7 +1768,7 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
           layout="vertical"
         >
           <div class="grid gap-3 sm:grid-cols-10">
-            <label class="space-y-2 sm:col-span-7">
+            <label class="grid gap-3 sm:col-span-7">
               <span class="text-sm font-medium text-foreground">服务名称</span>
               <Input
                 id="inspection-service-name"
@@ -1767,7 +1780,7 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
               />
             </label>
 
-            <label class="space-y-2 sm:col-span-3">
+            <label class="grid gap-3 sm:col-span-3">
               <span class="text-sm font-medium text-foreground">服务等级</span>
               <Select v-model="form.level" :disabled="isInteractionLocked || serviceLevelOptionsLoading || !serviceLevelOptions.length">
                 <SelectTrigger id="inspection-service-level" class="w-full">
@@ -1786,26 +1799,59 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
         <FormFieldSection
           id="section-manager"
           quick-nav-label="负责人"
-          label="负责人"
           layout="vertical"
         >
           <div class="grid gap-3 sm:grid-cols-2">
-            <Input
-              v-model="form.managerName"
-              required
-              placeholder="请输入负责人姓名"
-              class="w-full"
-              :disabled="isInteractionLocked"
-            />
-            <Input
-              v-model="form.managerPhone"
-              required
-              type="tel"
-              inputmode="tel"
-              placeholder="请输入负责人电话"
-              class="w-full"
-              :disabled="isInteractionLocked"
-            />
+            <label class="grid gap-3">
+              <span class="text-sm font-medium text-foreground">负责人姓名</span>
+              <Input
+                v-model="form.managerName"
+                required
+                placeholder="请输入负责人姓名"
+                class="w-full"
+                :disabled="isInteractionLocked"
+              />
+            </label>
+            <label class="grid gap-3">
+              <span class="text-sm font-medium text-foreground">负责人电话</span>
+              <Input
+                v-model="form.managerPhone"
+                required
+                type="tel"
+                inputmode="tel"
+                placeholder="请输入负责人电话"
+                class="w-full"
+                :disabled="isInteractionLocked"
+              />
+            </label>
+          </div>
+        </FormFieldSection>
+
+        <FormFieldSection
+          id="section-contract"
+          quick-nav-label="合同时间"
+          layout="vertical"
+        >
+          <div class="grid gap-3 sm:grid-cols-2">
+            <label class="grid gap-3">
+              <span class="text-sm font-medium text-foreground">合同开始时间</span>
+              <FormDatePicker
+                id="inspection-service-start-time"
+                v-model="form.startTime"
+                placeholder="请选择合同开始时间"
+                :disabled="isInteractionLocked"
+              />
+            </label>
+
+            <label class="grid gap-3">
+              <span class="text-sm font-medium text-foreground">合同结束时间</span>
+              <FormDatePicker
+                id="inspection-service-contract-end-time"
+                v-model="form.contractEndTime"
+                placeholder="请选择合同结束时间"
+                :disabled="isInteractionLocked"
+              />
+            </label>
           </div>
         </FormFieldSection>
 
@@ -1886,19 +1932,20 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
         <FormFieldSection
           id="section-remark"
           quick-nav-label="备注"
-          label="备注"
-          label-for="inspection-service-remark"
           align="start"
           layout="vertical"
           last
         >
-          <Textarea
-            id="inspection-service-remark"
-            v-model="form.remark"
-            placeholder="请输入备注"
-            class="min-h-[120px] w-full resize-y"
-            :disabled="isInteractionLocked"
-          />
+          <label class="grid gap-3">
+            <span class="text-sm font-medium text-foreground">备注</span>
+            <Textarea
+              id="inspection-service-remark"
+              v-model="form.remark"
+              placeholder="请输入备注"
+              class="min-h-[120px] w-full resize-y"
+              :disabled="isInteractionLocked"
+            />
+          </label>
         </FormFieldSection>
       </form>
 

@@ -205,7 +205,7 @@ export async function deleteMenu(payload: DeleteMenuPayload) {
   url.searchParams.set("Uuid", getRequiredString(payload.Uuid, "Uuid"))
 
   const response = await fetch(url.toString(), {
-    method: "POST",
+    method: "GET",
     headers: buildApiHeaders(),
   })
   const responsePayload = await readResponseBody(response)
