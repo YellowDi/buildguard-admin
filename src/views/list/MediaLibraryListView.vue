@@ -9,6 +9,7 @@ import SettingsToolbarSearchInput from "@/components/settings/SettingsToolbarSea
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
+import videoPreviewAsset from "@/assets/video.png"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ResponsiveRightSheet } from "@/components/ui/sheet"
@@ -968,74 +969,42 @@ function escapeHtml(value: string) {
       <main class="min-h-0 min-w-0 flex-1 overflow-y-auto pt-4">
         <section
           v-if="activeModule === 'videos' && currentView === 'grid'"
-          class="space-y-3"
+          class="space-y-0"
         >
-          <div class="flex items-center justify-between gap-3">
-            <div>
-              <h3 class="text-lg font-semibold tracking-tight text-foreground">
-                视频内容
-              </h3>
-              <p class="text-sm text-muted-foreground">
-                直接维护封面摘要、时长、分类和首页推荐字段。
-              </p>
-            </div>
-            <Badge variant="outline" class="rounded-md border-border/80 bg-background px-2.5 py-1 text-[11px] text-muted-foreground">
-              {{ filteredVideoItems.length }} 个视频
-            </Badge>
-          </div>
-
           <div v-if="filteredVideoItems.length" class="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
-            <article
+            <button
               v-for="item in filteredVideoItems"
               :key="item.id"
-              class="rounded-xl border border-border/70 bg-background p-3"
-              :class="isActiveEntity('video', item.id) ? 'border-foreground/20 bg-accent/20' : ''"
+              type="button"
+              class="group block text-left outline-none focus-visible:ring-2 focus-visible:ring-foreground/20 focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+              @click="openPreview('video', item.id)"
             >
-              <div class="flex items-start justify-between gap-3">
-                <div class="min-w-0">
-                  <div class="flex flex-wrap items-center gap-2">
-                    <Badge :class="cn('border-border bg-background', getCoverTone(item.title).accent)">
-                      {{ item.duration }}
-                    </Badge>
-                    <Badge :class="getStatusBadgeClass(item.status)">
-                      {{ getStatusLabel(item.status) }}
-                    </Badge>
-                    <Badge v-if="item.featured" class="border-amber-200 bg-amber-50 text-amber-700">
-                      首页推荐
-                    </Badge>
-                  </div>
-                  <h4 class="mt-3 text-base font-semibold tracking-tight text-foreground">
+              <div
+                class="video-thumbnail-card relative aspect-[3/4] overflow-hidden rounded-[18px] bg-slate-950 text-white transition-transform duration-200 ease-out group-hover:-translate-y-0.5"
+                :class="isActiveEntity('video', item.id) ? 'ring-2 ring-foreground/18 ring-offset-2 ring-offset-background' : ''"
+              >
+                <img
+                  class="absolute inset-0 h-full w-full object-cover"
+                  :src="videoPreviewAsset"
+                  alt=""
+                  aria-hidden="true"
+                />
+                <div class="absolute inset-0 bg-black/6" aria-hidden="true" />
+                <div class="absolute inset-x-0 bottom-0 h-[50%] bg-gradient-to-t from-black/82 via-black/38 to-transparent" aria-hidden="true" />
+
+                <div class="absolute right-2.5 top-2.5">
+                  <span class="flex size-6.5 items-center justify-center rounded-full bg-white/92 text-slate-900 shadow-[0_4px_8px_rgba(15,23,42,0.16)]">
+                    <i class="ri-play-fill translate-x-[1px] text-[14px] leading-none" />
+                  </span>
+                </div>
+
+                <div class="absolute inset-x-0 bottom-0 p-4">
+                  <h4 class="video-thumbnail-title text-[16px] leading-[1.25] font-semibold tracking-[-0.02em] text-white [text-shadow:0_2px_8px_rgba(0,0,0,0.35)]">
                     {{ item.title }}
                   </h4>
-                  <p class="mt-1 text-xs text-muted-foreground">
-                    {{ item.cover }}
-                  </p>
-                </div>
-                <span class="shrink-0 text-[11px] text-muted-foreground">
-                  排序 {{ item.sortOrder }}
-                </span>
-              </div>
-
-              <p class="media-card-summary mt-3 text-sm leading-6 text-muted-foreground">
-                {{ item.summary }}
-              </p>
-
-              <div class="mt-3 text-xs leading-5 text-muted-foreground">
-                {{ buildVideoPlacement(item) }}
-              </div>
-
-              <div class="mt-4 flex items-center justify-between gap-2 border-t border-border/70 pt-3">
-                <span class="text-xs text-muted-foreground">更新于 {{ item.updatedAt }}</span>
-                <div class="flex items-center gap-2">
-                  <Button variant="ghost" size="sm" class="rounded-md" @click="openPreview('video', item.id)">
-                    预览
-                  </Button>
-                  <Button size="sm" class="rounded-md" @click="openEdit('video', item.id)">
-                    编辑
-                  </Button>
                 </div>
               </div>
-            </article>
+            </button>
           </div>
 
           <div v-else class="rounded-xl border border-dashed border-border bg-background px-6 py-10 text-center text-sm text-muted-foreground">
@@ -1555,6 +1524,22 @@ function escapeHtml(value: string) {
   overflow: hidden;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 3;
+}
+
+.video-thumbnail-card::after {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.18);
+  content: "";
+  pointer-events: none;
+}
+
+.video-thumbnail-title {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .media-markdown {
