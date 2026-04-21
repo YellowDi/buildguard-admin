@@ -110,8 +110,8 @@ const articleItems = ref(initialState.articleItems)
 const activeModule = ref<MediaModuleKey>("videos")
 const activeVideoView = ref<VideoMediaViewKey>("grid")
 const activeArticleView = ref<ArticleMediaViewKey>("grid")
-const selectedVideoCategoryId = ref("all")
-const selectedArticleCategoryId = ref("all")
+const selectedVideoCategoryId = ref(initialState.videoCategories[0]?.id ?? "")
+const selectedArticleCategoryId = ref(initialState.articleCategories[0]?.id ?? "")
 const searchQuery = ref("")
 const searchExpanded = ref(false)
 const expandedCategoryIds = reactive<Record<MediaModuleKey, string[]>>({
@@ -499,17 +499,38 @@ function selectCategory(module: MediaModuleKey, id: string) {
   selectedArticleCategoryId.value = id
 }
 
+function addCategory(module: MediaModuleKey) {
+  const prefix = module === "videos" ? "video" : "article"
+  const nextIndex = flattenCategoryTree(module === "videos" ? videoCategories.value : articleCategories.value).length + 1
+  const newCategory: MediaCategoryNode = {
+    id: `${prefix}-category-${Date.now()}`,
+    name: `新分类 ${nextIndex}`,
+    slug: `${prefix}-category-${nextIndex}`,
+    count: 0,
+    module,
+  }
+
+  if (module === "videos") {
+    videoCategories.value = [...videoCategories.value, newCategory]
+    selectedVideoCategoryId.value = newCategory.id
+    expandedCategoryIds.videos = [...expandedCategoryIds.videos, newCategory.id]
+    toast.success("已添加视频分类")
+    return
+  }
+
+  articleCategories.value = [...articleCategories.value, newCategory]
+  selectedArticleCategoryId.value = newCategory.id
+  expandedCategoryIds.articles = [...expandedCategoryIds.articles, newCategory.id]
+  toast.success("已添加文章分类")
+}
+
 function openCreate(kind: SheetEntityKind, defaults: Partial<MediaEditorForm> = {}) {
   sheetMode.value = "create"
   sheetEntityKind.value = kind
   activeEntityId.value = ""
 
-  const fallbackVideoCategory = selectedVideoCategoryId.value !== "all"
-    ? selectedVideoCategoryId.value
-    : videoLeafCategories.value[0]?.id ?? ""
-  const fallbackArticleCategory = selectedArticleCategoryId.value !== "all"
-    ? selectedArticleCategoryId.value
-    : articleLeafCategories.value[0]?.id ?? ""
+  const fallbackVideoCategory = resolveLeafCategoryId(selectedVideoCategoryId.value, videoCategories.value)
+  const fallbackArticleCategory = resolveLeafCategoryId(selectedArticleCategoryId.value, articleCategories.value)
   const fallbackCollectionId = defaults.collectionId
     ?? filteredVideoCollections.value[0]?.id
     ?? formCollectionOptions.value[0]?.id
@@ -960,6 +981,35 @@ function resolveSelectedCategoryIds(selectedId: string, tree: MediaCategoryNode[
   return ids
 }
 
+function resolveLeafCategoryId(selectedId: string, tree: MediaCategoryNode[]): string {
+  if (!tree.length) {
+    return ""
+  }
+
+  if (!selectedId || selectedId === "all") {
+    return findFirstLeafCategoryId(tree)
+  }
+
+  const path = findCategoryPath(tree, selectedId)
+  const target = path[path.length - 1]
+  return target ? findFirstLeafCategoryId([target]) : findFirstLeafCategoryId(tree)
+}
+
+function findFirstLeafCategoryId(nodes: MediaCategoryNode[]): string {
+  for (const node of nodes) {
+    if (!node.children?.length) {
+      return node.id
+    }
+
+    const childLeafId = findFirstLeafCategoryId(node.children)
+    if (childLeafId) {
+      return childLeafId
+    }
+  }
+
+  return ""
+}
+
 function collectNodeIds(node: MediaCategoryNode, bucket: Set<string>) {
   bucket.add(node.id)
   for (const child of node.children ?? []) {
@@ -1213,26 +1263,11 @@ function escapeHtml(value: string) {
 
     <div class="mx-auto flex min-h-0 w-full max-w-4xl flex-1 gap-8 overflow-hidden pb-4">
       <aside class="w-[240px] shrink-0 overflow-y-auto pt-4">
-        <div class="mb-2 flex items-center justify-between gap-2 px-1">
+        <div class="mb-2 px-1">
           <p class="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
             分类
           </p>
-          <span class="text-[11px] text-muted-foreground">
-            {{ currentSelectedCategoryId === 'all' ? '全部' : '已筛选' }}
-          </span>
         </div>
-
-        <button
-          type="button"
-          class="mb-1 flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-left text-sm transition-colors"
-          :class="currentSelectedCategoryId === 'all' ? 'bg-accent text-foreground' : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'"
-          @click="selectCategory(activeModule, 'all')"
-        >
-          <span>全部内容</span>
-          <span class="text-[11px]">
-            {{ activeModule === "videos" ? videoCollections.length + videoItems.length : articleItems.length }}
-          </span>
-        </button>
 
         <div class="space-y-0.5">
           <div
@@ -1267,6 +1302,16 @@ function escapeHtml(value: string) {
             </span>
           </div>
         </div>
+
+        <Button
+          variant="ghost"
+          size="sm"
+          class="mt-3 h-8 w-full justify-start rounded-md px-2 text-muted-foreground"
+          @click="addCategory(activeModule)"
+        >
+          <i class="ri-add-line text-[15px]" />
+          <span>添加分类</span>
+        </Button>
       </aside>
 
       <main class="min-h-0 min-w-0 flex-1 overflow-y-auto pt-4">
