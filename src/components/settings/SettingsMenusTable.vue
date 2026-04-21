@@ -322,13 +322,6 @@ const apiColumns: TableColumn[] = [
     tone: "muted",
   },
   {
-    key: "description",
-    label: "说明",
-    filterType: "text",
-    tone: "muted",
-    cellRenderer: { kind: "note" },
-  },
-  {
     key: "updatedAt",
     label: "更新时间",
     filterType: "text",
