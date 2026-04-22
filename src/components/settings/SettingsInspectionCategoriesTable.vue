@@ -101,12 +101,6 @@ const editFormValid = computed(() => isInspectionCategoryFormValid(editForm.valu
 
 const columns: TableColumn[] = [
   {
-    key: "id",
-    label: "ID",
-    filterType: "number",
-    tone: "muted",
-  },
-  {
     key: "name",
     label: "分类名称",
     filterType: "text",
@@ -120,6 +114,7 @@ const columns: TableColumn[] = [
     filterType: "text",
     tone: "muted",
     width: "fill",
+    cellClass: "max-w-[24rem] lg:max-w-[32rem]",
   },
   {
     key: "scoreLimitDisplay",
@@ -133,7 +128,8 @@ const columns: TableColumn[] = [
     label: "",
     filterType: "none",
     slot: "cell-actions",
-    cellClass: "text-right",
+    headerClass: "min-w-[6rem]",
+    cellClass: "min-w-[6rem] text-right",
   },
 ]
 
@@ -307,6 +303,7 @@ async function submitCreate() {
     rows.value = [nextRow, ...rows.value]
     emit("countChange", rows.value.length)
     createDialogOpen.value = false
+    createSubmitArmed.value = false
     createForm.value = createInspectionCategoryForm()
     toast.success("检测项分类已创建", {
       description: `${nextRow.name} 已加入当前列表。`,
@@ -350,10 +347,11 @@ async function submitEdit() {
       Score: nextScoreLimit,
     })
 
+    const normalizedScoreLimit = nextScoreLimit ?? null
     currentRow.name = editForm.value.name.trim()
     currentRow.content = editForm.value.content.trim()
-    currentRow.scoreLimit = nextScoreLimit
-    currentRow.scoreLimitSearchText = buildScoreLimitSearchText(nextScoreLimit)
+    currentRow.scoreLimit = normalizedScoreLimit
+    currentRow.scoreLimitSearchText = buildScoreLimitSearchText(normalizedScoreLimit)
     closeEditDialog()
     toast.success("检测项分类已更新", {
       description: `${currentRow.name} 的名称和分数上限已保存。`,
@@ -462,13 +460,13 @@ function toScoreLimit(value: unknown, fallback: InspectionCategoryScoreLimit) {
   return Math.round(parsed)
 }
 
-function parseInspectionCategoryScoreLimitForm(form: InspectionCategoryForm): InspectionCategoryScoreLimit | null {
-  return parseScoreFieldValue(form.scoreLimit)
+function parseInspectionCategoryScoreLimitForm(form: InspectionCategoryForm): number | undefined | null {
+  return parseOptionalScoreFieldValue(form.scoreLimit)
 }
 
-function parseScoreFieldValue(value: string) {
+function parseOptionalScoreFieldValue(value: string) {
   if (!value.trim()) {
-    return null
+    return undefined
   }
 
   const parsed = Number(value)
@@ -481,7 +479,7 @@ function parseScoreFieldValue(value: string) {
 }
 
 function isInspectionCategoryFormValid(form: InspectionCategoryForm) {
-  return Boolean(form.name.trim()) && parseInspectionCategoryScoreLimitForm(form) !== null
+  return Boolean(form.name.trim()) && parseOptionalScoreFieldValue(form.scoreLimit) !== null
 }
 
 function buildScoreLimitSearchText(scoreLimit: InspectionCategoryScoreLimit) {
@@ -569,7 +567,7 @@ defineExpose({
       :empty-state="tableEmptyState"
     >
       <template #cell-content="{ row: rawRow }">
-        <span class="text-sm leading-6 text-muted-foreground">
+        <span class="block truncate text-sm leading-6 text-muted-foreground">
           {{ asInspectionCategoryRow(rawRow).content || "-" }}
         </span>
       </template>
@@ -582,7 +580,7 @@ defineExpose({
         <Button
           variant="outline"
           size="sm"
-          class="ml-auto h-7 gap-1.5 rounded-md px-2.5 text-[13px]"
+          class="ml-auto h-7 shrink-0 gap-1.5 rounded-md px-2.5 text-[13px]"
           @click.stop="openEditDialog(asInspectionCategoryRow(rawRow))"
         >
           <i class="ri-edit-line text-base" />
@@ -595,7 +593,7 @@ defineExpose({
       <DialogContent stack-above-sticky-header class="sm:max-w-[640px]">
         <DialogHeader>
           <DialogTitle>添加检测项分类</DialogTitle>
-          <DialogDescription>添加一个检测项分类，并填写内容和分数上限。</DialogDescription>
+          <DialogDescription>添加一个检测项分类，分类介绍和分数上限都可选填写。</DialogDescription>
         </DialogHeader>
 
         <form class="grid gap-4" @submit.prevent>
@@ -619,7 +617,7 @@ defineExpose({
           </div>
 
           <div class="grid gap-2">
-            <label class="text-sm font-medium text-foreground" for="create-inspection-category-score-limit">分数上限</label>
+            <label class="text-sm font-medium text-foreground" for="create-inspection-category-score-limit">分数上限（可选）</label>
             <Input
               id="create-inspection-category-score-limit"
               v-model="createForm.scoreLimit"
@@ -627,7 +625,7 @@ defineExpose({
               inputmode="numeric"
               min="0"
               step="1"
-              placeholder="例如：20"
+              placeholder="不填写则不设置"
               class="h-9 min-w-0"
             />
           </div>
@@ -654,7 +652,7 @@ defineExpose({
         <DialogHeader>
           <DialogTitle>修改检测项分类</DialogTitle>
           <DialogDescription>
-            {{ editDetailLoading ? "正在同步分类详情..." : "更新当前分类名称、内容和分数上限，调整后会同步应用到分类列表中。" }}
+            {{ editDetailLoading ? "正在同步分类详情..." : "更新当前分类名称、内容和分数上限；分数上限可留空，调整后会同步应用到分类列表中。" }}
           </DialogDescription>
         </DialogHeader>
 
@@ -683,7 +681,7 @@ defineExpose({
           </div>
 
           <div class="grid gap-2">
-            <label class="text-sm font-medium text-foreground" for="edit-inspection-category-score-limit">分数上限</label>
+            <label class="text-sm font-medium text-foreground" for="edit-inspection-category-score-limit">分数上限（可选）</label>
             <Input
               id="edit-inspection-category-score-limit"
               :model-value="editForm.scoreLimit"
@@ -692,7 +690,7 @@ defineExpose({
               inputmode="numeric"
               min="0"
               step="1"
-              placeholder="例如：20"
+              placeholder="不填写则不设置"
               class="h-9 min-w-0"
               @update:model-value="updateEditForm('scoreLimit', String($event))"
             />

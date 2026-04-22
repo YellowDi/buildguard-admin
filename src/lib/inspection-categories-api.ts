@@ -27,7 +27,7 @@ export type InspectionCategoriesListResult = {
 export type CreateInspectionCategoryPayload = {
   Name: string
   Content?: string
-  Score: number
+  Score?: number
   [property: string]: unknown
 }
 
@@ -40,7 +40,7 @@ export type UpdateInspectionCategoryPayload = {
   Uuid: string
   Name: string
   Content?: string
-  Score: number
+  Score?: number
   [property: string]: unknown
 }
 
@@ -52,7 +52,6 @@ export type DeleteInspectionCategoryPayload = {
 const INSPECTION_CATEGORIES_API_URL = buildApiUrl(API_PATHS.inspectionCategoriesList)
 const INSPECTION_CATEGORY_CREATE_API_URL = buildApiUrl(API_PATHS.inspectionCategoryCreate)
 const INSPECTION_CATEGORY_UPDATE_API_URL = buildApiUrl(API_PATHS.inspectionCategoryUpdate)
-const INSPECTION_CATEGORY_DELETE_API_URL = buildApiUrl(API_PATHS.inspectionCategoryDelete)
 const INSPECTION_CATEGORIES_LOAD_ERROR_MESSAGE = "检测项分类列表加载失败，请稍后重试。"
 const INSPECTION_CATEGORY_CREATE_ERROR_MESSAGE = "检测项分类创建失败，请稍后重试。"
 const INSPECTION_CATEGORY_DETAIL_ERROR_MESSAGE = "检测项分类详情加载失败，请稍后重试。"
@@ -90,7 +89,7 @@ export async function createInspectionCategory(payload: CreateInspectionCategory
     body: JSON.stringify({
       Name: getRequiredString(payload.Name, "Name"),
       Content: getOptionalString(payload.Content) ?? "",
-      Score: getRequiredNonNegativeInteger(payload.Score, "Score"),
+      ...resolveOptionalScorePayload(payload.Score),
     }),
   })
   const responseBody = await readResponseBody(response)
@@ -131,7 +130,7 @@ export async function updateInspectionCategory(payload: UpdateInspectionCategory
       Uuid: getRequiredString(payload.Uuid, "Uuid"),
       Name: getRequiredString(payload.Name, "Name"),
       Content: getOptionalString(payload.Content) ?? "",
-      Score: getRequiredNonNegativeInteger(payload.Score, "Score"),
+      ...resolveOptionalScorePayload(payload.Score),
     }),
   })
   const responseBody = await readResponseBody(response)
@@ -144,14 +143,12 @@ export async function updateInspectionCategory(payload: UpdateInspectionCategory
 }
 
 export async function deleteInspectionCategory(payload: DeleteInspectionCategoryPayload) {
-  const response = await fetch(INSPECTION_CATEGORY_DELETE_API_URL, {
-    method: "POST",
-    headers: buildApiHeaders({
-      "Content-Type": "application/json",
-    }),
-    body: JSON.stringify({
-      Uuid: getRequiredString(payload.Uuid, "Uuid"),
-    }),
+  const url = buildApiRequestUrl(API_PATHS.inspectionCategoryDelete)
+  url.searchParams.set("Uuid", getRequiredString(payload.Uuid, "Uuid"))
+
+  const response = await fetch(url.toString(), {
+    method: "GET",
+    headers: buildApiHeaders(),
   })
   const responseBody = await readResponseBody(response)
 
@@ -271,4 +268,20 @@ function getRequiredNonNegativeInteger(value: unknown, fieldName: string) {
   }
 
   throw new TypeError(`${fieldName} must be a non-negative integer`)
+}
+
+function getOptionalNonNegativeInteger(value: unknown, fieldName: string) {
+  if (value === undefined || value === null || value === "") {
+    return undefined
+  }
+
+  return getRequiredNonNegativeInteger(value, fieldName)
+}
+
+function resolveOptionalScorePayload(value: unknown) {
+  const score = getOptionalNonNegativeInteger(value, "Score")
+
+  return score === undefined
+    ? {}
+    : { Score: score }
 }
