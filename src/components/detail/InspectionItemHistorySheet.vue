@@ -55,7 +55,6 @@ const historyEntries = computed<HistoryEntry[]>(() => (
   props.model?.historyEntries.map((entry, index) => ({
     key: entry.key,
     title: entry.isLatest ? "最新检测结果" : `历史记录 ${props.model!.historyEntries.length - index}`,
-    timestamp: entry.timestamp,
     statusLabel: entry.resultLabel,
     statusTone: resolveStatusTone(entry.resultLabel),
     summary: entry.summary,

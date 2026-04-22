@@ -73,7 +73,6 @@ export type HistoryEntryImage = {
 export type HistoryEntry = {
   key: string
   title: string
-  timestamp: string
   statusLabel?: string
   statusTone?: EntityHistoryTone
   summary?: string
@@ -84,7 +83,6 @@ export type HistoryEntry = {
 
 export type InspectionItemHistoryRecord = {
   key: string
-  timestamp: string
   inspectorName?: string
   resultLabel: string
   scoreText?: string

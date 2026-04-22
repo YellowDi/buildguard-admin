@@ -765,7 +765,6 @@ function buildInspectionItemHistoryEntries(
 ) {
   return items.map((item, index) => ({
     key: toText(item.Uuid, `inspection-history-${index + 1}`),
-    timestamp: `第 ${index + 1} 条检测结果`,
     resultLabel: formatInspectionHistoryResultLabel(item.Result),
     summary: resolveInspectionHistorySummary(item, inspectionItemName),
     contentText: resolveInspectionHistoryContentText(item, inspectionItemName),
