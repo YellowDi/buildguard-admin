@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import { Separator } from "@/components/ui/separator"
 import { ResponsiveRightSheet } from "@/components/ui/sheet"
+import { StatusBadge } from "@/components/ui/status-badge"
 import { cn } from "@/lib/utils"
 
 const props = withDefaults(defineProps<{
@@ -79,6 +80,54 @@ function splitEntryFields(entry: HistoryEntry) {
 
 function hasSingleImage(entry: HistoryEntry) {
   return (entry.images?.length ?? 0) === 1
+}
+
+function resolveEntryStatusBadgeTone(entry: HistoryEntry) {
+  if (entry.statusLabel === "正常") {
+    return "green"
+  }
+
+  if (entry.statusLabel === "重点关注" || entry.statusTone === "warning") {
+    return "orange"
+  }
+
+  if (entry.statusLabel === "高风险" || entry.statusTone === "danger") {
+    return "red"
+  }
+
+  if (entry.statusTone === "info") {
+    return "blue"
+  }
+
+  return "gray"
+}
+
+function resolveEntryStatusBadgeIcon(entry: HistoryEntry) {
+  if (entry.statusLabel === "正常") {
+    return "check"
+  }
+
+  if (entry.statusLabel === "重点关注") {
+    return "clock"
+  }
+
+  if (entry.statusLabel === "高风险") {
+    return "alert"
+  }
+
+  if (entry.statusTone === "danger") {
+    return "alert"
+  }
+
+  if (entry.statusTone === "warning") {
+    return "clock"
+  }
+
+  if (entry.statusTone === "info") {
+    return "minus"
+  }
+
+  return "dot"
 }
 </script>
 
@@ -159,28 +208,25 @@ function hasSingleImage(entry: HistoryEntry) {
                   <div class="min-w-0 flex-1 pr-4">
                     <div class="flex min-w-0 items-center justify-between gap-3">
                       <div class="min-w-0 flex items-center gap-2 overflow-hidden">
+                        <StatusBadge
+                          v-if="entry.statusLabel"
+                          :label="entry.statusLabel"
+                          :tone="resolveEntryStatusBadgeTone(entry)"
+                          :icon="resolveEntryStatusBadgeIcon(entry)"
+                          class="shrink-0"
+                        />
                         <h3 class="min-w-0 truncate text-[16px] font-semibold tracking-[-0.15px] text-[rgba(0,0,0,0.95)] dark:text-[rgba(255,255,255,0.92)]">
                           {{ entry.title }}
                         </h3>
-                        <Badge
-                          v-if="entry.statusLabel"
-                          variant="secondary"
-                          :class="cn('shrink-0 rounded-full px-2 py-0.5 text-[12px] font-semibold tracking-[0.125px]', badgeClass(entry.statusTone))"
-                        >
-                          {{ entry.statusLabel }}
-                        </Badge>
-                        <Badge
-                          v-if="entry.isLatest"
-                          variant="secondary"
-                          class="shrink-0 rounded-full border border-black/5 bg-[#f2f9ff] px-2 py-0.5 text-[12px] font-semibold tracking-[0.125px] text-[#097fe8] dark:border-white/10 dark:bg-[#1a2a3a] dark:text-[#5aacf5]"
-                        >
-                          最新结果
-                        </Badge>
                       </div>
 
-                      <div class="shrink-0 whitespace-nowrap text-[12px] font-medium text-[#615d59] dark:text-[#a8a5a0]">
-                        {{ entry.timestamp }}
-                      </div>
+                      <Badge
+                        v-if="entry.isLatest"
+                        variant="secondary"
+                        class="shrink-0 rounded-full border border-black/5 bg-[#f2f9ff] px-2 py-0.5 text-[12px] font-semibold tracking-[0.125px] text-[#097fe8] dark:border-white/10 dark:bg-[#1a2a3a] dark:text-[#5aacf5]"
+                      >
+                        最新结果
+                      </Badge>
                     </div>
 
                     <p
