@@ -5,6 +5,7 @@ import TitleBlock from "@/components/layout/TitleBlock.vue"
 import { Badge } from "@/components/ui/badge"
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import { Progress } from "@/components/ui/progress"
+import { StatusBadge } from "@/components/ui/status-badge"
 
 type InspectionBuildingStatus = "pending" | "processing" | "completed"
 
@@ -12,6 +13,7 @@ type InspectionBuildingCardV2Item = {
   key: string
   name: string
   categoryName: string
+  resultLabel?: string
   scoreText: string
   scoreValue: number | null
   onSelect?: () => void
@@ -129,6 +131,38 @@ function resolveScoreTone(scoreValue: number | null) {
   }
 
   return "text-[#9aa0a7]"
+}
+
+function resolveItemResultBadgeTone(resultLabel: string | undefined) {
+  if (resultLabel === "正常") {
+    return "green"
+  }
+
+  if (resultLabel === "轻微风险") {
+    return "orange"
+  }
+
+  if (resultLabel === "存在隐患") {
+    return "red"
+  }
+
+  return "gray"
+}
+
+function resolveItemResultBadgeIcon(resultLabel: string | undefined) {
+  if (resultLabel === "正常") {
+    return "check"
+  }
+
+  if (resultLabel === "轻微风险") {
+    return "clock"
+  }
+
+  if (resultLabel === "存在隐患") {
+    return "alert"
+  }
+
+  return "minus"
 }
 
 function handleExpandBeforeEnter(element: Element) {
@@ -332,6 +366,13 @@ function handleExpandAfterLeave(element: Element) {
                         @click="item.onSelect?.()"
                       >
                         <div class="flex min-w-0 items-center gap-2.5 overflow-hidden whitespace-nowrap">
+                          <StatusBadge
+                            v-if="item.resultLabel"
+                            :label="item.resultLabel"
+                            :tone="resolveItemResultBadgeTone(item.resultLabel)"
+                            :icon="resolveItemResultBadgeIcon(item.resultLabel)"
+                            class="shrink-0"
+                          />
                           <div class="truncate whitespace-nowrap text-[14px] font-medium text-[#1e1f23]">
                             {{ item.name }}
                           </div>
