@@ -77,12 +77,17 @@ export type UpdateMemberPayload = {
   Phone: string
   Position: string
   Status: number
-  UserType?: number
 }
 
 export type BindMemberRolesPayload = {
   Uuid?: string
   RoleUuids?: string[]
+  [property: string]: unknown
+}
+
+export type UpdateMemberUserTypePayload = {
+  Uuid?: string
+  UserType?: number
   [property: string]: unknown
 }
 
@@ -101,6 +106,7 @@ export type DeleteMemberPayload = {
 const MEMBERS_API_URL = buildApiUrl(API_PATHS.membersList)
 const MEMBER_CREATE_API_URL = buildApiUrl(API_PATHS.memberCreate)
 const MEMBER_DETAIL_API_URL = buildApiUrl(API_PATHS.memberDetail)
+const MEMBER_TYPE_UPDATE_API_URL = buildApiUrl(API_PATHS.memberTypeUpdate)
 const MEMBER_STATUS_UPDATE_API_URL = buildApiUrl(API_PATHS.memberStatusUpdate)
 const MEMBER_UPDATE_API_URL = buildApiUrl(API_PATHS.memberUpdate)
 const MEMBER_ROLE_BIND_API_URL = buildApiUrl(API_PATHS.memberRoleBind)
@@ -109,6 +115,7 @@ const MEMBER_DELETE_API_URL = buildApiUrl(API_PATHS.memberDelete)
 const MEMBERS_LOAD_ERROR_MESSAGE = "成员列表加载失败，请稍后重试。"
 const MEMBER_CREATE_ERROR_MESSAGE = "成员创建失败，请稍后重试。"
 const MEMBER_DETAIL_ERROR_MESSAGE = "成员详情加载失败，请稍后重试。"
+const MEMBER_TYPE_UPDATE_ERROR_MESSAGE = "成员类型更新失败，请稍后重试。"
 const MEMBER_STATUS_UPDATE_ERROR_MESSAGE = "成员状态更新失败，请稍后重试。"
 const MEMBER_UPDATE_ERROR_MESSAGE = "成员信息更新失败，请稍后重试。"
 const MEMBER_ROLE_BIND_ERROR_MESSAGE = "成员角色绑定失败，请稍后重试。"
@@ -205,7 +212,6 @@ export async function updateMember(payload: UpdateMemberPayload) {
     Phone: getOptionalString(payload.Phone) ?? "",
     Position: getOptionalString(payload.Position) ?? "",
     Status: getRequiredNumber(payload.Status, "Status"),
-    UserType: getOptionalUserType(payload.UserType, "UserType"),
   }
 
   const response = await fetch(MEMBER_UPDATE_API_URL, {
@@ -239,6 +245,26 @@ export async function bindMemberRoles(payload: BindMemberRolesPayload) {
 
   if (!response.ok) {
     throw createHttpError(response, responseBody, MEMBER_ROLE_BIND_ERROR_MESSAGE)
+  }
+}
+
+export async function updateMemberUserType(payload: UpdateMemberUserTypePayload) {
+  const normalizedPayload = {
+    Uuid: getRequiredString(payload.Uuid, "Uuid"),
+    UserType: getOptionalUserType(payload.UserType, "UserType"),
+  }
+
+  const response = await fetch(MEMBER_TYPE_UPDATE_API_URL, {
+    method: "POST",
+    headers: buildApiHeaders({
+      "Content-Type": "application/json",
+    }),
+    body: JSON.stringify(normalizedPayload),
+  })
+  const responseBody = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responseBody, MEMBER_TYPE_UPDATE_ERROR_MESSAGE)
   }
 }
 

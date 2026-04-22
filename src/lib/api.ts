@@ -38,6 +38,7 @@ export const API_PATHS = {
   membersList: "/bqi/user/list",
   memberCreate: "/bqi/user/new",
   memberDetail: "/bqi/user/detail",
+  memberTypeUpdate: "/bqi/user/type/update",
   memberStatusUpdate: "/bqi/user/status/update",
   memberUpdate: "/bqi/user/update",
   memberRoleBind: "/bqi/user/role/bind",

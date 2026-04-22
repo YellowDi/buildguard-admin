@@ -56,12 +56,14 @@ import { Textarea } from "@/components/ui/textarea"
 import { handleApiError } from "@/lib/api-errors"
 import { fetchMenus, type MenuRecord } from "@/lib/menus-api"
 import {
+  bindMemberRoles,
   createMember as requestMemberCreate,
   deleteMember as requestMemberDelete,
   fetchMembers,
   getMemberDetail,
   updateMember as requestMemberUpdate,
   updateMemberStatus as requestMemberStatusUpdate,
+  updateMemberUserType,
 } from "@/lib/members-api"
 import {
   createRole as requestRoleCreate,
@@ -82,10 +84,6 @@ const props = defineProps<{
 
 type MemberViewKey = "members" | "roles"
 
-type PermissionOption = {
-  label: string
-}
-
 type MemberRow = {
   id: number
   uuid: string
@@ -94,9 +92,11 @@ type MemberRow = {
   departmentUuid: string
   departmentName: string
   position: string
-  permissionGroup: string
-  permissionOptions: PermissionOption[]
+  roleNames: string[]
+  roleUuids: string[]
+  rolesLoaded: boolean
   userType?: number
+  userTypeLabel: string
   status: string
   source: "remote" | "local"
 }
@@ -115,7 +115,8 @@ type ManualMemberForm = {
   phone: string
   departmentName: string
   position: string
-  permissionGroup: string
+  userType: string
+  roleUuid: string
 }
 
 type RoleForm = {
@@ -130,8 +131,14 @@ type EditMemberForm = {
   phone: string
   departmentName: string
   position: string
-  permissionGroup: string
+  userType: string
+  roleUuid: string
   status: string
+}
+
+type RoleOption = {
+  label: string
+  value: string
 }
 
 type MemberActionKey =
@@ -163,9 +170,7 @@ type PermissionButtonRow = {
   menuName: string
 }
 
-type PermissionPanelButtonRow = PermissionButtonRow & {
-  isDemo?: boolean
-}
+type PermissionPanelButtonRow = PermissionButtonRow
 
 type PermissionMenuGroup = {
   key: string
@@ -194,21 +199,16 @@ type SelectedPermissionMenuGroup = {
 const MEMBERS_LOAD_ERROR_MESSAGE = "成员列表加载失败，请稍后重试。"
 const MEMBER_STATUS_UPDATE_ERROR_MESSAGE = "成员状态更新失败，请稍后重试。"
 const MEMBER_UPDATE_ERROR_MESSAGE = "成员信息更新失败，请稍后重试。"
-const memberStatusMap = {
-  正常: { tone: "green", icon: "check" },
-  离职: { tone: "gray", icon: "minus" },
-  未知状态: { tone: "gray", icon: "alert" },
-} as const
 const MEMBER_USER_TYPE_OPTIONS = [
   { label: "后台", value: 1 },
   { label: "检修", value: 2 },
   { label: "维修", value: 3 },
 ] as const
-const ROLE_PERMISSION_DEMO_BUTTONS = [
-  { name: "测试查看按钮", code: "demo-view" },
-  { name: "测试编辑按钮", code: "demo-edit" },
-  { name: "测试导出按钮", code: "demo-export" },
+const MEMBER_STATUS_OPTIONS = [
+  { label: "正常", value: 1 },
+  { label: "离职", value: 2 },
 ] as const
+const MEMBER_ROLE_UNASSIGNED = "__member_role_unassigned__"
 
 const rows = ref<MemberRow[]>([])
 const roleRows = ref<RoleRow[]>([])
@@ -217,6 +217,7 @@ const rolesLoading = ref(false)
 const errorMessage = ref("")
 const rolesErrorMessage = ref("")
 const permissionUpdatingMemberIds = ref<number[]>([])
+const userTypeUpdatingMemberIds = ref<number[]>([])
 const statusUpdatingMemberIds = ref<number[]>([])
 const activeView = ref<MemberViewKey>("members")
 const manualDialogOpen = ref(false)
@@ -234,7 +235,6 @@ const editDetailLoading = ref(false)
 const editSubmitting = ref(false)
 const deleteSubmitting = ref(false)
 const deleteConfirmOpen = ref(false)
-const editPermissionGroupOptions = ref<PermissionOption[]>([])
 const searchExpanded = ref(false)
 const searchQuery = ref("")
 const permissionMenuRows = ref<PermissionMenuRow[]>([])
@@ -243,13 +243,15 @@ const rolePermissionResourcesLoading = ref(false)
 const rolePermissionResourcesLoaded = ref(false)
 const rolePermissionResourcesErrorMessage = ref("")
 const collapsedPermissionGroupKeys = ref<string[]>([])
-const globalPermissionOptions = computed(() => buildPermissionOptions(MEMBER_USER_TYPE_OPTIONS.map(option => ({
-  label: option.label,
-}))))
-const availablePermissionGroups = computed(() => globalPermissionOptions.value.map(option => option.label))
 const manualMemberForm = ref(createManualMemberForm())
 const roleForm = ref(createRoleForm())
 const editMemberForm = ref(createEditMemberForm())
+const availableRoleOptions = computed<RoleOption[]>(() => roleRows.value
+  .filter(role => role.uuid)
+  .map(role => ({
+    label: role.name,
+    value: role.uuid,
+  })))
 
 const memberColumns: TableColumn[] = [
   {
@@ -279,20 +281,23 @@ const memberColumns: TableColumn[] = [
     tone: "muted",
   },
   {
-    key: "permissionGroup",
-    label: "角色",
+    key: "roleSummary",
+    label: "权限组",
     filterType: "tag",
-    slot: "cell-permission",
+    slot: "cell-role",
+  },
+  {
+    key: "userTypeLabel",
+    label: "用户类型",
+    filterType: "tag",
+    slot: "cell-user-type",
   },
   {
     key: "status",
     label: "状态",
     filterType: "tag",
     width: "fill",
-    cellRenderer: {
-      kind: "status",
-      map: memberStatusMap,
-    },
+    slot: "cell-status",
   },
   {
     key: "actions",
@@ -368,7 +373,8 @@ const filteredMemberRows = computed(() => {
       row.phone,
       row.departmentName,
       row.position,
-      row.permissionGroup,
+      getRoleSummary(row),
+      row.userTypeLabel,
       row.status,
     ]
       .join(" ")
@@ -549,18 +555,7 @@ const menuPermissionGroups = computed(() => {
     .sort((left, right) => left.title.localeCompare(right.title, "zh-Hans-CN"))
 })
 
-const allPermissionButtonRows = computed<PermissionPanelButtonRow[]>(() => [
-  ...permissionButtonRows.value,
-  ...permissionMenuRows.value.flatMap(menu => ROLE_PERMISSION_DEMO_BUTTONS.map(button => ({
-    id: `permission-button-demo-${menu.uuid}-${button.code}`,
-    uuid: `permission-button-demo-${menu.uuid}-${button.code}`,
-    name: button.name,
-    code: button.code,
-    menuUuid: menu.uuid,
-    menuName: menu.name,
-    isDemo: true,
-  }))),
-])
+const allPermissionButtonRows = computed<PermissionPanelButtonRow[]>(() => permissionButtonRows.value)
 
 const selectableButtonRows = computed(() => allPermissionButtonRows.value.filter((row) => (
   !row.menuUuid || selectedMenuSet.value.has(row.menuUuid)
@@ -779,8 +774,7 @@ async function ensureRolePermissionResources(options?: { force?: boolean }) {
 function normalizeMemberRow(raw: unknown, index: number): MemberRow {
   const record = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>
   const userType = normalizeUserType(record.UserType)
-  const permissionOptions = buildPermissionOptions(getUserTypeOption(userType))
-  const initialPermissionGroup = permissionOptions[0]?.label ?? "后台"
+  const normalizedRoles = normalizeMemberRoles(record.Roles)
 
   return {
     id: toNumber(record.Id, index + 1),
@@ -790,16 +784,18 @@ function normalizeMemberRow(raw: unknown, index: number): MemberRow {
     departmentUuid: toText(record.DepartmentUuid),
     departmentName: toText(record.DepartmentName, "未分组"),
     position: toText(record.Position, "未设置职位"),
-    permissionGroup: initialPermissionGroup,
-    permissionOptions,
+    roleNames: normalizedRoles.names,
+    roleUuids: normalizedRoles.uuids,
+    rolesLoaded: Array.isArray(record.Roles),
     userType,
+    userTypeLabel: formatUserTypeLabel(userType),
     status: normalizeStatus(record.Status),
     source: "remote",
   }
 }
 
 async function hydrateMemberRolesFromDetail(memberRows: MemberRow[]) {
-  const missingRoleRows = memberRows.filter(row => row.uuid && row.permissionOptions.length === 0)
+  const missingRoleRows = memberRows.filter(row => row.uuid && !row.rolesLoaded)
 
   if (missingRoleRows.length === 0) {
     return
@@ -822,15 +818,13 @@ async function hydrateMemberRolesFromDetail(memberRows: MemberRow[]) {
     }
 
     const userType = normalizeUserType(result.value.detail.UserType)
-    const permissionOptions = buildPermissionOptions(getUserTypeOption(userType))
+    const normalizedRoles = normalizeMemberRoles(result.value.detail.Roles)
 
-    if (permissionOptions.length === 0) {
-      return
-    }
-
-    result.value.row.permissionOptions = permissionOptions
-    result.value.row.permissionGroup = permissionOptions[0]?.label ?? "后台"
+    result.value.row.roleUuids = normalizedRoles.uuids
+    result.value.row.roleNames = normalizedRoles.names
+    result.value.row.rolesLoaded = true
     result.value.row.userType = userType
+    result.value.row.userTypeLabel = formatUserTypeLabel(userType)
   })
 }
 
@@ -873,29 +867,6 @@ function normalizePermissionButton(raw: SystemResourceRecord, index: number): Pe
     menuUuid: toText(raw.MenuUuid),
     menuName: toText(raw.MenuName, "未绑定页面"),
   }
-}
-
-function buildPermissionOptions(options: PermissionOption[]) {
-  const deduped = new Map<string, PermissionOption>()
-
-  options.forEach((option) => {
-    const label = option.label.trim()
-
-    if (!label) {
-      return
-    }
-
-    const current = deduped.get(label)
-
-    if (!current) {
-      deduped.set(label, {
-        label,
-      })
-      return
-    }
-  })
-
-  return Array.from(deduped.values())
 }
 
 function normalizeStatus(value: unknown) {
@@ -974,23 +945,69 @@ function normalizeUserType(value: unknown) {
   return 1
 }
 
-function getUserTypeOption(value: number | undefined): PermissionOption[] {
-  const matched = MEMBER_USER_TYPE_OPTIONS.find(option => option.value === value)
-  return matched ? [{ label: matched.label }] : []
+function formatUserTypeLabel(value: number | undefined) {
+  return MEMBER_USER_TYPE_OPTIONS.find(option => option.value === value)?.label ?? "未知类型"
 }
 
-function getUserTypeValueByLabel(label: string) {
-  return MEMBER_USER_TYPE_OPTIONS.find(option => option.label === label)?.value
+function getUserTypeValue(value: unknown) {
+  const parsed = Number(value)
+
+  if (parsed === 1 || parsed === 2 || parsed === 3) {
+    return parsed
+  }
+
+  return undefined
 }
 
-function getAssignablePermissionOptions(member: MemberRow) {
-  return buildPermissionOptions([
-    ...globalPermissionOptions.value,
-    ...member.permissionOptions,
-    ...(member.permissionGroup
-      ? [{ label: member.permissionGroup }]
-      : []),
-  ])
+function normalizeMemberRoles(value: unknown) {
+  if (!Array.isArray(value)) {
+    return {
+      uuids: [] as string[],
+      names: [] as string[],
+    }
+  }
+
+  const uuids: string[] = []
+  const names: string[] = []
+
+  value.forEach((item) => {
+    const record = (item && typeof item === "object" ? item : {}) as Record<string, unknown>
+    const uuid = toText(record.RoleUuid, record.Uuid, record.uuid)
+    const name = toText(record.RoleName, record.Name, record.name)
+
+    if (uuid) {
+      uuids.push(uuid)
+    }
+
+    if (name) {
+      names.push(name)
+    }
+  })
+
+  return {
+    uuids: Array.from(new Set(uuids)),
+    names: Array.from(new Set(names)),
+  }
+}
+
+function getRoleSummary(member: MemberRow) {
+  if (member.roleNames.length > 0) {
+    return member.roleNames.join("、")
+  }
+
+  return "未分配"
+}
+
+function getPrimaryRoleUuid(member: MemberRow) {
+  return member.roleUuids[0] ?? MEMBER_ROLE_UNASSIGNED
+}
+
+function getRoleNameByUuid(roleUuid: string) {
+  return roleRows.value.find(role => role.uuid === roleUuid)?.name ?? ""
+}
+
+function normalizeRoleSelectionValue(value: string) {
+  return value === MEMBER_ROLE_UNASSIGNED ? "" : value
 }
 
 function getMenuButtonKeys(menuUuid: string) {
@@ -1168,7 +1185,7 @@ function toggleSearch() {
   searchExpanded.value = true
 }
 
-function buildMemberUpdatePayload(member: MemberRow, nextPermissionGroup = member.permissionGroup) {
+function buildMemberUpdatePayload(member: MemberRow) {
   return {
     Uuid: member.uuid || undefined,
     DepartmentUuid: member.departmentUuid || undefined,
@@ -1176,7 +1193,6 @@ function buildMemberUpdatePayload(member: MemberRow, nextPermissionGroup = membe
     Phone: member.phone === "-" ? "" : member.phone,
     Position: member.position === "未设置职位" ? "" : member.position,
     Status: toStatusValue(member.status),
-    UserType: getUserTypeValueByLabel(nextPermissionGroup) ?? 1,
   }
 }
 
@@ -1184,23 +1200,17 @@ function isMemberPermissionUpdating(memberId: number) {
   return permissionUpdatingMemberIds.value.includes(memberId)
 }
 
-async function updatePermissionGroup(memberId: number, nextGroup: string) {
+async function updateMemberRole(memberId: number, nextRoleUuidValue: string) {
   const member = rows.value.find(row => row.id === memberId)
+  const nextRoleUuid = normalizeRoleSelectionValue(nextRoleUuidValue)
 
-  if (!member || member.permissionGroup === nextGroup || isMemberPermissionUpdating(memberId)) {
+  if (!member || isMemberPermissionUpdating(memberId) || getPrimaryRoleUuid(member) === (nextRoleUuid || MEMBER_ROLE_UNASSIGNED)) {
     return
   }
 
   if (!member.uuid) {
-    toast.error("成员信息更新失败", {
+    toast.error("成员权限组更新失败", {
       description: `${member.name} 缺少用户 UUID，无法提交更新。`,
-    })
-    return
-  }
-
-  if (!getUserTypeValueByLabel(nextGroup)) {
-    toast.error("成员信息更新失败", {
-      description: `${nextGroup} 不是有效角色，无法提交更新。`,
     })
     return
   }
@@ -1208,24 +1218,68 @@ async function updatePermissionGroup(memberId: number, nextGroup: string) {
   permissionUpdatingMemberIds.value = [...permissionUpdatingMemberIds.value, memberId]
 
   try {
-    await requestMemberUpdate(buildMemberUpdatePayload(member, nextGroup))
+    await bindMemberRoles({
+      Uuid: member.uuid,
+      RoleUuids: nextRoleUuid ? [nextRoleUuid] : [],
+    })
 
-    member.permissionGroup = nextGroup
-    member.userType = getUserTypeValueByLabel(nextGroup) ?? 1
-    member.permissionOptions = buildPermissionOptions([
-      ...member.permissionOptions,
-      { label: nextGroup },
-    ])
-    toast.success("角色已更新", {
-      description: `${member.name} 已切换到 ${nextGroup}。`,
+    member.roleUuids = nextRoleUuid ? [nextRoleUuid] : []
+    member.roleNames = nextRoleUuid ? [getRoleNameByUuid(nextRoleUuid) || "未命名权限组"] : []
+    member.rolesLoaded = true
+    toast.success("权限组已更新", {
+      description: nextRoleUuid
+        ? `${member.name} 已切换到 ${member.roleNames[0]}。`
+        : `${member.name} 已取消权限组绑定。`,
     })
   } catch (error) {
     handleApiError(error, {
-      title: "成员信息更新失败",
-      fallback: MEMBER_UPDATE_ERROR_MESSAGE,
+      title: "成员权限组更新失败",
+      fallback: "成员权限组更新失败，请稍后重试。",
     })
   } finally {
     permissionUpdatingMemberIds.value = permissionUpdatingMemberIds.value.filter(id => id !== memberId)
+  }
+}
+
+function isMemberUserTypeUpdating(memberId: number) {
+  return userTypeUpdatingMemberIds.value.includes(memberId)
+}
+
+async function updateMemberUserTypeInline(memberId: number, nextUserTypeValue: string) {
+  const member = rows.value.find(row => row.id === memberId)
+  const nextUserType = getUserTypeValue(nextUserTypeValue)
+
+  if (!member || !nextUserType || isMemberUserTypeUpdating(memberId) || member.userType === nextUserType) {
+    return
+  }
+
+  if (!member.uuid) {
+    toast.error("成员类型更新失败", {
+      description: `${member.name} 缺少用户 UUID，无法提交更新。`,
+    })
+    return
+  }
+
+  userTypeUpdatingMemberIds.value = [...userTypeUpdatingMemberIds.value, memberId]
+
+  try {
+    await updateMemberUserType({
+      Uuid: member.uuid,
+      UserType: nextUserType,
+    })
+
+    member.userType = nextUserType
+    member.userTypeLabel = formatUserTypeLabel(nextUserType)
+    toast.success("用户类型已更新", {
+      description: `${member.name} 已切换到 ${member.userTypeLabel}。`,
+    })
+  } catch (error) {
+    handleApiError(error, {
+      title: "成员类型更新失败",
+      fallback: "成员类型更新失败，请稍后重试。",
+    })
+  } finally {
+    userTypeUpdatingMemberIds.value = userTypeUpdatingMemberIds.value.filter(id => id !== memberId)
   }
 }
 
@@ -1234,20 +1288,13 @@ function isMemberStatusUpdating(memberId: number) {
 }
 
 async function updateMemberStatus(member: MemberRow, nextStatus: number) {
-  if (isMemberStatusUpdating(member.id)) {
+  if (isMemberStatusUpdating(member.id) || toStatusValue(member.status) === nextStatus) {
     return
   }
 
   if (!member.uuid) {
     toast.error("成员状态更新失败", {
       description: `${member.name} 缺少用户 UUID，无法提交更新。`,
-    })
-    return
-  }
-
-  if (member.status === "离职") {
-    toast("成员状态未变更", {
-      description: `${member.name} 当前已是停用状态。`,
     })
     return
   }
@@ -1262,7 +1309,7 @@ async function updateMemberStatus(member: MemberRow, nextStatus: number) {
 
     member.status = normalizeStatus(nextStatus)
     toast.success("成员状态已更新", {
-      description: `${member.name} 已停用。`,
+      description: `${member.name} 已切换为${member.status}。`,
     })
   } catch (error) {
     handleApiError(error, {
@@ -1332,7 +1379,8 @@ function createManualMemberForm(): ManualMemberForm {
     phone: "",
     departmentName: "",
     position: "",
-    permissionGroup: "后台",
+    userType: "1",
+    roleUuid: MEMBER_ROLE_UNASSIGNED,
   }
 }
 
@@ -1351,7 +1399,8 @@ function createEditMemberForm(): EditMemberForm {
     phone: "",
     departmentName: "",
     position: "",
-    permissionGroup: "后台",
+    userType: "1",
+    roleUuid: MEMBER_ROLE_UNASSIGNED,
     status: "",
   }
 }
@@ -1433,12 +1482,11 @@ async function submitManualMember() {
     return
   }
 
-  const permissionGroup = manualMemberForm.value.permissionGroup.trim() || "后台"
-  const userType = getUserTypeValueByLabel(permissionGroup)
+  const userType = getUserTypeValue(manualMemberForm.value.userType)
 
   if (!userType) {
     toast.error("成员创建失败", {
-      description: `${permissionGroup} 不是有效角色，无法提交创建请求。`,
+      description: "请选择有效的用户类型。",
     })
     return
   }
@@ -1446,13 +1494,22 @@ async function submitManualMember() {
   manualSubmitting.value = true
 
   try {
-    await requestMemberCreate({
+    const result = await requestMemberCreate({
       DepartmentUuid: departmentMatch?.departmentUuid || undefined,
       Name: name,
       Phone: manualMemberForm.value.phone.trim() || undefined,
       Position: manualMemberForm.value.position.trim() || undefined,
       UserType: userType,
     })
+
+    const selectedRoleUuid = normalizeRoleSelectionValue(manualMemberForm.value.roleUuid)
+
+    if (selectedRoleUuid && result.Uuid) {
+      await bindMemberRoles({
+        Uuid: result.Uuid,
+        RoleUuids: [selectedRoleUuid],
+      })
+    }
 
     manualDialogOpen.value = false
     manualMemberForm.value = createManualMemberForm()
@@ -1647,11 +1704,11 @@ async function submitEditMember() {
     return
   }
 
-  const nextPermissionGroup = editMemberForm.value.permissionGroup.trim() || "后台"
+  const nextUserType = getUserTypeValue(editMemberForm.value.userType)
 
-  if (!getUserTypeValueByLabel(nextPermissionGroup)) {
+  if (!nextUserType) {
     toast.error("成员信息更新失败", {
-      description: `${nextPermissionGroup} 不是有效角色，无法提交更新。`,
+      description: "请选择有效的用户类型。",
     })
     return
   }
@@ -1659,30 +1716,47 @@ async function submitEditMember() {
   editSubmitting.value = true
 
   try {
+    const nextRoleUuid = normalizeRoleSelectionValue(editMemberForm.value.roleUuid)
+    const currentRoleUuid = normalizeRoleSelectionValue(getPrimaryRoleUuid(member))
     const nextMember: MemberRow = {
       ...member,
       name,
       phone: editMemberForm.value.phone.trim() || "-",
       departmentName: editMemberForm.value.departmentName.trim() || "未分组",
       position: editMemberForm.value.position.trim() || "未设置职位",
-      permissionGroup: nextPermissionGroup,
-      userType: getUserTypeValueByLabel(nextPermissionGroup) ?? 1,
+      roleUuids: nextRoleUuid ? [nextRoleUuid] : [],
+      roleNames: nextRoleUuid ? [getRoleNameByUuid(nextRoleUuid) || "未命名权限组"] : [],
+      rolesLoaded: true,
+      userType: nextUserType,
+      userTypeLabel: formatUserTypeLabel(nextUserType),
       status: editMemberForm.value.status || member.status,
-      permissionOptions: buildPermissionOptions([
-        ...member.permissionOptions,
-        { label: nextPermissionGroup },
-      ]),
     }
 
-    await requestMemberUpdate(buildMemberUpdatePayload(nextMember, nextPermissionGroup))
+    await requestMemberUpdate(buildMemberUpdatePayload(nextMember))
+
+    if (member.userType !== nextUserType) {
+      await updateMemberUserType({
+        Uuid: member.uuid,
+        UserType: nextUserType,
+      })
+    }
+
+    if (currentRoleUuid !== nextRoleUuid) {
+      await bindMemberRoles({
+        Uuid: member.uuid,
+        RoleUuids: nextRoleUuid ? [nextRoleUuid] : [],
+      })
+    }
 
     member.name = nextMember.name
     member.phone = nextMember.phone
     member.departmentName = nextMember.departmentName
     member.position = nextMember.position
-    member.permissionGroup = nextMember.permissionGroup
-    member.permissionOptions = nextMember.permissionOptions
+    member.roleUuids = nextMember.roleUuids
+    member.roleNames = nextMember.roleNames
+    member.rolesLoaded = true
     member.userType = nextMember.userType
+    member.userTypeLabel = nextMember.userTypeLabel
     closeEditDialog()
     toast.success("成员信息已更新", {
       description: `${member.name} 的信息已保存。`,
@@ -1698,13 +1772,13 @@ async function submitEditMember() {
 }
 
 function applyEditMemberSnapshot(member: MemberRow) {
-  editPermissionGroupOptions.value = getAssignablePermissionOptions(member)
   editMemberForm.value = {
     name: member.name,
     phone: member.phone === "-" ? "" : member.phone,
     departmentName: member.departmentName === "未分组" ? "" : member.departmentName,
     position: member.position === "未设置职位" ? "" : member.position,
-    permissionGroup: member.permissionGroup,
+    userType: String(member.userType ?? 1),
+    roleUuid: getPrimaryRoleUuid(member),
     status: member.status,
   }
 }
@@ -1724,8 +1798,7 @@ async function loadEditMemberDetail(member: MemberRow) {
     }
 
     const userType = normalizeUserType(detail.UserType)
-    const permissionOptions = buildPermissionOptions(getUserTypeOption(userType))
-    const permissionGroup = permissionOptions[0]?.label ?? "后台"
+    const normalizedRoles = normalizeMemberRoles(detail.Roles)
 
     member.uuid = toText(detail.Uuid, member.uuid)
     member.name = toText(detail.Name, member.name)
@@ -1733,9 +1806,11 @@ async function loadEditMemberDetail(member: MemberRow) {
     member.departmentUuid = toText(detail.DepartmentUuid, member.departmentUuid)
     member.departmentName = toText(detail.DepartmentName, member.departmentName) || "未分组"
     member.position = toText(detail.Position, member.position) || "未设置职位"
-    member.permissionOptions = permissionOptions
-    member.permissionGroup = permissionGroup
+    member.roleUuids = normalizedRoles.uuids
+    member.roleNames = normalizedRoles.names
+    member.rolesLoaded = true
     member.userType = userType
+    member.userTypeLabel = formatUserTypeLabel(userType)
     member.status = normalizeStatus(detail.Status ?? member.status)
 
     applyEditMemberSnapshot(member)
@@ -1931,7 +2006,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
       :table-class="SETTINGS_TABLE_PAGE_CLASS"
       :empty-state="tableEmptyState"
     >
-      <template #cell-permission="{ row: rawRow }">
+      <template #cell-role="{ row: rawRow }">
         <DropdownMenu v-if="activeView === 'members'">
           <DropdownMenuTrigger as-child>
             <button
@@ -1940,30 +2015,96 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
               class="inline-flex h-7 max-w-36 items-center gap-1 rounded-md px-1.5 text-[12px] font-medium text-foreground transition-colors hover:bg-surface-tertiary hover:text-foreground focus-visible:bg-surface-tertiary focus-visible:text-foreground focus-visible:outline-none"
             >
               <span class="truncate">
-                {{ isMemberPermissionUpdating(asMemberRow(rawRow).id) ? "更新中..." : asMemberRow(rawRow).permissionGroup }}
+                {{ isMemberPermissionUpdating(asMemberRow(rawRow).id) ? "更新中..." : getRoleSummary(asMemberRow(rawRow)) }}
               </span>
               <i class="ri-arrow-down-s-line text-sm text-muted-foreground" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" class="w-[190px] rounded-xl p-1.5">
             <DropdownMenuLabel class="px-2 pb-1 text-xs font-medium text-muted-foreground">
-              切换角色
+              切换权限组
             </DropdownMenuLabel>
             <DropdownMenuRadioGroup
-              :model-value="asMemberRow(rawRow).permissionGroup"
-              @update:model-value="updatePermissionGroup(asMemberRow(rawRow).id, String($event))"
+              :model-value="getPrimaryRoleUuid(asMemberRow(rawRow))"
+              @update:model-value="updateMemberRole(asMemberRow(rawRow).id, String($event))"
             >
-              <DropdownMenuItem
-                v-if="getAssignablePermissionOptions(asMemberRow(rawRow)).length === 0"
-                disabled
-                class="rounded-lg px-2.5 py-2 text-muted-foreground"
-              >
-                暂无可用角色
-              </DropdownMenuItem>
+              <DropdownMenuRadioItem :value="MEMBER_ROLE_UNASSIGNED" class="rounded-lg py-2 pr-2 pl-8">
+                未分配
+              </DropdownMenuRadioItem>
               <DropdownMenuRadioItem
-                v-for="option in getAssignablePermissionOptions(asMemberRow(rawRow))"
-                :key="`${asMemberRow(rawRow).id}-${option.label}`"
-                :value="option.label"
+                v-for="option in availableRoleOptions"
+                :key="`${asMemberRow(rawRow).id}-${option.value}`"
+                :value="option.value"
+                class="rounded-lg py-2 pr-2 pl-8"
+              >
+                {{ option.label }}
+              </DropdownMenuRadioItem>
+            </DropdownMenuRadioGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </template>
+
+      <template #cell-user-type="{ row: rawRow }">
+        <DropdownMenu v-if="activeView === 'members'">
+          <DropdownMenuTrigger as-child>
+            <button
+              type="button"
+              :disabled="isMemberUserTypeUpdating(asMemberRow(rawRow).id)"
+              class="inline-flex h-7 max-w-28 items-center gap-1 rounded-md px-1.5 text-[12px] font-medium text-foreground transition-colors hover:bg-surface-tertiary hover:text-foreground focus-visible:bg-surface-tertiary focus-visible:text-foreground focus-visible:outline-none"
+            >
+              <span class="truncate">
+                {{ isMemberUserTypeUpdating(asMemberRow(rawRow).id) ? "更新中..." : asMemberRow(rawRow).userTypeLabel }}
+              </span>
+              <i class="ri-arrow-down-s-line text-sm text-muted-foreground" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" class="w-[160px] rounded-xl p-1.5">
+            <DropdownMenuLabel class="px-2 pb-1 text-xs font-medium text-muted-foreground">
+              切换用户类型
+            </DropdownMenuLabel>
+            <DropdownMenuRadioGroup
+              :model-value="String(asMemberRow(rawRow).userType ?? 1)"
+              @update:model-value="updateMemberUserTypeInline(asMemberRow(rawRow).id, String($event))"
+            >
+              <DropdownMenuRadioItem
+                v-for="option in MEMBER_USER_TYPE_OPTIONS"
+                :key="`${asMemberRow(rawRow).id}-type-${option.value}`"
+                :value="String(option.value)"
+                class="rounded-lg py-2 pr-2 pl-8"
+              >
+                {{ option.label }}
+              </DropdownMenuRadioItem>
+            </DropdownMenuRadioGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </template>
+
+      <template #cell-status="{ row: rawRow }">
+        <DropdownMenu v-if="activeView === 'members'">
+          <DropdownMenuTrigger as-child>
+            <button
+              type="button"
+              :disabled="isMemberStatusUpdating(asMemberRow(rawRow).id)"
+              class="inline-flex h-7 max-w-24 items-center gap-1 rounded-md px-1.5 text-[12px] font-medium text-foreground transition-colors hover:bg-surface-tertiary hover:text-foreground focus-visible:bg-surface-tertiary focus-visible:text-foreground focus-visible:outline-none"
+            >
+              <span class="truncate">
+                {{ isMemberStatusUpdating(asMemberRow(rawRow).id) ? "更新中..." : asMemberRow(rawRow).status }}
+              </span>
+              <i class="ri-arrow-down-s-line text-sm text-muted-foreground" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" class="w-[150px] rounded-xl p-1.5">
+            <DropdownMenuLabel class="px-2 pb-1 text-xs font-medium text-muted-foreground">
+              切换成员状态
+            </DropdownMenuLabel>
+            <DropdownMenuRadioGroup
+              :model-value="String(toStatusValue(asMemberRow(rawRow).status))"
+              @update:model-value="updateMemberStatus(asMemberRow(rawRow), Number($event))"
+            >
+              <DropdownMenuRadioItem
+                v-for="option in MEMBER_STATUS_OPTIONS"
+                :key="`${asMemberRow(rawRow).id}-status-${option.value}`"
+                :value="String(option.value)"
                 class="rounded-lg py-2 pr-2 pl-8"
               >
                 {{ option.label }}
@@ -2029,25 +2170,45 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
             </div>
           </div>
 
-          <div class="grid gap-2">
-            <label class="text-sm font-medium text-foreground" for="manual-member-permission-group">角色</label>
-            <Select v-model="manualMemberForm.permissionGroup">
-              <SelectTrigger id="manual-member-permission-group" class="w-full">
-                <SelectValue placeholder="选择角色" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem v-if="availablePermissionGroups.length === 0" value="__no_permission_group__" disabled>
-                  暂无可用角色
-                </SelectItem>
-                <SelectItem
-                  v-for="option in availablePermissionGroups"
-                  :key="option"
-                  :value="option"
-                >
-                  {{ option }}
-                </SelectItem>
-              </SelectContent>
-            </Select>
+          <div class="grid gap-4 sm:grid-cols-2">
+            <div class="grid gap-2">
+              <label class="text-sm font-medium text-foreground" for="manual-member-user-type">用户类型</label>
+              <Select v-model="manualMemberForm.userType">
+                <SelectTrigger id="manual-member-user-type" class="w-full">
+                  <SelectValue placeholder="选择用户类型" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem
+                    v-for="option in MEMBER_USER_TYPE_OPTIONS"
+                    :key="option.value"
+                    :value="String(option.value)"
+                  >
+                    {{ option.label }}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div class="grid gap-2">
+              <label class="text-sm font-medium text-foreground" for="manual-member-role-uuid">权限组</label>
+              <Select v-model="manualMemberForm.roleUuid">
+                <SelectTrigger id="manual-member-role-uuid" class="w-full">
+                  <SelectValue placeholder="选择权限组" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem :value="MEMBER_ROLE_UNASSIGNED">
+                    不绑定权限组
+                  </SelectItem>
+                  <SelectItem
+                    v-for="option in availableRoleOptions"
+                    :key="option.value"
+                    :value="option.value"
+                  >
+                    {{ option.label }}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <DialogFooter class="pt-2">
@@ -2322,12 +2483,6 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
                                 </TooltipTrigger>
                                 <TooltipContent>{{ button.code }}</TooltipContent>
                               </Tooltip>
-                              <span
-                                v-if="button.isDemo"
-                                class="shrink-0 rounded-full border border-dashed border-border/80 px-1.5 py-0.5 text-[10px] leading-none text-muted-foreground"
-                              >
-                                测试
-                              </span>
                             </span>
                           </label>
                         </div>
@@ -2404,24 +2559,6 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
 
           <div class="grid gap-4 sm:grid-cols-2">
             <div class="grid gap-2">
-            <label class="text-sm font-medium text-foreground" for="edit-member-permission-group">角色</label>
-              <Select v-model="editMemberForm.permissionGroup" :disabled="editDetailLoading">
-                <SelectTrigger id="edit-member-permission-group" class="w-full">
-                <SelectValue placeholder="选择角色" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem
-                    v-for="option in editPermissionGroupOptions"
-                    :key="option.label"
-                    :value="option.label"
-                  >
-                    {{ option.label }}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div class="grid gap-2">
               <label class="text-sm font-medium text-foreground" for="edit-member-status">成员状态</label>
               <Select v-model="editMemberForm.status" :disabled="editDetailLoading">
                 <SelectTrigger id="edit-member-status" class="w-full">
@@ -2436,6 +2573,47 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
                   </SelectItem>
                   <SelectItem v-if="editMemberForm.status === '未知状态'" value="未知状态">
                     未知状态
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div class="grid gap-4 sm:grid-cols-2">
+            <div class="grid gap-2">
+              <label class="text-sm font-medium text-foreground" for="edit-member-user-type">用户类型</label>
+              <Select v-model="editMemberForm.userType" :disabled="editDetailLoading">
+                <SelectTrigger id="edit-member-user-type" class="w-full">
+                  <SelectValue placeholder="选择用户类型" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem
+                    v-for="option in MEMBER_USER_TYPE_OPTIONS"
+                    :key="option.value"
+                    :value="String(option.value)"
+                  >
+                    {{ option.label }}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div class="grid gap-2">
+              <label class="text-sm font-medium text-foreground" for="edit-member-role-uuid">权限组</label>
+              <Select v-model="editMemberForm.roleUuid" :disabled="editDetailLoading">
+                <SelectTrigger id="edit-member-role-uuid" class="w-full">
+                  <SelectValue placeholder="选择权限组" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem :value="MEMBER_ROLE_UNASSIGNED">
+                    不绑定权限组
+                  </SelectItem>
+                  <SelectItem
+                    v-for="option in availableRoleOptions"
+                    :key="option.value"
+                    :value="option.value"
+                  >
+                    {{ option.label }}
                   </SelectItem>
                 </SelectContent>
               </Select>
