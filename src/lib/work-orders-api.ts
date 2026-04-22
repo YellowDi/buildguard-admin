@@ -26,6 +26,7 @@ export type WorkOrderListItem = {
   BuildName?: string
   Builds?: WorkOrderBuildInfo[]
   Deadline?: string
+  EndTime?: string
   Executor?: string
   Executors?: string[]
   Status?: number
@@ -41,6 +42,9 @@ export type WorkOrderBuildInfo = {
   BuildName?: string
   BuildUuid?: string
   InspectionItems?: WorkOrderBuildInspectionItem[]
+  ItemPassTotal?: number
+  ItemTotal?: number
+  Result?: number
   Score?: number
   [property: string]: unknown
 }
@@ -467,6 +471,7 @@ function normalizeWorkOrderListItem(value: unknown): WorkOrderListItem {
     BuildName: getFirstText(record, ["BuildName", "buildName", "BuildingName", "buildingName"]),
     Builds: normalizeWorkOrderBuildInfos(record.Builds),
     Deadline: getFirstText(record, ["Deadline", "deadline", "ExpireAt", "expireAt", "DueAt", "dueAt"]),
+    EndTime: getFirstText(record, ["EndTime", "endTime"]),
     Executor: getFirstText(record, ["Executor", "executor", "PrincipalName", "principalName", "Assignee", "assignee"]),
     Executors: getFirstTextArray(record, ["Executors", "executors"]),
     Status: getFirstNumber(record, ["Status", "status", "WorkOrderStatus", "workOrderStatus"]),
@@ -742,6 +747,9 @@ function normalizeWorkOrderBuildInfos(value: unknown): WorkOrderBuildInfo[] {
         BuildName: getFirstText(record, ["BuildName", "buildName", "BuildingName", "buildingName"]),
         BuildUuid: getFirstText(record, ["BuildUuid", "buildUuid"]),
         InspectionItems: normalizeWorkOrderBuildInspectionItems(record.InspectionItems),
+        ItemPassTotal: getFirstNumber(record, ["ItemPassTotal", "itemPassTotal"]),
+        ItemTotal: getFirstNumber(record, ["ItemTotal", "itemTotal"]),
+        Result: getFirstNumber(record, ["Result", "result"]),
         Score: getFirstNumber(record, ["Score", "score"]),
       }
     })

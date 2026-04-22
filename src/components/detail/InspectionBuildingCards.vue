@@ -24,6 +24,7 @@ type InspectionBuildingCardV2Building = {
   completedCount: number
   totalCount: number
   progressValue: number
+  progressLabel?: string
   deadlineText: string
   scoreText: string
   items: InspectionBuildingCardV2Item[]
@@ -227,7 +228,7 @@ function handleExpandAfterLeave(element: Element) {
                   <div class="mt-3 flex min-w-0 items-center justify-between gap-3 whitespace-nowrap text-[12px] text-[#a0a4ac]">
                     <div class="min-w-0 truncate tabular-nums">
                       <span class="text-[#2b2d33]">{{ building.completedCount }}</span>
-                      <span> 已完成 / </span>
+                      <span> {{ building.progressLabel || "已完成" }} / </span>
                       <span>{{ building.totalCount }}</span>
                       <span> 总检测项</span>
                     </div>

@@ -48,6 +48,7 @@ export const API_PATHS = {
   roleCreate: "/bqi/sys/role/new",
   roleUpdate: "/bqi/sys/role/update",
   roleDelete: "/bqi/sys/role/del",
+  roleMenuBind: "/bqi/sys/role/menu/bind",
   menusList: "/bqi/sys/menu/list",
   menuDetail: "/bqi/sys/menu/detail",
   menuCreate: "/bqi/sys/menu/new",

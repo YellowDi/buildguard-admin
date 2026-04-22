@@ -56,15 +56,22 @@ export type DeleteRolePayload = {
   Uuid: string
 }
 
+export type BindRoleMenusPayload = {
+  RoleUuid: string
+  MenuUuids?: string[]
+}
+
 const ROLES_API_URL = buildApiUrl(API_PATHS.rolesList)
 const ROLE_CREATE_API_URL = buildApiUrl(API_PATHS.roleCreate)
 const ROLE_UPDATE_API_URL = buildApiUrl(API_PATHS.roleUpdate)
 const ROLE_DELETE_API_URL = buildApiUrl(API_PATHS.roleDelete)
+const ROLE_MENU_BIND_API_URL = buildApiUrl(API_PATHS.roleMenuBind)
 const ROLES_LOAD_ERROR_MESSAGE = "角色列表加载失败，请稍后重试。"
 const ROLE_DETAIL_ERROR_MESSAGE = "角色详情加载失败，请稍后重试。"
 const ROLE_CREATE_ERROR_MESSAGE = "角色创建失败，请稍后重试。"
 const ROLE_UPDATE_ERROR_MESSAGE = "角色更新失败，请稍后重试。"
 const ROLE_DELETE_ERROR_MESSAGE = "角色删除失败，请稍后重试。"
+const ROLE_MENU_BIND_ERROR_MESSAGE = "角色菜单权限保存失败，请稍后重试。"
 
 export async function fetchRoles(): Promise<RolesListResult> {
   const response = await fetch(ROLES_API_URL, {
@@ -176,6 +183,30 @@ export async function deleteRole(payload: DeleteRolePayload) {
   }
 
   assertApiSuccess(responsePayload, ROLE_DELETE_ERROR_MESSAGE)
+
+  return responsePayload
+}
+
+export async function bindRoleMenus(payload: BindRoleMenusPayload) {
+  const normalizedPayload = {
+    RoleUuid: getRequiredString(payload.RoleUuid, "RoleUuid"),
+    MenuUuids: getStringArray(payload.MenuUuids, "MenuUuids"),
+  }
+
+  const response = await fetch(ROLE_MENU_BIND_API_URL, {
+    method: "POST",
+    headers: buildApiHeaders({
+      "Content-Type": "application/json",
+    }),
+    body: JSON.stringify(normalizedPayload),
+  })
+  const responsePayload = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responsePayload, ROLE_MENU_BIND_ERROR_MESSAGE)
+  }
+
+  assertApiSuccess(responsePayload, ROLE_MENU_BIND_ERROR_MESSAGE)
 
   return responsePayload
 }
@@ -342,4 +373,22 @@ function getOptionalString(value: unknown) {
   }
 
   throw new ApiError("请求参数校验失败：字符串参数格式不正确。")
+}
+
+function getStringArray(value: unknown, field: string) {
+  if (value === undefined || value === null) {
+    return []
+  }
+
+  if (!Array.isArray(value)) {
+    throw new ApiError(`请求参数校验失败：${field} 必须是字符串数组。`)
+  }
+
+  return value.map((item, index) => {
+    if (typeof item !== "string" || !item.trim()) {
+      throw new ApiError(`请求参数校验失败：${field}[${index}] 不能为空。`)
+    }
+
+    return item.trim()
+  })
 }

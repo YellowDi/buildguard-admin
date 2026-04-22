@@ -55,6 +55,7 @@ type InspectionBuildingCardV2Building = {
   completedCount: number
   totalCount: number
   progressValue: number
+  progressLabel: string
   deadlineText: string
   scoreText: string
   items: InspectionBuildingCardV2Row[]
@@ -540,16 +541,19 @@ function buildInspectionWorkOrderCards(
 
   return builds.map((build, buildIndex) => {
     const inspectionItems: WorkOrderBuildInspectionItem[] = Array.isArray(build.InspectionItems) ? build.InspectionItems : []
-    const completedCount = inspectionItems.filter(item => isInspectionItemCompleted(item)).length
-    const totalCount = inspectionItems.length
+    const fallbackCompletedCount = inspectionItems.filter(item => isInspectionItemCompleted(item)).length
+    const totalCount = resolveInspectionBuildTotalCount(build, inspectionItems.length)
+    const completedCount = resolveInspectionBuildCompletedCount(build, fallbackCompletedCount, totalCount)
+    const progressLabel = hasInspectionBuildPassCount(build) ? "已通过" : "已完成"
 
     return {
       key: toText(build.BuildUuid, `work-order-build-${buildIndex + 1}`),
       buildName: toText(build.BuildName, `建筑 ${buildIndex + 1}`),
-      status: resolveInspectionBuildStatus(completedCount, totalCount),
+      status: resolveInspectionBuildStatus(build.Result, completedCount, totalCount),
       completedCount,
       totalCount,
       progressValue: totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0,
+      progressLabel,
       deadlineText,
       scoreText: formatInspectionCardBuildingScore(build.Score),
       items: inspectionItems.map((item, itemIndex) => {
@@ -792,9 +796,16 @@ function isInspectionItemCompleted(item: WorkOrderBuildInspectionItem) {
 }
 
 function resolveInspectionBuildStatus(
+  result: unknown,
   completedCount: number,
   totalCount: number,
 ): InspectionBuildingCardV2Status {
+  const normalizedResult = toNumber(result)
+
+  if (normalizedResult !== null && normalizedResult >= 1 && normalizedResult <= 3) {
+    return "completed"
+  }
+
   if (totalCount > 0 && completedCount >= totalCount) {
     return "completed"
   }
@@ -804,6 +815,34 @@ function resolveInspectionBuildStatus(
   }
 
   return "pending"
+}
+
+function hasInspectionBuildPassCount(build: WorkOrderBuildInfo) {
+  return toNumber(build.ItemPassTotal) !== null
+}
+
+function resolveInspectionBuildTotalCount(build: WorkOrderBuildInfo, fallbackCount: number) {
+  const totalCount = toNumber(build.ItemTotal)
+
+  if (totalCount === null) {
+    return fallbackCount
+  }
+
+  return Math.max(0, totalCount)
+}
+
+function resolveInspectionBuildCompletedCount(
+  build: WorkOrderBuildInfo,
+  fallbackCount: number,
+  totalCount: number,
+) {
+  const passCount = toNumber(build.ItemPassTotal)
+
+  if (passCount === null) {
+    return fallbackCount
+  }
+
+  return Math.max(0, Math.min(passCount, totalCount))
 }
 
 function formatBooleanFlag(value: unknown) {

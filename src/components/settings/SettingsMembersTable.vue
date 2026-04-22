@@ -66,6 +66,7 @@ import {
   updateMemberUserType,
 } from "@/lib/members-api"
 import {
+  bindRoleMenus,
   createRole as requestRoleCreate,
   deleteRole as requestRoleDelete,
   fetchRoles,
@@ -123,7 +124,6 @@ type RoleForm = {
   name: string
   remark: string
   selectedMenuUuids: string[]
-  selectedButtonKeys: string[]
 }
 
 type EditMemberForm = {
@@ -492,7 +492,6 @@ const currentErrorMessage = computed(() => (
 ))
 
 const selectedMenuSet = computed(() => new Set(roleForm.value.selectedMenuUuids))
-const selectedButtonSet = computed(() => new Set(roleForm.value.selectedButtonKeys))
 
 const menuRowsByUuid = computed(() => new Map(permissionMenuRows.value.map(row => [row.uuid, row])))
 
@@ -556,10 +555,6 @@ const menuPermissionGroups = computed(() => {
 })
 
 const allPermissionButtonRows = computed<PermissionPanelButtonRow[]>(() => permissionButtonRows.value)
-
-const selectableButtonRows = computed(() => allPermissionButtonRows.value.filter((row) => (
-  !row.menuUuid || selectedMenuSet.value.has(row.menuUuid)
-)))
 
 const selectedPermissionMenus = computed(() => permissionMenuRows.value
   .filter(row => row.uuid && selectedMenuSet.value.has(row.uuid))
@@ -634,25 +629,13 @@ const selectedMenuPermissionGroups = computed<SelectedPermissionMenuGroup[]>(() 
 })
 
 const selectedMenuCount = computed(() => roleForm.value.selectedMenuUuids.length)
-const selectedButtonCount = computed(() => roleForm.value.selectedButtonKeys.filter(key => selectableButtonRows.value.some(row => row.id === key)).length)
+const selectedButtonCount = computed(() => selectedMenuPermissionPanels.value.reduce((total, panel) => total + panel.buttons.length, 0))
 const menuSelectionState = computed<boolean | "indeterminate">(() => {
   if (permissionMenuRows.value.length === 0 || selectedMenuCount.value === 0) {
     return false
   }
 
   if (selectedMenuCount.value >= permissionMenuRows.value.length) {
-    return true
-  }
-
-  return "indeterminate"
-})
-
-const buttonSelectionState = computed<boolean | "indeterminate">(() => {
-  if (selectableButtonRows.value.length === 0 || selectedButtonCount.value === 0) {
-    return false
-  }
-
-  if (selectedButtonCount.value >= selectableButtonRows.value.length) {
     return true
   }
 
@@ -959,6 +942,32 @@ function getUserTypeValue(value: unknown) {
   return undefined
 }
 
+function normalizeRoleMenuUuids(value: unknown) {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => {
+        if (typeof item === "string") {
+          return item.trim()
+        }
+
+        if (item && typeof item === "object") {
+          const record = item as Record<string, unknown>
+          return toText(record.Uuid, record.MenuUuid, record.uuid, record.menuUuid)
+        }
+
+        return ""
+      })
+      .filter(Boolean)
+  }
+
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>
+    return normalizeRoleMenuUuids(record.MenuUuids ?? record.Menus ?? record.menuUuids ?? record.menus)
+  }
+
+  return []
+}
+
 function normalizeMemberRoles(value: unknown) {
   if (!Array.isArray(value)) {
     return {
@@ -1010,16 +1019,6 @@ function normalizeRoleSelectionValue(value: string) {
   return value === MEMBER_ROLE_UNASSIGNED ? "" : value
 }
 
-function getMenuButtonKeys(menuUuid: string) {
-  return allPermissionButtonRows.value
-    .filter(row => row.menuUuid === menuUuid)
-    .map(row => row.id)
-}
-
-function isButtonSelectable(button: PermissionButtonRow) {
-  return !button.menuUuid || selectedMenuSet.value.has(button.menuUuid)
-}
-
 function updateRoleMenuSelection(menuUuid: string, checked: boolean) {
   const nextSelectedMenus = new Set(roleForm.value.selectedMenuUuids)
 
@@ -1030,69 +1029,6 @@ function updateRoleMenuSelection(menuUuid: string, checked: boolean) {
   }
 
   roleForm.value.selectedMenuUuids = Array.from(nextSelectedMenus)
-
-  if (!checked) {
-    const nextSelectedButtons = new Set(roleForm.value.selectedButtonKeys)
-
-    getMenuButtonKeys(menuUuid).forEach((buttonKey) => {
-      nextSelectedButtons.delete(buttonKey)
-    })
-
-    roleForm.value.selectedButtonKeys = Array.from(nextSelectedButtons)
-  }
-}
-
-function updateRoleButtonSelection(buttonKey: string, checked: boolean) {
-  const nextSelectedButtons = new Set(roleForm.value.selectedButtonKeys)
-
-  if (checked) {
-    nextSelectedButtons.add(buttonKey)
-  } else {
-    nextSelectedButtons.delete(buttonKey)
-  }
-
-  roleForm.value.selectedButtonKeys = Array.from(nextSelectedButtons)
-}
-
-function toggleMenuButtons(menuUuid: string, checked: boolean) {
-  const nextSelectedButtons = new Set(roleForm.value.selectedButtonKeys)
-  const menuButtonKeys = getMenuButtonKeys(menuUuid)
-
-  if (checked) {
-    menuButtonKeys.forEach((buttonKey) => {
-      nextSelectedButtons.add(buttonKey)
-    })
-  } else {
-    menuButtonKeys.forEach((buttonKey) => {
-      nextSelectedButtons.delete(buttonKey)
-    })
-  }
-
-  roleForm.value.selectedButtonKeys = Array.from(nextSelectedButtons)
-}
-
-function getSelectedMenuButtonCount(menuUuid: string) {
-  return getMenuButtonKeys(menuUuid).filter(buttonKey => selectedButtonSet.value.has(buttonKey)).length
-}
-
-function getMenuButtonSelectionState(menuUuid: string): boolean | "indeterminate" {
-  const menuButtonKeys = getMenuButtonKeys(menuUuid)
-
-  if (menuButtonKeys.length === 0) {
-    return false
-  }
-
-  const selectedCount = getSelectedMenuButtonCount(menuUuid)
-
-  if (selectedCount === 0) {
-    return false
-  }
-
-  if (selectedCount >= menuButtonKeys.length) {
-    return true
-  }
-
-  return "indeterminate"
 }
 
 function getPermissionGroupSelectionState(group: PermissionMenuGroup): boolean | "indeterminate" {
@@ -1115,7 +1051,6 @@ function getPermissionGroupSelectionState(group: PermissionMenuGroup): boolean |
 
 function togglePermissionGroupRows(group: PermissionMenuGroup, checked: boolean) {
   const nextSelectedMenus = new Set(roleForm.value.selectedMenuUuids)
-  const nextSelectedButtons = new Set(roleForm.value.selectedButtonKeys)
 
   group.visibleRows.forEach((row) => {
     if (checked) {
@@ -1124,32 +1059,15 @@ function togglePermissionGroupRows(group: PermissionMenuGroup, checked: boolean)
     }
 
     nextSelectedMenus.delete(row.uuid)
-    getMenuButtonKeys(row.uuid).forEach((buttonKey) => {
-      nextSelectedButtons.delete(buttonKey)
-    })
   })
 
   roleForm.value.selectedMenuUuids = Array.from(nextSelectedMenus)
-  roleForm.value.selectedButtonKeys = Array.from(nextSelectedButtons)
 }
 
 function toggleAllMenus(checked: boolean) {
   roleForm.value.selectedMenuUuids = checked
     ? permissionMenuRows.value.map(row => row.uuid).filter(Boolean)
     : []
-
-  if (!checked) {
-    roleForm.value.selectedButtonKeys = []
-  }
-}
-
-function toggleAllButtons(checked: boolean) {
-  if (!checked) {
-    roleForm.value.selectedButtonKeys = []
-    return
-  }
-
-  roleForm.value.selectedButtonKeys = selectableButtonRows.value.map(row => row.id)
 }
 
 function isPermissionGroupCollapsed(groupKey: string) {
@@ -1389,7 +1307,6 @@ function createRoleForm(): RoleForm {
     name: "",
     remark: "",
     selectedMenuUuids: [],
-    selectedButtonKeys: [],
   }
 }
 
@@ -1427,6 +1344,7 @@ async function openEditRoleDialog(role: RoleRow) {
   editingRoleUuid.value = role.uuid
   roleDetailLoading.value = false
   roleDeleteConfirmOpen.value = false
+  roleForm.value = createRoleForm()
   applyRoleSnapshot(role)
   roleDialogOpen.value = true
   await ensureRolePermissionResources({
@@ -1540,6 +1458,7 @@ async function submitRole() {
   try {
     const editingRole = roleRows.value.find(role => role.id === editingRoleId.value) ?? null
     const editingRoleUuidValue = editingRoleUuid.value || editingRole?.uuid || ""
+    let savedRoleUuid = editingRoleUuidValue
 
     if (editingRoleId.value !== null) {
       if (!editingRoleUuidValue) {
@@ -1559,10 +1478,17 @@ async function submitRole() {
         editingRoleUuid.value = result.Uuid
       }
 
+      savedRoleUuid = result.Uuid || editingRoleUuidValue
+
+      await bindRoleMenus({
+        RoleUuid: savedRoleUuid,
+        MenuUuids: roleForm.value.selectedMenuUuids,
+      })
+
       closeRoleDialog()
       roleForm.value = createRoleForm()
       toast.success("角色已更新", {
-        description: `${name} 的信息已保存。`,
+        description: `${name} 的信息和菜单权限已保存。`,
       })
     } else {
       const result = await requestRoleCreate({
@@ -1574,10 +1500,24 @@ async function submitRole() {
         editingRoleUuid.value = result.Uuid
       }
 
+      savedRoleUuid = result.Uuid || ""
+
+      if (!savedRoleUuid) {
+        toast.error("角色创建失败", {
+          description: `${name} 缺少角色 Uuid，无法保存菜单权限。`,
+        })
+        return
+      }
+
+      await bindRoleMenus({
+        RoleUuid: savedRoleUuid,
+        MenuUuids: roleForm.value.selectedMenuUuids,
+      })
+
       closeRoleDialog()
       roleForm.value = createRoleForm()
       toast.success("角色已创建", {
-        description: `${name} 已提交到角色接口。`,
+        description: `${name} 已创建并完成菜单权限分配。`,
       })
     }
 
@@ -1644,7 +1584,6 @@ function applyRoleSnapshot(role: RoleRow) {
     name: role.name,
     remark: role.remark === "-" ? "" : role.remark,
     selectedMenuUuids: roleForm.value.selectedMenuUuids,
-    selectedButtonKeys: roleForm.value.selectedButtonKeys,
   }
 }
 
@@ -1669,6 +1608,7 @@ async function loadEditRoleDetail(role: RoleRow) {
     role.updatedAt = toText(detail.UpdatedAt, role.updatedAt) || "-"
     editingRoleUuid.value = role.uuid
 
+    roleForm.value.selectedMenuUuids = normalizeRoleMenuUuids(detail)
     applyRoleSnapshot(role)
   } catch (error) {
     handleApiError(error, {
@@ -2239,7 +2179,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
                 <div class="space-y-1">
                   <h3 class="text-sm font-semibold text-foreground">基础信息</h3>
                   <p class="text-xs leading-5 text-muted-foreground">
-                    当前保存仍只提交名称和备注，页面与按钮权限先用于前端展示。
+                    保存时会提交权限组基础信息，并将已选菜单同步分配给当前权限组。
                   </p>
                 </div>
 
@@ -2268,7 +2208,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
                 <div class="space-y-1">
                   <h3 class="text-sm font-semibold text-foreground">权限概览</h3>
                   <p class="text-xs leading-5 text-muted-foreground">
-                    用于模拟后续权限接口接入后的配置效果。
+                    按钮权限由菜单自动派生，右侧仅展示已选菜单下可见的按钮。
                   </p>
                 </div>
 
@@ -2279,13 +2219,13 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
                   </div>
 
                   <div class="flex items-center justify-between gap-3 border-b border-border/60 py-2">
-                    <span class="text-muted-foreground">已选按钮</span>
-                    <span class="font-medium text-foreground">{{ selectedButtonCount }} / {{ selectableButtonRows.length }}</span>
+                    <span class="text-muted-foreground">派生按钮</span>
+                    <span class="font-medium text-foreground">{{ selectedButtonCount }} / {{ permissionButtonRows.length }}</span>
                   </div>
 
                   <div class="pt-1">
                     <p class="text-xs leading-5 text-muted-foreground">
-                      取消页面访问后，该页面下的操作按钮会同步取消选中，避免出现“按钮可见但页面不可达”的展示状态。
+                      只需要配置菜单权限。按钮会随菜单自动生效，不再单独勾选。
                     </p>
                   </div>
                 </div>
@@ -2306,7 +2246,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
               <div class="space-y-2 pb-3">
                 <div class="flex min-w-0 items-center gap-2 whitespace-nowrap">
                   <h3 class="text-sm font-semibold text-foreground">待选页面</h3>
-                  <span class="text-xs text-muted-foreground">勾选后进入右侧并配置按钮</span>
+                  <span class="text-xs text-muted-foreground">勾选后右侧会展示该菜单下自动派生的按钮</span>
                   <span v-if="rolePermissionResourcesLoading" class="text-xs text-muted-foreground">加载中...</span>
                 </div>
 
@@ -2397,18 +2337,9 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
             <div class="md:relative md:flex md:min-h-0 md:flex-col md:overflow-hidden md:px-5 md:pt-4 md:pb-0">
               <div class="space-y-2 pb-3">
                 <div class="flex min-w-0 items-center gap-2 whitespace-nowrap">
-                  <h3 class="text-sm font-semibold text-foreground">已选页面与按钮</h3>
-                  <span class="text-xs text-muted-foreground">按页面继续勾选可操作按钮</span>
+                  <h3 class="text-sm font-semibold text-foreground">已选页面的派生按钮</h3>
+                  <span class="text-xs text-muted-foreground">按钮随菜单自动授权，当前仅做预览</span>
                 </div>
-
-                <label class="inline-flex items-center gap-2 text-sm text-foreground">
-                  <Checkbox
-                    :model-value="buttonSelectionState"
-                    :disabled="selectableButtonRows.length === 0"
-                    @update:model-value="toggleAllButtons($event === true)"
-                  />
-                  <span>全选按钮</span>
-                </label>
               </div>
 
               <Separator class="bg-border/70" />
@@ -2443,11 +2374,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
                             class="ri-corner-down-right-line shrink-0 text-[12px] text-muted-foreground"
                           />
                           <span v-else class="w-3 shrink-0" />
-                          <Checkbox
-                            :model-value="getMenuButtonSelectionState(menu.uuid)"
-                            :disabled="menu.buttons.length === 0"
-                            @update:model-value="toggleMenuButtons(menu.uuid, $event === true)"
-                          />
+                          <span class="w-4 shrink-0" />
                           <span class="min-w-0 flex flex-1 items-center gap-2 overflow-hidden leading-none">
                             <Tooltip>
                               <TooltipTrigger as-child>
@@ -2459,7 +2386,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
                             </Tooltip>
                           </span>
                           <span class="text-[11px] text-muted-foreground">
-                            {{ getSelectedMenuButtonCount(menu.uuid) }}/{{ menu.buttons.length }}
+                            {{ menu.buttons.length }} 个按钮
                           </span>
                         </label>
 
@@ -2471,11 +2398,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
                             :style="{ paddingLeft: `${(menu.depth + 1) * 18}px` }"
                           >
                             <i class="ri-corner-down-right-line shrink-0 text-[12px] text-muted-foreground" />
-                            <Checkbox
-                              :model-value="selectedButtonSet.has(button.id)"
-                              :disabled="!isButtonSelectable(button)"
-                              @update:model-value="updateRoleButtonSelection(button.id, $event === true)"
-                            />
+                            <span class="w-4 shrink-0" />
                             <span class="min-w-0 flex flex-1 items-center gap-2 overflow-hidden leading-none">
                               <Tooltip>
                                 <TooltipTrigger as-child>
