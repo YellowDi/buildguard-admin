@@ -707,7 +707,7 @@ async function openInspectionHistorySheet(model: InspectionItemHistoryModel, ite
 
     selectedInspectionHistoryModel.value = {
       ...model,
-      historyEntries: buildInspectionItemHistoryEntries(historyItems),
+      historyEntries: buildInspectionItemHistoryEntries(historyItems, model.inspectionItemName),
     }
   } catch (error) {
     if (requestId !== latestInspectionHistoryRequestId || selectedInspectionHistoryModel.value?.key !== model.key) {
@@ -759,13 +759,16 @@ function buildInspectionItemHistoryModel(args: {
   }
 }
 
-function buildInspectionItemHistoryEntries(items: WorkOrderInspectionHistoryDetailItem[]) {
+function buildInspectionItemHistoryEntries(
+  items: WorkOrderInspectionHistoryDetailItem[],
+  inspectionItemName: string,
+) {
   return items.map((item, index) => ({
     key: toText(item.Uuid, `inspection-history-${index + 1}`),
     timestamp: `第 ${index + 1} 条检测结果`,
     resultLabel: formatInspectionHistoryResultLabel(item.Result),
-    summary: toText(item.Content, toText(item.Name, "已返回检测结果。")),
-    contentText: toText(item.Content, ""),
+    summary: resolveInspectionHistorySummary(item, inspectionItemName),
+    contentText: resolveInspectionHistoryContentText(item, inspectionItemName),
     measureValue: toText(item.MeasureContent, ""),
     photoUrls: Array.isArray(item.PhotoFile) ? item.PhotoFile : [],
     isLatest: index === 0,
@@ -873,6 +876,54 @@ function formatInspectionHistoryResultLabel(value: unknown) {
   if (result === 3) return "高风险"
 
   return "未反馈"
+}
+
+function resolveInspectionHistorySummary(
+  item: WorkOrderInspectionHistoryDetailItem,
+  inspectionItemName: string,
+) {
+  const content = toText(item.Content, "")
+  const name = toText(item.Name, "")
+  const normalizedInspectionItemName = normalizeComparableText(inspectionItemName)
+
+  if (content && normalizeComparableText(content) !== normalizedInspectionItemName) {
+    return content
+  }
+
+  if (name && normalizeComparableText(name) !== normalizedInspectionItemName) {
+    return name
+  }
+
+  return ""
+}
+
+function resolveInspectionHistoryContentText(
+  item: WorkOrderInspectionHistoryDetailItem,
+  inspectionItemName: string,
+) {
+  const content = toText(item.Content, "")
+  const name = toText(item.Name, "")
+  const normalizedInspectionItemName = normalizeComparableText(inspectionItemName)
+  const normalizedContent = normalizeComparableText(content)
+  const normalizedName = normalizeComparableText(name)
+
+  if (!content) {
+    return ""
+  }
+
+  if (normalizedContent === normalizedInspectionItemName) {
+    return ""
+  }
+
+  if (normalizedContent && normalizedContent === normalizedName) {
+    return ""
+  }
+
+  return content
+}
+
+function normalizeComparableText(value: string) {
+  return value.trim().replace(/\s+/g, "")
 }
 
 function isInspectionItemCompleted(item: WorkOrderBuildInspectionItem) {

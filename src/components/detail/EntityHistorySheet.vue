@@ -155,39 +155,37 @@ function hasSingleImage(entry: HistoryEntry) {
               class="border-b-0"
             >
               <div class="detail-section-inset py-1.5">
-                <AccordionTrigger class="px-0 py-4 text-left hover:no-underline [&>svg]:mt-1 [&>svg]:self-start [&>svg]:text-muted-foreground">
+                <AccordionTrigger class="px-0 py-3 text-left hover:no-underline [&>svg]:self-center [&>svg]:text-muted-foreground">
                   <div class="min-w-0 flex-1 pr-4">
-                    <div class="flex flex-wrap items-center gap-2">
-                      <h3 class="min-w-0 truncate text-[16px] font-semibold tracking-[-0.15px] text-[rgba(0,0,0,0.95)] dark:text-[rgba(255,255,255,0.92)]">
-                        {{ entry.title }}
-                      </h3>
-                      <Badge
-                        v-if="entry.statusLabel"
-                        variant="secondary"
-                        :class="cn('rounded-full px-2 py-0.5 text-[12px] font-semibold tracking-[0.125px]', badgeClass(entry.statusTone))"
-                      >
-                        {{ entry.statusLabel }}
-                      </Badge>
-                      <Badge
-                        v-if="entry.isLatest"
-                        variant="secondary"
-                        class="rounded-full border border-black/5 bg-[#f2f9ff] px-2 py-0.5 text-[12px] font-semibold tracking-[0.125px] text-[#097fe8] dark:border-white/10 dark:bg-[#1a2a3a] dark:text-[#5aacf5]"
-                      >
-                        最新结果
-                      </Badge>
-                    </div>
+                    <div class="flex min-w-0 items-center justify-between gap-3">
+                      <div class="min-w-0 flex items-center gap-2 overflow-hidden">
+                        <h3 class="min-w-0 truncate text-[16px] font-semibold tracking-[-0.15px] text-[rgba(0,0,0,0.95)] dark:text-[rgba(255,255,255,0.92)]">
+                          {{ entry.title }}
+                        </h3>
+                        <Badge
+                          v-if="entry.statusLabel"
+                          variant="secondary"
+                          :class="cn('shrink-0 rounded-full px-2 py-0.5 text-[12px] font-semibold tracking-[0.125px]', badgeClass(entry.statusTone))"
+                        >
+                          {{ entry.statusLabel }}
+                        </Badge>
+                        <Badge
+                          v-if="entry.isLatest"
+                          variant="secondary"
+                          class="shrink-0 rounded-full border border-black/5 bg-[#f2f9ff] px-2 py-0.5 text-[12px] font-semibold tracking-[0.125px] text-[#097fe8] dark:border-white/10 dark:bg-[#1a2a3a] dark:text-[#5aacf5]"
+                        >
+                          最新结果
+                        </Badge>
+                      </div>
 
-                    <div class="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] font-medium text-[#615d59] dark:text-[#a8a5a0]">
-                      <span>{{ entry.timestamp }}</span>
-                      <template v-for="field in splitEntryFields(entry).meta" :key="field.key">
-                        <span class="h-1 w-1 rounded-full bg-[#a39e98] dark:bg-[#6b6763]" />
-                        <span>{{ field.label }} {{ field.value }}</span>
-                      </template>
+                      <div class="shrink-0 whitespace-nowrap text-[12px] font-medium text-[#615d59] dark:text-[#a8a5a0]">
+                        {{ entry.timestamp }}
+                      </div>
                     </div>
 
                     <p
                       v-if="entry.summary"
-                      class="mt-3 line-clamp-2 text-[14px] leading-6 text-[rgba(0,0,0,0.72)] dark:text-[rgba(255,255,255,0.72)]"
+                      class="mt-2 line-clamp-2 text-[14px] leading-6 text-[rgba(0,0,0,0.72)] dark:text-[rgba(255,255,255,0.72)]"
                     >
                       {{ entry.summary }}
                     </p>
@@ -195,7 +193,7 @@ function hasSingleImage(entry: HistoryEntry) {
                 </AccordionTrigger>
 
                 <AccordionContent class="px-0">
-                  <div class="border-t border-dashed border-black/10 pt-4 dark:border-white/10">
+                  <div class="pt-0.5">
                     <p
                       v-if="entry.summary"
                       class="text-[15px] leading-7 text-[rgba(0,0,0,0.9)] dark:text-[rgba(255,255,255,0.9)]"
@@ -205,7 +203,7 @@ function hasSingleImage(entry: HistoryEntry) {
 
                     <div
                       v-if="splitEntryFields(entry).detail.length"
-                      class="mt-4 space-y-3"
+                      class="mt-3 space-y-3"
                     >
                       <div
                         v-for="field in splitEntryFields(entry).detail"
