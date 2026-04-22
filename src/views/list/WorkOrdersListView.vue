@@ -465,7 +465,7 @@ function normalizeInspectionWorkOrderRecord(item: WorkOrderListItem, index: numb
   const score = toNumber(item.Score)
   const resultValue = toNumber(item.Result)
   const orderNo = toText(item.OrderNo, `WO-${fallbackId}`)
-  const packageName = toText(item.PackageName, "-")
+  const packageName = toText(item.ServiceName || item.PackageName, "-")
   const remark = toText(item.Remark, "-")
 
   return {
@@ -475,9 +475,8 @@ function normalizeInspectionWorkOrderRecord(item: WorkOrderListItem, index: numb
     planUuid: toText(item.PlanUuid),
     orderNo,
     title: "-",
-    // 接口字段从 CustomerName 调整为 CorpName
     customerName: toText(item.CorpName || item.CustomerName, "-"),
-    parkName: "-",
+    parkName: toText(item.ParkName, "-"),
     packageName,
     planName: toText(item.PlanName, "-"),
     executor: formatInspectionExecutors(item.Executors, item.Executor),
@@ -576,8 +575,8 @@ function formatResultLabel(value: number | null, kind: WorkOrderPageKind) {
 
   if (value === 0) return "未反馈"
   if (value === 1) return "正常"
-  if (value === 2) return "异常"
-  if (value === 3) return "已驳回"
+  if (value === 2) return "轻微风险"
+  if (value === 3) return "存在隐患"
 
   return `结果 ${value}`
 }
@@ -697,36 +696,6 @@ function createInspectionColumns(): TablePageSchema<WorkOrderRecord>["columns"] 
         label: "状态",
         kind: "metric",
         value: row => row.statusValue ?? -1,
-      },
-    },
-    {
-      key: "resultLabel",
-      label: "检测结果",
-      filterType: "tag",
-      filter: {
-        type: "tag",
-        defaultVisible: true,
-      },
-      sort: {
-        label: "结果",
-        kind: "metric",
-        value: row => row.resultValue ?? -1,
-      },
-    },
-    {
-      key: "scoreLabel",
-      label: "评分",
-      filterType: "number",
-      format: "numeric",
-      filter: {
-        type: "number",
-        defaultVisible: true,
-        value: row => row.score ?? -1,
-      },
-      sort: {
-        label: "评分",
-        kind: "metric",
-        value: row => row.score ?? -1,
       },
     },
     {
