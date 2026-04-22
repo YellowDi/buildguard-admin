@@ -17,6 +17,14 @@ type InspectionBuildingCardV2Item = {
   onSelect?: () => void
 }
 
+type InspectionBuildingCardV2Group = {
+  key: string
+  title: string
+  scoreText: string
+  scoreValue: number | null
+  items: InspectionBuildingCardV2Item[]
+}
+
 type InspectionBuildingCardV2Building = {
   key: string
   buildName: string
@@ -27,7 +35,7 @@ type InspectionBuildingCardV2Building = {
   progressLabel?: string
   deadlineText: string
   scoreText: string
-  items: InspectionBuildingCardV2Item[]
+  groups: InspectionBuildingCardV2Group[]
 }
 
 const props = withDefaults(defineProps<{
@@ -253,7 +261,7 @@ function handleExpandAfterLeave(element: Element) {
                 class="bg-transparent pb-0 pt-3"
               >
                 <div
-                  v-if="building.items.length === 0"
+                  v-if="building.groups.length === 0"
                   class="px-4 py-1 text-sm text-[#8f949c]"
                 >
                   当前建筑暂无检测项。
@@ -261,37 +269,65 @@ function handleExpandAfterLeave(element: Element) {
 
                 <div
                   v-else
-                  class="overflow-hidden"
+                  class="overflow-hidden pb-1"
                 >
-                  <TransitionGroup name="inspection-item-stagger" tag="div">
-                    <button
-                      v-for="(item, itemIndex) in building.items"
-                      :key="`${building.key}-${item.key}`"
-                      type="button"
-                      class="flex min-h-10 w-full items-center justify-between gap-4 border-b border-black/5 px-4 py-2.5 text-left transition-colors duration-180 ease-out last:border-b-0 hover:bg-black/1.5"
-                      :style="{ '--item-delay': `${220 + itemIndex * 36}ms` }"
-                      :disabled="!item.onSelect"
-                      @click="item.onSelect?.()"
-                    >
-                      <div class="flex min-w-0 items-center gap-2.5 overflow-hidden whitespace-nowrap">
-                        <div class="truncate whitespace-nowrap text-[14px] font-medium text-[#1e1f23]">
-                          {{ item.name }}
+                  <div
+                    v-for="(group, groupIndex) in building.groups"
+                    :key="`${building.key}-${group.key}`"
+                    :class="groupIndex === 0 ? '' : 'pt-2'"
+                  >
+                    <div class="flex items-center gap-3 px-4 py-2.5">
+                      <div class="flex min-w-0 items-center gap-2">
+                        <div class="truncate text-[13px] font-semibold tracking-[0.01em] text-[#6f7680]">
+                          {{ group.title }}
                         </div>
-                        <div class="truncate whitespace-nowrap text-[13px] text-[#979ca5]">
-                          {{ item.categoryName }}
-                        </div>
+                        <Badge
+                          variant="secondary"
+                          class="min-w-6 justify-center rounded-md border border-black/6 bg-[#f3f4f6] px-1.5 py-0.5 text-[11px] font-medium leading-none text-[#6b7280]"
+                        >
+                          {{ group.items.length }}
+                        </Badge>
                       </div>
+
+                      <div class="h-px flex-1 bg-black/6" />
 
                       <div
                         :class="[
-                          'shrink-0 whitespace-nowrap text-[14px] font-medium tabular-nums',
-                          resolveScoreTone(item.scoreValue),
+                          'shrink-0 whitespace-nowrap text-[16px] font-semibold tabular-nums',
+                          resolveScoreTone(group.scoreValue),
                         ]"
                       >
-                        {{ item.scoreText }}
+                        {{ group.scoreText }}
                       </div>
-                    </button>
-                  </TransitionGroup>
+                    </div>
+
+                    <TransitionGroup name="inspection-item-stagger" tag="div">
+                      <button
+                        v-for="(item, itemIndex) in group.items"
+                        :key="`${building.key}-${group.key}-${item.key}`"
+                        type="button"
+                        class="flex min-h-10 w-full items-center justify-between gap-4 border-b border-black/5 px-4 py-2.5 text-left transition-colors duration-180 ease-out last:border-b-0 hover:bg-black/1.5"
+                        :style="{ '--item-delay': `${220 + (groupIndex * 3 + itemIndex) * 36}ms` }"
+                        :disabled="!item.onSelect"
+                        @click="item.onSelect?.()"
+                      >
+                        <div class="flex min-w-0 items-center gap-2.5 overflow-hidden whitespace-nowrap">
+                          <div class="truncate whitespace-nowrap text-[14px] font-medium text-[#1e1f23]">
+                            {{ item.name }}
+                          </div>
+                        </div>
+
+                        <div
+                          :class="[
+                            'shrink-0 whitespace-nowrap text-[16px] font-semibold tabular-nums',
+                            resolveScoreTone(item.scoreValue),
+                          ]"
+                        >
+                          {{ item.scoreText }}
+                        </div>
+                      </button>
+                    </TransitionGroup>
+                  </div>
                 </div>
               </div>
             </Transition>

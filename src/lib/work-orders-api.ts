@@ -52,8 +52,13 @@ export type WorkOrderBuildInfo = {
 export type WorkOrderBuildInspectionItem = {
   InspectionItemName?: string
   InspectionItemUuid?: string
+  CategoryContent?: string
   CategoryName?: string
   CategoryUuid?: string
+  CategoryScore?: number
+  ExecutorName?: string
+  ExecutorUuid?: string
+  Result?: number
   Score?: number
   UserName?: string
   [property: string]: unknown
@@ -768,11 +773,16 @@ function normalizeWorkOrderBuildInspectionItems(value: unknown): WorkOrderBuildI
       return {
         ...record,
         InspectionItemName: getFirstText(record, ["InspectionItemName", "inspectionItemName", "Name", "name"]),
-        InspectionItemUuid: getFirstText(record, ["InspectionItemUuid", "inspectionItemUuid", "Uuid", "uuid"]),
+        InspectionItemUuid: getFirstText(record, ["InspectionItemUuid", "inspectionItemUuid"]),
+        CategoryContent: getFirstText(record, ["CategoryContent", "categoryContent"]),
         CategoryName: getFirstText(record, ["CategoryName", "categoryName"]),
-        CategoryUuid: getFirstText(record, ["CategoryUuid", "categoryUuid"]),
+        CategoryUuid: getFirstText(record, ["CategoryUuid", "categoryUuid", "Uuid", "uuid"]),
+        CategoryScore: getFirstNumber(record, ["CategoryScore", "categoryScore"]),
+        ExecutorName: getFirstText(record, ["ExecutorName", "executorName"]),
+        ExecutorUuid: getFirstText(record, ["ExecutorUuid", "executorUuid"]),
+        Result: getFirstNumber(record, ["Result", "result"]),
         Score: getFirstNumber(record, ["Score", "score"]),
-        UserName: getFirstText(record, ["UserName", "userName"]),
+        UserName: getFirstText(record, ["UserName", "userName", "ExecutorName", "executorName"]),
       }
     })
 }

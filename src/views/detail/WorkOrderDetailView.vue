@@ -48,6 +48,13 @@ type InspectionBuildingCardV2Row = {
   scoreValue: number | null
   onSelect: () => void
 }
+type InspectionBuildingCardV2Group = {
+  key: string
+  title: string
+  scoreText: string
+  scoreValue: number | null
+  items: InspectionBuildingCardV2Row[]
+}
 type InspectionBuildingCardV2Building = {
   key: string
   buildName: string
@@ -58,7 +65,7 @@ type InspectionBuildingCardV2Building = {
   progressLabel: string
   deadlineText: string
   scoreText: string
-  items: InspectionBuildingCardV2Row[]
+  groups: InspectionBuildingCardV2Group[]
 }
 
 const props = withDefaults(defineProps<{
@@ -541,6 +548,7 @@ function buildInspectionWorkOrderCards(
 
   return builds.map((build, buildIndex) => {
     const inspectionItems: WorkOrderBuildInspectionItem[] = Array.isArray(build.InspectionItems) ? build.InspectionItems : []
+    const groups = buildInspectionCategoryGroups(build, buildIndex, inspectionItems)
     const fallbackCompletedCount = inspectionItems.filter(item => isInspectionItemCompleted(item)).length
     const totalCount = resolveInspectionBuildTotalCount(build, inspectionItems.length)
     const completedCount = resolveInspectionBuildCompletedCount(build, fallbackCompletedCount, totalCount)
@@ -555,39 +563,80 @@ function buildInspectionWorkOrderCards(
       progressValue: totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0,
       progressLabel,
       deadlineText,
-      scoreText: formatInspectionCardBuildingScore(build.Score),
-      items: inspectionItems.map((item, itemIndex) => {
-        const inspectionItemUuid = toText(item.InspectionItemUuid, "")
-        const detail = inspectionItemUuid ? inspectionItemDetailByUuid.value[inspectionItemUuid] : undefined
-        const categoryName = toText(detail?.CategoryName, toText(item.CategoryName, "未分类"))
-        const inspectionItemName = toText(item.InspectionItemName, `检测项 ${itemIndex + 1}`)
-        const scoreValue = toNumber(item.Score)
-
-        return {
-          key: inspectionItemUuid || `inspection-item-${itemIndex + 1}`,
-          name: inspectionItemName,
-          categoryName,
-          scoreValue,
-          scoreText: formatInspectionCardDeduction(scoreValue),
-          onSelect: () => openInspectionHistorySheet(buildInspectionItemHistoryModel({
-            buildName: toText(build.BuildName, `建筑 ${buildIndex + 1}`),
-            categoryName,
-            inspectionItemName,
-            inspectionItemKey: inspectionItemUuid || `inspection-item-${itemIndex + 1}`,
-            detail,
-            item,
-          })),
-        }
-      }),
+      scoreText: formatInspectionCardBuildingScore(groups),
+      groups,
     }
   })
+}
+
+function buildInspectionCategoryGroups(
+  build: WorkOrderBuildInfo,
+  buildIndex: number,
+  inspectionItems: WorkOrderBuildInspectionItem[],
+): InspectionBuildingCardV2Group[] {
+  if (!inspectionItems.length) {
+    return []
+  }
+
+  const groupMap = new Map<string, {
+    group: InspectionBuildingCardV2Group
+    sourceItems: WorkOrderBuildInspectionItem[]
+  }>()
+
+  inspectionItems.forEach((item, itemIndex) => {
+    const inspectionItemKey = resolveWorkOrderInspectionItemKey(item, itemIndex)
+    const inspectionItemDetailUuid = resolveInspectionItemDetailUuid(item)
+    const detail = inspectionItemDetailUuid ? inspectionItemDetailByUuid.value[inspectionItemDetailUuid] : undefined
+    const categoryName = toText(detail?.CategoryName, toText(item.CategoryName, "未分类"))
+    const categoryKey = toText(item.CategoryUuid, "") || `inspection-category-${categoryName}`
+    const inspectionItemName = toText(item.InspectionItemName, `检测项 ${itemIndex + 1}`)
+    const scoreValue = toNumber(item.Score)
+    const row: InspectionBuildingCardV2Row = {
+      key: inspectionItemKey,
+      name: inspectionItemName,
+      categoryName,
+      scoreValue,
+      scoreText: formatInspectionCardDeduction(scoreValue),
+      onSelect: () => openInspectionHistorySheet(buildInspectionItemHistoryModel({
+        buildName: toText(build.BuildName, `建筑 ${buildIndex + 1}`),
+        categoryName,
+        inspectionItemName,
+        inspectionItemKey,
+        detail,
+        item,
+      })),
+    }
+
+    const existingEntry = groupMap.get(categoryKey)
+
+    if (existingEntry) {
+      existingEntry.group.items.push(row)
+      existingEntry.sourceItems.push(item)
+      existingEntry.group.scoreText = formatInspectionCategoryScore(existingEntry.sourceItems)
+      existingEntry.group.scoreValue = resolveInspectionCategoryScore(existingEntry.sourceItems)
+      return
+    }
+
+    groupMap.set(categoryKey, {
+      group: {
+        key: categoryKey,
+        title: categoryName,
+        scoreText: formatInspectionCategoryScore([item]),
+        scoreValue: resolveInspectionCategoryScore([item]),
+        items: [row],
+      },
+      sourceItems: [item],
+    })
+  })
+
+  return Array.from(groupMap.values(), entry => entry.group)
 }
 
 async function loadWorkOrderInspectionItemDetails(builds: WorkOrderBuildInfo[] | undefined, requestId: number) {
   const inspectionItemUuids = Array.from(new Set(
     (Array.isArray(builds) ? builds : [])
       .flatMap(build => Array.isArray(build.InspectionItems) ? build.InspectionItems : [])
-      .map(item => toText(item.InspectionItemUuid, ""))
+      .map(item => resolveInspectionItemDetailUuid(item))
       .filter(Boolean),
   ))
 
@@ -653,7 +702,7 @@ function buildInspectionItemHistoryModel(args: {
 }): InspectionItemHistoryModel {
   const detail = args.detail
   const inspectionItemName = args.inspectionItemName
-  const inspectorName = toText(args.item.UserName, "待回传")
+  const inspectorName = resolveInspectionItemExecutorName(args.item)
   const scoreText = formatInspectionItemScore(args.item.Score)
 
   return {
@@ -713,7 +762,7 @@ function buildInspectionItemHistoryEntries(args: {
       timestamp: shiftHistoryTimestamp(latestTimestamp, 9, 2, "2026-03-28 14:10"),
       inspectorName: "张海峰",
       resultLabel: latestResultLabel === "异常" ? "待复核" : "正常",
-      scoreText: latestResultLabel === "异常" ? "2 分" : "0 分",
+      scoreText: latestResultLabel === "异常" ? "-2 分" : "-0 分",
       summary: `按既定频次完成「${args.inspectionItemName}」检测，现场记录已归档。`,
       remark: args.detail?.Standard
         ? `复核依据：${truncateText(toText(args.detail.Standard, "判定标准已更新"), 40)}`
@@ -726,7 +775,7 @@ function buildInspectionItemHistoryEntries(args: {
       timestamp: shiftHistoryTimestamp(latestTimestamp, 24, 5, "2026-03-03 09:30"),
       inspectorName: "李文博",
       resultLabel: "正常",
-      scoreText: "0 分",
+      scoreText: "-0 分",
       summary: args.detail?.Content
         ? `上次巡检已覆盖检测内容：${truncateText(toText(args.detail.Content, ""), 36)}`
         : `上次巡检完成「${args.inspectionItemName}」标准项检查。`,
@@ -750,27 +799,23 @@ function buildLatestHistorySummary(resultLabel: string, inspectorName: string, s
 }
 
 function formatInspectionItemScore(value: unknown) {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return `${value} 分`
-  }
-
-  if (typeof value === "string" && value.trim()) {
-    return value.includes("分") ? value.trim() : `${value.trim()} 分`
-  }
-
-  return "-"
+  return formatDeductionScoreText(toNumber(value))
 }
 
 function formatInspectionCardDeadline(value: unknown) {
   return toText(value, "-") || "-"
 }
 
-function formatInspectionCardBuildingScore(value: unknown) {
-  const score = toNumber(value)
+function formatInspectionCardBuildingScore(groups: InspectionBuildingCardV2Group[]) {
+  const validScores = groups
+    .map(group => group.scoreValue)
+    .filter((value): value is number => value !== null)
 
-  if (score === null) {
+  if (!validScores.length) {
     return "-"
   }
+
+  const score = validScores.reduce((sum, value) => sum + Math.max(0, value), 0)
 
   if (Number.isInteger(score)) {
     return String(score)
@@ -780,19 +825,70 @@ function formatInspectionCardBuildingScore(value: unknown) {
 }
 
 function formatInspectionCardDeduction(value: number | null) {
+  return formatDeductionScoreText(value)
+}
+
+function formatDeductionScoreText(value: number | null) {
   if (value === null) {
     return "-"
   }
 
   if (Number.isInteger(value)) {
-    return `${value} 分`
+    return `-${value} 分`
   }
 
-  return `${value.toFixed(1).replace(/\.0$/, "")} 分`
+  return `-${value.toFixed(1).replace(/\.0$/, "")} 分`
+}
+
+function formatInspectionCategoryScore(items: WorkOrderBuildInspectionItem[]) {
+  const score = resolveInspectionCategoryScore(items)
+
+  if (score === null) {
+    return "-"
+  }
+
+  if (Number.isInteger(score)) {
+    return `${score} 分`
+  }
+
+  return `${score.toFixed(1).replace(/\.0$/, "")} 分`
+}
+
+function resolveWorkOrderInspectionItemKey(item: WorkOrderBuildInspectionItem, itemIndex: number) {
+  return toText(item.InspectionItemUuid, `inspection-item-${itemIndex + 1}`)
+}
+
+function resolveInspectionItemDetailUuid(item: WorkOrderBuildInspectionItem) {
+  return toText(item.InspectionItemUuid, "")
+}
+
+function resolveInspectionItemExecutorName(item: WorkOrderBuildInspectionItem, fallback = "待回传") {
+  return toText(item.UserName, toText(item.ExecutorName, fallback))
+}
+
+function resolveInspectionCategoryScore(items: WorkOrderBuildInspectionItem[]) {
+  if (!items.length) {
+    return null
+  }
+
+  if (items.some(item => toNumber(item.Result) === 3)) {
+    return 0
+  }
+
+  const baseScore = items
+    .map(item => toNumber(item.CategoryScore))
+    .find((value): value is number => value !== null)
+
+  if (baseScore === undefined) {
+    return null
+  }
+
+  const deductionTotal = items.reduce((sum, item) => sum + Math.max(0, toNumber(item.Score) ?? 0), 0)
+  return Math.max(0, baseScore - deductionTotal)
 }
 
 function isInspectionItemCompleted(item: WorkOrderBuildInspectionItem) {
-  return toNumber(item.Score) !== null && Boolean(toText(item.UserName, ""))
+  return toNumber(item.Score) !== null && Boolean(resolveInspectionItemExecutorName(item, ""))
 }
 
 function resolveInspectionBuildStatus(
