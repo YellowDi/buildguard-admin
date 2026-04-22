@@ -30,7 +30,9 @@ import { fetchInspectionServiceDetail, type InspectionServiceListItem } from "@/
 import {
   dispatchWorkOrder,
   fetchRepairWorkOrderDetail,
+  fetchWorkOrderInspectionHistoryDetail,
   fetchWorkOrderDetail,
+  type WorkOrderInspectionHistoryDetailItem,
   type WorkOrderBuildInspectionItem,
   type RepairWorkOrderDetailResult,
   type WorkOrderBuildInfo,
@@ -86,6 +88,7 @@ const loading = ref(false)
 const errorMessage = ref("")
 const inspectionItemDetailByUuid = ref<Record<string, InspectionItemRecord>>({})
 let latestRequestId = 0
+let latestInspectionHistoryRequestId = 0
 
 type AssignableUserOption = {
   uuid: string
@@ -597,14 +600,16 @@ function buildInspectionCategoryGroups(
       categoryName,
       scoreValue,
       scoreText: formatInspectionCardDeduction(scoreValue),
-      onSelect: () => openInspectionHistorySheet(buildInspectionItemHistoryModel({
-        buildName: toText(build.BuildName, `建筑 ${buildIndex + 1}`),
-        categoryName,
-        inspectionItemName,
-        inspectionItemKey,
-        detail,
-        item,
-      })),
+      onSelect: () => {
+        void openInspectionHistorySheet(buildInspectionItemHistoryModel({
+          buildName: toText(build.BuildName, `建筑 ${buildIndex + 1}`),
+          categoryName,
+          inspectionItemName,
+          inspectionItemKey,
+          detail,
+          item,
+        }), item)
+      },
     }
 
     const existingEntry = groupMap.get(categoryKey)
@@ -682,12 +687,46 @@ function handleInspectionHistorySheetOpenChange(open: boolean) {
   }
 }
 
-function openInspectionHistorySheet(model: InspectionItemHistoryModel) {
+async function openInspectionHistorySheet(model: InspectionItemHistoryModel, item: WorkOrderBuildInspectionItem) {
+  const requestId = ++latestInspectionHistoryRequestId
   selectedInspectionHistoryModel.value = model
   inspectionHistorySheetOpen.value = true
+
+  const inspectionItemUuid = resolveInspectionItemHistoryUuid(item)
+
+  if (!inspectionItemUuid) {
+    return
+  }
+
+  try {
+    const historyItems = await fetchWorkOrderInspectionHistoryDetail({ Uuid: inspectionItemUuid })
+
+    if (requestId !== latestInspectionHistoryRequestId || selectedInspectionHistoryModel.value?.key !== model.key) {
+      return
+    }
+
+    selectedInspectionHistoryModel.value = {
+      ...model,
+      historyEntries: buildInspectionItemHistoryEntries(historyItems),
+    }
+  } catch (error) {
+    if (requestId !== latestInspectionHistoryRequestId || selectedInspectionHistoryModel.value?.key !== model.key) {
+      return
+    }
+
+    selectedInspectionHistoryModel.value = {
+      ...model,
+      historyEntries: [],
+    }
+    toast.error(handleApiError(error, {
+      mode: "silent",
+      fallback: "检测结果历史加载失败，请稍后重试。",
+    }))
+  }
 }
 
 function resetInspectionHistorySheet() {
+  latestInspectionHistoryRequestId += 1
   inspectionHistorySheetOpen.value = false
   selectedInspectionHistoryModel.value = null
 }
@@ -716,86 +755,21 @@ function buildInspectionItemHistoryModel(args: {
     standard: toText(detail?.Standard, "-"),
     isForcePhotoText: formatBooleanFlag(detail?.IsForcePhoto),
     isMeasureRecordText: formatBooleanFlag(detail?.IsMeasureRecord),
-    historyEntries: buildInspectionItemHistoryEntries({
-      inspectionItemKey: args.inspectionItemKey,
-      inspectionItemName,
-      inspectorName,
-      scoreText,
-      detail,
-    }),
+    historyEntries: [],
   }
 }
 
-function buildInspectionItemHistoryEntries(args: {
-  inspectionItemKey: string
-  inspectionItemName: string
-  inspectorName: string
-  scoreText: string
-  detail?: InspectionItemRecord
-}) {
-  const latestTimestamp = resolveHistoryTimestamp(
-    resolvedInspectionWorkOrder.value?.UpdatedAt,
-    resolvedInspectionWorkOrder.value?.CreatedAt,
-    resolvedInspectionWorkOrder.value?.Deadline,
-  )
-  const latestResultLabel = formatInspectionResultLabel(resolvedInspectionWorkOrder.value?.Result)
-  const latestRemark = toText(resolvedInspectionWorkOrder.value?.Remark, "")
-  const hasMeasureValue = toNumber(args.detail?.IsMeasureRecord) === 1
-  const hasForcePhoto = toNumber(args.detail?.IsForcePhoto) === 1
-  const latestSummary = buildLatestHistorySummary(latestResultLabel, args.inspectorName, args.scoreText)
-
-  return [
-    {
-      key: `${args.inspectionItemKey}-latest`,
-      timestamp: latestTimestamp,
-      inspectorName: args.inspectorName,
-      resultLabel: latestResultLabel,
-      scoreText: args.scoreText,
-      summary: latestSummary,
-      remark: latestRemark || "当前结果来自工单详情页现有摘要字段。",
-      measureValue: hasMeasureValue ? "88" : undefined,
-      photoUrls: hasForcePhoto ? buildInspectionHistoryPhotoUrls(3) : undefined,
-      isLatest: true,
-    },
-    {
-      key: `${args.inspectionItemKey}-history-1`,
-      timestamp: shiftHistoryTimestamp(latestTimestamp, 9, 2, "2026-03-28 14:10"),
-      inspectorName: "张海峰",
-      resultLabel: latestResultLabel === "异常" ? "待复核" : "正常",
-      scoreText: latestResultLabel === "异常" ? "-2 分" : "-0 分",
-      summary: `按既定频次完成「${args.inspectionItemName}」检测，现场记录已归档。`,
-      remark: args.detail?.Standard
-        ? `复核依据：${truncateText(toText(args.detail.Standard, "判定标准已更新"), 40)}`
-        : "现场执行与既有标准一致。",
-      measureValue: hasMeasureValue ? "91" : undefined,
-      photoUrls: hasForcePhoto ? buildInspectionHistoryPhotoUrls(2) : undefined,
-    },
-    {
-      key: `${args.inspectionItemKey}-history-2`,
-      timestamp: shiftHistoryTimestamp(latestTimestamp, 24, 5, "2026-03-03 09:30"),
-      inspectorName: "李文博",
-      resultLabel: "正常",
-      scoreText: "-0 分",
-      summary: args.detail?.Content
-        ? `上次巡检已覆盖检测内容：${truncateText(toText(args.detail.Content, ""), 36)}`
-        : `上次巡检完成「${args.inspectionItemName}」标准项检查。`,
-      remark: "该记录为前端样式联调 mock，用于预览历史时间轴结构。",
-      measureValue: hasMeasureValue ? "89" : undefined,
-      photoUrls: hasForcePhoto ? buildInspectionHistoryPhotoUrls(2, 1) : undefined,
-    },
-  ]
-}
-
-function buildLatestHistorySummary(resultLabel: string, inspectorName: string, scoreText: string) {
-  if (resultLabel === "异常") {
-    return `本次由 ${inspectorName} 回传异常结果，当前扣分 ${scoreText}，建议结合历史记录复核。`
-  }
-
-  if (resultLabel === "未反馈") {
-    return "当前尚未收到完整结果回传，本条用于预览最新记录卡片样式。"
-  }
-
-  return `本次由 ${inspectorName} 完成检测，当前扣分 ${scoreText}。`
+function buildInspectionItemHistoryEntries(items: WorkOrderInspectionHistoryDetailItem[]) {
+  return items.map((item, index) => ({
+    key: toText(item.Uuid, `inspection-history-${index + 1}`),
+    timestamp: `第 ${index + 1} 条检测结果`,
+    resultLabel: formatInspectionHistoryResultLabel(item.Result),
+    summary: toText(item.Content, toText(item.Name, "已返回检测结果。")),
+    contentText: toText(item.Content, ""),
+    measureValue: toText(item.MeasureContent, ""),
+    photoUrls: Array.isArray(item.PhotoFile) ? item.PhotoFile : [],
+    isLatest: index === 0,
+  }))
 }
 
 function formatInspectionItemScore(value: unknown) {
@@ -862,6 +836,10 @@ function resolveInspectionItemDetailUuid(item: WorkOrderBuildInspectionItem) {
   return toText(item.InspectionItemUuid, "")
 }
 
+function resolveInspectionItemHistoryUuid(item: WorkOrderBuildInspectionItem) {
+  return toText(item.Uuid, "")
+}
+
 function resolveInspectionItemExecutorName(item: WorkOrderBuildInspectionItem, fallback = "待回传") {
   return toText(item.UserName, toText(item.ExecutorName, fallback))
 }
@@ -885,6 +863,16 @@ function resolveInspectionCategoryScore(items: WorkOrderBuildInspectionItem[]) {
 
   const deductionTotal = items.reduce((sum, item) => sum + Math.max(0, toNumber(item.Score) ?? 0), 0)
   return Math.max(0, baseScore - deductionTotal)
+}
+
+function formatInspectionHistoryResultLabel(value: unknown) {
+  const result = toNumber(value)
+
+  if (result === 1) return "正常"
+  if (result === 2) return "重点关注"
+  if (result === 3) return "高风险"
+
+  return "未反馈"
 }
 
 function isInspectionItemCompleted(item: WorkOrderBuildInspectionItem) {

@@ -85,10 +85,11 @@ export type HistoryEntry = {
 export type InspectionItemHistoryRecord = {
   key: string
   timestamp: string
-  inspectorName: string
+  inspectorName?: string
   resultLabel: string
-  scoreText: string
+  scoreText?: string
   summary?: string
+  contentText?: string
   remark?: string
   measureValue?: string
   photoUrls?: string[]

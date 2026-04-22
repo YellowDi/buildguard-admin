@@ -77,9 +77,10 @@ function handleOpenChange(open: boolean) {
 
 function buildEntryFields(entry: InspectionItemHistoryRecord): HistoryEntryField[] {
   return [
-    { key: `${entry.key}-inspector`, label: "检测人", value: entry.inspectorName },
-    { key: `${entry.key}-score`, label: "扣分", value: entry.scoreText },
-    ...(entry.measureValue ? [{ key: `${entry.key}-measure`, label: "实测值", value: entry.measureValue }] : []),
+    ...(entry.inspectorName ? [{ key: `${entry.key}-inspector`, label: "检测人", value: entry.inspectorName }] : []),
+    ...(entry.scoreText ? [{ key: `${entry.key}-score`, label: "扣分", value: entry.scoreText }] : []),
+    ...(entry.contentText ? [{ key: `${entry.key}-content`, label: "内容", value: entry.contentText }] : []),
+    ...(entry.measureValue ? [{ key: `${entry.key}-measure`, label: "测量内容", value: entry.measureValue }] : []),
     ...(entry.remark ? [{ key: `${entry.key}-remark`, label: "备注", value: entry.remark }] : []),
   ]
 }
@@ -88,7 +89,7 @@ function buildEntryImages(entry: InspectionItemHistoryRecord): HistoryEntryImage
   return (entry.photoUrls ?? []).map((src, index) => ({
     key: `${entry.key}-image-${index + 1}`,
     src,
-    alt: `${entry.inspectorName} 现场照片 ${index + 1}`,
+    alt: `${entry.inspectorName ?? entry.resultLabel} 现场照片 ${index + 1}`,
   }))
 }
 
@@ -103,6 +104,14 @@ function resolveStatusTone(label: string): EntityHistoryTone {
 
   if (label === "待复核") {
     return "warning"
+  }
+
+  if (label === "重点关注") {
+    return "warning"
+  }
+
+  if (label === "高风险") {
+    return "danger"
   }
 
   if (label === "未反馈") {

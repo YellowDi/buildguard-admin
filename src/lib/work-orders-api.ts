@@ -50,6 +50,7 @@ export type WorkOrderBuildInfo = {
 }
 
 export type WorkOrderBuildInspectionItem = {
+  Uuid?: string
   InspectionItemName?: string
   InspectionItemUuid?: string
   CategoryContent?: string
@@ -108,8 +109,22 @@ export type WorkOrderDetailPayload = {
   Uuid: string
 }
 
+export type WorkOrderInspectionHistoryDetailPayload = {
+  Uuid: string
+}
+
 export type WorkOrderDetailResult = WorkOrderListItem
 export type RepairWorkOrderDetailResult = RepairWorkOrderListItem
+
+export type WorkOrderInspectionHistoryDetailItem = {
+  Uuid?: string
+  Name?: string
+  Content?: string
+  MeasureContent?: string
+  PhotoFile?: string[]
+  Result?: number
+  [property: string]: unknown
+}
 
 export type RepairWorkOrderListItem = {
   Id?: number
@@ -163,12 +178,14 @@ const REPAIR_WORK_ORDER_DETAIL_API_URL = API_PATHS.workOrderReportDetail
 const REPAIR_WORK_ORDER_CREATE_API_URL = buildApiUrl(API_PATHS.workOrderReportCreate)
 const WORK_ORDER_CREATE_API_URL = buildApiUrl(API_PATHS.workOrderCreate)
 const WORK_ORDER_DETAIL_API_URL = API_PATHS.workOrderDetail
+const WORK_ORDER_INSPECTION_HISTORY_DETAIL_API_URL = API_PATHS.workOrderInspectionHistoryDetail
 const WORK_ORDER_UPDATE_API_URL = buildApiUrl(API_PATHS.workOrderUpdate)
 const WORK_ORDER_DISPATCH_API_URL = buildApiUrl(API_PATHS.workOrderDispatch)
 const WORK_ORDERS_LOAD_ERROR_MESSAGE = "工单列表加载失败，请稍后重试。"
 const WORK_ORDER_CREATE_ERROR_MESSAGE = "工单创建失败，请稍后重试。"
 const REPAIR_WORK_ORDER_CREATE_ERROR_MESSAGE = "报修工单创建失败，请稍后重试。"
 const WORK_ORDER_DETAIL_ERROR_MESSAGE = "工单详情加载失败，请稍后重试。"
+const WORK_ORDER_INSPECTION_HISTORY_DETAIL_ERROR_MESSAGE = "检测结果历史加载失败，请稍后重试。"
 const WORK_ORDER_UPDATE_ERROR_MESSAGE = "工单更新失败，请稍后重试。"
 const WORK_ORDER_DISPATCH_ERROR_MESSAGE = "工单指派失败，请稍后重试。"
 
@@ -305,6 +322,29 @@ export async function fetchRepairWorkOrderDetail(payload: WorkOrderDetailPayload
   assertApiSuccess(responseBody, WORK_ORDER_DETAIL_ERROR_MESSAGE)
 
   return normalizeRepairWorkOrderListItem(extractDetailRecord(responseBody))
+}
+
+export async function fetchWorkOrderInspectionHistoryDetail(
+  payload: WorkOrderInspectionHistoryDetailPayload,
+): Promise<WorkOrderInspectionHistoryDetailItem[]> {
+  const url = buildApiRequestUrl(WORK_ORDER_INSPECTION_HISTORY_DETAIL_API_URL)
+  const uuid = getRequiredString(payload.Uuid, "Uuid")
+
+  url.searchParams.set("Uuid", uuid)
+
+  const response = await fetch(url.toString(), {
+    method: "GET",
+    headers: buildApiHeaders(),
+  })
+  const responseBody = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responseBody, WORK_ORDER_INSPECTION_HISTORY_DETAIL_ERROR_MESSAGE)
+  }
+
+  assertApiSuccess(responseBody, WORK_ORDER_INSPECTION_HISTORY_DETAIL_ERROR_MESSAGE)
+
+  return extractInspectionHistoryList(responseBody).map(item => normalizeWorkOrderInspectionHistoryDetailItem(item))
 }
 
 export async function updateWorkOrder(payload: UpdateWorkOrderPayload): Promise<CreateWorkOrderResult> {
@@ -523,6 +563,24 @@ function normalizeRepairWorkOrderListItem(value: unknown): RepairWorkOrderListIt
   }
 }
 
+function normalizeWorkOrderInspectionHistoryDetailItem(value: unknown): WorkOrderInspectionHistoryDetailItem {
+  if (!value || typeof value !== "object") {
+    return {}
+  }
+
+  const record = value as Record<string, unknown>
+
+  return {
+    ...record,
+    Uuid: getFirstText(record, ["Uuid", "uuid"]),
+    Name: getFirstText(record, ["Name", "name"]),
+    Content: getFirstText(record, ["Content", "content"]),
+    MeasureContent: getFirstText(record, ["MeasureContent", "measureContent"]),
+    PhotoFile: getFirstTextArray(record, ["PhotoFile", "photoFile"]),
+    Result: getFirstNumber(record, ["Result", "result"]),
+  }
+}
+
 function extractCreateResult(payload: unknown): CreateWorkOrderResult {
   const record = asRecord(payload)
 
@@ -537,6 +595,30 @@ function extractCreateResult(payload: unknown): CreateWorkOrderResult {
   }
 
   return record as CreateWorkOrderResult
+}
+
+function extractInspectionHistoryList(payload: unknown) {
+  if (Array.isArray(payload)) {
+    return payload
+  }
+
+  const record = asRecord(payload)
+
+  if (!record) {
+    return []
+  }
+
+  if (Array.isArray(record.List)) {
+    return record.List
+  }
+
+  const nestedRecord = asRecord(record.data)
+
+  if (nestedRecord && Array.isArray(nestedRecord.List)) {
+    return nestedRecord.List
+  }
+
+  return []
 }
 
 function extractDetailRecord(payload: unknown): WorkOrderDetailResult {
@@ -772,6 +854,7 @@ function normalizeWorkOrderBuildInspectionItems(value: unknown): WorkOrderBuildI
 
       return {
         ...record,
+        Uuid: getFirstText(record, ["Uuid", "uuid"]),
         InspectionItemName: getFirstText(record, ["InspectionItemName", "inspectionItemName", "Name", "name"]),
         InspectionItemUuid: getFirstText(record, ["InspectionItemUuid", "inspectionItemUuid"]),
         CategoryContent: getFirstText(record, ["CategoryContent", "categoryContent"]),
