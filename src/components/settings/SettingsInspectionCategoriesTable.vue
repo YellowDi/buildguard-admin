@@ -184,9 +184,7 @@ async function loadInspectionCategories() {
   errorMessage.value = ""
 
   try {
-    const result = await fetchInspectionCategories()
-    rows.value = result.list.map((item, index) => normalizeInspectionCategory(item, index))
-    emit("countChange", rows.value.length)
+    await syncInspectionCategories()
   } catch (error) {
     errorMessage.value = handleApiError(error, {
       title: "检测项分类接口加载失败",
@@ -196,6 +194,12 @@ async function loadInspectionCategories() {
   } finally {
     loading.value = false
   }
+}
+
+async function syncInspectionCategories() {
+  const result = await fetchInspectionCategories()
+  rows.value = result.list.map((item, index) => normalizeInspectionCategory(item, index))
+  emit("countChange", rows.value.length)
 }
 
 function toggleSearch() {
@@ -281,32 +285,20 @@ async function submitCreate() {
 
   createSubmitArmed.value = false
   createSubmitting.value = true
+  const nextName = createForm.value.name.trim()
 
   try {
-    const response = await createInspectionCategory({
-      Name: createForm.value.name.trim(),
+    await createInspectionCategory({
+      Name: nextName,
       Content: createForm.value.content.trim(),
       Score: nextScoreLimit,
     })
-
-    const nextId = Number.isFinite(Number(response.Id)) ? Number(response.Id) : createLocalId()
-    const nextUuid = toText(response.Uuid, `category-${nextId}`)
-    const nextRow = normalizeInspectionCategory({
-      ...response,
-      Id: nextId,
-      Name: createForm.value.name.trim(),
-      Content: createForm.value.content.trim(),
-      Score: nextScoreLimit,
-      Uuid: nextUuid,
-    }, rows.value.length)
-
-    rows.value = [nextRow, ...rows.value]
-    emit("countChange", rows.value.length)
+    await syncInspectionCategories()
     createDialogOpen.value = false
     createSubmitArmed.value = false
     createForm.value = createInspectionCategoryForm()
     toast.success("检测项分类已创建", {
-      description: `${nextRow.name} 已加入当前列表。`,
+      description: `${nextName} 已加入当前列表。`,
     })
   } catch (error) {
     handleApiError(error, {
@@ -332,6 +324,7 @@ async function submitEdit() {
 
   editSubmitArmed.value = false
   const currentRow = rows.value.find(row => row.id === editingCategoryId.value)
+  const nextName = editForm.value.name.trim()
 
   if (!currentRow) {
     return
@@ -342,19 +335,14 @@ async function submitEdit() {
   try {
     await updateInspectionCategory({
       Uuid: currentRow.uuid,
-      Name: editForm.value.name.trim(),
+      Name: nextName,
       Content: editForm.value.content.trim(),
       Score: nextScoreLimit,
     })
-
-    const normalizedScoreLimit = nextScoreLimit ?? null
-    currentRow.name = editForm.value.name.trim()
-    currentRow.content = editForm.value.content.trim()
-    currentRow.scoreLimit = normalizedScoreLimit
-    currentRow.scoreLimitSearchText = buildScoreLimitSearchText(normalizedScoreLimit)
+    await syncInspectionCategories()
     closeEditDialog()
     toast.success("检测项分类已更新", {
-      description: `${currentRow.name} 的名称和分数上限已保存。`,
+      description: `${nextName} 的名称和分数上限已保存。`,
     })
   } catch (error) {
     handleApiError(error, {
@@ -384,6 +372,13 @@ function updateEditForm<K extends keyof InspectionCategoryForm>(field: K, value:
   }
 }
 
+function updateCreateScoreLimit(value: string | number) {
+  createForm.value = {
+    ...createForm.value,
+    scoreLimit: String(value ?? ""),
+  }
+}
+
 async function confirmDeleteEditingCategory() {
   const currentRow = rows.value.find(row => row.id === editingCategoryId.value)
 
@@ -397,9 +392,7 @@ async function confirmDeleteEditingCategory() {
     await deleteInspectionCategory({
       Uuid: currentRow.uuid,
     })
-
-    rows.value = rows.value.filter(row => row.id !== currentRow.id)
-    emit("countChange", rows.value.length)
+    await syncInspectionCategories()
     deleteConfirmOpen.value = false
     closeEditDialog()
     toast.success("检测项分类已删除", {
@@ -464,12 +457,30 @@ function parseInspectionCategoryScoreLimitForm(form: InspectionCategoryForm): nu
   return parseOptionalScoreFieldValue(form.scoreLimit)
 }
 
-function parseOptionalScoreFieldValue(value: string) {
-  if (!value.trim()) {
+function parseOptionalScoreFieldValue(value: unknown) {
+  if (value === undefined || value === null) {
     return undefined
   }
 
-  const parsed = Number(value)
+  if (typeof value === "number") {
+    if (!Number.isInteger(value) || value < 0) {
+      return null
+    }
+
+    return value
+  }
+
+  if (typeof value !== "string") {
+    return null
+  }
+
+  const normalized = value.trim()
+
+  if (!normalized) {
+    return undefined
+  }
+
+  const parsed = Number(normalized)
 
   if (!Number.isInteger(parsed) || parsed < 0) {
     return null
@@ -490,11 +501,6 @@ function buildScoreLimitSearchText(scoreLimit: InspectionCategoryScoreLimit) {
 
 function formatScoreLimitFieldValue(scoreLimit: InspectionCategoryScoreLimit) {
   return scoreLimit === null ? "" : String(scoreLimit)
-}
-
-function createLocalId() {
-  const maxId = rows.value.reduce((max, row) => Math.max(max, row.id), 0)
-  return maxId + 1
 }
 
 function asInspectionCategoryRow(row: Record<string, unknown>) {
@@ -620,13 +626,14 @@ defineExpose({
             <label class="text-sm font-medium text-foreground" for="create-inspection-category-score-limit">分数上限（可选）</label>
             <Input
               id="create-inspection-category-score-limit"
-              v-model="createForm.scoreLimit"
+              :model-value="createForm.scoreLimit"
               type="number"
               inputmode="numeric"
               min="0"
               step="1"
               placeholder="不填写则不设置"
               class="h-9 min-w-0"
+              @update:model-value="updateCreateScoreLimit"
             />
           </div>
 

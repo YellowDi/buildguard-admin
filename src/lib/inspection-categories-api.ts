@@ -1,4 +1,4 @@
-import { createHttpError, readResponseBody } from "@/lib/api-errors"
+import { assertApiSuccess, createHttpError, readResponseBody } from "@/lib/api-errors"
 import { API_PATHS, buildApiHeaders, buildApiRequestUrl, buildApiUrl } from "@/lib/api"
 
 type InspectionCategoriesListEnvelope = {
@@ -72,6 +72,8 @@ export async function fetchInspectionCategories(): Promise<InspectionCategoriesL
     throw createHttpError(response, responsePayload, INSPECTION_CATEGORIES_LOAD_ERROR_MESSAGE)
   }
 
+  assertApiSuccess(responsePayload, INSPECTION_CATEGORIES_LOAD_ERROR_MESSAGE)
+
   const list = extractList(responsePayload)
 
   return {
@@ -98,6 +100,8 @@ export async function createInspectionCategory(payload: CreateInspectionCategory
     throw createHttpError(response, responseBody, INSPECTION_CATEGORY_CREATE_ERROR_MESSAGE)
   }
 
+  assertApiSuccess(responseBody, INSPECTION_CATEGORY_CREATE_ERROR_MESSAGE)
+
   return extractDetailRecord(responseBody)
 }
 
@@ -116,6 +120,8 @@ export async function getInspectionCategoryDetail(
   if (!response.ok) {
     throw createHttpError(response, responseBody, INSPECTION_CATEGORY_DETAIL_ERROR_MESSAGE)
   }
+
+  assertApiSuccess(responseBody, INSPECTION_CATEGORY_DETAIL_ERROR_MESSAGE)
 
   return extractDetailRecord(responseBody)
 }
@@ -139,6 +145,8 @@ export async function updateInspectionCategory(payload: UpdateInspectionCategory
     throw createHttpError(response, responseBody, INSPECTION_CATEGORY_UPDATE_ERROR_MESSAGE)
   }
 
+  assertApiSuccess(responseBody, INSPECTION_CATEGORY_UPDATE_ERROR_MESSAGE)
+
   return extractDetailRecord(responseBody)
 }
 
@@ -155,6 +163,8 @@ export async function deleteInspectionCategory(payload: DeleteInspectionCategory
   if (!response.ok) {
     throw createHttpError(response, responseBody, INSPECTION_CATEGORY_DELETE_ERROR_MESSAGE)
   }
+
+  assertApiSuccess(responseBody, INSPECTION_CATEGORY_DELETE_ERROR_MESSAGE)
 
   return extractDetailRecord(responseBody)
 }
