@@ -107,6 +107,18 @@ function resolveStatusIcon(status: InspectionBuildingStatus) {
   return "ri-time-line"
 }
 
+function resolveStatusIconWrapClass(status: InspectionBuildingStatus) {
+  if (status === "completed") {
+    return "bg-[#eaf6f0] text-[#2f8f62] shadow-[inset_0_0_0_1px_rgba(47,143,98,0.08)]"
+  }
+
+  if (status === "processing") {
+    return "bg-[#edf4ff] text-[#2f7df6] shadow-[inset_0_0_0_1px_rgba(47,125,246,0.08)]"
+  }
+
+  return "bg-[#fff4e8] text-[#d97706] shadow-[inset_0_0_0_1px_rgba(217,119,6,0.08)]"
+}
+
 function resolveScoreTone(scoreValue: number | null) {
   if (scoreValue === null) {
     return "text-[#202126]"
@@ -216,13 +228,20 @@ function handleExpandAfterLeave(element: Element) {
               <div class="flex min-w-0 items-start gap-3">
                 <div class="min-w-0 flex-1">
                   <div class="flex min-w-0 items-center gap-2.5">
-                    <i
+                    <div
                       :class="[
-                        resolveStatusIcon(building.status),
-                        building.status === 'processing' ? 'animate-spin' : '',
-                        'shrink-0 text-[15px] text-[#8f949c]',
+                        'flex h-7 w-7 shrink-0 items-center justify-center rounded-[10px] transition-colors duration-180',
+                        resolveStatusIconWrapClass(building.status),
                       ]"
-                    />
+                    >
+                      <i
+                        :class="[
+                          resolveStatusIcon(building.status),
+                          building.status === 'processing' ? 'animate-spin' : '',
+                          'text-[15px]',
+                        ]"
+                      />
+                    </div>
                     <div class="truncate whitespace-nowrap text-[18px] font-semibold tracking-[-0.025em] text-[#17181c]">
                       {{ building.buildName }}
                     </div>
@@ -236,9 +255,10 @@ function handleExpandAfterLeave(element: Element) {
                   <div class="mt-3 flex min-w-0 items-center justify-between gap-3 whitespace-nowrap text-[12px] text-[#a0a4ac]">
                     <div class="min-w-0 truncate tabular-nums">
                       <span class="text-[#2b2d33]">{{ building.completedCount }}</span>
-                      <span> {{ building.progressLabel || "已完成" }} / </span>
-                      <span>{{ building.totalCount }}</span>
-                      <span> 总检测项</span>
+                      <span class="ml-1">{{ building.progressLabel || "已完成" }}</span>
+                      <span class="mx-1.5">/</span>
+                      <span class="text-[#2b2d33]">{{ building.totalCount }}</span>
+                      <span class="ml-1">总检测项</span>
                     </div>
                     <div class="shrink-0 truncate tabular-nums text-right">
                       {{ building.deadlineText }}
