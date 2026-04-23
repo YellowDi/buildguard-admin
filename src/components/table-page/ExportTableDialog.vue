@@ -263,20 +263,18 @@ function handleConfirm() {
       <DialogFooter class="border-t border-border/70 p-4 sm:justify-end">
         <Button
           variant="outline"
-          class="h-9 gap-2 px-4"
+          class="h-9 px-4"
           :disabled="isExporting"
           @click="updateOpen(false)"
         >
-          <i class="ri-close-line text-[15px]" />
           取消
         </Button>
         <Button
-          class="h-9 min-w-28 gap-2 px-4"
+          class="h-9 px-4"
           :disabled="!canConfirm"
           @click="handleConfirm"
         >
           <Spinner v-if="isExporting" class="size-4" label="导出中" />
-          <i v-else class="ri-download-line text-[15px]" />
           {{ isExporting ? "导出中..." : "开始导出" }}
         </Button>
       </DialogFooter>

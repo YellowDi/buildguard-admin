@@ -907,7 +907,7 @@ defineExpose({
             >
               {{ deleteSubmitting ? "删除中..." : "删除检测项" }}
             </Button>
-            <div class="flex items-center justify-end gap-2">
+            <div class="flex items-center justify-end">
               <Button type="button" variant="outline" :disabled="editDetailLoading || editSubmitting || deleteSubmitting" @click="closeEditDialog">
                 取消
               </Button>

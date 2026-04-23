@@ -1460,15 +1460,14 @@ function formatDateTime(...values: unknown[]) {
               v-if="menuDialogMode === 'edit'"
               type="button"
               variant="outline"
-              class="w-full gap-1 font-medium text-destructive hover:bg-destructive/5 hover:text-destructive sm:w-auto"
+              class="w-full font-medium text-destructive hover:bg-destructive/5 hover:text-destructive sm:w-auto"
               :disabled="menuSubmitting || deleteSubmitting || editDetailLoading"
               @click="promptDeleteMenu"
             >
-              <i class="ri-delete-bin-line text-base" />
               <span>删除菜单</span>
             </Button>
 
-            <div class="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row">
+            <div class="flex w-full flex-col-reverse sm:w-auto sm:flex-row">
               <Button type="button" variant="outline" :disabled="menuSubmitting || deleteSubmitting" @click="closeMenuDialog">
                 取消
               </Button>
@@ -1563,15 +1562,14 @@ function formatDateTime(...values: unknown[]) {
               v-if="buttonDialogMode === 'edit'"
               type="button"
               variant="outline"
-              class="w-full gap-1 font-medium text-destructive hover:bg-destructive/5 hover:text-destructive sm:w-auto"
+              class="w-full font-medium text-destructive hover:bg-destructive/5 hover:text-destructive sm:w-auto"
               :disabled="buttonSubmitting || buttonDeleteSubmitting || buttonDetailLoading"
               @click="promptDeleteButton"
             >
-              <i class="ri-delete-bin-line text-base" />
               <span>删除按钮</span>
             </Button>
 
-            <div class="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row">
+            <div class="flex w-full flex-col-reverse sm:w-auto sm:flex-row">
               <Button type="button" variant="outline" :disabled="buttonSubmitting || buttonDeleteSubmitting" @click="closeButtonDialog">
                 取消
               </Button>
@@ -1597,7 +1595,6 @@ function formatDateTime(...values: unknown[]) {
             取消
           </AlertDialogCancel>
           <AlertDialogAction :disabled="deleteSubmitting" @click="confirmDeleteMenu">
-            <i v-if="deleteSubmitting" class="ri-loader-4-line animate-spin text-base" />
             <span>{{ deleteSubmitting ? "删除中..." : "确认删除" }}</span>
           </AlertDialogAction>
         </AlertDialogFooter>
@@ -1617,7 +1614,6 @@ function formatDateTime(...values: unknown[]) {
             取消
           </AlertDialogCancel>
           <AlertDialogAction :disabled="buttonDeleteSubmitting" @click="confirmDeleteButton">
-            <i v-if="buttonDeleteSubmitting" class="ri-loader-4-line animate-spin text-base" />
             <span>{{ buttonDeleteSubmitting ? "删除中..." : "确认删除" }}</span>
           </AlertDialogAction>
         </AlertDialogFooter>

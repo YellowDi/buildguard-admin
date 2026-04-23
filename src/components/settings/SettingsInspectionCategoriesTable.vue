@@ -725,7 +725,6 @@ defineExpose({
               :disabled="createSubmitting || !createFormValid"
               @click.stop.prevent="requestCreateSubmit"
             >
-              <i v-if="createSubmitting" class="ri-loader-4-line animate-spin text-base" />
               <span>{{ createSubmitting ? "保存中" : "保存分类" }}</span>
             </Button>
           </DialogFooter>
@@ -811,15 +810,14 @@ defineExpose({
             <Button
               type="button"
               variant="outline"
-              class="w-full gap-1 font-medium text-destructive hover:bg-destructive/5 hover:text-destructive sm:w-auto"
+              class="w-full font-medium text-destructive hover:bg-destructive/5 hover:text-destructive sm:w-auto"
               :disabled="editSubmitting || deleteSubmitting"
               @click="promptDeleteEditingCategory"
             >
-              <i class="ri-delete-bin-line text-base" />
               <span>删除分类</span>
             </Button>
 
-            <div class="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row">
+            <div class="flex w-full flex-col-reverse sm:w-auto sm:flex-row">
               <Button type="button" variant="outline" :disabled="deleteSubmitting" @click="closeEditDialog">
                 取消
               </Button>
@@ -828,7 +826,6 @@ defineExpose({
                 :disabled="editSubmitting || deleteSubmitting || !editFormValid"
                 @click.stop.prevent="requestEditSubmit"
               >
-                <i v-if="editSubmitting" class="ri-loader-4-line animate-spin text-base" />
                 <span>{{ editSubmitting ? "保存中" : "保存修改" }}</span>
               </Button>
             </div>
@@ -850,7 +847,6 @@ defineExpose({
             取消
           </AlertDialogCancel>
           <AlertDialogAction :disabled="deleteSubmitting" @click="confirmDeleteEditingCategory">
-            <i v-if="deleteSubmitting" class="ri-loader-4-line animate-spin text-base" />
             <span>{{ deleteSubmitting ? "删除中" : "确认删除" }}</span>
           </AlertDialogAction>
         </AlertDialogFooter>

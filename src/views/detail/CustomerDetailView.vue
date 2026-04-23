@@ -3837,18 +3837,14 @@ function toDisplayText(value: unknown, fallback = "未填写") {
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel :disabled="deleteSubmitting" class="gap-2">
-                  <i class="ri-close-line text-base" />
+                <AlertDialogCancel :disabled="deleteSubmitting" class="">
                   取消
                 </AlertDialogCancel>
                 <AlertDialogAction
                   :disabled="deleteSubmitting"
-                  class="gap-2 bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                   @click="handleDeleteCustomer"
                 >
-                  <i
-                    :class="deleteSubmitting ? 'ri-loader-4-line animate-spin text-base' : 'ri-delete-bin-line text-base'"
-                  />
                   {{ deleteSubmitting ? "删除中..." : "确认删除" }}
                 </AlertDialogAction>
               </AlertDialogFooter>
@@ -4385,14 +4381,10 @@ function toDisplayText(value: unknown, fallback = "未填写") {
       </div>
 
       <DialogFooter>
-        <Button type="button" variant="outline" class="gap-2" :disabled="assignSubmitting" @click="closeAssignDialog">
-          <i class="ri-close-line text-sm" />
+        <Button type="button" variant="outline" class="" :disabled="assignSubmitting" @click="closeAssignDialog">
           取消
         </Button>
-        <Button type="button" class="gap-2" :disabled="!canSubmitAssign" @click="submitCustomerWorkOrderAssign">
-          <i
-            :class="assignSubmitting ? 'ri-loader-4-line animate-spin text-sm' : 'ri-send-plane-line text-sm'"
-          />
+        <Button type="button" class="" :disabled="!canSubmitAssign" @click="submitCustomerWorkOrderAssign">
           {{ assignSubmitting ? "提交中..." : "确认指派" }}
         </Button>
       </DialogFooter>
@@ -4625,18 +4617,14 @@ function toDisplayText(value: unknown, fallback = "未填写") {
         </AlertDialogDescription>
       </AlertDialogHeader>
       <AlertDialogFooter>
-        <AlertDialogCancel :disabled="parkDeleteSubmitting" class="gap-2">
-          <i class="ri-close-line text-base" />
+        <AlertDialogCancel :disabled="parkDeleteSubmitting" class="">
           取消
         </AlertDialogCancel>
         <AlertDialogAction
-          class="gap-2 bg-destructive text-destructive-foreground hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:bg-destructive/60 dark:focus-visible:ring-destructive/40"
+          class="bg-destructive text-destructive-foreground hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:bg-destructive/60 dark:focus-visible:ring-destructive/40"
           :disabled="parkDeleteSubmitting"
           @click="confirmDeletePark"
         >
-          <i
-            :class="parkDeleteSubmitting ? 'ri-loader-4-line animate-spin text-base' : 'ri-delete-bin-line text-base'"
-          />
           {{ parkDeleteSubmitting ? "删除中..." : "确认删除" }}
         </AlertDialogAction>
       </AlertDialogFooter>

@@ -2460,7 +2460,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
             >
               {{ roleDeleteSubmitting ? "删除中..." : "删除权限组" }}
             </Button>
-            <div class="flex items-center justify-end gap-2">
+            <div class="flex items-center justify-end">
               <Button type="button" variant="outline" :disabled="roleDetailLoading || roleSubmitting || roleDeleteSubmitting" @click="closeRoleDialog">
                 取消
               </Button>
@@ -2583,7 +2583,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
             >
               {{ deleteSubmitting ? "删除中..." : "删除用户" }}
             </Button>
-            <div class="flex items-center justify-end gap-2">
+            <div class="flex items-center justify-end">
               <Button type="button" variant="outline" :disabled="editDetailLoading || editSubmitting || deleteSubmitting" @click="closeEditDialog">
                 取消
               </Button>

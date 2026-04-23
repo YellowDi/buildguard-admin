@@ -1113,18 +1113,14 @@ function readFileAsDataUrl(file: File) {
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel :disabled="deleteSubmitting" class="gap-2">
-                <i class="ri-close-line text-base" />
+              <AlertDialogCancel :disabled="deleteSubmitting" class="">
                 取消
               </AlertDialogCancel>
               <AlertDialogAction
                 :disabled="deleteSubmitting"
-                class="gap-2 bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 @click="confirmDelete"
               >
-                <i
-                  :class="deleteSubmitting ? 'ri-loader-4-line animate-spin text-base' : 'ri-delete-bin-line text-base'"
-                />
                 {{ deleteSubmitting ? "删除中..." : "确认删除" }}
               </AlertDialogAction>
             </AlertDialogFooter>
@@ -1386,22 +1382,18 @@ function readFileAsDataUrl(file: File) {
         <Button
           type="button"
           variant="outline"
-          class="gap-2"
+          class=""
           :disabled="uploadingContract"
           @click="uploadContractDialogOpen = false"
         >
-          <i class="ri-close-line text-sm" />
           取消
         </Button>
         <Button
           type="button"
-          class="gap-2"
+          class=""
           :disabled="uploadingContract"
           @click="submitUploadContract"
         >
-          <i
-            :class="uploadingContract ? 'ri-loader-4-line animate-spin text-sm' : 'ri-upload-2-line text-sm'"
-          />
           {{ uploadingContract ? "提交中..." : "确认上传" }}
         </Button>
       </DialogFooter>

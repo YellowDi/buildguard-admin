@@ -937,14 +937,13 @@ defineExpose<ExposedActions>({
           <Button
             type="button"
             variant="outline"
-            class="w-full gap-1 font-medium text-destructive hover:bg-destructive/5 hover:text-destructive sm:w-auto"
+            class="w-full font-medium text-destructive hover:bg-destructive/5 hover:text-destructive sm:w-auto"
             @click="promptDeleteEditingItem"
           >
-            <i class="ri-delete-bin-line text-base" />
             <span>删除字典条目</span>
           </Button>
 
-          <div class="flex w-full flex-col-reverse gap-2 sm:w-auto sm:flex-row">
+          <div class="flex w-full flex-col-reverse sm:w-auto sm:flex-row">
             <Button type="button" variant="outline" @click="closeEditItemDialog">
               取消
             </Button>

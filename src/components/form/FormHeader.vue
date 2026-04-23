@@ -229,11 +229,9 @@ const primaryActionText = "确认"
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>
-                    <i class="ri-close-line mr-2 text-base" />
                     {{ resetDialog.cancelText ?? "取消" }}
                   </AlertDialogCancel>
                   <AlertDialogAction @click="emitReset">
-                    <i class="ri-restart-line mr-2 text-base" />
                     {{ resetDialog.confirmText ?? "确认重置" }}
                   </AlertDialogAction>
                 </AlertDialogFooter>
@@ -252,11 +250,9 @@ const primaryActionText = "确认"
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>
-                  <i class="ri-close-line mr-2 text-base" />
                   {{ resetDialog.cancelText ?? "取消" }}
                 </AlertDialogCancel>
                 <AlertDialogAction @click="emitReset">
-                  <i class="ri-restart-line mr-2 text-base" />
                   {{ resetDialog.confirmText ?? "确认重置" }}
                 </AlertDialogAction>
               </AlertDialogFooter>
@@ -301,11 +297,9 @@ const primaryActionText = "确认"
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>
-                  <i class="ri-close-line mr-2 text-base" />
                   {{ resetDialog.cancelText ?? "取消" }}
                 </AlertDialogCancel>
                 <AlertDialogAction @click="emitReset">
-                  <i class="ri-restart-line mr-2 text-base" />
                   {{ resetDialog.confirmText ?? "确认重置" }}
                 </AlertDialogAction>
               </AlertDialogFooter>

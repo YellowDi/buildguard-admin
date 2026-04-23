@@ -1302,14 +1302,10 @@ async function submitAssign() {
       </div>
 
       <DialogFooter>
-        <Button type="button" variant="outline" class="gap-2" :disabled="assignSubmitting" @click="closeAssignDialog">
-          <i class="ri-close-line text-sm" />
+        <Button type="button" variant="outline" class="" :disabled="assignSubmitting" @click="closeAssignDialog">
           取消
         </Button>
-        <Button type="button" class="gap-2" :disabled="!canSubmitAssign" @click="submitAssign">
-          <i
-            :class="assignSubmitting ? 'ri-loader-4-line animate-spin text-sm' : 'ri-send-plane-line text-sm'"
-          />
+        <Button type="button" class="" :disabled="!canSubmitAssign" @click="submitAssign">
           {{ assignSubmitting ? "提交中..." : "确认指派" }}
         </Button>
       </DialogFooter>

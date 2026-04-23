@@ -653,18 +653,14 @@ function getRemainingDaysHint(value: unknown) {
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel :disabled="deleteSubmitting" class="gap-2">
-                <i class="ri-close-line text-base" />
+              <AlertDialogCancel :disabled="deleteSubmitting" class="">
                 取消
               </AlertDialogCancel>
               <AlertDialogAction
                 :disabled="deleteSubmitting"
-                class="gap-2 bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 @click="confirmDelete"
               >
-                <i
-                  :class="deleteSubmitting ? 'ri-loader-4-line animate-spin text-base' : 'ri-delete-bin-line text-base'"
-                />
                 {{ deleteSubmitting ? "删除中..." : "确认删除" }}
               </AlertDialogAction>
             </AlertDialogFooter>
