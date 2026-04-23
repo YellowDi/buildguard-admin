@@ -25,7 +25,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { handleApiError } from "@/lib/api-errors"
-import { fetchBuildings } from "@/lib/buildings-api"
+import { fetchBuildings, type BuildingListItem } from "@/lib/buildings-api"
 import { fetchCustomers } from "@/lib/customers-api"
 import { primeParkCustomerCache, resolveParkCustomerMap } from "@/lib/park-customer-cache"
 import { fetchParks } from "@/lib/parks-api"
@@ -89,7 +89,6 @@ const collapsedCustomerWidth = ref(96)
 const collapsedParkWidth = ref(96)
 const initialized = ref(false)
 let latestRequestId = 0
-let latestParkOptionsRequestId = 0
 let nameDebounceTimer: ReturnType<typeof setTimeout> | null = null
 let suppressFilterSideEffects = false
 let syncingRoute = false
@@ -104,10 +103,6 @@ const customerSelectLabel = computed(() => {
   })
 })
 const parkSelectLabel = computed(() => {
-  if (!selectedCustomerUuids.value.length) {
-    return "请先选择客户"
-  }
-
   return buildMultiSelectLabel(selectedParkUuids.value, parkOptions.value, {
     placeholder: parkOptionsLoading.value ? "正在加载园区..." : "请选择园区",
     unit: "个园区",
@@ -137,13 +132,16 @@ const parkTriggerLabel = computed(() => {
   return value ? `所属园区：${value}` : "所属园区"
 })
 const nameControlWidth = computed(() => {
-  return expandedControl.value === "name" ? 336 : collapsedNameWidth.value
+  return expandedControl.value === "name" ? 248 : collapsedNameWidth.value
 })
 const customerControlWidth = computed(() => {
   return expandedControl.value === "customer" ? 248 : collapsedCustomerWidth.value
 })
 const parkControlWidth = computed(() => {
   return expandedControl.value === "park" ? 248 : collapsedParkWidth.value
+})
+const usesClientSideAggregation = computed(() => {
+  return selectedCustomerUuids.value.length > 1 || selectedParkUuids.value.length > 1
 })
 
 const schema: TablePageSchema<BuildingRecord> = {
@@ -280,16 +278,7 @@ const schema: TablePageSchema<BuildingRecord> = {
 }
 
 const sortedBuildings = computed(() => {
-  return [...buildings.value].sort((left, right) => {
-    const leftValue = getSortTimestamp(left.updatedAt)
-    const rightValue = getSortTimestamp(right.updatedAt)
-
-    if (leftValue === rightValue) {
-      return left.buildingName.localeCompare(right.buildingName, "zh-CN")
-    }
-
-    return sortDirection.value === "asc" ? leftValue - rightValue : rightValue - leftValue
-  })
+  return [...buildings.value].sort(compareBuildingRows)
 })
 
 const page = useTablePage({
@@ -330,7 +319,6 @@ watch(() => selectedCustomerUuids.value.join(","), async (nextValue, previousVal
     return
   }
 
-  await refreshParkOptionsForCurrentCustomers()
   await handleFilterChange()
 })
 
@@ -445,7 +433,6 @@ function handleResetFilters() {
   appliedName.value = ""
   selectedCustomerUuids.value = []
   selectedParkUuids.value = []
-  parkOptions.value = []
   expandedControl.value = null
   suppressFilterSideEffects = false
   void handleFilterChange()
@@ -453,13 +440,13 @@ function handleResetFilters() {
 
 function handleToolbarSortToggle() {
   sortDirection.value = sortDirection.value === "asc" ? "desc" : "asc"
+
+  if (initialized.value && usesClientSideAggregation.value) {
+    void loadBuildings()
+  }
 }
 
 async function toggleControl(key: "name" | "customer" | "park") {
-  if (key === "park" && !selectedCustomerUuids.value.length && !selectedParkUuids.value.length) {
-    return
-  }
-
   if (expandedControl.value === key) {
     collapseControl(key)
     return
@@ -531,7 +518,10 @@ function handleDocumentPointerDown(event: PointerEvent) {
 }
 
 async function initializePage() {
-  await loadCustomerOptions()
+  await Promise.all([
+    loadCustomerOptions(),
+    loadParkOptions(),
+  ])
   await applyRouteFilters({ reload: false })
   initialized.value = true
   await loadBuildings()
@@ -540,16 +530,15 @@ async function initializePage() {
 async function applyRouteFilters(options: { reload: boolean }) {
   const nextName = normalizeQueryValue(route.query.q)
   const nextCustomerUuids = filterKnownOptions(normalizeQueryList(route.query.customerUuids), customerOptions.value)
-  const nextParkUuids = normalizeQueryList(route.query.parkUuids)
+  const nextParkUuids = filterKnownOptions(normalizeQueryList(route.query.parkUuids), parkOptions.value)
 
   suppressFilterSideEffects = true
   clearNameDebounceTimer()
   draftName.value = nextName
   appliedName.value = nextName
   selectedCustomerUuids.value = nextCustomerUuids
+  selectedParkUuids.value = nextParkUuids
   suppressFilterSideEffects = false
-
-  await refreshParkOptionsForCurrentCustomers(nextParkUuids)
   await syncRouteQuery()
 
   if (!options.reload) {
@@ -580,49 +569,19 @@ async function loadCustomerOptions() {
   }
 }
 
-async function refreshParkOptionsForCurrentCustomers(requestedParkUuids: string[] = selectedParkUuids.value) {
-  const requestId = ++latestParkOptionsRequestId
-
-  if (!selectedCustomerUuids.value.length) {
-    parkOptions.value = []
-    suppressFilterSideEffects = true
-    selectedParkUuids.value = []
-    suppressFilterSideEffects = false
-    parkOptionsLoading.value = false
-    return
-  }
-
+async function loadParkOptions() {
   parkOptionsLoading.value = true
 
   try {
-    const nextOptions = await fetchAllParksForCustomers(selectedCustomerUuids.value)
-
-    if (requestId !== latestParkOptionsRequestId) {
-      return
-    }
-
-    parkOptions.value = nextOptions
-
-    suppressFilterSideEffects = true
-    selectedParkUuids.value = filterKnownOptions(requestedParkUuids, nextOptions)
-    suppressFilterSideEffects = false
+    parkOptions.value = await fetchAllParks()
   } catch (error) {
-    if (requestId !== latestParkOptionsRequestId) {
-      return
-    }
-
     parkOptions.value = []
-    suppressFilterSideEffects = true
-    selectedParkUuids.value = []
-    suppressFilterSideEffects = false
     toast.error(handleApiError(error, {
       mode: "silent",
       fallback: "园区筛选项加载失败，请稍后重试。",
     }))
   } finally {
-    if (requestId === latestParkOptionsRequestId) {
-      parkOptionsLoading.value = false
-    }
+    parkOptionsLoading.value = false
   }
 }
 
@@ -669,53 +628,14 @@ async function loadBuildings() {
   errorMessage.value = ""
 
   try {
-    const buildingsResult = await fetchBuildings({
-      Name: appliedName.value || undefined,
-      CustomerUuids: selectedCustomerUuids.value.length ? [...selectedCustomerUuids.value] : undefined,
-      ParkUuids: selectedParkUuids.value.length ? [...selectedParkUuids.value] : undefined,
-      PageNum: pageNum.value,
-      PageSize: pageSize.value,
-    })
+    const buildingsResult = await fetchBuildingsForCurrentFilters()
 
     if (requestId !== latestRequestId) {
       return
     }
 
     total.value = buildingsResult.total
-    const nextRows = buildingsResult.list.map((item, index) => {
-      const uuid = toText(item.Uuid, `building-${index + 1}`)
-      const parkUuid = toText(item.ParkUuid)
-      const directCustomerUuid = toText(item.CustomerUuid)
-      const directCustomerName = toText(item.CorpName || item.CustomerName)
-      const buildingAreaValue = parseAreaValue(item.BuildingArea ?? item.BuildArea)
-      const needsCustomerHydration = Boolean(parkUuid) && (!directCustomerUuid || !directCustomerName)
-
-      if (parkUuid && directCustomerUuid && directCustomerName) {
-        primeParkCustomerCache(parkUuid, {
-          customerUuid: directCustomerUuid,
-          customerName: directCustomerName,
-        })
-      }
-
-      return {
-        id: uuid,
-        uuid,
-        parkUuid,
-        parkName: toText(item.ParkName, "未关联园区"),
-        customerUuid: directCustomerUuid,
-        customerName: directCustomerName || (parkUuid ? "未关联客户" : "-"),
-        customerLoading: needsCustomerHydration,
-        buildingName: toText(item.Name, "未命名建筑"),
-        builtTime: toText(item.BuiltTime, "-"),
-        operationTime: toText(item.OperationTime, "-"),
-        buildingArea: buildingAreaValue === null ? "-" : String(buildingAreaValue),
-        buildingAreaValue,
-        contactName: toText(item.ContactPerson ?? item.Contact, "未填写"),
-        contactPhone: toText(item.ContactPhone, "-"),
-        address: toText(item.Address, "-"),
-        updatedAt: toText(item.UpdatedAt || item.CreatedAt, "-"),
-      }
-    })
+    const nextRows = normalizeBuildingRows(buildingsResult.list)
     const pendingParkUuids = [...new Set(
       nextRows
         .filter(row => row.customerLoading && row.parkUuid)
@@ -749,6 +669,111 @@ async function loadBuildings() {
       loading.value = false
     }
   }
+}
+
+async function fetchBuildingsForCurrentFilters() {
+  const name = appliedName.value || undefined
+  const customerUuids = [...selectedCustomerUuids.value]
+  const parkUuids = [...selectedParkUuids.value]
+  const usesClientSideAggregation = customerUuids.length > 1 || parkUuids.length > 1
+
+  if (!usesClientSideAggregation) {
+    return fetchBuildings({
+      Name: name,
+      CustomerUuid: customerUuids[0],
+      ParkUuid: parkUuids[0],
+      PageNum: pageNum.value,
+      PageSize: pageSize.value,
+    })
+  }
+
+  const rawItems = await fetchAllBuildingsForMultiFilters({
+    name,
+    customerUuids,
+    parkUuids,
+  })
+  const hydratedRows = await hydrateBuildingRows(normalizeBuildingRows(rawItems))
+  const filteredRows = filterBuildingRows(hydratedRows, {
+    customerUuids,
+    parkUuids,
+  })
+  const sortedRows = [...filteredRows].sort(compareBuildingRows)
+  const pageStart = Math.max(0, (pageNum.value - 1) * pageSize.value)
+
+  return {
+    total: sortedRows.length,
+    list: sortedRows.slice(pageStart, pageStart + pageSize.value).map(row => ({
+      Uuid: row.uuid,
+      ParkUuid: row.parkUuid,
+      ParkName: row.parkName,
+      CustomerUuid: row.customerUuid,
+      CorpName: row.customerName,
+      Name: row.buildingName,
+      BuiltTime: row.builtTime,
+      OperationTime: row.operationTime,
+      BuildingArea: row.buildingArea,
+      ContactPerson: row.contactName,
+      ContactPhone: row.contactPhone,
+      Address: row.address,
+      UpdatedAt: row.updatedAt,
+    })),
+  }
+}
+
+async function fetchAllBuildingsForMultiFilters(filters: {
+  name?: string
+  customerUuids: string[]
+  parkUuids: string[]
+}) {
+  const requestPayloads = filters.parkUuids.length
+    ? filters.parkUuids.map(parkUuid => ({
+        Name: filters.name,
+        ParkUuid: parkUuid,
+      }))
+    : filters.customerUuids.length
+      ? filters.customerUuids.map(customerUuid => ({
+          Name: filters.name,
+          CustomerUuid: customerUuid,
+        }))
+      : [{
+          Name: filters.name,
+        }]
+
+  const buildingGroups = await Promise.all(requestPayloads.map(payload => fetchAllBuildingsByPayload(payload)))
+  return dedupeBuildingItems(buildingGroups.flat())
+}
+
+async function fetchAllBuildingsByPayload(payload: {
+  Name?: string
+  CustomerUuid?: string
+  ParkUuid?: string
+}) {
+  const allItems: BuildingListItem[] = []
+  let currentPage = 1
+  let totalCount = 0
+  const requestPageSize = 200
+
+  while (currentPage <= 20) {
+    const result = await fetchBuildings({
+      ...payload,
+      PageNum: currentPage,
+      PageSize: requestPageSize,
+    })
+
+    if (currentPage === 1) {
+      totalCount = result.total
+    }
+
+    allItems.push(...result.list)
+
+    if (!result.list.length || (totalCount > 0 && allItems.length >= totalCount)) {
+      break
+    }
+
+    currentPage += 1
+  }
+
+  return allItems
 }
 
 async function hydrateBuildingCustomers(requestId: number, parkUuids: string[]) {
@@ -790,6 +815,47 @@ async function hydrateBuildingCustomers(requestId: number, parkUuids: string[]) 
   }
 }
 
+async function hydrateBuildingRows(rows: BuildingRecord[]) {
+  const pendingParkUuids = [...new Set(
+    rows
+      .filter(row => row.customerLoading && row.parkUuid)
+      .map(row => row.parkUuid),
+  )]
+
+  if (!pendingParkUuids.length) {
+    return rows
+  }
+
+  try {
+    const customerMap = await resolveParkCustomerMap(pendingParkUuids)
+
+    return rows.map((row) => {
+      if (!row.customerLoading) {
+        return row
+      }
+
+      const resolvedCustomer = customerMap.get(row.parkUuid)
+      const customerUuid = row.customerUuid || resolvedCustomer?.customerUuid || ""
+      const customerName = row.customerName && row.customerName !== "未关联客户"
+        ? row.customerName
+        : resolvedCustomer?.customerName || (row.parkUuid ? "未关联客户" : "-")
+
+      return {
+        ...row,
+        customerUuid,
+        customerName: customerUuid && customerName === "未关联客户" ? "未命名客户" : customerName,
+        customerLoading: false,
+      }
+    })
+  } catch {
+    return rows.map(row => ({
+      ...row,
+      customerName: row.customerUuid ? row.customerName || "未命名客户" : row.parkUuid ? "未关联客户" : "-",
+      customerLoading: false,
+    }))
+  }
+}
+
 async function fetchAllCustomers() {
   const pageSize = 200
   const allItems: FilterOption[] = []
@@ -821,12 +887,7 @@ async function fetchAllCustomers() {
   return dedupeOptions(allItems)
 }
 
-async function fetchAllParksForCustomers(customerUuids: string[]) {
-  const parkGroups = await Promise.all(customerUuids.map(customerUuid => fetchAllParksForCustomer(customerUuid)))
-  return dedupeOptions(parkGroups.flat())
-}
-
-async function fetchAllParksForCustomer(customerUuid: string) {
+async function fetchAllParks() {
   const pageSize = 200
   const allItems: FilterOption[] = []
   let currentPage = 1
@@ -834,7 +895,6 @@ async function fetchAllParksForCustomer(customerUuid: string) {
 
   while (currentPage <= 20) {
     const result = await fetchParks({
-      CustomerUuid: customerUuid,
       PageNum: currentPage,
       PageSize: pageSize,
     })
@@ -856,6 +916,78 @@ async function fetchAllParksForCustomer(customerUuid: string) {
   }
 
   return allItems
+}
+
+function normalizeBuildingRows(items: BuildingListItem[]) {
+  return items.map((item, index) => {
+    const uuid = toText(item.Uuid, `building-${index + 1}`)
+    const parkUuid = toText(item.ParkUuid)
+    const directCustomerUuid = toText(item.CustomerUuid)
+    const directCustomerName = toText(item.CorpName || item.CustomerName)
+    const buildingAreaValue = parseAreaValue(item.BuildingArea ?? item.BuildArea)
+    const needsCustomerHydration = Boolean(parkUuid) && (!directCustomerUuid || !directCustomerName)
+
+    if (parkUuid && directCustomerUuid && directCustomerName) {
+      primeParkCustomerCache(parkUuid, {
+        customerUuid: directCustomerUuid,
+        customerName: directCustomerName,
+      })
+    }
+
+    return {
+      id: uuid,
+      uuid,
+      parkUuid,
+      parkName: toText(item.ParkName, "未关联园区"),
+      customerUuid: directCustomerUuid,
+      customerName: directCustomerName || (parkUuid ? "未关联客户" : "-"),
+      customerLoading: needsCustomerHydration,
+      buildingName: toText(item.Name, "未命名建筑"),
+      builtTime: toText(item.BuiltTime, "-"),
+      operationTime: toText(item.OperationTime, "-"),
+      buildingArea: buildingAreaValue === null ? "-" : String(buildingAreaValue),
+      buildingAreaValue,
+      contactName: toText(item.ContactPerson ?? item.Contact, "未填写"),
+      contactPhone: toText(item.ContactPhone, "-"),
+      address: toText(item.Address, "-"),
+      updatedAt: toText(item.UpdatedAt || item.CreatedAt, "-"),
+    }
+  })
+}
+
+function filterBuildingRows(rows: BuildingRecord[], filters: { customerUuids: string[]; parkUuids: string[] }) {
+  return rows.filter((row) => {
+    const matchesCustomer = !filters.customerUuids.length || filters.customerUuids.includes(row.customerUuid)
+    const matchesPark = !filters.parkUuids.length || filters.parkUuids.includes(row.parkUuid)
+    return matchesCustomer && matchesPark
+  })
+}
+
+function compareBuildingRows(left: BuildingRecord, right: BuildingRecord) {
+  const leftValue = getSortTimestamp(left.updatedAt)
+  const rightValue = getSortTimestamp(right.updatedAt)
+
+  if (leftValue === rightValue) {
+    return left.buildingName.localeCompare(right.buildingName, "zh-CN")
+  }
+
+  return sortDirection.value === "asc" ? leftValue - rightValue : rightValue - leftValue
+}
+
+function dedupeBuildingItems(items: BuildingListItem[]) {
+  const itemMap = new Map<string, BuildingListItem>()
+
+  for (const item of items) {
+    const uuid = normalizeText(item.Uuid)
+
+    if (!uuid || itemMap.has(uuid)) {
+      continue
+    }
+
+    itemMap.set(uuid, item)
+  }
+
+  return [...itemMap.values()]
 }
 
 function dedupeOptions(items: FilterOption[]) {
@@ -896,7 +1028,7 @@ function buildMultiSelectLabel(
 }
 
 function updateCollapsedChipWidths() {
-  collapsedNameWidth.value = measureCollapsedChipWidth(nameMeasureRef.value, 102, 336)
+  collapsedNameWidth.value = measureCollapsedChipWidth(nameMeasureRef.value, 102, 248)
   collapsedCustomerWidth.value = measureCollapsedChipWidth(customerMeasureRef.value, 96, 248)
   collapsedParkWidth.value = measureCollapsedChipWidth(parkMeasureRef.value, 96, 248)
 }
@@ -1052,7 +1184,7 @@ function toText(value: unknown, fallback = "") {
                 :label="nameTriggerLabel"
                 :selected="Boolean(appliedName)"
                 caret
-                class="absolute left-0 top-1/2 w-full -translate-y-1/2 justify-start text-[13px] [&>span]:shrink-0"
+                class="absolute left-0 top-1/2 min-w-0 w-full -translate-y-1/2 justify-start overflow-hidden text-[13px] [&>span]:min-w-0 [&>span]:flex-1 [&>span]:truncate"
                 @click="toggleControl('name')"
               />
             </div>
@@ -1101,7 +1233,7 @@ function toText(value: unknown, fallback = "") {
                 :label="customerTriggerLabel"
                 :selected="Boolean(selectedCustomerUuids.length)"
                 caret
-                class="absolute left-0 top-1/2 w-full -translate-y-1/2 justify-start text-[13px] [&>span]:shrink-0"
+                class="absolute left-0 top-1/2 min-w-0 w-full -translate-y-1/2 justify-start overflow-hidden text-[13px] [&>span]:min-w-0 [&>span]:flex-1 [&>span]:truncate"
                 @click="toggleControl('customer')"
               />
             </div>
@@ -1160,10 +1292,7 @@ function toText(value: unknown, fallback = "") {
                 :label="parkTriggerLabel"
                 :selected="Boolean(selectedParkUuids.length)"
                 caret
-                :class="[
-                  'absolute left-0 top-1/2 w-full -translate-y-1/2 justify-start text-[13px] [&>span]:shrink-0',
-                  !selectedCustomerUuids.length && !selectedParkUuids.length ? 'pointer-events-none opacity-55' : '',
-                ]"
+                class="absolute left-0 top-1/2 min-w-0 w-full -translate-y-1/2 justify-start overflow-hidden text-[13px] [&>span]:min-w-0 [&>span]:flex-1 [&>span]:truncate"
                 @click="toggleControl('park')"
               />
             </div>
@@ -1183,7 +1312,7 @@ function toText(value: unknown, fallback = "") {
                   v-model="selectedParkUuids"
                   v-model:open="parkSelectOpen"
                   multiple
-                  :disabled="!selectedCustomerUuids.length || parkOptionsLoading"
+                  :disabled="parkOptionsLoading"
                 >
                   <SelectTrigger
                     data-building-park-trigger

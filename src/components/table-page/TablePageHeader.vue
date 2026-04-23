@@ -968,7 +968,7 @@ watch(
       leave-from-class="max-h-16 opacity-100 translate-y-0"
       leave-to-class="max-h-0 opacity-0 -translate-y-1"
     >
-      <div v-if="hasControlsRow" :class="props.listLevelTable ? 'px-4 py-2.5 sm:px-8 overflow-visible' : 'py-2.5 overflow-visible'">
+      <div v-if="hasControlsRow" :class="props.listLevelTable ? 'px-4 py-1.5 sm:px-8 overflow-visible' : 'py-1.5 overflow-visible'">
         <div
           :class="[
             'relative overflow-visible',
