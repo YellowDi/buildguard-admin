@@ -250,7 +250,11 @@ export function useTablePage<Row>(input: TablePageSchema<Row> | TablePageDefinit
     })
   })
 
-  if (definition.tabs.mode === "enum" && !definition.tabs.options?.length) {
+  if (
+    definition.tabs.mode === "enum"
+    && typeof definition.tabs.options !== "function"
+    && !definition.tabs.options?.length
+  ) {
     watch(
       rows,
       (nextRows) => {
@@ -670,7 +674,8 @@ function buildTabs<Row>(rows: Row[], tabs: TablePageTabsDefinition<Row>, selecte
   }
 
   const allValue = tabs.all?.value ?? "all"
-  const values = tabs.options?.length ? tabs.options : discoveredValues.length ? discoveredValues : getTabValues(rows, tabs)
+  const configuredOptions = resolveTabOptions(tabs)
+  const values = configuredOptions.length ? configuredOptions : discoveredValues.length ? discoveredValues : getTabValues(rows, tabs)
   const optionValues = values
   const orderedValues = tabs.order?.length
     ? [...tabs.order.filter(value => optionValues.includes(value)), ...optionValues.filter(value => !tabs.order!.includes(value))]
@@ -694,6 +699,14 @@ function buildTabs<Row>(rows: Row[], tabs: TablePageTabsDefinition<Row>, selecte
 
 function getTabValues<Row>(rows: Row[], tabs: Extract<TablePageTabsDefinition<Row>, { mode: "enum" }>) {
   return [...new Set(rows.map(row => getTabValue(row, tabs)).filter(Boolean))]
+}
+
+function resolveTabOptions<Row>(tabs: Extract<TablePageTabsDefinition<Row>, { mode: "enum" }>) {
+  if (typeof tabs.options === "function") {
+    return tabs.options().filter(Boolean)
+  }
+
+  return tabs.options?.filter(Boolean) ?? []
 }
 
 function getTabValue<Row>(row: Row, tabs: Extract<TablePageTabsDefinition<Row>, { mode: "enum" }>) {

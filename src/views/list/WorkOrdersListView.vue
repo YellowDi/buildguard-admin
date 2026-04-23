@@ -39,6 +39,8 @@ import {
 type WorkOrderPageKind = "inspection" | "repair"
 type LinkedDetailSheetKind = "customer" | "service" | "plan" | "park"
 
+const WORK_ORDER_TAB_OPTIONS = ["待指派", "待开始", "进行中", "报告生成中", "已结单", "复检"]
+
 type WorkOrderRecord = {
   id: string
   uuid: string
@@ -86,7 +88,7 @@ const pageNum = ref(1)
 const pageSize = ref(50)
 const total = ref(0)
 const orderNoQuery = ref("")
-const deadlineQuery = ref("")
+const createdAtQuery = ref("")
 const serviceNameQuery = ref("")
 const executorQuery = ref("")
 const selectedStatus = ref("")
@@ -193,6 +195,8 @@ const schema: TablePageSchema<WorkOrderRecord> = {
     mode: "enum",
     all: { label: "全部", value: "all" },
     field: "statusLabel",
+    options: WORK_ORDER_TAB_OPTIONS,
+    order: WORK_ORDER_TAB_OPTIONS,
   },
 }
 
@@ -240,17 +244,6 @@ const queryBar = computed<TableQueryBarConfig>(() => ({
           options: inspectionPlanOptions.value,
           loading: inspectionPlanOptionsLoading.value,
           placeholder: inspectionPlanOptionsLoading.value ? "正在加载计划..." : "请选择计划",
-          expandedWidth: 248,
-          collapsedMaxWidth: 248,
-        },
-        {
-          type: "date" as const,
-          key: "deadline",
-          queryKey: "deadline",
-          label: "截止时间",
-          icon: "ri-calendar-line",
-          placeholder: "请选择日期",
-          value: deadlineQuery.value,
           expandedWidth: 248,
           collapsedMaxWidth: 248,
         },
@@ -317,6 +310,17 @@ const queryBar = computed<TableQueryBarConfig>(() => ({
           collapsedMaxWidth: 248,
         },
         {
+          type: "date" as const,
+          key: "createdAt",
+          queryKey: "createdAt",
+          label: "创建时间",
+          icon: "ri-calendar-line",
+          placeholder: "请选择日期",
+          value: createdAtQuery.value,
+          expandedWidth: 248,
+          collapsedMaxWidth: 248,
+        },
+        {
           type: "select" as const,
           key: "status",
           queryKey: "status",
@@ -337,7 +341,6 @@ const queryBar = computed<TableQueryBarConfig>(() => ({
         q: orderNoQuery.value,
         customerUuid: selectedCustomerUuid.value,
         planUuid: selectedPlanUuid.value,
-        deadline: deadlineQuery.value,
         serviceName: serviceNameQuery.value,
         executor: executorQuery.value,
         status: selectedStatus.value,
@@ -345,11 +348,12 @@ const queryBar = computed<TableQueryBarConfig>(() => ({
       }
     : {
         q: orderNoQuery.value,
+        createdAt: createdAtQuery.value,
         status: selectedStatus.value,
       },
   canClear: props.kind === "inspection"
-    ? Boolean(orderNoQuery.value || selectedCustomerUuid.value || selectedPlanUuid.value || deadlineQuery.value || serviceNameQuery.value || executorQuery.value || selectedStatus.value || selectedResult.value)
-    : Boolean(orderNoQuery.value || selectedStatus.value),
+    ? Boolean(orderNoQuery.value || selectedCustomerUuid.value || selectedPlanUuid.value || serviceNameQuery.value || executorQuery.value || selectedStatus.value || selectedResult.value)
+    : Boolean(orderNoQuery.value || createdAtQuery.value || selectedStatus.value),
 }))
 
 watch([pageNum, pageSize], ([nextPageNum, nextPageSize], [previousPageNum, previousPageSize]) => {
@@ -366,7 +370,6 @@ watch(
         normalizeQueryValue(route.query.q),
         normalizeQueryValue(route.query.customerUuid),
         normalizeQueryValue(route.query.planUuid),
-        normalizeQueryValue(route.query.deadline),
         normalizeQueryValue(route.query.serviceName),
         normalizeQueryValue(route.query.executor),
         normalizeQueryValue(route.query.status),
@@ -374,6 +377,7 @@ watch(
       ] as const
     : [
         normalizeQueryValue(route.query.q),
+        normalizeQueryValue(route.query.createdAt),
         normalizeQueryValue(route.query.status),
       ] as const,
   (nextValue, previousValue) => {
@@ -390,13 +394,13 @@ watch(
     if (props.kind === "inspection") {
       selectedCustomerUuid.value = nextValue[1] ?? ""
       selectedPlanUuid.value = nextValue[2] ?? ""
-      deadlineQuery.value = nextValue[3] ?? ""
-      serviceNameQuery.value = nextValue[4] ?? ""
-      executorQuery.value = nextValue[5] ?? ""
-      selectedStatus.value = nextValue[6] ?? ""
-      selectedResult.value = nextValue[7] ?? ""
+      serviceNameQuery.value = nextValue[3] ?? ""
+      executorQuery.value = nextValue[4] ?? ""
+      selectedStatus.value = nextValue[5] ?? ""
+      selectedResult.value = nextValue[6] ?? ""
     } else {
-      selectedStatus.value = nextValue[1] ?? ""
+      createdAtQuery.value = nextValue[1] ?? ""
+      selectedStatus.value = nextValue[2] ?? ""
     }
 
     if (pageNum.value !== 1) {
@@ -627,7 +631,6 @@ async function loadWorkOrders() {
           OrderNo: orderNoQuery.value || undefined,
           CustomerUuid: selectedCustomerUuid.value || undefined,
           PlanUuid: selectedPlanUuid.value || undefined,
-          Deadline: deadlineQuery.value || undefined,
           ServiceName: serviceNameQuery.value || undefined,
           Executor: executorQuery.value || undefined,
           Status: toApiStatus(selectedStatus.value),
@@ -637,6 +640,8 @@ async function loadWorkOrders() {
         })
       : await fetchRepairWorkOrders({
           OrderNo: orderNoQuery.value || undefined,
+          CreatedStartAt: createdAtQuery.value || undefined,
+          CreatedEndAt: createdAtQuery.value || undefined,
           Status: toApiStatus(selectedStatus.value),
           PageNum: pageNum.value,
           PageSize: pageSize.value,
@@ -1190,10 +1195,6 @@ function handleQueryChange(payload: { key: string; value: string | string[] }) {
     selectedPlanUuid.value = typeof payload.value === "string" ? payload.value.trim() : ""
   }
 
-  if (payload.key === "deadline") {
-    deadlineQuery.value = typeof payload.value === "string" ? payload.value.trim() : ""
-  }
-
   if (payload.key === "serviceName") {
     serviceNameQuery.value = typeof payload.value === "string" ? payload.value.trim() : ""
   }
@@ -1206,6 +1207,10 @@ function handleQueryChange(payload: { key: string; value: string | string[] }) {
     selectedStatus.value = typeof payload.value === "string" ? payload.value.trim() : ""
   }
 
+  if (payload.key === "createdAt") {
+    createdAtQuery.value = typeof payload.value === "string" ? payload.value.trim() : ""
+  }
+
   if (payload.key === "result") {
     selectedResult.value = typeof payload.value === "string" ? payload.value.trim() : ""
   }
@@ -1214,23 +1219,26 @@ function handleQueryChange(payload: { key: string; value: string | string[] }) {
 }
 
 function handleQueryClear() {
-  if (
-    !orderNoQuery.value
-    && !selectedCustomerUuid.value
-    && !selectedPlanUuid.value
-    && !deadlineQuery.value
-    && !serviceNameQuery.value
-    && !executorQuery.value
-    && !selectedStatus.value
-    && !selectedResult.value
-  ) {
+  const hasFilters = props.kind === "inspection"
+    ? Boolean(
+        orderNoQuery.value
+        || selectedCustomerUuid.value
+        || selectedPlanUuid.value
+        || serviceNameQuery.value
+        || executorQuery.value
+        || selectedStatus.value
+        || selectedResult.value,
+      )
+    : Boolean(orderNoQuery.value || createdAtQuery.value || selectedStatus.value)
+
+  if (!hasFilters) {
     return
   }
 
   orderNoQuery.value = ""
   selectedCustomerUuid.value = ""
   selectedPlanUuid.value = ""
-  deadlineQuery.value = ""
+  createdAtQuery.value = ""
   serviceNameQuery.value = ""
   executorQuery.value = ""
   selectedStatus.value = ""
@@ -1243,9 +1251,9 @@ async function syncRouteQueryAndReload() {
     query: {
       ...route.query,
       q: orderNoQuery.value || undefined,
+      createdAt: props.kind === "repair" ? createdAtQuery.value || undefined : undefined,
       customerUuid: props.kind === "inspection" ? selectedCustomerUuid.value || undefined : undefined,
       planUuid: props.kind === "inspection" ? selectedPlanUuid.value || undefined : undefined,
-      deadline: props.kind === "inspection" ? deadlineQuery.value || undefined : undefined,
       serviceName: props.kind === "inspection" ? serviceNameQuery.value || undefined : undefined,
       executor: props.kind === "inspection" ? executorQuery.value || undefined : undefined,
       status: selectedStatus.value || undefined,

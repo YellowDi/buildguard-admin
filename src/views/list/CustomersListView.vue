@@ -21,6 +21,7 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { handleApiError } from "@/lib/api-errors"
+import { fetchBusinessPresetEntryOptions } from "@/lib/business-preset-options"
 import { fetchCustomers, type CustomerListItem } from "@/lib/customers-api"
 
 type CustomerRecord = {
@@ -54,6 +55,7 @@ const pageNum = ref(1)
 const pageSize = ref(50)
 const total = ref(0)
 const customerNameQuery = ref("")
+const customerLevelTabOptions = ref<string[]>(["未评级"])
 const sortDirection = ref<"asc" | "desc">("desc")
 const activeLinkedDetailKind = ref<LinkedDetailSheetKind | null>(null)
 const activeLinkedDetailUuid = ref("")
@@ -274,6 +276,7 @@ const schema: TablePageSchema<CustomerRecord> = {
     mode: "enum",
     all: { label: "全部", value: "all" },
     field: "levelLabel",
+    options: () => customerLevelTabOptions.value,
   },
 }
 
@@ -299,6 +302,8 @@ const route = useRoute()
 const router = useRouter()
 page.showControls.value = true
 page.customSortEnabled.value = false
+
+void loadCustomerLevelTabOptions()
 
 const queryBar = computed<TableQueryBarConfig>(() => ({
   controls: [
@@ -411,6 +416,19 @@ async function loadCustomers() {
     if (requestId === latestRequestId) {
       loading.value = false
     }
+  }
+}
+
+async function loadCustomerLevelTabOptions() {
+  try {
+    const result = await fetchBusinessPresetEntryOptions(["customerLevel"])
+    const levels = result.customerLevel
+      ?.map(item => item.name.trim())
+      .filter(Boolean) ?? []
+
+    customerLevelTabOptions.value = Array.from(new Set(["未评级", ...levels]))
+  } catch {
+    customerLevelTabOptions.value = ["未评级"]
   }
 }
 

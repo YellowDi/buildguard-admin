@@ -226,7 +226,7 @@ export type TablePageTabsDefinition<Row> =
       }
       field?: keyof Row & string
       value?: (row: Row) => string
-      options?: string[]
+      options?: string[] | (() => string[])
       labelMap?: Record<string, string>
       order?: string[]
     }

@@ -62,6 +62,8 @@ const pageSize = ref(50)
 const total = ref(0)
 const planNameQuery = ref("")
 const selectedCustomerUuid = ref("")
+const createdAtQuery = ref("")
+const nextExecutionAtQuery = ref("")
 const sortDirection = ref<"asc" | "desc">("asc")
 const customerOptions = ref<Array<{ value: string; label: string }>>([])
 const customerOptionsLoading = ref(false)
@@ -274,12 +276,36 @@ const queryBar = computed<TableQueryBarConfig>(() => ({
       expandedWidth: 248,
       collapsedMaxWidth: 248,
     },
+    {
+      type: "date",
+      key: "createdAt",
+      queryKey: "createdAt",
+      label: "创建时间",
+      icon: "ri-calendar-line",
+      placeholder: "请选择日期",
+      value: createdAtQuery.value,
+      expandedWidth: 248,
+      collapsedMaxWidth: 248,
+    },
+    {
+      type: "date",
+      key: "nextExecutionAt",
+      queryKey: "nextExecutionAt",
+      label: "下次执行时间",
+      icon: "ri-calendar-line",
+      placeholder: "请选择日期",
+      value: nextExecutionAtQuery.value,
+      expandedWidth: 248,
+      collapsedMaxWidth: 248,
+    },
   ],
   values: {
     q: planNameQuery.value,
     customerUuid: selectedCustomerUuid.value,
+    createdAt: createdAtQuery.value,
+    nextExecutionAt: nextExecutionAtQuery.value,
   },
-  canClear: Boolean(planNameQuery.value || selectedCustomerUuid.value),
+  canClear: Boolean(planNameQuery.value || selectedCustomerUuid.value || createdAtQuery.value || nextExecutionAtQuery.value),
 }))
 
 watch([pageNum, pageSize], ([nextPageNum, nextPageSize], [previousPageNum, previousPageSize]) => {
@@ -291,16 +317,29 @@ watch([pageNum, pageSize], ([nextPageNum, nextPageSize], [previousPageNum, previ
 })
 
 watch(
-  () => [normalizeQueryValue(route.query.q), normalizeQueryValue(route.query.customerUuid)] as const,
-  ([nextQuery, nextCustomer], previousValue) => {
-    const [previousQuery, previousCustomer] = previousValue ?? []
+  () => [
+    normalizeQueryValue(route.query.q),
+    normalizeQueryValue(route.query.customerUuid),
+    normalizeQueryValue(route.query.createdAt),
+    normalizeQueryValue(route.query.nextExecutionAt),
+  ] as const,
+  ([nextQuery, nextCustomer, nextCreatedAt, nextNextExecutionAt], previousValue) => {
+    const [previousQuery, previousCustomer, previousCreatedAt, previousNextExecutionAt] = previousValue ?? []
 
-    if (previousValue && nextQuery === previousQuery && nextCustomer === previousCustomer) {
+    if (
+      previousValue
+      && nextQuery === previousQuery
+      && nextCustomer === previousCustomer
+      && nextCreatedAt === previousCreatedAt
+      && nextNextExecutionAt === previousNextExecutionAt
+    ) {
       return
     }
 
     planNameQuery.value = nextQuery
     selectedCustomerUuid.value = nextCustomer
+    createdAtQuery.value = nextCreatedAt
+    nextExecutionAtQuery.value = nextNextExecutionAt
 
     if (pageNum.value !== 1) {
       pageNum.value = 1
@@ -324,6 +363,10 @@ async function loadInspectionPlans() {
     const result = await fetchInspectionPlans({
       Code: planNameQuery.value || undefined,
       CustomerUuid: selectedCustomerUuid.value || undefined,
+      CreatedStartAt: createdAtQuery.value || undefined,
+      CreatedEndAt: createdAtQuery.value || undefined,
+      NextStartTime: nextExecutionAtQuery.value || undefined,
+      NextEndTime: nextExecutionAtQuery.value || undefined,
       PageNum: pageNum.value,
       PageSize: pageSize.value,
     })
@@ -715,16 +758,26 @@ function handleQueryChange(payload: { key: string; value: string | string[] }) {
     selectedCustomerUuid.value = typeof payload.value === "string" ? payload.value.trim() : ""
   }
 
+  if (payload.key === "createdAt") {
+    createdAtQuery.value = typeof payload.value === "string" ? payload.value.trim() : ""
+  }
+
+  if (payload.key === "nextExecutionAt") {
+    nextExecutionAtQuery.value = typeof payload.value === "string" ? payload.value.trim() : ""
+  }
+
   void syncRouteQueryAndReload()
 }
 
 function handleQueryClear() {
-  if (!planNameQuery.value && !selectedCustomerUuid.value) {
+  if (!planNameQuery.value && !selectedCustomerUuid.value && !createdAtQuery.value && !nextExecutionAtQuery.value) {
     return
   }
 
   planNameQuery.value = ""
   selectedCustomerUuid.value = ""
+  createdAtQuery.value = ""
+  nextExecutionAtQuery.value = ""
   void syncRouteQueryAndReload()
 }
 
@@ -734,6 +787,8 @@ async function syncRouteQueryAndReload() {
       ...route.query,
       q: planNameQuery.value || undefined,
       customerUuid: selectedCustomerUuid.value || undefined,
+      createdAt: createdAtQuery.value || undefined,
+      nextExecutionAt: nextExecutionAtQuery.value || undefined,
     },
   })
 
