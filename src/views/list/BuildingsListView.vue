@@ -107,13 +107,13 @@ const canResetFilters = computed(() => {
   return Boolean(draftName.value || selectedCustomerUuids.value.length || selectedParkUuids.value.length)
 })
 const nameTriggerLabel = computed(() => {
-  return appliedName.value ? `建筑: ${appliedName.value}` : "搜索建筑"
+  return "建筑名称"
 })
 const customerTriggerLabel = computed(() => {
-  return selectedCustomerUuids.value.length ? `客户: ${customerSelectLabel.value}` : "筛选客户"
+  return "所属客户"
 })
 const parkTriggerLabel = computed(() => {
-  return selectedParkUuids.value.length ? `园区: ${parkSelectLabel.value}` : "筛选园区"
+  return "所属园区"
 })
 
 const schema: TablePageSchema<BuildingRecord> = {
@@ -887,29 +887,32 @@ function toText(value: unknown, fallback = "") {
       <template #controls-prefix>
         <div class="mr-2 flex min-w-max items-center gap-2">
           <div
-            :class="[
-              'relative shrink-0 overflow-visible transition-[width,max-width] duration-280 ease-[cubic-bezier(0.2,0,0,1)]',
-              expandedControl === 'name' ? 'w-[320px]' : 'w-fit max-w-[220px]',
-            ]"
+            class="relative h-6 shrink-0 overflow-visible transition-[width] duration-280 ease-[cubic-bezier(0.2,0,0,1)]"
+            :class="expandedControl === 'name' ? 'w-[336px]' : 'w-[102px]'"
           >
-            <Transition
-              mode="out-in"
-              enter-active-class="transition-[opacity,transform,filter] duration-220 ease-[cubic-bezier(0.2,0,0,1)]"
-              enter-from-class="opacity-0 scale-[0.985] blur-[4px]"
-              enter-to-class="opacity-100 scale-100 blur-0"
-              leave-active-class="transition-[opacity,transform,filter] duration-150 ease-[cubic-bezier(0.4,0,1,1)]"
-              leave-from-class="opacity-100 scale-100 blur-0"
-              leave-to-class="opacity-0 scale-[0.99] blur-[2px]"
+            <div
+              class="absolute inset-0 transition-[opacity,transform,filter] duration-220 ease-[cubic-bezier(0.2,0,0,1)]"
+              :class="expandedControl === 'name' ? 'pointer-events-none scale-[0.92] opacity-0 blur-[2px]' : 'pointer-events-auto scale-100 opacity-100 blur-0'"
             >
-              <InputGroup
-                v-if="expandedControl === 'name'"
-                key="name-expanded"
-                class="relative w-full rounded-full bg-background shadow-xs ring-1 ring-border/60"
-              >
+              <FilterChip
+                icon="ri-text"
+                :label="nameTriggerLabel"
+                :selected="Boolean(appliedName)"
+                caret
+                class="absolute left-0 top-1/2 -translate-y-1/2 text-[13px]"
+                @click="toggleControl('name')"
+              />
+            </div>
+
+            <div
+              class="absolute inset-0 origin-left transition-[opacity,transform,filter] duration-220 ease-[cubic-bezier(0.2,0,0,1)]"
+              :class="expandedControl === 'name' ? 'pointer-events-auto scale-100 opacity-100 blur-0' : 'pointer-events-none scale-[0.96] opacity-0 blur-[2px]'"
+            >
+              <InputGroup class="relative h-8 w-full rounded-full bg-background shadow-xs ring-1 ring-border/60">
                 <InputGroupAddon class="pl-2.5 pr-2">
                   <InputGroupText>
                     <i class="ri-text text-[15px]" />
-                    建筑
+                    建筑名称
                   </InputGroupText>
                 </InputGroupAddon>
                 <InputGroupInput
@@ -923,50 +926,42 @@ function toText(value: unknown, fallback = "") {
                 <button
                   type="button"
                   class="absolute right-1 top-1/2 inline-flex size-7 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground transition-[background-color,color,transform] duration-180 ease-out hover:bg-interactive-hover hover:text-foreground active:scale-[0.96]"
-                  aria-label="收起建筑搜索"
+                  aria-label="收起建筑名称搜索"
                   @click="collapseControl('name')"
                 >
                   <i class="ri-close-line text-[16px]" />
                 </button>
               </InputGroup>
-
-              <FilterChip
-                v-else
-                key="name-collapsed"
-                icon="ri-text"
-                :label="nameTriggerLabel"
-                :selected="Boolean(appliedName)"
-                caret
-                class="h-9 justify-start rounded-full px-3 shadow-xs ring-1 ring-border/60 transition-[background-color,color,box-shadow,transform] duration-220 ease-[cubic-bezier(0.2,0,0,1)]"
-                @click="toggleControl('name')"
-              />
-            </Transition>
+            </div>
           </div>
 
           <div
-            :class="[
-              'relative shrink-0 overflow-visible transition-[width,max-width] duration-280 ease-[cubic-bezier(0.2,0,0,1)]',
-              expandedControl === 'customer' ? 'w-[240px]' : 'w-fit max-w-[220px]',
-            ]"
+            class="relative h-6 shrink-0 overflow-visible transition-[width] duration-280 ease-[cubic-bezier(0.2,0,0,1)]"
+            :class="expandedControl === 'customer' ? 'w-[248px]' : 'w-[96px]'"
           >
-            <Transition
-              mode="out-in"
-              enter-active-class="transition-[opacity,transform,filter] duration-220 ease-[cubic-bezier(0.2,0,0,1)]"
-              enter-from-class="opacity-0 scale-[0.985] blur-[4px]"
-              enter-to-class="opacity-100 scale-100 blur-0"
-              leave-active-class="transition-[opacity,transform,filter] duration-150 ease-[cubic-bezier(0.4,0,1,1)]"
-              leave-from-class="opacity-100 scale-100 blur-0"
-              leave-to-class="opacity-0 scale-[0.99] blur-[2px]"
+            <div
+              class="absolute inset-0 transition-[opacity,transform,filter] duration-220 ease-[cubic-bezier(0.2,0,0,1)]"
+              :class="expandedControl === 'customer' ? 'pointer-events-none scale-[0.92] opacity-0 blur-[2px]' : 'pointer-events-auto scale-100 opacity-100 blur-0'"
             >
-              <InputGroup
-                v-if="expandedControl === 'customer'"
-                key="customer-expanded"
-                class="relative w-full rounded-full bg-background shadow-xs ring-1 ring-border/60"
-              >
+              <FilterChip
+                icon="ri-price-tag-3-line"
+                :label="customerTriggerLabel"
+                :selected="Boolean(selectedCustomerUuids.length)"
+                caret
+                class="absolute left-0 top-1/2 -translate-y-1/2 text-[13px]"
+                @click="toggleControl('customer')"
+              />
+            </div>
+
+            <div
+              class="absolute inset-0 origin-left transition-[opacity,transform,filter] duration-220 ease-[cubic-bezier(0.2,0,0,1)]"
+              :class="expandedControl === 'customer' ? 'pointer-events-auto scale-100 opacity-100 blur-0' : 'pointer-events-none scale-[0.96] opacity-0 blur-[2px]'"
+            >
+              <InputGroup class="relative h-8 w-full rounded-full bg-background shadow-xs ring-1 ring-border/60">
                 <InputGroupAddon class="pl-2.5 pr-2">
                   <InputGroupText>
                     <i class="ri-price-tag-3-line text-[15px]" />
-                    客户
+                    所属客户
                   </InputGroupText>
                 </InputGroupAddon>
                 <Select v-model="selectedCustomerUuids" multiple :disabled="customerOptionsLoading">
@@ -982,50 +977,45 @@ function toText(value: unknown, fallback = "") {
                 <button
                   type="button"
                   class="absolute right-1 top-1/2 z-10 inline-flex size-7 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground transition-[background-color,color,transform] duration-180 ease-out hover:bg-interactive-hover hover:text-foreground active:scale-[0.96]"
-                  aria-label="收起客户筛选"
+                  aria-label="收起所属客户筛选"
                   @click="collapseControl('customer')"
                 >
                   <i class="ri-close-line text-[16px]" />
                 </button>
               </InputGroup>
-
-              <FilterChip
-                v-else
-                key="customer-collapsed"
-                icon="ri-price-tag-3-line"
-                :label="customerTriggerLabel"
-                :selected="Boolean(selectedCustomerUuids.length)"
-                caret
-                class="h-9 justify-start rounded-full px-3 shadow-xs ring-1 ring-border/60 transition-[background-color,color,box-shadow,transform] duration-220 ease-[cubic-bezier(0.2,0,0,1)]"
-                @click="toggleControl('customer')"
-              />
-            </Transition>
+            </div>
           </div>
 
           <div
-            :class="[
-              'relative shrink-0 overflow-visible transition-[width,max-width] duration-280 ease-[cubic-bezier(0.2,0,0,1)]',
-              expandedControl === 'park' ? 'w-[240px]' : 'w-fit max-w-[220px]',
-            ]"
+            class="relative h-6 shrink-0 overflow-visible transition-[width] duration-280 ease-[cubic-bezier(0.2,0,0,1)]"
+            :class="expandedControl === 'park' ? 'w-[248px]' : 'w-[96px]'"
           >
-            <Transition
-              mode="out-in"
-              enter-active-class="transition-[opacity,transform,filter] duration-220 ease-[cubic-bezier(0.2,0,0,1)]"
-              enter-from-class="opacity-0 scale-[0.985] blur-[4px]"
-              enter-to-class="opacity-100 scale-100 blur-0"
-              leave-active-class="transition-[opacity,transform,filter] duration-150 ease-[cubic-bezier(0.4,0,1,1)]"
-              leave-from-class="opacity-100 scale-100 blur-0"
-              leave-to-class="opacity-0 scale-[0.99] blur-[2px]"
+            <div
+              class="absolute inset-0 transition-[opacity,transform,filter] duration-220 ease-[cubic-bezier(0.2,0,0,1)]"
+              :class="expandedControl === 'park' ? 'pointer-events-none scale-[0.92] opacity-0 blur-[2px]' : 'pointer-events-auto scale-100 opacity-100 blur-0'"
             >
-              <InputGroup
-                v-if="expandedControl === 'park'"
-                key="park-expanded"
-                class="relative w-full rounded-full bg-background shadow-xs ring-1 ring-border/60"
-              >
+              <FilterChip
+                icon="ri-price-tag-3-line"
+                :label="parkTriggerLabel"
+                :selected="Boolean(selectedParkUuids.length)"
+                caret
+                :class="[
+                  'absolute left-0 top-1/2 -translate-y-1/2 text-[13px]',
+                  !selectedCustomerUuids.length && !selectedParkUuids.length ? 'pointer-events-none opacity-55' : '',
+                ]"
+                @click="toggleControl('park')"
+              />
+            </div>
+
+            <div
+              class="absolute inset-0 origin-left transition-[opacity,transform,filter] duration-220 ease-[cubic-bezier(0.2,0,0,1)]"
+              :class="expandedControl === 'park' ? 'pointer-events-auto scale-100 opacity-100 blur-0' : 'pointer-events-none scale-[0.96] opacity-0 blur-[2px]'"
+            >
+              <InputGroup class="relative h-8 w-full rounded-full bg-background shadow-xs ring-1 ring-border/60">
                 <InputGroupAddon class="pl-2.5 pr-2">
                   <InputGroupText>
                     <i class="ri-price-tag-3-line text-[15px]" />
-                    园区
+                    所属园区
                   </InputGroupText>
                 </InputGroupAddon>
                 <Select
@@ -1045,27 +1035,13 @@ function toText(value: unknown, fallback = "") {
                 <button
                   type="button"
                   class="absolute right-1 top-1/2 z-10 inline-flex size-7 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground transition-[background-color,color,transform] duration-180 ease-out hover:bg-interactive-hover hover:text-foreground active:scale-[0.96]"
-                  aria-label="收起园区筛选"
+                  aria-label="收起所属园区筛选"
                   @click="collapseControl('park')"
                 >
                   <i class="ri-close-line text-[16px]" />
                 </button>
               </InputGroup>
-
-              <FilterChip
-                v-else
-                key="park-collapsed"
-                icon="ri-price-tag-3-line"
-                :label="parkTriggerLabel"
-                :selected="Boolean(selectedParkUuids.length)"
-                caret
-                :class="[
-                  'h-9 justify-start rounded-full px-3 shadow-xs ring-1 ring-border/60 transition-[background-color,color,box-shadow,transform] duration-220 ease-[cubic-bezier(0.2,0,0,1)]',
-                  !selectedCustomerUuids.length && !selectedParkUuids.length ? 'pointer-events-none opacity-55' : '',
-                ]"
-                @click="toggleControl('park')"
-              />
-            </Transition>
+            </div>
           </div>
 
           <FilterChip
@@ -1073,7 +1049,7 @@ function toText(value: unknown, fallback = "") {
             label="清空筛选"
             variant="ghost"
             :class="[
-              'h-9 shrink-0 px-2.5',
+              'h-6 shrink-0 px-2',
               canResetFilters ? '' : 'pointer-events-none opacity-40',
             ]"
             @click="handleResetFilters"
