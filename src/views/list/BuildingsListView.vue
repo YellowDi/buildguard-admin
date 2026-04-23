@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, onBeforeUnmount, ref, watch } from "vue"
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch, type ComponentPublicInstance } from "vue"
 import { useRoute, useRouter, type LocationQueryValue } from "vue-router"
 import { toast } from "vue-sonner"
 
@@ -80,12 +80,20 @@ const sortDirection = ref<"asc" | "desc">("desc")
 const expandedControl = ref<"name" | "customer" | "park" | null>(null)
 const customerSelectOpen = ref(false)
 const parkSelectOpen = ref(false)
+const filterControlsRef = ref<HTMLElement | null>(null)
+const nameMeasureRef = ref<ComponentPublicInstance | HTMLElement | null>(null)
+const customerMeasureRef = ref<ComponentPublicInstance | HTMLElement | null>(null)
+const parkMeasureRef = ref<ComponentPublicInstance | HTMLElement | null>(null)
+const collapsedNameWidth = ref(102)
+const collapsedCustomerWidth = ref(96)
+const collapsedParkWidth = ref(96)
 const initialized = ref(false)
 let latestRequestId = 0
 let latestParkOptionsRequestId = 0
 let nameDebounceTimer: ReturnType<typeof setTimeout> | null = null
 let suppressFilterSideEffects = false
 let syncingRoute = false
+let collapsedChipResizeObserver: ResizeObserver | null = null
 
 const router = useRouter()
 const route = useRoute()
@@ -109,13 +117,33 @@ const canResetFilters = computed(() => {
   return Boolean(draftName.value || selectedCustomerUuids.value.length || selectedParkUuids.value.length)
 })
 const nameTriggerLabel = computed(() => {
-  return "建筑名称"
+  const value = appliedName.value.trim()
+  return value ? `建筑名称：${value}` : "建筑名称"
 })
 const customerTriggerLabel = computed(() => {
-  return "所属客户"
+  const value = buildMultiSelectLabel(selectedCustomerUuids.value, customerOptions.value, {
+    placeholder: "",
+    unit: "个客户",
+  })
+
+  return value ? `所属客户：${value}` : "所属客户"
 })
 const parkTriggerLabel = computed(() => {
-  return "所属园区"
+  const value = buildMultiSelectLabel(selectedParkUuids.value, parkOptions.value, {
+    placeholder: "",
+    unit: "个园区",
+  })
+
+  return value ? `所属园区：${value}` : "所属园区"
+})
+const nameControlWidth = computed(() => {
+  return expandedControl.value === "name" ? 336 : collapsedNameWidth.value
+})
+const customerControlWidth = computed(() => {
+  return expandedControl.value === "customer" ? 248 : collapsedCustomerWidth.value
+})
+const parkControlWidth = computed(() => {
+  return expandedControl.value === "park" ? 248 : collapsedParkWidth.value
 })
 
 const schema: TablePageSchema<BuildingRecord> = {
@@ -335,8 +363,26 @@ watch(
 
 void initializePage()
 
+onMounted(() => {
+  document.addEventListener("pointerdown", handleDocumentPointerDown, true)
+  void nextTick(() => {
+    updateCollapsedChipWidths()
+    startCollapsedChipResizeObserver()
+  })
+})
+
 onBeforeUnmount(() => {
   clearNameDebounceTimer()
+  document.removeEventListener("pointerdown", handleDocumentPointerDown, true)
+  collapsedChipResizeObserver?.disconnect()
+  collapsedChipResizeObserver = null
+})
+
+watch([nameTriggerLabel, customerTriggerLabel, parkTriggerLabel], () => {
+  void nextTick(() => {
+    updateCollapsedChipWidths()
+    startCollapsedChipResizeObserver()
+  })
 })
 
 function handleCreateBuilding() {
@@ -455,6 +501,33 @@ function collapseControl(key: "name" | "customer" | "park") {
   if (expandedControl.value === key) {
     expandedControl.value = null
   }
+}
+
+function handleDocumentPointerDown(event: PointerEvent) {
+  if (!expandedControl.value) {
+    return
+  }
+
+  const target = event.target
+
+  if (!(target instanceof Node)) {
+    return
+  }
+
+  if (filterControlsRef.value?.contains(target)) {
+    return
+  }
+
+  if (target instanceof Element && target.closest("[data-slot='select-content']")) {
+    return
+  }
+
+  if (expandedControl.value === "name") {
+    clearNameDebounceTimer()
+    appliedName.value = normalizeText(draftName.value)
+  }
+
+  collapseControl(expandedControl.value)
 }
 
 async function initializePage() {
@@ -822,6 +895,55 @@ function buildMultiSelectLabel(
   return `已选 ${names.length}${config.unit}`
 }
 
+function updateCollapsedChipWidths() {
+  collapsedNameWidth.value = measureCollapsedChipWidth(nameMeasureRef.value, 102, 336)
+  collapsedCustomerWidth.value = measureCollapsedChipWidth(customerMeasureRef.value, 96, 248)
+  collapsedParkWidth.value = measureCollapsedChipWidth(parkMeasureRef.value, 96, 248)
+}
+
+function startCollapsedChipResizeObserver() {
+  if (typeof ResizeObserver === "undefined") {
+    return
+  }
+
+  collapsedChipResizeObserver?.disconnect()
+  collapsedChipResizeObserver = new ResizeObserver(() => {
+    updateCollapsedChipWidths()
+  })
+
+  for (const refValue of [nameMeasureRef.value, customerMeasureRef.value, parkMeasureRef.value]) {
+    const element = resolveMeasuredElement(refValue)
+
+    if (element) {
+      collapsedChipResizeObserver.observe(element)
+    }
+  }
+}
+
+function measureCollapsedChipWidth(
+  target: ComponentPublicInstance | HTMLElement | null,
+  minWidth: number,
+  maxWidth: number,
+) {
+  const element = resolveMeasuredElement(target)
+
+  if (!element) {
+    return minWidth
+  }
+
+  const measuredWidth = Math.ceil(element.getBoundingClientRect().width)
+  return Math.max(minWidth, Math.min(maxWidth, measuredWidth))
+}
+
+function resolveMeasuredElement(target: ComponentPublicInstance | HTMLElement | null) {
+  if (target instanceof HTMLElement) {
+    return target
+  }
+
+  const element = target?.$el
+  return element instanceof HTMLElement ? element : null
+}
+
 function filterKnownOptions(values: string[], options: FilterOption[]) {
   const validUuids = new Set(options.map(item => item.uuid))
   return values.filter(value => validUuids.has(value))
@@ -916,10 +1038,10 @@ function toText(value: unknown, fallback = "") {
       @toolbar-sort-toggle="handleToolbarSortToggle"
     >
       <template #controls-prefix>
-        <div class="mr-2 flex min-w-max items-center gap-2">
+        <div ref="filterControlsRef" class="mr-2 flex min-w-max items-center gap-2">
           <div
             class="relative h-8 shrink-0 overflow-visible transition-[width] duration-280 ease-[cubic-bezier(0.2,0,0,1)]"
-            :class="expandedControl === 'name' ? 'w-[336px]' : 'w-[102px]'"
+            :style="{ width: `${nameControlWidth}px` }"
           >
             <div
               class="absolute inset-0 transition-[opacity,transform,filter] duration-220 ease-[cubic-bezier(0.2,0,0,1)]"
@@ -930,7 +1052,7 @@ function toText(value: unknown, fallback = "") {
                 :label="nameTriggerLabel"
                 :selected="Boolean(appliedName)"
                 caret
-                class="absolute left-0 top-1/2 -translate-y-1/2 text-[13px]"
+                class="absolute left-0 top-1/2 w-full -translate-y-1/2 justify-start text-[13px] [&>span]:shrink-0"
                 @click="toggleControl('name')"
               />
             </div>
@@ -968,7 +1090,7 @@ function toText(value: unknown, fallback = "") {
 
           <div
             class="relative h-8 shrink-0 overflow-visible transition-[width] duration-280 ease-[cubic-bezier(0.2,0,0,1)]"
-            :class="expandedControl === 'customer' ? 'w-[248px]' : 'w-[96px]'"
+            :style="{ width: `${customerControlWidth}px` }"
           >
             <div
               class="absolute inset-0 transition-[opacity,transform,filter] duration-220 ease-[cubic-bezier(0.2,0,0,1)]"
@@ -979,7 +1101,7 @@ function toText(value: unknown, fallback = "") {
                 :label="customerTriggerLabel"
                 :selected="Boolean(selectedCustomerUuids.length)"
                 caret
-                class="absolute left-0 top-1/2 -translate-y-1/2 text-[13px]"
+                class="absolute left-0 top-1/2 w-full -translate-y-1/2 justify-start text-[13px] [&>span]:shrink-0"
                 @click="toggleControl('customer')"
               />
             </div>
@@ -1003,7 +1125,7 @@ function toText(value: unknown, fallback = "") {
                 >
                   <SelectTrigger
                     data-building-customer-trigger
-                    class="h-full w-full rounded-none border-0 bg-transparent px-2 pr-9 shadow-none focus-visible:ring-0"
+                    class="h-full w-full rounded-none border-0 bg-transparent px-2 pr-9 shadow-none focus-visible:border-0 focus-visible:ring-0 data-[state=open]:border-0 data-[state=open]:ring-0"
                   >
                     <span class="truncate text-left">{{ customerSelectLabel }}</span>
                   </SelectTrigger>
@@ -1027,7 +1149,7 @@ function toText(value: unknown, fallback = "") {
 
           <div
             class="relative h-8 shrink-0 overflow-visible transition-[width] duration-280 ease-[cubic-bezier(0.2,0,0,1)]"
-            :class="expandedControl === 'park' ? 'w-[248px]' : 'w-[96px]'"
+            :style="{ width: `${parkControlWidth}px` }"
           >
             <div
               class="absolute inset-0 transition-[opacity,transform,filter] duration-220 ease-[cubic-bezier(0.2,0,0,1)]"
@@ -1039,7 +1161,7 @@ function toText(value: unknown, fallback = "") {
                 :selected="Boolean(selectedParkUuids.length)"
                 caret
                 :class="[
-                  'absolute left-0 top-1/2 -translate-y-1/2 text-[13px]',
+                  'absolute left-0 top-1/2 w-full -translate-y-1/2 justify-start text-[13px] [&>span]:shrink-0',
                   !selectedCustomerUuids.length && !selectedParkUuids.length ? 'pointer-events-none opacity-55' : '',
                 ]"
                 @click="toggleControl('park')"
@@ -1065,7 +1187,7 @@ function toText(value: unknown, fallback = "") {
                 >
                   <SelectTrigger
                     data-building-park-trigger
-                    class="h-full w-full rounded-none border-0 bg-transparent px-2 pr-9 shadow-none focus-visible:ring-0"
+                    class="h-full w-full rounded-none border-0 bg-transparent px-2 pr-9 shadow-none focus-visible:border-0 focus-visible:ring-0 data-[state=open]:border-0 data-[state=open]:ring-0"
                   >
                     <span class="truncate text-left">{{ parkSelectLabel }}</span>
                   </SelectTrigger>
@@ -1096,6 +1218,32 @@ function toText(value: unknown, fallback = "") {
               canResetFilters ? '' : 'pointer-events-none opacity-40',
             ]"
             @click="handleResetFilters"
+          />
+        </div>
+        <div class="pointer-events-none fixed left-[-9999px] top-[-9999px] opacity-0" aria-hidden="true">
+          <FilterChip
+            ref="nameMeasureRef"
+            icon="ri-text"
+            :label="nameTriggerLabel"
+            :selected="Boolean(appliedName)"
+            caret
+            class="text-[13px]"
+          />
+          <FilterChip
+            ref="customerMeasureRef"
+            icon="ri-price-tag-3-line"
+            :label="customerTriggerLabel"
+            :selected="Boolean(selectedCustomerUuids.length)"
+            caret
+            class="mt-2 text-[13px]"
+          />
+          <FilterChip
+            ref="parkMeasureRef"
+            icon="ri-price-tag-3-line"
+            :label="parkTriggerLabel"
+            :selected="Boolean(selectedParkUuids.length)"
+            caret
+            class="mt-2 text-[13px]"
           />
         </div>
       </template>
