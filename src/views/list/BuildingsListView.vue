@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, watch } from "vue"
+import { computed, nextTick, onBeforeUnmount, ref, watch } from "vue"
 import { useRoute, useRouter, type LocationQueryValue } from "vue-router"
 import { toast } from "vue-sonner"
 
@@ -77,6 +77,7 @@ const appliedName = ref("")
 const selectedCustomerUuids = ref<string[]>([])
 const selectedParkUuids = ref<string[]>([])
 const sortDirection = ref<"asc" | "desc">("desc")
+const expandedControl = ref<"name" | "customer" | "park" | null>(null)
 const initialized = ref(false)
 let latestRequestId = 0
 let latestParkOptionsRequestId = 0
@@ -104,6 +105,15 @@ const parkSelectLabel = computed(() => {
 })
 const canResetFilters = computed(() => {
   return Boolean(draftName.value || selectedCustomerUuids.value.length || selectedParkUuids.value.length)
+})
+const nameTriggerLabel = computed(() => {
+  return appliedName.value ? `建筑: ${appliedName.value}` : "搜索建筑"
+})
+const customerTriggerLabel = computed(() => {
+  return selectedCustomerUuids.value.length ? `客户: ${customerSelectLabel.value}` : "筛选客户"
+})
+const parkTriggerLabel = computed(() => {
+  return selectedParkUuids.value.length ? `园区: ${parkSelectLabel.value}` : "筛选园区"
 })
 
 const schema: TablePageSchema<BuildingRecord> = {
@@ -377,6 +387,7 @@ function handleBuildingDetailSheetOpenChange(open: boolean) {
 function handleNameEnter() {
   clearNameDebounceTimer()
   appliedName.value = normalizeText(draftName.value)
+  collapseControl("name")
 }
 
 function handleResetFilters() {
@@ -387,12 +398,32 @@ function handleResetFilters() {
   selectedCustomerUuids.value = []
   selectedParkUuids.value = []
   parkOptions.value = []
+  expandedControl.value = null
   suppressFilterSideEffects = false
   void handleFilterChange()
 }
 
 function handleToolbarSortToggle() {
   sortDirection.value = sortDirection.value === "asc" ? "desc" : "asc"
+}
+
+async function toggleControl(key: "name" | "customer" | "park") {
+  if (key === "park" && !selectedCustomerUuids.value.length && !selectedParkUuids.value.length) {
+    return
+  }
+
+  expandedControl.value = expandedControl.value === key ? null : key
+
+  if (expandedControl.value === "name") {
+    await nextTick()
+    document.querySelector<HTMLInputElement>("[data-building-search-input]")?.focus()
+  }
+}
+
+function collapseControl(key: "name" | "customer" | "park") {
+  if (expandedControl.value === key) {
+    expandedControl.value = null
+  }
 }
 
 async function initializePage() {
@@ -855,62 +886,187 @@ function toText(value: unknown, fallback = "") {
     >
       <template #controls-prefix>
         <div class="mr-2 flex min-w-max items-center gap-2">
-          <InputGroup class="w-[320px] shrink-0 rounded-full bg-background">
-            <InputGroupAddon class="pl-2.5 pr-2">
-              <InputGroupText>
-                <i class="ri-search-line text-[15px]" />
-                建筑
-              </InputGroupText>
-            </InputGroupAddon>
-            <InputGroupInput
-              v-model="draftName"
-              placeholder="输入建筑名称搜索"
-              class="min-w-0"
-              @keydown.enter="handleNameEnter"
-            />
-          </InputGroup>
-
-          <InputGroup class="w-[240px] shrink-0 rounded-full bg-background">
-            <InputGroupAddon class="pl-2.5 pr-2">
-              <InputGroupText>
-                <i class="ri-filter-3-line text-[15px]" />
-                客户
-              </InputGroupText>
-            </InputGroupAddon>
-            <Select v-model="selectedCustomerUuids" multiple :disabled="customerOptionsLoading">
-              <SelectTrigger class="h-full w-full rounded-none border-0 bg-transparent px-2 shadow-none focus-visible:ring-0">
-                <span class="truncate text-left">{{ customerSelectLabel }}</span>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem v-for="customer in customerOptions" :key="customer.uuid" :value="customer.uuid">
-                  {{ customer.name }}
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </InputGroup>
-
-          <InputGroup class="w-[240px] shrink-0 rounded-full bg-background">
-            <InputGroupAddon class="pl-2.5 pr-2">
-              <InputGroupText>
-                <i class="ri-filter-3-line text-[15px]" />
-                园区
-              </InputGroupText>
-            </InputGroupAddon>
-            <Select
-              v-model="selectedParkUuids"
-              multiple
-              :disabled="!selectedCustomerUuids.length || parkOptionsLoading"
+          <div
+            :class="[
+              'relative shrink-0 overflow-visible transition-[width,max-width] duration-280 ease-[cubic-bezier(0.2,0,0,1)]',
+              expandedControl === 'name' ? 'w-[320px]' : 'w-fit max-w-[220px]',
+            ]"
+          >
+            <Transition
+              mode="out-in"
+              enter-active-class="transition-[opacity,transform,filter] duration-220 ease-[cubic-bezier(0.2,0,0,1)]"
+              enter-from-class="opacity-0 scale-[0.985] blur-[4px]"
+              enter-to-class="opacity-100 scale-100 blur-0"
+              leave-active-class="transition-[opacity,transform,filter] duration-150 ease-[cubic-bezier(0.4,0,1,1)]"
+              leave-from-class="opacity-100 scale-100 blur-0"
+              leave-to-class="opacity-0 scale-[0.99] blur-[2px]"
             >
-              <SelectTrigger class="h-full w-full rounded-none border-0 bg-transparent px-2 shadow-none focus-visible:ring-0">
-                <span class="truncate text-left">{{ parkSelectLabel }}</span>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem v-for="park in parkOptions" :key="park.uuid" :value="park.uuid">
-                  {{ park.name }}
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          </InputGroup>
+              <InputGroup
+                v-if="expandedControl === 'name'"
+                key="name-expanded"
+                class="relative w-full rounded-full bg-background shadow-xs ring-1 ring-border/60"
+              >
+                <InputGroupAddon class="pl-2.5 pr-2">
+                  <InputGroupText>
+                    <i class="ri-text text-[15px]" />
+                    建筑
+                  </InputGroupText>
+                </InputGroupAddon>
+                <InputGroupInput
+                  v-model="draftName"
+                  data-building-search-input
+                  placeholder="输入建筑名称搜索"
+                  class="min-w-0 pr-9"
+                  @keydown.enter="handleNameEnter"
+                  @keydown.esc="collapseControl('name')"
+                />
+                <button
+                  type="button"
+                  class="absolute right-1 top-1/2 inline-flex size-7 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground transition-[background-color,color,transform] duration-180 ease-out hover:bg-interactive-hover hover:text-foreground active:scale-[0.96]"
+                  aria-label="收起建筑搜索"
+                  @click="collapseControl('name')"
+                >
+                  <i class="ri-close-line text-[16px]" />
+                </button>
+              </InputGroup>
+
+              <FilterChip
+                v-else
+                key="name-collapsed"
+                icon="ri-text"
+                :label="nameTriggerLabel"
+                :selected="Boolean(appliedName)"
+                caret
+                class="h-9 justify-start rounded-full px-3 shadow-xs ring-1 ring-border/60 transition-[background-color,color,box-shadow,transform] duration-220 ease-[cubic-bezier(0.2,0,0,1)]"
+                @click="toggleControl('name')"
+              />
+            </Transition>
+          </div>
+
+          <div
+            :class="[
+              'relative shrink-0 overflow-visible transition-[width,max-width] duration-280 ease-[cubic-bezier(0.2,0,0,1)]',
+              expandedControl === 'customer' ? 'w-[240px]' : 'w-fit max-w-[220px]',
+            ]"
+          >
+            <Transition
+              mode="out-in"
+              enter-active-class="transition-[opacity,transform,filter] duration-220 ease-[cubic-bezier(0.2,0,0,1)]"
+              enter-from-class="opacity-0 scale-[0.985] blur-[4px]"
+              enter-to-class="opacity-100 scale-100 blur-0"
+              leave-active-class="transition-[opacity,transform,filter] duration-150 ease-[cubic-bezier(0.4,0,1,1)]"
+              leave-from-class="opacity-100 scale-100 blur-0"
+              leave-to-class="opacity-0 scale-[0.99] blur-[2px]"
+            >
+              <InputGroup
+                v-if="expandedControl === 'customer'"
+                key="customer-expanded"
+                class="relative w-full rounded-full bg-background shadow-xs ring-1 ring-border/60"
+              >
+                <InputGroupAddon class="pl-2.5 pr-2">
+                  <InputGroupText>
+                    <i class="ri-price-tag-3-line text-[15px]" />
+                    客户
+                  </InputGroupText>
+                </InputGroupAddon>
+                <Select v-model="selectedCustomerUuids" multiple :disabled="customerOptionsLoading">
+                  <SelectTrigger class="h-full w-full rounded-none border-0 bg-transparent px-2 pr-9 shadow-none focus-visible:ring-0">
+                    <span class="truncate text-left">{{ customerSelectLabel }}</span>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem v-for="customer in customerOptions" :key="customer.uuid" :value="customer.uuid">
+                      {{ customer.name }}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                <button
+                  type="button"
+                  class="absolute right-1 top-1/2 z-10 inline-flex size-7 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground transition-[background-color,color,transform] duration-180 ease-out hover:bg-interactive-hover hover:text-foreground active:scale-[0.96]"
+                  aria-label="收起客户筛选"
+                  @click="collapseControl('customer')"
+                >
+                  <i class="ri-close-line text-[16px]" />
+                </button>
+              </InputGroup>
+
+              <FilterChip
+                v-else
+                key="customer-collapsed"
+                icon="ri-price-tag-3-line"
+                :label="customerTriggerLabel"
+                :selected="Boolean(selectedCustomerUuids.length)"
+                caret
+                class="h-9 justify-start rounded-full px-3 shadow-xs ring-1 ring-border/60 transition-[background-color,color,box-shadow,transform] duration-220 ease-[cubic-bezier(0.2,0,0,1)]"
+                @click="toggleControl('customer')"
+              />
+            </Transition>
+          </div>
+
+          <div
+            :class="[
+              'relative shrink-0 overflow-visible transition-[width,max-width] duration-280 ease-[cubic-bezier(0.2,0,0,1)]',
+              expandedControl === 'park' ? 'w-[240px]' : 'w-fit max-w-[220px]',
+            ]"
+          >
+            <Transition
+              mode="out-in"
+              enter-active-class="transition-[opacity,transform,filter] duration-220 ease-[cubic-bezier(0.2,0,0,1)]"
+              enter-from-class="opacity-0 scale-[0.985] blur-[4px]"
+              enter-to-class="opacity-100 scale-100 blur-0"
+              leave-active-class="transition-[opacity,transform,filter] duration-150 ease-[cubic-bezier(0.4,0,1,1)]"
+              leave-from-class="opacity-100 scale-100 blur-0"
+              leave-to-class="opacity-0 scale-[0.99] blur-[2px]"
+            >
+              <InputGroup
+                v-if="expandedControl === 'park'"
+                key="park-expanded"
+                class="relative w-full rounded-full bg-background shadow-xs ring-1 ring-border/60"
+              >
+                <InputGroupAddon class="pl-2.5 pr-2">
+                  <InputGroupText>
+                    <i class="ri-price-tag-3-line text-[15px]" />
+                    园区
+                  </InputGroupText>
+                </InputGroupAddon>
+                <Select
+                  v-model="selectedParkUuids"
+                  multiple
+                  :disabled="!selectedCustomerUuids.length || parkOptionsLoading"
+                >
+                  <SelectTrigger class="h-full w-full rounded-none border-0 bg-transparent px-2 pr-9 shadow-none focus-visible:ring-0">
+                    <span class="truncate text-left">{{ parkSelectLabel }}</span>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem v-for="park in parkOptions" :key="park.uuid" :value="park.uuid">
+                      {{ park.name }}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+                <button
+                  type="button"
+                  class="absolute right-1 top-1/2 z-10 inline-flex size-7 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground transition-[background-color,color,transform] duration-180 ease-out hover:bg-interactive-hover hover:text-foreground active:scale-[0.96]"
+                  aria-label="收起园区筛选"
+                  @click="collapseControl('park')"
+                >
+                  <i class="ri-close-line text-[16px]" />
+                </button>
+              </InputGroup>
+
+              <FilterChip
+                v-else
+                key="park-collapsed"
+                icon="ri-price-tag-3-line"
+                :label="parkTriggerLabel"
+                :selected="Boolean(selectedParkUuids.length)"
+                caret
+                :class="[
+                  'h-9 justify-start rounded-full px-3 shadow-xs ring-1 ring-border/60 transition-[background-color,color,box-shadow,transform] duration-220 ease-[cubic-bezier(0.2,0,0,1)]',
+                  !selectedCustomerUuids.length && !selectedParkUuids.length ? 'pointer-events-none opacity-55' : '',
+                ]"
+                @click="toggleControl('park')"
+              />
+            </Transition>
+          </div>
 
           <FilterChip
             icon="ri-close-circle-line"
