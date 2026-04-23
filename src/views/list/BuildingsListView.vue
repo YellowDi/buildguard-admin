@@ -887,7 +887,7 @@ function toText(value: unknown, fallback = "") {
       <template #controls-prefix>
         <div class="mr-2 flex min-w-max items-center gap-2">
           <div
-            class="relative h-6 shrink-0 overflow-visible transition-[width] duration-280 ease-[cubic-bezier(0.2,0,0,1)]"
+            class="relative h-8 shrink-0 overflow-visible transition-[width] duration-280 ease-[cubic-bezier(0.2,0,0,1)]"
             :class="expandedControl === 'name' ? 'w-[336px]' : 'w-[102px]'"
           >
             <div
@@ -908,7 +908,7 @@ function toText(value: unknown, fallback = "") {
               class="absolute inset-0 origin-left transition-[opacity,transform,filter] duration-220 ease-[cubic-bezier(0.2,0,0,1)]"
               :class="expandedControl === 'name' ? 'pointer-events-auto scale-100 opacity-100 blur-0' : 'pointer-events-none scale-[0.96] opacity-0 blur-[2px]'"
             >
-              <InputGroup class="relative h-8 w-full rounded-full bg-background shadow-xs ring-1 ring-border/60">
+              <InputGroup class="relative h-8 w-full rounded-full bg-background">
                 <InputGroupAddon class="pl-2.5 pr-2">
                   <InputGroupText>
                     <i class="ri-text text-[15px]" />
@@ -936,7 +936,7 @@ function toText(value: unknown, fallback = "") {
           </div>
 
           <div
-            class="relative h-6 shrink-0 overflow-visible transition-[width] duration-280 ease-[cubic-bezier(0.2,0,0,1)]"
+            class="relative h-8 shrink-0 overflow-visible transition-[width] duration-280 ease-[cubic-bezier(0.2,0,0,1)]"
             :class="expandedControl === 'customer' ? 'w-[248px]' : 'w-[96px]'"
           >
             <div
@@ -957,7 +957,7 @@ function toText(value: unknown, fallback = "") {
               class="absolute inset-0 origin-left transition-[opacity,transform,filter] duration-220 ease-[cubic-bezier(0.2,0,0,1)]"
               :class="expandedControl === 'customer' ? 'pointer-events-auto scale-100 opacity-100 blur-0' : 'pointer-events-none scale-[0.96] opacity-0 blur-[2px]'"
             >
-              <InputGroup class="relative h-8 w-full rounded-full bg-background shadow-xs ring-1 ring-border/60">
+              <InputGroup class="relative h-8 w-full rounded-full bg-background">
                 <InputGroupAddon class="pl-2.5 pr-2">
                   <InputGroupText>
                     <i class="ri-price-tag-3-line text-[15px]" />
@@ -987,7 +987,7 @@ function toText(value: unknown, fallback = "") {
           </div>
 
           <div
-            class="relative h-6 shrink-0 overflow-visible transition-[width] duration-280 ease-[cubic-bezier(0.2,0,0,1)]"
+            class="relative h-8 shrink-0 overflow-visible transition-[width] duration-280 ease-[cubic-bezier(0.2,0,0,1)]"
             :class="expandedControl === 'park' ? 'w-[248px]' : 'w-[96px]'"
           >
             <div
@@ -1011,7 +1011,7 @@ function toText(value: unknown, fallback = "") {
               class="absolute inset-0 origin-left transition-[opacity,transform,filter] duration-220 ease-[cubic-bezier(0.2,0,0,1)]"
               :class="expandedControl === 'park' ? 'pointer-events-auto scale-100 opacity-100 blur-0' : 'pointer-events-none scale-[0.96] opacity-0 blur-[2px]'"
             >
-              <InputGroup class="relative h-8 w-full rounded-full bg-background shadow-xs ring-1 ring-border/60">
+              <InputGroup class="relative h-8 w-full rounded-full bg-background">
                 <InputGroupAddon class="pl-2.5 pr-2">
                   <InputGroupText>
                     <i class="ri-price-tag-3-line text-[15px]" />
@@ -1049,7 +1049,7 @@ function toText(value: unknown, fallback = "") {
             label="清空筛选"
             variant="ghost"
             :class="[
-              'h-6 shrink-0 px-2',
+              'h-6 shrink-0 self-center px-2',
               canResetFilters ? '' : 'pointer-events-none opacity-40',
             ]"
             @click="handleResetFilters"
