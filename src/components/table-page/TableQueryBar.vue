@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { DateFormatter, getLocalTimeZone, parseDate } from "@internationalized/date"
+import type { AcceptableValue } from "reka-ui"
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch, type ComponentPublicInstance } from "vue"
 
 import type { TableQueryBarConfig, TableQueryControl, TableQueryDateControl, TableQuerySelectControl } from "@/components/table-page/types"
@@ -280,8 +281,26 @@ function commitSearch(control: Extract<TableQueryControl, { type: "search" }>) {
   })
 }
 
-function handleSelectChange(control: Extract<TableQueryControl, { type: "select" }>, value: string | string[]) {
-  emit("query-change", { key: control.key, value })
+function handleSelectChange(
+  control: Extract<TableQueryControl, { type: "select" }>,
+  value: AcceptableValue | AcceptableValue[] | undefined,
+) {
+  if (control.multiple) {
+    emit("query-change", {
+      key: control.key,
+      value: Array.isArray(value)
+        ? value
+          .map(item => typeof item === "string" ? item : "")
+          .filter(Boolean)
+        : [],
+    })
+    return
+  }
+
+  emit("query-change", {
+    key: control.key,
+    value: typeof value === "string" ? value : "",
+  })
 }
 
 function handleDateChange(control: TableQueryDateControl, value: { toString: () => string } | undefined) {
@@ -504,10 +523,7 @@ function setDateTriggerRef(key: string, value: HTMLElement | null) {
       icon="ri-close-circle-line"
       label="清空筛选"
       variant="ghost"
-      :class="[
-        'h-6 shrink-0 self-center px-2',
-        props.queryBar.canClear ? '' : 'pointer-events-none opacity-40',
-      ]"
+      :class="`h-6 shrink-0 self-center px-2${props.queryBar.canClear ? '' : ' pointer-events-none opacity-40'}`"
       @click="emit('query-clear')"
     />
 

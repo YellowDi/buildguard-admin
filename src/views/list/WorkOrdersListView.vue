@@ -336,21 +336,16 @@ const queryBar = computed<TableQueryBarConfig>(() => ({
           collapsedMaxWidth: 248,
         },
       ],
-  values: props.kind === "inspection"
-    ? {
-        q: orderNoQuery.value,
-        customerUuid: selectedCustomerUuid.value,
-        planUuid: selectedPlanUuid.value,
-        serviceName: serviceNameQuery.value,
-        executor: executorQuery.value,
-        status: selectedStatus.value,
-        result: selectedResult.value,
-      }
-    : {
-        q: orderNoQuery.value,
-        createdAt: createdAtQuery.value,
-        status: selectedStatus.value,
-      },
+  values: {
+    q: orderNoQuery.value,
+    customerUuid: props.kind === "inspection" ? selectedCustomerUuid.value : "",
+    planUuid: props.kind === "inspection" ? selectedPlanUuid.value : "",
+    serviceName: props.kind === "inspection" ? serviceNameQuery.value : "",
+    executor: props.kind === "inspection" ? executorQuery.value : "",
+    createdAt: props.kind === "repair" ? createdAtQuery.value : "",
+    status: selectedStatus.value,
+    result: props.kind === "inspection" ? selectedResult.value : "",
+  },
   canClear: props.kind === "inspection"
     ? Boolean(orderNoQuery.value || selectedCustomerUuid.value || selectedPlanUuid.value || serviceNameQuery.value || executorQuery.value || selectedStatus.value || selectedResult.value)
     : Boolean(orderNoQuery.value || createdAtQuery.value || selectedStatus.value),

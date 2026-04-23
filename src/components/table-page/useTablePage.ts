@@ -250,15 +250,17 @@ export function useTablePage<Row>(input: TablePageSchema<Row> | TablePageDefinit
     })
   })
 
+  const enumTabs = definition.tabs.mode === "enum" ? definition.tabs : null
+
   if (
-    definition.tabs.mode === "enum"
-    && typeof definition.tabs.options !== "function"
-    && !definition.tabs.options?.length
+    enumTabs
+    && typeof enumTabs.options !== "function"
+    && !enumTabs.options?.length
   ) {
     watch(
       rows,
       (nextRows) => {
-        const nextValues = getTabValues(nextRows, definition.tabs)
+        const nextValues = getTabValues(nextRows, enumTabs)
 
         if (!nextValues.length) {
           return
