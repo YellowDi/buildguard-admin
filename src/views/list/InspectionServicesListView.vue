@@ -10,9 +10,9 @@ import { Progress } from "@/components/ui/progress"
 import TableStatusChip from "@/components/table-page/TableStatusChip.vue"
 import TablePage from "@/components/table-page/TablePage.vue"
 import { createTablePageDefinition, useTablePage } from "@/components/table-page/useTablePage"
-import type { TablePageSchema } from "@/components/table-page/types"
-import { useRouteTableSearch } from "@/composables/useRouteTableSearch"
+import type { TablePageSchema, TableQueryBarConfig } from "@/components/table-page/types"
 import { handleApiError } from "@/lib/api-errors"
+import { fetchCustomers } from "@/lib/customers-api"
 import { fetchInspectionServices, type InspectionServiceListItem } from "@/lib/inspection-services-api"
 import {
   Tooltip,
@@ -63,6 +63,11 @@ const errorMessage = ref("")
 const pageNum = ref(1)
 const pageSize = ref(50)
 const total = ref(0)
+const serviceNameQuery = ref("")
+const selectedCustomerUuid = ref("")
+const sortDirection = ref<"asc" | "desc">("desc")
+const customerOptions = ref<Array<{ value: string; label: string }>>([])
+const customerOptionsLoading = ref(false)
 const route = useRoute()
 const router = useRouter()
 const activeLinkedDetailKind = ref<LinkedDetailSheetKind | null>(null)
@@ -205,16 +210,7 @@ const schema: TablePageSchema<InspectionServiceRecord> = {
       sort: true,
     },
   ],
-  filters: [
-    {
-      key: "在页面中",
-      label: "在页面中",
-      type: "text",
-      fixed: true,
-      placeholder: "输入页面内筛选条件",
-      value: row => buildPageFilterText(row),
-    },
-  ],
+  filters: [],
   sort: {
     storageKey: "inspection-services-sort-preferences",
     initialField: "CreatedAt",
@@ -231,10 +227,44 @@ const schema: TablePageSchema<InspectionServiceRecord> = {
 
 const page = useTablePage({
   ...createTablePageDefinition(schema),
-  rows: inspectionServices,
+  rows: computed(() => [...inspectionServices.value].sort((left, right) => compareInspectionServiceRows(left, right, sortDirection.value))),
 })
+page.showControls.value = true
+page.customSortEnabled.value = false
 
-useRouteTableSearch(page, route)
+const queryBar = computed<TableQueryBarConfig>(() => ({
+  controls: [
+    {
+      type: "search",
+      key: "q",
+      queryKey: "q",
+      label: "服务名称",
+      icon: "ri-text",
+      placeholder: "输入服务名称搜索",
+      value: serviceNameQuery.value,
+      expandedWidth: 248,
+      collapsedMaxWidth: 248,
+    },
+    {
+      type: "select",
+      key: "customerUuid",
+      queryKey: "customerUuid",
+      label: "所属客户",
+      icon: "ri-price-tag-3-line",
+      value: selectedCustomerUuid.value,
+      options: customerOptions.value,
+      loading: customerOptionsLoading.value,
+      placeholder: customerOptionsLoading.value ? "正在加载客户..." : "请选择客户",
+      expandedWidth: 248,
+      collapsedMaxWidth: 248,
+    },
+  ],
+  values: {
+    q: serviceNameQuery.value,
+    customerUuid: selectedCustomerUuid.value,
+  },
+  canClear: Boolean(serviceNameQuery.value || selectedCustomerUuid.value),
+}))
 
 watch([pageNum, pageSize], ([nextPageNum, nextPageSize], [previousPageNum, previousPageSize]) => {
   if (nextPageNum === previousPageNum && nextPageSize === previousPageSize) {
@@ -242,7 +272,31 @@ watch([pageNum, pageSize], ([nextPageNum, nextPageSize], [previousPageNum, previ
   }
 
   void loadInspectionServices()
-}, { immediate: true })
+})
+
+watch(
+  () => [normalizeQueryValue(route.query.q), normalizeQueryValue(route.query.customerUuid)] as const,
+  ([nextQuery, nextCustomer], previousValue) => {
+    const [previousQuery, previousCustomer] = previousValue ?? []
+
+    if (previousValue && nextQuery === previousQuery && nextCustomer === previousCustomer) {
+      return
+    }
+
+    serviceNameQuery.value = nextQuery
+    selectedCustomerUuid.value = nextCustomer
+
+    if (pageNum.value !== 1) {
+      pageNum.value = 1
+      return
+    }
+
+    void loadInspectionServices()
+  },
+  { immediate: true },
+)
+
+void loadCustomerOptions()
 
 function handleCreateInspectionService() {
   void router.push({ name: "inspection-service-create" })
@@ -267,6 +321,28 @@ function buildPageFilterText(row: InspectionServiceRecord) {
   ].join(" ")
 }
 
+async function loadCustomerOptions() {
+  customerOptionsLoading.value = true
+
+  try {
+    const result = await fetchCustomers({
+      PageNum: 1,
+      PageSize: 200,
+    })
+
+    customerOptions.value = result.list
+      .map(item => ({
+        value: toText(item.Uuid),
+        label: toText(item.CorpName, "未命名客户"),
+      }))
+      .filter(option => option.value)
+  } catch {
+    customerOptions.value = []
+  } finally {
+    customerOptionsLoading.value = false
+  }
+}
+
 async function loadInspectionServices() {
   const requestId = ++latestRequestId
 
@@ -275,6 +351,8 @@ async function loadInspectionServices() {
 
   try {
     const result = await fetchInspectionServices({
+      Name: serviceNameQuery.value || undefined,
+      CustomerUuid: selectedCustomerUuid.value || undefined,
       PageNum: pageNum.value,
       PageSize: pageSize.value,
     })
@@ -561,6 +639,79 @@ function toText(value: unknown, fallback = "") {
 
   return fallback
 }
+
+function compareInspectionServiceRows(left: InspectionServiceRecord, right: InspectionServiceRecord, direction: "asc" | "desc") {
+  const leftValue = parseTimestamp(left.CreatedAt)
+  const rightValue = parseTimestamp(right.CreatedAt)
+
+  if (leftValue !== rightValue) {
+    return direction === "asc" ? leftValue - rightValue : rightValue - leftValue
+  }
+
+  return left.Name.localeCompare(right.Name, "zh-CN")
+}
+
+function parseTimestamp(value: string) {
+  const normalized = value.trim()
+
+  if (!normalized || normalized === "-" || normalized === "—") {
+    return 0
+  }
+
+  const timestamp = new Date(normalized.replace(" ", "T")).getTime()
+  return Number.isFinite(timestamp) ? timestamp : 0
+}
+
+function normalizeQueryValue(value: unknown) {
+  if (Array.isArray(value)) {
+    return normalizeQueryValue(value[0])
+  }
+
+  return typeof value === "string" ? value.trim() : ""
+}
+
+function handleToolbarSortToggle() {
+  sortDirection.value = sortDirection.value === "asc" ? "desc" : "asc"
+}
+
+function handleQueryChange(payload: { key: string; value: string | string[] }) {
+  if (payload.key === "q") {
+    serviceNameQuery.value = typeof payload.value === "string" ? payload.value.trim() : ""
+  }
+
+  if (payload.key === "customerUuid") {
+    selectedCustomerUuid.value = typeof payload.value === "string" ? payload.value.trim() : ""
+  }
+
+  void syncRouteQueryAndReload()
+}
+
+function handleQueryClear() {
+  if (!serviceNameQuery.value && !selectedCustomerUuid.value) {
+    return
+  }
+
+  serviceNameQuery.value = ""
+  selectedCustomerUuid.value = ""
+  void syncRouteQueryAndReload()
+}
+
+async function syncRouteQueryAndReload() {
+  await router.replace({
+    query: {
+      ...route.query,
+      q: serviceNameQuery.value || undefined,
+      customerUuid: selectedCustomerUuid.value || undefined,
+    },
+  })
+
+  if (pageNum.value !== 1) {
+    pageNum.value = 1
+    return
+  }
+
+  await loadInspectionServices()
+}
 </script>
 
 <template>
@@ -583,9 +734,15 @@ function toText(value: unknown, fallback = "") {
       <TablePage
         :page="page"
         :loading="loading"
+        :query-bar="queryBar"
+        toolbar-sort-behavior="toggle"
+        :toolbar-sort-direction="sortDirection"
         fill-available-height
         @refresh-action="loadInspectionServices"
         @primary-action="handleCreateInspectionService"
+        @toolbar-sort-toggle="handleToolbarSortToggle"
+        @query-change="handleQueryChange"
+        @query-clear="handleQueryClear"
       >
       <template #cell-CorpName="{ row }">
         <button

@@ -145,9 +145,11 @@ export type InspectionServiceDeletePayload = {
 }
 
 export type ListInspectionServicesPayload = {
+  BuildUuids?: string[]
   Name?: string
   CustomerUuid?: string
-  TemplateUuid?: string
+  PackageName?: string
+  Status?: number
   PageNum?: number
   PageSize?: number
   [property: string]: unknown
@@ -177,9 +179,13 @@ export async function fetchInspectionServices(
   }
 
   const normalizedPayload = {
+    BuildUuids: Array.isArray(payload.BuildUuids)
+      ? payload.BuildUuids.map(item => getOptionalString(item)).filter((item): item is string => Boolean(item))
+      : undefined,
     Name: getOptionalString(payload.Name),
     CustomerUuid: getOptionalString(payload.CustomerUuid),
-    TemplateUuid: getOptionalString(payload.TemplateUuid),
+    PackageName: getOptionalString(payload.PackageName),
+    Status: getOptionalNumber(payload.Status, "Status"),
     PageNum: getOptionalNumber(payload.PageNum, "PageNum"),
     PageSize: getOptionalNumber(payload.PageSize, "PageSize"),
   }

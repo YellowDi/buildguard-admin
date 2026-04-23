@@ -23,6 +23,7 @@ import type {
   TableSection,
   TagFilterState,
   TextFilterState,
+  TableQueryBarConfig,
 } from "@/components/table-page/types"
 import { handleApiError } from "@/lib/api-errors"
 import { cn } from "@/lib/utils"
@@ -73,6 +74,7 @@ const props = withDefaults(defineProps<{
   pinRowActions?: boolean
   toolbarSortBehavior?: "default" | "toggle"
   toolbarSortDirection?: "asc" | "desc"
+  queryBar?: TableQueryBarConfig | null
 }>(), {
   showToolbarActions: true,
   listLevelTable: true,
@@ -82,6 +84,7 @@ const props = withDefaults(defineProps<{
   pinRowActions: true,
   toolbarSortBehavior: "default",
   toolbarSortDirection: "desc",
+  queryBar: null,
 })
 
 const emit = defineEmits<{
@@ -102,6 +105,8 @@ const emit = defineEmits<{
   "export-action": []
   "primary-action": []
   "toolbar-sort-toggle": []
+  "query-change": [payload: { key: string; value: string | string[] }]
+  "query-clear": []
 }>()
 
 const slots = useSlots()
@@ -209,6 +214,7 @@ async function handleExportConfirm(payload: { scope: TableExportScope; format: T
           :list-level-table="props.listLevelTable"
           :toolbar-sort-behavior="props.toolbarSortBehavior"
           :toolbar-sort-direction="props.toolbarSortDirection"
+          :query-bar="props.queryBar"
           @tab-click="emit('tab-click', $event)"
           @add-filter="emit('add-filter', $event)"
           @replace-filter="emit('replace-filter', $event)"
@@ -225,6 +231,8 @@ async function handleExportConfirm(payload: { scope: TableExportScope; format: T
           @export-action="handleOpenExportDialog"
           @primary-action="emit('primary-action')"
           @toolbar-sort-toggle="emit('toolbar-sort-toggle')"
+          @query-change="emit('query-change', $event)"
+          @query-clear="emit('query-clear')"
         >
           <template v-if="slots['controls-prefix']" #controls-prefix>
             <slot name="controls-prefix" />

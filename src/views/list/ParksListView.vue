@@ -6,8 +6,7 @@ import { toast } from "vue-sonner"
 import LinkedEntityDetailSheet from "@/components/detail/LinkedEntityDetailSheet.vue"
 import TablePage from "@/components/table-page/TablePage.vue"
 import { createTablePageDefinition, useTablePage } from "@/components/table-page/useTablePage"
-import type { TablePageSchema } from "@/components/table-page/types"
-import { useRouteTableSearch } from "@/composables/useRouteTableSearch"
+import type { TablePageSchema, TableQueryBarConfig } from "@/components/table-page/types"
 import {
   Pagination,
   PaginationContent,
@@ -21,6 +20,7 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { handleApiError } from "@/lib/api-errors"
+import { fetchCustomers } from "@/lib/customers-api"
 import { fetchParks } from "@/lib/parks-api"
 
 type ParkRecord = {
@@ -49,10 +49,16 @@ const errorMessage = ref("")
 const pageNum = ref(1)
 const pageSize = ref(50)
 const total = ref(0)
+const parkNameQuery = ref("")
+const selectedCustomerUuid = ref("")
+const sortDirection = ref<"asc" | "desc">("desc")
+const customerOptions = ref<Array<{ value: string; label: string }>>([])
+const customerOptionsLoading = ref(false)
 const activeLinkedDetailKind = ref<LinkedDetailSheetKind | null>(null)
 const activeLinkedDetailUuid = ref("")
 const activeLinkedDetailCustomerUuid = ref("")
 let latestRequestId = 0
+let syncingRoute = false
 
 const router = useRouter()
 const route = useRoute()
@@ -248,12 +254,59 @@ const schema: TablePageSchema<ParkRecord> = {
   },
 }
 
-const page = useTablePage({
-  ...createTablePageDefinition(schema),
-  rows: parks,
+const sortedParks = computed(() => {
+  return [...parks.value].sort((left, right) => {
+    const leftValue = Date.parse(left.updatedAt)
+    const rightValue = Date.parse(right.updatedAt)
+
+    if (Number.isFinite(leftValue) && Number.isFinite(rightValue) && leftValue !== rightValue) {
+      return sortDirection.value === "asc" ? leftValue - rightValue : rightValue - leftValue
+    }
+
+    return left.parkName.localeCompare(right.parkName, "zh-CN")
+  })
 })
 
-useRouteTableSearch(page, route)
+const page = useTablePage({
+  ...createTablePageDefinition(schema),
+  rows: sortedParks,
+})
+page.showControls.value = true
+page.customSortEnabled.value = false
+
+const queryBar = computed<TableQueryBarConfig>(() => ({
+  controls: [
+    {
+      type: "search",
+      key: "q",
+      queryKey: "q",
+      label: "园区名称",
+      icon: "ri-text",
+      placeholder: "输入园区名称搜索",
+      value: parkNameQuery.value,
+      expandedWidth: 248,
+      collapsedMaxWidth: 248,
+    },
+    {
+      type: "select",
+      key: "customerUuid",
+      queryKey: "customerUuid",
+      label: "所属客户",
+      icon: "ri-price-tag-3-line",
+      value: selectedCustomerUuid.value,
+      loading: customerOptionsLoading.value,
+      options: customerOptions.value,
+      expandedWidth: 248,
+      collapsedMaxWidth: 248,
+      placeholder: customerOptionsLoading.value ? "正在加载客户..." : "请选择客户",
+    },
+  ],
+  values: {
+    q: parkNameQuery.value,
+    customerUuid: selectedCustomerUuid.value,
+  },
+  canClear: Boolean(parkNameQuery.value || selectedCustomerUuid.value),
+}))
 
 watch([pageNum, pageSize], ([nextPageNum, nextPageSize], [previousPageNum, previousPageSize]) => {
   if (nextPageNum === previousPageNum && nextPageSize === previousPageSize) {
@@ -261,7 +314,29 @@ watch([pageNum, pageSize], ([nextPageNum, nextPageSize], [previousPageNum, previ
   }
 
   void loadParks()
-}, { immediate: true })
+})
+
+watch(
+  () => [normalizeQueryValue(route.query.q), normalizeQueryValue(route.query.customerUuid)] as const,
+  ([nextQuery, nextCustomer], previousValue) => {
+    const [previousQuery, previousCustomer] = previousValue ?? []
+
+    if (syncingRoute || (previousValue && nextQuery === previousQuery && nextCustomer === previousCustomer)) {
+      return
+    }
+
+    parkNameQuery.value = nextQuery
+    selectedCustomerUuid.value = nextCustomer
+
+    if (pageNum.value !== 1) {
+      pageNum.value = 1
+      return
+    }
+
+    void loadParks()
+  },
+  { immediate: true },
+)
 
 function handleCreatePark() {
   void router.push({ name: "park-create" })
@@ -288,6 +363,55 @@ function handleLinkedDetailSheetOpenChange(open: boolean) {
   }
 }
 
+function handleToolbarSortToggle() {
+  sortDirection.value = sortDirection.value === "asc" ? "desc" : "asc"
+}
+
+function handleQueryChange(payload: { key: string; value: string | string[] }) {
+  if (payload.key === "q") {
+    parkNameQuery.value = typeof payload.value === "string" ? payload.value.trim() : ""
+  }
+
+  if (payload.key === "customerUuid") {
+    selectedCustomerUuid.value = typeof payload.value === "string" ? payload.value.trim() : ""
+  }
+
+  void syncRouteQueryAndReload()
+}
+
+function handleQueryClear() {
+  if (!parkNameQuery.value && !selectedCustomerUuid.value) {
+    return
+  }
+
+  parkNameQuery.value = ""
+  selectedCustomerUuid.value = ""
+  void syncRouteQueryAndReload()
+}
+
+async function syncRouteQueryAndReload() {
+  syncingRoute = true
+
+  try {
+    await router.replace({
+      query: {
+        ...route.query,
+        q: parkNameQuery.value || undefined,
+        customerUuid: selectedCustomerUuid.value || undefined,
+      },
+    })
+  } finally {
+    syncingRoute = false
+  }
+
+  if (pageNum.value !== 1) {
+    pageNum.value = 1
+    return
+  }
+
+  await loadParks()
+}
+
 async function loadParks() {
   const requestId = ++latestRequestId
 
@@ -295,7 +419,12 @@ async function loadParks() {
   errorMessage.value = ""
 
   try {
-    const parksResult = await fetchParks({ PageNum: pageNum.value, PageSize: pageSize.value })
+    const parksResult = await fetchParks({
+      Name: parkNameQuery.value || undefined,
+      CustomerUuid: selectedCustomerUuid.value || undefined,
+      PageNum: pageNum.value,
+      PageSize: pageSize.value,
+    })
 
     if (requestId !== latestRequestId) {
       return
@@ -346,6 +475,30 @@ async function loadParks() {
     if (requestId === latestRequestId) {
       loading.value = false
     }
+  }
+}
+
+void loadCustomerOptions()
+
+async function loadCustomerOptions() {
+  customerOptionsLoading.value = true
+
+  try {
+    const result = await fetchCustomers({
+      PageNum: 1,
+      PageSize: 200,
+    })
+
+    customerOptions.value = result.list
+      .map(item => ({
+        value: typeof item.Uuid === "string" ? item.Uuid.trim() : "",
+        label: typeof item.CorpName === "string" && item.CorpName.trim() ? item.CorpName.trim() : "未命名客户",
+      }))
+      .filter(option => option.value)
+  } catch {
+    customerOptions.value = []
+  } finally {
+    customerOptionsLoading.value = false
   }
 }
 
@@ -411,6 +564,14 @@ function toText(value: unknown, fallback = "") {
 
   return fallback
 }
+
+function normalizeQueryValue(value: unknown) {
+  if (Array.isArray(value)) {
+    return normalizeQueryValue(value[0])
+  }
+
+  return typeof value === "string" ? value.trim() : ""
+}
 </script>
 
 <template>
@@ -431,9 +592,15 @@ function toText(value: unknown, fallback = "") {
     <TablePage
       :page="page"
       :loading="loading"
+      :query-bar="queryBar"
+      toolbar-sort-behavior="toggle"
+      :toolbar-sort-direction="sortDirection"
       fill-available-height
       @refresh-action="loadParks"
       @primary-action="handleCreatePark"
+      @toolbar-sort-toggle="handleToolbarSortToggle"
+      @query-change="handleQueryChange"
+      @query-clear="handleQueryClear"
     >
       <template #cell-customerName="{ row }">
         <button

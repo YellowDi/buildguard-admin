@@ -162,11 +162,16 @@ export type ListWorkOrdersPayload = {
   OrderNo?: string
   PlanUuid?: string
   CustomerUuid?: string
-  PackageName?: string
+  ServiceName?: string
   Deadline?: string
   Executor?: string
   Status?: number
   Result?: number
+  CreatedStartAt?: string
+  CreatedEndAt?: string
+  Important?: number
+  Title?: string
+  UserUuid?: number
   PageNum?: number
   PageSize?: number
   [property: string]: unknown
@@ -193,7 +198,7 @@ export async function fetchWorkOrders(payload: ListWorkOrdersPayload = {}): Prom
   const normalizedPayload = {
     OrderNo: getOptionalString(payload.OrderNo) ?? "",
     PlanUuid: getOptionalString(payload.PlanUuid) ?? "",
-    PackageName: getOptionalString(payload.PackageName) ?? "",
+    ServiceName: getOptionalString(payload.ServiceName) ?? "",
     CustomerUuid: getOptionalString(payload.CustomerUuid) ?? "",
     Deadline: getOptionalString(payload.Deadline) ?? "",
     Executor: getOptionalString(payload.Executor) ?? "",
@@ -405,9 +410,14 @@ export async function dispatchWorkOrder(payload: DispatchWorkOrderPayload): Prom
 
 export async function fetchRepairWorkOrders(payload: ListWorkOrdersPayload = {}): Promise<RepairWorkOrdersListResult> {
   const normalizedPayload = {
+    CreatedEndAt: getOptionalString(payload.CreatedEndAt) ?? "",
+    CreatedStartAt: getOptionalString(payload.CreatedStartAt) ?? "",
     OrderNo: getOptionalString(payload.OrderNo) ?? "",
     CustomerUuid: getOptionalString(payload.CustomerUuid) ?? "",
+    Important: getOptionalNumber(payload.Important, "Important") ?? 0,
     Status: getOptionalNumber(payload.Status, "Status") ?? 0,
+    Title: getOptionalString(payload.Title) ?? "",
+    UserUuid: getOptionalNumber(payload.UserUuid, "UserUuid") ?? 0,
     PageNum: getOptionalNumber(payload.PageNum, "PageNum") ?? 1,
     PageSize: getOptionalNumber(payload.PageSize, "PageSize") ?? 10,
   }

@@ -68,7 +68,13 @@ export type InspectionPlanDeletePayload = {
 }
 
 export type ListInspectionPlansPayload = {
+  Code?: string
   CustomerUuid?: string
+  CreatedStartAt?: string
+  CreatedEndAt?: string
+  NextStartTime?: string
+  NextEndTime?: string
+  ServiceUuid?: string
   PageNum?: number
   PageSize?: number
   [property: string]: unknown
@@ -88,7 +94,13 @@ export async function fetchInspectionPlans(
   payload: ListInspectionPlansPayload = {},
 ): Promise<InspectionPlansResult> {
   const normalizedPayload = {
+    Code: getOptionalString(payload.Code),
     CustomerUuid: getOptionalString(payload.CustomerUuid),
+    CreatedStartAt: getOptionalString(payload.CreatedStartAt),
+    CreatedEndAt: getOptionalString(payload.CreatedEndAt),
+    NextStartTime: getOptionalString(payload.NextStartTime),
+    NextEndTime: getOptionalString(payload.NextEndTime),
+    ServiceUuid: getOptionalString(payload.ServiceUuid),
     PageNum: getOptionalNumber(payload.PageNum, "PageNum"),
     PageSize: getOptionalNumber(payload.PageSize, "PageSize"),
   }

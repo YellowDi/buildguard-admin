@@ -51,7 +51,7 @@ import TablePage from "@/components/table-page/TablePage.vue"
 import SortPopover from "@/components/table-page/TableSortPopover.vue"
 import type { SortRule } from "@/components/table-page/sort.types"
 import { createTablePageDefinition, useTablePage, type TablePageController } from "@/components/table-page/useTablePage"
-import type { TablePageSchema } from "@/components/table-page/types"
+import type { TablePageSchema, TableQueryBarConfig } from "@/components/table-page/types"
 import {
   exportTableData,
   SUPPORTED_TABLE_EXPORT_FORMATS,
@@ -251,6 +251,8 @@ const buildingAssetsLoading = ref(false)
 const buildingAssetsErrorMessage = ref("")
 const buildingAssetsPageNum = ref(1)
 const buildingAssetsPageSize = ref(DETAIL_TABLE_PAGE_SIZE)
+const buildingAssetsQuery = ref("")
+const buildingAssetsSortDirection = ref<"asc" | "desc">("desc")
 const maintenanceRecords = ref<MaintenanceRecordRow[]>([])
 const maintenanceRecordsLoading = ref(false)
 const maintenanceRecordsErrorMessage = ref("")
@@ -264,12 +266,18 @@ const inspectionWorkOrdersErrorMessage = ref("")
 const inspectionWorkOrdersPageNum = ref(1)
 const inspectionWorkOrdersPageSize = ref(10)
 const inspectionWorkOrdersTotal = ref(0)
+const inspectionWorkOrdersQuery = ref("")
+const inspectionWorkOrdersStatus = ref("")
+const inspectionWorkOrdersSortDirection = ref<"asc" | "desc">("desc")
 const repairWorkOrders = ref<CustomerWorkOrderRow[]>([])
 const repairWorkOrdersLoading = ref(false)
 const repairWorkOrdersErrorMessage = ref("")
 const repairWorkOrdersPageNum = ref(1)
 const repairWorkOrdersPageSize = ref(10)
 const repairWorkOrdersTotal = ref(0)
+const repairWorkOrdersQuery = ref("")
+const repairWorkOrdersStatus = ref("")
+const repairWorkOrdersSortDirection = ref<"asc" | "desc">("desc")
 const subAccounts = ref<SubAccountRow[]>([])
 const subAccountsLoading = ref(false)
 const subAccountsErrorMessage = ref("")
@@ -277,6 +285,10 @@ const monitoringPageNum = ref(1)
 const monitoringPageSize = ref(DETAIL_TABLE_PAGE_SIZE)
 const subAccountsPageNum = ref(1)
 const subAccountsPageSize = ref(DETAIL_TABLE_PAGE_SIZE)
+const monitoringQuery = ref("")
+const monitoringSortDirection = ref<"asc" | "desc">("asc")
+const subAccountsQuery = ref("")
+const subAccountsSortDirection = ref<"asc" | "desc">("asc")
 const parkDetailSheetOpen = ref(false)
 const parkDetailLoading = ref(false)
 const parkDetailErrorMessage = ref("")
@@ -550,6 +562,179 @@ const activeWorkOrderTableTotal = computed(() => (
   activeWorkOrderTableTab.value === "inspection"
     ? inspectionWorkOrdersTotal.value
     : repairWorkOrdersTotal.value
+))
+const filteredBuildingAssets = computed(() => {
+  const query = buildingAssetsQuery.value.trim().toLowerCase()
+  const rows = query
+    ? buildingAssets.value.filter(row => [row.buildingName, row.parkName, row.address].join(" ").toLowerCase().includes(query))
+    : buildingAssets.value
+
+  return [...rows].sort((left, right) => compareDateStrings(left.updatedAt, right.updatedAt, buildingAssetsSortDirection.value, left.buildingName, right.buildingName))
+})
+const filteredInspectionWorkOrders = computed(() => {
+  const query = inspectionWorkOrdersQuery.value.trim().toLowerCase()
+  const status = inspectionWorkOrdersStatus.value
+  const rows = inspectionWorkOrders.value.filter((row) => {
+    if (status && String(row.statusValue ?? "") !== status) {
+      return false
+    }
+
+    if (!query) {
+      return true
+    }
+
+    return [row.orderNo, row.packageName, row.planName, row.executor, row.remark].join(" ").toLowerCase().includes(query)
+  })
+
+  return [...rows].sort((left, right) => compareDateStrings(left.createdAt, right.createdAt, inspectionWorkOrdersSortDirection.value, left.orderNo, right.orderNo))
+})
+const filteredRepairWorkOrders = computed(() => {
+  const query = repairWorkOrdersQuery.value.trim().toLowerCase()
+  const status = repairWorkOrdersStatus.value
+  const rows = repairWorkOrders.value.filter((row) => {
+    if (status && String(row.statusValue ?? "") !== status) {
+      return false
+    }
+
+    if (!query) {
+      return true
+    }
+
+    return [row.orderNo, row.workOrderName, row.parkName, row.executor, row.remark].join(" ").toLowerCase().includes(query)
+  })
+
+  return [...rows].sort((left, right) => compareDateStrings(left.createdStartAt, right.createdStartAt, repairWorkOrdersSortDirection.value, left.orderNo, right.orderNo))
+})
+const filteredMonitoringRows = computed(() => {
+  const query = monitoringQuery.value.trim().toLowerCase()
+  const rows = query
+    ? monitoringRows.value.filter(row => [row.deviceName, row.platform, row.deviceId, row.parkName, row.buildingName].join(" ").toLowerCase().includes(query))
+    : monitoringRows.value
+
+  return [...rows].sort((left, right) => compareText(left.deviceName, right.deviceName, monitoringSortDirection.value))
+})
+const filteredSubAccounts = computed(() => {
+  const query = subAccountsQuery.value.trim().toLowerCase()
+  const rows = query
+    ? subAccounts.value.filter(row => [row.name, row.username, row.isMainLabel, row.statusLabel].join(" ").toLowerCase().includes(query))
+    : subAccounts.value
+
+  return [...rows].sort((left, right) => compareText(left.name, right.name, subAccountsSortDirection.value))
+})
+const workOrderStatusOptions = computed(() => Object.entries(workOrderStatusMap).map(([label], index) => ({
+  value: String(index + 1),
+  label,
+})))
+const buildingAssetsQueryBar = computed<TableQueryBarConfig>(() => ({
+  controls: [
+    {
+      type: "search",
+      key: "q",
+      label: "建筑名称",
+      icon: "ri-text",
+      placeholder: "输入建筑名称搜索",
+      value: buildingAssetsQuery.value,
+      expandedWidth: 248,
+      collapsedMaxWidth: 248,
+    },
+  ],
+  values: { q: buildingAssetsQuery.value },
+  canClear: Boolean(buildingAssetsQuery.value),
+}))
+const inspectionWorkOrdersQueryBar = computed<TableQueryBarConfig>(() => ({
+  controls: [
+    {
+      type: "search",
+      key: "q",
+      label: "工单编号",
+      icon: "ri-text",
+      placeholder: "输入工单编号搜索",
+      value: inspectionWorkOrdersQuery.value,
+      expandedWidth: 248,
+      collapsedMaxWidth: 248,
+    },
+    {
+      type: "select",
+      key: "status",
+      label: "工单状态",
+      icon: "ri-price-tag-3-line",
+      value: inspectionWorkOrdersStatus.value,
+      options: workOrderStatusOptions.value,
+      placeholder: "请选择状态",
+      expandedWidth: 248,
+      collapsedMaxWidth: 248,
+    },
+  ],
+  values: { q: inspectionWorkOrdersQuery.value, status: inspectionWorkOrdersStatus.value },
+  canClear: Boolean(inspectionWorkOrdersQuery.value || inspectionWorkOrdersStatus.value),
+}))
+const repairWorkOrdersQueryBar = computed<TableQueryBarConfig>(() => ({
+  controls: [
+    {
+      type: "search",
+      key: "q",
+      label: "工单编号",
+      icon: "ri-text",
+      placeholder: "输入工单编号搜索",
+      value: repairWorkOrdersQuery.value,
+      expandedWidth: 248,
+      collapsedMaxWidth: 248,
+    },
+    {
+      type: "select",
+      key: "status",
+      label: "工单状态",
+      icon: "ri-price-tag-3-line",
+      value: repairWorkOrdersStatus.value,
+      options: workOrderStatusOptions.value,
+      placeholder: "请选择状态",
+      expandedWidth: 248,
+      collapsedMaxWidth: 248,
+    },
+  ],
+  values: { q: repairWorkOrdersQuery.value, status: repairWorkOrdersStatus.value },
+  canClear: Boolean(repairWorkOrdersQuery.value || repairWorkOrdersStatus.value),
+}))
+const monitoringQueryBar = computed<TableQueryBarConfig>(() => ({
+  controls: [
+    {
+      type: "search",
+      key: "q",
+      label: "设备名称",
+      icon: "ri-text",
+      placeholder: "输入设备名称搜索",
+      value: monitoringQuery.value,
+      expandedWidth: 248,
+      collapsedMaxWidth: 248,
+    },
+  ],
+  values: { q: monitoringQuery.value },
+  canClear: Boolean(monitoringQuery.value),
+}))
+const subAccountsQueryBar = computed<TableQueryBarConfig>(() => ({
+  controls: [
+    {
+      type: "search",
+      key: "q",
+      label: "用户名",
+      icon: "ri-text",
+      placeholder: "输入用户名搜索",
+      value: subAccountsQuery.value,
+      expandedWidth: 248,
+      collapsedMaxWidth: 248,
+    },
+  ],
+  values: { q: subAccountsQuery.value },
+  canClear: Boolean(subAccountsQuery.value),
+}))
+const activeWorkOrderPage = computed(() => (
+  activeWorkOrderTableTab.value === "inspection" ? inspectionWorkOrdersPage : repairWorkOrdersPage
+))
+const activeWorkOrderQueryBar = computed(() => (
+  activeWorkOrderTableTab.value === "inspection" ? inspectionWorkOrdersQueryBar.value : repairWorkOrdersQueryBar.value
+))
+const activeWorkOrderSortDirection = computed(() => (
+  activeWorkOrderTableTab.value === "inspection" ? inspectionWorkOrdersSortDirection.value : repairWorkOrdersSortDirection.value
 ))
 
 const activeWorkOrderTablePageNumProxy = computed({
@@ -904,16 +1089,7 @@ const buildingAssetsSchema: TablePageSchema<CustomerBuildingAssetRow> = {
       sort: true,
     },
   ],
-  filters: [
-    {
-      key: "在页面中",
-      label: "在页面中",
-      type: "text",
-      fixed: true,
-      placeholder: "输入页面内筛选条件",
-      value: row => buildBuildingAssetsFilterText(row),
-    },
-  ],
+  filters: [],
   sort: {
     storageKey: "customer-detail-building-assets-sort-preferences",
     initialField: "updatedAt",
@@ -1091,16 +1267,7 @@ const inspectionWorkOrdersSchema: TablePageSchema<CustomerWorkOrderRow> = {
       sort: true,
     },
   ],
-  filters: [
-    {
-      key: "在页面中",
-      label: "在页面中",
-      type: "text",
-      fixed: true,
-      placeholder: "输入页面内筛选条件",
-      value: row => buildInspectionWorkOrdersFilterText(row),
-    },
-  ],
+  filters: [],
   sort: {
     storageKey: "customer-detail-inspection-work-orders-sort-preferences-created-at-v2",
     initialField: "createdAt",
@@ -1265,16 +1432,7 @@ const repairWorkOrdersSchema: TablePageSchema<CustomerWorkOrderRow> = {
       sort: true,
     },
   ],
-  filters: [
-    {
-      key: "在页面中",
-      label: "在页面中",
-      type: "text",
-      fixed: true,
-      placeholder: "输入页面内筛选条件",
-      value: row => buildRepairWorkOrdersFilterText(row),
-    },
-  ],
+  filters: [],
   sort: {
     storageKey: "customer-detail-repair-work-orders-sort-preferences-created-start-at-v3",
     initialField: "createdStartAt",
@@ -1381,16 +1539,7 @@ const monitoringSchema: TablePageSchema<MonitoringRow> = {
       sort: true,
     },
   ],
-  filters: [
-    {
-      key: "在页面中",
-      label: "在页面中",
-      type: "text",
-      fixed: true,
-      placeholder: "输入页面内筛选条件",
-      value: row => `${row.deviceName} ${row.platform} ${row.deviceId} ${row.customerName} ${row.parkName} ${row.buildingName}`,
-    },
-  ],
+  filters: [],
   sort: {
     storageKey: "customer-detail-monitoring-sort-preferences",
     initialField: "deviceName",
@@ -1467,16 +1616,7 @@ const subAccountsSchema: TablePageSchema<SubAccountRow> = {
       sort: true,
     },
   ],
-  filters: [
-    {
-      key: "在页面中",
-      label: "在页面中",
-      type: "text",
-      fixed: true,
-      placeholder: "输入页面内筛选条件",
-      value: row => `${row.name} ${row.username} ${row.isMainLabel} ${row.statusLabel} ${row.uuid}`,
-    },
-  ],
+  filters: [],
   sort: {
     storageKey: "customer-detail-sub-accounts-sort-preferences-v2",
     initialField: "name",
@@ -1489,34 +1629,191 @@ const subAccountsSchema: TablePageSchema<SubAccountRow> = {
 
 const buildingAssetsPage = useTablePage({
   ...createTablePageDefinition(buildingAssetsSchema),
-  rows: buildingAssets,
+  rows: filteredBuildingAssets,
 })
 
 const inspectionWorkOrdersPage = useTablePage({
   ...createTablePageDefinition(inspectionWorkOrdersSchema),
-  rows: inspectionWorkOrders,
+  rows: filteredInspectionWorkOrders,
 })
 
 const repairWorkOrdersPage = useTablePage({
   ...createTablePageDefinition(repairWorkOrdersSchema),
-  rows: repairWorkOrders,
+  rows: filteredRepairWorkOrders,
 })
 
 const monitoringPage = useTablePage({
   ...createTablePageDefinition(monitoringSchema),
-  rows: monitoringRows,
+  rows: filteredMonitoringRows,
 })
 
 const subAccountsPage = useTablePage({
   ...createTablePageDefinition(subAccountsSchema),
-  rows: subAccounts,
+  rows: filteredSubAccounts,
 })
+buildingAssetsPage.showControls.value = true
+buildingAssetsPage.customSortEnabled.value = false
+inspectionWorkOrdersPage.showControls.value = true
+inspectionWorkOrdersPage.customSortEnabled.value = false
+repairWorkOrdersPage.showControls.value = true
+repairWorkOrdersPage.customSortEnabled.value = false
+monitoringPage.showControls.value = true
+monitoringPage.customSortEnabled.value = false
+subAccountsPage.showControls.value = true
+subAccountsPage.customSortEnabled.value = false
 const pagedBuildingAssetsPage = createClientPaginatedTablePage(buildingAssetsPage, buildingAssetsPageNum, buildingAssetsPageSize)
 const pagedMonitoringPage = createClientPaginatedTablePage(monitoringPage, monitoringPageNum, monitoringPageSize)
 const pagedSubAccountsPage = createClientPaginatedTablePage(subAccountsPage, subAccountsPageNum, subAccountsPageSize)
 const buildingAssetsPaginationTotal = computed(() => buildingAssetsPage.filteredRowsCount.value)
 const monitoringPaginationTotal = computed(() => monitoringPage.filteredRowsCount.value)
 const subAccountsPaginationTotal = computed(() => subAccountsPage.filteredRowsCount.value)
+
+function compareText(left: string, right: string, direction: "asc" | "desc") {
+  return direction === "asc"
+    ? left.localeCompare(right, "zh-CN")
+    : right.localeCompare(left, "zh-CN")
+}
+
+function compareDateStrings(
+  left: string,
+  right: string,
+  direction: "asc" | "desc",
+  leftFallback: string,
+  rightFallback: string,
+) {
+  const leftValue = parseDateString(left)
+  const rightValue = parseDateString(right)
+
+  if (leftValue !== rightValue) {
+    return direction === "asc" ? leftValue - rightValue : rightValue - leftValue
+  }
+
+  return compareText(leftFallback, rightFallback, direction)
+}
+
+function parseDateString(value: string) {
+  const normalized = value.trim()
+
+  if (!normalized || normalized === "-" || normalized === "—") {
+    return 0
+  }
+
+  const timestamp = new Date(normalized.replace(" ", "T")).getTime()
+  return Number.isFinite(timestamp) ? timestamp : 0
+}
+
+function handleBuildingAssetsQueryChange(payload: { key: string; value: string | string[] }) {
+  if (payload.key === "q") {
+    buildingAssetsQuery.value = typeof payload.value === "string" ? payload.value.trim() : ""
+    buildingAssetsPageNum.value = 1
+  }
+}
+
+function handleBuildingAssetsQueryClear() {
+  if (!buildingAssetsQuery.value) {
+    return
+  }
+
+  buildingAssetsQuery.value = ""
+  buildingAssetsPageNum.value = 1
+}
+
+function handleBuildingAssetsSortToggle() {
+  buildingAssetsSortDirection.value = buildingAssetsSortDirection.value === "asc" ? "desc" : "asc"
+}
+
+function handleActiveWorkOrdersQueryChange(payload: { key: string; value: string | string[] }) {
+  const nextValue = typeof payload.value === "string" ? payload.value.trim() : ""
+
+  if (activeWorkOrderTableTab.value === "inspection") {
+    if (payload.key === "q") {
+      inspectionWorkOrdersQuery.value = nextValue
+    }
+    if (payload.key === "status") {
+      inspectionWorkOrdersStatus.value = nextValue
+    }
+    inspectionWorkOrdersPageNum.value = 1
+    return
+  }
+
+  if (payload.key === "q") {
+    repairWorkOrdersQuery.value = nextValue
+  }
+  if (payload.key === "status") {
+    repairWorkOrdersStatus.value = nextValue
+  }
+  repairWorkOrdersPageNum.value = 1
+}
+
+function handleActiveWorkOrdersQueryClear() {
+  if (activeWorkOrderTableTab.value === "inspection") {
+    if (!inspectionWorkOrdersQuery.value && !inspectionWorkOrdersStatus.value) {
+      return
+    }
+
+    inspectionWorkOrdersQuery.value = ""
+    inspectionWorkOrdersStatus.value = ""
+    inspectionWorkOrdersPageNum.value = 1
+    return
+  }
+
+  if (!repairWorkOrdersQuery.value && !repairWorkOrdersStatus.value) {
+    return
+  }
+
+  repairWorkOrdersQuery.value = ""
+  repairWorkOrdersStatus.value = ""
+  repairWorkOrdersPageNum.value = 1
+}
+
+function handleActiveWorkOrdersSortToggle() {
+  if (activeWorkOrderTableTab.value === "inspection") {
+    inspectionWorkOrdersSortDirection.value = inspectionWorkOrdersSortDirection.value === "asc" ? "desc" : "asc"
+    return
+  }
+
+  repairWorkOrdersSortDirection.value = repairWorkOrdersSortDirection.value === "asc" ? "desc" : "asc"
+}
+
+function handleMonitoringQueryChange(payload: { key: string; value: string | string[] }) {
+  if (payload.key === "q") {
+    monitoringQuery.value = typeof payload.value === "string" ? payload.value.trim() : ""
+    monitoringPageNum.value = 1
+  }
+}
+
+function handleMonitoringQueryClear() {
+  if (!monitoringQuery.value) {
+    return
+  }
+
+  monitoringQuery.value = ""
+  monitoringPageNum.value = 1
+}
+
+function handleMonitoringSortToggle() {
+  monitoringSortDirection.value = monitoringSortDirection.value === "asc" ? "desc" : "asc"
+}
+
+function handleSubAccountsQueryChange(payload: { key: string; value: string | string[] }) {
+  if (payload.key === "q") {
+    subAccountsQuery.value = typeof payload.value === "string" ? payload.value.trim() : ""
+    subAccountsPageNum.value = 1
+  }
+}
+
+function handleSubAccountsQueryClear() {
+  if (!subAccountsQuery.value) {
+    return
+  }
+
+  subAccountsQuery.value = ""
+  subAccountsPageNum.value = 1
+}
+
+function handleSubAccountsSortToggle() {
+  subAccountsSortDirection.value = subAccountsSortDirection.value === "asc" ? "desc" : "asc"
+}
 
 const parkDetailSheetSections = computed<DetailFieldSection[]>(() => {
   const current = activeParkDetail.value
@@ -3949,7 +4246,20 @@ function toDisplayText(value: unknown, fallback = "未填写") {
           </Alert>
 
           <CustomerDetailContentLoading v-if="loading || buildingAssetsLoading" variant="building-assets" />
-          <TablePage v-else-if="customer" :page="pagedBuildingAssetsPage" :show-toolbar-actions="false" :list-level-table="false" fill-available-height class="-mt-3">
+          <TablePage
+            v-else-if="customer"
+            :page="pagedBuildingAssetsPage"
+            :query-bar="buildingAssetsQueryBar"
+            :show-toolbar-actions="false"
+            :list-level-table="false"
+            toolbar-sort-behavior="toggle"
+            :toolbar-sort-direction="buildingAssetsSortDirection"
+            fill-available-height
+            class="-mt-3"
+            @toolbar-sort-toggle="handleBuildingAssetsSortToggle"
+            @query-change="handleBuildingAssetsQueryChange"
+            @query-clear="handleBuildingAssetsQueryClear"
+          >
             <template #footer>
               <Pagination
                 v-model:page="buildingAssetsPageNum"
@@ -3995,7 +4305,19 @@ function toDisplayText(value: unknown, fallback = "未填写") {
             <AlertDescription>{{ activeWorkOrderTableErrorMessage }}</AlertDescription>
           </Alert>
 
-          <TablePage :page="activeWorkOrderTableTab === 'inspection' ? inspectionWorkOrdersPage : repairWorkOrdersPage" :show-toolbar-actions="false" :list-level-table="false" fill-available-height class="-mt-3">
+          <TablePage
+            :page="activeWorkOrderPage"
+            :query-bar="activeWorkOrderQueryBar"
+            :show-toolbar-actions="false"
+            :list-level-table="false"
+            toolbar-sort-behavior="toggle"
+            :toolbar-sort-direction="activeWorkOrderSortDirection"
+            fill-available-height
+            class="-mt-3"
+            @toolbar-sort-toggle="handleActiveWorkOrdersSortToggle"
+            @query-change="handleActiveWorkOrdersQueryChange"
+            @query-clear="handleActiveWorkOrdersQueryClear"
+          >
             <template #controls-prefix>
               <div class="mr-2 inline-flex shrink-0 items-center gap-2.5 whitespace-nowrap">
                 <TopTabSwitch
@@ -4062,7 +4384,19 @@ function toDisplayText(value: unknown, fallback = "未填写") {
       <template v-else-if="activeTab === 'monitoring'">
         <CustomerDetailContentLoading v-if="loading" variant="monitoring" />
         <div v-else-if="customer" class="flex min-h-0 flex-1 flex-col">
-          <TablePage :page="pagedMonitoringPage" :show-toolbar-actions="false" :list-level-table="false" fill-available-height class="-mt-3">
+          <TablePage
+            :page="pagedMonitoringPage"
+            :query-bar="monitoringQueryBar"
+            :show-toolbar-actions="false"
+            :list-level-table="false"
+            toolbar-sort-behavior="toggle"
+            :toolbar-sort-direction="monitoringSortDirection"
+            fill-available-height
+            class="-mt-3"
+            @toolbar-sort-toggle="handleMonitoringSortToggle"
+            @query-change="handleMonitoringQueryChange"
+            @query-clear="handleMonitoringQueryClear"
+          >
             <template #footer>
               <Pagination
                 v-model:page="monitoringPageNum"
@@ -4107,7 +4441,19 @@ function toDisplayText(value: unknown, fallback = "未填写") {
             <AlertTitle>子账号列表接口加载失败</AlertTitle>
             <AlertDescription>{{ subAccountsErrorMessage }}</AlertDescription>
           </Alert>
-          <TablePage :page="pagedSubAccountsPage" :show-toolbar-actions="false" :list-level-table="false" fill-available-height class="-mt-3">
+          <TablePage
+            :page="pagedSubAccountsPage"
+            :query-bar="subAccountsQueryBar"
+            :show-toolbar-actions="false"
+            :list-level-table="false"
+            toolbar-sort-behavior="toggle"
+            :toolbar-sort-direction="subAccountsSortDirection"
+            fill-available-height
+            class="-mt-3"
+            @toolbar-sort-toggle="handleSubAccountsSortToggle"
+            @query-change="handleSubAccountsQueryChange"
+            @query-clear="handleSubAccountsQueryClear"
+          >
             <template #footer>
               <Pagination
                 v-model:page="subAccountsPageNum"

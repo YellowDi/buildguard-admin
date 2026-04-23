@@ -4,6 +4,7 @@ import { useSlots } from "vue"
 
 import Page from "@/components/table-page/TablePageShell.vue"
 import type { TablePageController } from "@/components/table-page/useTablePage"
+import type { TableQueryBarConfig } from "@/components/table-page/types"
 
 const props = defineProps({
   page: {
@@ -43,6 +44,10 @@ const props = defineProps({
     type: String as PropType<"asc" | "desc">,
     default: "desc",
   },
+  queryBar: {
+    type: Object as PropType<TableQueryBarConfig | null>,
+    default: null,
+  },
 })
 
 const emit = defineEmits<{
@@ -51,6 +56,8 @@ const emit = defineEmits<{
   "export-action": []
   "primary-action": []
   "toolbar-sort-toggle": []
+  "query-change": [payload: { key: string; value: string | string[] }]
+  "query-clear": []
 }>()
 
 const slots = useSlots()
@@ -101,6 +108,7 @@ const slots = useSlots()
     :pin-row-actions="props.pinRowActions"
     :toolbar-sort-behavior="props.toolbarSortBehavior"
     :toolbar-sort-direction="props.toolbarSortDirection"
+    :query-bar="props.queryBar"
     @tab-click="page.handleTabClick"
     @add-filter="page.handleAddFilter"
     @replace-filter="page.handleReplaceFilter"
@@ -118,6 +126,8 @@ const slots = useSlots()
     @export-action="emit('export-action')"
     @primary-action="emit('primary-action')"
     @toolbar-sort-toggle="emit('toolbar-sort-toggle')"
+    @query-change="emit('query-change', $event)"
+    @query-clear="emit('query-clear')"
   >
     <template
       v-for="(_, name) in slots"

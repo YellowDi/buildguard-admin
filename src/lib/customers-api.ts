@@ -108,6 +108,12 @@ export type CustomerDeletePayload = {
 }
 
 export type ListCustomersPayload = {
+  CorpName?: string
+  CustomerName?: string
+  CustomerPhone?: string
+  Status?: string | number
+  Level?: string
+  Business?: string
   PageNum?: number
   PageSize?: number
   [property: string]: unknown
@@ -127,6 +133,12 @@ const CUSTOMER_DELETE_ERROR_MESSAGE = "客户删除失败，请稍后重试。"
 
 export async function fetchCustomers(payload: ListCustomersPayload = {}): Promise<CustomerListResult> {
   const normalizedPayload = {
+    CorpName: getOptionalString(payload.CorpName),
+    CustomerName: getOptionalString(payload.CustomerName),
+    CustomerPhone: getOptionalString(payload.CustomerPhone),
+    Status: getOptionalString(payload.Status),
+    Level: getOptionalString(payload.Level),
+    Business: getOptionalString(payload.Business),
     PageNum: getOptionalNumber(payload.PageNum, "PageNum"),
     PageSize: getOptionalNumber(payload.PageSize, "PageSize"),
   }

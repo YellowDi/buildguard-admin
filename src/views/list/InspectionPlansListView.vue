@@ -1,13 +1,12 @@
 <script setup lang="ts">
-import { ref, watch } from "vue"
+import { computed, ref, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { toast } from "vue-sonner"
 
 import LinkedEntityDetailSheet from "@/components/detail/LinkedEntityDetailSheet.vue"
 import TablePage from "@/components/table-page/TablePage.vue"
 import { createTablePageDefinition, useTablePage } from "@/components/table-page/useTablePage"
-import type { TablePageSchema } from "@/components/table-page/types"
-import { useRouteTableSearch } from "@/composables/useRouteTableSearch"
+import type { TablePageSchema, TableQueryBarConfig } from "@/components/table-page/types"
 import {
   Pagination,
   PaginationContent,
@@ -28,6 +27,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { handleApiError } from "@/lib/api-errors"
+import { fetchCustomers } from "@/lib/customers-api"
 import { fetchInspectionPlans, type InspectionPlanListItem } from "@/lib/inspection-plans-api"
 
 type InspectionPlanRecord = {
@@ -60,6 +60,11 @@ const errorMessage = ref("")
 const pageNum = ref(1)
 const pageSize = ref(50)
 const total = ref(0)
+const planNameQuery = ref("")
+const selectedCustomerUuid = ref("")
+const sortDirection = ref<"asc" | "desc">("asc")
+const customerOptions = ref<Array<{ value: string; label: string }>>([])
+const customerOptionsLoading = ref(false)
 const activeLinkedDetailKind = ref<LinkedDetailSheetKind | null>(null)
 const activeLinkedDetailUuid = ref("")
 const activeLinkedDetailCustomerUuid = ref("")
@@ -226,16 +231,7 @@ const schema: TablePageSchema<InspectionPlanRecord> = {
       sort: true,
     },
   ],
-  filters: [
-    {
-      key: "在页面中",
-      label: "在页面中",
-      type: "text",
-      fixed: true,
-      placeholder: "输入页面内筛选条件",
-      value: row => buildPageFilterText(row),
-    },
-  ],
+  filters: [],
   sort: {
     storageKey: "inspection-plans-sort-preferences",
     initialField: "nextExecutionAt",
@@ -245,19 +241,78 @@ const schema: TablePageSchema<InspectionPlanRecord> = {
 
 const page = useTablePage({
   ...createTablePageDefinition(schema),
-  rows: inspectionPlans,
+  rows: computed(() => [...inspectionPlans.value].sort((left, right) => compareInspectionPlanRows(left, right, sortDirection.value))),
 })
 const route = useRoute()
 const router = useRouter()
+page.showControls.value = true
+page.customSortEnabled.value = false
 
-useRouteTableSearch(page, route)
+const queryBar = computed<TableQueryBarConfig>(() => ({
+  controls: [
+    {
+      type: "search",
+      key: "q",
+      queryKey: "q",
+      label: "计划名称",
+      icon: "ri-text",
+      placeholder: "输入计划名称搜索",
+      value: planNameQuery.value,
+      expandedWidth: 248,
+      collapsedMaxWidth: 248,
+    },
+    {
+      type: "select",
+      key: "customerUuid",
+      queryKey: "customerUuid",
+      label: "所属客户",
+      icon: "ri-price-tag-3-line",
+      value: selectedCustomerUuid.value,
+      options: customerOptions.value,
+      loading: customerOptionsLoading.value,
+      placeholder: customerOptionsLoading.value ? "正在加载客户..." : "请选择客户",
+      expandedWidth: 248,
+      collapsedMaxWidth: 248,
+    },
+  ],
+  values: {
+    q: planNameQuery.value,
+    customerUuid: selectedCustomerUuid.value,
+  },
+  canClear: Boolean(planNameQuery.value || selectedCustomerUuid.value),
+}))
+
 watch([pageNum, pageSize], ([nextPageNum, nextPageSize], [previousPageNum, previousPageSize]) => {
   if (nextPageNum === previousPageNum && nextPageSize === previousPageSize) {
     return
   }
 
   void loadInspectionPlans()
-}, { immediate: true })
+})
+
+watch(
+  () => [normalizeQueryValue(route.query.q), normalizeQueryValue(route.query.customerUuid)] as const,
+  ([nextQuery, nextCustomer], previousValue) => {
+    const [previousQuery, previousCustomer] = previousValue ?? []
+
+    if (previousValue && nextQuery === previousQuery && nextCustomer === previousCustomer) {
+      return
+    }
+
+    planNameQuery.value = nextQuery
+    selectedCustomerUuid.value = nextCustomer
+
+    if (pageNum.value !== 1) {
+      pageNum.value = 1
+      return
+    }
+
+    void loadInspectionPlans()
+  },
+  { immediate: true },
+)
+
+void loadCustomerOptions()
 
 async function loadInspectionPlans() {
   const requestId = ++latestRequestId
@@ -267,6 +322,8 @@ async function loadInspectionPlans() {
 
   try {
     const result = await fetchInspectionPlans({
+      Code: planNameQuery.value || undefined,
+      CustomerUuid: selectedCustomerUuid.value || undefined,
       PageNum: pageNum.value,
       PageSize: pageSize.value,
     })
@@ -482,6 +539,28 @@ function buildPageFilterText(row: InspectionPlanRecord) {
   ].join(" ")
 }
 
+async function loadCustomerOptions() {
+  customerOptionsLoading.value = true
+
+  try {
+    const result = await fetchCustomers({
+      PageNum: 1,
+      PageSize: 200,
+    })
+
+    customerOptions.value = result.list
+      .map(item => ({
+        value: getText(item.Uuid),
+        label: getText(item.CorpName, "未命名客户"),
+      }))
+      .filter(option => option.value)
+  } catch {
+    customerOptions.value = []
+  } finally {
+    customerOptionsLoading.value = false
+  }
+}
+
 function normalizeInspectionPlanRecord(
   item: InspectionPlanListItem,
   index: number,
@@ -592,6 +671,79 @@ function getNumber(value: unknown) {
 function asInspectionPlanRecord(row: Record<string, unknown>): InspectionPlanRecord {
   return row as InspectionPlanRecord
 }
+
+function compareInspectionPlanRows(left: InspectionPlanRecord, right: InspectionPlanRecord, direction: "asc" | "desc") {
+  const leftValue = parseDateValue(left.nextExecutionAt)
+  const rightValue = parseDateValue(right.nextExecutionAt)
+
+  if (leftValue !== rightValue) {
+    return direction === "asc" ? leftValue - rightValue : rightValue - leftValue
+  }
+
+  return left.planName.localeCompare(right.planName, "zh-CN")
+}
+
+function parseDateValue(value: string) {
+  const normalized = value.trim()
+
+  if (!normalized || normalized === "-" || normalized === "—") {
+    return 0
+  }
+
+  const timestamp = new Date(normalized.replace(" ", "T")).getTime()
+  return Number.isFinite(timestamp) ? timestamp : 0
+}
+
+function normalizeQueryValue(value: unknown) {
+  if (Array.isArray(value)) {
+    return normalizeQueryValue(value[0])
+  }
+
+  return typeof value === "string" ? value.trim() : ""
+}
+
+function handleToolbarSortToggle() {
+  sortDirection.value = sortDirection.value === "asc" ? "desc" : "asc"
+}
+
+function handleQueryChange(payload: { key: string; value: string | string[] }) {
+  if (payload.key === "q") {
+    planNameQuery.value = typeof payload.value === "string" ? payload.value.trim() : ""
+  }
+
+  if (payload.key === "customerUuid") {
+    selectedCustomerUuid.value = typeof payload.value === "string" ? payload.value.trim() : ""
+  }
+
+  void syncRouteQueryAndReload()
+}
+
+function handleQueryClear() {
+  if (!planNameQuery.value && !selectedCustomerUuid.value) {
+    return
+  }
+
+  planNameQuery.value = ""
+  selectedCustomerUuid.value = ""
+  void syncRouteQueryAndReload()
+}
+
+async function syncRouteQueryAndReload() {
+  await router.replace({
+    query: {
+      ...route.query,
+      q: planNameQuery.value || undefined,
+      customerUuid: selectedCustomerUuid.value || undefined,
+    },
+  })
+
+  if (pageNum.value !== 1) {
+    pageNum.value = 1
+    return
+  }
+
+  await loadInspectionPlans()
+}
 </script>
 
 <template>
@@ -614,9 +766,15 @@ function asInspectionPlanRecord(row: Record<string, unknown>): InspectionPlanRec
       <TablePage
         :page="page"
         :loading="loading"
+        :query-bar="queryBar"
+        toolbar-sort-behavior="toggle"
+        :toolbar-sort-direction="sortDirection"
         fill-available-height
         @refresh-action="loadInspectionPlans"
         @primary-action="handleCreateInspectionPlan"
+        @toolbar-sort-toggle="handleToolbarSortToggle"
+        @query-change="handleQueryChange"
+        @query-clear="handleQueryClear"
       >
         <template #cell-planName="{ row }">
           <div class="inline-flex max-w-full items-baseline gap-1.5">

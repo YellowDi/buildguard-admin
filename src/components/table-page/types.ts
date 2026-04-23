@@ -263,3 +263,47 @@ export type TablePageSchema<Row> = {
   tableClass?: string
   emptyState?: TablePageEmptyState
 }
+
+export type TableQuerySelectOption = {
+  value: string
+  label: string
+}
+
+export type TableQuerySearchControl = {
+  type: "search"
+  key: string
+  label: string
+  icon: string
+  placeholder?: string
+  value?: string
+  queryKey?: string
+  debounceMs?: number
+  expandedWidth?: number
+  collapsedMinWidth?: number
+  collapsedMaxWidth?: number
+}
+
+export type TableQuerySelectControl = {
+  type: "select"
+  key: string
+  label: string
+  icon: string
+  multiple?: boolean
+  options: TableQuerySelectOption[]
+  value?: string | string[]
+  loading?: boolean
+  disabled?: boolean
+  queryKey?: string
+  expandedWidth?: number
+  collapsedMinWidth?: number
+  collapsedMaxWidth?: number
+  placeholder?: string
+}
+
+export type TableQueryControl = TableQuerySearchControl | TableQuerySelectControl
+
+export type TableQueryBarConfig = {
+  controls: TableQueryControl[]
+  values: Record<string, string | string[]>
+  canClear: boolean
+}

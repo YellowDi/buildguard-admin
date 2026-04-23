@@ -7,8 +7,7 @@ import LinkedEntityDetailSheet from "@/components/detail/LinkedEntityDetailSheet
 import TablePage from "@/components/table-page/TablePage.vue"
 import { customerStatusMap } from "@/components/table-page/statusPresets"
 import { createTablePageDefinition, useTablePage } from "@/components/table-page/useTablePage"
-import type { TablePageSchema } from "@/components/table-page/types"
-import { useRouteTableSearch } from "@/composables/useRouteTableSearch"
+import type { TablePageSchema, TableQueryBarConfig } from "@/components/table-page/types"
 import {
   Pagination,
   PaginationContent,
@@ -54,9 +53,12 @@ const errorMessage = ref("")
 const pageNum = ref(1)
 const pageSize = ref(50)
 const total = ref(0)
+const customerNameQuery = ref("")
+const sortDirection = ref<"asc" | "desc">("desc")
 const activeLinkedDetailKind = ref<LinkedDetailSheetKind | null>(null)
 const activeLinkedDetailUuid = ref("")
 let latestRequestId = 0
+let syncingRoute = false
 
 const schema: TablePageSchema<CustomerRecord> = {
   title: "客户",
@@ -275,15 +277,48 @@ const schema: TablePageSchema<CustomerRecord> = {
   },
 }
 
+const sortedCustomers = computed(() => {
+  return [...customers.value].sort((left, right) => {
+    const leftValue = toTimestamp(left.createdAt) ?? 0
+    const rightValue = toTimestamp(right.createdAt) ?? 0
+
+    if (leftValue === rightValue) {
+      return left.customerName.localeCompare(right.customerName, "zh-CN")
+    }
+
+    return sortDirection.value === "asc" ? leftValue - rightValue : rightValue - leftValue
+  })
+})
+
 const page = useTablePage({
   ...createTablePageDefinition(schema),
   primaryActionLabel: "添加客户",
-  rows: customers,
+  rows: sortedCustomers,
 })
 const route = useRoute()
 const router = useRouter()
+page.showControls.value = true
+page.customSortEnabled.value = false
 
-useRouteTableSearch(page, route)
+const queryBar = computed<TableQueryBarConfig>(() => ({
+  controls: [
+    {
+      type: "search",
+      key: "q",
+      queryKey: "q",
+      label: "客户名称",
+      icon: "ri-text",
+      placeholder: "输入客户名称搜索",
+      value: customerNameQuery.value,
+      expandedWidth: 248,
+      collapsedMaxWidth: 248,
+    },
+  ],
+  values: {
+    q: customerNameQuery.value,
+  },
+  canClear: Boolean(customerNameQuery.value),
+}))
 
 watch([pageNum, pageSize], ([nextPageNum, nextPageSize], [previousPageNum, previousPageSize]) => {
   if (nextPageNum === previousPageNum && nextPageSize === previousPageSize) {
@@ -291,7 +326,30 @@ watch([pageNum, pageSize], ([nextPageNum, nextPageSize], [previousPageNum, previ
   }
 
   void loadCustomers()
-}, { immediate: true })
+})
+
+watch(
+  () => normalizeQueryValue(route.query.q),
+  (nextValue, previousValue) => {
+    if (syncingRoute) {
+      return
+    }
+
+    if (nextValue === previousValue) {
+      return
+    }
+
+    customerNameQuery.value = nextValue
+
+    if (pageNum.value !== 1) {
+      pageNum.value = 1
+      return
+    }
+
+    void loadCustomers()
+  },
+  { immediate: true },
+)
 
 function extractDatePart(value: string) {
   const [datePart] = value.split(" ")
@@ -320,6 +378,7 @@ async function loadCustomers() {
 
   try {
     const result = await fetchCustomers({
+      CustomerName: customerNameQuery.value || undefined,
       PageNum: pageNum.value,
       PageSize: pageSize.value,
     })
@@ -553,6 +612,64 @@ function handleCreateCustomer() {
   router.push({ name: "customer-create" })
 }
 
+function handleToolbarSortToggle() {
+  sortDirection.value = sortDirection.value === "asc" ? "desc" : "asc"
+}
+
+function handleQueryChange(payload: { key: string; value: string | string[] }) {
+  if (payload.key !== "q") {
+    return
+  }
+
+  const nextValue = typeof payload.value === "string" ? payload.value.trim() : ""
+
+  if (nextValue === customerNameQuery.value) {
+    return
+  }
+
+  customerNameQuery.value = nextValue
+  void syncRouteQueryAndReload()
+}
+
+function handleQueryClear() {
+  if (!customerNameQuery.value) {
+    return
+  }
+
+  customerNameQuery.value = ""
+  void syncRouteQueryAndReload()
+}
+
+async function syncRouteQueryAndReload() {
+  syncingRoute = true
+
+  try {
+    await router.replace({
+      query: {
+        ...route.query,
+        q: customerNameQuery.value || undefined,
+      },
+    })
+  } finally {
+    syncingRoute = false
+  }
+
+  if (pageNum.value !== 1) {
+    pageNum.value = 1
+    return
+  }
+
+  await loadCustomers()
+}
+
+function normalizeQueryValue(value: unknown) {
+  if (Array.isArray(value)) {
+    return normalizeQueryValue(value[0])
+  }
+
+  return typeof value === "string" ? value.trim() : ""
+}
+
 function handleLinkedDetailSheetOpenChange(open: boolean) {
   if (!open) {
     activeLinkedDetailKind.value = null
@@ -581,9 +698,15 @@ function handleLinkedDetailSheetOpenChange(open: boolean) {
     <TablePage
       :page="page"
       :loading="loading"
+      :query-bar="queryBar"
+      toolbar-sort-behavior="toggle"
+      :toolbar-sort-direction="sortDirection"
       fill-available-height
       @refresh-action="loadCustomers"
       @primary-action="handleCreateCustomer"
+      @toolbar-sort-toggle="handleToolbarSortToggle"
+      @query-change="handleQueryChange"
+      @query-clear="handleQueryClear"
     >
       <template #cell-packageInfo="{ row }">
         <button

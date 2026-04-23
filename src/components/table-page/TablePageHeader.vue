@@ -7,6 +7,7 @@ import { useSlidingTabIndicator } from "@/composables/useSlidingTabIndicator"
 import DateFilterPopover from "@/components/table-page/TableDateFilterPopover.vue"
 import FilterChip from "@/components/table-page/TableFilterChip.vue"
 import NumberFilterPopover from "@/components/table-page/TableNumberFilterPopover.vue"
+import TableQueryBar from "@/components/table-page/TableQueryBar.vue"
 import SortPopover from "@/components/table-page/TableSortPopover.vue"
 import TagFilterPopover from "@/components/table-page/TableTagFilterPopover.vue"
 import TextFilterPopover from "@/components/table-page/TableTextFilterPopover.vue"
@@ -28,6 +29,7 @@ import type {
   NumberFilterState,
   TagFilterState,
   TextFilterState,
+  TableQueryBarConfig,
 } from "@/components/table-page/types"
 import { toMobileActionLabel } from "@/lib/mobileActionLabel"
 
@@ -65,6 +67,7 @@ const props = withDefaults(defineProps<{
   listLevelTable?: boolean
   toolbarSortBehavior?: "default" | "toggle"
   toolbarSortDirection?: "asc" | "desc"
+  queryBar?: TableQueryBarConfig | null
 }>(), {
   availableFilters: () => [],
   textFilters: () => ({}),
@@ -79,6 +82,7 @@ const props = withDefaults(defineProps<{
   listLevelTable: true,
   toolbarSortBehavior: "default",
   toolbarSortDirection: "desc",
+  queryBar: null,
 })
 
 const emit = defineEmits<{
@@ -98,6 +102,8 @@ const emit = defineEmits<{
   "export-action": []
   "primary-action": []
   "toolbar-sort-toggle": []
+  "query-change": [payload: { key: string; value: string | string[] }]
+  "query-clear": []
 }>()
 
 const openPopover = ref<string | null>(null)
@@ -128,15 +134,15 @@ const placeholderBulkActions = [
   { label: "删除", iconClass: "ri-delete-bin-line", danger: true },
 ] as const
 
-const sortFields = computed(() => props.fields.filter(field => field.kind === "sort"))
-const activeFilterFields = computed(() => props.fields.filter(field => field.kind !== "sort" && field.accent))
-const inactiveFilterFields = computed(() => props.fields.filter(field => field.kind !== "sort" && !field.accent))
-const visibleFilterKeys = computed(() => props.fields.filter((field) => field.kind !== "sort").map((field) => field.key))
-const addableFilters = computed(() => props.availableFilters.filter((key) => !visibleFilterKeys.value.includes(key)))
+const sortFields = computed(() => props.queryBar ? [] : props.fields.filter(field => field.kind === "sort"))
+const activeFilterFields = computed(() => props.queryBar ? [] : props.fields.filter(field => field.kind !== "sort" && field.accent))
+const inactiveFilterFields = computed(() => props.queryBar ? [] : props.fields.filter(field => field.kind !== "sort" && !field.accent))
+const visibleFilterKeys = computed(() => props.queryBar ? [] : props.fields.filter((field) => field.kind !== "sort").map((field) => field.key))
+const addableFilters = computed(() => props.queryBar ? [] : props.availableFilters.filter((key) => !visibleFilterKeys.value.includes(key)))
 const hasTabs = computed(() => props.tabs.length > 0)
 const hasHeading = computed(() => Boolean(props.title || props.description))
 const hasSelectedRows = computed(() => (props.selectedRowsCount ?? 0) > 0)
-const hasControlsRow = computed(() => props.showControls || hasSelectedRows.value)
+const hasControlsRow = computed(() => props.showControls || hasSelectedRows.value || Boolean(props.queryBar?.controls.length))
 const hasTopSurface = computed(() => hasHeading.value || hasTabs.value || props.showToolbarActions)
 const activeTabLabel = computed(() => props.tabs.find(tab => tab.active)?.label ?? props.tabs[0]?.label ?? "")
 const mobilePrimaryActionLabel = computed(() => toMobileActionLabel(props.primaryActionLabel))
@@ -1027,10 +1033,17 @@ watch(
               @scroll="handleControlsScroll"
             >
               <div class="flex min-w-max flex-nowrap items-center gap-1 pr-6 text-[14px] text-muted-foreground">
-              <template v-if="showControls">
+              <template v-if="showControls || props.queryBar">
                 <slot name="controls-prefix" />
 
-                <template v-for="field in sortFields" :key="field.key">
+                <TableQueryBar
+                  v-if="props.queryBar"
+                  :query-bar="props.queryBar"
+                  @query-change="emit('query-change', $event)"
+                  @query-clear="emit('query-clear')"
+                />
+
+                <template v-else v-for="field in sortFields" :key="field.key">
                   <Popover
                     :open="field.kind === 'sort' && openPopover === 'sort-popover' && sortPopoverSource === 'chip'"
                     @update:open="(nextOpen) => {

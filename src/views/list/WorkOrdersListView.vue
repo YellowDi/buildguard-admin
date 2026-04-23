@@ -11,8 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import TablePage from "@/components/table-page/TablePage.vue"
 import { workOrderStatusMap } from "@/components/table-page/statusPresets"
 import { createTablePageDefinition, useTablePage } from "@/components/table-page/useTablePage"
-import type { TablePageSchema } from "@/components/table-page/types"
-import { useRouteTableSearch } from "@/composables/useRouteTableSearch"
+import type { TablePageSchema, TableQueryBarConfig } from "@/components/table-page/types"
 import { handleApiError } from "@/lib/api-errors"
 import { fetchMembers } from "@/lib/members-api"
 import { getWorkOrderStatusLabel } from "@/lib/work-order-status"
@@ -84,6 +83,9 @@ const errorMessage = ref("")
 const pageNum = ref(1)
 const pageSize = ref(50)
 const total = ref(0)
+const orderNoQuery = ref("")
+const selectedStatus = ref("")
+const sortDirection = ref<"asc" | "desc">("desc")
 const route = useRoute()
 let latestRequestId = 0
 const assignDialogOpen = ref(false)
@@ -164,16 +166,7 @@ const schema: TablePageSchema<WorkOrderRecord> = {
   onRowClick: row => handleViewDetail(row as WorkOrderRecord),
   onQuickAction: row => handleOpenPreviewSheet(row as WorkOrderRecord),
   columns,
-  filters: [
-    {
-      key: "在页面中",
-      label: "在页面中",
-      type: "text",
-      fixed: true,
-      placeholder: "输入页面内筛选条件",
-      value: row => buildPageFilterText(row),
-    },
-  ],
+  filters: [],
   sort: {
     storageKey: pageSortStorageKey.value,
     initialField: props.kind === "inspection" ? "createdAt" : "createdStartAt",
@@ -188,10 +181,46 @@ const schema: TablePageSchema<WorkOrderRecord> = {
 
 const page = useTablePage({
   ...createTablePageDefinition(schema),
-  rows: workOrders,
+  rows: computed(() => [...workOrders.value].sort((left, right) => compareWorkOrderRows(left, right, sortDirection.value, props.kind))),
 })
+page.showControls.value = true
+page.customSortEnabled.value = false
 
-useRouteTableSearch(page, route)
+const queryBar = computed<TableQueryBarConfig>(() => ({
+  controls: [
+    {
+      type: "search",
+      key: "q",
+      queryKey: "q",
+      label: "工单编号",
+      icon: "ri-text",
+      placeholder: "输入工单编号搜索",
+      value: orderNoQuery.value,
+      expandedWidth: 248,
+      collapsedMaxWidth: 248,
+    },
+    {
+      type: "select",
+      key: "status",
+      queryKey: "status",
+      label: "工单状态",
+      icon: "ri-price-tag-3-line",
+      value: selectedStatus.value,
+      options: Object.entries(workOrderStatusMap).map(([label], index) => ({
+        value: String(index + 1),
+        label,
+      })),
+      placeholder: "请选择状态",
+      expandedWidth: 248,
+      collapsedMaxWidth: 248,
+    },
+  ],
+  values: {
+    q: orderNoQuery.value,
+    status: selectedStatus.value,
+  },
+  canClear: Boolean(orderNoQuery.value || selectedStatus.value),
+}))
 
 watch([pageNum, pageSize], ([nextPageNum, nextPageSize], [previousPageNum, previousPageSize]) => {
   if (nextPageNum === previousPageNum && nextPageSize === previousPageSize) {
@@ -199,7 +228,29 @@ watch([pageNum, pageSize], ([nextPageNum, nextPageSize], [previousPageNum, previ
   }
 
   void loadWorkOrders()
-}, { immediate: true })
+})
+
+watch(
+  () => [normalizeQueryValue(route.query.q), normalizeQueryValue(route.query.status)] as const,
+  ([nextQuery, nextStatus], previousValue) => {
+    const [previousQuery, previousStatus] = previousValue ?? []
+
+    if (previousValue && nextQuery === previousQuery && nextStatus === previousStatus) {
+      return
+    }
+
+    orderNoQuery.value = nextQuery
+    selectedStatus.value = nextStatus
+
+    if (pageNum.value !== 1) {
+      pageNum.value = 1
+      return
+    }
+
+    void loadWorkOrders()
+  },
+  { immediate: true },
+)
 
 function extractDatePart(value: string) {
   const [datePart] = value.split(" ")
@@ -411,10 +462,14 @@ async function loadWorkOrders() {
   try {
     const result = props.kind === "inspection"
       ? await fetchWorkOrders({
+          OrderNo: orderNoQuery.value || undefined,
+          Status: toApiStatus(selectedStatus.value),
           PageNum: pageNum.value,
           PageSize: pageSize.value,
         })
       : await fetchRepairWorkOrders({
+          OrderNo: orderNoQuery.value || undefined,
+          Status: toApiStatus(selectedStatus.value),
           PageNum: pageNum.value,
           PageSize: pageSize.value,
         })
@@ -906,6 +961,93 @@ function toNumber(value: unknown) {
   return typeof value === "number" && Number.isFinite(value) ? value : null
 }
 
+function compareWorkOrderRows(
+  left: WorkOrderRecord,
+  right: WorkOrderRecord,
+  direction: "asc" | "desc",
+  kind: WorkOrderPageKind,
+) {
+  const leftValue = kind === "inspection" ? parseTimestamp(left.createdAt) : parseTimestamp(left.createdStartAt)
+  const rightValue = kind === "inspection" ? parseTimestamp(right.createdAt) : parseTimestamp(right.createdStartAt)
+
+  if (leftValue !== rightValue) {
+    return direction === "asc" ? leftValue - rightValue : rightValue - leftValue
+  }
+
+  return left.orderNo.localeCompare(right.orderNo, "zh-CN")
+}
+
+function parseTimestamp(value: string) {
+  const normalized = value.trim()
+
+  if (!normalized || normalized === "-" || normalized === "—") {
+    return 0
+  }
+
+  const timestamp = new Date(normalized.replace(" ", "T")).getTime()
+  return Number.isFinite(timestamp) ? timestamp : 0
+}
+
+function toApiStatus(value: string) {
+  if (!value) {
+    return undefined
+  }
+
+  const normalized = Number(value)
+  return Number.isFinite(normalized) ? normalized : undefined
+}
+
+function normalizeQueryValue(value: unknown) {
+  if (Array.isArray(value)) {
+    return normalizeQueryValue(value[0])
+  }
+
+  return typeof value === "string" ? value.trim() : ""
+}
+
+function handleToolbarSortToggle() {
+  sortDirection.value = sortDirection.value === "asc" ? "desc" : "asc"
+}
+
+function handleQueryChange(payload: { key: string; value: string | string[] }) {
+  if (payload.key === "q") {
+    orderNoQuery.value = typeof payload.value === "string" ? payload.value.trim() : ""
+  }
+
+  if (payload.key === "status") {
+    selectedStatus.value = typeof payload.value === "string" ? payload.value.trim() : ""
+  }
+
+  void syncRouteQueryAndReload()
+}
+
+function handleQueryClear() {
+  if (!orderNoQuery.value && !selectedStatus.value) {
+    return
+  }
+
+  orderNoQuery.value = ""
+  selectedStatus.value = ""
+  void syncRouteQueryAndReload()
+}
+
+async function syncRouteQueryAndReload() {
+  await router.replace({
+    query: {
+      ...route.query,
+      q: orderNoQuery.value || undefined,
+      status: selectedStatus.value || undefined,
+    },
+  })
+
+  if (pageNum.value !== 1) {
+    pageNum.value = 1
+    return
+  }
+
+  await loadWorkOrders()
+}
+
 function handlePrimaryAction() {
   if (props.kind === "inspection") {
     router.push({
@@ -973,9 +1115,15 @@ function handleWorkOrderPreviewSheetOpenChange(open: boolean) {
     <TablePage
       :page="page"
       :loading="loading"
+      :query-bar="queryBar"
+      toolbar-sort-behavior="toggle"
+      :toolbar-sort-direction="sortDirection"
       fill-available-height
       @refresh-action="loadWorkOrders"
       @primary-action="handlePrimaryAction"
+      @toolbar-sort-toggle="handleToolbarSortToggle"
+      @query-change="handleQueryChange"
+      @query-clear="handleQueryClear"
     >
       <template #cell-orderNo="{ row }">
         <div class="inline-flex max-w-full items-baseline gap-1.5">

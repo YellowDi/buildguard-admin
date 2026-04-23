@@ -89,6 +89,7 @@ export type ParkDetailResult = {
 }
 
 export type ListParksPayload = {
+  Name?: string
   CustomerUuid?: string
   PageNum?: number
   PageSize?: number
@@ -108,6 +109,7 @@ const PARK_DELETE_ERROR_MESSAGE = "园区删除失败，请稍后重试。"
 
 export async function fetchParks(payload: ListParksPayload = {}): Promise<ParksListResult> {
   const normalizedPayload = {
+    Name: getOptionalString(payload.Name),
     CustomerUuid: getOptionalString(payload.CustomerUuid),
     PageNum: getOptionalNumber(payload.PageNum, "PageNum"),
     PageSize: getOptionalNumber(payload.PageSize, "PageSize"),
