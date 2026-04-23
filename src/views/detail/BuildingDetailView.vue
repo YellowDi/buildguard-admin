@@ -19,6 +19,7 @@ import { handleApiError } from "@/lib/api-errors"
 import { toMobileActionLabel } from "@/lib/mobileActionLabel"
 import { fetchBuildings, type BuildingListItem } from "@/lib/buildings-api"
 import { fetchInspectionCategories, type InspectionCategoryRecord } from "@/lib/inspection-categories-api"
+import { resolveParkCustomerMap } from "@/lib/park-customer-cache"
 import { fetchRepairWorkOrders, fetchWorkOrders } from "@/lib/work-orders-api"
 
 const CustomerInspectionCategoryRadar = defineAsyncComponent({
@@ -40,6 +41,8 @@ const recordsErrorMessage = ref("")
 const mapDialogOpen = ref(false)
 const inspectionCategoriesList = ref<InspectionCategoryRecord[]>([])
 const inspectionCategoriesLoading = ref(false)
+const resolvedCustomerUuid = ref("")
+const resolvedCustomerName = ref("")
 let latestRequestId = 0
 let latestRecordsRequestId = 0
 
@@ -61,6 +64,14 @@ const relatedCustomerUuid = computed(() => {
   return customerUuid.value
     || toText(current?.CustomerUuid, "")
     || toText(current?.CorpUuid, "")
+    || resolvedCustomerUuid.value
+})
+
+const relatedCustomerName = computed(() => {
+  const current = building.value as (BuildingListItem & { CorpName?: unknown; CustomerName?: unknown }) | null
+
+  return toText(current?.CorpName || current?.CustomerName, "")
+    || resolvedCustomerName.value
 })
 
 const inspectionModule = computed<DetailRelationModuleSchema<BuildingRecordRow>>(() => ({
@@ -223,6 +234,7 @@ function goToEdit() {
     query: {
       parkUuid: parkUuid.value,
       customerUuid: relatedCustomerUuid.value || undefined,
+      customerName: relatedCustomerName.value || undefined,
     },
   })
 }
@@ -254,6 +266,27 @@ async function loadBuildingDetail(nextBuildingUuid: string, nextParkUuid: string
       throw new Error("未找到该建筑信息。")
     }
 
+    const nextCustomerUuid = (toText(currentBuilding.CustomerUuid, "") ?? "") || (toText(currentBuilding.CorpUuid, "") ?? "")
+    const nextCustomerName = toText(currentBuilding.CorpName || currentBuilding.CustomerName, "") ?? ""
+
+    if (customerUuid.value || nextCustomerUuid) {
+      resolvedCustomerUuid.value = nextCustomerUuid
+      resolvedCustomerName.value = nextCustomerName
+    } else if (nextParkUuid) {
+      const customerMap = await resolveParkCustomerMap([nextParkUuid])
+
+      if (requestId !== latestRequestId) {
+        return
+      }
+
+      const resolved = customerMap.get(nextParkUuid)
+      resolvedCustomerUuid.value = toText(resolved?.customerUuid, "") ?? ""
+      resolvedCustomerName.value = toText(resolved?.customerName, "") ?? ""
+    } else {
+      resolvedCustomerUuid.value = ""
+      resolvedCustomerName.value = ""
+    }
+
     building.value = currentBuilding
     await loadBuildingRecords(currentBuilding)
   } catch (error) {
@@ -262,6 +295,8 @@ async function loadBuildingDetail(nextBuildingUuid: string, nextParkUuid: string
     }
 
     building.value = null
+    resolvedCustomerUuid.value = ""
+    resolvedCustomerName.value = ""
     inspectionRecords.value = []
     repairRecords.value = []
     recordsErrorMessage.value = ""

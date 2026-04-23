@@ -65,6 +65,7 @@ const activeLinkedDetailCustomerUuid = ref("")
 const buildingDetailSheetOpen = ref(false)
 const activeBuildingSheetUuid = ref("")
 const activeBuildingSheetParkUuid = ref("")
+const activeBuildingSheetCustomerUuid = ref("")
 const customerOptions = ref<FilterOption[]>([])
 const customerOptionsLoading = ref(false)
 const parkOptions = ref<FilterOption[]>([])
@@ -168,7 +169,10 @@ const schema: TablePageSchema<BuildingRecord> = {
         void router.push({
           name: "building-detail",
           params: { id: row.uuid },
-          query: { parkUuid: row.parkUuid },
+          query: {
+            parkUuid: row.parkUuid,
+            customerUuid: row.customerUuid || undefined,
+          },
         })
       },
     },
@@ -187,7 +191,10 @@ const schema: TablePageSchema<BuildingRecord> = {
     void router.push({
       name: "building-detail",
       params: { id: row.uuid },
-      query: { parkUuid: row.parkUuid },
+      query: {
+        parkUuid: row.parkUuid,
+        customerUuid: row.customerUuid || undefined,
+      },
     })
   },
   onQuickAction: row => {
@@ -198,6 +205,7 @@ const schema: TablePageSchema<BuildingRecord> = {
 
     activeBuildingSheetUuid.value = row.uuid
     activeBuildingSheetParkUuid.value = row.parkUuid
+    activeBuildingSheetCustomerUuid.value = row.customerUuid
     buildingDetailSheetOpen.value = true
   },
   columns: [
@@ -382,6 +390,7 @@ function handleBuildingDetailSheetOpenChange(open: boolean) {
   if (!open) {
     activeBuildingSheetUuid.value = ""
     activeBuildingSheetParkUuid.value = ""
+    activeBuildingSheetCustomerUuid.value = ""
   }
 }
 
@@ -1085,6 +1094,7 @@ function toText(value: unknown, fallback = "") {
       :open="buildingDetailSheetOpen"
       :building-uuid="activeBuildingSheetUuid"
       :park-uuid="activeBuildingSheetParkUuid"
+      :customer-uuid="activeBuildingSheetCustomerUuid"
       @update:open="handleBuildingDetailSheetOpenChange"
     />
   </section>

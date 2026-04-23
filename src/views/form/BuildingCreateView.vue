@@ -23,6 +23,7 @@ import { handleApiError } from "@/lib/api-errors"
 import { hasValidLatLng } from "@/lib/map-coordinates"
 import { createBuilding, fetchBuildings, updateBuilding } from "@/lib/buildings-api"
 import { fetchCustomers } from "@/lib/customers-api"
+import { resolveParkCustomerMap } from "@/lib/park-customer-cache"
 import { fetchParks, type ParkListItem } from "@/lib/parks-api"
 
 type QuickNavItem = {
@@ -272,7 +273,11 @@ async function loadFormOptions() {
     }
   }
 
-  if (!customerUuid.value) {
+  const customerContext = await resolveCustomerContext(isStandaloneCreate)
+  const resolvedCustomerUuid = customerContext.customerUuid
+  const resolvedCustomerName = customerContext.customerName
+
+  if (!resolvedCustomerUuid) {
     if (!isStandaloneCreate) {
       loadError.value = isEditMode.value ? "所属客户信息缺失，无法编辑建筑。" : "所属客户信息缺失，无法创建建筑。"
     }
@@ -286,14 +291,12 @@ async function loadFormOptions() {
     return
   }
 
-  form.customerUuid = customerUuid.value
-  customerName.value = isStandaloneCreate
-    ? customerOptions.value.find(item => item.uuid === customerUuid.value)?.name ?? ""
-    : queryCustomerName.value || "当前客户"
+  form.customerUuid = resolvedCustomerUuid
+  customerName.value = resolvedCustomerName || "当前客户"
   parkLoading.value = true
 
   try {
-    const parks = await fetchAllParks(customerUuid.value)
+    const parks = await fetchAllParks(resolvedCustomerUuid)
     const options = parks
       .map(item => mapParkOption(item))
       .filter(item => item.uuid)
@@ -304,7 +307,7 @@ async function loadFormOptions() {
       loadError.value = isEditMode.value ? "当前客户下暂无园区，无法编辑建筑。" : "当前客户下暂无园区，无法创建建筑。请先添加园区。"
       initialFormState.value = {
         ...createEmptyForm(),
-        customerUuid: customerUuid.value,
+        customerUuid: resolvedCustomerUuid,
       }
       return
     }
@@ -322,7 +325,7 @@ async function loadFormOptions() {
       }
 
       const nextState = {
-        customerUuid: customerUuid.value,
+        customerUuid: resolvedCustomerUuid,
         parkUuid: preferredParkUuid,
         name: normalizeText(detail.Name),
         builtTime: normalizeText(detail.BuiltTime),
@@ -337,14 +340,14 @@ async function loadFormOptions() {
 
       Object.assign(form, nextState)
       initialFormState.value = { ...nextState }
-      customerName.value = queryCustomerName.value || "当前客户"
+      customerName.value = resolvedCustomerName || "当前客户"
       return
     }
 
     form.parkUuid = preferredParkUuid
     initialFormState.value = {
       ...createEmptyForm(),
-      customerUuid: customerUuid.value,
+      customerUuid: resolvedCustomerUuid,
       parkUuid: preferredParkUuid,
     }
   } catch (error) {
@@ -421,6 +424,37 @@ function normalizeText(value: unknown) {
 function getOptionalText(value: unknown) {
   const normalized = normalizeText(value)
   return normalized || undefined
+}
+
+async function resolveCustomerContext(isStandaloneCreate: boolean) {
+  const directCustomerUuid = customerUuid.value
+  const directCustomerName = isStandaloneCreate
+    ? customerOptions.value.find(item => item.uuid === directCustomerUuid)?.name ?? ""
+    : queryCustomerName.value
+
+  if (directCustomerUuid) {
+    return {
+      customerUuid: directCustomerUuid,
+      customerName: directCustomerName || "当前客户",
+    }
+  }
+
+  if (!isEditMode.value || !queryParkUuid.value) {
+    return {
+      customerUuid: "",
+      customerName: directCustomerName,
+    }
+  }
+
+  const customerMap = await resolveParkCustomerMap([queryParkUuid.value])
+  const resolved = customerMap.get(queryParkUuid.value)
+  const resolvedCustomerUuid = normalizeText(resolved?.customerUuid)
+  const resolvedCustomerName = directCustomerName || normalizeText(resolved?.customerName)
+
+  return {
+    customerUuid: resolvedCustomerUuid,
+    customerName: resolvedCustomerName || "当前客户",
+  }
 }
 
 function resetLocalStateForRoute() {

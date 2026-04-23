@@ -24,6 +24,7 @@ import { ResponsiveRightSheet } from "@/components/ui/sheet"
 import { TooltipWrap } from "@/components/ui/tooltip"
 import { handleApiError } from "@/lib/api-errors"
 import { deleteBuilding, fetchBuildings, type BuildingListItem } from "@/lib/buildings-api"
+import { resolveParkCustomerMap } from "@/lib/park-customer-cache"
 
 const props = defineProps<{
   open: boolean
@@ -44,6 +45,8 @@ const errorMessage = ref("")
 const deleteConfirmOpen = ref(false)
 const deleteSubmitting = ref(false)
 const mapDialogOpen = ref(false)
+const resolvedCustomerUuid = ref("")
+const resolvedCustomerName = ref("")
 let latestRequestId = 0
 
 const fieldSections = computed<DetailFieldSection[]>(() => {
@@ -55,6 +58,11 @@ const fieldSections = computed<DetailFieldSection[]>(() => {
 })
 
 const deleteTargetName = computed(() => toText(building.value?.Name, "当前建筑"))
+const relatedCustomerUuid = computed(() => props.customerUuid || resolvedCustomerUuid.value)
+const relatedCustomerName = computed(() => {
+  return toText(building.value?.CorpName || building.value?.CustomerName, "")
+    || resolvedCustomerName.value
+})
 
 watch(
   () => [props.open, props.buildingUuid, props.parkUuid] as const,
@@ -89,7 +97,8 @@ function goToBuildingFullDetail() {
     params: { id: props.buildingUuid },
     query: {
       parkUuid: props.parkUuid,
-      customerUuid: props.customerUuid,
+      customerUuid: relatedCustomerUuid.value || undefined,
+      customerName: relatedCustomerName.value || undefined,
     },
   })
 }
@@ -106,7 +115,8 @@ function goToBuildingEdit() {
     params: { id: props.buildingUuid },
     query: {
       parkUuid: props.parkUuid,
-      customerUuid: props.customerUuid,
+      customerUuid: relatedCustomerUuid.value || undefined,
+      customerName: relatedCustomerName.value || undefined,
     },
   })
 }
@@ -135,6 +145,27 @@ async function loadBuildingDetail(buildingUuid: string, parkUuid: string) {
       throw new Error("未找到该建筑信息。")
     }
 
+    const nextCustomerUuid = toText(currentBuilding.CustomerUuid, "") ?? ""
+    const nextCustomerName = toText(currentBuilding.CorpName || currentBuilding.CustomerName, "") ?? ""
+
+    if (props.customerUuid || nextCustomerUuid) {
+      resolvedCustomerUuid.value = nextCustomerUuid
+      resolvedCustomerName.value = nextCustomerName
+    } else if (parkUuid) {
+      const customerMap = await resolveParkCustomerMap([parkUuid])
+
+      if (requestId !== latestRequestId) {
+        return
+      }
+
+      const resolved = customerMap.get(parkUuid)
+      resolvedCustomerUuid.value = toText(resolved?.customerUuid, "") ?? ""
+      resolvedCustomerName.value = toText(resolved?.customerName, "") ?? ""
+    } else {
+      resolvedCustomerUuid.value = ""
+      resolvedCustomerName.value = ""
+    }
+
     building.value = currentBuilding
   } catch (error) {
     if (requestId !== latestRequestId) {
@@ -142,6 +173,8 @@ async function loadBuildingDetail(buildingUuid: string, parkUuid: string) {
     }
 
     building.value = null
+    resolvedCustomerUuid.value = ""
+    resolvedCustomerName.value = ""
     errorMessage.value = handleApiError(error, {
       mode: "silent",
       fallback: "建筑详情加载失败，请稍后重试。",
@@ -190,6 +223,8 @@ function resetState() {
   deleteConfirmOpen.value = false
   deleteSubmitting.value = false
   mapDialogOpen.value = false
+  resolvedCustomerUuid.value = ""
+  resolvedCustomerName.value = ""
 }
 
 </script>
