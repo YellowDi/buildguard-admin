@@ -78,6 +78,8 @@ const selectedCustomerUuids = ref<string[]>([])
 const selectedParkUuids = ref<string[]>([])
 const sortDirection = ref<"asc" | "desc">("desc")
 const expandedControl = ref<"name" | "customer" | "park" | null>(null)
+const customerSelectOpen = ref(false)
+const parkSelectOpen = ref(false)
 const initialized = ref(false)
 let latestRequestId = 0
 let latestParkOptionsRequestId = 0
@@ -412,15 +414,44 @@ async function toggleControl(key: "name" | "customer" | "park") {
     return
   }
 
-  expandedControl.value = expandedControl.value === key ? null : key
+  if (expandedControl.value === key) {
+    collapseControl(key)
+    return
+  }
+
+  customerSelectOpen.value = false
+  parkSelectOpen.value = false
+  expandedControl.value = key
 
   if (expandedControl.value === "name") {
     await nextTick()
     document.querySelector<HTMLInputElement>("[data-building-search-input]")?.focus()
+    return
+  }
+
+  await nextTick()
+
+  if (key === "customer") {
+    customerSelectOpen.value = true
+    document.querySelector<HTMLElement>("[data-building-customer-trigger]")?.focus()
+    return
+  }
+
+  if (key === "park") {
+    parkSelectOpen.value = true
+    document.querySelector<HTMLElement>("[data-building-park-trigger]")?.focus()
   }
 }
 
 function collapseControl(key: "name" | "customer" | "park") {
+  if (key === "customer") {
+    customerSelectOpen.value = false
+  }
+
+  if (key === "park") {
+    parkSelectOpen.value = false
+  }
+
   if (expandedControl.value === key) {
     expandedControl.value = null
   }
@@ -964,8 +995,16 @@ function toText(value: unknown, fallback = "") {
                     所属客户
                   </InputGroupText>
                 </InputGroupAddon>
-                <Select v-model="selectedCustomerUuids" multiple :disabled="customerOptionsLoading">
-                  <SelectTrigger class="h-full w-full rounded-none border-0 bg-transparent px-2 pr-9 shadow-none focus-visible:ring-0">
+                <Select
+                  v-model="selectedCustomerUuids"
+                  v-model:open="customerSelectOpen"
+                  multiple
+                  :disabled="customerOptionsLoading"
+                >
+                  <SelectTrigger
+                    data-building-customer-trigger
+                    class="h-full w-full rounded-none border-0 bg-transparent px-2 pr-9 shadow-none focus-visible:ring-0"
+                  >
                     <span class="truncate text-left">{{ customerSelectLabel }}</span>
                   </SelectTrigger>
                   <SelectContent>
@@ -1020,10 +1059,14 @@ function toText(value: unknown, fallback = "") {
                 </InputGroupAddon>
                 <Select
                   v-model="selectedParkUuids"
+                  v-model:open="parkSelectOpen"
                   multiple
                   :disabled="!selectedCustomerUuids.length || parkOptionsLoading"
                 >
-                  <SelectTrigger class="h-full w-full rounded-none border-0 bg-transparent px-2 pr-9 shadow-none focus-visible:ring-0">
+                  <SelectTrigger
+                    data-building-park-trigger
+                    class="h-full w-full rounded-none border-0 bg-transparent px-2 pr-9 shadow-none focus-visible:ring-0"
+                  >
                     <span class="truncate text-left">{{ parkSelectLabel }}</span>
                   </SelectTrigger>
                   <SelectContent>

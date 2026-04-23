@@ -23,6 +23,8 @@ const props = defineProps<{
 
       // Focus state.
       'has-[[data-slot=input-group-control]:focus-visible]:border-ring has-[[data-slot=input-group-control]:focus-visible]:ring-ring/50 has-[[data-slot=input-group-control]:focus-visible]:ring-[3px]',
+      'has-[[data-slot=select-trigger]:focus]:border-ring has-[[data-slot=select-trigger]:focus]:ring-ring/50 has-[[data-slot=select-trigger]:focus]:ring-[3px]',
+      'has-[[data-slot=select-trigger][data-state=open]]:border-ring has-[[data-slot=select-trigger][data-state=open]]:ring-ring/50 has-[[data-slot=select-trigger][data-state=open]]:ring-[3px]',
 
       // Error state.
       'has-[[data-slot][aria-invalid=true]]:ring-destructive/20 has-[[data-slot][aria-invalid=true]]:border-destructive dark:has-[[data-slot][aria-invalid=true]]:ring-destructive/40',
