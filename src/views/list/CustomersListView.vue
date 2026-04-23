@@ -308,7 +308,7 @@ const queryBar = computed<TableQueryBarConfig>(() => ({
       queryKey: "q",
       label: "客户名称",
       icon: "ri-text",
-      placeholder: "输入客户名称搜索",
+      placeholder: "请输入",
       value: customerNameQuery.value,
       expandedWidth: 248,
       collapsedMaxWidth: 248,
@@ -621,13 +621,7 @@ function handleQueryChange(payload: { key: string; value: string | string[] }) {
     return
   }
 
-  const nextValue = typeof payload.value === "string" ? payload.value.trim() : ""
-
-  if (nextValue === customerNameQuery.value) {
-    return
-  }
-
-  customerNameQuery.value = nextValue
+  customerNameQuery.value = typeof payload.value === "string" ? payload.value.trim() : ""
   void syncRouteQueryAndReload()
 }
 

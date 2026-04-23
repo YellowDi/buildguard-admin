@@ -176,7 +176,8 @@ export function useTablePage<Row>(input: TablePageSchema<Row> | TablePageDefinit
       .filter((filter): filter is NormalizedFilter<Row> & { type: "tag" } => filter.type === "tag")
       .map((filter) => [filter.key, resolveTagOptions(filter, rows.value)]),
   ) as Record<string, string[]>)
-  const tabs = computed(() => buildTabs(rows.value, definition.tabs, selectedTab.value))
+  const discoveredTabValues = ref<string[]>([])
+  const tabs = computed(() => buildTabs(rows.value, definition.tabs, selectedTab.value, discoveredTabValues.value))
   const selectedRowKeys = ref<Array<string | number>>([])
   const primarySortRule = computed(() => sortRules.value[0] ?? null)
   const selectedRowKeySet = computed(() => new Set(selectedRowKeys.value))
@@ -248,6 +249,36 @@ export function useTablePage<Row>(input: TablePageSchema<Row> | TablePageDefinit
       return 0
     })
   })
+
+  if (definition.tabs.mode === "enum" && !definition.tabs.options?.length) {
+    watch(
+      rows,
+      (nextRows) => {
+        const nextValues = getTabValues(nextRows, definition.tabs)
+
+        if (!nextValues.length) {
+          return
+        }
+
+        const mergedValues = [...discoveredTabValues.value]
+        let changed = false
+
+        for (const value of nextValues) {
+          if (mergedValues.includes(value)) {
+            continue
+          }
+
+          mergedValues.push(value)
+          changed = true
+        }
+
+        if (changed) {
+          discoveredTabValues.value = mergedValues
+        }
+      },
+      { immediate: true },
+    )
+  }
 
   function buildFilterField(key: string): HeaderField {
     const filter = filterMap.get(key)
@@ -633,14 +664,14 @@ function getDefaultTabValue<Row>(tabs: TablePageTabsDefinition<Row>) {
   return "all"
 }
 
-function buildTabs<Row>(rows: Row[], tabs: TablePageTabsDefinition<Row>, selectedTab: string): HeaderTab[] {
+function buildTabs<Row>(rows: Row[], tabs: TablePageTabsDefinition<Row>, selectedTab: string, discoveredValues: string[] = []): HeaderTab[] {
   if (tabs.mode !== "enum") {
     return []
   }
 
   const allValue = tabs.all?.value ?? "all"
-  const values = getTabValues(rows, tabs)
-  const optionValues = tabs.options?.length ? tabs.options : values
+  const values = tabs.options?.length ? tabs.options : discoveredValues.length ? discoveredValues : getTabValues(rows, tabs)
+  const optionValues = values
   const orderedValues = tabs.order?.length
     ? [...tabs.order.filter(value => optionValues.includes(value)), ...optionValues.filter(value => !tabs.order!.includes(value))]
     : optionValues
