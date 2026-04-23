@@ -35,6 +35,14 @@ const props = defineProps({
     type: Boolean,
     default: true,
   },
+  toolbarSortBehavior: {
+    type: String as PropType<"default" | "toggle">,
+    default: "default",
+  },
+  toolbarSortDirection: {
+    type: String as PropType<"asc" | "desc">,
+    default: "desc",
+  },
 })
 
 const emit = defineEmits<{
@@ -42,6 +50,7 @@ const emit = defineEmits<{
   "refresh-action": []
   "export-action": []
   "primary-action": []
+  "toolbar-sort-toggle": []
 }>()
 
 const slots = useSlots()
@@ -90,6 +99,8 @@ const slots = useSlots()
     :loading="props.loading"
     :loading-row-count="props.loadingRowCount"
     :pin-row-actions="props.pinRowActions"
+    :toolbar-sort-behavior="props.toolbarSortBehavior"
+    :toolbar-sort-direction="props.toolbarSortDirection"
     @tab-click="page.handleTabClick"
     @add-filter="page.handleAddFilter"
     @replace-filter="page.handleReplaceFilter"
@@ -106,6 +117,7 @@ const slots = useSlots()
     @update:selected-row-keys="page.selectedRowKeys.value = $event; emit('update:selected-row-keys', $event)"
     @export-action="emit('export-action')"
     @primary-action="emit('primary-action')"
+    @toolbar-sort-toggle="emit('toolbar-sort-toggle')"
   >
     <template
       v-for="(_, name) in slots"

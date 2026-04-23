@@ -63,6 +63,8 @@ const props = withDefaults(defineProps<{
   selectedRowsCount?: number
   showToolbarActions?: boolean
   listLevelTable?: boolean
+  toolbarSortBehavior?: "default" | "toggle"
+  toolbarSortDirection?: "asc" | "desc"
 }>(), {
   availableFilters: () => [],
   textFilters: () => ({}),
@@ -75,6 +77,8 @@ const props = withDefaults(defineProps<{
   primaryActionLabel: "",
   showToolbarActions: true,
   listLevelTable: true,
+  toolbarSortBehavior: "default",
+  toolbarSortDirection: "desc",
 })
 
 const emit = defineEmits<{
@@ -93,6 +97,7 @@ const emit = defineEmits<{
   "clear-all-filters": []
   "export-action": []
   "primary-action": []
+  "toolbar-sort-toggle": []
 }>()
 
 const openPopover = ref<string | null>(null)
@@ -155,9 +160,13 @@ const mobileToolbarItems = computed<Array<{
     },
     {
       key: "sort",
-      label: props.customSortEnabled ? "关闭排序" : "启用排序",
-      iconClass: "ri-sort-asc",
-      active: props.customSortEnabled,
+      label: props.toolbarSortBehavior === "toggle"
+        ? (props.toolbarSortDirection === "asc" ? "切到逆序" : "切到正序")
+        : (props.customSortEnabled ? "关闭排序" : "启用排序"),
+      iconClass: props.toolbarSortBehavior === "toggle"
+        ? (props.toolbarSortDirection === "asc" ? "ri-sort-asc" : "ri-sort-desc")
+        : "ri-sort-asc",
+      active: props.toolbarSortBehavior === "toggle" ? true : props.customSortEnabled,
     },
   ]
 
@@ -236,6 +245,11 @@ function buildNextSortRule(): SortRule {
 }
 
 function handleToolbarAddSort() {
+  if (props.toolbarSortBehavior === "toggle") {
+    emit("toolbar-sort-toggle")
+    return
+  }
+
   if (!props.sortFieldOptions.length) {
     return
   }
@@ -254,6 +268,18 @@ function handleToolbarAddSort() {
   emit("set-custom-sort-enabled", true)
   emit("update-sort-rules", nextRules)
 }
+
+const sortToolbarIconClass = computed(() => {
+  if (props.toolbarSortBehavior === "toggle") {
+    return props.toolbarSortDirection === "asc" ? "ri-sort-asc" : "ri-sort-desc"
+  }
+
+  return "ri-sort-asc"
+})
+
+const sortToolbarActive = computed(() => {
+  return props.toolbarSortBehavior === "toggle" ? true : props.customSortEnabled
+})
 
 function closePopover() {
   openPopover.value = null
@@ -330,6 +356,11 @@ function handleMobileToolbarActionSelect(action: MobileToolbarActionKey) {
   }
 
   if (action === "sort") {
+    if (props.toolbarSortBehavior === "toggle") {
+      emit("toolbar-sort-toggle")
+      return
+    }
+
     if (props.customSortEnabled) {
       emit("set-custom-sort-enabled", false)
       return
@@ -631,11 +662,11 @@ watch(
                     aria-label="排序"
                     :class="[
                       ghostIconButtonClass,
-                      customSortEnabled ? ghostIconButtonActiveClass : '',
+                      sortToolbarActive ? ghostIconButtonActiveClass : '',
                     ]"
                     @click="handleToolbarAddSort"
                   >
-                    <i :class="['ri-sort-asc text-[17px]', customSortEnabled ? 'text-link' : '']" />
+                    <i :class="[`${sortToolbarIconClass} text-[17px]`, sortToolbarActive ? 'text-link' : '']" />
                   </button>
                 </TooltipWrap>
               </div>
@@ -871,11 +902,11 @@ watch(
                     aria-label="排序"
                     :class="[
                       ghostIconButtonClass,
-                      customSortEnabled ? ghostIconButtonActiveClass : '',
+                      sortToolbarActive ? ghostIconButtonActiveClass : '',
                     ]"
                     @click="handleToolbarAddSort"
                   >
-                    <i :class="['ri-sort-asc text-[17px]', customSortEnabled ? 'text-link' : '']" />
+                    <i :class="[`${sortToolbarIconClass} text-[17px]`, sortToolbarActive ? 'text-link' : '']" />
                   </button>
                 </TooltipWrap>
               </div>
@@ -992,7 +1023,7 @@ watch(
             <div
               ref="controlsScrollViewportRef"
               data-table-header-controls-scroll
-              class="min-w-0 overflow-x-auto overflow-y-visible whitespace-nowrap"
+              class="-mx-1 -my-1 min-w-0 overflow-x-auto overflow-y-hidden px-1 py-1 whitespace-nowrap"
               @scroll="handleControlsScroll"
             >
               <div class="flex min-w-max flex-nowrap items-center gap-1 pr-6 text-[14px] text-muted-foreground">

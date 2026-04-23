@@ -1,14 +1,17 @@
 <script setup lang="ts">
-import { ref, watch } from "vue"
-import { useRoute, useRouter } from "vue-router"
+import { computed, onBeforeUnmount, ref, watch } from "vue"
+import { useRoute, useRouter, type LocationQueryValue } from "vue-router"
 import { toast } from "vue-sonner"
 
 import BuildingDetailSheet from "@/components/detail/BuildingDetailSheet.vue"
 import LinkedEntityDetailSheet from "@/components/detail/LinkedEntityDetailSheet.vue"
 import TablePage from "@/components/table-page/TablePage.vue"
+import FilterChip from "@/components/table-page/TableFilterChip.vue"
 import { createTablePageDefinition, useTablePage } from "@/components/table-page/useTablePage"
 import type { TablePageSchema } from "@/components/table-page/types"
-import { useRouteTableSearch } from "@/composables/useRouteTableSearch"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Button } from "@/components/ui/button"
+import { InputGroup, InputGroupAddon, InputGroupInput, InputGroupText } from "@/components/ui/input-group"
 import {
   Pagination,
   PaginationContent,
@@ -19,12 +22,13 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Button } from "@/components/ui/button"
+import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { handleApiError } from "@/lib/api-errors"
 import { fetchBuildings } from "@/lib/buildings-api"
+import { fetchCustomers } from "@/lib/customers-api"
 import { primeParkCustomerCache, resolveParkCustomerMap } from "@/lib/park-customer-cache"
+import { fetchParks } from "@/lib/parks-api"
 
 type BuildingRecord = {
   id: string
@@ -47,6 +51,11 @@ type BuildingRecord = {
 
 type LinkedDetailSheetKind = "customer" | "park"
 
+type FilterOption = {
+  uuid: string
+  name: string
+}
+
 const buildings = ref<BuildingRecord[]>([])
 const loading = ref(false)
 const errorMessage = ref("")
@@ -59,10 +68,44 @@ const activeLinkedDetailCustomerUuid = ref("")
 const buildingDetailSheetOpen = ref(false)
 const activeBuildingSheetUuid = ref("")
 const activeBuildingSheetParkUuid = ref("")
+const customerOptions = ref<FilterOption[]>([])
+const customerOptionsLoading = ref(false)
+const parkOptions = ref<FilterOption[]>([])
+const parkOptionsLoading = ref(false)
+const draftName = ref("")
+const appliedName = ref("")
+const selectedCustomerUuids = ref<string[]>([])
+const selectedParkUuids = ref<string[]>([])
+const sortDirection = ref<"asc" | "desc">("desc")
+const initialized = ref(false)
 let latestRequestId = 0
+let latestParkOptionsRequestId = 0
+let nameDebounceTimer: ReturnType<typeof setTimeout> | null = null
+let suppressFilterSideEffects = false
+let syncingRoute = false
 
 const router = useRouter()
 const route = useRoute()
+const customerSelectLabel = computed(() => {
+  return buildMultiSelectLabel(selectedCustomerUuids.value, customerOptions.value, {
+    placeholder: customerOptionsLoading.value ? "正在加载客户..." : "请选择客户",
+    unit: "个客户",
+  })
+})
+const parkSelectLabel = computed(() => {
+  if (!selectedCustomerUuids.value.length) {
+    return "请先选择客户"
+  }
+
+  return buildMultiSelectLabel(selectedParkUuids.value, parkOptions.value, {
+    placeholder: parkOptionsLoading.value ? "正在加载园区..." : "请选择园区",
+    unit: "个园区",
+  })
+})
+const canResetFilters = computed(() => {
+  return Boolean(draftName.value || selectedCustomerUuids.value.length || selectedParkUuids.value.length)
+})
+
 const schema: TablePageSchema<BuildingRecord> = {
   title: "建筑",
   description: "查看所有建筑的检测情况，了解评分、状态和存在的问题",
@@ -128,12 +171,6 @@ const schema: TablePageSchema<BuildingRecord> = {
       filterType: "text",
       emphasis: "strong",
       tone: "primary",
-      filter: {
-        type: "text",
-        placeholder: "输入建筑名称",
-        defaultVisible: true,
-      },
-      sort: true,
     },
     {
       key: "customerName",
@@ -146,28 +183,12 @@ const schema: TablePageSchema<BuildingRecord> = {
       label: "所属园区",
       filterType: "text",
       slot: "cell-parkName",
-      filter: {
-        type: "text",
-        placeholder: "输入园区名称",
-        defaultVisible: true,
-      },
-      sort: true,
     },
     {
       key: "buildingArea",
       label: "建筑面积",
       filterType: "number",
       variant: "metric",
-      filter: {
-        type: "number",
-        placeholder: "输入建筑面积",
-        value: row => row.buildingAreaValue ?? "",
-      },
-      sort: {
-        label: "建筑面积",
-        kind: "metric",
-        value: row => row.buildingAreaValue ?? -1,
-      },
       cellRenderer: {
         kind: "metric-unit",
         valueKey: "buildingAreaValue",
@@ -179,15 +200,6 @@ const schema: TablePageSchema<BuildingRecord> = {
       label: "联系人",
       filterType: "contact",
       variant: "contact",
-      filter: {
-        type: "text",
-        placeholder: "输入联系人或手机号",
-        value: row => `${row.contactName} ${row.contactPhone}`,
-      },
-      sort: {
-        label: "联系人",
-        value: row => `${row.contactName} ${row.contactPhone}`,
-      },
       cellRenderer: {
         kind: "dual-inline",
         primaryKey: "contactName",
@@ -200,10 +212,6 @@ const schema: TablePageSchema<BuildingRecord> = {
       filterType: "time",
       tone: "muted",
       format: "numeric",
-      filter: {
-        type: "date",
-      },
-      sort: true,
     },
     {
       key: "operationTime",
@@ -211,21 +219,12 @@ const schema: TablePageSchema<BuildingRecord> = {
       filterType: "time",
       tone: "muted",
       format: "numeric",
-      filter: {
-        type: "date",
-      },
-      sort: true,
     },
     {
       key: "address",
       label: "地址",
       filterType: "text",
       width: "fill",
-      filter: {
-        type: "text",
-        placeholder: "输入地址",
-      },
-      sort: true,
     },
     {
       key: "updatedAt",
@@ -233,47 +232,100 @@ const schema: TablePageSchema<BuildingRecord> = {
       filterType: "time",
       tone: "muted",
       format: "numeric",
-      filter: {
-        type: "date",
-        value: row => extractDatePart(row.updatedAt),
-      },
-      sort: true,
     },
   ],
-  filters: [
-    {
-      key: "在页面中",
-      label: "在页面中",
-      type: "text",
-      fixed: true,
-      placeholder: "输入页面内筛选条件",
-      value: row => buildPageFilterText(row),
-    },
-  ],
-  sort: {
-    storageKey: "buildings-sort-preferences",
-    initialField: "updatedAt",
-    initialDirection: "desc",
-  },
   tabs: {
     mode: "none",
   },
 }
 
-const page = useTablePage({
-  ...createTablePageDefinition(schema),
-  rows: buildings,
+const sortedBuildings = computed(() => {
+  return [...buildings.value].sort((left, right) => {
+    const leftValue = getSortTimestamp(left.updatedAt)
+    const rightValue = getSortTimestamp(right.updatedAt)
+
+    if (leftValue === rightValue) {
+      return left.buildingName.localeCompare(right.buildingName, "zh-CN")
+    }
+
+    return sortDirection.value === "asc" ? leftValue - rightValue : rightValue - leftValue
+  })
 })
 
-useRouteTableSearch(page, route)
+const page = useTablePage({
+  ...createTablePageDefinition(schema),
+  rows: sortedBuildings,
+})
+page.showControls.value = true
 
 watch([pageNum, pageSize], ([nextPageNum, nextPageSize], [previousPageNum, previousPageSize]) => {
-  if (nextPageNum === previousPageNum && nextPageSize === previousPageSize) {
+  if (!initialized.value || (nextPageNum === previousPageNum && nextPageSize === previousPageSize)) {
     return
   }
 
   void loadBuildings()
-}, { immediate: true })
+})
+
+watch(draftName, (value) => {
+  if (suppressFilterSideEffects) {
+    return
+  }
+
+  clearNameDebounceTimer()
+  nameDebounceTimer = setTimeout(() => {
+    appliedName.value = normalizeText(value)
+  }, 400)
+})
+
+watch(appliedName, (nextValue, previousValue) => {
+  if (!initialized.value || suppressFilterSideEffects || nextValue === previousValue) {
+    return
+  }
+
+  void handleFilterChange()
+})
+
+watch(() => selectedCustomerUuids.value.join(","), async (nextValue, previousValue) => {
+  if (!initialized.value || suppressFilterSideEffects || nextValue === previousValue) {
+    return
+  }
+
+  await refreshParkOptionsForCurrentCustomers()
+  await handleFilterChange()
+})
+
+watch(() => selectedParkUuids.value.join(","), (nextValue, previousValue) => {
+  if (!initialized.value || suppressFilterSideEffects || nextValue === previousValue) {
+    return
+  }
+
+  void handleFilterChange()
+})
+
+watch(
+  [
+    () => normalizeQueryValue(route.query.q),
+    () => normalizeQueryList(route.query.customerUuids).join(","),
+    () => normalizeQueryList(route.query.parkUuids).join(","),
+  ],
+  ([nextName, nextCustomers, nextParks], [previousName, previousCustomers, previousParks]) => {
+    if (
+      !initialized.value
+      || syncingRoute
+      || (nextName === previousName && nextCustomers === previousCustomers && nextParks === previousParks)
+    ) {
+      return
+    }
+
+    void applyRouteFilters({ reload: true })
+  },
+)
+
+void initializePage()
+
+onBeforeUnmount(() => {
+  clearNameDebounceTimer()
+})
 
 function handleCreateBuilding() {
   void router.push({ name: "building-create" })
@@ -322,6 +374,159 @@ function handleBuildingDetailSheetOpenChange(open: boolean) {
   }
 }
 
+function handleNameEnter() {
+  clearNameDebounceTimer()
+  appliedName.value = normalizeText(draftName.value)
+}
+
+function handleResetFilters() {
+  clearNameDebounceTimer()
+  suppressFilterSideEffects = true
+  draftName.value = ""
+  appliedName.value = ""
+  selectedCustomerUuids.value = []
+  selectedParkUuids.value = []
+  parkOptions.value = []
+  suppressFilterSideEffects = false
+  void handleFilterChange()
+}
+
+function handleToolbarSortToggle() {
+  sortDirection.value = sortDirection.value === "asc" ? "desc" : "asc"
+}
+
+async function initializePage() {
+  await loadCustomerOptions()
+  await applyRouteFilters({ reload: false })
+  initialized.value = true
+  await loadBuildings()
+}
+
+async function applyRouteFilters(options: { reload: boolean }) {
+  const nextName = normalizeQueryValue(route.query.q)
+  const nextCustomerUuids = filterKnownOptions(normalizeQueryList(route.query.customerUuids), customerOptions.value)
+  const nextParkUuids = normalizeQueryList(route.query.parkUuids)
+
+  suppressFilterSideEffects = true
+  clearNameDebounceTimer()
+  draftName.value = nextName
+  appliedName.value = nextName
+  selectedCustomerUuids.value = nextCustomerUuids
+  suppressFilterSideEffects = false
+
+  await refreshParkOptionsForCurrentCustomers(nextParkUuids)
+  await syncRouteQuery()
+
+  if (!options.reload) {
+    return
+  }
+
+  if (pageNum.value !== 1) {
+    pageNum.value = 1
+    return
+  }
+
+  await loadBuildings()
+}
+
+async function loadCustomerOptions() {
+  customerOptionsLoading.value = true
+
+  try {
+    customerOptions.value = await fetchAllCustomers()
+  } catch (error) {
+    customerOptions.value = []
+    toast.error(handleApiError(error, {
+      mode: "silent",
+      fallback: "客户筛选项加载失败，请稍后重试。",
+    }))
+  } finally {
+    customerOptionsLoading.value = false
+  }
+}
+
+async function refreshParkOptionsForCurrentCustomers(requestedParkUuids: string[] = selectedParkUuids.value) {
+  const requestId = ++latestParkOptionsRequestId
+
+  if (!selectedCustomerUuids.value.length) {
+    parkOptions.value = []
+    suppressFilterSideEffects = true
+    selectedParkUuids.value = []
+    suppressFilterSideEffects = false
+    parkOptionsLoading.value = false
+    return
+  }
+
+  parkOptionsLoading.value = true
+
+  try {
+    const nextOptions = await fetchAllParksForCustomers(selectedCustomerUuids.value)
+
+    if (requestId !== latestParkOptionsRequestId) {
+      return
+    }
+
+    parkOptions.value = nextOptions
+
+    suppressFilterSideEffects = true
+    selectedParkUuids.value = filterKnownOptions(requestedParkUuids, nextOptions)
+    suppressFilterSideEffects = false
+  } catch (error) {
+    if (requestId !== latestParkOptionsRequestId) {
+      return
+    }
+
+    parkOptions.value = []
+    suppressFilterSideEffects = true
+    selectedParkUuids.value = []
+    suppressFilterSideEffects = false
+    toast.error(handleApiError(error, {
+      mode: "silent",
+      fallback: "园区筛选项加载失败，请稍后重试。",
+    }))
+  } finally {
+    if (requestId === latestParkOptionsRequestId) {
+      parkOptionsLoading.value = false
+    }
+  }
+}
+
+async function handleFilterChange() {
+  await syncRouteQuery()
+
+  if (pageNum.value !== 1) {
+    pageNum.value = 1
+    return
+  }
+
+  await loadBuildings()
+}
+
+async function syncRouteQuery() {
+  const nextQuery = {
+    ...route.query,
+    q: appliedName.value || undefined,
+    customerUuids: selectedCustomerUuids.value.length ? selectedCustomerUuids.value.join(",") : undefined,
+    parkUuids: selectedParkUuids.value.length ? selectedParkUuids.value.join(",") : undefined,
+  }
+
+  if (
+    normalizeQueryValue(nextQuery.q) === normalizeQueryValue(route.query.q)
+    && normalizeQueryList(nextQuery.customerUuids).join(",") === normalizeQueryList(route.query.customerUuids).join(",")
+    && normalizeQueryList(nextQuery.parkUuids).join(",") === normalizeQueryList(route.query.parkUuids).join(",")
+  ) {
+    return
+  }
+
+  syncingRoute = true
+
+  try {
+    await router.replace({ query: nextQuery })
+  } finally {
+    syncingRoute = false
+  }
+}
+
 async function loadBuildings() {
   const requestId = ++latestRequestId
 
@@ -329,7 +534,13 @@ async function loadBuildings() {
   errorMessage.value = ""
 
   try {
-    const buildingsResult = await fetchBuildings({ PageNum: pageNum.value, PageSize: pageSize.value })
+    const buildingsResult = await fetchBuildings({
+      Name: appliedName.value || undefined,
+      CustomerUuids: selectedCustomerUuids.value.length ? [...selectedCustomerUuids.value] : undefined,
+      ParkUuids: selectedParkUuids.value.length ? [...selectedParkUuids.value] : undefined,
+      PageNum: pageNum.value,
+      PageSize: pageSize.value,
+    })
 
     if (requestId !== latestRequestId) {
       return
@@ -444,23 +655,148 @@ async function hydrateBuildingCustomers(requestId: number, parkUuids: string[]) 
   }
 }
 
-function buildPageFilterText(row: BuildingRecord) {
-  return [
-    row.buildingName,
-    row.parkName,
-    row.buildingArea,
-    row.contactName,
-    row.contactPhone,
-    row.address,
-    row.builtTime,
-    row.operationTime,
-    row.updatedAt,
-  ].join(" ")
+async function fetchAllCustomers() {
+  const pageSize = 200
+  const allItems: FilterOption[] = []
+  let currentPage = 1
+  let totalCount = 0
+
+  while (currentPage <= 20) {
+    const result = await fetchCustomers({
+      PageNum: currentPage,
+      PageSize: pageSize,
+    })
+
+    if (currentPage === 1) {
+      totalCount = result.total
+    }
+
+    allItems.push(...result.list.map(item => ({
+      uuid: normalizeText(item.Uuid),
+      name: normalizeText(item.CorpName) || "未命名客户",
+    })))
+
+    if (!result.list.length || (totalCount > 0 && allItems.length >= totalCount)) {
+      break
+    }
+
+    currentPage += 1
+  }
+
+  return dedupeOptions(allItems)
+}
+
+async function fetchAllParksForCustomers(customerUuids: string[]) {
+  const parkGroups = await Promise.all(customerUuids.map(customerUuid => fetchAllParksForCustomer(customerUuid)))
+  return dedupeOptions(parkGroups.flat())
+}
+
+async function fetchAllParksForCustomer(customerUuid: string) {
+  const pageSize = 200
+  const allItems: FilterOption[] = []
+  let currentPage = 1
+  let totalCount = 0
+
+  while (currentPage <= 20) {
+    const result = await fetchParks({
+      CustomerUuid: customerUuid,
+      PageNum: currentPage,
+      PageSize: pageSize,
+    })
+
+    if (currentPage === 1) {
+      totalCount = result.total
+    }
+
+    allItems.push(...result.list.map(item => ({
+      uuid: normalizeText(item.Uuid),
+      name: normalizeText(item.Name) || "未命名园区",
+    })))
+
+    if (!result.list.length || (totalCount > 0 && allItems.length >= totalCount)) {
+      break
+    }
+
+    currentPage += 1
+  }
+
+  return allItems
+}
+
+function dedupeOptions(items: FilterOption[]) {
+  const optionMap = new Map<string, FilterOption>()
+
+  for (const item of items) {
+    if (!item.uuid || optionMap.has(item.uuid)) {
+      continue
+    }
+
+    optionMap.set(item.uuid, item)
+  }
+
+  return [...optionMap.values()]
+}
+
+function buildMultiSelectLabel(
+  selectedIds: string[],
+  options: FilterOption[],
+  config: { placeholder: string; unit: string },
+) {
+  if (!selectedIds.length) {
+    return config.placeholder
+  }
+
+  const nameMap = new Map(options.map(item => [item.uuid, item.name]))
+  const names = selectedIds.map(uuid => nameMap.get(uuid)).filter((value): value is string => Boolean(value))
+
+  if (!names.length) {
+    return config.placeholder
+  }
+
+  if (names.length <= 2) {
+    return names.join("、")
+  }
+
+  return `已选 ${names.length}${config.unit}`
+}
+
+function filterKnownOptions(values: string[], options: FilterOption[]) {
+  const validUuids = new Set(options.map(item => item.uuid))
+  return values.filter(value => validUuids.has(value))
+}
+
+function normalizeQueryValue(value: LocationQueryValue | LocationQueryValue[] | undefined) {
+  if (Array.isArray(value)) {
+    return normalizeQueryValue(value[0])
+  }
+
+  return typeof value === "string" ? value.trim() : ""
+}
+
+function normalizeQueryList(value: LocationQueryValue | LocationQueryValue[] | undefined) {
+  return normalizeQueryValue(value)
+    .split(",")
+    .map(item => item.trim())
+    .filter(Boolean)
+}
+
+function clearNameDebounceTimer() {
+  if (!nameDebounceTimer) {
+    return
+  }
+
+  clearTimeout(nameDebounceTimer)
+  nameDebounceTimer = null
 }
 
 function extractDatePart(value: string) {
   const [datePart] = value.split(/[ T]/)
   return datePart ?? value
+}
+
+function getSortTimestamp(value: string) {
+  const timestamp = Date.parse(value)
+  return Number.isFinite(timestamp) ? timestamp : 0
 }
 
 function parseAreaValue(value: unknown) {
@@ -474,8 +810,8 @@ function parseAreaValue(value: unknown) {
   return Number.isFinite(numeric) ? numeric : null
 }
 
-function toText(value: unknown, fallback = "") {
-  if (typeof value === "string" && value.trim()) {
+function normalizeText(value: unknown) {
+  if (typeof value === "string") {
     return value.trim()
   }
 
@@ -483,7 +819,12 @@ function toText(value: unknown, fallback = "") {
     return String(value)
   }
 
-  return fallback
+  return ""
+}
+
+function toText(value: unknown, fallback = "") {
+  const normalized = normalizeText(value)
+  return normalized || fallback
 }
 </script>
 
@@ -505,10 +846,85 @@ function toText(value: unknown, fallback = "") {
     <TablePage
       :page="page"
       :loading="loading"
+      toolbar-sort-behavior="toggle"
+      :toolbar-sort-direction="sortDirection"
       fill-available-height
       @refresh-action="loadBuildings"
       @primary-action="handleCreateBuilding"
+      @toolbar-sort-toggle="handleToolbarSortToggle"
     >
+      <template #controls-prefix>
+        <div class="mr-2 flex min-w-max items-center gap-2">
+          <InputGroup class="w-[320px] shrink-0 rounded-full bg-background">
+            <InputGroupAddon class="pl-2.5 pr-2">
+              <InputGroupText>
+                <i class="ri-search-line text-[15px]" />
+                建筑
+              </InputGroupText>
+            </InputGroupAddon>
+            <InputGroupInput
+              v-model="draftName"
+              placeholder="输入建筑名称搜索"
+              class="min-w-0"
+              @keydown.enter="handleNameEnter"
+            />
+          </InputGroup>
+
+          <InputGroup class="w-[240px] shrink-0 rounded-full bg-background">
+            <InputGroupAddon class="pl-2.5 pr-2">
+              <InputGroupText>
+                <i class="ri-filter-3-line text-[15px]" />
+                客户
+              </InputGroupText>
+            </InputGroupAddon>
+            <Select v-model="selectedCustomerUuids" multiple :disabled="customerOptionsLoading">
+              <SelectTrigger class="h-full w-full rounded-none border-0 bg-transparent px-2 shadow-none focus-visible:ring-0">
+                <span class="truncate text-left">{{ customerSelectLabel }}</span>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem v-for="customer in customerOptions" :key="customer.uuid" :value="customer.uuid">
+                  {{ customer.name }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </InputGroup>
+
+          <InputGroup class="w-[240px] shrink-0 rounded-full bg-background">
+            <InputGroupAddon class="pl-2.5 pr-2">
+              <InputGroupText>
+                <i class="ri-filter-3-line text-[15px]" />
+                园区
+              </InputGroupText>
+            </InputGroupAddon>
+            <Select
+              v-model="selectedParkUuids"
+              multiple
+              :disabled="!selectedCustomerUuids.length || parkOptionsLoading"
+            >
+              <SelectTrigger class="h-full w-full rounded-none border-0 bg-transparent px-2 shadow-none focus-visible:ring-0">
+                <span class="truncate text-left">{{ parkSelectLabel }}</span>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem v-for="park in parkOptions" :key="park.uuid" :value="park.uuid">
+                  {{ park.name }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </InputGroup>
+
+          <FilterChip
+            icon="ri-close-circle-line"
+            label="清空筛选"
+            variant="ghost"
+            :class="[
+              'h-9 shrink-0 px-2.5',
+              canResetFilters ? '' : 'pointer-events-none opacity-40',
+            ]"
+            @click="handleResetFilters"
+          />
+        </div>
+      </template>
+
       <template #cell-parkName="{ row }">
         <button
           type="button"

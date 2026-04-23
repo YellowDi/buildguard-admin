@@ -71,6 +71,8 @@ const props = withDefaults(defineProps<{
   loading?: boolean
   loadingRowCount?: number
   pinRowActions?: boolean
+  toolbarSortBehavior?: "default" | "toggle"
+  toolbarSortDirection?: "asc" | "desc"
 }>(), {
   showToolbarActions: true,
   listLevelTable: true,
@@ -78,6 +80,8 @@ const props = withDefaults(defineProps<{
   loading: false,
   loadingRowCount: 8,
   pinRowActions: true,
+  toolbarSortBehavior: "default",
+  toolbarSortDirection: "desc",
 })
 
 const emit = defineEmits<{
@@ -97,6 +101,7 @@ const emit = defineEmits<{
   "update:selected-row-keys": [keys: Array<string | number>]
   "export-action": []
   "primary-action": []
+  "toolbar-sort-toggle": []
 }>()
 
 const slots = useSlots()
@@ -202,6 +207,8 @@ async function handleExportConfirm(payload: { scope: TableExportScope; format: T
           :date-filter-fields="props.dateFilterFields"
           :show-toolbar-actions="props.showToolbarActions"
           :list-level-table="props.listLevelTable"
+          :toolbar-sort-behavior="props.toolbarSortBehavior"
+          :toolbar-sort-direction="props.toolbarSortDirection"
           @tab-click="emit('tab-click', $event)"
           @add-filter="emit('add-filter', $event)"
           @replace-filter="emit('replace-filter', $event)"
@@ -217,6 +224,7 @@ async function handleExportConfirm(payload: { scope: TableExportScope; format: T
           @update-date-filter="emit('update-date-filter', $event)"
           @export-action="handleOpenExportDialog"
           @primary-action="emit('primary-action')"
+          @toolbar-sort-toggle="emit('toolbar-sort-toggle')"
         >
           <template v-if="slots['controls-prefix']" #controls-prefix>
             <slot name="controls-prefix" />
