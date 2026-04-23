@@ -41,9 +41,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Separator } from "@/components/ui/separator"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import {
@@ -248,7 +246,6 @@ const collapsedPermissionGroupKeys = ref<string[]>([])
 const manualMemberForm = ref(createManualMemberForm())
 const roleForm = ref(createRoleForm())
 const editMemberForm = ref(createEditMemberForm())
-const inlineUserTypePopoverMemberId = ref<number | null>(null)
 const availableRoleOptions = computed<RoleOption[]>(() => roleRows.value
   .filter(role => role.uuid)
   .map(role => ({
@@ -963,10 +960,6 @@ function getUserTypeValues(value: unknown): MemberUserType[] {
   return normalizeUserTypes(value)
 }
 
-function hasUserType(values: MemberUserType[], userType: MemberUserType) {
-  return normalizeUserTypes(values).includes(userType)
-}
-
 function isSameUserTypes(left: MemberUserType[], right: MemberUserType[]) {
   const normalizedLeft = normalizeUserTypes(left)
   const normalizedRight = normalizeUserTypes(right)
@@ -976,22 +969,6 @@ function isSameUserTypes(left: MemberUserType[], right: MemberUserType[]) {
   }
 
   return normalizedLeft.every((value, index) => value === normalizedRight[index])
-}
-
-function toggleUserTypeSelection(values: MemberUserType[], userType: MemberUserType, checked: boolean) {
-  const nextValues = new Set(normalizeUserTypes(values))
-
-  if (checked) {
-    nextValues.add(userType)
-  } else {
-    nextValues.delete(userType)
-  }
-
-  return normalizeUserTypes(Array.from(nextValues))
-}
-
-function updateInlineUserTypePopoverOpen(memberId: number, open: boolean) {
-  inlineUserTypePopoverMemberId.value = open ? memberId : null
 }
 
 function normalizeRoleMenuUuids(value: unknown) {
@@ -1215,11 +1192,9 @@ function isMemberUserTypeUpdating(memberId: number) {
   return userTypeUpdatingMemberIds.value.includes(memberId)
 }
 
-async function updateMemberUserTypeInline(memberId: number, userTypeValue: MemberUserType, checked: boolean) {
+async function updateMemberUserTypesInline(memberId: number, nextUserTypeValues: string[]) {
   const member = rows.value.find(row => row.id === memberId)
-  const nextUserTypes = member
-    ? toggleUserTypeSelection(member.userTypes, userTypeValue, checked)
-    : []
+  const nextUserTypes = getUserTypeValues(nextUserTypeValues)
 
   if (!member || isMemberUserTypeUpdating(memberId) || isSameUserTypes(member.userTypes, nextUserTypes)) {
     return
@@ -2046,46 +2021,32 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
       </template>
 
       <template #cell-user-type="{ row: rawRow }">
-        <Popover
+        <Select
           v-if="activeView === 'members'"
-          :open="inlineUserTypePopoverMemberId === asMemberRow(rawRow).id"
-          @update:open="updateInlineUserTypePopoverOpen(asMemberRow(rawRow).id, $event)"
+          multiple
+          :model-value="asMemberRow(rawRow).userTypes.map(value => String(value))"
+          :disabled="isMemberUserTypeUpdating(asMemberRow(rawRow).id)"
+          @update:model-value="updateMemberUserTypesInline(asMemberRow(rawRow).id, ($event as string[]) ?? [])"
         >
-          <PopoverTrigger as-child>
-            <button
-              type="button"
-              :disabled="isMemberUserTypeUpdating(asMemberRow(rawRow).id)"
-              class="inline-flex h-7 max-w-40 items-center gap-1 rounded-md px-1.5 text-[12px] font-medium text-foreground transition-colors hover:bg-surface-tertiary hover:text-foreground focus-visible:bg-surface-tertiary focus-visible:text-foreground focus-visible:outline-none"
-              @click.stop
+          <SelectTrigger
+            class="h-7 max-w-40 border-0 bg-transparent px-1.5 text-[12px] font-medium shadow-none hover:bg-surface-tertiary focus-visible:bg-surface-tertiary"
+            @click.stop
+          >
+            <span class="truncate">
+              {{ isMemberUserTypeUpdating(asMemberRow(rawRow).id) ? "更新中..." : asMemberRow(rawRow).userTypeLabel }}
+            </span>
+          </SelectTrigger>
+          <SelectContent class="w-[200px] rounded-xl p-1.5" @click.stop>
+            <SelectItem
+              v-for="option in MEMBER_USER_TYPE_OPTIONS"
+              :key="`${asMemberRow(rawRow).id}-type-${option.value}`"
+              :value="String(option.value)"
+              class="rounded-lg py-2 pr-8"
             >
-              <span class="truncate">
-                {{ isMemberUserTypeUpdating(asMemberRow(rawRow).id) ? "更新中..." : asMemberRow(rawRow).userTypeLabel }}
-              </span>
-              <i class="ri-arrow-down-s-line text-sm text-muted-foreground" />
-            </button>
-          </PopoverTrigger>
-          <PopoverContent align="start" class="w-[200px] rounded-xl p-3" @click.stop>
-            <div class="space-y-3">
-              <div class="space-y-1">
-                <p class="text-xs font-medium text-foreground">切换用户类型</p>
-                <p class="text-[11px] text-muted-foreground">可多选，修改后立即保存</p>
-              </div>
-              <div class="grid gap-2">
-                <label
-                  v-for="option in MEMBER_USER_TYPE_OPTIONS"
-                  :key="`${asMemberRow(rawRow).id}-type-${option.value}`"
-                  class="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-foreground transition-colors hover:bg-muted/60"
-                >
-                  <Checkbox
-                    :checked="hasUserType(asMemberRow(rawRow).userTypes, option.value)"
-                    @update:checked="updateMemberUserTypeInline(asMemberRow(rawRow).id, option.value, $event === true)"
-                  />
-                  <span>{{ option.label }}</span>
-                </label>
-              </div>
-            </div>
-          </PopoverContent>
-        </Popover>
+              {{ option.label }}
+            </SelectItem>
+          </SelectContent>
+        </Select>
       </template>
 
       <template #cell-status="{ row: rawRow }">
