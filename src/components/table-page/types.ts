@@ -283,6 +283,19 @@ export type TableQuerySearchControl = {
   collapsedMaxWidth?: number
 }
 
+export type TableQueryDateControl = {
+  type: "date"
+  key: string
+  label: string
+  icon: string
+  placeholder?: string
+  value?: string
+  queryKey?: string
+  expandedWidth?: number
+  collapsedMinWidth?: number
+  collapsedMaxWidth?: number
+}
+
 export type TableQuerySelectControl = {
   type: "select"
   key: string
@@ -300,7 +313,7 @@ export type TableQuerySelectControl = {
   placeholder?: string
 }
 
-export type TableQueryControl = TableQuerySearchControl | TableQuerySelectControl
+export type TableQueryControl = TableQuerySearchControl | TableQueryDateControl | TableQuerySelectControl
 
 export type TableQueryBarConfig = {
   controls: TableQueryControl[]

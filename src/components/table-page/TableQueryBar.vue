@@ -1,9 +1,13 @@
 <script setup lang="ts">
+import { DateFormatter, getLocalTimeZone, parseDate } from "@internationalized/date"
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch, type ComponentPublicInstance } from "vue"
 
-import type { TableQueryBarConfig, TableQueryControl, TableQuerySelectControl } from "@/components/table-page/types"
+import type { TableQueryBarConfig, TableQueryControl, TableQueryDateControl, TableQuerySelectControl } from "@/components/table-page/types"
 import FilterChip from "@/components/table-page/TableFilterChip.vue"
+import { Button } from "@/components/ui/button"
+import { Calendar } from "@/components/ui/calendar"
 import { InputGroup, InputGroupAddon, InputGroupInput, InputGroupText } from "@/components/ui/input-group"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select"
 
 const props = defineProps<{
@@ -20,10 +24,13 @@ const expandedKey = ref<string | null>(null)
 const searchDrafts = reactive<Record<string, string>>({})
 const collapsedWidths = reactive<Record<string, number>>({})
 const selectOpenState = reactive<Record<string, boolean>>({})
+const datePopoverOpenState = reactive<Record<string, boolean>>({})
 const measureRefs = new Map<string, ComponentPublicInstance | HTMLElement | null>()
 const selectTriggerRefs = new Map<string, HTMLElement | null>()
+const dateTriggerRefs = new Map<string, HTMLElement | null>()
 let resizeObserver: ResizeObserver | null = null
 const debounceTimers = new Map<string, ReturnType<typeof setTimeout>>()
+const dateFormatter = new DateFormatter("zh-CN", { dateStyle: "long" })
 
 const controlMap = computed(() => new Map(props.queryBar.controls.map(control => [control.key, control])))
 
@@ -100,6 +107,11 @@ function getSearchValue(control: TableQueryControl) {
     : ""
 }
 
+function getDateValue(control: TableQueryDateControl) {
+  const value = props.queryBar.values[control.key]
+  return typeof value === "string" ? value : ""
+}
+
 function getSelectValue(control: TableQuerySelectControl) {
   const value = props.queryBar.values[control.key]
 
@@ -114,6 +126,11 @@ function getCollapsedLabel(control: TableQueryControl) {
   if (control.type === "search") {
     const value = getSearchValue(control).trim()
     return value ? `${control.label}：${value}` : control.label
+  }
+
+  if (control.type === "date") {
+    const value = getDateValue(control).trim()
+    return value ? `${control.label}：${formatDateLabel(value)}` : control.label
   }
 
   const rawValue = getSelectValue(control)
@@ -136,6 +153,11 @@ function getCollapsedLabel(control: TableQueryControl) {
 
   const summary = labels.length <= 2 ? labels.join("、") : `已选 ${labels.length} 项`
   return `${control.label}：${summary}`
+}
+
+function getExpandedDateLabel(control: TableQueryDateControl) {
+  const value = getDateValue(control)
+  return value ? formatDateLabel(value) : (control.placeholder ?? "请选择日期")
 }
 
 function getExpandedSelectLabel(control: TableQuerySelectControl) {
@@ -175,6 +197,12 @@ async function toggleControl(control: TableQueryControl) {
     return
   }
 
+  if (control.type === "date") {
+    datePopoverOpenState[control.key] = true
+    dateTriggerRefs.get(control.key)?.focus()
+    return
+  }
+
   selectOpenState[control.key] = true
   selectTriggerRefs.get(control.key)?.focus()
 }
@@ -187,6 +215,7 @@ function collapseControl(key: string) {
   }
 
   selectOpenState[key] = false
+  datePopoverOpenState[key] = false
 
   if (expandedKey.value === key) {
     expandedKey.value = null
@@ -208,7 +237,7 @@ function handleDocumentPointerDown(event: PointerEvent) {
     return
   }
 
-  if (target instanceof Element && target.closest("[data-slot='select-content']")) {
+  if (target instanceof Element && (target.closest("[data-slot='select-content']") || target.closest("[data-slot='popover-content']"))) {
     return
   }
 
@@ -255,11 +284,41 @@ function handleSelectChange(control: Extract<TableQueryControl, { type: "select"
   emit("query-change", { key: control.key, value })
 }
 
+function handleDateChange(control: TableQueryDateControl, value: { toString: () => string } | undefined) {
+  emit("query-change", {
+    key: control.key,
+    value: value?.toString() ?? "",
+  })
+  collapseControl(control.key)
+}
+
+function getCalendarValue(control: TableQueryDateControl) {
+  const value = getDateValue(control)
+
+  if (!value) {
+    return undefined
+  }
+
+  try {
+    return parseDate(value)
+  } catch {
+    return undefined
+  }
+}
+
 function closeAllSelects() {
   for (const control of props.queryBar.controls) {
     if (control.type === "select") {
       selectOpenState[control.key] = false
     }
+  }
+}
+
+function formatDateLabel(value: string) {
+  try {
+    return dateFormatter.format(parseDate(value).toDate(getLocalTimeZone()))
+  } catch {
+    return value
   }
 }
 
@@ -318,6 +377,10 @@ function setMeasureRef(key: string, value: ComponentPublicInstance | HTMLElement
 function setSelectTriggerRef(key: string, value: HTMLElement | null) {
   selectTriggerRefs.set(key, value)
 }
+
+function setDateTriggerRef(key: string, value: HTMLElement | null) {
+  dateTriggerRefs.set(key, value)
+}
 </script>
 
 <template>
@@ -335,7 +398,11 @@ function setSelectTriggerRef(key: string, value: HTMLElement | null) {
         <FilterChip
           :icon="control.icon"
           :label="getCollapsedLabel(control)"
-          :selected="control.type === 'search' ? Boolean(getSearchValue(control)) : Boolean(Array.isArray(getSelectValue(control)) ? getSelectValue(control).length : getSelectValue(control))"
+          :selected="control.type === 'search'
+            ? Boolean(getSearchValue(control))
+            : control.type === 'date'
+              ? Boolean(getDateValue(control))
+              : Boolean(Array.isArray(getSelectValue(control)) ? getSelectValue(control).length : getSelectValue(control))"
           caret
           class="absolute left-0 top-1/2 min-w-0 w-full -translate-y-1/2 justify-start overflow-hidden text-[13px] [&>span]:min-w-0 [&>span]:flex-1 [&>span]:truncate"
           @click="toggleControl(control)"
@@ -364,6 +431,34 @@ function setSelectTriggerRef(key: string, value: HTMLElement | null) {
               @keydown.enter="handleSearchEnter(control)"
               @keydown.esc="collapseControl(control.key)"
             />
+          </template>
+
+          <template v-else-if="control.type === 'date'">
+            <Popover v-model:open="datePopoverOpenState[control.key]">
+              <PopoverTrigger as-child>
+                <Button
+                  :ref="value => setDateTriggerRef(control.key, value as HTMLElement | null)"
+                  variant="ghost"
+                  class="h-full w-full justify-start rounded-none border-0 bg-transparent px-2 pr-9 text-left font-normal shadow-none hover:bg-transparent"
+                >
+                  <span class="truncate">{{ getExpandedDateLabel(control) }}</span>
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent
+                class="w-auto p-0"
+                align="start"
+                @escape-key-down="collapseControl(control.key)"
+                @pointer-down-outside="collapseControl(control.key)"
+              >
+                <Calendar
+                  :model-value="getCalendarValue(control)"
+                  layout="month-and-year"
+                  locale="zh-CN"
+                  initial-focus
+                  @update:model-value="handleDateChange(control, $event)"
+                />
+              </PopoverContent>
+            </Popover>
           </template>
 
           <template v-else>
@@ -423,7 +518,11 @@ function setSelectTriggerRef(key: string, value: HTMLElement | null) {
         :key="`${control.key}-measure`"
         :icon="control.icon"
         :label="getCollapsedLabel(control)"
-        :selected="control.type === 'search' ? Boolean(getSearchValue(control)) : Boolean(Array.isArray(getSelectValue(control)) ? getSelectValue(control).length : getSelectValue(control))"
+        :selected="control.type === 'search'
+          ? Boolean(getSearchValue(control))
+          : control.type === 'date'
+            ? Boolean(getDateValue(control))
+            : Boolean(Array.isArray(getSelectValue(control)) ? getSelectValue(control).length : getSelectValue(control))"
         caret
         class="text-[13px]"
       />

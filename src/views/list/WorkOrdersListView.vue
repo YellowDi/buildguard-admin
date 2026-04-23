@@ -13,6 +13,8 @@ import { workOrderStatusMap } from "@/components/table-page/statusPresets"
 import { createTablePageDefinition, useTablePage } from "@/components/table-page/useTablePage"
 import type { TablePageSchema, TableQueryBarConfig } from "@/components/table-page/types"
 import { handleApiError } from "@/lib/api-errors"
+import { fetchCustomers } from "@/lib/customers-api"
+import { fetchInspectionPlans } from "@/lib/inspection-plans-api"
 import { fetchMembers } from "@/lib/members-api"
 import { getWorkOrderStatusLabel } from "@/lib/work-order-status"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -84,7 +86,13 @@ const pageNum = ref(1)
 const pageSize = ref(50)
 const total = ref(0)
 const orderNoQuery = ref("")
+const deadlineQuery = ref("")
+const serviceNameQuery = ref("")
+const executorQuery = ref("")
 const selectedStatus = ref("")
+const selectedCustomerUuid = ref("")
+const selectedPlanUuid = ref("")
+const selectedResult = ref("")
 const sortDirection = ref<"asc" | "desc">("desc")
 const route = useRoute()
 let latestRequestId = 0
@@ -101,6 +109,15 @@ const activeLinkedDetailUuid = ref("")
 const workOrderPreviewSheetOpen = ref(false)
 const activeWorkOrderPreviewUuid = ref("")
 const activeWorkOrderPreviewCustomerUuid = ref("")
+const customerOptions = ref<Array<{ value: string; label: string }>>([])
+const customerOptionsLoading = ref(false)
+const inspectionPlanOptions = ref<Array<{ value: string; label: string }>>([])
+const inspectionPlanOptionsLoading = ref(false)
+const inspectionResultOptions = [
+  { value: "1", label: "正常" },
+  { value: "2", label: "轻微风险" },
+  { value: "3", label: "存在隐患" },
+]
 const pageTitle = computed(() => props.kind === "inspection" ? "检测工单" : "报修工单")
 const pageEmptyStateTitle = computed(() => `暂无${pageTitle.value}数据`)
 const pageEmptyStateDescription = computed(() => props.kind === "inspection"
@@ -187,39 +204,152 @@ page.showControls.value = true
 page.customSortEnabled.value = false
 
 const queryBar = computed<TableQueryBarConfig>(() => ({
-  controls: [
-    {
-      type: "search",
-      key: "q",
-      queryKey: "q",
-      label: "工单编号",
-      icon: "ri-text",
-      placeholder: "输入工单编号搜索",
-      value: orderNoQuery.value,
-      expandedWidth: 248,
-      collapsedMaxWidth: 248,
-    },
-    {
-      type: "select",
-      key: "status",
-      queryKey: "status",
-      label: "工单状态",
-      icon: "ri-price-tag-3-line",
-      value: selectedStatus.value,
-      options: Object.entries(workOrderStatusMap).map(([label], index) => ({
-        value: String(index + 1),
-        label,
-      })),
-      placeholder: "请选择状态",
-      expandedWidth: 248,
-      collapsedMaxWidth: 248,
-    },
-  ],
-  values: {
-    q: orderNoQuery.value,
-    status: selectedStatus.value,
-  },
-  canClear: Boolean(orderNoQuery.value || selectedStatus.value),
+  controls: props.kind === "inspection"
+    ? [
+        {
+          type: "search" as const,
+          key: "q",
+          queryKey: "q",
+          label: "工单编号",
+          icon: "ri-text",
+          placeholder: "请输入",
+          value: orderNoQuery.value,
+          expandedWidth: 248,
+          collapsedMaxWidth: 248,
+        },
+        {
+          type: "select" as const,
+          key: "customerUuid",
+          queryKey: "customerUuid",
+          label: "所属客户",
+          icon: "ri-price-tag-3-line",
+          value: selectedCustomerUuid.value,
+          options: customerOptions.value,
+          loading: customerOptionsLoading.value,
+          placeholder: customerOptionsLoading.value ? "正在加载客户..." : "请选择客户",
+          expandedWidth: 248,
+          collapsedMaxWidth: 248,
+        },
+        {
+          type: "select" as const,
+          key: "planUuid",
+          queryKey: "planUuid",
+          label: "检测计划",
+          icon: "ri-price-tag-3-line",
+          value: selectedPlanUuid.value,
+          options: inspectionPlanOptions.value,
+          loading: inspectionPlanOptionsLoading.value,
+          placeholder: inspectionPlanOptionsLoading.value ? "正在加载计划..." : "请选择计划",
+          expandedWidth: 248,
+          collapsedMaxWidth: 248,
+        },
+        {
+          type: "date" as const,
+          key: "deadline",
+          queryKey: "deadline",
+          label: "截止时间",
+          icon: "ri-calendar-line",
+          placeholder: "请选择日期",
+          value: deadlineQuery.value,
+          expandedWidth: 248,
+          collapsedMaxWidth: 248,
+        },
+        {
+          type: "search" as const,
+          key: "serviceName",
+          queryKey: "serviceName",
+          label: "服务名称",
+          icon: "ri-text",
+          placeholder: "请输入",
+          value: serviceNameQuery.value,
+          expandedWidth: 248,
+          collapsedMaxWidth: 248,
+        },
+        {
+          type: "search" as const,
+          key: "executor",
+          queryKey: "executor",
+          label: "执行人",
+          icon: "ri-text",
+          placeholder: "请输入",
+          value: executorQuery.value,
+          expandedWidth: 248,
+          collapsedMaxWidth: 248,
+        },
+        {
+          type: "select" as const,
+          key: "status",
+          queryKey: "status",
+          label: "工单状态",
+          icon: "ri-price-tag-3-line",
+          value: selectedStatus.value,
+          options: Object.entries(workOrderStatusMap).map(([label], index) => ({
+            value: String(index + 1),
+            label,
+          })),
+          placeholder: "请选择状态",
+          expandedWidth: 248,
+          collapsedMaxWidth: 248,
+        },
+        {
+          type: "select" as const,
+          key: "result",
+          queryKey: "result",
+          label: "检测结果",
+          icon: "ri-price-tag-3-line",
+          value: selectedResult.value,
+          options: inspectionResultOptions,
+          placeholder: "请选择检测结果",
+          expandedWidth: 248,
+          collapsedMaxWidth: 248,
+        },
+      ]
+    : [
+        {
+          type: "search" as const,
+          key: "q",
+          queryKey: "q",
+          label: "工单编号",
+          icon: "ri-text",
+          placeholder: "请输入",
+          value: orderNoQuery.value,
+          expandedWidth: 248,
+          collapsedMaxWidth: 248,
+        },
+        {
+          type: "select" as const,
+          key: "status",
+          queryKey: "status",
+          label: "工单状态",
+          icon: "ri-price-tag-3-line",
+          value: selectedStatus.value,
+          options: Object.entries(workOrderStatusMap).map(([label], index) => ({
+            value: String(index + 1),
+            label,
+          })),
+          placeholder: "请选择状态",
+          expandedWidth: 248,
+          collapsedMaxWidth: 248,
+        },
+      ],
+  values: props.kind === "inspection"
+    ? {
+        q: orderNoQuery.value,
+        customerUuid: selectedCustomerUuid.value,
+        planUuid: selectedPlanUuid.value,
+        deadline: deadlineQuery.value,
+        serviceName: serviceNameQuery.value,
+        executor: executorQuery.value,
+        status: selectedStatus.value,
+        result: selectedResult.value,
+      }
+    : {
+        q: orderNoQuery.value,
+        status: selectedStatus.value,
+      },
+  canClear: props.kind === "inspection"
+    ? Boolean(orderNoQuery.value || selectedCustomerUuid.value || selectedPlanUuid.value || deadlineQuery.value || serviceNameQuery.value || executorQuery.value || selectedStatus.value || selectedResult.value)
+    : Boolean(orderNoQuery.value || selectedStatus.value),
 }))
 
 watch([pageNum, pageSize], ([nextPageNum, nextPageSize], [previousPageNum, previousPageSize]) => {
@@ -231,16 +361,43 @@ watch([pageNum, pageSize], ([nextPageNum, nextPageSize], [previousPageNum, previ
 })
 
 watch(
-  () => [normalizeQueryValue(route.query.q), normalizeQueryValue(route.query.status)] as const,
-  ([nextQuery, nextStatus], previousValue) => {
-    const [previousQuery, previousStatus] = previousValue ?? []
-
-    if (previousValue && nextQuery === previousQuery && nextStatus === previousStatus) {
+  () => props.kind === "inspection"
+    ? [
+        normalizeQueryValue(route.query.q),
+        normalizeQueryValue(route.query.customerUuid),
+        normalizeQueryValue(route.query.planUuid),
+        normalizeQueryValue(route.query.deadline),
+        normalizeQueryValue(route.query.serviceName),
+        normalizeQueryValue(route.query.executor),
+        normalizeQueryValue(route.query.status),
+        normalizeQueryValue(route.query.result),
+      ] as const
+    : [
+        normalizeQueryValue(route.query.q),
+        normalizeQueryValue(route.query.status),
+      ] as const,
+  (nextValue, previousValue) => {
+    if (
+      previousValue
+      && nextValue.length === previousValue.length
+      && nextValue.every((value, index) => value === previousValue[index])
+    ) {
       return
     }
 
-    orderNoQuery.value = nextQuery
-    selectedStatus.value = nextStatus
+    orderNoQuery.value = nextValue[0] ?? ""
+
+    if (props.kind === "inspection") {
+      selectedCustomerUuid.value = nextValue[1] ?? ""
+      selectedPlanUuid.value = nextValue[2] ?? ""
+      deadlineQuery.value = nextValue[3] ?? ""
+      serviceNameQuery.value = nextValue[4] ?? ""
+      executorQuery.value = nextValue[5] ?? ""
+      selectedStatus.value = nextValue[6] ?? ""
+      selectedResult.value = nextValue[7] ?? ""
+    } else {
+      selectedStatus.value = nextValue[1] ?? ""
+    }
 
     if (pageNum.value !== 1) {
       pageNum.value = 1
@@ -251,6 +408,11 @@ watch(
   },
   { immediate: true },
 )
+
+if (props.kind === "inspection") {
+  void loadCustomerOptions()
+  void loadInspectionPlanOptions()
+}
 
 function extractDatePart(value: string) {
   const [datePart] = value.split(" ")
@@ -463,7 +625,13 @@ async function loadWorkOrders() {
     const result = props.kind === "inspection"
       ? await fetchWorkOrders({
           OrderNo: orderNoQuery.value || undefined,
+          CustomerUuid: selectedCustomerUuid.value || undefined,
+          PlanUuid: selectedPlanUuid.value || undefined,
+          Deadline: deadlineQuery.value || undefined,
+          ServiceName: serviceNameQuery.value || undefined,
+          Executor: executorQuery.value || undefined,
           Status: toApiStatus(selectedStatus.value),
+          Result: toApiStatus(selectedResult.value),
           PageNum: pageNum.value,
           PageSize: pageSize.value,
         })
@@ -1014,20 +1182,59 @@ function handleQueryChange(payload: { key: string; value: string | string[] }) {
     orderNoQuery.value = typeof payload.value === "string" ? payload.value.trim() : ""
   }
 
+  if (payload.key === "customerUuid") {
+    selectedCustomerUuid.value = typeof payload.value === "string" ? payload.value.trim() : ""
+  }
+
+  if (payload.key === "planUuid") {
+    selectedPlanUuid.value = typeof payload.value === "string" ? payload.value.trim() : ""
+  }
+
+  if (payload.key === "deadline") {
+    deadlineQuery.value = typeof payload.value === "string" ? payload.value.trim() : ""
+  }
+
+  if (payload.key === "serviceName") {
+    serviceNameQuery.value = typeof payload.value === "string" ? payload.value.trim() : ""
+  }
+
+  if (payload.key === "executor") {
+    executorQuery.value = typeof payload.value === "string" ? payload.value.trim() : ""
+  }
+
   if (payload.key === "status") {
     selectedStatus.value = typeof payload.value === "string" ? payload.value.trim() : ""
+  }
+
+  if (payload.key === "result") {
+    selectedResult.value = typeof payload.value === "string" ? payload.value.trim() : ""
   }
 
   void syncRouteQueryAndReload()
 }
 
 function handleQueryClear() {
-  if (!orderNoQuery.value && !selectedStatus.value) {
+  if (
+    !orderNoQuery.value
+    && !selectedCustomerUuid.value
+    && !selectedPlanUuid.value
+    && !deadlineQuery.value
+    && !serviceNameQuery.value
+    && !executorQuery.value
+    && !selectedStatus.value
+    && !selectedResult.value
+  ) {
     return
   }
 
   orderNoQuery.value = ""
+  selectedCustomerUuid.value = ""
+  selectedPlanUuid.value = ""
+  deadlineQuery.value = ""
+  serviceNameQuery.value = ""
+  executorQuery.value = ""
   selectedStatus.value = ""
+  selectedResult.value = ""
   void syncRouteQueryAndReload()
 }
 
@@ -1036,7 +1243,13 @@ async function syncRouteQueryAndReload() {
     query: {
       ...route.query,
       q: orderNoQuery.value || undefined,
+      customerUuid: props.kind === "inspection" ? selectedCustomerUuid.value || undefined : undefined,
+      planUuid: props.kind === "inspection" ? selectedPlanUuid.value || undefined : undefined,
+      deadline: props.kind === "inspection" ? deadlineQuery.value || undefined : undefined,
+      serviceName: props.kind === "inspection" ? serviceNameQuery.value || undefined : undefined,
+      executor: props.kind === "inspection" ? executorQuery.value || undefined : undefined,
       status: selectedStatus.value || undefined,
+      result: props.kind === "inspection" ? selectedResult.value || undefined : undefined,
     },
   })
 
@@ -1092,6 +1305,50 @@ function handleWorkOrderPreviewSheetOpenChange(open: boolean) {
   if (!open) {
     activeWorkOrderPreviewUuid.value = ""
     activeWorkOrderPreviewCustomerUuid.value = ""
+  }
+}
+
+async function loadCustomerOptions() {
+  customerOptionsLoading.value = true
+
+  try {
+    const result = await fetchCustomers({
+      PageNum: 1,
+      PageSize: 200,
+    })
+
+    customerOptions.value = result.list
+      .map(item => ({
+        value: toText(item.Uuid),
+        label: toText(item.CorpName || item.CustomerName, "未命名客户"),
+      }))
+      .filter(option => option.value)
+  } catch {
+    customerOptions.value = []
+  } finally {
+    customerOptionsLoading.value = false
+  }
+}
+
+async function loadInspectionPlanOptions() {
+  inspectionPlanOptionsLoading.value = true
+
+  try {
+    const result = await fetchInspectionPlans({
+      PageNum: 1,
+      PageSize: 200,
+    })
+
+    inspectionPlanOptions.value = result.list
+      .map(item => ({
+        value: toText(item.Uuid),
+        label: toText(item.Name || item.Code, "未命名计划"),
+      }))
+      .filter(option => option.value)
+  } catch {
+    inspectionPlanOptions.value = []
+  } finally {
+    inspectionPlanOptionsLoading.value = false
   }
 }
 </script>
