@@ -9,7 +9,7 @@ const props = defineProps<{
 }>()
 
 function hasLimit(limit: number | null | undefined) {
-  return typeof limit === "number" && Number.isFinite(limit)
+  return typeof limit === "number" && Number.isFinite(limit) && limit >= 1
 }
 
 function formatLimit(limit: number | null | undefined) {

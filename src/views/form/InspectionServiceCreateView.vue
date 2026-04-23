@@ -1341,7 +1341,7 @@ function mapServiceDetailBuildToConfig(
         normalizeText((category as { Uuid?: unknown }).Uuid),
         categoryName,
       )
-      const score = normalizeScoreLimitValue((category as { Score?: unknown }).Score)
+      const score = resolveInspectionServiceCategoryWeight((category as { Weight?: unknown }).Weight, (category as { Score?: unknown }).Score)
 
       if (!categoryUuid || score === null) {
         return []
@@ -1413,7 +1413,7 @@ function buildInspectionServiceBuildInfosPayload() {
       List: Array.from(categoryMap.values()).map((category) => ({
         Uuid: category.uuid || undefined,
         Name: category.name || undefined,
-        Score: category.score === null ? undefined : category.score,
+        Weight: category.score === null ? undefined : category.score,
         List: category.items,
       })),
     }
@@ -1624,6 +1624,25 @@ function getCategoryWeightMarkStyle(mark: number) {
   return {
     left: `${Math.max(0, Math.min(1, ratio)) * 100}%`,
   }
+}
+
+function resolveInspectionServiceCategoryWeight(weight: unknown, score: unknown): InspectionCategoryScoreLimit {
+  return parsePersistedInspectionServiceCategoryWeight(weight)
+    ?? parsePersistedInspectionServiceCategoryWeight(score)
+}
+
+function parsePersistedInspectionServiceCategoryWeight(value: unknown): InspectionCategoryScoreLimit {
+  const parsedValue = parseNumericValue(value)
+
+  if (
+    parsedValue === null
+    || parsedValue < CATEGORY_WEIGHT_MIN
+    || parsedValue > CATEGORY_WEIGHT_MAX
+  ) {
+    return null
+  }
+
+  return parsedValue
 }
 
 function resetLocalStateForRoute() {

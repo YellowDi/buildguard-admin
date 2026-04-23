@@ -125,6 +125,7 @@ export type DetailRelationColumn<Row extends Record<string, unknown> = Record<st
 export type DetailRelationGroup<Row extends Record<string, unknown> = Record<string, unknown>> = {
   key: string | number
   title: string
+  scoreLimit?: number | null
   rows: Row[]
 }
 

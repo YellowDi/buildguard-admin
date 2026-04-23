@@ -7,6 +7,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Badge } from "@/components/ui/badge"
 import DetailRelationModule from "@/components/detail/DetailRelationModule.vue"
 import DetailFieldSections from "@/components/detail/DetailFieldSections.vue"
+import InspectionCategoryScoreLimitInline from "@/components/inspection/InspectionCategoryScoreLimitInline.vue"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import LinkedEntityDetailSheet from "@/components/detail/LinkedEntityDetailSheet.vue"
 import TitleBlock from "@/components/layout/TitleBlock.vue"
@@ -34,6 +35,7 @@ import { detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
 import DetailLayout from "@/layouts/DetailLayout.vue"
 import { buildApiRequestUrl } from "@/lib/api"
 import { handleApiError } from "@/lib/api-errors"
+import { fetchInspectionCategories } from "@/lib/inspection-categories-api"
 import { toMobileActionLabel } from "@/lib/mobileActionLabel"
 import { getInspectionItemDetail, type InspectionItemRecord } from "@/lib/inspection-items-api"
 import {
@@ -98,6 +100,7 @@ let latestRequestId = 0
 const inspectionItemDetailByUuid = ref<Record<string, InspectionItemRecord>>({})
 const inspectionItemDetailLoadingByUuid = ref<Record<string, boolean>>({})
 const inspectionItemDetailErrorByUuid = ref<Record<string, string>>({})
+const globalCategoryWeightByKey = ref<Record<string, number | null>>({})
 const expandedParkGroupKey = ref("")
 const expandedBuildingModuleKeys = ref<string[]>([])
 
@@ -263,6 +266,8 @@ watch(parkInspectionModuleGroups, (groups) => {
 watch(inspectionServiceUuid, (nextUuid) => {
   void loadInspectionServiceDetail(nextUuid)
 }, { immediate: true })
+
+void loadInspectionCategoryDefaults()
 
 onUnmounted(() => {
   detailBreadcrumbTitle.value = null
@@ -501,6 +506,24 @@ async function loadInspectionServiceDetail(uuid: string) {
   }
 }
 
+async function loadInspectionCategoryDefaults() {
+  try {
+    const result = await fetchInspectionCategories()
+
+    globalCategoryWeightByKey.value = Object.fromEntries(
+      result.list.flatMap((item, index) => {
+        const categoryName = toText(item.Name, `分类 ${index + 1}`)
+        const categoryKey = resolveInspectionCategoryKey(toText(item.Uuid, ""), categoryName)
+        const scoreLimit = toValidCategoryWeight(item.Score)
+
+        return categoryKey ? [[categoryKey, scoreLimit] as const] : []
+      }),
+    )
+  } catch {
+    globalCategoryWeightByKey.value = {}
+  }
+}
+
 function buildInspectionItemMetaByUuid(serviceDetail: InspectionServiceListItem | null) {
   const items = Array.isArray(serviceDetail?.Inspections) ? serviceDetail.Inspections : []
   const metaMap: Record<string, InspectionItemRecord> = {}
@@ -601,6 +624,12 @@ function buildInspectionTableGroups(
       return {
         key: categoryUuid || `inspection-category-${buildIndex + 1}-${categoryIndex + 1}`,
         title: categoryName,
+        scoreLimit: resolveInspectionServiceCategoryWeight(
+          category.Weight,
+          category.Score,
+          categoryUuid,
+          categoryName,
+        ),
         rows: items.map((item, itemIndex) => {
           const inspectionUuid = toText(item.Uuid, "")
           const inspectionName = toText(item.Name, `检测项 ${itemIndex + 1}`)
@@ -957,6 +986,62 @@ function toOptionalText(value: unknown) {
   return nextValue || null
 }
 
+function toOptionalRoundedNumber(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return Math.round(value)
+  }
+
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value)
+
+    if (Number.isFinite(parsed)) {
+      return Math.round(parsed)
+    }
+  }
+
+  return null
+}
+
+function resolveInspectionServiceCategoryWeight(
+  weight: unknown,
+  score: unknown,
+  categoryUuid = "",
+  categoryName = "",
+) {
+  return toValidCategoryWeight(weight)
+    ?? toValidCategoryWeight(score)
+    ?? getDefaultInspectionCategoryWeight(categoryUuid, categoryName)
+}
+
+function toValidCategoryWeight(value: unknown) {
+  const parsedValue = toOptionalRoundedNumber(value)
+
+  if (parsedValue === null || parsedValue < 1 || parsedValue > 10) {
+    return null
+  }
+
+  return parsedValue
+}
+
+function getDefaultInspectionCategoryWeight(categoryUuid: string, categoryName: string) {
+  const categoryKey = resolveInspectionCategoryKey(categoryUuid, categoryName)
+
+  return categoryKey in globalCategoryWeightByKey.value
+    ? globalCategoryWeightByKey.value[categoryKey]
+    : null
+}
+
+function resolveInspectionCategoryKey(categoryUuid: string, categoryName: string) {
+  const normalizedUuid = toText(categoryUuid, "")
+
+  if (normalizedUuid) {
+    return normalizedUuid
+  }
+
+  const normalizedName = toText(categoryName, "")
+  return normalizedName ? `inspection-category-name:${normalizedName}` : ""
+}
+
 function getRemainingDaysHint(value: unknown) {
   const dateText = toText(value, "")
   if (!dateText) {
@@ -1180,6 +1265,13 @@ function readFileAsDataUrl(file: File) {
                             :schema="module"
                             hide-title-block
                           >
+                            <template #group-actions="{ group }">
+                              <InspectionCategoryScoreLimitInline
+                                v-if="group.scoreLimit !== undefined && group.scoreLimit !== null"
+                                :limit="group.scoreLimit"
+                              />
+                            </template>
+
                             <template #inspection-item-name-cell="{ row }">
                               <button
                                 type="button"

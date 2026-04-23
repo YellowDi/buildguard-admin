@@ -14,6 +14,8 @@ export type MembersListResult = {
   total: number
 }
 
+export type MemberUserTypeValue = number[]
+
 export type ListMembersPayload = {
   DepartmentUuid?: string
   Name?: string
@@ -22,7 +24,7 @@ export type ListMembersPayload = {
   Phone?: string
   Position?: string
   Status?: number
-  UserType?: number
+  UserType?: MemberUserTypeValue
   [property: string]: unknown
 }
 
@@ -31,7 +33,7 @@ export type CreateMemberPayload = {
   Name?: string
   Phone?: string
   Position?: string
-  UserType?: number
+  UserType?: MemberUserTypeValue
   [property: string]: unknown
 }
 
@@ -66,7 +68,7 @@ export type MemberDetailResult = {
   Roles?: MemberDetailRole[]
   Status?: number
   Uuid?: string
-  UserType?: number
+  UserType?: MemberUserTypeValue
   [property: string]: unknown
 }
 
@@ -87,7 +89,7 @@ export type BindMemberRolesPayload = {
 
 export type UpdateMemberUserTypePayload = {
   Uuid?: string
-  UserType?: number
+  UserType?: MemberUserTypeValue
   [property: string]: unknown
 }
 
@@ -447,11 +449,23 @@ function getOptionalUserType(value: unknown, field: string) {
     return undefined
   }
 
-  const normalized = getOptionalNumber(value, field)
+  if (!Array.isArray(value)) {
+    throw new ApiError(`请求参数校验失败：${field} 必须是数组。`)
+  }
 
-  if (normalized === undefined) {
+  const normalizedValues = Array.from(new Set(
+    value.map(item => getRequiredUserType(item, field)),
+  ))
+
+  if (normalizedValues.length === 0) {
     return undefined
   }
+
+  return normalizedValues
+}
+
+function getRequiredUserType(value: unknown, field: string) {
+  const normalized = getRequiredNumber(value, field)
 
   if (normalized === 1 || normalized === 2 || normalized === 3) {
     return normalized

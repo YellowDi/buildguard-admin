@@ -185,13 +185,15 @@ function handleRowKeydown(event: KeyboardEvent, row: RelationRow) {
               v-if="group.title || hasNamedSlot('group-actions')"
               class="detail-group-divider-row detail-section-inset flex min-w-0 items-center gap-3"
             >
-              <div class="min-w-0 truncate text-[14px] font-medium text-muted-foreground">{{ group.title }}</div>
-              <div class="h-px flex-1 bg-border/80" />
-              <slot
-                v-if="hasNamedSlot('group-actions')"
-                name="group-actions"
-                :group="group"
-              />
+              <div class="flex min-w-0 items-center gap-2">
+                <div class="min-w-0 truncate text-[14px] font-medium text-muted-foreground">{{ group.title }}</div>
+                <slot
+                  v-if="hasNamedSlot('group-actions')"
+                  name="group-actions"
+                  :group="group"
+                />
+              </div>
+              <div class="h-px min-w-0 flex-1 bg-border/80" />
             </div>
 
             <div

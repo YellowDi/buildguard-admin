@@ -25,6 +25,7 @@ type InspectionServiceBuildItem = {
 type InspectionServiceBuildCategoryItem = {
   Uuid?: string
   Name?: string
+  Weight?: number
   Score?: number
   List?: InspectionServiceBuildCategoryInspectionItem[]
   [property: string]: unknown
@@ -95,7 +96,7 @@ export type InspectionServiceBuildInfoWriteItem = {
 export type InspectionServiceBuildCategoryWriteItem = {
   Uuid?: string
   Name?: string
-  Score?: number
+  Weight?: number
   List?: InspectionServiceBuildInspectionWriteItem[]
 }
 
@@ -163,6 +164,8 @@ const INSPECTION_SERVICE_UPDATE_ERROR_MESSAGE = "检测服务更新失败，请�
 const INSPECTION_SERVICE_CONTRACT_UPDATE_ERROR_MESSAGE = "检测服务合同更新失败，请稍后重试。"
 const INSPECTION_SERVICE_DETAIL_ERROR_MESSAGE = "检测服务详情加载失败，请稍后重试。"
 const INSPECTION_SERVICE_DELETE_ERROR_MESSAGE = "检测服务删除失败，请稍后重试。"
+const INSPECTION_SERVICE_CATEGORY_WEIGHT_MIN = 1
+const INSPECTION_SERVICE_CATEGORY_WEIGHT_MAX = 10
 const USE_INSPECTION_SERVICES_LIST_MOCK = false
 const USE_INSPECTION_SERVICE_DETAIL_MOCK = false
 
@@ -309,9 +312,11 @@ export async function fetchInspectionServiceDetail(
   const uuid = getRequiredString(payload.Uuid, "Uuid")
 
   url.searchParams.set("Uuid", uuid)
+  url.searchParams.set("_ts", String(Date.now()))
 
   const response = await fetch(url.toString(), {
     method: "GET",
+    cache: "no-store",
     headers: buildApiHeaders(),
   })
   const responseBody = await readResponseBody(response)
@@ -643,7 +648,7 @@ function normalizeBuildCategoryWriteItems(value: unknown) {
     .filter(item => item && typeof item === "object")
     .map((item, index): InspectionServiceBuildCategoryWriteItem | null => {
       const record = item as Record<string, unknown>
-      const score = normalizeOptionalNumberLike(record.Score)
+      const weight = resolveValidInspectionServiceCategoryWeight(record.Weight, record.Score)
       const inspections = normalizeBuildInspectionWriteItems(record.List, `BuildInfos.List[${index}].List`)
 
       if (!Array.isArray(inspections) || inspections.length === 0) {
@@ -653,7 +658,7 @@ function normalizeBuildCategoryWriteItems(value: unknown) {
       return {
         Uuid: getOptionalString(record.Uuid),
         Name: getOptionalString(record.Name),
-        Score: score,
+        Weight: weight,
         List: inspections,
       }
     })
@@ -772,6 +777,7 @@ function normalizeInspectionServiceBuildCategoryItems(value: unknown): Inspectio
         ...record,
         Uuid: getOptionalString(record.Uuid),
         Name: getOptionalString(record.Name),
+        Weight: resolveValidInspectionServiceCategoryWeight(record.Weight, record.Score),
         Score: normalizeOptionalNumberLike(record.Score),
         List: normalizeInspectionServiceBuildCategoryInspectionItems(record.List),
       }
@@ -886,6 +892,26 @@ function normalizeOptionalNumberLike(value: unknown) {
   }
 
   return undefined
+}
+
+function normalizeOptionalInspectionServiceCategoryWeight(value: unknown) {
+  const parsed = normalizeOptionalNumberLike(value)
+
+  if (
+    parsed === undefined
+    || !Number.isInteger(parsed)
+    || parsed < INSPECTION_SERVICE_CATEGORY_WEIGHT_MIN
+    || parsed > INSPECTION_SERVICE_CATEGORY_WEIGHT_MAX
+  ) {
+    return undefined
+  }
+
+  return parsed
+}
+
+function resolveValidInspectionServiceCategoryWeight(weight: unknown, score: unknown) {
+  return normalizeOptionalInspectionServiceCategoryWeight(weight)
+    ?? normalizeOptionalInspectionServiceCategoryWeight(score)
 }
 
 function getMockInspectionServices() {

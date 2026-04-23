@@ -43,6 +43,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Separator } from "@/components/ui/separator"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import {
@@ -84,6 +85,7 @@ const props = defineProps<{
 }>()
 
 type MemberViewKey = "members" | "roles"
+type MemberUserType = 1 | 2 | 3
 
 type MemberRow = {
   id: number
@@ -96,7 +98,7 @@ type MemberRow = {
   roleNames: string[]
   roleUuids: string[]
   rolesLoaded: boolean
-  userType?: number
+  userTypes: MemberUserType[]
   userTypeLabel: string
   status: string
   source: "remote" | "local"
@@ -116,7 +118,7 @@ type ManualMemberForm = {
   phone: string
   departmentName: string
   position: string
-  userType: string
+  userTypes: string[]
   roleUuid: string
 }
 
@@ -131,7 +133,7 @@ type EditMemberForm = {
   phone: string
   departmentName: string
   position: string
-  userType: string
+  userTypes: string[]
   roleUuid: string
   status: string
 }
@@ -246,6 +248,7 @@ const collapsedPermissionGroupKeys = ref<string[]>([])
 const manualMemberForm = ref(createManualMemberForm())
 const roleForm = ref(createRoleForm())
 const editMemberForm = ref(createEditMemberForm())
+const inlineUserTypePopoverMemberId = ref<number | null>(null)
 const availableRoleOptions = computed<RoleOption[]>(() => roleRows.value
   .filter(role => role.uuid)
   .map(role => ({
@@ -756,7 +759,7 @@ async function ensureRolePermissionResources(options?: { force?: boolean }) {
 
 function normalizeMemberRow(raw: unknown, index: number): MemberRow {
   const record = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>
-  const userType = normalizeUserType(record.UserType)
+  const userTypes = normalizeUserTypes(record.UserType)
   const normalizedRoles = normalizeMemberRoles(record.Roles)
 
   return {
@@ -770,8 +773,8 @@ function normalizeMemberRow(raw: unknown, index: number): MemberRow {
     roleNames: normalizedRoles.names,
     roleUuids: normalizedRoles.uuids,
     rolesLoaded: Array.isArray(record.Roles),
-    userType,
-    userTypeLabel: formatUserTypeLabel(userType),
+    userTypes,
+    userTypeLabel: formatUserTypeLabel(userTypes),
     status: normalizeStatus(record.Status),
     source: "remote",
   }
@@ -800,14 +803,14 @@ async function hydrateMemberRolesFromDetail(memberRows: MemberRow[]) {
       return
     }
 
-    const userType = normalizeUserType(result.value.detail.UserType)
+    const userTypes = normalizeUserTypes(result.value.detail.UserType)
     const normalizedRoles = normalizeMemberRoles(result.value.detail.Roles)
 
     result.value.row.roleUuids = normalizedRoles.uuids
     result.value.row.roleNames = normalizedRoles.names
     result.value.row.rolesLoaded = true
-    result.value.row.userType = userType
-    result.value.row.userTypeLabel = formatUserTypeLabel(userType)
+    result.value.row.userTypes = userTypes
+    result.value.row.userTypeLabel = formatUserTypeLabel(userTypes)
   })
 }
 
@@ -918,28 +921,77 @@ function toText(...values: unknown[]) {
   return ""
 }
 
-function normalizeUserType(value: unknown) {
-  const parsed = typeof value === "string" ? Number(value.trim()) : value
+function normalizeUserTypes(value: unknown): MemberUserType[] {
+  const values = Array.isArray(value)
+    ? value
+    : value === undefined || value === null || value === ""
+      ? []
+      : [value]
 
-  if (parsed === 1 || parsed === 2 || parsed === 3) {
-    return parsed
-  }
+  const normalizedValues = Array.from(new Set(
+    values
+      .map((item) => {
+        const parsed = typeof item === "string" ? Number(item.trim()) : Number(item)
 
-  return 1
+        if (parsed === 1 || parsed === 2 || parsed === 3) {
+          return parsed
+        }
+
+        return null
+      })
+      .filter((item): item is MemberUserType => item !== null),
+  ))
+
+  return MEMBER_USER_TYPE_OPTIONS
+    .map(option => option.value)
+    .filter(optionValue => normalizedValues.includes(optionValue))
 }
 
-function formatUserTypeLabel(value: number | undefined) {
-  return MEMBER_USER_TYPE_OPTIONS.find(option => option.value === value)?.label ?? "未知类型"
-}
+function formatUserTypeLabel(values: MemberUserType[]) {
+  const labels = normalizeUserTypes(values)
+    .map(value => MEMBER_USER_TYPE_OPTIONS.find(option => option.value === value)?.label ?? "")
+    .filter(Boolean)
 
-function getUserTypeValue(value: unknown) {
-  const parsed = Number(value)
-
-  if (parsed === 1 || parsed === 2 || parsed === 3) {
-    return parsed
+  if (labels.length === 0) {
+    return "未设置"
   }
 
-  return undefined
+  return labels.join("、")
+}
+
+function getUserTypeValues(value: unknown): MemberUserType[] {
+  return normalizeUserTypes(value)
+}
+
+function hasUserType(values: MemberUserType[], userType: MemberUserType) {
+  return normalizeUserTypes(values).includes(userType)
+}
+
+function isSameUserTypes(left: MemberUserType[], right: MemberUserType[]) {
+  const normalizedLeft = normalizeUserTypes(left)
+  const normalizedRight = normalizeUserTypes(right)
+
+  if (normalizedLeft.length !== normalizedRight.length) {
+    return false
+  }
+
+  return normalizedLeft.every((value, index) => value === normalizedRight[index])
+}
+
+function toggleUserTypeSelection(values: MemberUserType[], userType: MemberUserType, checked: boolean) {
+  const nextValues = new Set(normalizeUserTypes(values))
+
+  if (checked) {
+    nextValues.add(userType)
+  } else {
+    nextValues.delete(userType)
+  }
+
+  return normalizeUserTypes(Array.from(nextValues))
+}
+
+function updateInlineUserTypePopoverOpen(memberId: number, open: boolean) {
+  inlineUserTypePopoverMemberId.value = open ? memberId : null
 }
 
 function normalizeRoleMenuUuids(value: unknown) {
@@ -1163,11 +1215,20 @@ function isMemberUserTypeUpdating(memberId: number) {
   return userTypeUpdatingMemberIds.value.includes(memberId)
 }
 
-async function updateMemberUserTypeInline(memberId: number, nextUserTypeValue: string) {
+async function updateMemberUserTypeInline(memberId: number, userTypeValue: MemberUserType, checked: boolean) {
   const member = rows.value.find(row => row.id === memberId)
-  const nextUserType = getUserTypeValue(nextUserTypeValue)
+  const nextUserTypes = member
+    ? toggleUserTypeSelection(member.userTypes, userTypeValue, checked)
+    : []
 
-  if (!member || !nextUserType || isMemberUserTypeUpdating(memberId) || member.userType === nextUserType) {
+  if (!member || isMemberUserTypeUpdating(memberId) || isSameUserTypes(member.userTypes, nextUserTypes)) {
+    return
+  }
+
+  if (nextUserTypes.length === 0) {
+    toast.error("成员类型更新失败", {
+      description: "至少选择一个用户类型。",
+    })
     return
   }
 
@@ -1183,13 +1244,13 @@ async function updateMemberUserTypeInline(memberId: number, nextUserTypeValue: s
   try {
     await updateMemberUserType({
       Uuid: member.uuid,
-      UserType: nextUserType,
+      UserType: nextUserTypes,
     })
 
-    member.userType = nextUserType
-    member.userTypeLabel = formatUserTypeLabel(nextUserType)
+    member.userTypes = nextUserTypes
+    member.userTypeLabel = formatUserTypeLabel(nextUserTypes)
     toast.success("用户类型已更新", {
-      description: `${member.name} 已切换到 ${member.userTypeLabel}。`,
+      description: `${member.name} 已更新为 ${member.userTypeLabel}。`,
     })
   } catch (error) {
     handleApiError(error, {
@@ -1297,7 +1358,7 @@ function createManualMemberForm(): ManualMemberForm {
     phone: "",
     departmentName: "",
     position: "",
-    userType: "1",
+    userTypes: ["1"],
     roleUuid: MEMBER_ROLE_UNASSIGNED,
   }
 }
@@ -1316,7 +1377,7 @@ function createEditMemberForm(): EditMemberForm {
     phone: "",
     departmentName: "",
     position: "",
-    userType: "1",
+    userTypes: ["1"],
     roleUuid: MEMBER_ROLE_UNASSIGNED,
     status: "",
   }
@@ -1400,11 +1461,11 @@ async function submitManualMember() {
     return
   }
 
-  const userType = getUserTypeValue(manualMemberForm.value.userType)
+  const userTypes = getUserTypeValues(manualMemberForm.value.userTypes)
 
-  if (!userType) {
+  if (userTypes.length === 0) {
     toast.error("成员创建失败", {
-      description: "请选择有效的用户类型。",
+      description: "请至少选择一个有效的用户类型。",
     })
     return
   }
@@ -1417,7 +1478,7 @@ async function submitManualMember() {
       Name: name,
       Phone: manualMemberForm.value.phone.trim() || undefined,
       Position: manualMemberForm.value.position.trim() || undefined,
-      UserType: userType,
+      UserType: userTypes,
     })
 
     const selectedRoleUuid = normalizeRoleSelectionValue(manualMemberForm.value.roleUuid)
@@ -1644,11 +1705,11 @@ async function submitEditMember() {
     return
   }
 
-  const nextUserType = getUserTypeValue(editMemberForm.value.userType)
+  const nextUserTypes = getUserTypeValues(editMemberForm.value.userTypes)
 
-  if (!nextUserType) {
+  if (nextUserTypes.length === 0) {
     toast.error("成员信息更新失败", {
-      description: "请选择有效的用户类型。",
+      description: "请至少选择一个有效的用户类型。",
     })
     return
   }
@@ -1667,17 +1728,17 @@ async function submitEditMember() {
       roleUuids: nextRoleUuid ? [nextRoleUuid] : [],
       roleNames: nextRoleUuid ? [getRoleNameByUuid(nextRoleUuid) || "未命名权限组"] : [],
       rolesLoaded: true,
-      userType: nextUserType,
-      userTypeLabel: formatUserTypeLabel(nextUserType),
+      userTypes: nextUserTypes,
+      userTypeLabel: formatUserTypeLabel(nextUserTypes),
       status: editMemberForm.value.status || member.status,
     }
 
     await requestMemberUpdate(buildMemberUpdatePayload(nextMember))
 
-    if (member.userType !== nextUserType) {
+    if (!isSameUserTypes(member.userTypes, nextUserTypes)) {
       await updateMemberUserType({
         Uuid: member.uuid,
-        UserType: nextUserType,
+        UserType: nextUserTypes,
       })
     }
 
@@ -1695,7 +1756,7 @@ async function submitEditMember() {
     member.roleUuids = nextMember.roleUuids
     member.roleNames = nextMember.roleNames
     member.rolesLoaded = true
-    member.userType = nextMember.userType
+    member.userTypes = nextMember.userTypes
     member.userTypeLabel = nextMember.userTypeLabel
     closeEditDialog()
     toast.success("成员信息已更新", {
@@ -1717,7 +1778,7 @@ function applyEditMemberSnapshot(member: MemberRow) {
     phone: member.phone === "-" ? "" : member.phone,
     departmentName: member.departmentName === "未分组" ? "" : member.departmentName,
     position: member.position === "未设置职位" ? "" : member.position,
-    userType: String(member.userType ?? 1),
+    userTypes: member.userTypes.map(value => String(value)),
     roleUuid: getPrimaryRoleUuid(member),
     status: member.status,
   }
@@ -1737,7 +1798,7 @@ async function loadEditMemberDetail(member: MemberRow) {
       return
     }
 
-    const userType = normalizeUserType(detail.UserType)
+    const userTypes = normalizeUserTypes(detail.UserType)
     const normalizedRoles = normalizeMemberRoles(detail.Roles)
 
     member.uuid = toText(detail.Uuid, member.uuid)
@@ -1749,8 +1810,8 @@ async function loadEditMemberDetail(member: MemberRow) {
     member.roleUuids = normalizedRoles.uuids
     member.roleNames = normalizedRoles.names
     member.rolesLoaded = true
-    member.userType = userType
-    member.userTypeLabel = formatUserTypeLabel(userType)
+    member.userTypes = userTypes
+    member.userTypeLabel = formatUserTypeLabel(userTypes)
     member.status = normalizeStatus(detail.Status ?? member.status)
 
     applyEditMemberSnapshot(member)
@@ -1985,38 +2046,46 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
       </template>
 
       <template #cell-user-type="{ row: rawRow }">
-        <DropdownMenu v-if="activeView === 'members'">
-          <DropdownMenuTrigger as-child>
+        <Popover
+          v-if="activeView === 'members'"
+          :open="inlineUserTypePopoverMemberId === asMemberRow(rawRow).id"
+          @update:open="updateInlineUserTypePopoverOpen(asMemberRow(rawRow).id, $event)"
+        >
+          <PopoverTrigger as-child>
             <button
               type="button"
               :disabled="isMemberUserTypeUpdating(asMemberRow(rawRow).id)"
-              class="inline-flex h-7 max-w-28 items-center gap-1 rounded-md px-1.5 text-[12px] font-medium text-foreground transition-colors hover:bg-surface-tertiary hover:text-foreground focus-visible:bg-surface-tertiary focus-visible:text-foreground focus-visible:outline-none"
+              class="inline-flex h-7 max-w-40 items-center gap-1 rounded-md px-1.5 text-[12px] font-medium text-foreground transition-colors hover:bg-surface-tertiary hover:text-foreground focus-visible:bg-surface-tertiary focus-visible:text-foreground focus-visible:outline-none"
+              @click.stop
             >
               <span class="truncate">
                 {{ isMemberUserTypeUpdating(asMemberRow(rawRow).id) ? "更新中..." : asMemberRow(rawRow).userTypeLabel }}
               </span>
               <i class="ri-arrow-down-s-line text-sm text-muted-foreground" />
             </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" class="w-[160px] rounded-xl p-1.5">
-            <DropdownMenuLabel class="px-2 pb-1 text-xs font-medium text-muted-foreground">
-              切换用户类型
-            </DropdownMenuLabel>
-            <DropdownMenuRadioGroup
-              :model-value="String(asMemberRow(rawRow).userType ?? 1)"
-              @update:model-value="updateMemberUserTypeInline(asMemberRow(rawRow).id, String($event))"
-            >
-              <DropdownMenuRadioItem
-                v-for="option in MEMBER_USER_TYPE_OPTIONS"
-                :key="`${asMemberRow(rawRow).id}-type-${option.value}`"
-                :value="String(option.value)"
-                class="rounded-lg py-2 pr-2 pl-8"
-              >
-                {{ option.label }}
-              </DropdownMenuRadioItem>
-            </DropdownMenuRadioGroup>
-          </DropdownMenuContent>
-        </DropdownMenu>
+          </PopoverTrigger>
+          <PopoverContent align="start" class="w-[200px] rounded-xl p-3" @click.stop>
+            <div class="space-y-3">
+              <div class="space-y-1">
+                <p class="text-xs font-medium text-foreground">切换用户类型</p>
+                <p class="text-[11px] text-muted-foreground">可多选，修改后立即保存</p>
+              </div>
+              <div class="grid gap-2">
+                <label
+                  v-for="option in MEMBER_USER_TYPE_OPTIONS"
+                  :key="`${asMemberRow(rawRow).id}-type-${option.value}`"
+                  class="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm text-foreground transition-colors hover:bg-muted/60"
+                >
+                  <Checkbox
+                    :checked="hasUserType(asMemberRow(rawRow).userTypes, option.value)"
+                    @update:checked="updateMemberUserTypeInline(asMemberRow(rawRow).id, option.value, $event === true)"
+                  />
+                  <span>{{ option.label }}</span>
+                </label>
+              </div>
+            </div>
+          </PopoverContent>
+        </Popover>
       </template>
 
       <template #cell-status="{ row: rawRow }">
@@ -2112,15 +2181,15 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
 
           <div class="grid gap-4 sm:grid-cols-2">
             <div class="grid gap-2">
-              <label class="text-sm font-medium text-foreground" for="manual-member-user-type">用户类型</label>
-              <Select v-model="manualMemberForm.userType">
-                <SelectTrigger id="manual-member-user-type" class="w-full">
+              <label class="text-sm font-medium text-foreground">用户类型</label>
+              <Select v-model="manualMemberForm.userTypes" multiple>
+                <SelectTrigger class="w-full">
                   <SelectValue placeholder="选择用户类型" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem
                     v-for="option in MEMBER_USER_TYPE_OPTIONS"
-                    :key="option.value"
+                    :key="`manual-member-type-${option.value}`"
                     :value="String(option.value)"
                   >
                     {{ option.label }}
@@ -2504,15 +2573,15 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
 
           <div class="grid gap-4 sm:grid-cols-2">
             <div class="grid gap-2">
-              <label class="text-sm font-medium text-foreground" for="edit-member-user-type">用户类型</label>
-              <Select v-model="editMemberForm.userType" :disabled="editDetailLoading">
-                <SelectTrigger id="edit-member-user-type" class="w-full">
+              <label class="text-sm font-medium text-foreground">用户类型</label>
+              <Select v-model="editMemberForm.userTypes" multiple :disabled="editDetailLoading">
+                <SelectTrigger class="w-full">
                   <SelectValue placeholder="选择用户类型" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem
                     v-for="option in MEMBER_USER_TYPE_OPTIONS"
-                    :key="option.value"
+                    :key="`edit-member-type-${option.value}`"
                     :value="String(option.value)"
                   >
                     {{ option.label }}
