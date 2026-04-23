@@ -31,6 +31,7 @@ import {
 } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
 import { ResponsiveRightSheet } from "@/components/ui/sheet"
+import { Slider } from "@/components/ui/slider"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
 import { TooltipWrap } from "@/components/ui/tooltip"
@@ -66,7 +67,8 @@ type InspectionServiceBaseForm = {
 type InspectionServiceCategoryScoreLimitDraft = InspectionCategoryScoreLimit
 
 type InspectionServiceCategoryScoreLimitForm = {
-  scoreLimit: string
+  scoreLimit: number
+  touched: boolean
 }
 
 type InspectionServiceBuildingConfig = {
@@ -115,6 +117,14 @@ type InspectionCategoryOption = {
 
 type InspectionCategoryScoreLimit = number | null
 
+const CATEGORY_WEIGHT_MIN = 1
+const CATEGORY_WEIGHT_MAX = 10
+const CATEGORY_WEIGHT_FALLBACK = CATEGORY_WEIGHT_MIN
+const CATEGORY_WEIGHT_OPTIONS = Array.from(
+  { length: CATEGORY_WEIGHT_MAX - CATEGORY_WEIGHT_MIN + 1 },
+  (_, index) => CATEGORY_WEIGHT_MIN + index,
+)
+
 function createEmptyBaseForm(): InspectionServiceBaseForm {
   return {
     customerUuid: "",
@@ -155,7 +165,8 @@ function cloneBuildingConfigs(configs: InspectionServiceBuildingConfig[]) {
 
 function createCategoryScoreLimitForm(scoreLimit: InspectionCategoryScoreLimit): InspectionServiceCategoryScoreLimitForm {
   return {
-    scoreLimit: scoreLimit === null ? "" : String(scoreLimit),
+    scoreLimit: resolveDraftScoreLimit(scoreLimit),
+    touched: false,
   }
 }
 
@@ -634,8 +645,7 @@ function handleScoreLimitPopoverOpenChange(buildUuid: string, open: boolean) {
 
 function updateScoreLimitField(
   categoryUuid: string,
-  field: keyof InspectionServiceCategoryScoreLimitForm,
-  value: string | number,
+  value: number[] | number | undefined,
 ) {
   const current = scoreLimitDraftForms.value[categoryUuid]
 
@@ -643,7 +653,15 @@ function updateScoreLimitField(
     return
   }
 
-  current[field] = typeof value === "number" ? String(value) : value
+  const nextValue = Array.isArray(value) ? value[0] : value
+  const normalizedValue = normalizeScoreLimitValue(nextValue)
+
+  if (normalizedValue === null) {
+    return
+  }
+
+  current.scoreLimit = normalizedValue
+  current.touched = true
 }
 
 function resetScoreLimitDraft() {
@@ -669,21 +687,16 @@ function saveScoreLimitDraft(buildUuid: string) {
   for (const category of categories) {
     const formState = scoreLimitDraftForms.value[category.uuid]
     const defaultScoreLimit = getDefaultCategoryScoreLimit(category.uuid)
-    const rawScoreLimit = formState?.scoreLimit.trim() ?? ""
+    const hasExistingOverride = category.uuid in target.categoryScoreLimitByCategoryUuid
 
-    if (!rawScoreLimit) {
-      if (defaultScoreLimit === null) {
-        continue
-      }
-
-      toast.error(`请检查 ${category.name} 的分数上限，需为非负整数。`)
-      return
+    if (defaultScoreLimit === null && !hasExistingOverride && !formState?.touched) {
+      continue
     }
 
     const parsedScoreLimit = parseScoreLimitForm(formState)
 
     if (parsedScoreLimit === null) {
-      toast.error(`请检查 ${category.name} 的分数上限，需为非负整数。`)
+      toast.error(`请检查 ${category.name} 的权重值，需为 1-10 的整数。`)
       return
     }
 
@@ -695,10 +708,10 @@ function saveScoreLimitDraft(buildUuid: string) {
   target.categoryScoreLimitByCategoryUuid = nextScoreLimitMap
   closeScoreLimitPopover()
 
-  toast.success("分数上限已更新", {
+  toast.success("分类权重已更新", {
     description: Object.keys(nextScoreLimitMap).length
-      ? `${target.buildName} 已配置 ${Object.keys(nextScoreLimitMap).length} 个分类的服务内分数上限。`
-      : `${target.buildName} 已恢复为预设分数上限。`,
+      ? `${target.buildName} 已配置 ${Object.keys(nextScoreLimitMap).length} 个分类的服务内权重。`
+      : `${target.buildName} 已恢复为预设权重。`,
   })
 }
 
@@ -712,8 +725,8 @@ function clearScoreLimitOverrides(buildUuid: string) {
   target.categoryScoreLimitByCategoryUuid = {}
   closeScoreLimitPopover()
 
-  toast.success("已恢复预设分数上限", {
-    description: `${target.buildName} 当前不再使用服务内自定义分数上限。`,
+  toast.success("已恢复预设权重", {
+    description: `${target.buildName} 当前不再使用服务内自定义权重。`,
   })
 }
 
@@ -1476,7 +1489,7 @@ function getCategoryScoreLimitActionDisabledReason(config: InspectionServiceBuil
   }
 
   if (!getInspectionCategoriesForConfig(config).length) {
-    return "当前建筑没有可配置分数上限的检测分类。"
+    return "当前建筑没有可配置权重的检测分类。"
   }
 
   return ""
@@ -1502,7 +1515,7 @@ function getBuildingScoreLimitSummary(config: InspectionServiceBuildingConfig) {
   const categoryUuids = Object.keys(config.categoryScoreLimitByCategoryUuid)
 
   if (!categoryUuids.length) {
-    return "使用预设分数上限"
+    return "使用预设权重"
   }
 
   const previewNames = categoryUuids
@@ -1510,10 +1523,10 @@ function getBuildingScoreLimitSummary(config: InspectionServiceBuildingConfig) {
     .map(uuid => resolveInspectionCategoryName(uuid))
 
   if (categoryUuids.length > 2) {
-    return `${previewNames.join("、")} 等 ${categoryUuids.length} 个分类已自定义分数上限。`
+    return `${previewNames.join("、")} 等 ${categoryUuids.length} 个分类已自定义权重。`
   }
 
-  return `${previewNames.join("、")} 已使用服务内分数上限。`
+  return `${previewNames.join("、")} 已使用服务内权重。`
 }
 
 function getDefaultCategoryScoreLimit(categoryUuid: string): InspectionCategoryScoreLimit {
@@ -1552,21 +1565,7 @@ function resolveInspectionCategoryName(categoryKey: string) {
 }
 
 function resolveInspectionCategoryScoreLimit(item: InspectionCategoryRecord) {
-  const value: unknown = item.Score
-
-  if (typeof value === "number" && Number.isFinite(value) && value >= 0) {
-    return Math.round(value)
-  }
-
-  if (typeof value === "string" && value.trim()) {
-    const parsed = Number(value)
-
-    if (Number.isFinite(parsed) && parsed >= 0) {
-      return Math.round(parsed)
-    }
-  }
-
-  return null
+  return normalizeScoreLimitValue(item.Score)
 }
 
 function parseScoreLimitForm(formState: InspectionServiceCategoryScoreLimitForm | undefined) {
@@ -1574,32 +1573,36 @@ function parseScoreLimitForm(formState: InspectionServiceCategoryScoreLimitForm 
     return null
   }
 
-  return parseScoreFieldValue(formState.scoreLimit)
+  return normalizeScoreLimitValue(formState.scoreLimit)
 }
 
-function parseScoreFieldValue(value: string) {
-  if (!value.trim()) {
-    return null
-  }
-
-  const parsed = Number(value)
-
-  if (!Number.isInteger(parsed) || parsed < 0) {
-    return null
-  }
-
-  return parsed
+function resolveDraftScoreLimit(scoreLimit: InspectionCategoryScoreLimit) {
+  return normalizeScoreLimitValue(scoreLimit) ?? CATEGORY_WEIGHT_FALLBACK
 }
 
 function normalizeScoreLimitValue(value: unknown): InspectionCategoryScoreLimit {
-  if (typeof value === "number" && Number.isFinite(value) && value >= 0) {
+  const parsedValue = parseNumericValue(value)
+
+  if (parsedValue === null) {
+    return null
+  }
+
+  return clampCategoryWeight(parsedValue)
+}
+
+function isSameScoreLimit(left: InspectionCategoryScoreLimit, right: InspectionCategoryScoreLimit) {
+  return left === right
+}
+
+function parseNumericValue(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) {
     return Math.round(value)
   }
 
   if (typeof value === "string" && value.trim()) {
     const parsed = Number(value)
 
-    if (Number.isFinite(parsed) && parsed >= 0) {
+    if (Number.isFinite(parsed)) {
       return Math.round(parsed)
     }
   }
@@ -1607,8 +1610,20 @@ function normalizeScoreLimitValue(value: unknown): InspectionCategoryScoreLimit 
   return null
 }
 
-function isSameScoreLimit(left: InspectionCategoryScoreLimit, right: InspectionCategoryScoreLimit) {
-  return left === right
+function clampCategoryWeight(value: number) {
+  return Math.min(CATEGORY_WEIGHT_MAX, Math.max(CATEGORY_WEIGHT_MIN, value))
+}
+
+function getScoreLimitDraftValue(categoryUuid: string) {
+  return [scoreLimitDraftForms.value[categoryUuid]?.scoreLimit ?? CATEGORY_WEIGHT_FALLBACK]
+}
+
+function getCategoryWeightMarkStyle(mark: number) {
+  const ratio = (mark - CATEGORY_WEIGHT_MIN) / (CATEGORY_WEIGHT_MAX - CATEGORY_WEIGHT_MIN)
+
+  return {
+    left: `${Math.max(0, Math.min(1, ratio)) * 100}%`,
+  }
 }
 
 function resetLocalStateForRoute() {
@@ -1979,7 +1994,7 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
             <div v-if="!selectedBuildingParkGroups.length" class="border border-dashed border-border/60 px-4 py-8 text-center">
               <p class="text-sm font-medium text-foreground">还没有选中建筑</p>
               <p class="mt-2 text-sm leading-6 text-muted-foreground">
-                勾选建筑后，这里会按园区列出对应的配置卡片，便于逐栋编辑检测项和分数上限。
+                勾选建筑后，这里会按园区列出对应的配置卡片，便于逐栋编辑检测项和分类权重。
               </p>
             </div>
 
@@ -2036,16 +2051,16 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
                                 type="button"
                                 class="size-7 px-0"
                                 :disabled="Boolean(getCategoryScoreLimitActionDisabledReason(config))"
-                                aria-label="配置分数上限"
+                                aria-label="配置分类权重"
                                 @click="handleScoreLimitPopoverOpenChange(config.buildUuid, true)"
                               >
                                 <i class="ri-settings-3-line text-[13px]" />
-                                <span class="sr-only">分数上限</span>
+                                <span class="sr-only">分类权重</span>
                               </Button>
                             </span>
                           </TooltipTrigger>
                           <TooltipContent>
-                            {{ getCategoryScoreLimitActionDisabledReason(config) || "配置分数上限" }}
+                            {{ getCategoryScoreLimitActionDisabledReason(config) || "配置分类权重" }}
                           </TooltipContent>
                         </Tooltip>
                       </div>
@@ -2069,10 +2084,10 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
 
     <Dialog :open="Boolean(currentScoreLimitConfig)" @update:open="!$event && closeScoreLimitPopover()">
       <DialogContent class="max-w-xl gap-0 p-0">
-        <DialogHeader class="border-b border-border/60 p-4">
-          <DialogTitle>配置分数上限</DialogTitle>
+        <DialogHeader class="p-4">
+          <DialogTitle>配置分类权重</DialogTitle>
           <DialogDescription>
-            {{ currentScoreLimitConfig?.buildName || "当前建筑" }} 未改动时将使用各分类的预设分数上限。
+            {{ currentScoreLimitConfig?.buildName || "当前建筑" }} 未改动时将使用各分类的预设权重。权重范围为 1-10。
           </DialogDescription>
         </DialogHeader>
 
@@ -2086,27 +2101,45 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
           <div
             v-for="category in (currentScoreLimitConfig ? getInspectionCategoriesForConfig(currentScoreLimitConfig) : [])"
             :key="`${currentScoreLimitConfig?.buildUuid || 'score-limit'}-${category.uuid}`"
-            class="flex items-center justify-between gap-4 border-b border-dashed border-border/60 py-3 last:border-b-0"
+            class="grid gap-3 border-b border-dashed border-border/60 py-4 last:border-b-0"
           >
-            <label
-              :for="`score-limit-${currentScoreLimitConfig?.buildUuid || 'score-limit'}-${category.uuid}`"
-              class="min-w-0 flex-1 text-sm font-medium text-foreground"
-            >
-              {{ category.name }}
-            </label>
-            <Input
-              :id="`score-limit-${currentScoreLimitConfig?.buildUuid || 'score-limit'}-${category.uuid}`"
-              type="number"
-              min="0"
-              inputmode="numeric"
-              :model-value="scoreLimitDraftForms[category.uuid]?.scoreLimit ?? ''"
-              class="h-8 w-28 shrink-0 text-right tabular-nums"
-              @update:model-value="updateScoreLimitField(category.uuid, 'scoreLimit', $event)"
-            />
+            <div class="flex items-center justify-between gap-3">
+              <label
+                :for="`score-limit-${currentScoreLimitConfig?.buildUuid || 'score-limit'}-${category.uuid}`"
+                class="min-w-0 flex-1 text-sm font-medium text-foreground"
+              >
+                {{ category.name }}
+              </label>
+              <span class="inline-flex min-w-11 items-center justify-center rounded-md bg-muted px-2 py-1 text-sm font-semibold text-foreground tabular-nums">
+                {{ scoreLimitDraftForms[category.uuid]?.scoreLimit ?? CATEGORY_WEIGHT_FALLBACK }}
+              </span>
+            </div>
+
+            <div class="grid gap-2">
+              <Slider
+                :id="`score-limit-${currentScoreLimitConfig?.buildUuid || 'score-limit'}-${category.uuid}`"
+                :model-value="getScoreLimitDraftValue(category.uuid)"
+                :min="CATEGORY_WEIGHT_MIN"
+                :max="CATEGORY_WEIGHT_MAX"
+                :step="1"
+                class="w-full"
+                @update:model-value="updateScoreLimitField(category.uuid, $event)"
+              />
+              <div class="relative h-4 text-[11px] text-muted-foreground">
+                <span
+                  v-for="mark in CATEGORY_WEIGHT_OPTIONS"
+                  :key="`${category.uuid}-weight-mark-${mark}`"
+                  :style="getCategoryWeightMarkStyle(mark)"
+                  class="absolute top-0 -translate-x-1/2 tabular-nums leading-none"
+                >
+                  {{ mark }}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 
-        <DialogFooter class="border-t border-border/60 p-4">
+        <DialogFooter class="p-4">
           <Button size="sm" variant="outline" type="button" @click="resetScoreLimitDraft">
             恢复初始
           </Button>
@@ -2125,7 +2158,7 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
             type="button"
             @click="saveScoreLimitDraft(currentScoreLimitConfig.buildUuid)"
           >
-            保存上限
+            保存权重
           </Button>
         </DialogFooter>
       </DialogContent>

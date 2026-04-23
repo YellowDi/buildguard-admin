@@ -57,6 +57,8 @@ const INSPECTION_CATEGORY_CREATE_ERROR_MESSAGE = "检测项分类创建失败，
 const INSPECTION_CATEGORY_DETAIL_ERROR_MESSAGE = "检测项分类详情加载失败，请稍后重试。"
 const INSPECTION_CATEGORY_UPDATE_ERROR_MESSAGE = "检测项分类更新失败，请稍后重试。"
 const INSPECTION_CATEGORY_DELETE_ERROR_MESSAGE = "检测项分类删除失败，请稍后重试。"
+const INSPECTION_CATEGORY_WEIGHT_MIN = 1
+const INSPECTION_CATEGORY_WEIGHT_MAX = 10
 
 export async function fetchInspectionCategories(): Promise<InspectionCategoriesListResult> {
   const response = await fetch(INSPECTION_CATEGORIES_API_URL, {
@@ -264,32 +266,41 @@ function getOptionalString(value: unknown) {
   throw new TypeError("String value is invalid")
 }
 
-function getRequiredNonNegativeInteger(value: unknown, fieldName: string) {
-  if (typeof value === "number" && Number.isInteger(value) && value >= 0) {
+function getRequiredWeightInteger(value: unknown, fieldName: string) {
+  if (
+    typeof value === "number"
+    && Number.isInteger(value)
+    && value >= INSPECTION_CATEGORY_WEIGHT_MIN
+    && value <= INSPECTION_CATEGORY_WEIGHT_MAX
+  ) {
     return value
   }
 
   if (typeof value === "string" && value.trim()) {
     const parsed = Number(value)
 
-    if (Number.isInteger(parsed) && parsed >= 0) {
+    if (
+      Number.isInteger(parsed)
+      && parsed >= INSPECTION_CATEGORY_WEIGHT_MIN
+      && parsed <= INSPECTION_CATEGORY_WEIGHT_MAX
+    ) {
       return parsed
     }
   }
 
-  throw new TypeError(`${fieldName} must be a non-negative integer`)
+  throw new TypeError(`${fieldName} must be an integer between 1 and 10`)
 }
 
-function getOptionalNonNegativeInteger(value: unknown, fieldName: string) {
+function getOptionalWeightInteger(value: unknown, fieldName: string) {
   if (value === undefined || value === null || value === "") {
     return undefined
   }
 
-  return getRequiredNonNegativeInteger(value, fieldName)
+  return getRequiredWeightInteger(value, fieldName)
 }
 
 function resolveOptionalScorePayload(value: unknown) {
-  const score = getOptionalNonNegativeInteger(value, "Score")
+  const score = getOptionalWeightInteger(value, "Score")
 
   return score === undefined
     ? {}

@@ -24,8 +24,7 @@ function formatLimit(limit: number | null | undefined) {
       props.class,
     )"
   >
-    <span class="text-muted-foreground">上限</span>
+    <span class="text-muted-foreground">权重</span>
     <span class="font-semibold tabular-nums text-foreground">{{ formatLimit(props.limit) }}</span>
-    <span v-if="hasLimit(props.limit)" class="text-muted-foreground">分</span>
   </div>
 </template>

@@ -31,6 +31,7 @@ import SettingsToolbarRow from "@/components/settings/SettingsToolbarRow.vue"
 import SettingsToolbarRefreshSlot from "@/components/settings/SettingsToolbarRefreshSlot.vue"
 import SettingsToolbarSearchInput from "@/components/settings/SettingsToolbarSearchInput.vue"
 import { Input } from "@/components/ui/input"
+import { Slider } from "@/components/ui/slider"
 import { Textarea } from "@/components/ui/textarea"
 import { SETTINGS_TABLE_PAGE_CLASS } from "@/components/settings/settingsTablePageClass"
 import TablePageTable from "@/components/table-page/TablePageTable.vue"
@@ -73,10 +74,17 @@ type InspectionCategoryRow = {
 type InspectionCategoryForm = {
   name: string
   content: string
-  scoreLimit: string
+  scoreLimit: InspectionCategoryScoreLimit
 }
 
 const INSPECTION_CATEGORIES_LOAD_ERROR_MESSAGE = "检测项分类列表加载失败，请稍后重试。"
+const CATEGORY_WEIGHT_MIN = 1
+const CATEGORY_WEIGHT_MAX = 10
+const CATEGORY_WEIGHT_FALLBACK = CATEGORY_WEIGHT_MIN
+const CATEGORY_WEIGHT_OPTIONS = Array.from(
+  { length: CATEGORY_WEIGHT_MAX - CATEGORY_WEIGHT_MIN + 1 },
+  (_, index) => CATEGORY_WEIGHT_MIN + index,
+)
 const rows = ref<InspectionCategoryRow[]>([])
 const loading = ref(false)
 const errorMessage = ref("")
@@ -118,7 +126,7 @@ const columns: TableColumn[] = [
   },
   {
     key: "scoreLimitDisplay",
-    label: "分数上限",
+    label: "分类权重",
     filterType: "none",
     tone: "muted",
     slot: "cell-score-limit",
@@ -222,7 +230,7 @@ async function openEditDialog(row: InspectionCategoryRow) {
   editForm.value = {
     name: row.name,
     content: row.content,
-    scoreLimit: formatScoreLimitFieldValue(row.scoreLimit),
+    scoreLimit: row.scoreLimit,
   }
   editFormTouched.value = false
   editDetailLoading.value = true
@@ -243,7 +251,7 @@ async function openEditDialog(row: InspectionCategoryRow) {
       editForm.value = {
         name: detailRow.name,
         content: detailRow.content,
-        scoreLimit: formatScoreLimitFieldValue(detailRow.scoreLimit),
+        scoreLimit: detailRow.scoreLimit,
       }
     }
   } catch (error) {
@@ -342,7 +350,7 @@ async function submitEdit() {
     await syncInspectionCategories()
     closeEditDialog()
     toast.success("检测项分类已更新", {
-      description: `${nextName} 的名称和分数上限已保存。`,
+      description: `${nextName} 的名称和权重已保存。`,
     })
   } catch (error) {
     handleApiError(error, {
@@ -372,11 +380,38 @@ function updateEditForm<K extends keyof InspectionCategoryForm>(field: K, value:
   }
 }
 
-function updateCreateScoreLimit(value: string | number) {
+function updateCreateScoreLimit(value: number[] | number | undefined) {
+  const nextScoreLimit = normalizeOptionalScoreLimitValue(Array.isArray(value) ? value[0] : value)
+
+  if (nextScoreLimit === null) {
+    return
+  }
+
   createForm.value = {
     ...createForm.value,
-    scoreLimit: String(value ?? ""),
+    scoreLimit: nextScoreLimit,
   }
+}
+
+function updateEditScoreLimit(value: number[] | number | undefined) {
+  const nextScoreLimit = normalizeOptionalScoreLimitValue(Array.isArray(value) ? value[0] : value)
+
+  if (nextScoreLimit === null) {
+    return
+  }
+
+  updateEditForm("scoreLimit", nextScoreLimit)
+}
+
+function clearCreateScoreLimit() {
+  createForm.value = {
+    ...createForm.value,
+    scoreLimit: null,
+  }
+}
+
+function clearEditScoreLimit() {
+  updateEditForm("scoreLimit", null)
 }
 
 async function confirmDeleteEditingCategory() {
@@ -439,18 +474,18 @@ function createInspectionCategoryForm(): InspectionCategoryForm {
   return {
     name: "",
     content: "",
-    scoreLimit: "",
+    scoreLimit: null,
   }
 }
 
 function toScoreLimit(value: unknown, fallback: InspectionCategoryScoreLimit) {
   const parsed = typeof value === "number" ? value : typeof value === "string" && value.trim() ? Number(value) : NaN
 
-  if (!Number.isFinite(parsed) || parsed < 0) {
+  if (!Number.isFinite(parsed)) {
     return fallback
   }
 
-  return Math.round(parsed)
+  return clampCategoryWeight(Math.round(parsed))
 }
 
 function parseInspectionCategoryScoreLimitForm(form: InspectionCategoryForm): number | undefined | null {
@@ -458,12 +493,12 @@ function parseInspectionCategoryScoreLimitForm(form: InspectionCategoryForm): nu
 }
 
 function parseOptionalScoreFieldValue(value: unknown) {
-  if (value === undefined || value === null) {
+  if (value === undefined || value === null || value === "") {
     return undefined
   }
 
   if (typeof value === "number") {
-    if (!Number.isInteger(value) || value < 0) {
+    if (!Number.isInteger(value) || value < CATEGORY_WEIGHT_MIN || value > CATEGORY_WEIGHT_MAX) {
       return null
     }
 
@@ -482,7 +517,7 @@ function parseOptionalScoreFieldValue(value: unknown) {
 
   const parsed = Number(normalized)
 
-  if (!Number.isInteger(parsed) || parsed < 0) {
+  if (!Number.isInteger(parsed) || parsed < CATEGORY_WEIGHT_MIN || parsed > CATEGORY_WEIGHT_MAX) {
     return null
   }
 
@@ -495,12 +530,38 @@ function isInspectionCategoryFormValid(form: InspectionCategoryForm) {
 
 function buildScoreLimitSearchText(scoreLimit: InspectionCategoryScoreLimit) {
   return scoreLimit === null
-    ? "分数上限 未设置"
-    : ["分数上限", String(scoreLimit)].join(" ")
+    ? "分类权重 未设置"
+    : ["分类权重", String(scoreLimit)].join(" ")
 }
 
-function formatScoreLimitFieldValue(scoreLimit: InspectionCategoryScoreLimit) {
-  return scoreLimit === null ? "" : String(scoreLimit)
+function normalizeOptionalScoreLimitValue(value: unknown): InspectionCategoryScoreLimit | null {
+  if (value === undefined || value === null || value === "") {
+    return null
+  }
+
+  const parsed = typeof value === "number" ? value : typeof value === "string" && value.trim() ? Number(value) : NaN
+
+  if (!Number.isFinite(parsed)) {
+    return null
+  }
+
+  return clampCategoryWeight(Math.round(parsed))
+}
+
+function clampCategoryWeight(value: number) {
+  return Math.min(CATEGORY_WEIGHT_MAX, Math.max(CATEGORY_WEIGHT_MIN, value))
+}
+
+function getFormScoreLimitValue(scoreLimit: InspectionCategoryScoreLimit) {
+  return [scoreLimit ?? CATEGORY_WEIGHT_FALLBACK]
+}
+
+function getCategoryWeightMarkStyle(mark: number) {
+  const ratio = (mark - CATEGORY_WEIGHT_MIN) / (CATEGORY_WEIGHT_MAX - CATEGORY_WEIGHT_MIN)
+
+  return {
+    left: `${Math.max(0, Math.min(1, ratio)) * 100}%`,
+  }
 }
 
 function asInspectionCategoryRow(row: Record<string, unknown>) {
@@ -524,7 +585,7 @@ defineExpose({
         <SettingsToolbarSearchInput
           v-model="searchQuery"
           :expanded="searchExpanded"
-          placeholder="搜索分类名称、ID、内容或分数上限"
+          placeholder="搜索分类名称、ID、内容或分类权重"
           @toggle="toggleSearch"
         />
 
@@ -599,7 +660,7 @@ defineExpose({
       <DialogContent stack-above-sticky-header class="sm:max-w-[640px]">
         <DialogHeader>
           <DialogTitle>添加检测项分类</DialogTitle>
-          <DialogDescription>添加一个检测项分类，分类介绍和分数上限都可选填写。</DialogDescription>
+          <DialogDescription>添加一个检测项分类，分类介绍可选填写；分类权重可按需设置为 1-10。</DialogDescription>
         </DialogHeader>
 
         <form class="grid gap-4" @submit.prevent>
@@ -623,18 +684,36 @@ defineExpose({
           </div>
 
           <div class="grid gap-2">
-            <label class="text-sm font-medium text-foreground" for="create-inspection-category-score-limit">分数上限（可选）</label>
-            <Input
+            <div class="flex items-center justify-between gap-3">
+              <label class="text-sm font-medium text-foreground" for="create-inspection-category-score-limit">分类权重（可选）</label>
+              <div class="flex items-center gap-2">
+                <span class="inline-flex min-w-11 items-center justify-center rounded-md bg-muted px-2 py-1 text-sm font-semibold text-foreground tabular-nums">
+                  {{ createForm.scoreLimit ?? "未设" }}
+                </span>
+                <Button type="button" variant="outline" size="sm" class="h-8 px-2 text-xs" @click="clearCreateScoreLimit">
+                  清空
+                </Button>
+              </div>
+            </div>
+            <Slider
               id="create-inspection-category-score-limit"
-              :model-value="createForm.scoreLimit"
-              type="number"
-              inputmode="numeric"
-              min="0"
-              step="1"
-              placeholder="不填写则不设置"
-              class="h-9 min-w-0"
+              :model-value="getFormScoreLimitValue(createForm.scoreLimit)"
+              :min="CATEGORY_WEIGHT_MIN"
+              :max="CATEGORY_WEIGHT_MAX"
+              :step="1"
+              class="w-full"
               @update:model-value="updateCreateScoreLimit"
             />
+            <div class="relative h-4 text-[11px] text-muted-foreground">
+              <span
+                v-for="mark in CATEGORY_WEIGHT_OPTIONS"
+                :key="`create-category-weight-mark-${mark}`"
+                :style="getCategoryWeightMarkStyle(mark)"
+                class="absolute top-0 -translate-x-1/2 tabular-nums leading-none"
+              >
+                {{ mark }}
+              </span>
+            </div>
           </div>
 
           <DialogFooter>
@@ -659,7 +738,7 @@ defineExpose({
         <DialogHeader>
           <DialogTitle>修改检测项分类</DialogTitle>
           <DialogDescription>
-            {{ editDetailLoading ? "正在同步分类详情..." : "更新当前分类名称、内容和分数上限；分数上限可留空，调整后会同步应用到分类列表中。" }}
+            {{ editDetailLoading ? "正在同步分类详情..." : "更新当前分类名称、内容和分类权重；权重可留空，设置后范围为 1-10。" }}
           </DialogDescription>
         </DialogHeader>
 
@@ -688,19 +767,44 @@ defineExpose({
           </div>
 
           <div class="grid gap-2">
-            <label class="text-sm font-medium text-foreground" for="edit-inspection-category-score-limit">分数上限（可选）</label>
-            <Input
+            <div class="flex items-center justify-between gap-3">
+              <label class="text-sm font-medium text-foreground" for="edit-inspection-category-score-limit">分类权重（可选）</label>
+              <div class="flex items-center gap-2">
+                <span class="inline-flex min-w-11 items-center justify-center rounded-md bg-muted px-2 py-1 text-sm font-semibold text-foreground tabular-nums">
+                  {{ editForm.scoreLimit ?? "未设" }}
+                </span>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  class="h-8 px-2 text-xs"
+                  :disabled="editSubmitting || deleteSubmitting"
+                  @click="clearEditScoreLimit"
+                >
+                  清空
+                </Button>
+              </div>
+            </div>
+            <Slider
               id="edit-inspection-category-score-limit"
-              :model-value="editForm.scoreLimit"
+              :model-value="getFormScoreLimitValue(editForm.scoreLimit)"
               :disabled="editSubmitting || deleteSubmitting"
-              type="number"
-              inputmode="numeric"
-              min="0"
-              step="1"
-              placeholder="不填写则不设置"
-              class="h-9 min-w-0"
-              @update:model-value="updateEditForm('scoreLimit', String($event))"
+              :min="CATEGORY_WEIGHT_MIN"
+              :max="CATEGORY_WEIGHT_MAX"
+              :step="1"
+              class="w-full"
+              @update:model-value="updateEditScoreLimit"
             />
+            <div class="relative h-4 text-[11px] text-muted-foreground">
+              <span
+                v-for="mark in CATEGORY_WEIGHT_OPTIONS"
+                :key="`edit-category-weight-mark-${mark}`"
+                :style="getCategoryWeightMarkStyle(mark)"
+                class="absolute top-0 -translate-x-1/2 tabular-nums leading-none"
+              >
+                {{ mark }}
+              </span>
+            </div>
           </div>
 
           <DialogFooter class="flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
