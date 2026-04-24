@@ -393,9 +393,9 @@ onBeforeUnmount(() => {
       </RouterLink>
     </div>
 
-    <div class="auth-animated-panel relative hidden overflow-hidden lg:block">
-      <div class="auth-animated-glow auth-animated-glow-top" aria-hidden="true" />
-      <div class="auth-animated-glow auth-animated-glow-bottom" aria-hidden="true" />
+    <div class="auth-animated-panel relative hidden overflow-hidden dark:!bg-[radial-gradient(circle_at_24%_18%,_rgba(77,163,240,0.14),_transparent_28%),linear-gradient(145deg,_#20242a_0%,_#1d2227_48%,_#181c21_100%)] lg:block">
+      <div class="auth-animated-glow auth-animated-glow-top dark:!bg-[rgba(77,163,240,0.14)]" aria-hidden="true" />
+      <div class="auth-animated-glow auth-animated-glow-bottom dark:!bg-[rgba(255,255,255,0.08)]" aria-hidden="true" />
       <div
         ref="sceneRef"
         class="auth-scene-wrapper"
