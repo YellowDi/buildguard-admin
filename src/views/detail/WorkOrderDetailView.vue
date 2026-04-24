@@ -9,11 +9,12 @@ import authSignupVisual from "@/assets/auth-signup-visual.svg"
 import InspectionBuildingCards from "@/components/detail/InspectionBuildingCards.vue"
 import InspectionItemHistorySheet from "@/components/detail/InspectionItemHistorySheet.vue"
 import LinkedEntityDetailSheet from "@/components/detail/LinkedEntityDetailSheet.vue"
+import RepairWorkOrderMediaSheet from "@/components/detail/RepairWorkOrderMediaSheet.vue"
 import DetailFieldsSkeleton from "@/components/loading/DetailFieldsSkeleton.vue"
 import DetailRelationSkeleton from "@/components/loading/DetailRelationSkeleton.vue"
 import DetailFieldSections from "@/components/detail/DetailFieldSections.vue"
-import { buildRepairWorkOrderPrimarySections, buildRepairWorkOrderSecondarySections, toText as toRepairWorkOrderText } from "@/components/detail/repairWorkOrderDetailFields"
-import { buildWorkOrderPrimarySections, buildWorkOrderSecondarySections, toText } from "@/components/detail/workOrderDetailFields"
+import { buildRepairWorkOrderPrimarySections, toText as toRepairWorkOrderText } from "@/components/detail/repairWorkOrderDetailFields"
+import { buildWorkOrderPrimarySections, toText } from "@/components/detail/workOrderDetailFields"
 import type { DetailFieldSection, InspectionItemHistoryModel } from "@/components/detail/types"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -108,6 +109,7 @@ const linkedDetailSheetKind = ref<LinkedDetailSheetKind | null>(null)
 const linkedDetailSheetUuid = ref("")
 const inspectionHistorySheetOpen = ref(false)
 const selectedInspectionHistoryModel = ref<InspectionItemHistoryModel | null>(null)
+const repairMediaSheetOpen = ref(false)
 
 const workOrderUuid = computed(() => typeof route.params.id === "string" ? route.params.id.trim() : "")
 const customerUuid = computed(() => {
@@ -172,20 +174,13 @@ const primarySections = computed<DetailFieldSection[]>(() => {
   })
 })
 
-const secondarySections = computed<DetailFieldSection[]>(() => {
-  if (props.kind === "repair") {
-    return buildRepairWorkOrderSecondarySections(repairWorkOrder.value)
-  }
-
-  return buildWorkOrderSecondarySections(resolvedInspectionWorkOrder.value)
-})
-
 const inspectionBuildingCards = computed(() => (
   buildInspectionWorkOrderCards(
     resolvedInspectionWorkOrder.value?.Builds,
     resolvedInspectionWorkOrder.value?.Deadline,
   )
 ))
+const repairWorkOrderCards = computed(() => buildRepairWorkOrderCards(repairWorkOrder.value))
 
 function openRepairCustomerDetail() {
   const targetCustomerUuid = toRepairWorkOrderText(repairWorkOrder.value?.CustomerUuid) || customerUuid.value
@@ -264,6 +259,18 @@ function openLinkedDetailSheet(kind: LinkedDetailSheetKind, uuid: string) {
   linkedDetailSheetKind.value = kind
   linkedDetailSheetUuid.value = uuid
   linkedDetailSheetOpen.value = true
+}
+
+function handleRepairMediaSheetOpenChange(open: boolean) {
+  repairMediaSheetOpen.value = open
+}
+
+function openRepairMediaSheet() {
+  if (!repairWorkOrder.value) {
+    return
+  }
+
+  repairMediaSheetOpen.value = true
 }
 
 const pageTitle = computed(() => {
@@ -571,6 +578,64 @@ function buildInspectionWorkOrderCards(
       groups,
     }
   })
+}
+
+function buildRepairWorkOrderCards(workOrder: RepairWorkOrderDetailResult | null): InspectionBuildingCardV2Building[] {
+  if (!workOrder) {
+    return []
+  }
+
+  const title = toRepairWorkOrderText(workOrder.Title, toRepairWorkOrderText(workOrder.OrderNo, "报修工单"))
+  const content = toRepairWorkOrderText(workOrder.Content, "")
+  const repairContent = toRepairWorkOrderText(workOrder.RepairContent, "")
+  const items: InspectionBuildingCardV2Row[] = [
+    {
+      key: "repair-content",
+      name: content ? truncateText(content, 28) : "报修内容",
+      categoryName: "报修问题",
+      resultLabel: formatRepairCardReportType(workOrder.ReportType),
+      scoreText: formatRepairCardImportant(workOrder.Important),
+      scoreValue: toNumber(workOrder.Important),
+      onSelect: openRepairMediaSheet,
+    },
+  ]
+
+  if (repairContent) {
+    items.push({
+      key: "repair-record",
+      name: truncateText(repairContent, 28),
+      categoryName: "维修记录",
+      resultLabel: "维修记录",
+      scoreText: formatRepairFileCount(workOrder),
+      scoreValue: null,
+      onSelect: openRepairMediaSheet,
+    })
+  }
+
+  const totalCount = Math.max(1, items.length)
+
+  return [
+    {
+      key: toRepairWorkOrderText(workOrder.Uuid, "repair-work-order"),
+      buildName: title,
+      status: resolveRepairCardStatus(workOrder.Status),
+      completedCount: items.length,
+      totalCount,
+      progressValue: Math.round((items.length / totalCount) * 100),
+      progressLabel: "已记录",
+      deadlineText: toRepairWorkOrderText(workOrder.CreatedAt, "-"),
+      scoreText: formatRepairCardImportant(workOrder.Important),
+      groups: [
+        {
+          key: "repair-problems",
+          title: "报修问题",
+          scoreText: formatRepairFileCount(workOrder),
+          scoreValue: null,
+          items,
+        },
+      ],
+    },
+  ]
 }
 
 function buildInspectionCategoryGroups(
@@ -1006,6 +1071,45 @@ function formatInspectionResultLabel(value: unknown) {
   return `结果 ${result}`
 }
 
+function formatRepairCardReportType(value: unknown) {
+  const reportType = toNumber(value)
+  return reportType === null ? "报修" : `类型 ${reportType}`
+}
+
+function formatRepairCardImportant(value: unknown) {
+  const important = toNumber(value)
+  return important === null ? "-" : `等级 ${important}`
+}
+
+function formatRepairFileCount(workOrder: RepairWorkOrderDetailResult) {
+  const count = countRepairFiles(workOrder)
+  return count > 0 ? `${count} 个附件` : "无附件"
+}
+
+function countRepairFiles(workOrder: RepairWorkOrderDetailResult) {
+  return normalizeRepairFiles(workOrder.BeforeRepairFile).length + normalizeRepairFiles(workOrder.AfterRepairFile).length
+}
+
+function normalizeRepairFiles(value: unknown) {
+  return Array.isArray(value)
+    ? value.filter(item => item && typeof item === "object" && toText((item as Record<string, unknown>).Url, ""))
+    : []
+}
+
+function resolveRepairCardStatus(value: unknown): InspectionBuildingCardV2Status {
+  const status = toNumber(value)
+
+  if (status === 5) {
+    return "completed"
+  }
+
+  if (status !== null && status >= 2) {
+    return "processing"
+  }
+
+  return "pending"
+}
+
 function resolveHistoryTimestamp(...values: unknown[]) {
   const firstText = values
     .map(value => toText(value, ""))
@@ -1239,11 +1343,19 @@ async function submitAssign() {
     <template #secondary>
       <template v-if="props.kind === 'repair'">
         <div v-if="loading" class="pb-5">
-          <DetailFieldsSkeleton :sections="1" :rows-per-section="3" />
+          <DetailRelationSkeleton :two-data-columns="false" :rows-per-group="2" />
         </div>
 
         <div v-else-if="!loading && hasWorkOrder" class="pb-5">
-          <DetailFieldSections :sections="secondarySections" use-title-block />
+          <InspectionBuildingCards
+            :buildings="repairWorkOrderCards"
+            title="报修卡片"
+            empty-title="暂无报修内容"
+            empty-description="当前工单还没有可展示的报修问题。"
+            empty-items-text="当前报修卡片暂无问题。"
+            total-label="报修项"
+            empty-icon="ri-tools-line"
+          />
         </div>
       </template>
 
@@ -1324,5 +1436,11 @@ async function submitAssign() {
     :open="inspectionHistorySheetOpen"
     :model="selectedInspectionHistoryModel"
     @update:open="handleInspectionHistorySheetOpenChange"
+  />
+
+  <RepairWorkOrderMediaSheet
+    :open="repairMediaSheetOpen"
+    :work-order="repairWorkOrder"
+    @update:open="handleRepairMediaSheetOpenChange"
   />
 </template>

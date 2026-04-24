@@ -126,6 +126,12 @@ export type WorkOrderInspectionHistoryDetailItem = {
   [property: string]: unknown
 }
 
+export type WorkOrderFile = {
+  Type?: number
+  Url?: string
+  [property: string]: unknown
+}
+
 export type RepairWorkOrderListItem = {
   Id?: number
   Uuid?: string
@@ -147,8 +153,8 @@ export type RepairWorkOrderListItem = {
   CreatedEndAt?: string
   CreatedAt?: string
   UpdatedAt?: string
-  AfterRepairFile?: string
-  BeforeRepairFile?: string
+  AfterRepairFile?: WorkOrderFile[]
+  BeforeRepairFile?: WorkOrderFile[]
   RepairContent?: string
   [property: string]: unknown
 }
@@ -565,10 +571,12 @@ function normalizeRepairWorkOrderListItem(value: unknown): RepairWorkOrderListIt
     Content: getFirstText(record, ["Content", "content"]),
     Title: getFirstText(record, ["Title", "title"]),
     Status: getFirstNumber(record, ["Status", "status"]),
+    CreatedStartAt: getFirstText(record, ["CreatedStartAt", "createdStartAt"]),
+    CreatedEndAt: getFirstText(record, ["CreatedEndAt", "createdEndAt"]),
     CreatedAt: getFirstText(record, ["CreatedAt", "createdAt", "CreateTime", "createTime"]),
     UpdatedAt: getFirstText(record, ["UpdatedAt", "updatedAt", "UpdateTime", "updateTime"]),
-    AfterRepairFile: getFirstText(record, ["AfterRepairFile", "afterRepairFile"]),
-    BeforeRepairFile: getFirstText(record, ["BeforeRepairFile", "beforeRepairFile"]),
+    AfterRepairFile: getFirstWorkOrderFiles(record, ["AfterRepairFile", "afterRepairFile"]),
+    BeforeRepairFile: getFirstWorkOrderFiles(record, ["BeforeRepairFile", "beforeRepairFile"]),
     RepairContent: getFirstText(record, ["RepairContent", "repairContent"]),
   }
 }
@@ -739,6 +747,8 @@ function hasDirectWorkOrderFields(record: Record<string, unknown>) {
     "OrderNo",
     "Uuid",
     "CustomerUuid",
+    "Title",
+    "Content",
   ].some(key => key in record)
 }
 
@@ -880,6 +890,58 @@ function normalizeWorkOrderBuildInspectionItems(value: unknown): WorkOrderBuildI
     })
 }
 
+function getFirstWorkOrderFiles(record: Record<string, unknown>, keys: string[]): WorkOrderFile[] {
+  for (const key of keys) {
+    const value = record[key]
+    const normalized = normalizeWorkOrderFiles(value)
+
+    if (normalized.length) {
+      return normalized
+    }
+  }
+
+  return []
+}
+
+function normalizeWorkOrderFiles(value: unknown): WorkOrderFile[] {
+  if (Array.isArray(value)) {
+    return value
+      .map(item => normalizeWorkOrderFile(item))
+      .filter((item): item is WorkOrderFile => Boolean(item))
+  }
+
+  const legacyUrl = getOptionalStringSilently(value)
+  return legacyUrl ? [{ Url: legacyUrl, Type: inferWorkOrderFileType(legacyUrl) }] : []
+}
+
+function normalizeWorkOrderFile(value: unknown): WorkOrderFile | null {
+  if (typeof value === "string" || typeof value === "number") {
+    const url = getOptionalStringSilently(value)
+    return url ? { Url: url, Type: inferWorkOrderFileType(url) } : null
+  }
+
+  if (!value || typeof value !== "object") {
+    return null
+  }
+
+  const record = value as Record<string, unknown>
+  const url = getFirstText(record, ["Url", "url", "URL", "FileUrl", "fileUrl"])
+
+  if (!url) {
+    return null
+  }
+
+  return {
+    ...record,
+    Url: url,
+    Type: getFirstNumber(record, ["Type", "type", "FileType", "fileType"]) ?? inferWorkOrderFileType(url),
+  }
+}
+
+function inferWorkOrderFileType(url: string) {
+  return /\.(mp4|mov|m4v|webm|ogg)(\?|#|$)/i.test(url) ? 2 : 1
+}
+
 function getFirstNumber(record: Record<string, unknown>, keys: string[]) {
   for (const key of keys) {
     const value = record[key]
@@ -897,6 +959,14 @@ function getFirstNumber(record: Record<string, unknown>, keys: string[]) {
   }
 
   return undefined
+}
+
+function getOptionalStringSilently(value: unknown) {
+  try {
+    return getOptionalString(value)
+  } catch {
+    return undefined
+  }
 }
 
 function getOptionalString(value: unknown) {

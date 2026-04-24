@@ -46,11 +46,17 @@ const props = withDefaults(defineProps<{
   buildings: InspectionBuildingCardV2Building[]
   emptyTitle?: string
   emptyDescription?: string
+  emptyItemsText?: string
+  totalLabel?: string
+  emptyIcon?: string
 }>(), {
   title: "建筑与检测项",
   count: undefined,
   emptyTitle: "暂无建筑检测项",
   emptyDescription: "当前暂无可展示的建筑检测项数据。",
+  emptyItemsText: "当前建筑暂无检测项。",
+  totalLabel: "总检测项",
+  emptyIcon: "ri-building-line",
 })
 
 const expandedBuildingKeys = ref<string[]>([])
@@ -237,7 +243,7 @@ function handleExpandAfterLeave(element: Element) {
           <Empty class="w-full max-w-md flex-none border-0 bg-transparent p-6! shadow-none md:p-8!">
             <EmptyHeader class="max-w-md">
               <EmptyMedia variant="icon">
-                <i class="ri-building-line text-[18px]" />
+                <i :class="[props.emptyIcon, 'text-[18px]']" />
               </EmptyMedia>
               <EmptyTitle>{{ props.emptyTitle }}</EmptyTitle>
               <EmptyDescription>{{ props.emptyDescription }}</EmptyDescription>
@@ -292,7 +298,7 @@ function handleExpandAfterLeave(element: Element) {
                       <span class="ml-1">{{ building.progressLabel || "已完成" }}</span>
                       <span class="mx-1.5">/</span>
                       <span class="text-[#2b2d33]">{{ building.totalCount }}</span>
-                      <span class="ml-1">总检测项</span>
+                      <span class="ml-1">{{ props.totalLabel }}</span>
                     </div>
                     <div class="shrink-0 truncate tabular-nums text-right">
                       {{ building.deadlineText }}
@@ -318,7 +324,7 @@ function handleExpandAfterLeave(element: Element) {
                   v-if="building.groups.length === 0"
                   class="px-4 py-1 text-sm text-[#8f949c]"
                 >
-                  当前建筑暂无检测项。
+                  {{ props.emptyItemsText }}
                 </div>
 
                 <div

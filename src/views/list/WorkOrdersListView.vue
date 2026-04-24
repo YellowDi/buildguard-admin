@@ -88,10 +88,12 @@ const pageNum = ref(1)
 const pageSize = ref(50)
 const total = ref(0)
 const orderNoQuery = ref("")
+const titleQuery = ref("")
 const createdAtQuery = ref("")
 const serviceNameQuery = ref("")
 const executorQuery = ref("")
 const selectedStatus = ref("")
+const selectedImportant = ref("")
 const selectedCustomerUuid = ref("")
 const selectedPlanUuid = ref("")
 const selectedResult = ref("")
@@ -120,6 +122,11 @@ const inspectionResultOptions = [
   { value: "2", label: "轻微风险" },
   { value: "3", label: "存在隐患" },
 ]
+const repairImportantOptions = [
+  { value: "1", label: "等级 1" },
+  { value: "2", label: "等级 2" },
+  { value: "3", label: "等级 3" },
+]
 const pageTitle = computed(() => props.kind === "inspection" ? "检测工单" : "报修工单")
 const pageEmptyStateTitle = computed(() => `暂无${pageTitle.value}数据`)
 const pageEmptyStateDescription = computed(() => props.kind === "inspection"
@@ -139,7 +146,7 @@ const canSubmitAssign = computed(() => {
 })
 const pageSortStorageKey = computed(() => props.kind === "inspection"
   ? "inspection-work-orders-sort-preferences-created-at-v2"
-  : "repair-work-orders-sort-preferences-created-start-at-v3")
+  : "repair-work-orders-sort-preferences-created-at-v4")
 const primaryActionLabel = "添加工单"
 const router = useRouter()
 const columns = props.kind === "inspection" ? createInspectionColumns() : createRepairColumns()
@@ -188,7 +195,7 @@ const schema: TablePageSchema<WorkOrderRecord> = {
   filters: [],
   sort: {
     storageKey: pageSortStorageKey.value,
-    initialField: props.kind === "inspection" ? "createdAt" : "createdStartAt",
+    initialField: "createdAt",
     initialDirection: "desc",
   },
   tabs: {
@@ -321,6 +328,29 @@ const queryBar = computed<TableQueryBarConfig>(() => ({
           collapsedMaxWidth: 248,
         },
         {
+          type: "search" as const,
+          key: "title",
+          queryKey: "title",
+          label: "报修标题",
+          icon: "ri-text",
+          placeholder: "请输入",
+          value: titleQuery.value,
+          expandedWidth: 248,
+          collapsedMaxWidth: 248,
+        },
+        {
+          type: "select" as const,
+          key: "important",
+          queryKey: "important",
+          label: "重要程度",
+          icon: "ri-price-tag-3-line",
+          value: selectedImportant.value,
+          options: repairImportantOptions,
+          placeholder: "请选择重要程度",
+          expandedWidth: 248,
+          collapsedMaxWidth: 248,
+        },
+        {
           type: "select" as const,
           key: "status",
           queryKey: "status",
@@ -343,12 +373,14 @@ const queryBar = computed<TableQueryBarConfig>(() => ({
     serviceName: props.kind === "inspection" ? serviceNameQuery.value : "",
     executor: props.kind === "inspection" ? executorQuery.value : "",
     createdAt: props.kind === "repair" ? createdAtQuery.value : "",
+    title: props.kind === "repair" ? titleQuery.value : "",
+    important: props.kind === "repair" ? selectedImportant.value : "",
     status: selectedStatus.value,
     result: props.kind === "inspection" ? selectedResult.value : "",
   },
   canClear: props.kind === "inspection"
     ? Boolean(orderNoQuery.value || selectedCustomerUuid.value || selectedPlanUuid.value || serviceNameQuery.value || executorQuery.value || selectedStatus.value || selectedResult.value)
-    : Boolean(orderNoQuery.value || createdAtQuery.value || selectedStatus.value),
+    : Boolean(orderNoQuery.value || createdAtQuery.value || titleQuery.value || selectedImportant.value || selectedStatus.value),
 }))
 
 watch([pageNum, pageSize], ([nextPageNum, nextPageSize], [previousPageNum, previousPageSize]) => {
@@ -373,6 +405,8 @@ watch(
     : [
         normalizeQueryValue(route.query.q),
         normalizeQueryValue(route.query.createdAt),
+        normalizeQueryValue(route.query.title),
+        normalizeQueryValue(route.query.important),
         normalizeQueryValue(route.query.status),
       ] as const,
   (nextValue, previousValue) => {
@@ -395,7 +429,9 @@ watch(
       selectedResult.value = nextValue[6] ?? ""
     } else {
       createdAtQuery.value = nextValue[1] ?? ""
-      selectedStatus.value = nextValue[2] ?? ""
+      titleQuery.value = nextValue[2] ?? ""
+      selectedImportant.value = nextValue[3] ?? ""
+      selectedStatus.value = nextValue[4] ?? ""
     }
 
     if (pageNum.value !== 1) {
@@ -440,8 +476,7 @@ function buildPageFilterText(row: WorkOrderRecord) {
       row.reportTypeLabel,
       row.statusLabel,
       row.remark,
-      row.createdStartAt,
-      row.createdEndAt,
+      row.createdAt,
     ].join(" ")
   }
 
@@ -637,6 +672,8 @@ async function loadWorkOrders() {
           OrderNo: orderNoQuery.value || undefined,
           CreatedStartAt: createdAtQuery.value || undefined,
           CreatedEndAt: createdAtQuery.value || undefined,
+          Title: titleQuery.value || undefined,
+          Important: toApiStatus(selectedImportant.value),
           Status: toApiStatus(selectedStatus.value),
           PageNum: pageNum.value,
           PageSize: pageSize.value,
@@ -743,8 +780,7 @@ function normalizeRepairWorkOrderRecord(item: RepairWorkOrderListItem, index: nu
   const statusValue = toNumber(item.Status)
   const importantValue = toNumber(item.Important)
   const reportTypeValue = toNumber(item.ReportType)
-  const createdStartAt = toText(item.CreatedStartAt, "-")
-  const createdEndAt = toText(item.CreatedEndAt, "-")
+  const createdAt = toText(item.CreatedAt, "-")
 
   return {
     id: uuid || fallbackId,
@@ -771,10 +807,10 @@ function normalizeRepairWorkOrderRecord(item: RepairWorkOrderListItem, index: nu
     scoreLabel: formatScoreLabel(importantValue, props.kind),
     deadline: "-",
     remark: toText(item.RepairContent || item.Content, "-"),
-    createdAt: "-",
+    createdAt,
     updatedAt: "-",
-    createdStartAt,
-    createdEndAt,
+    createdStartAt: createdAt,
+    createdEndAt: "-",
   }
 }
 
@@ -810,8 +846,6 @@ function formatScoreLabel(value: number | null, kind: WorkOrderPageKind) {
   }
 
   if (kind === "repair") {
-    if (value === 0) return "普通"
-    if (value === 1) return "紧急"
     return `等级 ${value}`
   }
 
@@ -1086,27 +1120,15 @@ function createRepairColumns(): TablePageSchema<WorkOrderRecord>["columns"] {
       },
     },
     {
-      key: "createdStartAt",
-      label: "创建开始时间",
+      key: "createdAt",
+      label: "创建时间",
       filterType: "time",
       tone: "muted",
       format: "numeric",
       filter: {
         type: "date",
         defaultVisible: true,
-        value: row => extractDatePart(row.createdStartAt),
-      },
-      sort: true,
-    },
-    {
-      key: "createdEndAt",
-      label: "创建结束时间",
-      filterType: "time",
-      tone: "muted",
-      format: "numeric",
-      filter: {
-        type: "date",
-        value: row => extractDatePart(row.createdEndAt),
+        value: row => extractDatePart(row.createdAt),
       },
       sort: true,
     },
@@ -1135,8 +1157,9 @@ function compareWorkOrderRows(
   direction: "asc" | "desc",
   kind: WorkOrderPageKind,
 ) {
-  const leftValue = kind === "inspection" ? parseTimestamp(left.createdAt) : parseTimestamp(left.createdStartAt)
-  const rightValue = kind === "inspection" ? parseTimestamp(right.createdAt) : parseTimestamp(right.createdStartAt)
+  void kind
+  const leftValue = parseTimestamp(left.createdAt)
+  const rightValue = parseTimestamp(right.createdAt)
 
   if (leftValue !== rightValue) {
     return direction === "asc" ? leftValue - rightValue : rightValue - leftValue
@@ -1206,6 +1229,14 @@ function handleQueryChange(payload: { key: string; value: string | string[] }) {
     createdAtQuery.value = typeof payload.value === "string" ? payload.value.trim() : ""
   }
 
+  if (payload.key === "title") {
+    titleQuery.value = typeof payload.value === "string" ? payload.value.trim() : ""
+  }
+
+  if (payload.key === "important") {
+    selectedImportant.value = typeof payload.value === "string" ? payload.value.trim() : ""
+  }
+
   if (payload.key === "result") {
     selectedResult.value = typeof payload.value === "string" ? payload.value.trim() : ""
   }
@@ -1224,19 +1255,21 @@ function handleQueryClear() {
         || selectedStatus.value
         || selectedResult.value,
       )
-    : Boolean(orderNoQuery.value || createdAtQuery.value || selectedStatus.value)
+    : Boolean(orderNoQuery.value || createdAtQuery.value || titleQuery.value || selectedImportant.value || selectedStatus.value)
 
   if (!hasFilters) {
     return
   }
 
   orderNoQuery.value = ""
+  titleQuery.value = ""
   selectedCustomerUuid.value = ""
   selectedPlanUuid.value = ""
   createdAtQuery.value = ""
   serviceNameQuery.value = ""
   executorQuery.value = ""
   selectedStatus.value = ""
+  selectedImportant.value = ""
   selectedResult.value = ""
   void syncRouteQueryAndReload()
 }
@@ -1247,6 +1280,8 @@ async function syncRouteQueryAndReload() {
       ...route.query,
       q: orderNoQuery.value || undefined,
       createdAt: props.kind === "repair" ? createdAtQuery.value || undefined : undefined,
+      title: props.kind === "repair" ? titleQuery.value || undefined : undefined,
+      important: props.kind === "repair" ? selectedImportant.value || undefined : undefined,
       customerUuid: props.kind === "inspection" ? selectedCustomerUuid.value || undefined : undefined,
       planUuid: props.kind === "inspection" ? selectedPlanUuid.value || undefined : undefined,
       serviceName: props.kind === "inspection" ? serviceNameQuery.value || undefined : undefined,

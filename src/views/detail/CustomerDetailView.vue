@@ -603,7 +603,7 @@ const filteredRepairWorkOrders = computed(() => {
     return [row.orderNo, row.workOrderName, row.parkName, row.executor, row.remark].join(" ").toLowerCase().includes(query)
   })
 
-  return [...rows].sort((left, right) => compareDateStrings(left.createdStartAt, right.createdStartAt, repairWorkOrdersSortDirection.value, left.orderNo, right.orderNo))
+  return [...rows].sort((left, right) => compareDateStrings(left.createdAt, right.createdAt, repairWorkOrdersSortDirection.value, left.orderNo, right.orderNo))
 })
 const filteredMonitoringRows = computed(() => {
   const query = monitoringQuery.value.trim().toLowerCase()
@@ -1408,34 +1408,22 @@ const repairWorkOrdersSchema: TablePageSchema<CustomerWorkOrderRow> = {
       },
     },
     {
-      key: "createdStartAt",
-      label: "创建开始时间",
+      key: "createdAt",
+      label: "创建时间",
       filterType: "time",
       tone: "muted",
       format: "numeric",
       filter: {
         type: "date",
-        value: row => extractDatePart(row.createdStartAt),
-      },
-      sort: true,
-    },
-    {
-      key: "createdEndAt",
-      label: "创建结束时间",
-      filterType: "time",
-      tone: "muted",
-      format: "numeric",
-      filter: {
-        type: "date",
-        value: row => extractDatePart(row.createdEndAt),
+        value: row => extractDatePart(row.createdAt),
       },
       sort: true,
     },
   ],
   filters: [],
   sort: {
-    storageKey: "customer-detail-repair-work-orders-sort-preferences-created-start-at-v3",
-    initialField: "createdStartAt",
+    storageKey: "customer-detail-repair-work-orders-sort-preferences-created-at-v4",
+    initialField: "createdAt",
     initialDirection: "desc",
   },
   tabs: {
@@ -3683,10 +3671,8 @@ function mapRepairWorkOrderRow(item: RepairWorkOrderListItem, index: number): Cu
   const statusValue = toNullableNumber(item.Status)
   const importantValue = toNullableNumber(item.Important)
   const reportTypeValue = toNullableNumber(item.ReportType)
-  const createdStartAt = toDisplayText(item.CreatedStartAt, "-")
-  const createdEndAt = toDisplayText(item.CreatedEndAt, "-")
-  const createdAt = toDisplayText(item.CreatedAt, createdStartAt !== "-" ? createdStartAt : "-")
-  const updatedAt = toDisplayText(item.UpdatedAt, createdEndAt !== "-" ? createdEndAt : "-")
+  const createdAt = toDisplayText(item.CreatedAt, "-")
+  const updatedAt = toDisplayText(item.UpdatedAt, "-")
   const executors = normalizeExecutors(item.UserName)
 
   return {
@@ -3720,8 +3706,8 @@ function mapRepairWorkOrderRow(item: RepairWorkOrderListItem, index: number): Cu
     remark: toDisplayText(item.RepairContent || item.Content, "-"),
     createdAt,
     updatedAt,
-    createdStartAt,
-    createdEndAt,
+    createdStartAt: createdAt,
+    createdEndAt: "-",
   }
 }
 

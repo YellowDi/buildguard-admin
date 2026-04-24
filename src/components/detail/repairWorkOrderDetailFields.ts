@@ -32,8 +32,7 @@ export function buildRepairWorkOrderPrimarySections(
           valueClass: "leading-6",
         },
         { key: "status", label: "状态", value: formatRepairWorkOrderStatus(workOrder.Status) },
-        { key: "created-start-at", label: "创建开始时间", value: toText(workOrder.CreatedStartAt, "-") },
-        { key: "created-end-at", label: "创建结束时间", value: toText(workOrder.CreatedEndAt, "-") },
+        { key: "created-at", label: "创建时间", value: toText(workOrder.CreatedAt, "-") },
         { key: "user-name", label: "执行人", value: toText(workOrder.UserName, "-") },
       ],
     },
@@ -96,17 +95,13 @@ export function buildRepairWorkOrderSecondarySections(workOrder: RepairWorkOrder
         },
         {
           key: "before-repair-file",
-          label: "维修前图片",
-          value: workOrder.BeforeRepairFile ? null : "-",
-          imageUrl: toOptionalText(workOrder.BeforeRepairFile),
-          truncate: false,
+          label: "维修前附件",
+          value: formatFileCount(workOrder.BeforeRepairFile),
         },
         {
           key: "after-repair-file",
-          label: "维修后图片",
-          value: workOrder.AfterRepairFile ? null : "-",
-          imageUrl: toOptionalText(workOrder.AfterRepairFile),
-          truncate: false,
+          label: "维修后附件",
+          value: formatFileCount(workOrder.AfterRepairFile),
         },
       ],
     },
@@ -125,9 +120,12 @@ export function toText(value: unknown, fallback = "") {
   return fallback
 }
 
-function toOptionalText(value: unknown) {
-  const text = toText(value)
-  return text || null
+function formatFileCount(value: unknown) {
+  if (!Array.isArray(value) || value.length === 0) {
+    return "-"
+  }
+
+  return `${value.length} 个附件`
 }
 
 function toNumber(value: unknown) {
