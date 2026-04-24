@@ -50,7 +50,7 @@ function getEventTitleText(event: AppSidebarCalendarItem) {
           type="button"
           variant="ghost"
           size="icon"
-          class="size-8 shrink-0 text-muted-foreground"
+          class="right-sheet-icon-button shrink-0"
           aria-label="添加"
           @click="emit('add')"
         >
@@ -60,7 +60,7 @@ function getEventTitleText(event: AppSidebarCalendarItem) {
           type="button"
           variant="ghost"
           size="icon"
-          class="size-8 shrink-0 text-muted-foreground"
+          class="right-sheet-icon-button shrink-0"
           aria-label="关闭"
           @click="emit('close')"
         >

@@ -196,10 +196,6 @@ function handleBuildingDetailSheetOpenChange(open: boolean) {
   }
 }
 
-function handleBuildingDeleted() {
-  void loadParkDetail(parkUuid.value)
-}
-
 async function loadParkDetail(nextParkUuid: string) {
   const requestId = ++latestRequestId
 
@@ -373,6 +369,5 @@ function buildContactValue(name: string | null, phone?: string | null): DetailCo
     :park-uuid="parkUuid"
     :customer-uuid="linkedCustomerUuid || undefined"
     @update:open="handleBuildingDetailSheetOpenChange"
-    @deleted="handleBuildingDeleted"
   />
 </template>

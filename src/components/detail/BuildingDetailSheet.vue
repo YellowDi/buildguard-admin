@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue"
 import { useRouter } from "vue-router"
-import { toast } from "vue-sonner"
 
 import { buildBuildingDetailSections, toText } from "@/components/detail/buildingDetailFields"
 import DetailFieldSections from "@/components/detail/DetailFieldSections.vue"
@@ -9,21 +8,11 @@ import DetailFieldsSkeleton from "@/components/loading/DetailFieldsSkeleton.vue"
 import MapLocationDialog from "@/components/map/MapLocationDialog.vue"
 import type { DetailFieldSection } from "@/components/detail/types"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { ResponsiveRightSheet } from "@/components/ui/sheet"
 import { TooltipWrap } from "@/components/ui/tooltip"
 import { handleApiError } from "@/lib/api-errors"
-import { deleteBuilding, fetchBuildings, type BuildingListItem } from "@/lib/buildings-api"
+import { fetchBuildings, type BuildingListItem } from "@/lib/buildings-api"
 import { resolveParkCustomerMap } from "@/lib/park-customer-cache"
 
 const props = defineProps<{
@@ -35,15 +24,12 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   "update:open": [value: boolean]
-  deleted: []
 }>()
 
 const router = useRouter()
 const building = ref<BuildingListItem | null>(null)
 const loading = ref(false)
 const errorMessage = ref("")
-const deleteConfirmOpen = ref(false)
-const deleteSubmitting = ref(false)
 const mapDialogOpen = ref(false)
 const resolvedCustomerUuid = ref("")
 const resolvedCustomerName = ref("")
@@ -57,7 +43,6 @@ const fieldSections = computed<DetailFieldSection[]>(() => {
   })
 })
 
-const deleteTargetName = computed(() => toText(building.value?.Name, "当前建筑"))
 const relatedCustomerUuid = computed(() => props.customerUuid || resolvedCustomerUuid.value)
 const relatedCustomerName = computed(() => {
   return toText(building.value?.CorpName || building.value?.CustomerName, "")
@@ -186,42 +171,10 @@ async function loadBuildingDetail(buildingUuid: string, parkUuid: string) {
   }
 }
 
-function promptDeleteBuilding() {
-  if (!props.buildingUuid || deleteSubmitting.value) {
-    return
-  }
-
-  deleteConfirmOpen.value = true
-}
-
-async function confirmDeleteBuilding() {
-  if (!props.buildingUuid || deleteSubmitting.value) {
-    return
-  }
-
-  deleteSubmitting.value = true
-
-  try {
-    await deleteBuilding({ Uuid: props.buildingUuid })
-    deleteConfirmOpen.value = false
-    toast.success("建筑已删除")
-    handleOpenChange(false)
-    emit("deleted")
-  } catch (error) {
-    handleApiError(error, {
-      fallback: "建筑删除失败，请稍后重试。",
-    })
-  } finally {
-    deleteSubmitting.value = false
-  }
-}
-
 function resetState() {
   loading.value = false
   errorMessage.value = ""
   building.value = null
-  deleteConfirmOpen.value = false
-  deleteSubmitting.value = false
   mapDialogOpen.value = false
   resolvedCustomerUuid.value = ""
   resolvedCustomerName.value = ""
@@ -237,17 +190,17 @@ function resetState() {
     @footer-primary="goToBuildingFullDetail"
   >
     <template #actions>
-      <div class="flex items-center justify-between gap-3">
-        <div class="flex items-center gap-1">
+      <div class="right-sheet-actions">
+        <div class="right-sheet-actions__primary">
           <TooltipWrap content="关闭建筑详情" side="right">
             <Button
               type="button"
               variant="ghost"
               size="icon-sm"
-              class="h-8 w-8 rounded-md text-muted-foreground hover:text-foreground"
+              class="right-sheet-icon-button"
               @click="handleOpenChange(false)"
             >
-              <i class="ri-arrow-right-double-line text-[16px]" />
+              <i class="ri-close-line text-base" />
               <span class="sr-only">关闭建筑详情</span>
             </Button>
           </TooltipWrap>
@@ -256,31 +209,22 @@ function resetState() {
               type="button"
               variant="ghost"
               size="icon-sm"
-              class="h-8 w-8 rounded-md text-muted-foreground hover:text-foreground"
+              class="right-sheet-icon-button"
               @click="goToBuildingFullDetail"
             >
-              <i class="ri-fullscreen-line text-[16px]" />
+              <i class="ri-fullscreen-line text-base" />
               <span class="sr-only">打开完整建筑详情页</span>
             </Button>
           </TooltipWrap>
         </div>
-        <div class="flex items-center gap-2">
+        <div class="right-sheet-actions__secondary">
           <Button
-            variant="outline"
+            variant="ghost"
             size="sm"
-            class="h-8 rounded-md text-destructive hover:bg-destructive/5 hover:text-destructive"
-            :disabled="deleteSubmitting"
-            @click="promptDeleteBuilding"
-          >
-            {{ deleteSubmitting ? "删除中..." : "删除建筑" }}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            class="h-8 rounded-md"
-            :disabled="deleteSubmitting"
+            class="right-sheet-text-button"
             @click="goToBuildingEdit"
           >
+            <i class="ri-edit-line text-base" />
             编辑建筑信息
           </Button>
         </div>
@@ -307,27 +251,4 @@ function resetState() {
     :latitude="building?.Latitude ?? ''"
     :longitude="building?.Longitude ?? ''"
   />
-
-  <AlertDialog :open="deleteConfirmOpen" @update:open="deleteConfirmOpen = $event">
-    <AlertDialogContent>
-      <AlertDialogHeader>
-        <AlertDialogTitle>确认删除建筑？</AlertDialogTitle>
-        <AlertDialogDescription>
-          将删除“{{ deleteTargetName }}”，该操作不可撤销，确认后将立即提交删除请求。
-        </AlertDialogDescription>
-      </AlertDialogHeader>
-      <AlertDialogFooter>
-        <AlertDialogCancel :disabled="deleteSubmitting" class="">
-          取消
-        </AlertDialogCancel>
-        <AlertDialogAction
-          class="bg-destructive text-destructive-foreground hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60"
-          :disabled="deleteSubmitting"
-          @click="confirmDeleteBuilding"
-        >
-          {{ deleteSubmitting ? "删除中..." : "确认删除" }}
-        </AlertDialogAction>
-      </AlertDialogFooter>
-    </AlertDialogContent>
-  </AlertDialog>
 </template>

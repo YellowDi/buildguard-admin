@@ -2303,22 +2303,26 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
       @footer-primary="saveBuildingEditor"
     >
       <template #actions>
-        <div class="flex items-center justify-between gap-3">
-          <TooltipWrap content="关闭建筑检测项编辑" side="right">
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-sm"
-              class="h-8 w-8 rounded-md text-muted-foreground hover:text-foreground"
-              @click="closeBuildingEditor"
-            >
-              <i class="ri-arrow-right-double-line text-[16px]" />
-              <span class="sr-only">关闭建筑检测项编辑</span>
+        <div class="right-sheet-actions">
+          <div class="right-sheet-actions__primary">
+            <TooltipWrap content="关闭建筑检测项编辑" side="right">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                class="right-sheet-icon-button"
+                @click="closeBuildingEditor"
+              >
+                <i class="ri-close-line text-base" />
+                <span class="sr-only">关闭建筑检测项编辑</span>
+              </Button>
+            </TooltipWrap>
+          </div>
+          <div class="right-sheet-actions__secondary">
+            <Button size="sm" type="button" class="h-8 rounded-md px-2.5" @click="saveBuildingEditor">
+              保存当前建筑配置
             </Button>
-          </TooltipWrap>
-          <Button size="sm" type="button" @click="saveBuildingEditor">
-            保存当前建筑配置
-          </Button>
+          </div>
         </div>
       </template>
       <template #title>{{ currentBuildingEditorTitle }}</template>

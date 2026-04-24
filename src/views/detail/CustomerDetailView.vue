@@ -89,7 +89,7 @@ import {
   type WorkOrderListItem,
 } from "@/lib/work-orders-api"
 import customersData from "@/mocks/customers.json"
-import { deletePark, fetchParkDetail, fetchParks, type ParkDetailResult, type ParkListItem } from "@/lib/parks-api"
+import { fetchParkDetail, fetchParks, type ParkDetailResult, type ParkListItem } from "@/lib/parks-api"
 
 type BuildingRow = {
   key: string
@@ -292,8 +292,6 @@ const subAccountsSortDirection = ref<"asc" | "desc">("asc")
 const parkDetailSheetOpen = ref(false)
 const parkDetailLoading = ref(false)
 const parkDetailErrorMessage = ref("")
-const parkDeleteConfirmOpen = ref(false)
-const parkDeleteSubmitting = ref(false)
 const parkMapDialogOpen = ref(false)
 const activeParkDetail = ref<ParkDetailResult | null>(null)
 const workOrderDetailSheetOpen = ref(false)
@@ -2574,8 +2572,6 @@ function handleParkDetailSheetOpenChange(open: boolean) {
   if (!open) {
     parkDetailLoading.value = false
     parkDetailErrorMessage.value = ""
-    parkDeleteConfirmOpen.value = false
-    parkDeleteSubmitting.value = false
     activeParkDetail.value = null
   }
 }
@@ -2700,46 +2696,6 @@ function goToWorkOrderFullDetail() {
   })
 }
 
-function promptDeletePark() {
-  if (!activeParkDetail.value?.Uuid || parkDeleteSubmitting.value) {
-    return
-  }
-
-  parkDeleteConfirmOpen.value = true
-}
-
-async function confirmDeletePark() {
-  const parkUuid = activeParkDetail.value?.Uuid
-
-  if (!parkUuid || parkDeleteSubmitting.value) {
-    return
-  }
-
-  parkDeleteSubmitting.value = true
-
-  try {
-    await deletePark({ Uuid: parkUuid })
-    parkDeleteConfirmOpen.value = false
-    parkDetailSheetOpen.value = false
-    parkDetailLoading.value = false
-    parkDetailErrorMessage.value = ""
-    activeParkDetail.value = null
-    toast.success("园区已删除")
-
-    if (customerUuid.value) {
-      void loadBuildingAssets(customerUuid.value)
-      void loadParkBuildings(customerUuid.value)
-    }
-  } catch (error) {
-    handleApiError(error, {
-      title: "园区删除失败",
-      fallback: "园区删除失败，请稍后重试。",
-    })
-  } finally {
-    parkDeleteSubmitting.value = false
-  }
-}
-
 function getGroupParkUuid(group: unknown) {
   if (group && typeof group === "object" && "parkUuid" in group) {
     const value = (group as { parkUuid?: unknown }).parkUuid
@@ -2806,15 +2762,6 @@ function handleBuildingDetailSheetOpenChange(open: boolean) {
     activeBuildingUuid.value = ""
     activeBuildingParkUuid.value = ""
   }
-}
-
-function handleBuildingDeleted() {
-  if (!customerUuid.value) {
-    return
-  }
-
-  void loadBuildingAssets(customerUuid.value)
-  void loadParkBuildings(customerUuid.value)
 }
 
 async function loadCustomerDetail(uuid: string) {
@@ -4798,17 +4745,17 @@ function toDisplayText(value: unknown, fallback = "未填写") {
     @footer-primary="goToWorkOrderFullDetail"
   >
     <template #actions>
-      <div class="flex items-center justify-between gap-3">
-        <div class="flex items-center gap-1">
+      <div class="right-sheet-actions">
+        <div class="right-sheet-actions__primary">
           <TooltipWrap content="关闭工单详情" side="right">
             <Button
               type="button"
               variant="ghost"
               size="icon-sm"
-              class="h-8 w-8 rounded-md text-muted-foreground hover:text-foreground"
+              class="right-sheet-icon-button"
               @click="handleWorkOrderDetailSheetOpenChange(false)"
             >
-              <i class="ri-arrow-right-double-line text-[16px]" />
+              <i class="ri-close-line text-base" />
               <span class="sr-only">关闭工单详情</span>
             </Button>
           </TooltipWrap>
@@ -4820,14 +4767,15 @@ function toDisplayText(value: unknown, fallback = "未填写") {
               type="button"
               variant="ghost"
               size="icon-sm"
-              class="h-8 w-8 rounded-md text-muted-foreground hover:text-foreground"
+              class="right-sheet-icon-button"
               @click="goToWorkOrderFullDetail"
             >
-              <i class="ri-fullscreen-line text-[16px]" />
+              <i class="ri-fullscreen-line text-base" />
               <span class="sr-only">打开完整工单详情页</span>
             </Button>
           </TooltipWrap>
         </div>
+        <div class="right-sheet-actions__secondary" />
       </div>
     </template>
     <template #title>{{ workOrderDetailSheetTitle }}</template>
@@ -4861,17 +4809,17 @@ function toDisplayText(value: unknown, fallback = "未填写") {
     @footer-primary="handleParkDetailSheetFooterPrimary"
   >
     <template #actions>
-      <div class="flex items-center justify-between gap-3">
-        <div class="flex items-center gap-1">
+      <div class="right-sheet-actions">
+        <div class="right-sheet-actions__primary">
           <TooltipWrap content="关闭园区详情" side="right">
             <Button
               type="button"
               variant="ghost"
               size="icon-sm"
-              class="h-8 w-8 rounded-md text-muted-foreground hover:text-foreground"
+              class="right-sheet-icon-button"
               @click="handleParkDetailSheetOpenChange(false)"
             >
-              <i class="ri-arrow-right-double-line text-[16px]" />
+              <i class="ri-close-line text-base" />
               <span class="sr-only">关闭园区详情</span>
             </Button>
           </TooltipWrap>
@@ -4880,32 +4828,19 @@ function toDisplayText(value: unknown, fallback = "未填写") {
               type="button"
               variant="ghost"
               size="icon-sm"
-              class="h-8 w-8 rounded-md text-muted-foreground hover:text-foreground"
+              class="right-sheet-icon-button"
               @click="goToParkFullDetail(activeParkDetail.Uuid, activeParkDetail.CustomerUuid || customer?.Uuid || '')"
             >
-              <i class="ri-fullscreen-line text-[16px]" />
+              <i class="ri-fullscreen-line text-base" />
               <span class="sr-only">打开完整园区详情页</span>
             </Button>
           </TooltipWrap>
         </div>
-        <div v-if="activeParkDetail?.Uuid" class="flex items-center gap-2">
+        <div v-if="activeParkDetail?.Uuid" class="right-sheet-actions__secondary">
           <Button
-            variant="outline"
+            variant="ghost"
             size="sm"
-            class="h-8 gap-1 rounded-md text-destructive hover:bg-destructive/5 hover:text-destructive"
-            :disabled="parkDeleteSubmitting"
-            @click="promptDeletePark"
-          >
-            <i
-              :class="parkDeleteSubmitting ? 'ri-loader-4-line animate-spin text-base' : 'ri-delete-bin-line text-base'"
-            />
-            {{ parkDeleteSubmitting ? "删除中..." : "删除园区" }}
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            class="h-8 gap-1 rounded-md"
-            :disabled="parkDeleteSubmitting"
+            class="right-sheet-text-button"
             @click="goToParkEdit(activeParkDetail.Uuid, activeParkDetail.CustomerUuid || customer?.Uuid || '')"
           >
             <i class="ri-edit-line text-base" />
@@ -4940,36 +4875,12 @@ function toDisplayText(value: unknown, fallback = "未填写") {
     :longitude="activeParkDetail?.Longitude ?? ''"
   />
 
-  <AlertDialog :open="parkDeleteConfirmOpen" @update:open="parkDeleteConfirmOpen = $event">
-    <AlertDialogContent>
-      <AlertDialogHeader>
-        <AlertDialogTitle>确认删除园区？</AlertDialogTitle>
-        <AlertDialogDescription>
-          将删除“{{ toDisplayText(activeParkDetail?.Name, "当前园区") }}”，该操作不可撤销，确认后将立即提交删除请求。
-        </AlertDialogDescription>
-      </AlertDialogHeader>
-      <AlertDialogFooter>
-        <AlertDialogCancel :disabled="parkDeleteSubmitting" class="">
-          取消
-        </AlertDialogCancel>
-        <AlertDialogAction
-          class="bg-destructive text-destructive-foreground hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:bg-destructive/60 dark:focus-visible:ring-destructive/40"
-          :disabled="parkDeleteSubmitting"
-          @click="confirmDeletePark"
-        >
-          {{ parkDeleteSubmitting ? "删除中..." : "确认删除" }}
-        </AlertDialogAction>
-      </AlertDialogFooter>
-    </AlertDialogContent>
-  </AlertDialog>
-
   <BuildingDetailSheet
     :open="buildingDetailSheetOpen"
     :building-uuid="activeBuildingUuid"
     :park-uuid="activeBuildingParkUuid"
     :customer-uuid="customerUuid"
     @update:open="handleBuildingDetailSheetOpenChange"
-    @deleted="handleBuildingDeleted"
   />
 
   <ExportTableDialog

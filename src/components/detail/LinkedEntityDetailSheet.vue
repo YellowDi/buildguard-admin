@@ -528,17 +528,17 @@ function getServiceRemainingDaysHint(value: unknown) {
     @footer-primary="openFullPage"
   >
     <template #actions>
-      <div class="flex items-center justify-between gap-3">
-        <div class="flex items-center gap-1">
+      <div class="right-sheet-actions">
+        <div class="right-sheet-actions__primary">
           <TooltipWrap content="关闭关联详情" side="right">
             <Button
               type="button"
               variant="ghost"
               size="icon-sm"
-              class="h-8 w-8 rounded-md text-muted-foreground hover:text-foreground"
+              class="right-sheet-icon-button"
               @click="handleOpenChange(false)"
             >
-              <i class="ri-arrow-right-double-line text-[16px]" />
+              <i class="ri-close-line text-base" />
               <span class="sr-only">关闭关联详情</span>
             </Button>
           </TooltipWrap>
@@ -547,14 +547,15 @@ function getServiceRemainingDaysHint(value: unknown) {
               type="button"
               variant="ghost"
               size="icon-sm"
-              class="h-8 w-8 rounded-md text-muted-foreground hover:text-foreground"
+              class="right-sheet-icon-button"
               @click="openFullPage"
             >
-              <i class="ri-fullscreen-line text-[16px]" />
+              <i class="ri-fullscreen-line text-base" />
               <span class="sr-only">打开完整详情页</span>
             </Button>
           </TooltipWrap>
         </div>
+        <div class="right-sheet-actions__secondary" />
       </div>
     </template>
     <template #title>{{ title }}</template>

@@ -1167,37 +1167,41 @@ function escapeHtml(value: string) {
       @update:open="sheetOpen = $event"
     >
       <template #actions>
-        <div class="flex items-center gap-2">
-          <Button
-            v-if="sheetMode === 'preview'"
-            variant="ghost"
-            size="sm"
-            class="rounded-md"
-            @click="editPreviewEntity"
-          >
-            <i class="ri-edit-line text-sm" />
-            <span>编辑</span>
-          </Button>
+        <div class="right-sheet-actions">
+          <div class="right-sheet-actions__primary">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              class="right-sheet-icon-button"
+              @click="closeSheet"
+            >
+              <i class="ri-close-line text-base" />
+              <span class="sr-only">关闭面板</span>
+            </Button>
+          </div>
 
-          <Button
-            v-else
-            size="sm"
-            class="rounded-md"
-            @click="saveCurrentForm"
-          >
-            <i class="ri-save-line text-sm" />
-            <span>{{ sheetMode === "create" ? "创建" : "保存" }}</span>
-          </Button>
+          <div class="right-sheet-actions__secondary">
+            <Button
+              v-if="sheetMode === 'preview'"
+              variant="ghost"
+              size="sm"
+              class="right-sheet-text-button"
+              @click="editPreviewEntity"
+            >
+              <i class="ri-edit-line text-sm" />
+              <span>编辑</span>
+            </Button>
 
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            class="rounded-md"
-            @click="closeSheet"
-          >
-            <i class="ri-close-line text-base" />
-            <span class="sr-only">关闭面板</span>
-          </Button>
+            <Button
+              v-else
+              size="sm"
+              class="h-8 rounded-md px-2.5"
+              @click="saveCurrentForm"
+            >
+              <i class="ri-save-line text-sm" />
+              <span>{{ sheetMode === "create" ? "创建" : "保存" }}</span>
+            </Button>
+          </div>
         </div>
       </template>
 

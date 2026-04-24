@@ -378,6 +378,27 @@
     box-shadow: var(--shadow-deep);
   }
 
+  .right-sheet-actions {
+    @apply flex w-full items-center justify-between gap-3;
+  }
+
+  .right-sheet-actions__primary,
+  .right-sheet-actions__secondary {
+    @apply flex min-w-0 items-center gap-1;
+  }
+
+  .right-sheet-actions__secondary {
+    @apply justify-end;
+  }
+
+  .right-sheet-icon-button {
+    @apply h-8 w-8 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground;
+  }
+
+  .right-sheet-text-button {
+    @apply h-8 rounded-md px-2.5 text-muted-foreground hover:bg-accent hover:text-foreground;
+  }
+
   .sheet-panel-right[data-state="open"] {
     animation: sheet-panel-right-in 360ms cubic-bezier(0.16, 1, 0.3, 1) both;
   }

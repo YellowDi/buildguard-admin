@@ -90,16 +90,21 @@ function toText(value: unknown, fallback = "") {
     @update:open="handleOpenChange"
   >
     <template #actions>
-      <Button
-        type="button"
-        variant="ghost"
-        size="icon-sm"
-        class="h-8 w-8 rounded-md text-muted-foreground hover:text-foreground"
-        @click="handleOpenChange(false)"
-      >
-        <i class="ri-arrow-right-double-line text-[16px]" />
-        <span class="sr-only">关闭维修过程</span>
-      </Button>
+      <div class="right-sheet-actions">
+        <div class="right-sheet-actions__primary">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            class="right-sheet-icon-button"
+            @click="handleOpenChange(false)"
+          >
+            <i class="ri-close-line text-base" />
+            <span class="sr-only">关闭维修过程</span>
+          </Button>
+        </div>
+        <div class="right-sheet-actions__secondary" />
+      </div>
     </template>
 
     <template #title>
