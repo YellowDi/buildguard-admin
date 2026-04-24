@@ -13,6 +13,7 @@ import { ResponsiveRightSheet } from "@/components/ui/sheet"
 import { TooltipWrap } from "@/components/ui/tooltip"
 import { handleApiError } from "@/lib/api-errors"
 import { fetchCustomerDetail, type CustomerDetailResult } from "@/lib/customers-api"
+import { fetchRepairWorkOrderDictionaries, type RepairDictionaryOption } from "@/lib/repair-work-order-dictionaries"
 import {
   fetchRepairWorkOrderDetail,
   fetchWorkOrderDetail,
@@ -39,6 +40,8 @@ const errorMessage = ref("")
 const inspectionWorkOrder = ref<WorkOrderDetailResult | null>(null)
 const repairWorkOrder = ref<RepairWorkOrderDetailResult | null>(null)
 const customer = ref<CustomerDetailResult | null>(null)
+const repairImportanceOptions = ref<RepairDictionaryOption[]>([])
+const repairTypeOptions = ref<RepairDictionaryOption[]>([])
 let latestRequestId = 0
 
 const title = computed(() => (
@@ -49,7 +52,12 @@ const title = computed(() => (
 
 const primarySections = computed<DetailFieldSection[]>(() => {
   return props.kind === "repair"
-    ? buildRepairWorkOrderPrimarySections(repairWorkOrder.value, customer.value)
+    ? buildRepairWorkOrderPrimarySections(repairWorkOrder.value, customer.value, {
+        dictionaries: {
+          importanceOptions: repairImportanceOptions.value,
+          typeOptions: repairTypeOptions.value,
+        },
+      })
     : buildWorkOrderPrimarySections(inspectionWorkOrder.value, customer.value)
 })
 
@@ -128,6 +136,10 @@ async function loadWorkOrderDetail(kind: WorkOrderPreviewKind, uuid: string, fal
   customer.value = null
 
   try {
+    if (kind === "repair") {
+      await ensureRepairDictionaries()
+    }
+
     const detail = kind === "repair"
       ? await fetchRepairWorkOrderDetail({ Uuid: uuid })
       : await fetchWorkOrderDetail({ Uuid: uuid })
@@ -191,6 +203,21 @@ function resetState() {
   inspectionWorkOrder.value = null
   repairWorkOrder.value = null
   customer.value = null
+}
+
+async function ensureRepairDictionaries() {
+  if (repairImportanceOptions.value.length || repairTypeOptions.value.length) {
+    return
+  }
+
+  try {
+    const dictionaries = await fetchRepairWorkOrderDictionaries()
+    repairImportanceOptions.value = dictionaries.importanceOptions
+    repairTypeOptions.value = dictionaries.typeOptions
+  } catch {
+    repairImportanceOptions.value = []
+    repairTypeOptions.value = []
+  }
 }
 </script>
 

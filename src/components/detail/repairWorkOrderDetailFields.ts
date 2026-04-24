@@ -1,7 +1,13 @@
 import type { DetailContactValue, DetailFieldSection } from "@/components/detail/types"
 import type { CustomerDetailResult } from "@/lib/customers-api"
+import { formatRepairDictionaryLabel, type RepairDictionaryOption } from "@/lib/repair-work-order-dictionaries"
 import { getWorkOrderStatusLabel } from "@/lib/work-order-status"
 import type { RepairWorkOrderDetailResult } from "@/lib/work-orders-api"
+
+export type RepairWorkOrderDictionaryLabels = {
+  importanceOptions?: RepairDictionaryOption[]
+  typeOptions?: RepairDictionaryOption[]
+}
 
 export function buildRepairWorkOrderPrimarySections(
   workOrder: RepairWorkOrderDetailResult | null,
@@ -9,6 +15,7 @@ export function buildRepairWorkOrderPrimarySections(
   options?: {
     onOpenCustomer?: () => void
     onOpenPark?: () => void
+    dictionaries?: RepairWorkOrderDictionaryLabels
   },
 ): DetailFieldSection[] {
   if (!workOrder) {
@@ -22,8 +29,8 @@ export function buildRepairWorkOrderPrimarySections(
       rows: [
         { key: "order-no", label: "工单编号", value: toText(workOrder.OrderNo, "-") },
         { key: "title", label: "报修标题", value: toText(workOrder.Title, "-") },
-        { key: "report-type", label: "报修类型", value: formatRepairReportTypeLabel(workOrder.ReportType) },
-        { key: "important", label: "重要程度", value: formatRepairImportantLabel(workOrder.Important) },
+        { key: "report-type", label: "报修类型", value: formatRepairReportTypeLabel(workOrder.ReportType, options?.dictionaries?.typeOptions) },
+        { key: "important", label: "重要程度", value: formatRepairImportantLabel(workOrder.Important, options?.dictionaries?.importanceOptions) },
         {
           key: "content",
           label: "报修内容",
@@ -137,14 +144,12 @@ function formatRepairWorkOrderStatus(value: unknown) {
   return getWorkOrderStatusLabel(status, "-")
 }
 
-function formatRepairReportTypeLabel(value: unknown) {
-  const reportType = toNumber(value)
-  return reportType === null ? "-" : `类型 ${reportType}`
+function formatRepairReportTypeLabel(value: unknown, options: RepairDictionaryOption[] = []) {
+  return formatRepairDictionaryLabel(value, options, "类型")
 }
 
-function formatRepairImportantLabel(value: unknown) {
-  const important = toNumber(value)
-  return important === null ? "-" : `等级 ${important}`
+function formatRepairImportantLabel(value: unknown, options: RepairDictionaryOption[] = []) {
+  return formatRepairDictionaryLabel(value, options, "等级")
 }
 
 function buildContactValue(name: string, phone?: string | null): DetailContactValue {

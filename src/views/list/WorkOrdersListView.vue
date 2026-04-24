@@ -16,6 +16,7 @@ import { handleApiError } from "@/lib/api-errors"
 import { fetchCustomers } from "@/lib/customers-api"
 import { fetchInspectionPlans } from "@/lib/inspection-plans-api"
 import { fetchMembers } from "@/lib/members-api"
+import { fetchRepairWorkOrderDictionaries, formatRepairDictionaryLabel, type RepairDictionaryOption } from "@/lib/repair-work-order-dictionaries"
 import { getWorkOrderStatusLabel } from "@/lib/work-order-status"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
@@ -117,15 +118,13 @@ const customerOptions = ref<Array<{ value: string; label: string }>>([])
 const customerOptionsLoading = ref(false)
 const inspectionPlanOptions = ref<Array<{ value: string; label: string }>>([])
 const inspectionPlanOptionsLoading = ref(false)
+const repairImportanceOptions = ref<RepairDictionaryOption[]>([])
+const repairTypeOptions = ref<RepairDictionaryOption[]>([])
+const repairDictionariesLoading = ref(false)
 const inspectionResultOptions = [
   { value: "1", label: "正常" },
   { value: "2", label: "轻微风险" },
   { value: "3", label: "存在隐患" },
-]
-const repairImportantOptions = [
-  { value: "1", label: "等级 1" },
-  { value: "2", label: "等级 2" },
-  { value: "3", label: "等级 3" },
 ]
 const pageTitle = computed(() => props.kind === "inspection" ? "检测工单" : "报修工单")
 const pageEmptyStateTitle = computed(() => `暂无${pageTitle.value}数据`)
@@ -345,8 +344,9 @@ const queryBar = computed<TableQueryBarConfig>(() => ({
           label: "重要程度",
           icon: "ri-price-tag-3-line",
           value: selectedImportant.value,
-          options: repairImportantOptions,
-          placeholder: "请选择重要程度",
+          options: repairImportanceOptions.value,
+          loading: repairDictionariesLoading.value,
+          placeholder: repairDictionariesLoading.value ? "正在加载重要程度..." : "请选择重要程度",
           expandedWidth: 248,
           collapsedMaxWidth: 248,
         },
@@ -656,6 +656,10 @@ async function loadWorkOrders() {
   errorMessage.value = ""
 
   try {
+    if (props.kind === "repair") {
+      await ensureRepairDictionaries()
+    }
+
     const result = props.kind === "inspection"
       ? await fetchWorkOrders({
           OrderNo: orderNoQuery.value || undefined,
@@ -846,26 +850,18 @@ function formatScoreLabel(value: number | null, kind: WorkOrderPageKind) {
   }
 
   if (kind === "repair") {
-    return `等级 ${value}`
+    return formatRepairDictionaryLabel(value, repairImportanceOptions.value, "等级")
   }
 
   return String(value)
 }
 
 function formatImportantLabel(value: number | null) {
-  if (value === null) {
-    return "-"
-  }
-
-  return `等级 ${value}`
+  return formatRepairDictionaryLabel(value, repairImportanceOptions.value, "等级")
 }
 
 function formatReportTypeLabel(value: number | null) {
-  if (value === null) {
-    return "-"
-  }
-
-  return `类型 ${value}`
+  return formatRepairDictionaryLabel(value, repairTypeOptions.value, "类型")
 }
 
 function createInspectionColumns(): TablePageSchema<WorkOrderRecord>["columns"] {
@@ -1387,6 +1383,25 @@ async function loadInspectionPlanOptions() {
     inspectionPlanOptions.value = []
   } finally {
     inspectionPlanOptionsLoading.value = false
+  }
+}
+
+async function ensureRepairDictionaries() {
+  if (repairImportanceOptions.value.length || repairTypeOptions.value.length) {
+    return
+  }
+
+  repairDictionariesLoading.value = true
+
+  try {
+    const dictionaries = await fetchRepairWorkOrderDictionaries()
+    repairImportanceOptions.value = dictionaries.importanceOptions
+    repairTypeOptions.value = dictionaries.typeOptions
+  } catch {
+    repairImportanceOptions.value = []
+    repairTypeOptions.value = []
+  } finally {
+    repairDictionariesLoading.value = false
   }
 }
 </script>

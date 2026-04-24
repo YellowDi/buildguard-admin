@@ -66,6 +66,7 @@ import DetailLayout from "@/layouts/DetailLayout.vue"
 import { handleApiError } from "@/lib/api-errors"
 import { fetchMembers } from "@/lib/members-api"
 import { hasValidLatLng } from "@/lib/map-coordinates"
+import { fetchRepairWorkOrderDictionaries, formatRepairDictionaryLabel, type RepairDictionaryOption } from "@/lib/repair-work-order-dictionaries"
 import { getWorkOrderStatusLabel } from "@/lib/work-order-status"
 import { fetchBuildings, type BuildingListItem } from "@/lib/buildings-api"
 import {
@@ -278,6 +279,8 @@ const repairWorkOrdersTotal = ref(0)
 const repairWorkOrdersQuery = ref("")
 const repairWorkOrdersStatus = ref("")
 const repairWorkOrdersSortDirection = ref<"asc" | "desc">("desc")
+const repairImportanceOptions = ref<RepairDictionaryOption[]>([])
+const repairTypeOptions = ref<RepairDictionaryOption[]>([])
 const subAccounts = ref<SubAccountRow[]>([])
 const subAccountsLoading = ref(false)
 const subAccountsErrorMessage = ref("")
@@ -2959,6 +2962,8 @@ async function loadRepairWorkOrders(uuid: string) {
   repairWorkOrdersErrorMessage.value = ""
 
   try {
+    await ensureRepairDictionaries()
+
     const result = await fetchRepairWorkOrders({
       CustomerUuid: uuid,
       PageNum: repairWorkOrdersPageNum.value,
@@ -3111,6 +3116,8 @@ async function loadRepairOverviewRecords(uuid: string) {
   repairOverviewRecordsErrorMessage.value = ""
 
   try {
+    await ensureRepairDictionaries()
+
     const repairResult = await fetchRepairWorkOrders({
       CustomerUuid: uuid,
       PageNum: 1,
@@ -3663,19 +3670,26 @@ function formatRepairWorkOrderStatus(status: number | null) {
 }
 
 function formatRepairReportTypeLabel(value: number | null) {
-  if (value === null) {
-    return "-"
-  }
-
-  return `类型 ${value}`
+  return formatRepairDictionaryLabel(value, repairTypeOptions.value, "类型")
 }
 
 function formatRepairImportantLabel(value: number | null) {
-  if (value === null) {
-    return "-"
+  return formatRepairDictionaryLabel(value, repairImportanceOptions.value, "等级")
+}
+
+async function ensureRepairDictionaries() {
+  if (repairImportanceOptions.value.length || repairTypeOptions.value.length) {
+    return
   }
 
-  return `等级 ${value}`
+  try {
+    const dictionaries = await fetchRepairWorkOrderDictionaries()
+    repairImportanceOptions.value = dictionaries.importanceOptions
+    repairTypeOptions.value = dictionaries.typeOptions
+  } catch {
+    repairImportanceOptions.value = []
+    repairTypeOptions.value = []
+  }
 }
 
 function formatCustomerStatus(value: unknown) {

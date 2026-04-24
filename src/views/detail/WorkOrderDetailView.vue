@@ -27,6 +27,7 @@ import { fetchCustomerDetail, type CustomerDetailResult } from "@/lib/customers-
 import { getInspectionItemDetail, type InspectionItemRecord } from "@/lib/inspection-items-api"
 import { fetchInspectionPlanDetail, type InspectionPlanListItem } from "@/lib/inspection-plans-api"
 import { fetchMembers } from "@/lib/members-api"
+import { fetchRepairWorkOrderDictionaries, formatRepairDictionaryLabel, type RepairDictionaryOption } from "@/lib/repair-work-order-dictionaries"
 import { fetchInspectionServiceDetail, type InspectionServiceListItem } from "@/lib/inspection-services-api"
 import {
   dispatchWorkOrder,
@@ -89,6 +90,8 @@ const customer = ref<CustomerDetailResult | null>(null)
 const loading = ref(false)
 const errorMessage = ref("")
 const inspectionItemDetailByUuid = ref<Record<string, InspectionItemRecord>>({})
+const repairImportanceOptions = ref<RepairDictionaryOption[]>([])
+const repairTypeOptions = ref<RepairDictionaryOption[]>([])
 let latestRequestId = 0
 let latestInspectionHistoryRequestId = 0
 
@@ -163,6 +166,10 @@ const primarySections = computed<DetailFieldSection[]>(() => {
     return buildRepairWorkOrderPrimarySections(repairWorkOrder.value, customer.value, {
       onOpenCustomer: openRepairCustomerDetail,
       onOpenPark: openRepairParkDetail,
+      dictionaries: {
+        importanceOptions: repairImportanceOptions.value,
+        typeOptions: repairTypeOptions.value,
+      },
     })
   }
 
@@ -374,6 +381,10 @@ async function loadWorkOrderDetail(uuid: string) {
   resetInspectionHistorySheet()
 
   try {
+    if (props.kind === "repair") {
+      await ensureRepairDictionaries()
+    }
+
     const result = props.kind === "repair"
       ? await fetchRepairWorkOrderDetail({ Uuid: uuid })
       : await fetchWorkOrderDetail({ Uuid: uuid })
@@ -1072,13 +1083,11 @@ function formatInspectionResultLabel(value: unknown) {
 }
 
 function formatRepairCardReportType(value: unknown) {
-  const reportType = toNumber(value)
-  return reportType === null ? "报修" : `类型 ${reportType}`
+  return formatRepairDictionaryLabel(value, repairTypeOptions.value, "类型")
 }
 
 function formatRepairCardImportant(value: unknown) {
-  const important = toNumber(value)
-  return important === null ? "-" : `等级 ${important}`
+  return formatRepairDictionaryLabel(value, repairImportanceOptions.value, "等级")
 }
 
 function formatRepairFileCount(workOrder: RepairWorkOrderDetailResult) {
@@ -1251,6 +1260,21 @@ async function loadAssignableUsers() {
     }))
   } finally {
     assignableUsersLoading.value = false
+  }
+}
+
+async function ensureRepairDictionaries() {
+  if (repairImportanceOptions.value.length || repairTypeOptions.value.length) {
+    return
+  }
+
+  try {
+    const dictionaries = await fetchRepairWorkOrderDictionaries()
+    repairImportanceOptions.value = dictionaries.importanceOptions
+    repairTypeOptions.value = dictionaries.typeOptions
+  } catch {
+    repairImportanceOptions.value = []
+    repairTypeOptions.value = []
   }
 }
 

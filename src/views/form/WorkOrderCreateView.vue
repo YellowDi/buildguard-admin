@@ -23,6 +23,7 @@ import { fetchCustomerDetail, fetchCustomers, type CustomerListItem } from "@/li
 import { fetchInspectionPlans, type InspectionPlanListItem } from "@/lib/inspection-plans-api"
 import { fetchInspectionServices, type InspectionServiceListItem } from "@/lib/inspection-services-api"
 import { fetchParks, type ParkListItem } from "@/lib/parks-api"
+import { fetchRepairWorkOrderDictionaries, type RepairDictionaryOption } from "@/lib/repair-work-order-dictionaries"
 import { createRepairWorkOrder, createWorkOrder, updateWorkOrder } from "@/lib/work-orders-api"
 
 type WorkOrderPageKind = "inspection" | "repair"
@@ -107,6 +108,9 @@ const customerOptions = ref<CustomerOption[]>([])
 const planOptions = ref<PlanOption[]>([])
 const serviceOptions = ref<ServiceOption[]>([])
 const parkOptions = ref<ParkOption[]>([])
+const repairImportanceOptions = ref<RepairDictionaryOption[]>([])
+const repairTypeOptions = ref<RepairDictionaryOption[]>([])
+const repairDictionariesLoading = ref(false)
 const anchorItems = ref<QuickNavItem[]>([])
 const activeNavId = ref("")
 const formSectionsRef = ref<HTMLElement | null>(null)
@@ -161,7 +165,8 @@ const canSubmit = computed(() => {
       && normalizeText(form.content)
       && !submitting.value
       && !customerLoading.value
-      && !relatedOptionsLoading.value,
+      && !relatedOptionsLoading.value
+      && !repairDictionariesLoading.value
     )
   }
 
@@ -502,6 +507,7 @@ async function loadFixedCustomerContext(customerUuid: string) {
     form.customerUuid = customerUuid
 
     if (isRepairKind.value) {
+      await ensureRepairDictionaries()
       await loadParksForCustomer(customerUuid)
       applyRepairPrefill()
     } else {
@@ -543,6 +549,9 @@ async function loadSelectableCustomerContext() {
     }
 
     relatedOptionsLoading.value = true
+    if (isRepairKind.value) {
+      await ensureRepairDictionaries()
+    }
     await loadRelatedOptionsForCustomer(form.customerUuid, true)
     initialFormState.value = { ...form }
   } finally {
@@ -658,6 +667,22 @@ function applyRepairPrefill(useRoutePrefill = false) {
     form.reportType = normalizeRouteField(queryReportType.value)
     form.important = normalizeRouteField(queryImportant.value)
     form.content = normalizeRouteField(queryContent.value)
+  }
+}
+
+async function ensureRepairDictionaries() {
+  if (repairImportanceOptions.value.length || repairTypeOptions.value.length) {
+    return
+  }
+
+  repairDictionariesLoading.value = true
+
+  try {
+    const dictionaries = await fetchRepairWorkOrderDictionaries()
+    repairImportanceOptions.value = dictionaries.importanceOptions
+    repairTypeOptions.value = dictionaries.typeOptions
+  } finally {
+    repairDictionariesLoading.value = false
   }
 }
 
@@ -1153,15 +1178,16 @@ watch(
               label="报修类型"
               label-for="work-order-report-type"
             >
-              <Input
-                id="work-order-report-type"
-                v-model="form.reportType"
-                required
-                inputmode="numeric"
-                placeholder="请输入报修类型编码"
-                class="w-full"
-                @focus="handleFocus('section-report-type')"
-              />
+              <Select v-model="form.reportType" :disabled="repairDictionariesLoading || !repairTypeOptions.length">
+                <SelectTrigger id="work-order-report-type" class="w-full" @focus="handleFocus('section-report-type')">
+                  <SelectValue :placeholder="repairDictionariesLoading ? '正在加载报修类型...' : repairTypeOptions.length ? '请选择报修类型' : '暂无可用报修类型'" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem v-for="option in repairTypeOptions" :key="option.value" :value="option.value">
+                    {{ option.label }}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
             </FormFieldSection>
 
             <FormFieldSection
@@ -1170,15 +1196,16 @@ watch(
               label="重要程度"
               label-for="work-order-important"
             >
-              <Input
-                id="work-order-important"
-                v-model="form.important"
-                required
-                inputmode="numeric"
-                placeholder="请输入重要程度编码"
-                class="w-full"
-                @focus="handleFocus('section-important')"
-              />
+              <Select v-model="form.important" :disabled="repairDictionariesLoading || !repairImportanceOptions.length">
+                <SelectTrigger id="work-order-important" class="w-full" @focus="handleFocus('section-important')">
+                  <SelectValue :placeholder="repairDictionariesLoading ? '正在加载重要程度...' : repairImportanceOptions.length ? '请选择重要程度' : '暂无可用重要程度'" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem v-for="option in repairImportanceOptions" :key="option.value" :value="option.value">
+                    {{ option.label }}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
             </FormFieldSection>
 
             <FormFieldSection
