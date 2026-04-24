@@ -677,6 +677,7 @@ function getRowClass(row: Record<string, unknown>, index: number) {
   const rowKey = getRowKey(row, index)
   return cn(
     tableTheme.row,
+    "table-row-enter",
     rowClickEnabled.value ? "cursor-pointer" : "",
     isRowSelected(row, index)
       ? "bg-selection hover:bg-selection"
@@ -684,6 +685,12 @@ function getRowClass(row: Record<string, unknown>, index: number) {
         ? "bg-surface-hover-subtle"
         : "",
   )
+}
+
+function getRowAnimationStyle(index: number) {
+  return {
+    "--table-row-enter-delay": `${Math.min(index, 10) * 28}ms`,
+  }
 }
 
 function getIndexLabelClass(row: Record<string, unknown>, index: number) {
@@ -1700,6 +1707,7 @@ onBeforeUnmount(() => {
                 v-else-if="hasDataRows"
                 :key="getRowKey(row, index)"
                 :class="getRowClass(row, index)"
+                :style="getRowAnimationStyle(index)"
                 @mousedown="handleRowMouseDown(row, index, $event)"
                 @click="handleRowClick(row, index, $event)"
                 @mouseenter="handleRowMouseEnter(getRowKey(row, index))"

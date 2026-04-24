@@ -704,6 +704,144 @@
     opacity: 0;
   }
 
+  .animate-text {
+    display: inline;
+  }
+
+  .animate-text--split {
+    white-space: inherit;
+  }
+
+  .animate-text--focus {
+    display: inline-grid;
+    vertical-align: baseline;
+  }
+
+  .animate-text__focus-layer {
+    grid-area: 1 / 1;
+    min-width: 0;
+  }
+
+  .animate-text__unit {
+    display: inline-block;
+    white-space: pre;
+  }
+
+  .animate-text__unit--soft-blur-in {
+    animation: animate-text-soft-blur-in 900ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: var(--animate-text-delay, 0ms);
+    will-change: opacity, transform, filter;
+  }
+
+  .animate-text__unit--spring-scale-in {
+    animation: animate-text-spring-scale-in 360ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    animation-delay: var(--animate-text-delay, 0ms);
+    transform-origin: center;
+    will-change: opacity, transform;
+  }
+
+  .animate-text__unit--fade-through {
+    animation: animate-text-fade-through 420ms cubic-bezier(0.2, 0, 0, 1) both;
+    animation-delay: var(--animate-text-delay, 0ms);
+    transform-origin: center;
+    will-change: opacity, transform, filter;
+  }
+
+  .animate-text-focus-enter-active {
+    transition:
+      opacity 760ms cubic-bezier(0.22, 1, 0.36, 1),
+      transform 760ms cubic-bezier(0.22, 1, 0.36, 1),
+      filter 760ms cubic-bezier(0.22, 1, 0.36, 1);
+    will-change: opacity, transform, filter;
+  }
+
+  .animate-text-focus-leave-active {
+    transition:
+      opacity 520ms cubic-bezier(0.64, 0, 0.78, 0),
+      transform 520ms cubic-bezier(0.64, 0, 0.78, 0),
+      filter 520ms cubic-bezier(0.64, 0, 0.78, 0);
+    will-change: opacity, transform, filter;
+  }
+
+  .animate-text-focus-enter-from {
+    opacity: 0;
+    filter: blur(14px);
+    transform: translate3d(0, 14px, 0) scale(1.01);
+  }
+
+  .animate-text-focus-leave-to {
+    opacity: 0;
+    filter: blur(10px);
+    transform: translate3d(0, -10px, 0) scale(1);
+  }
+
+  .animate-text-focus-enter-to,
+  .animate-text-focus-leave-from {
+    opacity: 1;
+    filter: blur(0);
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+
+  .table-row-enter {
+    animation: table-row-enter 360ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: var(--table-row-enter-delay, 0ms);
+    will-change: opacity, transform, filter;
+  }
+
+  @keyframes animate-text-soft-blur-in {
+    0% {
+      opacity: 0;
+      filter: blur(12px);
+      transform: translate3d(0, 16px, 0);
+    }
+
+    100% {
+      opacity: 1;
+      filter: blur(0);
+      transform: translate3d(0, 0, 0);
+    }
+  }
+
+  @keyframes animate-text-spring-scale-in {
+    0% {
+      opacity: 0;
+      transform: scale(0.7);
+    }
+
+    100% {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  @keyframes animate-text-fade-through {
+    0% {
+      opacity: 0;
+      filter: blur(2px);
+      transform: translate3d(0, 6px, 0) scale(0.99);
+    }
+
+    100% {
+      opacity: 1;
+      filter: blur(0);
+      transform: translate3d(0, 0, 0) scale(1);
+    }
+  }
+
+  @keyframes table-row-enter {
+    0% {
+      opacity: 0;
+      filter: blur(4px);
+      transform: translate3d(0, 8px, 0);
+    }
+
+    100% {
+      opacity: 1;
+      filter: blur(0);
+      transform: translate3d(0, 0, 0);
+    }
+  }
+
   /* Overrides component transition-* utilities in dark mode (design token). */
   .dark [data-slot="card"],
   .dark [data-slot="button"],
@@ -731,6 +869,28 @@
   .route-page-fade-enter-active,
   .route-page-fade-leave-active {
     transition: none !important;
+  }
+
+  .animate-text__unit,
+  .animate-text__unit--soft-blur-in,
+  .animate-text__unit--spring-scale-in,
+  .animate-text__unit--fade-through {
+    animation: none !important;
+    opacity: 1 !important;
+    filter: none !important;
+    transform: none !important;
+  }
+
+  .animate-text-focus-enter-active,
+  .animate-text-focus-leave-active {
+    transition: none !important;
+  }
+
+  .table-row-enter {
+    animation: none !important;
+    opacity: 1 !important;
+    filter: none !important;
+    transform: none !important;
   }
 
   .dialog-panel-float[data-state="open"],

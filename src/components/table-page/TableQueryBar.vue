@@ -3,6 +3,7 @@ import { DateFormatter, getLocalTimeZone, parseDate } from "@internationalized/d
 import type { AcceptableValue } from "reka-ui"
 import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch, type ComponentPublicInstance } from "vue"
 
+import AnimatedText from "@/components/animation/AnimatedText.vue"
 import type { TableQueryBarConfig, TableQueryControl, TableQueryDateControl, TableQuerySelectControl } from "@/components/table-page/types"
 import FilterChip from "@/components/table-page/TableFilterChip.vue"
 import { Button } from "@/components/ui/button"
@@ -436,7 +437,10 @@ function setDateTriggerRef(key: string, value: HTMLElement | null) {
           <InputGroupAddon class="pl-2.5 pr-2">
             <InputGroupText>
               <i :class="[control.icon, 'text-[15px]']" />
-              {{ control.label }}
+              <AnimatedText
+                :text="control.label"
+                effect="fade-through"
+              />
             </InputGroupText>
           </InputGroupAddon>
 
@@ -460,7 +464,12 @@ function setDateTriggerRef(key: string, value: HTMLElement | null) {
                   variant="ghost"
                   class="h-full w-full justify-start rounded-none border-0 bg-transparent px-2 pr-9 text-left font-normal shadow-none hover:bg-transparent"
                 >
-                  <span class="truncate">{{ getExpandedDateLabel(control) }}</span>
+                  <AnimatedText
+                    as="span"
+                    :text="getExpandedDateLabel(control)"
+                    effect="fade-through"
+                    class="truncate"
+                  />
                 </Button>
               </PopoverTrigger>
               <PopoverContent
@@ -493,7 +502,12 @@ function setDateTriggerRef(key: string, value: HTMLElement | null) {
                 :data-query-select-trigger="control.key"
                 class="h-full w-full rounded-none border-0 bg-transparent px-2 pr-9 shadow-none focus-visible:border-0 focus-visible:ring-0 data-[state=open]:border-0 data-[state=open]:ring-0"
               >
-                <span class="truncate text-left">{{ getExpandedSelectLabel(control) }}</span>
+                <AnimatedText
+                  as="span"
+                  :text="getExpandedSelectLabel(control)"
+                  effect="fade-through"
+                  class="truncate text-left"
+                />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem

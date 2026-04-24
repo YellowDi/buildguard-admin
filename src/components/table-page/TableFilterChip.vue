@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from "vue"
 
+import AnimatedText from "@/components/animation/AnimatedText.vue"
 import { cn } from "@/lib/utils"
 
 const props = withDefaults(defineProps<{
@@ -43,7 +44,11 @@ const classes = computed(() => {
 <template>
   <button type="button" :class="classes" :aria-pressed="selected">
     <i v-if="icon" :class="[icon, 'text-[15px]']" />
-    <span>{{ label }}</span>
+    <AnimatedText
+      as="span"
+      :text="label"
+      effect="fade-through"
+    />
     <i v-if="caret" class="ri-arrow-down-s-line text-sm text-muted-foreground" />
   </button>
 </template>
