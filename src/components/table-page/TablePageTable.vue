@@ -278,6 +278,9 @@ const scrollViewportStyle = computed(() => {
     height: shouldMaskNativeHorizontalScrollbar.value
       ? `calc(100% + ${NATIVE_HORIZONTAL_SCROLLBAR_MASK_SIZE}px)`
       : undefined,
+    paddingBottom: shouldMaskNativeHorizontalScrollbar.value
+      ? `${NATIVE_HORIZONTAL_SCROLLBAR_MASK_SIZE}px`
+      : undefined,
   }
 
   if (!props.fillAvailableHeight && !props.listLevelTable && (embeddedViewportExpandLeft.value > 0 || embeddedViewportExpandRight.value > 0)) {
