@@ -185,7 +185,7 @@ function resetState() {
 <template>
   <ResponsiveRightSheet
     :open="open"
-    sheet-content-class="overflow-hidden sm:max-w-xl"
+    sheet-content-class="flex min-h-0 flex-col overflow-hidden sm:max-w-xl"
     @update:open="handleOpenChange"
     @footer-primary="goToBuildingFullDetail"
   >
@@ -232,7 +232,7 @@ function resetState() {
     </template>
     <template #title>{{ toText(building?.Name, "建筑详情") }}</template>
 
-    <div class="overflow-y-auto">
+    <div class="min-h-0 flex-1 overflow-y-auto pb-6">
       <Alert v-if="errorMessage" variant="destructive" class="mb-4">
         <AlertTitle>建筑详情接口加载失败</AlertTitle>
         <AlertDescription>{{ errorMessage }}</AlertDescription>
@@ -240,7 +240,7 @@ function resetState() {
 
       <DetailFieldsSkeleton v-if="loading" :sections="1" :rows-per-section="11" />
 
-      <DetailFieldSections v-else-if="building" :sections="fieldSections" />
+      <DetailFieldSections v-else-if="building" :sections="fieldSections" use-title-block />
     </div>
   </ResponsiveRightSheet>
 

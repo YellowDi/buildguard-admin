@@ -1411,7 +1411,7 @@ function readFileAsDataUrl(file: File) {
   <ResponsiveRightSheet
     :open="inspectionItemDetailSheetOpen"
     :show-primary="false"
-    sheet-content-class="overflow-hidden sm:max-w-xl"
+    sheet-content-class="flex min-h-0 flex-col overflow-hidden sm:max-w-xl"
     @update:open="handleInspectionItemDetailSheetOpenChange"
   >
     <template #actions>
@@ -1438,7 +1438,7 @@ function readFileAsDataUrl(file: File) {
       {{ inspectionItemSheetDescription }}
     </template>
 
-    <div class="overflow-y-auto">
+    <div class="min-h-0 flex-1 overflow-y-auto pb-6">
       <Alert v-if="activeInspectionItemError" variant="destructive" class="mb-4">
         <AlertTitle>检测项详情加载失败</AlertTitle>
         <AlertDescription>{{ activeInspectionItemError }}</AlertDescription>

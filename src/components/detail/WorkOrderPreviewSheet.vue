@@ -67,6 +67,11 @@ const secondarySections = computed<DetailFieldSection[]>(() => {
     : buildWorkOrderSecondarySections(inspectionWorkOrder.value)
 })
 
+const detailSections = computed<DetailFieldSection[]>(() => [
+  ...primarySections.value,
+  ...secondarySections.value,
+])
+
 const hasDetail = computed(() => (
   props.kind === "repair"
     ? Boolean(repairWorkOrder.value?.Uuid)
@@ -224,7 +229,7 @@ async function ensureRepairDictionaries() {
 <template>
   <ResponsiveRightSheet
     :open="open"
-    sheet-content-class="overflow-hidden sm:max-w-xl"
+    sheet-content-class="flex min-h-0 flex-col overflow-hidden sm:max-w-xl"
     :show-primary="hasDetail"
     @update:open="handleOpenChange"
     @footer-primary="openFullPage"
@@ -262,7 +267,7 @@ async function ensureRepairDictionaries() {
     </template>
     <template #title>{{ title }}</template>
 
-    <div class="space-y-5 overflow-y-auto">
+    <div class="min-h-0 flex-1 overflow-y-auto pb-6">
       <Alert v-if="errorMessage" variant="destructive" class="mb-4">
         <AlertTitle>工单详情接口加载失败</AlertTitle>
         <AlertDescription>{{ errorMessage }}</AlertDescription>
@@ -274,8 +279,7 @@ async function ensureRepairDictionaries() {
       </div>
 
       <template v-else-if="hasDetail">
-        <DetailFieldSections :sections="primarySections" />
-        <DetailFieldSections v-if="secondarySections.length" :sections="secondarySections" />
+        <DetailFieldSections :sections="detailSections" use-title-block />
       </template>
     </div>
   </ResponsiveRightSheet>

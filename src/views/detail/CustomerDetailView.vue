@@ -4753,7 +4753,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
 
   <ResponsiveRightSheet
     :open="workOrderDetailSheetOpen"
-    sheet-content-class="overflow-hidden sm:max-w-xl"
+    sheet-content-class="flex min-h-0 flex-col overflow-hidden sm:max-w-xl"
     :show-primary="Boolean(activeWorkOrderDetailKind === 'repair' ? activeRepairWorkOrderDetail?.Uuid : activeInspectionWorkOrderDetail?.Uuid)"
     @update:open="handleWorkOrderDetailSheetOpenChange"
     @footer-primary="goToWorkOrderFullDetail"
@@ -4794,7 +4794,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
     </template>
     <template #title>{{ workOrderDetailSheetTitle }}</template>
 
-    <div class="space-y-5 overflow-y-auto">
+    <div class="min-h-0 flex-1 overflow-y-auto pb-6">
       <Alert v-if="workOrderDetailErrorMessage" variant="destructive" class="mb-4">
         <AlertTitle>工单详情接口加载失败</AlertTitle>
         <AlertDescription>{{ workOrderDetailErrorMessage }}</AlertDescription>
@@ -4809,15 +4809,14 @@ function toDisplayText(value: unknown, fallback = "未填写") {
       </div>
 
       <template v-else-if="activeWorkOrderDetailKind === 'repair' ? activeRepairWorkOrderDetail : activeInspectionWorkOrderDetail">
-        <DetailFieldSections :sections="workOrderDetailPrimarySections" />
-        <DetailFieldSections :sections="workOrderDetailSecondarySections" />
+        <DetailFieldSections :sections="[...workOrderDetailPrimarySections, ...workOrderDetailSecondarySections]" use-title-block />
       </template>
     </div>
   </ResponsiveRightSheet>
 
   <ResponsiveRightSheet
     :open="parkDetailSheetOpen"
-    sheet-content-class="overflow-hidden sm:max-w-xl"
+    sheet-content-class="flex min-h-0 flex-col overflow-hidden sm:max-w-xl"
     :show-primary="Boolean(activeParkDetail?.Uuid)"
     @update:open="handleParkDetailSheetOpenChange"
     @footer-primary="handleParkDetailSheetFooterPrimary"
@@ -4865,7 +4864,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
     </template>
     <template #title>{{ toDisplayText(activeParkDetail?.Name, "园区详情") }}</template>
 
-    <div class="overflow-y-auto">
+    <div class="min-h-0 flex-1 overflow-y-auto pb-6">
       <Alert v-if="parkDetailErrorMessage" variant="destructive" class="mb-4">
         <AlertTitle>园区详情接口加载失败</AlertTitle>
         <AlertDescription>{{ parkDetailErrorMessage }}</AlertDescription>
@@ -4877,7 +4876,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
         :rows-per-section="6"
       />
 
-      <DetailFieldSections v-else-if="activeParkDetail" :sections="parkDetailSheetSections" />
+      <DetailFieldSections v-else-if="activeParkDetail" :sections="parkDetailSheetSections" use-title-block />
     </div>
   </ResponsiveRightSheet>
 

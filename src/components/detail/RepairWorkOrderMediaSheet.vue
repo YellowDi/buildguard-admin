@@ -133,7 +133,7 @@ function toText(value: unknown, fallback = "") {
           title="维修过程附件"
           :sticky="true"
           sticky-top="var(--detail-layout-sticky-offset, 0px)"
-          class="detail-section-inset pt-4 pb-2"
+          class="detail-section-inset pt-4 pb-1"
         />
 
         <div v-if="mediaCount" class="detail-section-inset space-y-5">

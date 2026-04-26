@@ -522,7 +522,7 @@ function getServiceRemainingDaysHint(value: unknown) {
 <template>
   <ResponsiveRightSheet
     :open="props.open"
-    sheet-content-class="overflow-hidden sm:max-w-xl"
+    sheet-content-class="flex min-h-0 flex-col overflow-hidden sm:max-w-xl"
     :show-primary="!loading"
     @update:open="handleOpenChange"
     @footer-primary="openFullPage"
@@ -560,14 +560,14 @@ function getServiceRemainingDaysHint(value: unknown) {
     </template>
     <template #title>{{ title }}</template>
 
-    <div class="space-y-5 overflow-y-auto">
+    <div class="min-h-0 flex-1 overflow-y-auto pb-6">
       <Alert v-if="errorMessage" variant="destructive" class="mb-4">
         <AlertTitle>关联详情接口加载失败</AlertTitle>
         <AlertDescription>{{ errorMessage }}</AlertDescription>
       </Alert>
 
       <DetailFieldsSkeleton v-if="loading" :sections="1" :rows-per-section="5" />
-      <DetailFieldSections v-else-if="sections.length" :sections="sections" />
+      <DetailFieldSections v-else-if="sections.length" :sections="sections" use-title-block />
     </div>
   </ResponsiveRightSheet>
 </template>
