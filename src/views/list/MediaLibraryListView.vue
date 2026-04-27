@@ -26,6 +26,8 @@ import {
   type VideoItem,
   type VideoMediaViewKey,
 } from "@/lib/media-library-mock"
+import { getApiErrorMessage } from "@/lib/api-errors"
+import { uploadTencentCosFile } from "@/lib/tencent-cos-sdk"
 import { cn } from "@/lib/utils"
 
 type SheetMode = "preview" | "edit" | "create"
@@ -36,6 +38,8 @@ type MediaEditorForm = {
   title: string
   categoryId: string
   cover: string
+  sourceUrl: string
+  sourceFileName: string
   summary: string
   duration: string
   status: MediaStatus
@@ -109,7 +113,10 @@ const sheetOpen = ref(false)
 const sheetMode = ref<SheetMode>("preview")
 const sheetEntityKind = ref<SheetEntityKind>("video")
 const activeEntityId = ref("")
+const videoFileInputRef = ref<HTMLInputElement | null>(null)
+const uploadingVideoFile = ref(false)
 const formState = reactive<MediaEditorForm>(createEmptyForm("video"))
+const canUseVideoUploadTest = import.meta.env.DEV
 
 const normalizedSearch = computed(() => searchQuery.value.trim().toLowerCase())
 const currentViewTabs = computed(() => activeModule.value === "videos" ? videoViewTabs : articleViewTabs)
@@ -269,6 +276,7 @@ const videoPreviewSections = computed<DetailFieldSection[]>(() => {
       title: "",
       rows: [
         { key: "cover", label: "封面文案", value: activeVideo.value.cover || "—" },
+        { key: "sourceUrl", label: "视频文件", value: activeVideo.value.sourceFileName || activeVideo.value.sourceUrl || "—", truncate: false },
         { key: "category", label: "分类", value: getCategoryPathLabel("videos", activeVideo.value.categoryId) },
         { key: "status", label: "状态", value: getStatusLabel(activeVideo.value.status) },
         { key: "duration", label: "时长", value: activeVideo.value.duration || "—" },
@@ -400,6 +408,8 @@ function openEdit(kind: SheetEntityKind, id: string) {
       title: entity.title,
       categoryId: entity.categoryId,
       cover: entity.cover,
+      sourceUrl: entity.sourceUrl ?? "",
+      sourceFileName: entity.sourceFileName ?? "",
       duration: entity.duration,
       summary: entity.summary,
       status: entity.status,
@@ -463,6 +473,8 @@ function saveCurrentForm() {
       categoryId: formState.categoryId,
       title: formState.title.trim(),
       cover: formState.cover.trim() || formState.title.trim(),
+      sourceUrl: formState.sourceUrl.trim(),
+      sourceFileName: formState.sourceFileName.trim(),
       duration: formState.duration.trim() || "05:00",
       summary: formState.summary.trim(),
       status: formState.status,
@@ -502,6 +514,69 @@ function saveCurrentForm() {
   sheetMode.value = "preview"
   sheetEntityKind.value = "article"
   toast.success(created ? "文章已创建" : "文章已保存")
+}
+
+function triggerVideoFileSelect() {
+  if (uploadingVideoFile.value) {
+    return
+  }
+
+  videoFileInputRef.value?.click()
+}
+
+async function handleVideoFileChange(event: Event) {
+  const input = event.target as HTMLInputElement | null
+  const file = input?.files?.[0]
+
+  if (!file) {
+    return
+  }
+
+  try {
+    await uploadVideoFile(file)
+  } finally {
+    if (input) {
+      input.value = ""
+    }
+  }
+}
+
+async function uploadVideoTestFile() {
+  const fileName = `buildguard-cos-test-${Date.now()}.mp4`
+  const file = new File([
+    `buildguard cos upload test ${new Date().toISOString()}`,
+  ], fileName, {
+    type: "video/mp4",
+  })
+
+  await uploadVideoFile(file)
+}
+
+async function uploadVideoFile(file: File) {
+  uploadingVideoFile.value = true
+
+  try {
+    const result = await uploadTencentCosFile({
+      file,
+      key: `media-library/videos/${Date.now()}-${sanitizeObjectKeyFileName(file.name)}`,
+      contentType: file.type || undefined,
+    })
+
+    formState.sourceUrl = result.url
+    formState.sourceFileName = file.name
+
+    if (!formState.title.trim()) {
+      formState.title = stripFileExtension(file.name)
+    }
+
+    toast.success("视频已上传到腾讯云 COS")
+  } catch (error) {
+    toast.error("视频上传失败", {
+      description: getApiErrorMessage(error, "请稍后重试。"),
+    })
+  } finally {
+    uploadingVideoFile.value = false
+  }
 }
 
 function applyForm(next: MediaEditorForm) {
@@ -611,6 +686,8 @@ function createEmptyForm(kind: SheetEntityKind, overrides: Partial<MediaEditorFo
     title: "",
     categoryId: "",
     cover: "",
+    sourceUrl: "",
+    sourceFileName: "",
     summary: "",
     duration: "05:00",
     status: "draft",
@@ -620,6 +697,19 @@ function createEmptyForm(kind: SheetEntityKind, overrides: Partial<MediaEditorFo
     tagsText: "",
     ...overrides,
   }
+}
+
+function sanitizeObjectKeyFileName(value: string) {
+  const normalized = value.trim().replace(/[\\/:*?"<>|\s]+/g, "-").replace(/^-+|-+$/g, "")
+
+  return normalized || "media-file"
+}
+
+function stripFileExtension(value: string) {
+  const normalized = value.trim()
+  const lastDotIndex = normalized.lastIndexOf(".")
+
+  return lastDotIndex > 0 ? normalized.slice(0, lastDotIndex) : normalized
 }
 
 function upsertById<T extends { id: string }>(list: T[], next: T) {
@@ -1212,14 +1302,22 @@ function escapeHtml(value: string) {
               class="overflow-hidden border border-border/70 bg-background"
             >
               <div class="relative aspect-video bg-slate-950">
+                <video
+                  v-if="activeVideo.sourceUrl"
+                  class="absolute inset-0 h-full w-full object-cover"
+                  :src="activeVideo.sourceUrl"
+                  controls
+                  preload="metadata"
+                />
                 <img
+                  v-else
                   class="absolute inset-0 h-full w-full object-cover"
                   :src="videoPreviewAsset"
                   alt=""
                   aria-hidden="true"
                 />
-                <div class="absolute inset-0 bg-black/10" aria-hidden="true" />
-                <div class="absolute inset-0 flex items-center justify-center">
+                <div v-if="!activeVideo.sourceUrl" class="absolute inset-0 bg-black/10" aria-hidden="true" />
+                <div v-if="!activeVideo.sourceUrl" class="absolute inset-0 flex items-center justify-center">
                   <span class="flex size-11 items-center justify-center rounded-full bg-white/92 text-slate-900">
                     <i class="ri-play-fill translate-x-[1px] text-[22px] leading-none" />
                   </span>
@@ -1276,11 +1374,37 @@ function escapeHtml(value: string) {
                 <span class="text-sm font-medium text-foreground">视频文件</span>
                 <div class="border border-dashed border-border/80 px-4 py-5">
                   <div class="flex flex-wrap items-center gap-3">
-                    <Button type="button" variant="outline" class="rounded-md">
-                      <i class="ri-upload-2-line text-sm" />
-                      <span>上传视频</span>
+                    <input
+                      ref="videoFileInputRef"
+                      class="sr-only"
+                      type="file"
+                      accept="video/*"
+                      @change="handleVideoFileChange"
+                    >
+                    <Button
+                      type="button"
+                      variant="outline"
+                      class="rounded-md"
+                      :disabled="uploadingVideoFile"
+                      @click="triggerVideoFileSelect"
+                    >
+                      <i :class="uploadingVideoFile ? 'ri-loader-4-line animate-spin text-sm' : 'ri-upload-2-line text-sm'" />
+                      <span>{{ uploadingVideoFile ? "上传中..." : "上传视频" }}</span>
                     </Button>
-                    <span class="text-sm text-muted-foreground">暂未选择文件</span>
+                    <Button
+                      v-if="canUseVideoUploadTest"
+                      type="button"
+                      variant="ghost"
+                      class="rounded-md"
+                      :disabled="uploadingVideoFile"
+                      @click="uploadVideoTestFile"
+                    >
+                      <i class="ri-flask-line text-sm" />
+                      <span>测试上传</span>
+                    </Button>
+                    <span class="min-w-0 truncate text-sm text-muted-foreground">
+                      {{ formState.sourceFileName || formState.sourceUrl || "暂未选择文件" }}
+                    </span>
                   </div>
                 </div>
               </label>

@@ -4,6 +4,7 @@ import type { HTMLAttributes } from "vue"
 import { reactiveOmit } from "@vueuse/core"
 import { AlertDialogOverlay, useForwardProps } from "reka-ui"
 
+import { FLOATING_OVERLAY_STATE_ANIMATION_CLASS, FLOATING_OVERLAY_SURFACE_CLASS } from "@/components/ui/overlay"
 import { cn } from "@/lib/utils"
 
 defineOptions({
@@ -21,6 +22,6 @@ const forwarded = useForwardProps(delegatedProps)
 <template>
   <AlertDialogOverlay
     v-bind="{ ...forwarded, ...$attrs }"
-    :class="cn('fixed inset-0 z-50 bg-background/80 backdrop-blur-[3px] supports-backdrop-filter:bg-background/60 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0', props.class)"
+    :class="cn('fixed inset-0 z-50', FLOATING_OVERLAY_SURFACE_CLASS, FLOATING_OVERLAY_STATE_ANIMATION_CLASS, props.class)"
   />
 </template>

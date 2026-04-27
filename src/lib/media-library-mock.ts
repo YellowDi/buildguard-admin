@@ -41,6 +41,8 @@ export type VideoItem = {
   categoryId: string
   title: string
   cover: string
+  sourceUrl?: string
+  sourceFileName?: string
   duration: string
   summary: string
   status: MediaStatus

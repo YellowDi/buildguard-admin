@@ -25,6 +25,7 @@ export type FetchTencentCosStsOptions = {
 const TENCENT_COS_STS_API_URL = buildApiUrl(API_PATHS.tencentCosSts)
 const TENCENT_COS_STS_ERROR_MESSAGE = "腾讯云 COS 鉴权信息获取失败，请稍后重试。"
 const TENCENT_COS_STS_CACHE_LEEWAY_MS = 60 * 1000
+const TENCENT_COS_STS_METHODS = ["GET", "POST"] as const
 
 let cachedTencentCosSts: {
   expiresAt: number
@@ -36,17 +37,7 @@ export async function fetchTencentCosSts(options: FetchTencentCosStsOptions = {}
     return cachedTencentCosSts.value
   }
 
-  const response = await fetch(TENCENT_COS_STS_API_URL, {
-    method: "GET",
-    headers: buildApiHeaders(),
-  })
-  const responseBody = await readResponseBody(response)
-
-  if (!response.ok) {
-    throw createHttpError(response, responseBody, TENCENT_COS_STS_ERROR_MESSAGE)
-  }
-
-  assertApiSuccess(responseBody, TENCENT_COS_STS_ERROR_MESSAGE)
+  const responseBody = await requestTencentCosSts()
 
   const sts = normalizeTencentCosStsResponse(extractTencentCosStsRecord(responseBody))
 
@@ -58,6 +49,36 @@ export async function fetchTencentCosSts(options: FetchTencentCosStsOptions = {}
 
 export function clearTencentCosStsCache() {
   cachedTencentCosSts = null
+}
+
+async function requestTencentCosSts() {
+  let lastError: ApiError | Error | null = null
+
+  for (const method of TENCENT_COS_STS_METHODS) {
+    const response = await fetch(TENCENT_COS_STS_API_URL, {
+      method,
+      headers: buildApiHeaders(method === "POST" ? {
+        "Content-Type": "application/json",
+      } : undefined),
+      body: method === "POST" ? "{}" : undefined,
+    })
+    const responseBody = await readResponseBody(response)
+
+    if (!response.ok) {
+      lastError = createHttpError(response, responseBody, TENCENT_COS_STS_ERROR_MESSAGE)
+
+      if (response.status === 404 && method !== TENCENT_COS_STS_METHODS[TENCENT_COS_STS_METHODS.length - 1]) {
+        continue
+      }
+
+      throw lastError
+    }
+
+    assertApiSuccess(responseBody, TENCENT_COS_STS_ERROR_MESSAGE)
+    return responseBody
+  }
+
+  throw lastError ?? new ApiError(TENCENT_COS_STS_ERROR_MESSAGE)
 }
 
 function cacheTencentCosSts(value: TencentCosStsResponse) {

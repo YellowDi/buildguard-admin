@@ -11,6 +11,7 @@ import {
   useForwardPropsEmits,
 } from "reka-ui"
 import { TooltipWrap } from "@/components/ui/tooltip"
+import { FLOATING_OVERLAY_STATE_ANIMATION_CLASS, FLOATING_OVERLAY_SURFACE_CLASS } from "@/components/ui/overlay"
 import { preventDismissForMediaLightbox } from "@/lib/media-lightbox-dismiss"
 import { cn } from "@/lib/utils"
 
@@ -29,7 +30,11 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
 <template>
   <DialogPortal>
     <DialogOverlay
-      class="fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-background/80 backdrop-blur-[3px] supports-backdrop-filter:bg-background/60 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
+      :class="cn(
+        'fixed inset-0 z-50 grid place-items-center overflow-y-auto',
+        FLOATING_OVERLAY_SURFACE_CLASS,
+        FLOATING_OVERLAY_STATE_ANIMATION_CLASS,
+      )"
     >
       <DialogContent
         :class="

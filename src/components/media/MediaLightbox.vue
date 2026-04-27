@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, ref } from "vue"
+import { FLOATING_OVERLAY_SURFACE_CLASS } from "@/components/ui/overlay"
 
 export type MediaLightboxItem = {
   key: string
@@ -205,8 +206,8 @@ onBeforeUnmount(() => {
       @pointerdown.self.stop
     >
       <div
-        class="fixed inset-0 cursor-zoom-out bg-black/72 backdrop-blur-[2px] transition-[opacity] duration-200 ease-out"
-        :class="backdropVisible ? 'opacity-100' : 'opacity-0'"
+        class="fixed inset-0 cursor-zoom-out transition-[opacity] duration-200 ease-out"
+        :class="[FLOATING_OVERLAY_SURFACE_CLASS, backdropVisible ? 'opacity-100' : 'opacity-0']"
         @click.prevent.stop="close()"
         @pointerdown.stop
       />
