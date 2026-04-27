@@ -131,6 +131,8 @@
   --border: rgb(255 255 255 / 0.1);
   --input: rgb(255 255 255 / 0.12);
   --border-hover: rgb(255 255 255 / 0.16);
+  --form-control-hover-background: #252525;
+  --form-control-hover-foreground: #ffffff;
   --ring: #5aacf5;
   --focus-ring: #5aacf5;
   --theme-primary: #4da3f0;
