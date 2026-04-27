@@ -3,6 +3,7 @@ import type { DialogContentEmits, DialogContentProps } from "reka-ui"
 import type { HTMLAttributes } from "vue"
 import { useForwardPropsEmits } from "reka-ui"
 import { DrawerContent, DrawerPortal } from "vaul-vue"
+import { preventDismissForMediaLightbox } from "@/lib/media-lightbox-dismiss"
 import { cn } from "@/lib/utils"
 import DrawerOverlay from "./DrawerOverlay.vue"
 
@@ -23,6 +24,8 @@ const forwarded = useForwardPropsEmits(props, emits)
     <DrawerContent
       data-slot="drawer-content"
       v-bind="{ ...$attrs, ...forwarded }"
+      @pointer-down-outside="preventDismissForMediaLightbox"
+      @interact-outside="preventDismissForMediaLightbox"
       :class="cn(
         'bg-background shadow-[var(--shadow-card)] fixed z-50 flex h-auto flex-col',
         'data-[vaul-drawer-direction=top]:inset-x-0 data-[vaul-drawer-direction=top]:top-0 data-[vaul-drawer-direction=top]:mb-24 data-[vaul-drawer-direction=top]:max-h-[96vh] data-[vaul-drawer-direction=top]:rounded-b-lg',

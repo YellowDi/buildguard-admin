@@ -11,6 +11,7 @@ import {
   useForwardPropsEmits,
 } from "reka-ui"
 import { TooltipWrap } from "@/components/ui/tooltip"
+import { preventDismissForMediaLightbox } from "@/lib/media-lightbox-dismiss"
 import { cn } from "@/lib/utils"
 
 defineOptions({
@@ -39,12 +40,17 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
         "
         v-bind="{ ...$attrs, ...forwarded }"
         @pointer-down-outside="(event) => {
+          preventDismissForMediaLightbox(event);
+          if (event.defaultPrevented) {
+            return;
+          }
           const originalEvent = event.detail.originalEvent;
           const target = originalEvent.target as HTMLElement;
           if (originalEvent.offsetX > target.clientWidth || originalEvent.offsetY > target.clientHeight) {
             event.preventDefault();
           }
         }"
+        @interact-outside="preventDismissForMediaLightbox"
       >
         <slot />
 

@@ -11,6 +11,7 @@ import {
 } from "reka-ui"
 import { cn } from "@/lib/utils"
 import DialogOverlay from "./DialogOverlay.vue"
+import { preventDismissForMediaLightbox } from "@/lib/media-lightbox-dismiss"
 
 defineOptions({
   inheritAttrs: false,
@@ -38,6 +39,8 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
     <DialogContent
       data-slot="dialog-content"
       v-bind="{ ...$attrs, ...forwarded }"
+      @pointer-down-outside="preventDismissForMediaLightbox"
+      @interact-outside="preventDismissForMediaLightbox"
       :class="
         cn(
           'dialog-panel-float fixed top-[50%] left-[50%] grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-2xl bg-background p-4 shadow-(--shadow-card) outline-none focus:outline-none focus-visible:outline-none sm:max-w-lg',

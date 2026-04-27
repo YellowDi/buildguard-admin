@@ -8,6 +8,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
+import MediaLightbox from "@/components/media/MediaLightbox.vue"
 import { Separator } from "@/components/ui/separator"
 import { ResponsiveRightSheet } from "@/components/ui/sheet"
 import { StatusBadge } from "@/components/ui/status-badge"
@@ -277,30 +278,41 @@ function resolveEntryStatusBadgeIcon(entry: HistoryEntry) {
                       <p class="text-[12px] font-medium tracking-[0.125px] text-[#a39e98] dark:text-[#6b6763]">
                         现场附件
                       </p>
-                      <div
-                        class="mt-3 columns-1 gap-3 sm:columns-2"
-                      >
+                      <MediaLightbox v-slot="{ open: openMediaLightbox }">
                         <div
-                          v-for="image in entry.images"
-                          :key="image.key"
-                          class="border-overlay mb-3 break-inside-avoid overflow-hidden rounded-[12px] bg-[#f6f5f4] shadow-[0_4px_18px_rgba(0,0,0,0.04),0_2.025px_7.85px_rgba(0,0,0,0.027),0_0.8px_2.93px_rgba(0,0,0,0.02),0_0.175px_1.04px_rgba(0,0,0,0.01)] dark:bg-[#1e1e1e] dark:shadow-[0_4px_18px_rgba(0,0,0,0.2),0_2.025px_7.85px_rgba(0,0,0,0.15),0_0.8px_2.93px_rgba(0,0,0,0.1),0_0.175px_1.04px_rgba(0,0,0,0.08)]"
+                          class="mt-3 columns-1 gap-3 sm:columns-2"
                         >
-                          <video
-                            v-if="isVideoMedia(image)"
-                            :src="image.src"
-                            controls
-                            preload="metadata"
-                            playsinline
-                            class="block h-auto w-full bg-black"
-                          />
-                          <img
-                            v-else
-                            :src="image.src"
-                            :alt="image.alt ?? entry.title"
-                            class="block h-auto w-full"
+                          <button
+                            v-for="image in entry.images"
+                            :key="image.key"
+                            type="button"
+                            class="border-overlay group relative mb-3 block w-full break-inside-avoid overflow-hidden rounded-[12px] bg-[#f6f5f4] text-left shadow-[0_4px_18px_rgba(0,0,0,0.04),0_2.025px_7.85px_rgba(0,0,0,0.027),0_0.8px_2.93px_rgba(0,0,0,0.02),0_0.175px_1.04px_rgba(0,0,0,0.01)] transition-transform duration-180 ease-out hover:scale-[1.01] active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#097fe8]/50 dark:bg-[#1e1e1e] dark:shadow-[0_4px_18px_rgba(0,0,0,0.2),0_2.025px_7.85px_rgba(0,0,0,0.15),0_0.8px_2.93px_rgba(0,0,0,0.1),0_0.175px_1.04px_rgba(0,0,0,0.08)]"
+                            :aria-label="`预览${isVideoMedia(image) ? '视频' : '图片'}：${image.alt ?? entry.title}`"
+                            @click="openMediaLightbox(image, entry.title, $event)"
                           >
+                            <video
+                              v-if="isVideoMedia(image)"
+                              :src="image.src"
+                              preload="metadata"
+                              playsinline
+                              muted
+                              class="block h-auto w-full bg-black"
+                            />
+                            <img
+                              v-else
+                              :src="image.src"
+                              :alt="image.alt ?? entry.title"
+                              class="block h-auto w-full"
+                            >
+                            <span
+                              v-if="isVideoMedia(image)"
+                              class="pointer-events-none absolute left-1/2 top-1/2 flex h-11 w-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-white shadow-[0_10px_24px_rgba(0,0,0,0.22)] backdrop-blur-sm transition-[opacity,transform,filter] duration-200 ease-out group-hover:scale-105"
+                            >
+                              <i class="ri-play-fill translate-x-px text-[24px]" />
+                            </span>
+                          </button>
                         </div>
-                      </div>
+                      </MediaLightbox>
                     </div>
                   </div>
                 </AccordionContent>

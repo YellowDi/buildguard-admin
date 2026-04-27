@@ -9,6 +9,7 @@ import {
   useForwardPropsEmits,
 } from "reka-ui"
 import DialogOverlay from "@/components/ui/dialog/DialogOverlay.vue"
+import { preventDismissForMediaLightbox } from "@/lib/media-lightbox-dismiss"
 import { cn } from "@/lib/utils"
 import { sheetVariants } from "."
 
@@ -36,6 +37,8 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
     <DialogContent
       :class="cn(sheetVariants({ side }), props.class)"
       v-bind="{ ...forwarded, ...$attrs }"
+      @pointer-down-outside="preventDismissForMediaLightbox"
+      @interact-outside="preventDismissForMediaLightbox"
     >
       <slot />
     </DialogContent>
