@@ -67,7 +67,12 @@ import { handleApiError } from "@/lib/api-errors"
 import { fetchMembers } from "@/lib/members-api"
 import { hasValidLatLng } from "@/lib/map-coordinates"
 import { fetchRepairWorkOrderDictionaries, formatRepairDictionaryLabel, type RepairDictionaryOption } from "@/lib/repair-work-order-dictionaries"
-import { getWorkOrderStatusLabel } from "@/lib/work-order-status"
+import {
+  getRepairWorkOrderStatusLabel,
+  getWorkOrderStatusLabel,
+  REPAIR_WORK_ORDER_STATUS_OPTIONS,
+  WORK_ORDER_STATUS_OPTIONS,
+} from "@/lib/work-order-status"
 import { fetchBuildings, type BuildingListItem } from "@/lib/buildings-api"
 import {
   appendCustomerSubAccountLocalRecord,
@@ -79,6 +84,7 @@ import {
 } from "@/lib/customer-sub-accounts-api"
 import { deleteCustomer, fetchCustomerDetail, type CustomerDetailPerson, type CustomerDetailResult } from "@/lib/customers-api"
 import {
+  dispatchRepairWorkOrder,
   dispatchWorkOrder,
   fetchRepairWorkOrderDetail,
   fetchWorkOrderDetail,
@@ -166,13 +172,13 @@ type CustomerWorkOrderRow = {
   status: string
   statusValue: number | null
   statusLabel: string
-  importantValue: number | null
+  importantValue: string | null
   importantLabel: string
-  reportTypeValue: number | null
+  reportTypeValue: string | null
   reportTypeLabel: string
-  resultValue: number | null
+  resultValue: number | string | null
   resultLabel: string
-  score: number | null
+  score: number | string | null
   scoreLabel: string
   deadline: string
   remark: string
@@ -309,7 +315,6 @@ type AssignableUserOption = {
   name: string
 }
 const assignDialogOpen = ref(false)
-const assignUserUuid = ref("")
 const assignUserUuids = ref<string[]>([])
 const assignTargetWorkOrder = ref<CustomerWorkOrderRow | null>(null)
 const assignableUsers = ref<AssignableUserOption[]>([])
@@ -362,10 +367,6 @@ const isInspectionAssignDialog = computed(() => assignTargetWorkOrder.value?.wor
 const canSubmitAssign = computed(() => {
   if (assignSubmitting.value) {
     return false
-  }
-
-  if (!isInspectionAssignDialog.value) {
-    return Boolean(assignUserUuid.value)
   }
 
   return assignUserUuids.value.length > 0
@@ -622,10 +623,8 @@ const filteredSubAccounts = computed(() => {
 
   return [...rows].sort((left, right) => compareText(left.name, right.name, subAccountsSortDirection.value))
 })
-const workOrderStatusOptions = computed(() => Object.entries(workOrderStatusMap).map(([label], index) => ({
-  value: String(index + 1),
-  label,
-})))
+const workOrderStatusOptions = computed(() => WORK_ORDER_STATUS_OPTIONS)
+const repairWorkOrderStatusOptions = computed(() => REPAIR_WORK_ORDER_STATUS_OPTIONS)
 const buildingAssetsQueryBar = computed<TableQueryBarConfig>(() => ({
   controls: [
     {
@@ -687,7 +686,7 @@ const repairWorkOrdersQueryBar = computed<TableQueryBarConfig>(() => ({
       label: "工单状态",
       icon: "ri-price-tag-3-line",
       value: repairWorkOrdersStatus.value,
-      options: workOrderStatusOptions.value,
+      options: repairWorkOrderStatusOptions.value,
       placeholder: "请选择状态",
       expandedWidth: 248,
       collapsedMaxWidth: 248,
@@ -2166,7 +2165,6 @@ async function loadAssignableUsers() {
 }
 
 function resetAssignState() {
-  assignUserUuid.value = ""
   assignUserUuids.value = []
 }
 
@@ -2187,25 +2185,20 @@ async function submitCustomerWorkOrderAssign() {
   assignSubmitting.value = true
 
   try {
-    if (currentTarget.workOrderKind === "inspection") {
-      if (!assignUserUuids.value.length) {
-        toast.error("请先选择至少一位指派人员")
-        return
-      }
+    if (!assignUserUuids.value.length) {
+      toast.error("请先选择至少一位指派人员")
+      return
+    }
 
+    if (currentTarget.workOrderKind === "inspection") {
       await dispatchWorkOrder({
         Uuid: currentTarget.uuid,
         UserUuids: assignUserUuids.value,
       })
     } else {
-      if (!assignUserUuid.value) {
-        toast.error("请先选择指派用户")
-        return
-      }
-
-      await dispatchWorkOrder({
-        Uuid: currentTarget.uuid,
-        UserUuid: assignUserUuid.value,
+      await dispatchRepairWorkOrder({
+        Uuids: [currentTarget.uuid],
+        UserUuids: assignUserUuids.value,
       })
     }
 
@@ -3509,7 +3502,7 @@ function formatWorkOrderResult(result: number | null) {
   }
 }
 
-function formatWorkOrderScore(score: number | null) {
+function formatWorkOrderScore(score: number | string | null) {
   if (score === null) {
     return "-"
   }
@@ -3623,8 +3616,10 @@ function mapRepairWorkOrderRow(item: RepairWorkOrderListItem, index: number): Cu
   const uuid = toDisplayText(item.Uuid, toDisplayText(item.Id, `repair-${index + 1}`))
   const fallbackId = toDisplayText(item.Id, `repair-${index + 1}`)
   const statusValue = toNullableNumber(item.Status)
-  const importantValue = toNullableNumber(item.Important)
-  const reportTypeValue = toNullableNumber(item.ReportType)
+  const importantValue = toNullableDictionaryValue(item.Important)
+  const reportTypeValue = toNullableDictionaryValue(item.ReportType)
+  const importantLabel = formatRepairImportantLabel(importantValue)
+  const reportTypeLabel = formatRepairReportTypeLabel(reportTypeValue)
   const createdAt = toDisplayText(item.CreatedAt, "-")
   const updatedAt = toDisplayText(item.UpdatedAt, "-")
   const executors = normalizeExecutors(item.UserName)
@@ -3649,13 +3644,13 @@ function mapRepairWorkOrderRow(item: RepairWorkOrderListItem, index: number): Cu
     statusValue,
     statusLabel: formatRepairWorkOrderStatus(statusValue),
     importantValue,
-    importantLabel: formatRepairImportantLabel(importantValue),
+    importantLabel,
     reportTypeValue,
-    reportTypeLabel: formatRepairReportTypeLabel(reportTypeValue),
+    reportTypeLabel,
     resultValue: reportTypeValue,
-    resultLabel: formatRepairReportTypeLabel(reportTypeValue),
+    resultLabel: reportTypeLabel,
     score: importantValue,
-    scoreLabel: formatRepairImportantLabel(importantValue),
+    scoreLabel: importantLabel,
     deadline: "-",
     remark: toDisplayText(item.RepairContent || item.Content, "-"),
     createdAt,
@@ -3666,14 +3661,14 @@ function mapRepairWorkOrderRow(item: RepairWorkOrderListItem, index: number): Cu
 }
 
 function formatRepairWorkOrderStatus(status: number | null) {
-  return getWorkOrderStatusLabel(status)
+  return getRepairWorkOrderStatusLabel(status)
 }
 
-function formatRepairReportTypeLabel(value: number | null) {
+function formatRepairReportTypeLabel(value: string | null) {
   return formatRepairDictionaryLabel(value, repairTypeOptions.value, "类型")
 }
 
-function formatRepairImportantLabel(value: number | null) {
+function formatRepairImportantLabel(value: string | null) {
   return formatRepairDictionaryLabel(value, repairImportanceOptions.value, "等级")
 }
 
@@ -3725,6 +3720,18 @@ function buildCustomerStatusValue(value: unknown): DetailStatusValue {
 
 function toNullableNumber(value: unknown) {
   return typeof value === "number" && Number.isFinite(value) ? value : null
+}
+
+function toNullableDictionaryValue(value: unknown) {
+  if (typeof value === "string" && value.trim()) {
+    return value.trim()
+  }
+
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return String(value)
+  }
+
+  return null
 }
 
 function buildMockMonitoringRows(current: CustomerDetailResult): MonitoringRow[] {
@@ -4641,29 +4648,15 @@ function toDisplayText(value: unknown, fallback = "未填写") {
       <DialogHeader>
         <DialogTitle>指派工单</DialogTitle>
         <DialogDescription>
-          {{ isInspectionAssignDialog ? "请选择一位或多位执行人并确认提交。" : "请选择要指派的用户并确认提交。" }}
+          {{ isInspectionAssignDialog ? "请选择一位或多位执行人并确认提交。" : "请选择一位或多位维修人员并确认提交。" }}
         </DialogDescription>
       </DialogHeader>
 
-      <div v-if="isInspectionAssignDialog" class="space-y-4">
-        <p class="text-sm text-foreground">执行人</p>
+      <div class="space-y-4">
+        <p class="text-sm text-foreground">{{ isInspectionAssignDialog ? "执行人" : "维修人员" }}</p>
         <Select v-model="assignUserUuids" multiple :disabled="assignableUsersLoading || assignSubmitting">
           <SelectTrigger class="w-full">
-            <SelectValue :placeholder="assignableUsersLoading ? '正在加载用户...' : '请选择执行人，可多选'" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem v-for="user in assignableUsers" :key="user.uuid" :value="user.uuid">
-              {{ user.name }}
-            </SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div v-else class="space-y-2">
-        <p class="text-sm text-foreground">指派用户</p>
-        <Select v-model="assignUserUuid" :disabled="assignableUsersLoading || assignSubmitting">
-          <SelectTrigger class="w-full">
-            <SelectValue :placeholder="assignableUsersLoading ? '正在加载用户...' : '请选择用户'" />
+            <SelectValue :placeholder="assignableUsersLoading ? '正在加载用户...' : isInspectionAssignDialog ? '请选择执行人，可多选' : '请选择维修人员，可多选'" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem v-for="user in assignableUsers" :key="user.uuid" :value="user.uuid">

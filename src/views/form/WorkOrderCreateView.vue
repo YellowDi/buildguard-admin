@@ -7,6 +7,7 @@ import FormDatePicker from "@/components/form/FormDatePicker.vue"
 import FormFieldSection from "@/components/form/FormFieldSection.vue"
 import FormHeader from "@/components/form/FormHeader.vue"
 import FormQuickNav from "@/components/form/FormQuickNav.vue"
+import InspectionBuildingCards from "@/components/detail/InspectionBuildingCards.vue"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -17,14 +18,29 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Separator } from "@/components/ui/separator"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
 import { handleApiError } from "@/lib/api-errors"
 import { fetchCustomerDetail, fetchCustomers, type CustomerListItem } from "@/lib/customers-api"
+import type { InspectionItemOption } from "@/lib/inspection-item-options"
 import { fetchInspectionPlans, type InspectionPlanListItem } from "@/lib/inspection-plans-api"
 import { fetchInspectionServices, type InspectionServiceListItem } from "@/lib/inspection-services-api"
 import { fetchParks, type ParkListItem } from "@/lib/parks-api"
 import { fetchRepairWorkOrderDictionaries, type RepairDictionaryOption } from "@/lib/repair-work-order-dictionaries"
-import { createRepairWorkOrder, createWorkOrder, updateWorkOrder } from "@/lib/work-orders-api"
+import { cn } from "@/lib/utils"
+import {
+  createRepairWorkOrder,
+  createWorkOrder,
+  fetchWorkOrderInspectionHistoryDetail,
+  fetchWorkOrderDetail,
+  fetchWorkOrders,
+  updateWorkOrder,
+  type WorkOrderBuildInfo,
+  type WorkOrderBuildInspectionItem,
+  type WorkOrderDetailResult,
+  type WorkOrderListItem,
+} from "@/lib/work-orders-api"
 
 type WorkOrderPageKind = "inspection" | "repair"
 
@@ -46,6 +62,8 @@ type WorkOrderFormState = {
   reportType: string
   important: string
   content: string
+  inspectionWorkOrderUuid: string
+  workOrderInspectionBuildUuid: string[]
 }
 
 type PlanOption = {
@@ -70,6 +88,36 @@ type ParkOption = {
   name: string
 }
 
+type RepairInspectionItemOption = InspectionItemOption & {
+  buildUuid: string
+  buildName: string
+  parkUuid: string
+  parkName: string
+  serviceName: string
+  categoryRawName: string
+  workOrderUuid: string
+  workOrderNo: string
+  resultValue: number | null
+  resultLabel: string
+  scoreValue: number | null
+  scoreText: string
+  issueText: string
+  executorName: string
+  createdAt: string
+}
+
+type RepairInspectionSourceWorkOrder = {
+  uuid: string
+  orderNo: string
+  createdAt: string
+  resultLabel: string
+  scoreText: string
+}
+
+type RepairInspectionWorkOrderOption = RepairInspectionSourceWorkOrder & {
+  items: RepairInspectionItemOption[]
+}
+
 const props = withDefaults(defineProps<{
   kind?: WorkOrderPageKind
 }>(), {
@@ -92,6 +140,8 @@ function createEmptyForm(): WorkOrderFormState {
     reportType: "",
     important: "",
     content: "",
+    inspectionWorkOrderUuid: "",
+    workOrderInspectionBuildUuid: [],
   }
 }
 
@@ -110,7 +160,14 @@ const serviceOptions = ref<ServiceOption[]>([])
 const parkOptions = ref<ParkOption[]>([])
 const repairImportanceOptions = ref<RepairDictionaryOption[]>([])
 const repairTypeOptions = ref<RepairDictionaryOption[]>([])
+const repairInspectionWorkOrderOptions = ref<RepairInspectionWorkOrderOption[]>([])
+const repairInspectionItemOptions = ref<RepairInspectionItemOption[]>([])
 const repairDictionariesLoading = ref(false)
+const repairInspectionWorkOrdersLoading = ref(false)
+const repairInspectionWorkOrdersError = ref("")
+const repairInspectionItemsLoading = ref(false)
+const repairInspectionItemsError = ref("")
+const repairInspectionSourceWorkOrder = ref<RepairInspectionSourceWorkOrder | null>(null)
 const anchorItems = ref<QuickNavItem[]>([])
 const activeNavId = ref("")
 const formSectionsRef = ref<HTMLElement | null>(null)
@@ -118,6 +175,8 @@ const STICKY_HEADER_OFFSET = 112
 let observer: IntersectionObserver | null = null
 let observerActive = false
 let suppressCustomerWatch = false
+let latestRepairInspectionWorkOrdersRequestId = 0
+let latestRepairInspectionItemsRequestId = 0
 
 const isRepairKind = computed(() => props.kind === "repair")
 const isEditMode = computed(() => route.name === "inspection-work-order-edit")
@@ -150,6 +209,103 @@ const pageTitle = computed(() => {
 
   return isRepairKind.value ? "添加报修工单" : "添加检测工单"
 })
+const repairInspectionBuildGroups = computed(() => {
+  const groups = new Map<string, {
+    key: string
+    buildUuid: string
+    buildName: string
+    parkName: string
+    selectedCount: number
+    items: RepairInspectionItemOption[]
+  }>()
+
+  repairInspectionItemOptions.value.forEach((item) => {
+    const key = item.buildUuid || `build-${item.buildName}`
+    const current = groups.get(key) ?? {
+      key,
+      buildUuid: item.buildUuid,
+      buildName: item.buildName || "未命名建筑",
+      parkName: item.parkName,
+      selectedCount: 0,
+      items: [],
+    }
+
+    current.items.push(item)
+    groups.set(key, current)
+  })
+
+  return Array.from(groups.values())
+    .map(group => ({
+      ...group,
+      selectedCount: group.items.reduce((count, item) => (
+        form.workOrderInspectionBuildUuid.includes(item.uuid) ? count + 1 : count
+      ), 0),
+      items: [...group.items].sort((left, right) => (
+        left.categoryRawName.localeCompare(right.categoryRawName, "zh-CN")
+        || left.name.localeCompare(right.name, "zh-CN")
+      )),
+    }))
+    .sort((left, right) => left.buildName.localeCompare(right.buildName, "zh-CN"))
+})
+const repairInspectionBuildings = computed(() => repairInspectionBuildGroups.value.map((group) => {
+  const completedCount = group.items.filter(item => item.resultValue !== null).length
+
+  return {
+    key: group.key,
+    buildName: group.buildName,
+    status: "completed" as const,
+    completedCount,
+    totalCount: group.items.length,
+    progressValue: group.items.length ? Math.round((completedCount / group.items.length) * 100) : 0,
+    progressLabel: "已反馈",
+    deadlineText: repairInspectionSourceWorkOrder.value?.createdAt ?? "-",
+    scoreText: `${group.selectedCount} / ${group.items.length}`,
+    groups: Array.from(group.items.reduce((bucket, item) => {
+      const key = item.categoryUuid || item.categoryRawName || "未分类"
+      const current = bucket.get(key) ?? {
+        key,
+        title: item.categoryRawName || "未分类",
+        scoreText: "",
+        scoreValue: null as number | null,
+        items: [] as Array<{
+          key: string
+          name: string
+          categoryName: string
+          resultLabel: string
+          scoreText: string
+          scoreValue: number | null
+        }>,
+      }
+
+      current.items.push({
+        key: item.uuid,
+        name: item.name,
+        categoryName: item.categoryRawName,
+        resultLabel: item.resultLabel,
+        scoreText: item.scoreText,
+        scoreValue: item.scoreValue,
+      })
+      const categoryScore = current.items.reduce((sum, row) => sum + Math.max(0, row.scoreValue ?? 0), 0)
+      current.scoreValue = categoryScore
+      current.scoreText = formatRepairInspectionScore(categoryScore)
+      bucket.set(key, current)
+      return bucket
+    }, new Map<string, {
+      key: string
+      title: string
+      scoreText: string
+      scoreValue: number | null
+      items: Array<{
+        key: string
+        name: string
+        categoryName: string
+        resultLabel: string
+        scoreText: string
+        scoreValue: number | null
+      }>
+    }>()).values()),
+  }
+}))
 const canSubmit = computed(() => {
   if (isEditMode.value) {
     return Boolean(normalizeText(workOrderUuid.value) && !submitting.value)
@@ -167,6 +323,8 @@ const canSubmit = computed(() => {
       && !customerLoading.value
       && !relatedOptionsLoading.value
       && !repairDictionariesLoading.value
+      && !repairInspectionWorkOrdersLoading.value
+      && !repairInspectionItemsLoading.value
     )
   }
 
@@ -381,17 +539,17 @@ async function handleRepairCreateSubmit() {
     return
   }
 
-  const reportType = parseIntegerField(form.reportType)
+  const reportType = normalizeText(form.reportType)
 
-  if (reportType === null) {
-    toast.error("请填写有效的报修类型")
+  if (!reportType) {
+    toast.error("请选择报修类型")
     return
   }
 
-  const important = parseIntegerField(form.important)
+  const important = normalizeText(form.important)
 
-  if (important === null) {
-    toast.error("请填写有效的重要程度")
+  if (!important) {
+    toast.error("请选择重要程度")
     return
   }
 
@@ -410,6 +568,7 @@ async function handleRepairCreateSubmit() {
       ReportType: reportType,
       Important: important,
       Content: normalizeText(form.content),
+      WorkOrderInspectionBuildUuid: normalizeTextArray(form.workOrderInspectionBuildUuid),
     }
     const result = await createRepairWorkOrder(payload)
 
@@ -436,7 +595,7 @@ async function handleRepairCreateSubmit() {
 }
 
 function handleReset() {
-  Object.assign(form, initialFormState.value)
+  Object.assign(form, cloneFormState(initialFormState.value))
 }
 
 async function loadFormContext() {
@@ -445,8 +604,14 @@ async function loadFormContext() {
   planOptions.value = []
   serviceOptions.value = []
   parkOptions.value = []
+  repairInspectionWorkOrderOptions.value = []
+  repairInspectionItemOptions.value = []
 
   try {
+    if (isRepairKind.value && !isEditMode.value) {
+      await ensureRepairDictionaries()
+    }
+
     if (isEditMode.value) {
       loadEditContext()
       return
@@ -495,7 +660,7 @@ function loadEditContext() {
     : []
 
   Object.assign(form, nextForm)
-  initialFormState.value = { ...nextForm }
+  initialFormState.value = cloneFormState(nextForm)
 }
 
 async function loadFixedCustomerContext(customerUuid: string) {
@@ -510,11 +675,12 @@ async function loadFixedCustomerContext(customerUuid: string) {
       await ensureRepairDictionaries()
       await loadParksForCustomer(customerUuid)
       applyRepairPrefill()
+      await loadRepairInspectionWorkOrdersForSelection(customerUuid, form.parkUuid)
     } else {
       await loadRelatedOptionsForCustomer(customerUuid)
     }
 
-    initialFormState.value = { ...form }
+    initialFormState.value = cloneFormState(form)
   } finally {
     relatedOptionsLoading.value = false
   }
@@ -541,10 +707,12 @@ async function loadSelectableCustomerContext() {
     form.serviceUuid = ""
     form.packageName = ""
     form.parkUuid = ""
+    form.inspectionWorkOrderUuid = ""
+    form.workOrderInspectionBuildUuid = []
     suppressCustomerWatch = false
 
     if (!form.customerUuid) {
-      initialFormState.value = createEmptyForm()
+      initialFormState.value = cloneFormState(createEmptyForm())
       return
     }
 
@@ -553,7 +721,7 @@ async function loadSelectableCustomerContext() {
       await ensureRepairDictionaries()
     }
     await loadRelatedOptionsForCustomer(form.customerUuid, true)
-    initialFormState.value = { ...form }
+    initialFormState.value = cloneFormState(form)
   } finally {
     customerLoading.value = false
     relatedOptionsLoading.value = false
@@ -564,6 +732,7 @@ async function loadRelatedOptionsForCustomer(customerUuid: string, useRoutePrefi
   if (isRepairKind.value) {
     await loadParksForCustomer(customerUuid)
     applyRepairPrefill(useRoutePrefill)
+    await loadRepairInspectionWorkOrdersForSelection(customerUuid, form.parkUuid)
     return
   }
 
@@ -684,6 +853,250 @@ async function ensureRepairDictionaries() {
   } finally {
     repairDictionariesLoading.value = false
   }
+}
+
+async function loadRepairInspectionWorkOrdersForSelection(customerUuid: string, parkUuid: string) {
+  const normalizedCustomerUuid = normalizeText(customerUuid)
+  const normalizedParkUuid = normalizeText(parkUuid)
+  const requestId = ++latestRepairInspectionWorkOrdersRequestId
+
+  repairInspectionWorkOrderOptions.value = []
+  repairInspectionItemOptions.value = []
+  repairInspectionWorkOrdersError.value = ""
+  repairInspectionItemsError.value = ""
+  repairInspectionSourceWorkOrder.value = null
+  repairInspectionWorkOrdersLoading.value = false
+  repairInspectionItemsLoading.value = false
+  form.inspectionWorkOrderUuid = ""
+  form.workOrderInspectionBuildUuid = []
+
+  if (!isRepairKind.value || !normalizedCustomerUuid || !normalizedParkUuid) {
+    return
+  }
+
+  repairInspectionWorkOrdersLoading.value = true
+
+  try {
+    const options = await fetchInspectionWorkOrderOptions(normalizedCustomerUuid, normalizedParkUuid)
+
+    if (requestId !== latestRepairInspectionWorkOrdersRequestId) {
+      return
+    }
+
+    repairInspectionWorkOrderOptions.value = options
+    form.inspectionWorkOrderUuid = options[0]?.uuid ?? ""
+  } catch (error) {
+    if (requestId === latestRepairInspectionWorkOrdersRequestId) {
+      repairInspectionWorkOrdersError.value = handleApiError(error, {
+        mode: "silent",
+        fallback: "检测结果加载失败，请稍后重试。",
+      })
+    }
+  } finally {
+    if (requestId === latestRepairInspectionWorkOrdersRequestId) {
+      repairInspectionWorkOrdersLoading.value = false
+    }
+  }
+}
+
+async function loadRepairInspectionItemsForSelection(customerUuid: string, parkUuid: string, workOrderUuid: string) {
+  const normalizedCustomerUuid = normalizeText(customerUuid)
+  const normalizedParkUuid = normalizeText(parkUuid)
+  const normalizedWorkOrderUuid = normalizeText(workOrderUuid)
+  const requestId = ++latestRepairInspectionItemsRequestId
+
+  repairInspectionItemOptions.value = []
+  repairInspectionItemsError.value = ""
+  repairInspectionSourceWorkOrder.value = null
+  repairInspectionItemsLoading.value = false
+  form.workOrderInspectionBuildUuid = []
+
+  if (!isRepairKind.value || !normalizedCustomerUuid || !normalizedParkUuid || !normalizedWorkOrderUuid) {
+    return
+  }
+
+  const selectedWorkOrder = repairInspectionWorkOrderOptions.value.find(item => item.uuid === normalizedWorkOrderUuid)
+
+  if (!selectedWorkOrder) {
+    return
+  }
+
+  repairInspectionItemsLoading.value = true
+
+  try {
+    const items = await enrichRepairInspectionIssueText(selectedWorkOrder.items)
+
+    if (requestId !== latestRepairInspectionItemsRequestId) {
+      return
+    }
+
+    repairInspectionSourceWorkOrder.value = selectedWorkOrder
+    repairInspectionItemOptions.value = items
+  } catch (error) {
+    if (requestId === latestRepairInspectionItemsRequestId) {
+      repairInspectionItemsError.value = handleApiError(error, {
+        mode: "silent",
+        fallback: "检测项加载失败，请稍后重试。",
+      })
+    }
+  } finally {
+    if (requestId === latestRepairInspectionItemsRequestId) {
+      repairInspectionItemsLoading.value = false
+    }
+  }
+}
+
+async function fetchInspectionWorkOrderOptions(customerUuid: string, parkUuid: string) {
+  const result = await fetchWorkOrders({
+    CustomerUuid: customerUuid,
+    PageNum: 1,
+    PageSize: 50,
+  })
+  const candidates = [...result.list]
+    .filter(item => normalizeText(item.Uuid))
+    .sort((left, right) => getWorkOrderSortTime(right) - getWorkOrderSortTime(left))
+  const options: RepairInspectionWorkOrderOption[] = []
+
+  for (const candidate of candidates) {
+    const detail = await fetchWorkOrderDetail({ Uuid: normalizeText(candidate.Uuid) })
+    const baseItems = buildRepairInspectionItemOptionsFromWorkOrder(detail, parkUuid)
+
+    if (!baseItems.length) {
+      continue
+    }
+
+    options.push({
+      ...mapRepairInspectionSourceWorkOrder(detail),
+      items: baseItems,
+    })
+  }
+
+  return options
+}
+
+function buildRepairInspectionItemOptionsFromWorkOrder(detail: WorkOrderDetailResult, parkUuid: string) {
+  const optionByUuid = new Map<string, RepairInspectionItemOption>()
+  const builds = Array.isArray(detail.Builds) ? detail.Builds : []
+
+  builds
+    .filter(build => isInspectionBuildInPark(build, detail, parkUuid))
+    .forEach((build) => {
+      const buildUuid = normalizeText(build.BuildUuid)
+      const buildName = normalizeText(build.BuildName) || "未命名建筑"
+      const parkName = normalizeText(build.ParkName) || normalizeText(detail.ParkName)
+      const items = Array.isArray(build.InspectionItems) ? build.InspectionItems : []
+
+      items.forEach((item) => {
+        const uuid = normalizeText(item.Uuid)
+
+        if (!uuid || optionByUuid.has(uuid)) {
+          return
+        }
+
+        const categoryName = normalizeText(item.CategoryName) || normalizeText(item.CategoryContent) || "未分类"
+        const resultValue = toNumber(item.Result)
+        const scoreValue = toNumber(item.Score)
+
+        optionByUuid.set(uuid, {
+          id: optionByUuid.size + 1,
+          uuid,
+          name: normalizeText(item.InspectionItemName) || normalizeText(item.Name) || `检测项 ${optionByUuid.size + 1}`,
+          categoryUuid: normalizeText(item.CategoryUuid),
+          categoryName,
+          buildUuid,
+          buildName,
+          parkUuid,
+          parkName,
+          serviceName: normalizeText(detail.ServiceName) || normalizeText(detail.PackageName),
+          categoryRawName: categoryName,
+          workOrderUuid: normalizeText(detail.Uuid),
+          workOrderNo: normalizeText(detail.OrderNo),
+          resultValue,
+          resultLabel: formatRepairInspectionResultLabel(resultValue),
+          scoreValue,
+          scoreText: formatRepairInspectionScore(scoreValue),
+          issueText: resolveRepairInspectionIssueText(item),
+          executorName: normalizeText(item.UserName) || normalizeText(item.ExecutorName) || "-",
+          createdAt: normalizeText(detail.CreatedAt),
+        })
+      })
+    })
+
+  return Array.from(optionByUuid.values()).sort((left, right) => (
+    compareRepairInspectionResult(left, right)
+    || left.buildName.localeCompare(right.buildName, "zh-CN")
+    || left.categoryRawName.localeCompare(right.categoryRawName, "zh-CN")
+    || left.name.localeCompare(right.name, "zh-CN")
+  ))
+}
+
+async function enrichRepairInspectionIssueText(items: RepairInspectionItemOption[]) {
+  const enriched = await Promise.all(items.map(async (item) => {
+    if (!item.uuid) {
+      return item
+    }
+
+    try {
+      const history = await fetchWorkOrderInspectionHistoryDetail({ Uuid: item.uuid })
+      const latest = history[0]
+      const issueText = latest
+        ? resolveRepairInspectionHistoryIssueText(latest, item)
+        : ""
+
+      return issueText ? { ...item, issueText } : item
+    } catch {
+      return item
+    }
+  }))
+
+  return enriched
+}
+
+function mapRepairInspectionSourceWorkOrder(detail: WorkOrderDetailResult): RepairInspectionSourceWorkOrder {
+  return {
+    uuid: normalizeText(detail.Uuid),
+    orderNo: normalizeText(detail.OrderNo) || "最近检测工单",
+    createdAt: normalizeText(detail.CreatedAt) || normalizeText(detail.UpdatedAt) || "-",
+    resultLabel: formatRepairInspectionWorkOrderResultLabel(toNumber(detail.Result)),
+    scoreText: formatRepairInspectionWorkOrderScore(detail.Score),
+  }
+}
+
+function isInspectionBuildInPark(build: WorkOrderBuildInfo, detail: WorkOrderDetailResult, parkUuid: string) {
+  const buildParkUuid = normalizeText(build.ParkUuid)
+  const detailParkUuid = normalizeText(detail.ParkUuid)
+
+  if (buildParkUuid) {
+    return buildParkUuid === parkUuid
+  }
+
+  if (detailParkUuid) {
+    return detailParkUuid === parkUuid
+  }
+
+  return true
+}
+
+function getWorkOrderSortTime(item: WorkOrderListItem | WorkOrderDetailResult) {
+  const timestamp = Date.parse(
+    normalizeText(item.CreatedAt)
+    || normalizeText(item.UpdatedAt)
+    || normalizeText(item.Deadline),
+  )
+
+  return Number.isFinite(timestamp) ? timestamp : 0
+}
+
+function compareRepairInspectionResult(left: RepairInspectionItemOption, right: RepairInspectionItemOption) {
+  return getRepairInspectionSeverityRank(right) - getRepairInspectionSeverityRank(left)
+}
+
+function getRepairInspectionSeverityRank(item: RepairInspectionItemOption) {
+  if (item.resultValue === 3) return 4
+  if (item.resultValue === 2) return 3
+  if ((item.scoreValue ?? 0) > 0) return 2
+  if (item.resultValue === 1) return 1
+  return 0
 }
 
 async function fetchAllInspectionPlans(customerUuid: string) {
@@ -906,6 +1319,107 @@ function normalizeText(value: unknown) {
   return ""
 }
 
+function normalizeTextArray(value: unknown) {
+  if (!Array.isArray(value)) {
+    return []
+  }
+
+  return Array.from(new Set(value.map(normalizeText).filter(Boolean)))
+}
+
+function toNumber(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value
+  }
+
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value.trim())
+    return Number.isFinite(parsed) ? parsed : null
+  }
+
+  return null
+}
+
+function formatRepairInspectionResultLabel(value: number | null) {
+  if (value === 1) return "正常"
+  if (value === 2) return "轻微风险"
+  if (value === 3) return "存在隐患"
+  if (value === 0 || value === null) return "未反馈"
+
+  return `结果 ${value}`
+}
+
+function formatRepairInspectionWorkOrderResultLabel(value: number | null) {
+  if (value === 1) return "正常"
+  if (value === 2) return "轻微风险"
+  if (value === 3) return "存在隐患"
+  if (value === 0 || value === null) return "未反馈"
+
+  return `结果 ${value}`
+}
+
+function formatRepairInspectionScore(value: number | null) {
+  if (value === null) {
+    return "-"
+  }
+
+  if (Number.isInteger(value)) {
+    return `-${value} 分`
+  }
+
+  return `-${value.toFixed(1).replace(/\.0$/, "")} 分`
+}
+
+function formatRepairInspectionWorkOrderScore(value: unknown) {
+  const score = toNumber(value)
+
+  if (score === null) {
+    return "-"
+  }
+
+  return Number.isInteger(score) ? `${score} 分` : `${score.toFixed(1).replace(/\.0$/, "")} 分`
+}
+
+function resolveRepairInspectionIssueText(item: WorkOrderBuildInspectionItem) {
+  const record = item as Record<string, unknown>
+  return normalizeText(record.Content)
+    || normalizeText(record.MeasureContent)
+    || normalizeText(record.RepairContent)
+    || normalizeText(record.Remark)
+    || normalizeText(record.Description)
+}
+
+function resolveRepairInspectionHistoryIssueText(
+  historyItem: { Content?: string, MeasureContent?: string, Name?: string },
+  fallback: RepairInspectionItemOption,
+) {
+  const content = normalizeText(historyItem.Content)
+  const measureContent = normalizeText(historyItem.MeasureContent)
+  const name = normalizeText(historyItem.Name)
+  const normalizedInspectionName = fallback.name.trim().replace(/\s+/g, "")
+
+  if (content && content.trim().replace(/\s+/g, "") !== normalizedInspectionName) {
+    return content
+  }
+
+  if (measureContent) {
+    return measureContent
+  }
+
+  if (name && name.trim().replace(/\s+/g, "") !== normalizedInspectionName) {
+    return name
+  }
+
+  return ""
+}
+
+function cloneFormState(value: WorkOrderFormState): WorkOrderFormState {
+  return {
+    ...value,
+    workOrderInspectionBuildUuid: [...value.workOrderInspectionBuildUuid],
+  }
+}
+
 function getOptionalText(value: unknown) {
   const normalized = normalizeText(value)
   return normalized || undefined
@@ -936,24 +1450,29 @@ function resetLocalStateForRoute() {
   planOptions.value = []
   serviceOptions.value = []
   parkOptions.value = []
+  repairInspectionWorkOrderOptions.value = []
+  repairInspectionItemOptions.value = []
+  repairInspectionWorkOrdersError.value = ""
+  repairInspectionItemsError.value = ""
+  repairInspectionSourceWorkOrder.value = null
   Object.assign(form, createEmptyForm())
 
   if (isEditMode.value) {
-    initialFormState.value = createEmptyForm()
+    initialFormState.value = cloneFormState(createEmptyForm())
     return
   }
 
   if (routeCustomerUuid.value) {
     form.customerUuid = routeCustomerUuid.value
     customerName.value = queryCustomerName.value || "当前客户"
-    initialFormState.value = {
+    initialFormState.value = cloneFormState({
       ...createEmptyForm(),
       customerUuid: routeCustomerUuid.value,
-    }
+    })
     return
   }
 
-  initialFormState.value = createEmptyForm()
+  initialFormState.value = cloneFormState(createEmptyForm())
 }
 
 onMounted(() => {
@@ -1023,10 +1542,17 @@ watch(
       planOptions.value = []
       serviceOptions.value = []
       parkOptions.value = []
+      repairInspectionWorkOrderOptions.value = []
+      repairInspectionItemOptions.value = []
+      repairInspectionWorkOrdersError.value = ""
+      repairInspectionItemsError.value = ""
+      repairInspectionSourceWorkOrder.value = null
       form.planUuid = ""
       form.serviceUuid = ""
       form.packageName = ""
       form.parkUuid = ""
+      form.inspectionWorkOrderUuid = ""
+      form.workOrderInspectionBuildUuid = []
       return
     }
 
@@ -1040,6 +1566,28 @@ watch(
     } finally {
       relatedOptionsLoading.value = false
     }
+  },
+)
+
+watch(
+  () => form.parkUuid,
+  (nextParkUuid, previousParkUuid) => {
+    if (!isRepairKind.value || isEditMode.value || nextParkUuid === previousParkUuid) {
+      return
+    }
+
+    void loadRepairInspectionWorkOrdersForSelection(form.customerUuid, nextParkUuid)
+  },
+)
+
+watch(
+  () => form.inspectionWorkOrderUuid,
+  (nextWorkOrderUuid, previousWorkOrderUuid) => {
+    if (!isRepairKind.value || isEditMode.value || nextWorkOrderUuid === previousWorkOrderUuid) {
+      return
+    }
+
+    void loadRepairInspectionItemsForSelection(form.customerUuid, form.parkUuid, nextWorkOrderUuid)
   },
 )
 
@@ -1078,7 +1626,12 @@ watch(
 </script>
 
 <template>
-  <section class="mx-auto flex w-full max-w-4xl min-w-0 flex-col gap-6 pb-8">
+  <section
+    :class="cn(
+      'mx-auto flex w-full min-w-0 flex-col gap-6 pb-8',
+      isRepairKind && !isEditMode ? 'max-w-[1021px]' : 'max-w-4xl',
+    )"
+  >
     <FormHeader
       :title="pageTitle"
       :primary-action="{ label: submitButtonLabel, icon: 'ri-file-add-line', disabled: !canSubmit }"
@@ -1100,14 +1653,28 @@ watch(
       </AlertDescription>
     </Alert>
 
-    <div class="grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1fr)_220px] xl:grid-cols-[minmax(0,1fr)_250px]">
-      <form class="min-w-0 space-y-0" @submit.prevent="handleSubmit">
+    <div
+      :class="cn(
+        'grid min-w-0',
+        isRepairKind && !isEditMode
+          ? 'gap-0 lg:grid-cols-[minmax(0,1fr)_1px_460px]'
+          : 'gap-8 lg:grid-cols-[minmax(0,1fr)_220px] xl:grid-cols-[minmax(0,1fr)_250px]',
+      )"
+    >
+      <form
+        :class="cn(
+          'min-w-0 space-y-0',
+          isRepairKind && !isEditMode ? 'lg:sticky lg:top-24 lg:self-start lg:pr-6' : '',
+        )"
+        @submit.prevent="handleSubmit"
+      >
         <div ref="formSectionsRef" class="min-w-0 space-y-0">
           <FormFieldSection
             id="section-customer"
             quick-nav-label="所属客户"
             label="所属客户"
             label-for="work-order-customer"
+            :layout="isRepairKind && !isEditMode ? 'vertical' : 'responsive'"
           >
             <Input
               v-if="routeCustomerUuid || isEditMode"
@@ -1134,10 +1701,12 @@ watch(
               id="section-park"
               quick-nav-label="所属园区"
               label="所属园区"
+              label-for="work-order-park"
+              layout="vertical"
             >
-              <Select v-if="parkOptions.length" v-model="form.parkUuid" :disabled="relatedOptionsLoading">
+              <Select v-model="form.parkUuid" :disabled="relatedOptionsLoading || !form.customerUuid || !parkOptions.length">
                 <SelectTrigger id="work-order-park" class="w-full" @focus="handleFocus('section-park')">
-                  <SelectValue :placeholder="relatedOptionsLoading ? '正在加载园区...' : '请选择所属园区'" />
+                  <SelectValue :placeholder="!form.customerUuid ? '请先选择所属客户' : relatedOptionsLoading ? '正在加载园区...' : parkOptions.length ? '请选择所属园区' : '当前客户暂无园区'" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem v-for="park in parkOptions" :key="park.uuid" :value="park.uuid">
@@ -1145,15 +1714,37 @@ watch(
                   </SelectItem>
                 </SelectContent>
               </Select>
-              <Input
-                v-else
-                id="work-order-park"
-                v-model="form.parkUuid"
-                required
-                :placeholder="relatedOptionsLoading ? '正在加载园区...' : '请输入园区 UUID'"
-                class="w-full"
-                @focus="handleFocus('section-park')"
-              />
+            </FormFieldSection>
+
+            <FormFieldSection
+              id="section-inspection-work-order"
+              quick-nav-label="检测结果"
+              label="检测结果"
+              label-for="repair-source-work-order"
+              layout="vertical"
+            >
+              <Select
+                v-model="form.inspectionWorkOrderUuid"
+                :disabled="repairInspectionWorkOrdersLoading || !form.customerUuid || !form.parkUuid || !repairInspectionWorkOrderOptions.length"
+              >
+                <SelectTrigger id="repair-source-work-order" class="w-full" @focus="handleFocus('section-inspection-work-order')">
+                  <SelectValue
+                    :placeholder="!form.customerUuid || !form.parkUuid ? '请先选择客户和园区' : repairInspectionWorkOrdersLoading ? '正在加载检测结果...' : repairInspectionWorkOrderOptions.length ? '请选择检测结果' : '当前客户园区暂无检测结果'"
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem
+                    v-for="option in repairInspectionWorkOrderOptions"
+                    :key="option.uuid"
+                    :value="option.uuid"
+                  >
+                    {{ option.orderNo }} / {{ option.createdAt }}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <p v-if="repairInspectionWorkOrdersError" class="mt-1 text-xs text-destructive">
+                {{ repairInspectionWorkOrdersError }}
+              </p>
             </FormFieldSection>
 
             <FormFieldSection
@@ -1161,6 +1752,7 @@ watch(
               quick-nav-label="报修标题"
               label="报修标题"
               label-for="work-order-title"
+              layout="vertical"
             >
               <Input
                 id="work-order-title"
@@ -1177,6 +1769,7 @@ watch(
               quick-nav-label="报修类型"
               label="报修类型"
               label-for="work-order-report-type"
+              layout="vertical"
             >
               <Select v-model="form.reportType" :disabled="repairDictionariesLoading || !repairTypeOptions.length">
                 <SelectTrigger id="work-order-report-type" class="w-full" @focus="handleFocus('section-report-type')">
@@ -1195,6 +1788,7 @@ watch(
               quick-nav-label="重要程度"
               label="重要程度"
               label-for="work-order-important"
+              layout="vertical"
             >
               <Select v-model="form.important" :disabled="repairDictionariesLoading || !repairImportanceOptions.length">
                 <SelectTrigger id="work-order-important" class="w-full" @focus="handleFocus('section-important')">
@@ -1214,6 +1808,7 @@ watch(
               label="报修内容"
               label-for="work-order-content"
               align="start"
+              layout="vertical"
               last
             >
               <Textarea
@@ -1312,8 +1907,61 @@ watch(
         </div>
       </form>
 
+      <Separator v-if="isRepairKind && !isEditMode" orientation="vertical" class="hidden h-auto bg-border/80 lg:block" />
+
+      <div
+        v-if="isRepairKind && !isEditMode"
+        id="section-inspection-items"
+        class="min-w-0 lg:max-w-[460px] lg:pl-6"
+      >
+        <section class="pt-5 pb-5">
+          <div>
+            <div v-if="repairInspectionWorkOrdersLoading || repairInspectionItemsLoading" class="space-y-3">
+              <Skeleton class="h-4 w-40 max-w-full" />
+              <div class="grid gap-2.5">
+                <Skeleton
+                  v-for="slot in 5"
+                  :key="`repair-inspection-skeleton-${slot}`"
+                  class="h-[4.75rem] w-full rounded-xl"
+                />
+              </div>
+            </div>
+
+            <div v-else-if="repairInspectionWorkOrdersError || repairInspectionItemsError" class="rounded-md border border-destructive/30 bg-destructive/5 p-4">
+              <p class="text-sm font-medium text-destructive">检测项加载失败</p>
+              <p class="mt-1 text-sm text-muted-foreground">{{ repairInspectionWorkOrdersError || repairInspectionItemsError }}</p>
+            </div>
+
+            <div v-else-if="!form.customerUuid || !form.parkUuid" class="border border-dashed border-border/60 px-4 py-6 text-sm text-muted-foreground">
+              请先在左侧选择客户和园区。
+            </div>
+
+            <div v-else-if="!form.inspectionWorkOrderUuid" class="border border-dashed border-border/60 px-4 py-6 text-sm text-muted-foreground">
+              请先在左侧选择检测结果。
+            </div>
+
+            <InspectionBuildingCards
+              v-else
+              v-model:selected-item-keys="form.workOrderInspectionBuildUuid"
+              title="检测项"
+              :count="repairInspectionItemOptions.length"
+              :buildings="repairInspectionBuildings"
+              selectable
+              :show-header="false"
+              empty-title="暂无检测结果"
+              empty-description="当前检测工单暂无可选检测结果。"
+              empty-items-text="当前建筑暂无检测结果。"
+              total-label="检测结果"
+              empty-icon="ri-file-search-line"
+              class="max-h-[calc(100vh-18rem)] overflow-y-auto pr-1"
+            />
+          </div>
+
+        </section>
+      </div>
+
       <FormQuickNav
-        v-if="anchorItems.length"
+        v-if="!isRepairKind && anchorItems.length"
         class="hidden lg:sticky lg:top-24 lg:block lg:self-start"
         :active-id="activeNavId"
         :items="anchorItems"

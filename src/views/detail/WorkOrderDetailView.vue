@@ -30,6 +30,7 @@ import { fetchMembers } from "@/lib/members-api"
 import { fetchRepairWorkOrderDictionaries, formatRepairDictionaryLabel, type RepairDictionaryOption } from "@/lib/repair-work-order-dictionaries"
 import { fetchInspectionServiceDetail, type InspectionServiceListItem } from "@/lib/inspection-services-api"
 import {
+  dispatchRepairWorkOrder,
   dispatchWorkOrder,
   fetchRepairWorkOrderDetail,
   fetchWorkOrderInspectionHistoryDetail,
@@ -101,7 +102,6 @@ type AssignableUserOption = {
 }
 
 const assignDialogOpen = ref(false)
-const assignUserUuid = ref("")
 const assignUserUuids = ref<string[]>([])
 const assignableUsers = ref<AssignableUserOption[]>([])
 const assignableUsersLoading = ref(false)
@@ -128,10 +128,6 @@ const isInspectionAssignDialog = computed(() => props.kind === "inspection")
 const canSubmitAssign = computed(() => {
   if (assignSubmitting.value) {
     return false
-  }
-
-  if (!isInspectionAssignDialog.value) {
-    return Boolean(assignUserUuid.value)
   }
 
   return assignUserUuids.value.length > 0
@@ -282,7 +278,7 @@ function openRepairMediaSheet() {
 
 const pageTitle = computed(() => {
   if (props.kind === "repair") {
-    return toRepairWorkOrderText(repairWorkOrder.value?.Title, "报修工单详情")
+    return toRepairWorkOrderText(repairWorkOrder.value?.ParkName, "园区")
   }
 
   return toText(resolvedInspectionWorkOrder.value?.ServiceName, "关联检测服务") || "关联检测服务"
@@ -290,12 +286,7 @@ const pageTitle = computed(() => {
 
 const pageSubtitle = computed(() => {
   if (props.kind === "repair") {
-    return toRepairWorkOrderText(
-      repairWorkOrder.value?.CustomerName
-      ?? repairWorkOrder.value?.CorpName
-      ?? customer.value?.CorpName,
-      "CustomerName",
-    ) || "CustomerName"
+    return formatRepairCardReportType(repairWorkOrder.value?.ReportType)
   }
 
   return toText(
@@ -315,7 +306,7 @@ const showAssignAction = computed(() => !loading.value && hasWorkOrder.value && 
 watch([inspectionWorkOrder, repairWorkOrder], () => {
   if (props.kind === "repair") {
     const current = repairWorkOrder.value
-    detailBreadcrumbTitle.value = toOptionalText(current?.Title) || toOptionalText(current?.OrderNo)
+    detailBreadcrumbTitle.value = toOptionalText(current?.ParkName) || toOptionalText(current?.OrderNo)
     return
   }
 
@@ -596,7 +587,7 @@ function buildRepairWorkOrderCards(workOrder: RepairWorkOrderDetailResult | null
     return []
   }
 
-  const title = toRepairWorkOrderText(workOrder.Title, toRepairWorkOrderText(workOrder.OrderNo, "报修工单"))
+  const title = toRepairWorkOrderText(workOrder.ParkName, toRepairWorkOrderText(workOrder.OrderNo, "报修工单"))
   const content = toRepairWorkOrderText(workOrder.Content, "")
   const repairContent = toRepairWorkOrderText(workOrder.RepairContent, "")
   const items: InspectionBuildingCardV2Row[] = [
@@ -1108,7 +1099,7 @@ function normalizeRepairFiles(value: unknown) {
 function resolveRepairCardStatus(value: unknown): InspectionBuildingCardV2Status {
   const status = toNumber(value)
 
-  if (status === 5) {
+  if (status === 4) {
     return "completed"
   }
 
@@ -1279,7 +1270,6 @@ async function ensureRepairDictionaries() {
 }
 
 function resetAssignState() {
-  assignUserUuid.value = ""
   assignUserUuids.value = []
 }
 
@@ -1294,25 +1284,20 @@ async function submitAssign() {
   assignSubmitting.value = true
 
   try {
-    if (props.kind === "inspection") {
-      if (!assignUserUuids.value.length) {
-        toast.error("请先选择至少一位指派人员")
-        return
-      }
+    if (!assignUserUuids.value.length) {
+      toast.error("请先选择至少一位指派人员")
+      return
+    }
 
+    if (props.kind === "inspection") {
       await dispatchWorkOrder({
         Uuid: uuid,
         UserUuids: assignUserUuids.value,
       })
     } else {
-      if (!assignUserUuid.value) {
-        toast.error("请先选择指派用户")
-        return
-      }
-
-      await dispatchWorkOrder({
-        Uuid: uuid,
-        UserUuid: assignUserUuid.value,
+      await dispatchRepairWorkOrder({
+        Uuids: [uuid],
+        UserUuids: assignUserUuids.value,
       })
     }
 
@@ -1405,29 +1390,15 @@ async function submitAssign() {
       <DialogHeader>
         <DialogTitle>指派工单</DialogTitle>
         <DialogDescription>
-          {{ isInspectionAssignDialog ? "请选择一位或多位执行人并确认提交。" : "请选择要指派的用户并确认提交。" }}
+          {{ isInspectionAssignDialog ? "请选择一位或多位执行人并确认提交。" : "请选择一位或多位维修人员并确认提交。" }}
         </DialogDescription>
       </DialogHeader>
 
-      <div v-if="isInspectionAssignDialog" class="space-y-4">
-        <p class="text-sm text-foreground">执行人</p>
+      <div class="space-y-4">
+        <p class="text-sm text-foreground">{{ isInspectionAssignDialog ? "执行人" : "维修人员" }}</p>
         <Select v-model="assignUserUuids" multiple :disabled="assignableUsersLoading || assignSubmitting">
           <SelectTrigger class="w-full">
-            <SelectValue :placeholder="assignableUsersLoading ? '正在加载用户...' : '请选择执行人，可多选'" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem v-for="user in assignableUsers" :key="user.uuid" :value="user.uuid">
-              {{ user.name }}
-            </SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div v-else class="space-y-2">
-        <p class="text-sm text-foreground">指派用户</p>
-        <Select v-model="assignUserUuid" :disabled="assignableUsersLoading || assignSubmitting">
-          <SelectTrigger class="w-full">
-            <SelectValue :placeholder="assignableUsersLoading ? '正在加载用户...' : '请选择用户'" />
+            <SelectValue :placeholder="assignableUsersLoading ? '正在加载用户...' : isInspectionAssignDialog ? '请选择执行人，可多选' : '请选择维修人员，可多选'" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem v-for="user in assignableUsers" :key="user.uuid" :value="user.uuid">

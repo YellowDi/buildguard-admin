@@ -17,9 +17,15 @@ import { fetchCustomers } from "@/lib/customers-api"
 import { fetchInspectionPlans } from "@/lib/inspection-plans-api"
 import { fetchMembers } from "@/lib/members-api"
 import { fetchRepairWorkOrderDictionaries, formatRepairDictionaryLabel, type RepairDictionaryOption } from "@/lib/repair-work-order-dictionaries"
-import { getWorkOrderStatusLabel } from "@/lib/work-order-status"
+import {
+  getRepairWorkOrderStatusLabel,
+  getWorkOrderStatusLabel,
+  REPAIR_WORK_ORDER_STATUS_OPTIONS,
+  WORK_ORDER_STATUS_OPTIONS,
+} from "@/lib/work-order-status"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
+  dispatchRepairWorkOrder,
   dispatchWorkOrder,
   fetchRepairWorkOrders,
   fetchWorkOrders,
@@ -40,7 +46,8 @@ import {
 type WorkOrderPageKind = "inspection" | "repair"
 type LinkedDetailSheetKind = "customer" | "service" | "plan" | "park"
 
-const WORK_ORDER_TAB_OPTIONS = ["待指派", "待开始", "进行中", "报告生成中", "已结单", "复检"]
+const INSPECTION_WORK_ORDER_TAB_OPTIONS = WORK_ORDER_STATUS_OPTIONS.map(option => option.label)
+const REPAIR_WORK_ORDER_TAB_OPTIONS = REPAIR_WORK_ORDER_STATUS_OPTIONS.map(option => option.label)
 
 type WorkOrderRecord = {
   id: string
@@ -48,7 +55,6 @@ type WorkOrderRecord = {
   customerUuid: string
   planUuid: string
   orderNo: string
-  title: string
   customerName: string
   parkName: string
   packageName: string
@@ -57,13 +63,13 @@ type WorkOrderRecord = {
   status: string
   statusValue: number | null
   statusLabel: string
-  importantValue: number | null
+  importantValue: string | null
   importantLabel: string
-  reportTypeValue: number | null
+  reportTypeValue: string | null
   reportTypeLabel: string
-  resultValue: number | null
+  resultValue: number | string | null
   resultLabel: string
-  score: number | null
+  score: number | string | null
   scoreLabel: string
   deadline: string
   remark: string
@@ -89,7 +95,6 @@ const pageNum = ref(1)
 const pageSize = ref(50)
 const total = ref(0)
 const orderNoQuery = ref("")
-const titleQuery = ref("")
 const createdAtQuery = ref("")
 const serviceNameQuery = ref("")
 const executorQuery = ref("")
@@ -102,7 +107,6 @@ const sortDirection = ref<"asc" | "desc">("desc")
 const route = useRoute()
 let latestRequestId = 0
 const assignDialogOpen = ref(false)
-const assignUserUuid = ref("")
 const assignUserUuids = ref<string[]>([])
 const assignTargetWorkOrder = ref<WorkOrderRecord | null>(null)
 const assignableUsers = ref<AssignableUserOption[]>([])
@@ -137,10 +141,6 @@ const canSubmitAssign = computed(() => {
     return false
   }
 
-  if (!isInspectionAssignDialog.value) {
-    return Boolean(assignUserUuid.value)
-  }
-
   return assignUserUuids.value.length > 0
 })
 const pageSortStorageKey = computed(() => props.kind === "inspection"
@@ -149,6 +149,8 @@ const pageSortStorageKey = computed(() => props.kind === "inspection"
 const primaryActionLabel = "添加工单"
 const router = useRouter()
 const columns = props.kind === "inspection" ? createInspectionColumns() : createRepairColumns()
+const statusOptions = props.kind === "repair" ? REPAIR_WORK_ORDER_STATUS_OPTIONS : WORK_ORDER_STATUS_OPTIONS
+const statusTabOptions = props.kind === "repair" ? REPAIR_WORK_ORDER_TAB_OPTIONS : INSPECTION_WORK_ORDER_TAB_OPTIONS
 
 const schema: TablePageSchema<WorkOrderRecord> = {
   title: pageTitle.value,
@@ -201,8 +203,8 @@ const schema: TablePageSchema<WorkOrderRecord> = {
     mode: "enum",
     all: { label: "全部", value: "all" },
     field: "statusLabel",
-    options: WORK_ORDER_TAB_OPTIONS,
-    order: WORK_ORDER_TAB_OPTIONS,
+    options: statusTabOptions,
+    order: statusTabOptions,
   },
 }
 
@@ -282,10 +284,7 @@ const queryBar = computed<TableQueryBarConfig>(() => ({
           label: "工单状态",
           icon: "ri-price-tag-3-line",
           value: selectedStatus.value,
-          options: Object.entries(workOrderStatusMap).map(([label], index) => ({
-            value: String(index + 1),
-            label,
-          })),
+          options: statusOptions,
           placeholder: "请选择状态",
           expandedWidth: 248,
           collapsedMaxWidth: 248,
@@ -327,17 +326,6 @@ const queryBar = computed<TableQueryBarConfig>(() => ({
           collapsedMaxWidth: 248,
         },
         {
-          type: "search" as const,
-          key: "title",
-          queryKey: "title",
-          label: "报修标题",
-          icon: "ri-text",
-          placeholder: "请输入",
-          value: titleQuery.value,
-          expandedWidth: 248,
-          collapsedMaxWidth: 248,
-        },
-        {
           type: "select" as const,
           key: "important",
           queryKey: "important",
@@ -357,10 +345,7 @@ const queryBar = computed<TableQueryBarConfig>(() => ({
           label: "工单状态",
           icon: "ri-price-tag-3-line",
           value: selectedStatus.value,
-          options: Object.entries(workOrderStatusMap).map(([label], index) => ({
-            value: String(index + 1),
-            label,
-          })),
+          options: statusOptions,
           placeholder: "请选择状态",
           expandedWidth: 248,
           collapsedMaxWidth: 248,
@@ -373,14 +358,13 @@ const queryBar = computed<TableQueryBarConfig>(() => ({
     serviceName: props.kind === "inspection" ? serviceNameQuery.value : "",
     executor: props.kind === "inspection" ? executorQuery.value : "",
     createdAt: props.kind === "repair" ? createdAtQuery.value : "",
-    title: props.kind === "repair" ? titleQuery.value : "",
     important: props.kind === "repair" ? selectedImportant.value : "",
     status: selectedStatus.value,
     result: props.kind === "inspection" ? selectedResult.value : "",
   },
   canClear: props.kind === "inspection"
     ? Boolean(orderNoQuery.value || selectedCustomerUuid.value || selectedPlanUuid.value || serviceNameQuery.value || executorQuery.value || selectedStatus.value || selectedResult.value)
-    : Boolean(orderNoQuery.value || createdAtQuery.value || titleQuery.value || selectedImportant.value || selectedStatus.value),
+    : Boolean(orderNoQuery.value || createdAtQuery.value || selectedImportant.value || selectedStatus.value),
 }))
 
 watch([pageNum, pageSize], ([nextPageNum, nextPageSize], [previousPageNum, previousPageSize]) => {
@@ -405,7 +389,6 @@ watch(
     : [
         normalizeQueryValue(route.query.q),
         normalizeQueryValue(route.query.createdAt),
-        normalizeQueryValue(route.query.title),
         normalizeQueryValue(route.query.important),
         normalizeQueryValue(route.query.status),
       ] as const,
@@ -429,9 +412,8 @@ watch(
       selectedResult.value = nextValue[6] ?? ""
     } else {
       createdAtQuery.value = nextValue[1] ?? ""
-      titleQuery.value = nextValue[2] ?? ""
-      selectedImportant.value = nextValue[3] ?? ""
-      selectedStatus.value = nextValue[4] ?? ""
+      selectedImportant.value = nextValue[2] ?? ""
+      selectedStatus.value = nextValue[3] ?? ""
     }
 
     if (pageNum.value !== 1) {
@@ -468,7 +450,6 @@ function buildPageFilterText(row: WorkOrderRecord) {
   if (props.kind === "repair") {
     return [
       row.orderNo,
-      row.title,
       row.customerName,
       row.parkName,
       row.executor,
@@ -598,7 +579,6 @@ async function loadAssignableUsers() {
 }
 
 function resetAssignState() {
-  assignUserUuid.value = ""
   assignUserUuids.value = []
 }
 
@@ -613,25 +593,20 @@ async function submitAssign() {
   assignSubmitting.value = true
 
   try {
-    if (props.kind === "inspection") {
-      if (!assignUserUuids.value.length) {
-        toast.error("请先选择至少一位指派人员")
-        return
-      }
+    if (!assignUserUuids.value.length) {
+      toast.error("请先选择至少一位指派人员")
+      return
+    }
 
+    if (props.kind === "inspection") {
       await dispatchWorkOrder({
         Uuid: currentTarget.uuid,
         UserUuids: assignUserUuids.value,
       })
     } else {
-      if (!assignUserUuid.value) {
-        toast.error("请先选择指派用户")
-        return
-      }
-
-      await dispatchWorkOrder({
-        Uuid: currentTarget.uuid,
-        UserUuid: assignUserUuid.value,
+      await dispatchRepairWorkOrder({
+        Uuids: [currentTarget.uuid],
+        UserUuids: assignUserUuids.value,
       })
     }
 
@@ -676,8 +651,7 @@ async function loadWorkOrders() {
           OrderNo: orderNoQuery.value || undefined,
           CreatedStartAt: createdAtQuery.value || undefined,
           CreatedEndAt: createdAtQuery.value || undefined,
-          Title: titleQuery.value || undefined,
-          Important: toApiStatus(selectedImportant.value),
+          Important: selectedImportant.value || undefined,
           Status: toApiStatus(selectedStatus.value),
           PageNum: pageNum.value,
           PageSize: pageSize.value,
@@ -738,7 +712,6 @@ function normalizeInspectionWorkOrderRecord(item: WorkOrderListItem, index: numb
     customerUuid: toText(item.CustomerUuid),
     planUuid: toText(item.PlanUuid),
     orderNo,
-    title: "-",
     customerName: toText(item.CorpName || item.CustomerName, "-"),
     parkName: toText(item.ParkName, "-"),
     packageName,
@@ -782,8 +755,10 @@ function normalizeRepairWorkOrderRecord(item: RepairWorkOrderListItem, index: nu
   const uuid = toText(item.Uuid)
   const fallbackId = toText(item.Id, `${pageNum.value}-${index + 1}`)
   const statusValue = toNumber(item.Status)
-  const importantValue = toNumber(item.Important)
-  const reportTypeValue = toNumber(item.ReportType)
+  const importantValue = toDictionaryValue(item.Important)
+  const reportTypeValue = toDictionaryValue(item.ReportType)
+  const importantLabel = formatImportantLabel(importantValue)
+  const reportTypeLabel = formatReportTypeLabel(reportTypeValue)
   const createdAt = toText(item.CreatedAt, "-")
 
   return {
@@ -792,7 +767,6 @@ function normalizeRepairWorkOrderRecord(item: RepairWorkOrderListItem, index: nu
     customerUuid: toText(item.CustomerUuid),
     planUuid: "",
     orderNo: toText(item.OrderNo, `RP-${fallbackId}`),
-    title: toText(item.Title, "-"),
     customerName: toText(item.CorpName || item.CustomerName, "-"),
     parkName: toText(item.ParkName, "-"),
     packageName: "-",
@@ -802,13 +776,13 @@ function normalizeRepairWorkOrderRecord(item: RepairWorkOrderListItem, index: nu
     statusValue,
     statusLabel: formatStatusLabel(props.kind, statusValue),
     importantValue,
-    importantLabel: formatImportantLabel(importantValue),
+    importantLabel,
     reportTypeValue,
-    reportTypeLabel: formatReportTypeLabel(reportTypeValue),
+    reportTypeLabel,
     resultValue: reportTypeValue,
-    resultLabel: formatResultLabel(reportTypeValue, props.kind),
+    resultLabel: reportTypeLabel,
     score: importantValue,
-    scoreLabel: formatScoreLabel(importantValue, props.kind),
+    scoreLabel: importantLabel,
     deadline: "-",
     remark: toText(item.RepairContent || item.Content, "-"),
     createdAt,
@@ -822,29 +796,32 @@ function formatStatusLabel(kind: WorkOrderPageKind, value: number | null) {
   if (value === null) {
     return "未知状态"
   }
-  void kind
-  return getWorkOrderStatusLabel(value)
+
+  return kind === "repair"
+    ? getRepairWorkOrderStatusLabel(value)
+    : getWorkOrderStatusLabel(value)
 }
 
-function formatResultLabel(value: number | null, kind: WorkOrderPageKind) {
+function formatResultLabel(value: number | string | null, kind: WorkOrderPageKind) {
   if (value === null) {
     return kind === "inspection" ? "未反馈" : "-"
   }
 
   if (kind === "repair") {
-    if (value === 0) return "类型 0"
-    return `类型 ${value}`
+    return formatRepairDictionaryLabel(value, repairTypeOptions.value, "类型")
   }
 
-  if (value === 0) return "未反馈"
-  if (value === 1) return "正常"
-  if (value === 2) return "轻微风险"
-  if (value === 3) return "存在隐患"
+  const numericValue = typeof value === "number" ? value : Number(value)
 
-  return `结果 ${value}`
+  if (numericValue === 0) return "未反馈"
+  if (numericValue === 1) return "正常"
+  if (numericValue === 2) return "轻微风险"
+  if (numericValue === 3) return "存在隐患"
+
+  return `结果 ${numericValue}`
 }
 
-function formatScoreLabel(value: number | null, kind: WorkOrderPageKind) {
+function formatScoreLabel(value: number | string | null, kind: WorkOrderPageKind) {
   if (value === null) {
     return "-"
   }
@@ -856,11 +833,11 @@ function formatScoreLabel(value: number | null, kind: WorkOrderPageKind) {
   return String(value)
 }
 
-function formatImportantLabel(value: number | null) {
+function formatImportantLabel(value: string | null) {
   return formatRepairDictionaryLabel(value, repairImportanceOptions.value, "等级")
 }
 
-function formatReportTypeLabel(value: number | null) {
+function formatReportTypeLabel(value: string | null) {
   return formatRepairDictionaryLabel(value, repairTypeOptions.value, "类型")
 }
 
@@ -1017,46 +994,18 @@ function createRepairColumns(): TablePageSchema<WorkOrderRecord>["columns"] {
       sort: true,
     },
     {
-      key: "title",
-      label: "报修标题",
-      filterType: "text",
+      key: "reportTypeLabel",
+      label: "报修类型",
+      filterType: "tag",
       filter: {
-        type: "text",
-        placeholder: "输入报修标题",
+        type: "tag",
         defaultVisible: true,
       },
-      sort: true,
-    },
-    {
-      key: "customerName",
-      label: "客户名称",
-      filterType: "text",
-      slot: "cell-customerName",
-      filter: {
-        type: "text",
-        placeholder: "输入客户名称",
+      sort: {
+        label: "报修类型",
+        kind: "metric",
+        value: row => row.reportTypeValue ?? -1,
       },
-      sort: true,
-    },
-    {
-      key: "parkName",
-      label: "园区名称",
-      filterType: "text",
-      filter: {
-        type: "text",
-        placeholder: "输入园区名称",
-      },
-      sort: true,
-    },
-    {
-      key: "executor",
-      label: "执行人",
-      filterType: "text",
-      filter: {
-        type: "text",
-        placeholder: "输入执行人",
-      },
-      sort: true,
     },
     {
       key: "importantLabel",
@@ -1070,20 +1019,6 @@ function createRepairColumns(): TablePageSchema<WorkOrderRecord>["columns"] {
         label: "重要程度",
         kind: "metric",
         value: row => row.importantValue ?? -1,
-      },
-    },
-    {
-      key: "reportTypeLabel",
-      label: "报修类型",
-      filterType: "tag",
-      filter: {
-        type: "tag",
-        defaultVisible: true,
-      },
-      sort: {
-        label: "报修类型",
-        kind: "metric",
-        value: row => row.reportTypeValue ?? -1,
       },
     },
     {
@@ -1116,6 +1051,37 @@ function createRepairColumns(): TablePageSchema<WorkOrderRecord>["columns"] {
       },
     },
     {
+      key: "executor",
+      label: "执行人",
+      filterType: "text",
+      filter: {
+        type: "text",
+        placeholder: "输入执行人",
+      },
+      sort: true,
+    },
+    {
+      key: "customerName",
+      label: "客户名称",
+      filterType: "text",
+      slot: "cell-customerName",
+      filter: {
+        type: "text",
+        placeholder: "输入客户名称",
+      },
+      sort: true,
+    },
+    {
+      key: "parkName",
+      label: "园区名称",
+      filterType: "text",
+      filter: {
+        type: "text",
+        placeholder: "输入园区名称",
+      },
+      sort: true,
+    },
+    {
       key: "createdAt",
       label: "创建时间",
       filterType: "time",
@@ -1145,6 +1111,18 @@ function toText(value: unknown, fallback = "") {
 
 function toNumber(value: unknown) {
   return typeof value === "number" && Number.isFinite(value) ? value : null
+}
+
+function toDictionaryValue(value: unknown) {
+  if (typeof value === "string" && value.trim()) {
+    return value.trim()
+  }
+
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return String(value)
+  }
+
+  return null
 }
 
 function compareWorkOrderRows(
@@ -1225,10 +1203,6 @@ function handleQueryChange(payload: { key: string; value: string | string[] }) {
     createdAtQuery.value = typeof payload.value === "string" ? payload.value.trim() : ""
   }
 
-  if (payload.key === "title") {
-    titleQuery.value = typeof payload.value === "string" ? payload.value.trim() : ""
-  }
-
   if (payload.key === "important") {
     selectedImportant.value = typeof payload.value === "string" ? payload.value.trim() : ""
   }
@@ -1251,14 +1225,13 @@ function handleQueryClear() {
         || selectedStatus.value
         || selectedResult.value,
       )
-    : Boolean(orderNoQuery.value || createdAtQuery.value || titleQuery.value || selectedImportant.value || selectedStatus.value)
+    : Boolean(orderNoQuery.value || createdAtQuery.value || selectedImportant.value || selectedStatus.value)
 
   if (!hasFilters) {
     return
   }
 
   orderNoQuery.value = ""
-  titleQuery.value = ""
   selectedCustomerUuid.value = ""
   selectedPlanUuid.value = ""
   createdAtQuery.value = ""
@@ -1276,7 +1249,7 @@ async function syncRouteQueryAndReload() {
       ...route.query,
       q: orderNoQuery.value || undefined,
       createdAt: props.kind === "repair" ? createdAtQuery.value || undefined : undefined,
-      title: props.kind === "repair" ? titleQuery.value || undefined : undefined,
+      title: undefined,
       important: props.kind === "repair" ? selectedImportant.value || undefined : undefined,
       customerUuid: props.kind === "inspection" ? selectedCustomerUuid.value || undefined : undefined,
       planUuid: props.kind === "inspection" ? selectedPlanUuid.value || undefined : undefined,
@@ -1497,29 +1470,15 @@ async function ensureRepairDictionaries() {
         <DialogHeader>
           <DialogTitle>指派工单</DialogTitle>
           <DialogDescription>
-            {{ isInspectionAssignDialog ? "请选择一位或多位执行人并确认提交。" : "请选择要指派的用户并确认提交。" }}
+            {{ isInspectionAssignDialog ? "请选择一位或多位执行人并确认提交。" : "请选择一位或多位维修人员并确认提交。" }}
           </DialogDescription>
         </DialogHeader>
 
-        <div v-if="isInspectionAssignDialog" class="space-y-4">
-          <p class="text-sm text-foreground">执行人</p>
+        <div class="space-y-4">
+          <p class="text-sm text-foreground">{{ isInspectionAssignDialog ? "执行人" : "维修人员" }}</p>
           <Select v-model="assignUserUuids" multiple :disabled="assignableUsersLoading || assignSubmitting">
             <SelectTrigger class="w-full">
-              <SelectValue :placeholder="assignableUsersLoading ? '正在加载用户...' : '请选择执行人，可多选'" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem v-for="user in assignableUsers" :key="user.uuid" :value="user.uuid">
-                {{ user.name }}
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div v-else class="space-y-2">
-          <p class="text-sm text-foreground">指派用户</p>
-          <Select v-model="assignUserUuid" :disabled="assignableUsersLoading || assignSubmitting">
-            <SelectTrigger class="w-full">
-              <SelectValue :placeholder="assignableUsersLoading ? '正在加载用户...' : '请选择用户'" />
+              <SelectValue :placeholder="assignableUsersLoading ? '正在加载用户...' : isInspectionAssignDialog ? '请选择执行人，可多选' : '请选择维修人员，可多选'" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem v-for="user in assignableUsers" :key="user.uuid" :value="user.uuid">

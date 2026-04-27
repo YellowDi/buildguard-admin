@@ -3,6 +3,7 @@ import { computed, ref, watch } from "vue"
 
 import TitleBlock from "@/components/layout/TitleBlock.vue"
 import { Badge } from "@/components/ui/badge"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import { Progress } from "@/components/ui/progress"
 import { StatusBadge } from "@/components/ui/status-badge"
@@ -49,6 +50,9 @@ const props = withDefaults(defineProps<{
   emptyItemsText?: string
   totalLabel?: string
   emptyIcon?: string
+  selectable?: boolean
+  selectedItemKeys?: string[]
+  showHeader?: boolean
 }>(), {
   title: "建筑与检测项",
   count: undefined,
@@ -57,7 +61,15 @@ const props = withDefaults(defineProps<{
   emptyItemsText: "当前建筑暂无检测项。",
   totalLabel: "总检测项",
   emptyIcon: "ri-building-line",
+  selectable: false,
+  selectedItemKeys: () => [],
+  showHeader: true,
 })
+
+const emit = defineEmits<{
+  "update:selectedItemKeys": [value: string[]]
+  "item-toggle": [item: InspectionBuildingCardV2Item, checked: boolean]
+}>()
 
 const expandedBuildingKeys = ref<string[]>([])
 
@@ -101,6 +113,41 @@ function handleBaseCardKeydown(event: KeyboardEvent, buildingKey: string) {
 
   event.preventDefault()
   toggleBuilding(buildingKey)
+}
+
+function isItemSelected(itemKey: string) {
+  return props.selectedItemKeys.includes(itemKey)
+}
+
+function handleItemClick(item: InspectionBuildingCardV2Item) {
+  if (props.selectable) {
+    updateItemSelected(item, !isItemSelected(item.key))
+    return
+  }
+
+  item.onSelect?.()
+}
+
+function handleItemKeydown(event: KeyboardEvent, item: InspectionBuildingCardV2Item) {
+  if (event.key !== "Enter" && event.key !== " ") {
+    return
+  }
+
+  event.preventDefault()
+  handleItemClick(item)
+}
+
+function updateItemSelected(item: InspectionBuildingCardV2Item, checked: boolean | "indeterminate") {
+  if (checked === "indeterminate") {
+    return
+  }
+
+  const nextSelectedKeys = checked
+    ? Array.from(new Set([...props.selectedItemKeys, item.key]))
+    : props.selectedItemKeys.filter(key => key !== item.key)
+
+  emit("update:selectedItemKeys", nextSelectedKeys)
+  emit("item-toggle", item, checked)
 }
 
 function resolveStatusIcon(status: InspectionBuildingStatus) {
@@ -222,6 +269,7 @@ function handleExpandAfterLeave(element: Element) {
     <div class="detail-table-scroll">
       <div class="detail-table-frame detail-relation-frame">
         <TitleBlock
+          v-if="props.showHeader"
           variant="section"
           :title="props.title"
           class="detail-section-inset pt-4 pb-3"
@@ -362,16 +410,29 @@ function handleExpandAfterLeave(element: Element) {
                     </div>
 
                     <TransitionGroup name="inspection-item-stagger" tag="div">
-                      <button
+                      <div
                         v-for="(item, itemIndex) in group.items"
                         :key="`${building.key}-${group.key}-${item.key}`"
-                        type="button"
-                        class="flex min-h-10 w-full items-center justify-between gap-4 border-b border-black/5 px-4 py-2.5 text-left transition-colors duration-180 ease-out last:border-b-0 hover:bg-black/1.5"
+                        role="button"
+                        tabindex="0"
+                        :aria-pressed="props.selectable ? isItemSelected(item.key) : undefined"
+                        :class="[
+                          'flex min-h-10 w-full items-center justify-between gap-4 border-b border-black/5 px-4 py-2.5 text-left transition-colors duration-180 ease-out last:border-b-0 hover:bg-black/1.5',
+                          props.selectable && isItemSelected(item.key) ? 'bg-black/2' : '',
+                          !props.selectable && !item.onSelect ? 'cursor-default' : 'cursor-pointer',
+                        ]"
                         :style="{ '--item-delay': `${220 + (groupIndex * 3 + itemIndex) * 36}ms` }"
-                        :disabled="!item.onSelect"
-                        @click="item.onSelect?.()"
+                        @click="handleItemClick(item)"
+                        @keydown="handleItemKeydown($event, item)"
                       >
-                        <div class="flex min-w-0 items-center gap-2.5 overflow-hidden whitespace-nowrap">
+                        <div class="flex min-w-0 items-center gap-2.5 overflow-hidden">
+                          <Checkbox
+                            v-if="props.selectable"
+                            :model-value="isItemSelected(item.key)"
+                            class="shrink-0"
+                            @click.stop
+                            @update:model-value="updateItemSelected(item, $event)"
+                          />
                           <StatusBadge
                             v-if="item.resultLabel"
                             :label="item.resultLabel"
@@ -392,7 +453,7 @@ function handleExpandAfterLeave(element: Element) {
                         >
                           {{ item.scoreText }}
                         </div>
-                      </button>
+                      </div>
                     </TransitionGroup>
                   </div>
                 </div>

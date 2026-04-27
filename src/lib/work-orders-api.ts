@@ -89,9 +89,10 @@ export type CreateRepairWorkOrderPayload = {
   CustomerUuid: string
   ParkUuid: string
   Title: string
-  ReportType: number
-  Important: number
+  ReportType: string
+  Important: string
   Content: string
+  WorkOrderInspectionBuildUuid?: string[]
 }
 
 export type UpdateWorkOrderPayload = {
@@ -105,6 +106,11 @@ export type DispatchWorkOrderPayload = {
   UserUuids?: string[]
 }
 
+export type DispatchRepairWorkOrderPayload = {
+  Uuids?: string[]
+  UserUuids?: string[]
+}
+
 export type WorkOrderDetailPayload = {
   Uuid: string
 }
@@ -114,7 +120,6 @@ export type WorkOrderInspectionHistoryDetailPayload = {
 }
 
 export type WorkOrderDetailResult = WorkOrderListItem
-export type RepairWorkOrderDetailResult = RepairWorkOrderListItem
 
 export type WorkOrderInspectionHistoryDetailItem = {
   Uuid?: string
@@ -132,7 +137,7 @@ export type WorkOrderFile = {
   [property: string]: unknown
 }
 
-export type RepairWorkOrderListItem = {
+export type RepairWorkOrderDetailResult = {
   Id?: number
   Uuid?: string
   OrderNo?: string
@@ -141,22 +146,26 @@ export type RepairWorkOrderListItem = {
   CustomerName?: string
   ParkUuid?: string
   ParkName?: string
-  BuildName?: string
   UserUuid?: string
   UserName?: string
-  Important?: number
-  ReportType?: number
+  Important?: string
+  ReportType?: string
   Content?: string
   Title?: string
   Status?: number
-  CreatedStartAt?: string
-  CreatedEndAt?: string
   CreatedAt?: string
-  UpdatedAt?: string
   AfterRepairFile?: WorkOrderFile[]
   BeforeRepairFile?: WorkOrderFile[]
   RepairContent?: string
   [property: string]: unknown
+}
+
+export type RepairWorkOrderListItem = {
+} & RepairWorkOrderDetailResult & {
+  BuildName?: string
+  CreatedStartAt?: string
+  CreatedEndAt?: string
+  UpdatedAt?: string
 }
 
 export type RepairWorkOrdersListResult = {
@@ -175,7 +184,7 @@ export type ListWorkOrdersPayload = {
   Result?: number
   CreatedStartAt?: string
   CreatedEndAt?: string
-  Important?: number
+  Important?: string
   Title?: string
   UserUuid?: number
   PageNum?: number
@@ -192,6 +201,7 @@ const WORK_ORDER_DETAIL_API_URL = API_PATHS.workOrderDetail
 const WORK_ORDER_INSPECTION_HISTORY_DETAIL_API_URL = API_PATHS.workOrderInspectionHistoryDetail
 const WORK_ORDER_UPDATE_API_URL = buildApiUrl(API_PATHS.workOrderUpdate)
 const WORK_ORDER_DISPATCH_API_URL = buildApiUrl(API_PATHS.workOrderDispatch)
+const WORK_ORDER_REPAIR_DISPATCH_API_URL = buildApiUrl(API_PATHS.workOrderRepairDispatch)
 const WORK_ORDERS_LOAD_ERROR_MESSAGE = "工单列表加载失败，请稍后重试。"
 const WORK_ORDER_CREATE_ERROR_MESSAGE = "工单创建失败，请稍后重试。"
 const REPAIR_WORK_ORDER_CREATE_ERROR_MESSAGE = "报修工单创建失败，请稍后重试。"
@@ -270,9 +280,10 @@ export async function createRepairWorkOrder(payload: CreateRepairWorkOrderPayloa
     CustomerUuid: getRequiredString(payload.CustomerUuid, "CustomerUuid"),
     ParkUuid: getRequiredString(payload.ParkUuid, "ParkUuid"),
     Title: getRequiredString(payload.Title, "Title"),
-    ReportType: getRequiredNumber(payload.ReportType, "ReportType"),
-    Important: getRequiredNumber(payload.Important, "Important"),
+    ReportType: getRequiredString(payload.ReportType, "ReportType"),
+    Important: getRequiredString(payload.Important, "Important"),
     Content: getRequiredString(payload.Content, "Content"),
+    WorkOrderInspectionBuildUuid: normalizeOptionalStringArray(payload.WorkOrderInspectionBuildUuid),
   }
 
   const response = await fetch(REPAIR_WORK_ORDER_CREATE_API_URL, {
@@ -414,13 +425,48 @@ export async function dispatchWorkOrder(payload: DispatchWorkOrderPayload): Prom
   return extractCreateResult(responseBody)
 }
 
+export async function dispatchRepairWorkOrder(payload: DispatchRepairWorkOrderPayload): Promise<CreateWorkOrderResult> {
+  const uuids = normalizeOptionalStringArray(payload.Uuids)
+  const userUuids = normalizeOptionalStringArray(payload.UserUuids)
+
+  if (!uuids?.length) {
+    throw new ApiError("请求参数校验失败：Uuids 至少需要一个。")
+  }
+
+  if (!userUuids?.length) {
+    throw new ApiError("请求参数校验失败：UserUuids 至少需要一个。")
+  }
+
+  const normalizedPayload = {
+    Uuids: uuids,
+    UserUuids: userUuids,
+  }
+
+  const response = await fetch(WORK_ORDER_REPAIR_DISPATCH_API_URL, {
+    method: "POST",
+    headers: buildApiHeaders({
+      "Content-Type": "application/json",
+    }),
+    body: JSON.stringify(normalizedPayload),
+  })
+  const responseBody = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responseBody, WORK_ORDER_DISPATCH_ERROR_MESSAGE)
+  }
+
+  assertApiSuccess(responseBody, WORK_ORDER_DISPATCH_ERROR_MESSAGE)
+
+  return extractCreateResult(responseBody)
+}
+
 export async function fetchRepairWorkOrders(payload: ListWorkOrdersPayload = {}): Promise<RepairWorkOrdersListResult> {
   const normalizedPayload = {
     CreatedEndAt: getOptionalString(payload.CreatedEndAt) ?? "",
     CreatedStartAt: getOptionalString(payload.CreatedStartAt) ?? "",
     OrderNo: getOptionalString(payload.OrderNo) ?? "",
     CustomerUuid: getOptionalString(payload.CustomerUuid) ?? "",
-    Important: getOptionalNumber(payload.Important, "Important") ?? 0,
+    Important: getOptionalString(payload.Important) ?? "",
     Status: getOptionalNumber(payload.Status, "Status") ?? 0,
     Title: getOptionalString(payload.Title) ?? "",
     UserUuid: getOptionalNumber(payload.UserUuid, "UserUuid") ?? 0,
@@ -566,8 +612,8 @@ function normalizeRepairWorkOrderListItem(value: unknown): RepairWorkOrderListIt
     BuildName: getFirstText(record, ["BuildName", "buildName", "BuildingName", "buildingName"]),
     UserUuid: getFirstText(record, ["UserUuid", "userUuid"]),
     UserName: getFirstText(record, ["UserName", "userName"]),
-    Important: getFirstNumber(record, ["Important", "important"]),
-    ReportType: getFirstNumber(record, ["ReportType", "reportType"]),
+    Important: getFirstText(record, ["Important", "important"]),
+    ReportType: getFirstText(record, ["ReportType", "reportType"]),
     Content: getFirstText(record, ["Content", "content"]),
     Title: getFirstText(record, ["Title", "title"]),
     Status: getFirstNumber(record, ["Status", "status"]),

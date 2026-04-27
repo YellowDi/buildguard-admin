@@ -1,7 +1,7 @@
 import type { DetailContactValue, DetailFieldSection } from "@/components/detail/types"
 import type { CustomerDetailResult } from "@/lib/customers-api"
 import { formatRepairDictionaryLabel, type RepairDictionaryOption } from "@/lib/repair-work-order-dictionaries"
-import { getWorkOrderStatusLabel } from "@/lib/work-order-status"
+import { getRepairWorkOrderStatusLabel } from "@/lib/work-order-status"
 import type { RepairWorkOrderDetailResult } from "@/lib/work-orders-api"
 
 export type RepairWorkOrderDictionaryLabels = {
@@ -141,7 +141,7 @@ function toNumber(value: unknown) {
 
 function formatRepairWorkOrderStatus(value: unknown) {
   const status = toNumber(value)
-  return getWorkOrderStatusLabel(status, "-")
+  return getRepairWorkOrderStatusLabel(status, "-")
 }
 
 function formatRepairReportTypeLabel(value: unknown, options: RepairDictionaryOption[] = []) {

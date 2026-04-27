@@ -7,7 +7,7 @@ import {
 
 export type RepairDictionaryOption = {
   value: string
-  numericValue: number
+  numericValue: number | null
   label: string
   uuid: string
   sort: number | null
@@ -18,8 +18,28 @@ export type RepairWorkOrderDictionaries = {
   typeOptions: RepairDictionaryOption[]
 }
 
-const REPAIR_IMPORTANCE_CODE = "repair_importance"
-const REPAIR_TYPE_CODE = "repair_type"
+const REPAIR_IMPORTANCE_TARGET = {
+  codeAliases: [
+    "repair_importance",
+    "repair_important",
+    "repair_importance_level",
+    "repair_work_order_importance",
+    "work_order_repair_importance",
+  ],
+  nameAliases: ["报修重要程度"],
+}
+
+const REPAIR_TYPE_TARGET = {
+  codeAliases: [
+    "repair_type",
+    "report_type",
+    "repair_report_type",
+    "repair_work_order_type",
+    "work_order_repair_type",
+    "maintenance_type",
+  ],
+  nameAliases: ["报修类型"],
+}
 
 let cachedDictionaries: Promise<RepairWorkOrderDictionaries> | null = null
 
@@ -39,20 +59,46 @@ export function formatRepairDictionaryLabel(
   options: RepairDictionaryOption[],
   fallbackPrefix: string,
 ) {
+  const normalizedText = toTextValue(value)
+
+  if (normalizedText) {
+    const matchedByValue = options.find(option => (
+      option.value === normalizedText
+      || option.uuid === normalizedText
+      || option.label === normalizedText
+    ))
+
+    if (matchedByValue) {
+      return matchedByValue.label
+    }
+  }
+
   const normalizedValue = toNumericValue(value)
 
   if (normalizedValue === null) {
-    return "-"
+    return normalizedText ? `${fallbackPrefix} ${normalizedText}` : "-"
   }
 
   return options.find(option => option.numericValue === normalizedValue)?.label
     ?? `${fallbackPrefix} ${normalizedValue}`
 }
 
+function toTextValue(value: unknown) {
+  if (typeof value === "string") {
+    return value.trim()
+  }
+
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return String(value)
+  }
+
+  return ""
+}
+
 async function loadRepairWorkOrderDictionaries(): Promise<RepairWorkOrderDictionaries> {
   const dictTypes = await fetchDictTypes()
-  const importanceType = resolveDictType(dictTypes, REPAIR_IMPORTANCE_CODE)
-  const repairType = resolveDictType(dictTypes, REPAIR_TYPE_CODE)
+  const importanceType = resolveDictType(dictTypes, REPAIR_IMPORTANCE_TARGET)
+  const repairType = resolveDictType(dictTypes, REPAIR_TYPE_TARGET)
   const [importanceOptions, typeOptions] = await Promise.all([
     fetchOptionsForType(importanceType),
     fetchOptionsForType(repairType),
@@ -92,25 +138,42 @@ async function fetchOptionsForType(type: DictTypeItem | null) {
 }
 
 function mapDictEntryOption(item: DictEntryItem): RepairDictionaryOption | null {
-  const numericValue = item.Sort ?? item.Id
+  const label = item.Name.trim()
+  const numericValue = Number.isFinite(item.Id) ? item.Id : null
+  const value = numericValue === null ? item.Uuid.trim() : String(numericValue)
 
-  if (!Number.isFinite(numericValue)) {
+  if (!value) {
     return null
   }
 
   return {
-    value: String(numericValue),
+    value,
     numericValue,
-    label: item.Name || String(numericValue),
+    label: label || value,
     uuid: item.Uuid,
     sort: item.Sort,
   }
 }
 
-function resolveDictType(dictTypes: DictTypeItem[], code: string) {
-  const normalizedCode = normalizeText(code)
+function resolveDictType(
+  dictTypes: DictTypeItem[],
+  target: { codeAliases: string[]; nameAliases: string[] },
+) {
+  const normalizedCodeAliases = new Set(target.codeAliases.map(normalizeText))
+  const normalizedNameAliases = new Set(target.nameAliases.map(normalizeText))
 
-  return dictTypes.find(type => normalizeText(type.Code) === normalizedCode) ?? null
+  return dictTypes.find((type) => {
+    const code = normalizeText(type.Code)
+    const name = normalizeText(type.Name)
+
+    return normalizedCodeAliases.has(code) || normalizedNameAliases.has(name)
+  }) ?? dictTypes.find((type) => {
+    const code = normalizeText(type.Code)
+    const name = normalizeText(type.Name)
+
+    return target.codeAliases.some(alias => code.includes(normalizeText(alias)))
+      || target.nameAliases.some(alias => name.includes(normalizeText(alias)))
+  }) ?? null
 }
 
 function toNumericValue(value: unknown) {
