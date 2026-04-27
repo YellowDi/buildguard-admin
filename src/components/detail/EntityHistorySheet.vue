@@ -78,10 +78,6 @@ function splitEntryFields(entry: HistoryEntry) {
   }
 }
 
-function hasSingleImage(entry: HistoryEntry) {
-  return (entry.images?.length ?? 0) === 1
-}
-
 function isVideoMedia(image: NonNullable<HistoryEntry["images"]>[number]) {
   return image.type === "video"
 }
@@ -282,18 +278,12 @@ function resolveEntryStatusBadgeIcon(entry: HistoryEntry) {
                         现场附件
                       </p>
                       <div
-                        :class="cn(
-                          'mt-3 grid gap-3',
-                          hasSingleImage(entry) ? 'grid-cols-1' : 'grid-cols-2',
-                        )"
+                        class="mt-3 columns-1 gap-3 sm:columns-2"
                       >
                         <div
                           v-for="image in entry.images"
                           :key="image.key"
-                          :class="cn(
-                            'border-overlay overflow-hidden rounded-[12px] bg-[#f6f5f4] shadow-[0_4px_18px_rgba(0,0,0,0.04),0_2.025px_7.85px_rgba(0,0,0,0.027),0_0.8px_2.93px_rgba(0,0,0,0.02),0_0.175px_1.04px_rgba(0,0,0,0.01)] dark:bg-[#1e1e1e] dark:shadow-[0_4px_18px_rgba(0,0,0,0.2),0_2.025px_7.85px_rgba(0,0,0,0.15),0_0.8px_2.93px_rgba(0,0,0,0.1),0_0.175px_1.04px_rgba(0,0,0,0.08)]',
-                            hasSingleImage(entry) ? 'col-span-1' : '',
-                          )"
+                          class="border-overlay mb-3 break-inside-avoid overflow-hidden rounded-[12px] bg-[#f6f5f4] shadow-[0_4px_18px_rgba(0,0,0,0.04),0_2.025px_7.85px_rgba(0,0,0,0.027),0_0.8px_2.93px_rgba(0,0,0,0.02),0_0.175px_1.04px_rgba(0,0,0,0.01)] dark:bg-[#1e1e1e] dark:shadow-[0_4px_18px_rgba(0,0,0,0.2),0_2.025px_7.85px_rgba(0,0,0,0.15),0_0.8px_2.93px_rgba(0,0,0,0.1),0_0.175px_1.04px_rgba(0,0,0,0.08)]"
                         >
                           <video
                             v-if="isVideoMedia(image)"
@@ -301,19 +291,13 @@ function resolveEntryStatusBadgeIcon(entry: HistoryEntry) {
                             controls
                             preload="metadata"
                             playsinline
-                            :class="cn(
-                              'w-full bg-black object-contain',
-                              hasSingleImage(entry) ? 'h-52' : 'h-32',
-                            )"
+                            class="block h-auto w-full bg-black"
                           />
                           <img
                             v-else
                             :src="image.src"
                             :alt="image.alt ?? entry.title"
-                            :class="cn(
-                              'w-full object-cover',
-                              hasSingleImage(entry) ? 'h-52' : 'h-32',
-                            )"
+                            class="block h-auto w-full"
                           >
                         </div>
                       </div>
