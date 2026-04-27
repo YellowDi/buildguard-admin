@@ -95,6 +95,16 @@ export type CreateRepairWorkOrderPayload = {
   WorkOrderInspectionBuildUuid?: string[]
 }
 
+export type UpdateRepairWorkOrderPayload = {
+  Uuid: string
+  CustomerUuid?: string
+  ParkUuid?: string
+  Title?: string
+  ReportType?: string
+  Important?: string
+  Content?: string
+}
+
 export type UpdateWorkOrderPayload = {
   Uuid: string
   Remark?: string
@@ -157,6 +167,7 @@ export type RepairWorkOrderDetailResult = {
   AfterRepairFile?: WorkOrderFile[]
   BeforeRepairFile?: WorkOrderFile[]
   RepairContent?: string
+  WorkOrderInspectionBuildUuid?: string[]
   [property: string]: unknown
 }
 
@@ -196,6 +207,8 @@ const WORK_ORDERS_API_URL = buildApiUrl(API_PATHS.workOrdersList)
 const REPAIR_WORK_ORDERS_API_URL = buildApiUrl(API_PATHS.workOrderReportList)
 const REPAIR_WORK_ORDER_DETAIL_API_URL = API_PATHS.workOrderReportDetail
 const REPAIR_WORK_ORDER_CREATE_API_URL = buildApiUrl(API_PATHS.workOrderReportCreate)
+const REPAIR_WORK_ORDER_UPDATE_API_URL = buildApiUrl(API_PATHS.workOrderReportUpdate)
+const REPAIR_WORK_ORDER_DELETE_API_URL = API_PATHS.workOrderReportDelete
 const WORK_ORDER_CREATE_API_URL = buildApiUrl(API_PATHS.workOrderCreate)
 const WORK_ORDER_DETAIL_API_URL = API_PATHS.workOrderDetail
 const WORK_ORDER_INSPECTION_HISTORY_DETAIL_API_URL = API_PATHS.workOrderInspectionHistoryDetail
@@ -205,6 +218,8 @@ const WORK_ORDER_REPAIR_DISPATCH_API_URL = buildApiUrl(API_PATHS.workOrderRepair
 const WORK_ORDERS_LOAD_ERROR_MESSAGE = "工单列表加载失败，请稍后重试。"
 const WORK_ORDER_CREATE_ERROR_MESSAGE = "工单创建失败，请稍后重试。"
 const REPAIR_WORK_ORDER_CREATE_ERROR_MESSAGE = "报修工单创建失败，请稍后重试。"
+const REPAIR_WORK_ORDER_UPDATE_ERROR_MESSAGE = "报修工单更新失败，请稍后重试。"
+const REPAIR_WORK_ORDER_DELETE_ERROR_MESSAGE = "报修工单删除失败，请稍后重试。"
 const WORK_ORDER_DETAIL_ERROR_MESSAGE = "工单详情加载失败，请稍后重试。"
 const WORK_ORDER_INSPECTION_HISTORY_DETAIL_ERROR_MESSAGE = "检测结果历史加载失败，请稍后重试。"
 const WORK_ORDER_UPDATE_ERROR_MESSAGE = "工单更新失败，请稍后重试。"
@@ -304,6 +319,35 @@ export async function createRepairWorkOrder(payload: CreateRepairWorkOrderPayloa
   return extractCreateResult(responseBody)
 }
 
+export async function updateRepairWorkOrder(payload: UpdateRepairWorkOrderPayload): Promise<CreateWorkOrderResult> {
+  const normalizedPayload = {
+    Uuid: getOptionalString(payload.Uuid),
+    CustomerUuid: getOptionalString(payload.CustomerUuid),
+    ParkUuid: getOptionalString(payload.ParkUuid),
+    Title: getOptionalString(payload.Title),
+    ReportType: getOptionalString(payload.ReportType),
+    Important: getOptionalString(payload.Important),
+    Content: getOptionalString(payload.Content),
+  }
+
+  const response = await fetch(REPAIR_WORK_ORDER_UPDATE_API_URL, {
+    method: "POST",
+    headers: buildApiHeaders({
+      "Content-Type": "application/json",
+    }),
+    body: JSON.stringify(normalizedPayload),
+  })
+  const responseBody = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responseBody, REPAIR_WORK_ORDER_UPDATE_ERROR_MESSAGE)
+  }
+
+  assertApiSuccess(responseBody, REPAIR_WORK_ORDER_UPDATE_ERROR_MESSAGE)
+
+  return extractCreateResult(responseBody)
+}
+
 export async function fetchWorkOrderDetail(payload: WorkOrderDetailPayload): Promise<WorkOrderDetailResult> {
   const url = buildApiRequestUrl(WORK_ORDER_DETAIL_API_URL)
   const uuid = getRequiredString(payload.Uuid, "Uuid")
@@ -344,6 +388,25 @@ export async function fetchRepairWorkOrderDetail(payload: WorkOrderDetailPayload
   assertApiSuccess(responseBody, WORK_ORDER_DETAIL_ERROR_MESSAGE)
 
   return normalizeRepairWorkOrderListItem(extractDetailRecord(responseBody))
+}
+
+export async function deleteRepairWorkOrder(payload: WorkOrderDetailPayload) {
+  const url = buildApiRequestUrl(REPAIR_WORK_ORDER_DELETE_API_URL)
+  const uuid = getRequiredString(payload.Uuid, "Uuid")
+
+  url.searchParams.set("Uuid", uuid)
+
+  const response = await fetch(url.toString(), {
+    method: "GET",
+    headers: buildApiHeaders(),
+  })
+  const responseBody = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responseBody, REPAIR_WORK_ORDER_DELETE_ERROR_MESSAGE)
+  }
+
+  assertApiSuccess(responseBody, REPAIR_WORK_ORDER_DELETE_ERROR_MESSAGE)
 }
 
 export async function fetchWorkOrderInspectionHistoryDetail(
@@ -624,6 +687,12 @@ function normalizeRepairWorkOrderListItem(value: unknown): RepairWorkOrderListIt
     AfterRepairFile: getFirstWorkOrderFiles(record, ["AfterRepairFile", "afterRepairFile"]),
     BeforeRepairFile: getFirstWorkOrderFiles(record, ["BeforeRepairFile", "beforeRepairFile"]),
     RepairContent: getFirstText(record, ["RepairContent", "repairContent"]),
+    WorkOrderInspectionBuildUuid: getFirstTextArray(record, [
+      "WorkOrderInspectionBuildUuid",
+      "workOrderInspectionBuildUuid",
+      "WorkOrderInspectionBuildUuids",
+      "workOrderInspectionBuildUuids",
+    ]),
   }
 }
 

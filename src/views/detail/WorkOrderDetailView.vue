@@ -17,6 +17,16 @@ import { buildRepairWorkOrderPrimarySections, toText as toRepairWorkOrderText } 
 import { buildWorkOrderPrimarySections, toText } from "@/components/detail/workOrderDetailFields"
 import type { DetailFieldSection, InspectionItemHistoryModel } from "@/components/detail/types"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -30,6 +40,7 @@ import { fetchMembers } from "@/lib/members-api"
 import { fetchRepairWorkOrderDictionaries, formatRepairDictionaryLabel, type RepairDictionaryOption } from "@/lib/repair-work-order-dictionaries"
 import { fetchInspectionServiceDetail, type InspectionServiceListItem } from "@/lib/inspection-services-api"
 import {
+  deleteRepairWorkOrder,
   dispatchRepairWorkOrder,
   dispatchWorkOrder,
   fetchRepairWorkOrderDetail,
@@ -107,6 +118,8 @@ const assignableUsers = ref<AssignableUserOption[]>([])
 const assignableUsersLoading = ref(false)
 const assignableUsersLoaded = ref(false)
 const assignSubmitting = ref(false)
+const deleteConfirmOpen = ref(false)
+const deleteSubmitting = ref(false)
 const linkedDetailSheetOpen = ref(false)
 const linkedDetailSheetKind = ref<LinkedDetailSheetKind | null>(null)
 const linkedDetailSheetUuid = ref("")
@@ -302,6 +315,8 @@ const hasWorkOrder = computed(() => (
 ))
 
 const showAssignAction = computed(() => !loading.value && hasWorkOrder.value && Boolean(workOrderUuid.value))
+const showRepairDeleteAction = computed(() => props.kind === "repair" && !loading.value && hasWorkOrder.value && Boolean(workOrderUuid.value))
+const showRepairEditAction = computed(() => props.kind === "repair" && !loading.value && hasWorkOrder.value && Boolean(workOrderUuid.value))
 
 watch([inspectionWorkOrder, repairWorkOrder], () => {
   if (props.kind === "repair") {
@@ -347,6 +362,47 @@ function goBack() {
   }
 
   void router.push({ name: props.kind === "repair" ? "repair-work-orders" : "inspection-work-orders" })
+}
+
+function openRepairEditPage() {
+  const uuid = workOrderUuid.value
+
+  if (!uuid) {
+    toast.error("当前报修工单缺少 Uuid，无法编辑")
+    return
+  }
+
+  void router.push({
+    name: "repair-work-order-edit",
+    params: { id: uuid },
+    query: {
+      customerUuid: customerUuid.value,
+      returnTo: queryReturnTo.value || "repair-work-orders",
+    },
+  })
+}
+
+async function confirmDeleteRepairWorkOrder() {
+  const uuid = workOrderUuid.value
+
+  if (!uuid || deleteSubmitting.value) {
+    return
+  }
+
+  deleteSubmitting.value = true
+
+  try {
+    await deleteRepairWorkOrder({ Uuid: uuid })
+    deleteConfirmOpen.value = false
+    toast.success("报修工单已删除")
+    await router.push({ name: "repair-work-orders" })
+  } catch (error) {
+    handleApiError(error, {
+      fallback: "报修工单删除失败，请稍后重试。",
+    })
+  } finally {
+    deleteSubmitting.value = false
+  }
 }
 
 async function loadWorkOrderDetail(uuid: string) {
@@ -1325,6 +1381,39 @@ async function submitAssign() {
     @back="goBack"
   >
     <template #actions>
+      <AlertDialog :open="deleteConfirmOpen" @update:open="deleteConfirmOpen = $event">
+        <Button
+          v-if="showRepairDeleteAction"
+          type="button"
+          variant="outline"
+          size="sm"
+          class="gap-2 text-destructive hover:bg-destructive/10 hover:text-destructive"
+          @click="deleteConfirmOpen = true"
+        >
+          <i class="ri-delete-bin-line text-base" />
+          删除
+        </Button>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>确认删除当前报修工单？</AlertDialogTitle>
+            <AlertDialogDescription>
+              删除后将无法恢复，该操作会移除当前报修工单。
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel :disabled="deleteSubmitting">
+              取消
+            </AlertDialogCancel>
+            <AlertDialogAction
+              :disabled="deleteSubmitting"
+              class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              @click="confirmDeleteRepairWorkOrder"
+            >
+              {{ deleteSubmitting ? "删除中..." : "确认删除" }}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <Button
         v-if="showAssignAction"
         type="button"
@@ -1335,6 +1424,17 @@ async function submitAssign() {
       >
         <i class="ri-user-shared-line text-base" />
         指派
+      </Button>
+      <Button
+        v-if="showRepairEditAction"
+        type="button"
+        variant="outline"
+        size="sm"
+        class="gap-2"
+        @click="openRepairEditPage"
+      >
+        <i class="ri-edit-line text-base" />
+        编辑
       </Button>
     </template>
 
