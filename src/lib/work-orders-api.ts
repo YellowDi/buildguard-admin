@@ -88,7 +88,6 @@ export type CreateWorkOrderResult = {
 export type CreateRepairWorkOrderPayload = {
   CustomerUuid: string
   ParkUuid: string
-  Title: string
   ReportType: string
   Important: string
   Content: string
@@ -99,7 +98,6 @@ export type UpdateRepairWorkOrderPayload = {
   Uuid: string
   CustomerUuid?: string
   ParkUuid?: string
-  Title?: string
   ReportType?: string
   Important?: string
   Content?: string
@@ -294,7 +292,6 @@ export async function createRepairWorkOrder(payload: CreateRepairWorkOrderPayloa
   const normalizedPayload = {
     CustomerUuid: getRequiredString(payload.CustomerUuid, "CustomerUuid"),
     ParkUuid: getRequiredString(payload.ParkUuid, "ParkUuid"),
-    Title: getRequiredString(payload.Title, "Title"),
     ReportType: getRequiredString(payload.ReportType, "ReportType"),
     Important: getRequiredString(payload.Important, "Important"),
     Content: getRequiredString(payload.Content, "Content"),
@@ -324,7 +321,6 @@ export async function updateRepairWorkOrder(payload: UpdateRepairWorkOrderPayloa
     Uuid: getOptionalString(payload.Uuid),
     CustomerUuid: getOptionalString(payload.CustomerUuid),
     ParkUuid: getOptionalString(payload.ParkUuid),
-    Title: getOptionalString(payload.Title),
     ReportType: getOptionalString(payload.ReportType),
     Important: getOptionalString(payload.Important),
     Content: getOptionalString(payload.Content),

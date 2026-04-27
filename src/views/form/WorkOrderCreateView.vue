@@ -61,7 +61,6 @@ type WorkOrderFormState = {
   status: string
   remark: string
   parkUuid: string
-  title: string
   reportType: string
   important: string
   content: string
@@ -128,6 +127,7 @@ const props = withDefaults(defineProps<{
 })
 
 const DEFAULT_INSPECTION_STATUS = "1"
+const NO_REPAIR_INSPECTION_WORK_ORDER_VALUE = "__no-repair-inspection-work-order__"
 
 function createEmptyForm(): WorkOrderFormState {
   return {
@@ -139,7 +139,6 @@ function createEmptyForm(): WorkOrderFormState {
     status: DEFAULT_INSPECTION_STATUS,
     remark: "",
     parkUuid: "",
-    title: "",
     reportType: "",
     important: "",
     content: "",
@@ -205,7 +204,6 @@ const queryDeadline = computed(() => typeof route.query.deadline === "string" ? 
 const queryRemark = computed(() => typeof route.query.remark === "string" ? route.query.remark : "")
 const queryParkUuid = computed(() => typeof route.query.parkUuid === "string" ? route.query.parkUuid.trim() : "")
 const queryParkName = computed(() => typeof route.query.parkName === "string" ? route.query.parkName.trim() : "")
-const queryTitle = computed(() => typeof route.query.title === "string" ? route.query.title.trim() : "")
 const queryReportType = computed(() => typeof route.query.reportType === "string" ? route.query.reportType.trim() : "")
 const queryImportant = computed(() => typeof route.query.important === "string" ? route.query.important.trim() : "")
 const queryContent = computed(() => typeof route.query.content === "string" ? route.query.content : "")
@@ -318,6 +316,12 @@ const repairInspectionBuildings = computed(() => repairInspectionBuildGroups.val
     }>()).values()),
   }
 }))
+const optionalRepairInspectionWorkOrderUuid = computed({
+  get: () => form.inspectionWorkOrderUuid || NO_REPAIR_INSPECTION_WORK_ORDER_VALUE,
+  set: (value: string) => {
+    form.inspectionWorkOrderUuid = value === NO_REPAIR_INSPECTION_WORK_ORDER_VALUE ? "" : value
+  },
+})
 const canSubmit = computed(() => {
   if (isInspectionEditMode.value) {
     return Boolean(normalizeText(workOrderUuid.value) && !submitting.value)
@@ -329,7 +333,6 @@ const canSubmit = computed(() => {
       &&
       normalizeText(form.customerUuid)
       && normalizeText(form.parkUuid)
-      && normalizeText(form.title)
       && normalizeText(form.reportType)
       && normalizeText(form.important)
       && normalizeText(form.content)
@@ -337,8 +340,6 @@ const canSubmit = computed(() => {
       && !customerLoading.value
       && !relatedOptionsLoading.value
       && !repairDictionariesLoading.value
-      && !repairInspectionWorkOrdersLoading.value
-      && !repairInspectionItemsLoading.value
     )
   }
 
@@ -554,11 +555,6 @@ function buildRepairWorkOrderPayload() {
     return null
   }
 
-  if (!normalizeText(form.title)) {
-    toast.error("请填写报修标题")
-    return null
-  }
-
   const reportType = normalizeText(form.reportType)
 
   if (!reportType) {
@@ -581,7 +577,6 @@ function buildRepairWorkOrderPayload() {
   return {
     CustomerUuid: normalizeText(form.customerUuid),
     ParkUuid: normalizeText(form.parkUuid),
-    Title: normalizeText(form.title),
     ReportType: reportType,
     Important: important,
     Content: normalizeText(form.content),
@@ -644,7 +639,6 @@ async function handleRepairUpdateSubmit() {
       Uuid: uuid,
       CustomerUuid: payload.CustomerUuid,
       ParkUuid: payload.ParkUuid,
-      Title: payload.Title,
       ReportType: payload.ReportType,
       Important: payload.Important,
       Content: payload.Content,
@@ -772,7 +766,6 @@ async function loadRepairEditContext() {
       ...createEmptyForm(),
       customerUuid,
       parkUuid,
-      title: normalizeText(detail.Title),
       reportType: normalizeText(detail.ReportType),
       important: normalizeText(detail.Important),
       content: normalizeText(detail.Content),
@@ -982,7 +975,6 @@ function applyRepairPrefill(useRoutePrefill = false) {
   }
 
   if (useRoutePrefill) {
-    form.title = normalizeRouteField(queryTitle.value)
     form.reportType = normalizeRouteField(queryReportType.value)
     form.important = normalizeRouteField(queryImportant.value)
     form.content = normalizeRouteField(queryContent.value)
@@ -1140,7 +1132,7 @@ function resolvePreferredRepairInspectionWorkOrderUuid(
     }
   }
 
-  return options[0]?.uuid ?? ""
+  return ""
 }
 
 async function fetchInspectionWorkOrderOptions(customerUuid: string, parkUuid: string) {
@@ -1923,7 +1915,7 @@ watch(
               layout="vertical"
             >
               <Select
-                v-model="form.inspectionWorkOrderUuid"
+                v-model="optionalRepairInspectionWorkOrderUuid"
                 :disabled="repairInspectionWorkOrdersLoading || !form.customerUuid || !form.parkUuid || !repairInspectionWorkOrderOptions.length"
               >
                 <SelectTrigger id="repair-source-work-order" class="w-full" @focus="handleFocus('section-inspection-work-order')">
@@ -1932,6 +1924,9 @@ watch(
                   />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem :value="NO_REPAIR_INSPECTION_WORK_ORDER_VALUE">
+                    暂不选择检测结果
+                  </SelectItem>
                   <SelectItem
                     v-for="option in repairInspectionWorkOrderOptions"
                     :key="option.uuid"
@@ -1944,23 +1939,6 @@ watch(
               <p v-if="repairInspectionWorkOrdersError" class="mt-1 text-xs text-destructive">
                 {{ repairInspectionWorkOrdersError }}
               </p>
-            </FormFieldSection>
-
-            <FormFieldSection
-              id="section-title"
-              quick-nav-label="报修标题"
-              label="报修标题"
-              label-for="work-order-title"
-              layout="vertical"
-            >
-              <Input
-                id="work-order-title"
-                v-model="form.title"
-                required
-                placeholder="请输入报修标题"
-                class="w-full"
-                @focus="handleFocus('section-title')"
-              />
             </FormFieldSection>
 
             <FormFieldSection
@@ -2136,7 +2114,7 @@ watch(
             </div>
 
             <div v-else-if="!form.inspectionWorkOrderUuid" class="border border-dashed border-border/60 px-4 py-6 text-sm text-muted-foreground">
-              请先在左侧选择检测结果。
+              未选择检测结果，可直接提交；选择检测结果后可勾选检测项。
             </div>
 
             <InspectionBuildingCards
