@@ -1041,16 +1041,6 @@ function createRepairColumns(): TablePageSchema<WorkOrderRecord>["columns"] {
       },
     },
     {
-      key: "remark",
-      label: "内容说明",
-      filterType: "text",
-      format: "note",
-      filter: {
-        type: "text",
-        placeholder: "输入内容说明",
-      },
-    },
-    {
       key: "executor",
       label: "执行人",
       filterType: "text",
@@ -1059,6 +1049,16 @@ function createRepairColumns(): TablePageSchema<WorkOrderRecord>["columns"] {
         placeholder: "输入执行人",
       },
       sort: true,
+    },
+    {
+      key: "remark",
+      label: "内容说明",
+      filterType: "text",
+      format: "note",
+      filter: {
+        type: "text",
+        placeholder: "输入内容说明",
+      },
     },
     {
       key: "customerName",
