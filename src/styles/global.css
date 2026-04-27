@@ -604,6 +604,7 @@
   :is(
     [data-slot="input"],
     [data-slot="textarea"],
+    [data-slot="date-picker-trigger"],
     [data-slot="select-trigger"],
     [data-slot="native-select"],
     input:not([type="hidden"]),
@@ -623,6 +624,7 @@
   :is(
     [data-slot="input"],
     [data-slot="textarea"],
+    [data-slot="date-picker-trigger"],
     [data-slot="select-trigger"],
     [data-slot="native-select"],
     input:not([type="hidden"]),
@@ -635,6 +637,7 @@
   }
 
   [data-slot="select-trigger"]:not([data-disabled]):hover:not(:focus-visible) :is(svg, [data-slot="select-value"]),
+  [data-slot="date-picker-trigger"]:not(:disabled):hover:not(:focus-visible) svg,
   [data-slot="native-select-wrapper"]:not(:has(select:disabled)):hover [data-slot="native-select-icon"],
   [data-slot="input-group"]:hover:not(:has([data-slot="input-group-control"]:focus-visible)) :is(
     [data-slot="input-group-control"],
@@ -669,7 +672,7 @@
    * but suppress the blue ring on buttons, tabs, sidebar items, and popup/window actions.
    */
   :where(
-    button:not([data-slot="checkbox"]):not([data-slot="switch"]):not([data-slot="radio-group-item"]),
+    button:not([data-slot="checkbox"]):not([data-slot="switch"]):not([data-slot="radio-group-item"]):not([data-slot="date-picker-trigger"]),
     [role="button"],
     [role="tab"],
     [data-slot="button"],
@@ -689,7 +692,7 @@
     --tw-inset-ring-shadow: 0 0 #0000;
   }
 
-  button:not([data-slot="checkbox"]):not([data-slot="switch"]):not([data-slot="radio-group-item"]):focus-visible,
+  button:not([data-slot="checkbox"]):not([data-slot="switch"]):not([data-slot="radio-group-item"]):not([data-slot="date-picker-trigger"]):focus-visible,
   [data-slot="button"][data-variant="outline"]:focus-visible,
   [data-slot="select-trigger"]:focus-visible {
     border-color: var(--input);
@@ -803,6 +806,7 @@
   .dark [data-slot="card"],
   .dark [data-slot="button"],
   .dark [data-slot="select-trigger"],
+  .dark [data-slot="date-picker-trigger"],
   .dark [data-slot="checkbox"],
   .dark [data-slot="radio-group-item"],
   .dark [data-slot="input-group"],
@@ -861,6 +865,7 @@
   .dark [data-slot="card"],
   .dark [data-slot="button"],
   .dark [data-slot="select-trigger"],
+  .dark [data-slot="date-picker-trigger"],
   .dark [data-slot="checkbox"],
   .dark [data-slot="radio-group-item"],
   .dark [data-slot="input-group"],

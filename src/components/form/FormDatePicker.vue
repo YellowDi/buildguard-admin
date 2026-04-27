@@ -3,7 +3,6 @@ import { DateFormatter, getLocalTimeZone, parseDate } from "@internationalized/d
 import { Calendar as CalendarIcon } from "lucide-vue-next"
 import { computed } from "vue"
 
-import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
@@ -59,13 +58,16 @@ const displayValue = computed(() => {
 <template>
   <Popover>
     <PopoverTrigger as-child>
-      <Button
+      <button
         :id="id"
-        variant="outline"
+        type="button"
+        data-slot="date-picker-trigger"
         :disabled="disabled"
         :class="
           cn(
-            'w-full justify-start text-left font-normal',
+            'border-input dark:bg-input/30 flex h-9 w-full min-w-0 items-center justify-start rounded-md border bg-background/92 px-3 py-1 text-left text-base font-normal shadow-xs transition-[border-color,background-color,color,box-shadow] duration-180 ease-out outline-none disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50 md:text-sm',
+            'focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]',
+            'data-[state=open]:border-ring data-[state=open]:ring-ring/50 data-[state=open]:ring-[3px]',
             !modelValue && 'text-muted-foreground',
           )
         "
@@ -73,7 +75,7 @@ const displayValue = computed(() => {
       >
         <CalendarIcon class="mr-2 h-4 w-4" />
         {{ displayValue }}
-      </Button>
+      </button>
     </PopoverTrigger>
     <PopoverContent class="w-auto p-0" align="start">
       <Calendar
