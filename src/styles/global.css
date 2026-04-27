@@ -24,6 +24,8 @@
   --border: rgb(0 0 0 / 0.1);
   --input: rgb(0 0 0 / 0.12);
   --border-hover: rgb(0 0 0 / 0.16);
+  --form-control-hover-background: #f2f2f2;
+  --form-control-hover-foreground: #000000;
   --ring: #097fe8;
   --focus-ring: #097fe8;
   --theme-primary: #0075de;
@@ -597,6 +599,49 @@
 
   .dark .border-input:hover:not(:disabled):not([aria-invalid="true"]):not(:focus-visible) {
     border-color: var(--border-hover);
+  }
+
+  :is(
+    [data-slot="input"],
+    [data-slot="textarea"],
+    [data-slot="select-trigger"],
+    [data-slot="native-select"],
+    input:not([type="hidden"]),
+    textarea,
+    select
+  ):not(:disabled):not([data-disabled]):hover:not(:focus-visible),
+  [data-slot="input-group"]:hover:not(:has([data-slot="input-group-control"]:focus-visible)) {
+    background: var(--form-control-hover-background) !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+    color: var(--form-control-hover-foreground) !important;
+    --tw-ring-shadow: 0 0 #0000 !important;
+    --tw-ring-offset-shadow: 0 0 #0000 !important;
+    --tw-inset-ring-shadow: 0 0 #0000 !important;
+  }
+
+  :is(
+    [data-slot="input"],
+    [data-slot="textarea"],
+    [data-slot="select-trigger"],
+    [data-slot="native-select"],
+    input:not([type="hidden"]),
+    textarea,
+    select
+  ):not(:disabled):not([data-disabled]):hover:not(:focus-visible)::placeholder,
+  [data-slot="input-group"]:hover:not(:has([data-slot="input-group-control"]:focus-visible)) :is(input, textarea)::placeholder {
+    color: var(--form-control-hover-foreground) !important;
+    opacity: 0.6;
+  }
+
+  [data-slot="select-trigger"]:not([data-disabled]):hover:not(:focus-visible) :is(svg, [data-slot="select-value"]),
+  [data-slot="native-select-wrapper"]:not(:has(select:disabled)):hover [data-slot="native-select-icon"],
+  [data-slot="input-group"]:hover:not(:has([data-slot="input-group-control"]:focus-visible)) :is(
+    [data-slot="input-group-control"],
+    [data-slot="input-group-addon"],
+    svg
+  ) {
+    color: var(--form-control-hover-foreground) !important;
   }
 }
 
