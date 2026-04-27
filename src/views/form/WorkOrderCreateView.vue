@@ -1970,7 +1970,7 @@ watch(
               label-for="work-order-report-type"
               layout="vertical"
             >
-              <Select v-model="form.reportType" :disabled="repairDictionariesLoading || !repairTypeOptions.length">
+              <Select v-model="form.reportType" :multiple="false" :disabled="repairDictionariesLoading || !repairTypeOptions.length">
                 <SelectTrigger id="work-order-report-type" class="w-full" @focus="handleFocus('section-report-type')">
                   <SelectValue :placeholder="repairDictionariesLoading ? '正在加载报修类型...' : repairTypeOptions.length ? '请选择报修类型' : '暂无可用报修类型'" />
                 </SelectTrigger>
@@ -1989,7 +1989,7 @@ watch(
               label-for="work-order-important"
               layout="vertical"
             >
-              <Select v-model="form.important" :disabled="repairDictionariesLoading || !repairImportanceOptions.length">
+              <Select v-model="form.important" :multiple="false" :disabled="repairDictionariesLoading || !repairImportanceOptions.length">
                 <SelectTrigger id="work-order-important" class="w-full" @focus="handleFocus('section-important')">
                   <SelectValue :placeholder="repairDictionariesLoading ? '正在加载重要程度...' : repairImportanceOptions.length ? '请选择重要程度' : '暂无可用重要程度'" />
                 </SelectTrigger>

@@ -139,7 +139,7 @@ async function fetchOptionsForType(type: DictTypeItem | null) {
 
 function mapDictEntryOption(item: DictEntryItem): RepairDictionaryOption | null {
   const label = item.Name.trim()
-  const numericValue = Number.isFinite(item.Id) ? item.Id : null
+  const numericValue = resolveDictEntryId(item)
   const value = numericValue === null ? item.Uuid.trim() : String(numericValue)
 
   if (!value) {
@@ -153,6 +153,34 @@ function mapDictEntryOption(item: DictEntryItem): RepairDictionaryOption | null 
     uuid: item.Uuid,
     sort: item.Sort,
   }
+}
+
+function resolveDictEntryId(item: DictEntryItem) {
+  const record = item as DictEntryItem & Record<string, unknown>
+  const candidateKeys = [
+    "Id",
+    "ID",
+    "id",
+    "DictDataId",
+    "DictDataID",
+    "dictDataId",
+    "dictDataID",
+    "EntryId",
+    "EntryID",
+    "entryId",
+    "entryID",
+  ]
+
+  for (const key of candidateKeys) {
+    const value = record[key]
+    const parsed = typeof value === "string" ? Number(value.trim()) : value
+
+    if (typeof parsed === "number" && Number.isFinite(parsed) && parsed > 0) {
+      return parsed
+    }
+  }
+
+  return null
 }
 
 function resolveDictType(
