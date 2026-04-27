@@ -82,6 +82,10 @@ function hasSingleImage(entry: HistoryEntry) {
   return (entry.images?.length ?? 0) === 1
 }
 
+function isVideoMedia(image: NonNullable<HistoryEntry["images"]>[number]) {
+  return image.type === "video"
+}
+
 function resolveEntryStatusBadgeTone(entry: HistoryEntry) {
   if (entry.statusLabel === "正常") {
     return "green"
@@ -275,7 +279,7 @@ function resolveEntryStatusBadgeIcon(entry: HistoryEntry) {
                       class="mt-5"
                     >
                       <p class="text-[12px] font-medium tracking-[0.125px] text-[#a39e98] dark:text-[#6b6763]">
-                        现场照片
+                        现场附件
                       </p>
                       <div
                         :class="cn(
@@ -291,7 +295,19 @@ function resolveEntryStatusBadgeIcon(entry: HistoryEntry) {
                             hasSingleImage(entry) ? 'col-span-1' : '',
                           )"
                         >
+                          <video
+                            v-if="isVideoMedia(image)"
+                            :src="image.src"
+                            controls
+                            preload="metadata"
+                            playsinline
+                            :class="cn(
+                              'w-full bg-black object-contain',
+                              hasSingleImage(entry) ? 'h-52' : 'h-32',
+                            )"
+                          />
                           <img
+                            v-else
                             :src="image.src"
                             :alt="image.alt ?? entry.title"
                             :class="cn(

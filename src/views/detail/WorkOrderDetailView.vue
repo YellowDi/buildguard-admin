@@ -818,13 +818,14 @@ async function openInspectionHistorySheet(model: InspectionItemHistoryModel, ite
   inspectionHistorySheetOpen.value = true
 
   const inspectionItemUuid = resolveInspectionItemHistoryUuid(item)
+  const fallbackInspectionItemUuid = resolveInspectionItemHistoryFallbackUuid(item)
 
   if (!inspectionItemUuid) {
     return
   }
 
   try {
-    const historyItems = await fetchWorkOrderInspectionHistoryDetail({ Uuid: inspectionItemUuid })
+    const historyItems = await fetchInspectionHistoryItems(inspectionItemUuid, fallbackInspectionItemUuid)
 
     if (requestId !== latestInspectionHistoryRequestId || selectedInspectionHistoryModel.value?.key !== model.key) {
       return
@@ -894,9 +895,26 @@ function buildInspectionItemHistoryEntries(
     summary: resolveInspectionHistorySummary(item, inspectionItemName),
     contentText: resolveInspectionHistoryContentText(item, inspectionItemName),
     measureValue: toText(item.MeasureContent, ""),
-    photoUrls: Array.isArray(item.PhotoFile) ? item.PhotoFile : [],
+    mediaFiles: resolveInspectionHistoryMediaFiles(item.PhotoFile),
     isLatest: index === 0,
   }))
+}
+
+function resolveInspectionHistoryMediaFiles(value: WorkOrderInspectionHistoryDetailItem["PhotoFile"]) {
+  return (Array.isArray(value) ? value : [])
+    .map((file) => {
+      const src = toText(file.Url, "")
+
+      if (!src) {
+        return null
+      }
+
+      return {
+        src,
+        type: toNumber(file.Type) === 2 ? "video" as const : "image" as const,
+      }
+    })
+    .filter((file): file is { src: string, type: "image" | "video" } => file !== null)
 }
 
 function formatInspectionItemScore(value: unknown) {
@@ -965,6 +983,22 @@ function resolveInspectionItemDetailUuid(item: WorkOrderBuildInspectionItem) {
 
 function resolveInspectionItemHistoryUuid(item: WorkOrderBuildInspectionItem) {
   return toText(item.Uuid, "")
+}
+
+function resolveInspectionItemHistoryFallbackUuid(item: WorkOrderBuildInspectionItem) {
+  const inspectionItemUuid = toText(item.InspectionItemUuid, "")
+  const primaryUuid = resolveInspectionItemHistoryUuid(item)
+  return inspectionItemUuid && inspectionItemUuid !== primaryUuid ? inspectionItemUuid : ""
+}
+
+async function fetchInspectionHistoryItems(primaryUuid: string, fallbackUuid: string) {
+  const historyItems = await fetchWorkOrderInspectionHistoryDetail({ Uuid: primaryUuid })
+
+  if (historyItems.length || !fallbackUuid) {
+    return historyItems
+  }
+
+  return fetchWorkOrderInspectionHistoryDetail({ Uuid: fallbackUuid })
 }
 
 function resolveInspectionItemExecutorName(item: WorkOrderBuildInspectionItem, fallback = "待回传") {

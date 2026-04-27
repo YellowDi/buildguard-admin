@@ -134,7 +134,7 @@ export type WorkOrderInspectionHistoryDetailItem = {
   Name?: string
   Content?: string
   MeasureContent?: string
-  PhotoFile?: string[]
+  PhotoFile?: WorkOrderFile[]
   Result?: number
   [property: string]: unknown
 }
@@ -705,7 +705,7 @@ function normalizeWorkOrderInspectionHistoryDetailItem(value: unknown): WorkOrde
     Name: getFirstText(record, ["Name", "name"]),
     Content: getFirstText(record, ["Content", "content"]),
     MeasureContent: getFirstText(record, ["MeasureContent", "measureContent"]),
-    PhotoFile: getFirstTextArray(record, ["PhotoFile", "photoFile"]),
+    PhotoFile: getFirstWorkOrderFiles(record, ["PhotoFile", "photoFile"]),
     Result: getFirstNumber(record, ["Result", "result"]),
   }
 }
@@ -745,6 +745,48 @@ function extractInspectionHistoryList(payload: unknown) {
 
   if (nestedRecord && Array.isArray(nestedRecord.List)) {
     return nestedRecord.List
+  }
+
+  if (nestedRecord && Array.isArray(nestedRecord.list)) {
+    return nestedRecord.list
+  }
+
+  if (nestedRecord && Array.isArray(nestedRecord.Rows)) {
+    return nestedRecord.Rows
+  }
+
+  if (nestedRecord && Array.isArray(nestedRecord.rows)) {
+    return nestedRecord.rows
+  }
+
+  const upperNestedRecord = asRecord(record.Data)
+
+  if (upperNestedRecord && Array.isArray(upperNestedRecord.List)) {
+    return upperNestedRecord.List
+  }
+
+  if (upperNestedRecord && Array.isArray(upperNestedRecord.list)) {
+    return upperNestedRecord.list
+  }
+
+  if (upperNestedRecord && Array.isArray(upperNestedRecord.Rows)) {
+    return upperNestedRecord.Rows
+  }
+
+  if (upperNestedRecord && Array.isArray(upperNestedRecord.rows)) {
+    return upperNestedRecord.rows
+  }
+
+  if (Array.isArray(record.list)) {
+    return record.list
+  }
+
+  if (Array.isArray(record.Rows)) {
+    return record.Rows
+  }
+
+  if (Array.isArray(record.rows)) {
+    return record.rows
   }
 
   return []

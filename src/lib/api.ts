@@ -102,6 +102,7 @@ export const API_PATHS = {
   dictEntryDetail: "/bqi/sys/dict/data/detail",
   dictEntryUpdate: "/bqi/sys/dict/data/update",
   dictEntryDelete: "/bqi/sys/dict/data/delete",
+  tencentCosSts: "/bqi/public/tencent/cos/sts",
 } as const
 
 export function ensureApiEnvironmentSecurity() {

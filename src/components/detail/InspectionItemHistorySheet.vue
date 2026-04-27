@@ -85,9 +85,19 @@ function buildEntryFields(entry: InspectionItemHistoryRecord): HistoryEntryField
 }
 
 function buildEntryImages(entry: InspectionItemHistoryRecord): HistoryEntryImage[] {
+  if (entry.mediaFiles?.length) {
+    return entry.mediaFiles.map((file, index) => ({
+      key: `${entry.key}-media-${index + 1}`,
+      src: file.src,
+      type: file.type,
+      alt: `${entry.inspectorName ?? entry.resultLabel} 现场附件 ${index + 1}`,
+    }))
+  }
+
   return (entry.photoUrls ?? []).map((src, index) => ({
     key: `${entry.key}-image-${index + 1}`,
     src,
+    type: "image",
     alt: `${entry.inspectorName ?? entry.resultLabel} 现场照片 ${index + 1}`,
   }))
 }

@@ -67,6 +67,7 @@ export type HistoryEntryField = {
 export type HistoryEntryImage = {
   key: string
   src: string
+  type?: "image" | "video"
   alt?: string
 }
 
@@ -91,6 +92,10 @@ export type InspectionItemHistoryRecord = {
   remark?: string
   measureValue?: string
   photoUrls?: string[]
+  mediaFiles?: Array<{
+    src: string
+    type: "image" | "video"
+  }>
   isLatest?: boolean
 }
 
