@@ -1360,8 +1360,8 @@ const repairWorkOrdersSchema: TablePageSchema<CustomerWorkOrderRow> = {
       },
       sort: {
         label: "重要程度",
-        kind: "metric",
-        value: row => row.importantValue ?? -1,
+        kind: "text",
+        value: row => row.importantLabel,
       },
     },
     {
@@ -1374,8 +1374,8 @@ const repairWorkOrdersSchema: TablePageSchema<CustomerWorkOrderRow> = {
       },
       sort: {
         label: "报修类型",
-        kind: "metric",
-        value: row => row.reportTypeValue ?? -1,
+        kind: "text",
+        value: row => row.reportTypeLabel,
       },
     },
     {
@@ -3622,7 +3622,7 @@ function mapRepairWorkOrderRow(item: RepairWorkOrderListItem, index: number): Cu
   const reportTypeLabel = formatRepairReportTypeLabel(reportTypeValue)
   const createdAt = toDisplayText(item.CreatedAt, "-")
   const updatedAt = toDisplayText(item.UpdatedAt, "-")
-  const executors = normalizeExecutors(item.UserName)
+  const executors = normalizeExecutors(item.Executors)
 
   return {
     id: uuid || fallbackId,

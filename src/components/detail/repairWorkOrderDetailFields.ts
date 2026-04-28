@@ -1,4 +1,5 @@
-import type { DetailContactValue, DetailFieldSection } from "@/components/detail/types"
+import type { DetailContactValue, DetailFieldSection, DetailStatusValue } from "@/components/detail/types"
+import { workOrderStatusMap } from "@/components/table-page/statusPresets"
 import type { CustomerDetailResult } from "@/lib/customers-api"
 import { formatRepairDictionaryLabel, type RepairDictionaryOption } from "@/lib/repair-work-order-dictionaries"
 import { getRepairWorkOrderStatusLabel } from "@/lib/work-order-status"
@@ -28,7 +29,6 @@ export function buildRepairWorkOrderPrimarySections(
       title: "基本信息",
       rows: [
         { key: "order-no", label: "工单编号", value: toText(workOrder.OrderNo, "-") },
-        { key: "title", label: "报修标题", value: toText(workOrder.Title, "-") },
         { key: "report-type", label: "报修类型", value: formatRepairReportTypeLabel(workOrder.ReportType, options?.dictionaries?.typeOptions) },
         { key: "important", label: "重要程度", value: formatRepairImportantLabel(workOrder.Important, options?.dictionaries?.importanceOptions) },
         {
@@ -38,9 +38,9 @@ export function buildRepairWorkOrderPrimarySections(
           truncate: false,
           valueClass: "leading-6",
         },
-        { key: "status", label: "状态", value: formatRepairWorkOrderStatus(workOrder.Status) },
+        { key: "status", label: "状态", value: buildRepairWorkOrderStatusValue(workOrder.Status) },
         { key: "created-at", label: "创建时间", value: toText(workOrder.CreatedAt, "-") },
-        { key: "user-name", label: "执行人", value: toText(workOrder.UserName, "-") },
+        { key: "executors", label: "执行人", value: formatExecutors(workOrder.Executors) },
       ],
     },
     {
@@ -135,6 +135,18 @@ function formatFileCount(value: unknown) {
   return `${value.length} 个附件`
 }
 
+function formatExecutors(value: unknown) {
+  if (!Array.isArray(value)) {
+    return "-"
+  }
+
+  const executors = value
+    .map(item => toText(item))
+    .filter(Boolean)
+
+  return executors.length ? executors.join("、") : "-"
+}
+
 function toNumber(value: unknown) {
   return typeof value === "number" && Number.isFinite(value) ? value : null
 }
@@ -142,6 +154,18 @@ function toNumber(value: unknown) {
 function formatRepairWorkOrderStatus(value: unknown) {
   const status = toNumber(value)
   return getRepairWorkOrderStatusLabel(status, "-")
+}
+
+function buildRepairWorkOrderStatusValue(value: unknown): DetailStatusValue {
+  return {
+    kind: "status",
+    value: formatRepairWorkOrderStatus(value),
+    renderer: {
+      kind: "status",
+      map: workOrderStatusMap,
+      fallback: { tone: "gray", icon: "dot" },
+    },
+  }
 }
 
 function formatRepairReportTypeLabel(value: unknown, options: RepairDictionaryOption[] = []) {

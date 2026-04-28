@@ -101,6 +101,7 @@ export type UpdateRepairWorkOrderPayload = {
   ReportType?: string
   Important?: string
   Content?: string
+  Status?: number
 }
 
 export type UpdateWorkOrderPayload = {
@@ -156,6 +157,7 @@ export type RepairWorkOrderDetailResult = {
   ParkName?: string
   UserUuid?: string
   UserName?: string
+  Executors?: string[]
   Important?: string
   ReportType?: string
   Content?: string
@@ -324,6 +326,7 @@ export async function updateRepairWorkOrder(payload: UpdateRepairWorkOrderPayloa
     ReportType: getOptionalString(payload.ReportType),
     Important: getOptionalString(payload.Important),
     Content: getOptionalString(payload.Content),
+    Status: getOptionalNumber(payload.Status, "Status"),
   }
 
   const response = await fetch(REPAIR_WORK_ORDER_UPDATE_API_URL, {
@@ -671,6 +674,7 @@ function normalizeRepairWorkOrderListItem(value: unknown): RepairWorkOrderListIt
     BuildName: getFirstText(record, ["BuildName", "buildName", "BuildingName", "buildingName"]),
     UserUuid: getFirstText(record, ["UserUuid", "userUuid"]),
     UserName: getFirstText(record, ["UserName", "userName"]),
+    Executors: getFirstTextArray(record, ["Executors", "executors"]),
     Important: getFirstText(record, ["Important", "important"]),
     ReportType: getFirstText(record, ["ReportType", "reportType"]),
     Content: getFirstText(record, ["Content", "content"]),
@@ -975,6 +979,14 @@ function getFirstText(record: Record<string, unknown>, keys: string[]) {
 function getFirstTextArray(record: Record<string, unknown>, keys: string[]) {
   for (const key of keys) {
     const value = record[key]
+
+    if (typeof value === "string" || typeof value === "number") {
+      const normalized = getOptionalString(value)
+
+      if (normalized) {
+        return [normalized]
+      }
+    }
 
     if (!Array.isArray(value)) {
       continue

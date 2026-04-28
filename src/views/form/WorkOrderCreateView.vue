@@ -642,6 +642,7 @@ async function handleRepairUpdateSubmit() {
       ReportType: payload.ReportType,
       Important: payload.Important,
       Content: payload.Content,
+      Status: parseIntegerField(form.status) ?? Number(DEFAULT_INSPECTION_STATUS),
     })
 
     toast.success("报修工单已更新")
@@ -762,10 +763,12 @@ async function loadRepairEditContext() {
     const customerUuid = normalizeText(detail.CustomerUuid) || normalizeRouteField(queryCustomerUuid.value)
     const parkUuid = normalizeText(detail.ParkUuid) || normalizeRouteField(queryParkUuid.value)
     const selectedInspectionItemUuids = normalizeTextArray(detail.WorkOrderInspectionBuildUuid)
+    const status = toNumber(detail.Status)
     const nextForm = {
       ...createEmptyForm(),
       customerUuid,
       parkUuid,
+      status: status === null ? DEFAULT_INSPECTION_STATUS : String(status),
       reportType: normalizeText(detail.ReportType),
       important: normalizeText(detail.Important),
       content: normalizeText(detail.Content),

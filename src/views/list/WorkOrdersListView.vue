@@ -771,7 +771,7 @@ function normalizeRepairWorkOrderRecord(item: RepairWorkOrderListItem, index: nu
     parkName: toText(item.ParkName, "-"),
     packageName: "-",
     planName: "-",
-    executor: toText(item.UserName, "-"),
+    executor: formatInspectionExecutors(item.Executors, "未指派"),
     status: statusValue === null ? "" : String(statusValue),
     statusValue,
     statusLabel: formatStatusLabel(props.kind, statusValue),
@@ -1003,8 +1003,8 @@ function createRepairColumns(): TablePageSchema<WorkOrderRecord>["columns"] {
       },
       sort: {
         label: "报修类型",
-        kind: "metric",
-        value: row => row.reportTypeValue ?? -1,
+        kind: "text",
+        value: row => row.reportTypeLabel,
       },
     },
     {
@@ -1017,8 +1017,8 @@ function createRepairColumns(): TablePageSchema<WorkOrderRecord>["columns"] {
       },
       sort: {
         label: "重要程度",
-        kind: "metric",
-        value: row => row.importantValue ?? -1,
+        kind: "text",
+        value: row => row.importantLabel,
       },
     },
     {
@@ -1044,6 +1044,7 @@ function createRepairColumns(): TablePageSchema<WorkOrderRecord>["columns"] {
       key: "executor",
       label: "执行人",
       filterType: "text",
+      slot: "cell-executor",
       filter: {
         type: "text",
         placeholder: "输入执行人",
@@ -1417,6 +1418,12 @@ async function ensureRepairDictionaries() {
             #{{ toText(row.orderNo, "-") }}
           </span>
         </div>
+      </template>
+
+      <template #cell-executor="{ row }">
+        <span :class="props.kind === 'repair' && row.executor === '未指派' ? 'text-muted-foreground' : undefined">
+          {{ row.executor }}
+        </span>
       </template>
 
       <template #cell-customerName="{ row }">

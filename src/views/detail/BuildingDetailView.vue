@@ -368,7 +368,7 @@ async function loadBuildingRecords(currentBuilding: BuildingListItem) {
     repairRecords.value = repairResult.list
       .filter(item => normalizeText(recordText(item.BuildName, "")) === normalizedBuildingName)
       .map((item, index) => {
-        const executors = normalizeExecutors(item.UserName)
+        const executors = normalizeExecutors(item.Executors)
 
         return {
           id: recordText(item.Uuid, `repair-${index + 1}`),

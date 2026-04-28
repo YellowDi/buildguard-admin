@@ -653,7 +653,7 @@ function buildRepairWorkOrderCards(workOrder: RepairWorkOrderDetailResult | null
       categoryName: "报修问题",
       resultLabel: formatRepairCardReportType(workOrder.ReportType),
       scoreText: formatRepairCardImportant(workOrder.Important),
-      scoreValue: toNumber(workOrder.Important),
+      scoreValue: null,
       onSelect: openRepairMediaSheet,
     },
   ]
