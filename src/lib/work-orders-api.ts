@@ -90,7 +90,7 @@ export type CreateRepairWorkOrderPayload = {
   ParkUuid: string
   ReportType: string
   Important: string
-  Content: string
+  Content?: string
   WorkOrderInspectionBuildUuid?: string[]
 }
 
@@ -297,7 +297,7 @@ export async function createRepairWorkOrder(payload: CreateRepairWorkOrderPayloa
     ParkUuid: getRequiredString(payload.ParkUuid, "ParkUuid"),
     ReportType: getRequiredString(payload.ReportType, "ReportType"),
     Important: getRequiredString(payload.Important, "Important"),
-    Content: getRequiredString(payload.Content, "Content"),
+    Content: getOptionalString(payload.Content) ?? "",
     WorkOrderInspectionBuildUuid: normalizeOptionalStringArray(payload.WorkOrderInspectionBuildUuid),
   }
 

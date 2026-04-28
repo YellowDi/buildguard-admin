@@ -52,6 +52,7 @@ const props = withDefaults(defineProps<{
   emptyIcon?: string
   selectable?: boolean
   selectedItemKeys?: string[]
+  selectableDisabledItemKeys?: string[]
   showHeader?: boolean
 }>(), {
   title: "建筑与检测项",
@@ -63,6 +64,7 @@ const props = withDefaults(defineProps<{
   emptyIcon: "ri-building-line",
   selectable: false,
   selectedItemKeys: () => [],
+  selectableDisabledItemKeys: () => [],
   showHeader: true,
 })
 
@@ -119,7 +121,15 @@ function isItemSelected(itemKey: string) {
   return props.selectedItemKeys.includes(itemKey)
 }
 
+function isItemSelectionDisabled(itemKey: string) {
+  return props.selectable && props.selectableDisabledItemKeys.includes(itemKey)
+}
+
 function handleItemClick(item: InspectionBuildingCardV2Item) {
+  if (isItemSelectionDisabled(item.key)) {
+    return
+  }
+
   if (props.selectable) {
     updateItemSelected(item, !isItemSelected(item.key))
     return
@@ -139,6 +149,10 @@ function handleItemKeydown(event: KeyboardEvent, item: InspectionBuildingCardV2I
 
 function updateItemSelected(item: InspectionBuildingCardV2Item, checked: boolean | "indeterminate") {
   if (checked === "indeterminate") {
+    return
+  }
+
+  if (isItemSelectionDisabled(item.key)) {
     return
   }
 
@@ -419,6 +433,7 @@ function handleExpandAfterLeave(element: Element) {
                         :class="[
                           'flex min-h-10 w-full items-center justify-between gap-4 border-b border-black/5 px-4 py-2.5 text-left transition-colors duration-180 ease-out last:border-b-0 hover:bg-black/1.5',
                           props.selectable && isItemSelected(item.key) ? 'bg-black/2' : '',
+                          isItemSelectionDisabled(item.key) ? 'cursor-not-allowed opacity-55 hover:bg-transparent' : '',
                           !props.selectable && !item.onSelect ? 'cursor-default' : 'cursor-pointer',
                         ]"
                         :style="{ '--item-delay': `${220 + (groupIndex * 3 + itemIndex) * 36}ms` }"
@@ -429,6 +444,7 @@ function handleExpandAfterLeave(element: Element) {
                           <Checkbox
                             v-if="props.selectable"
                             :model-value="isItemSelected(item.key)"
+                            :disabled="isItemSelectionDisabled(item.key)"
                             class="shrink-0"
                             @click.stop
                             @update:model-value="updateItemSelected(item, $event)"

@@ -316,6 +316,13 @@ const repairInspectionBuildings = computed(() => repairInspectionBuildGroups.val
     }>()).values()),
   }
 }))
+const disabledRepairInspectionItemKeys = computed(() => repairInspectionItemOptions.value
+  .filter(item => item.resultValue === 1 || item.resultLabel === "正常")
+  .map(item => item.uuid)
+  .filter(Boolean))
+const selectedRepairInspectionItemKeys = computed(() => normalizeTextArray(form.workOrderInspectionBuildUuid)
+  .filter(uuid => !disabledRepairInspectionItemKeys.value.includes(uuid)))
+const hasSelectedRepairInspectionItems = computed(() => selectedRepairInspectionItemKeys.value.length > 0)
 const optionalRepairInspectionWorkOrderUuid = computed({
   get: () => form.inspectionWorkOrderUuid || NO_REPAIR_INSPECTION_WORK_ORDER_VALUE,
   set: (value: string) => {
@@ -335,7 +342,7 @@ const canSubmit = computed(() => {
       && normalizeText(form.parkUuid)
       && normalizeText(form.reportType)
       && normalizeText(form.important)
-      && normalizeText(form.content)
+      && (hasSelectedRepairInspectionItems.value || normalizeText(form.content))
       && !submitting.value
       && !customerLoading.value
       && !relatedOptionsLoading.value
@@ -569,7 +576,10 @@ function buildRepairWorkOrderPayload() {
     return null
   }
 
-  if (!normalizeText(form.content)) {
+  const selectedInspectionItemUuids = selectedRepairInspectionItemKeys.value
+  const content = selectedInspectionItemUuids.length ? "" : normalizeText(form.content)
+
+  if (!selectedInspectionItemUuids.length && !content) {
     toast.error("请填写报修内容")
     return null
   }
@@ -579,8 +589,8 @@ function buildRepairWorkOrderPayload() {
     ParkUuid: normalizeText(form.parkUuid),
     ReportType: reportType,
     Important: important,
-    Content: normalizeText(form.content),
-    WorkOrderInspectionBuildUuid: normalizeTextArray(form.workOrderInspectionBuildUuid),
+    Content: content,
+    WorkOrderInspectionBuildUuid: selectedInspectionItemUuids,
   }
 }
 
@@ -1803,6 +1813,23 @@ watch(
 )
 
 watch(
+  [() => [...form.workOrderInspectionBuildUuid], disabledRepairInspectionItemKeys],
+  ([selectedItemKeys, disabledItemKeys]) => {
+    const disabledItemKeySet = new Set(disabledItemKeys)
+    const nextSelectedItemKeys = normalizeTextArray(selectedItemKeys).filter(uuid => !disabledItemKeySet.has(uuid))
+
+    if (nextSelectedItemKeys.length !== form.workOrderInspectionBuildUuid.length) {
+      form.workOrderInspectionBuildUuid = nextSelectedItemKeys
+      return
+    }
+
+    if (nextSelectedItemKeys.length && normalizeText(form.content)) {
+      form.content = ""
+    }
+  },
+)
+
+watch(
   () => form.planUuid,
   (nextPlanUuid, previousPlanUuid) => {
     if (isRepairKind.value || isEditMode.value || nextPlanUuid === previousPlanUuid) {
@@ -2011,7 +2038,8 @@ watch(
               <Textarea
                 id="work-order-content"
                 v-model="form.content"
-                placeholder="请输入报修内容"
+                :disabled="hasSelectedRepairInspectionItems"
+                :placeholder="hasSelectedRepairInspectionItems ? '已选择检测条目，无需填写报修内容' : '请输入报修内容'"
                 class="min-h-[120px] w-full resize-y"
                 @focus="handleFocus('section-content')"
               />
@@ -2143,6 +2171,7 @@ watch(
               title="检测项"
               :count="repairInspectionItemOptions.length"
               :buildings="repairInspectionBuildings"
+              :selectable-disabled-item-keys="disabledRepairInspectionItemKeys"
               selectable
               :show-header="false"
               empty-title="暂无检测结果"
