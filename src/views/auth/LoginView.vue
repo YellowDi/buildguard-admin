@@ -496,7 +496,7 @@ onBeforeUnmount(() => {
                     />
                   </div>
 
-                  <Button type="submit" class="mt-1 h-11 w-full shadow-(--shadow-border) hover:shadow-(--shadow-border-hover)" :disabled="isSubmitting">
+                  <Button type="submit" class="mt-1 h-10 w-full shadow-(--shadow-border) hover:shadow-(--shadow-border-hover)" :disabled="isSubmitting">
                     {{ isSubmitting ? "登录中..." : "登录" }}
                   </Button>
                 </div>

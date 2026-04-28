@@ -18,7 +18,7 @@ export const tableTheme = {
   edgeGutter: "shrink-0",
   table: "min-w-full w-full table-auto border-separate border-spacing-0 bg-background text-[14px] text-foreground",
   head: "relative z-20 text-muted-foreground",
-  headActive: "shadow-[inset_0_-1px_0_var(--border)]",
+  headActive: "",
   /** z 须高于根级 Dialog/Overlay（z-50），否则 Teleport 到 body 的吸顶表头会被设置弹窗挡住；设置内嵌套弹窗请用 DialogContent 的 stackAboveStickyHeader（z-[70]） */
   stickyViewport: "fixed z-[60] overflow-hidden bg-background",
   body: "text-foreground",
@@ -37,7 +37,7 @@ export const tableTheme = {
     button: "h-6 w-6 rounded-md border-0 bg-background p-0 text-muted-foreground border-shadow hover:bg-accent hover:text-accent-foreground focus-visible:bg-accent focus-visible:text-accent-foreground",
   },
   headerCell: {
-    base: "h-[38px] px-3 py-0 text-left font-normal whitespace-nowrap align-middle transition-colors hover:bg-surface-hover-subtle",
+    base: "h-[38px] border-b border-border px-3 py-0 text-left font-normal whitespace-nowrap align-middle transition-colors hover:bg-surface-hover-subtle",
     /** 序号/checkbox 列：去掉 px-3 左侧 12px，与滚动区左缘对齐（右侧仍保留 pr-3） */
     selectionFlush: "!pl-0",
     sticky: "sticky z-20 bg-background bg-clip-padding",
@@ -48,7 +48,7 @@ export const tableTheme = {
     split: "border-l",
     rightAligned: "text-right",
   },
-  actionHeader: "h-[38px] w-px whitespace-nowrap border-l border-border px-3 py-0 text-left font-normal text-muted-foreground align-middle transition-colors hover:bg-surface-hover-subtle",
+  actionHeader: "h-[38px] w-px whitespace-nowrap border-b border-l border-border px-3 py-0 text-left font-normal text-muted-foreground align-middle transition-colors hover:bg-surface-hover-subtle",
   actionHeaderSticky: "bg-background bg-clip-padding",
   actionCell: "h-[42px] w-px border-b border-l border-border px-3 py-0 align-middle whitespace-nowrap",
   actionCellContent: "ml-auto flex w-fit items-center",
