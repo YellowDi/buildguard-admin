@@ -137,6 +137,7 @@ export type WorkOrderInspectionHistoryDetailItem = {
   MeasureContent?: string
   PhotoFile?: WorkOrderFile[]
   Result?: number
+  IsReplay?: number
   [property: string]: unknown
 }
 
@@ -711,6 +712,7 @@ function normalizeWorkOrderInspectionHistoryDetailItem(value: unknown): WorkOrde
     MeasureContent: getFirstText(record, ["MeasureContent", "measureContent"]),
     PhotoFile: getFirstWorkOrderFiles(record, ["PhotoFile", "photoFile"]),
     Result: getFirstNumber(record, ["Result", "result"]),
+    IsReplay: getFirstNumber(record, ["IsReplay", "isReplay"]),
   }
 }
 

@@ -221,6 +221,14 @@ function resolveEntryStatusBadgeIcon(entry: HistoryEntry) {
                           :icon="resolveEntryStatusBadgeIcon(entry)"
                           class="shrink-0"
                         />
+                        <Badge
+                          v-for="badge in entry.badges ?? []"
+                          :key="badge.key"
+                          variant="secondary"
+                          :class="cn('shrink-0 rounded-md px-2 py-0.5 text-[12px] font-medium', badgeClass(badge.tone))"
+                        >
+                          {{ badge.label }}
+                        </Badge>
                         <h3 class="min-w-0 truncate text-[16px] font-semibold tracking-[-0.15px] text-[rgba(0,0,0,0.95)] dark:text-[rgba(255,255,255,0.92)]">
                           {{ entry.title }}
                         </h3>

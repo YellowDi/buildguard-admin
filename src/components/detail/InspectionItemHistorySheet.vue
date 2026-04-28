@@ -57,6 +57,7 @@ const historyEntries = computed<HistoryEntry[]>(() => (
     title: entry.isLatest ? "最新检测结果" : `历史记录 ${props.model!.historyEntries.length - index}`,
     statusLabel: entry.resultLabel,
     statusTone: resolveStatusTone(entry.resultLabel),
+    badges: buildEntryBadges(entry),
     summary: entry.summary,
     fields: buildEntryFields(entry),
     images: buildEntryImages(entry),
@@ -82,6 +83,18 @@ function buildEntryFields(entry: InspectionItemHistoryRecord): HistoryEntryField
     ...(entry.measureValue ? [{ key: `${entry.key}-measure`, label: "测量内容", value: entry.measureValue }] : []),
     ...(entry.remark ? [{ key: `${entry.key}-remark`, label: "备注", value: entry.remark }] : []),
   ]
+}
+
+function buildEntryBadges(entry: InspectionItemHistoryRecord) {
+  if (entry.isReplay === null || entry.isReplay === undefined) {
+    return []
+  }
+
+  return [{
+    key: `${entry.key}-replay`,
+    label: entry.isReplay ? "复检" : "初检",
+    tone: entry.isReplay ? "info" as const : "neutral" as const,
+  }]
 }
 
 function buildEntryImages(entry: InspectionItemHistoryRecord): HistoryEntryImage[] {
@@ -137,7 +150,7 @@ function resolveStatusTone(label: string): EntityHistoryTone {
     :title="model?.inspectionItemName ?? '检测结果历史'"
     :description="description"
     :sections="sections"
-    history-title="检测结果时间轴"
+    history-title="检测历史"
     :history-entries="historyEntries"
     empty-history-title="暂无检测结果历史"
     empty-history-description="当前检测项还没有可展示的检测结果历史。"

@@ -818,14 +818,13 @@ async function openInspectionHistorySheet(model: InspectionItemHistoryModel, ite
   inspectionHistorySheetOpen.value = true
 
   const inspectionItemUuid = resolveInspectionItemHistoryUuid(item)
-  const fallbackInspectionItemUuid = resolveInspectionItemHistoryFallbackUuid(item)
 
   if (!inspectionItemUuid) {
     return
   }
 
   try {
-    const historyItems = await fetchInspectionHistoryItems(inspectionItemUuid, fallbackInspectionItemUuid)
+    const historyItems = await fetchWorkOrderInspectionHistoryDetail({ Uuid: inspectionItemUuid })
 
     if (requestId !== latestInspectionHistoryRequestId || selectedInspectionHistoryModel.value?.key !== model.key) {
       return
@@ -896,6 +895,7 @@ function buildInspectionItemHistoryEntries(
     contentText: resolveInspectionHistoryContentText(item, inspectionItemName),
     measureValue: toText(item.MeasureContent, ""),
     mediaFiles: resolveInspectionHistoryMediaFiles(item.PhotoFile),
+    isReplay: resolveInspectionHistoryReplayFlag(item.IsReplay),
     isLatest: index === 0,
   }))
 }
@@ -985,20 +985,14 @@ function resolveInspectionItemHistoryUuid(item: WorkOrderBuildInspectionItem) {
   return toText(item.Uuid, "")
 }
 
-function resolveInspectionItemHistoryFallbackUuid(item: WorkOrderBuildInspectionItem) {
-  const inspectionItemUuid = toText(item.InspectionItemUuid, "")
-  const primaryUuid = resolveInspectionItemHistoryUuid(item)
-  return inspectionItemUuid && inspectionItemUuid !== primaryUuid ? inspectionItemUuid : ""
-}
+function resolveInspectionHistoryReplayFlag(value: unknown) {
+  const flag = toNumber(value)
 
-async function fetchInspectionHistoryItems(primaryUuid: string, fallbackUuid: string) {
-  const historyItems = await fetchWorkOrderInspectionHistoryDetail({ Uuid: primaryUuid })
-
-  if (historyItems.length || !fallbackUuid) {
-    return historyItems
+  if (flag === null) {
+    return null
   }
 
-  return fetchWorkOrderInspectionHistoryDetail({ Uuid: fallbackUuid })
+  return flag === 1
 }
 
 function resolveInspectionItemExecutorName(item: WorkOrderBuildInspectionItem, fallback = "待回传") {

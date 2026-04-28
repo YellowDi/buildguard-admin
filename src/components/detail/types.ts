@@ -76,6 +76,7 @@ export type HistoryEntry = {
   title: string
   statusLabel?: string
   statusTone?: EntityHistoryTone
+  badges?: EntityHistoryMetaBadge[]
   summary?: string
   fields?: HistoryEntryField[]
   images?: HistoryEntryImage[]
@@ -96,6 +97,7 @@ export type InspectionItemHistoryRecord = {
     src: string
     type: "image" | "video"
   }>
+  isReplay?: boolean | null
   isLatest?: boolean
 }
 
