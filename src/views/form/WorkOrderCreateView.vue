@@ -1742,19 +1742,23 @@ function cloneFormState(value: WorkOrderFormState): WorkOrderFormState {
 }
 
 function createRepairFileObjectKey(file: File) {
+  const now = new Date()
+  const datePrefix = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`
   const random = Math.random().toString(36).slice(2, 10)
+  const extension = getObjectKeyFileExtension(file.name)
 
-  return `repair/${Date.now()}-${random}-${sanitizeObjectKeyFileName(file.name)}`
+  return `repair/${datePrefix}/${Date.now()}-${random}${extension}`
 }
 
 function createLocalId(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
 }
 
-function sanitizeObjectKeyFileName(value: string) {
-  const normalized = value.trim().replace(/[\\/:*?"<>|\s]+/g, "-").replace(/^-+|-+$/g, "")
+function getObjectKeyFileExtension(value: string) {
+  const fileName = normalizeText(value).split("?")[0]
+  const lastDotIndex = fileName.lastIndexOf(".")
 
-  return normalized || "repair-file"
+  return lastDotIndex > -1 ? fileName.slice(lastDotIndex).toLowerCase() : ""
 }
 
 function getOptionalText(value: unknown) {

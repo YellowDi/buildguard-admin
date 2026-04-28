@@ -189,11 +189,15 @@ function parseExpirationTime(value: unknown) {
 }
 
 function normalizeText(value: unknown) {
-  if (typeof value !== "string") {
-    return ""
+  if (typeof value === "string") {
+    return value.trim()
   }
 
-  return value.trim()
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return String(value)
+  }
+
+  return ""
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {

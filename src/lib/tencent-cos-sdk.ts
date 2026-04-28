@@ -4,9 +4,9 @@ import { ApiError, getApiErrorMessage } from "@/lib/api-errors"
 import { fetchTencentCosSts, type TencentCosStsResponse } from "@/lib/tencent-cos-api"
 
 type TencentCosClientOptions = Omit<COS.COSOptions, "SecretId" | "SecretKey" | "SecurityToken" | "XCosSecurityToken" | "getAuthorization">
-type TencentCosAuthorizationWithToken = {
-  Authorization: string
-  SecurityToken: string
+type TencentCosStsPayload = TencentCosStsResponse & {
+  expiredTime: number
+  startTime: number
 }
 
 export type TencentCosBucketConfig = {
@@ -33,21 +33,31 @@ export type UploadTencentCosFileResult = COS.UploadFileResult & {
 }
 
 const TENCENT_COS_AUTH_ERROR_MESSAGE = "腾讯云 COS 签名生成失败，请稍后重试。"
-const DEFAULT_SIGN_EXPIRES_SECONDS = 900
+const DEFAULT_COS_STS_EXPIRES_SECONDS = 1800
+const DEFAULT_COS_SLICE_SIZE = 1024 * 1024
 
-export function createTencentCosClient(options: TencentCosClientOptions = {}) {
+export function createTencentCosClient(stsPayload: TencentCosStsPayload, options: TencentCosClientOptions = {}) {
   return new COS({
     ...options,
-    getAuthorization(signOptions, callback) {
-      fetchTencentCosAuthorization(signOptions)
-        .then(callback)
-        .catch((error: unknown) => {
-          console.error(getApiErrorMessage(error, TENCENT_COS_AUTH_ERROR_MESSAGE))
-          callback({
-            Authorization: "",
-            SecurityToken: "",
-          } as COS.GetAuthorizationCallbackParams)
+    getAuthorization(_, callback) {
+      try {
+        callback({
+          TmpSecretId: normalizeText(stsPayload.Sts?.AccessKeyId),
+          TmpSecretKey: normalizeText(stsPayload.Sts?.AccessKeySecret),
+          SecurityToken: normalizeText(stsPayload.Sts?.SecurityToken),
+          StartTime: stsPayload.startTime,
+          ExpiredTime: stsPayload.expiredTime,
         })
+      } catch (error) {
+        console.error(getApiErrorMessage(error, TENCENT_COS_AUTH_ERROR_MESSAGE))
+        callback({
+          TmpSecretId: "",
+          TmpSecretKey: "",
+          SecurityToken: "",
+          StartTime: Math.floor(Date.now() / 1000),
+          ExpiredTime: Math.floor(Date.now() / 1000),
+        })
+      }
     },
   })
 }
@@ -57,22 +67,28 @@ export async function fetchTencentCosBucketConfig(): Promise<TencentCosBucketCon
 }
 
 export async function uploadTencentCosFile(payload: UploadTencentCosFilePayload): Promise<UploadTencentCosFileResult> {
+  const stsPayload = await getFreshTencentCosStsPayload()
+  const stsConfig = extractBucketConfig(stsPayload)
   const config = payload.bucket && payload.region
     ? {
         Bucket: payload.bucket,
         Region: payload.region,
+        Domain: stsConfig.Domain,
+        EndPoint: stsConfig.EndPoint,
       }
-    : await fetchTencentCosBucketConfig()
+    : stsConfig
   const key = normalizeObjectKey(payload.key || createDefaultObjectKey(payload.file))
-  const cos = createTencentCosClient()
+  const cos = createTencentCosClient(stsPayload)
+  const uploadBody = await createUploadBody(payload.file)
   const result = await cos.uploadFile({
     Bucket: config.Bucket,
     Region: config.Region,
     Key: key,
-    Body: payload.file,
+    Body: uploadBody.body,
+    ContentLength: uploadBody.contentLength,
     Headers: payload.headers,
     ContentType: payload.contentType || getFileContentType(payload.file),
-    SliceSize: payload.sliceSize,
+    SliceSize: payload.sliceSize ?? DEFAULT_COS_SLICE_SIZE,
     onProgress: payload.onProgress,
   })
 
@@ -83,7 +99,7 @@ export async function uploadTencentCosFile(payload: UploadTencentCosFilePayload)
   }
 }
 
-async function fetchTencentCosAuthorization(options: COS.GetAuthorizationOptions): Promise<COS.GetAuthorizationCallbackParams> {
+async function getFreshTencentCosStsPayload(): Promise<TencentCosStsPayload> {
   const sts = await fetchTencentCosSts({ forceRefresh: true })
   const credentials = sts.Sts
   const secretId = normalizeText(credentials?.AccessKeyId)
@@ -94,24 +110,13 @@ async function fetchTencentCosAuthorization(options: COS.GetAuthorizationOptions
     throw new ApiError("腾讯云 COS 鉴权响应缺少临时凭证。")
   }
 
-  const authorization: TencentCosAuthorizationWithToken = {
-    Authorization: COS.getAuthorization({
-      SecretId: secretId,
-      SecretKey: secretKey,
-      Bucket: options.Bucket,
-      Region: options.Region,
-      Method: options.Method,
-      Pathname: options.Pathname,
-      Key: options.Key,
-      Query: options.Query,
-      Headers: options.Headers,
-      Expires: DEFAULT_SIGN_EXPIRES_SECONDS,
-      SystemClockOffset: options.SystemClockOffset,
-    }),
-    SecurityToken: securityToken,
-  }
+  const { expiredTime, startTime } = parseCosStsTime(sts)
 
-  return authorization as COS.GetAuthorizationCallbackParams
+  return {
+    ...sts,
+    expiredTime,
+    startTime,
+  }
 }
 
 function extractBucketConfig(sts: TencentCosStsResponse): TencentCosBucketConfig {
@@ -146,10 +151,49 @@ function buildObjectUrl(location: string | undefined, key: string, config: Tence
   const domain = normalizeText(config.Domain) || normalizeText(config.EndPoint)
 
   if (domain) {
-    return `${domain.replace(/\/+$/, "")}/${encodeObjectKey(key)}`
+    const normalizedDomain = /^https?:\/\//i.test(domain) ? domain : `https://${domain}`
+
+    return `${normalizedDomain.replace(/\/+$/, "")}/${encodeObjectKey(key)}`
   }
 
   return `https://${config.Bucket}.cos.${config.Region}.myqcloud.com/${encodeObjectKey(key)}`
+}
+
+async function createUploadBody(file: UploadTencentCosFilePayload["file"]) {
+  if (file instanceof ArrayBuffer) {
+    return {
+      body: file,
+      contentLength: file.byteLength,
+    }
+  }
+
+  if (typeof Blob !== "undefined" && file instanceof Blob) {
+    return {
+      body: file,
+      contentLength: file.size,
+    }
+  }
+
+  return {
+    body: file,
+    contentLength: undefined,
+  }
+}
+
+function parseCosStsTime(stsPayload: TencentCosStsResponse) {
+  const expiration = normalizeText(stsPayload.Sts?.Expiration)
+  const parsedExpirationTime = Date.parse(expiration)
+  const numericExpirationTime = Number(expiration)
+  const expiredTime = Number.isFinite(parsedExpirationTime) && parsedExpirationTime > 0
+    ? Math.floor(parsedExpirationTime / 1000)
+    : Number.isFinite(numericExpirationTime) && numericExpirationTime > 0
+      ? Math.floor(numericExpirationTime > 10_000_000_000 ? numericExpirationTime / 1000 : numericExpirationTime)
+      : Math.floor(Date.now() / 1000) + DEFAULT_COS_STS_EXPIRES_SECONDS
+
+  return {
+    expiredTime,
+    startTime: Math.max(0, Math.floor(Date.now() / 1000) - 60),
+  }
 }
 
 function createDefaultObjectKey(file: UploadTencentCosFilePayload["file"]) {
