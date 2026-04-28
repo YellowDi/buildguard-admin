@@ -19,7 +19,7 @@ const props = withDefaults(defineProps<{
   workOrder: RepairWorkOrderDetailResult | null
   title?: string
 }>(), {
-  title: "维修回传",
+  title: "维修记录",
 })
 
 const mediaGroups = computed<RepairMediaGroup[]>(() => {
@@ -123,8 +123,8 @@ function toText(value: unknown, fallback = "") {
               <EmptyMedia variant="icon">
                 <i class="ri-tools-line text-[18px]" />
               </EmptyMedia>
-              <EmptyTitle>暂无维修回传</EmptyTitle>
-              <EmptyDescription>当前工单还没有可展示的维修回传记录。</EmptyDescription>
+              <EmptyTitle>暂无维修记录</EmptyTitle>
+              <EmptyDescription>当前工单还没有可展示的维修记录。</EmptyDescription>
             </EmptyHeader>
           </Empty>
         </div>
@@ -215,7 +215,7 @@ function toText(value: unknown, fallback = "") {
                 <EmptyMedia variant="icon">
                   <i class="ri-inbox-line text-[18px]" />
                 </EmptyMedia>
-                <EmptyTitle>暂无维修回传</EmptyTitle>
+                <EmptyTitle>暂无维修记录</EmptyTitle>
                 <EmptyDescription>当前工单没有返回维修内容、维修前或维修后附件。</EmptyDescription>
               </EmptyHeader>
             </Empty>
