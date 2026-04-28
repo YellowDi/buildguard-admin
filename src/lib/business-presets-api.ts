@@ -20,6 +20,7 @@ export type DictTypeItem = {
 
 export type DictEntryItem = {
   Id: number
+  RawId: string
   Uuid: string
   DictTypeUuid: string
   DictTypeName: string
@@ -471,6 +472,7 @@ function normalizeDictEntry(raw: unknown): DictEntryItem {
 
   return {
     Id: getFirstNumber(item, ["Id", "id", "DictDataId", "dictDataId", "EntryId", "entryId"]),
+    RawId: getFirstText(item, ["Id", "id", "DictDataId", "dictDataId", "EntryId", "entryId"]),
     Uuid: getFirstText(item, ["Uuid", "uuid", "DictDataUuid", "dictDataUuid", "EntryUuid", "entryUuid"]),
     DictTypeUuid: getFirstText(item, ["DictTypeUuid", "dictTypeUuid", "TypeUuid", "typeUuid"]),
     DictTypeName: getFirstText(item, ["DictTypeName", "dictTypeName", "TypeName", "typeName"]),

@@ -139,8 +139,9 @@ async function fetchOptionsForType(type: DictTypeItem | null) {
 
 function mapDictEntryOption(item: DictEntryItem): RepairDictionaryOption | null {
   const label = item.Name.trim()
-  const numericValue = resolveDictEntryId(item)
-  const value = numericValue === null ? item.Uuid.trim() : String(numericValue)
+  const idValue = resolveDictEntryIdValue(item)
+  const numericValue = toNumericValue(idValue)
+  const value = idValue || item.Uuid.trim()
 
   if (!value) {
     return null
@@ -155,9 +156,11 @@ function mapDictEntryOption(item: DictEntryItem): RepairDictionaryOption | null 
   }
 }
 
-function resolveDictEntryId(item: DictEntryItem) {
+function resolveDictEntryIdValue(item: DictEntryItem) {
   const record = item as DictEntryItem & Record<string, unknown>
   const candidateKeys = [
+    "RawId",
+    "rawId",
     "Id",
     "ID",
     "id",
@@ -173,14 +176,24 @@ function resolveDictEntryId(item: DictEntryItem) {
 
   for (const key of candidateKeys) {
     const value = record[key]
-    const parsed = typeof value === "string" ? Number(value.trim()) : value
 
-    if (typeof parsed === "number" && Number.isFinite(parsed) && parsed > 0) {
-      return parsed
+    if (typeof value === "string" && value.trim()) {
+      const trimmed = value.trim()
+      const parsed = Number(trimmed)
+
+      if (Number.isFinite(parsed) && parsed <= 0) {
+        continue
+      }
+
+      return trimmed
+    }
+
+    if (typeof value === "number" && Number.isFinite(value) && value > 0) {
+      return String(value)
     }
   }
 
-  return null
+  return ""
 }
 
 function resolveDictType(
