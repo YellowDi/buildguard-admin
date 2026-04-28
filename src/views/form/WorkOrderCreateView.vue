@@ -21,13 +21,14 @@ import {
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
-import { handleApiError } from "@/lib/api-errors"
+import { getApiErrorMessage, handleApiError } from "@/lib/api-errors"
 import { fetchCustomerDetail, fetchCustomers, type CustomerListItem } from "@/lib/customers-api"
 import type { InspectionItemOption } from "@/lib/inspection-item-options"
 import { fetchInspectionPlans, type InspectionPlanListItem } from "@/lib/inspection-plans-api"
 import { fetchInspectionServices, type InspectionServiceListItem } from "@/lib/inspection-services-api"
 import { fetchParks, type ParkListItem } from "@/lib/parks-api"
 import { fetchRepairWorkOrderDictionaries, type RepairDictionaryOption } from "@/lib/repair-work-order-dictionaries"
+import { uploadTencentCosFile } from "@/lib/tencent-cos-sdk"
 import { cn } from "@/lib/utils"
 import {
   createRepairWorkOrder,
@@ -66,6 +67,14 @@ type WorkOrderFormState = {
   content: string
   inspectionWorkOrderUuid: string
   workOrderInspectionBuildUuid: string[]
+  repairFiles: RepairFormFile[]
+}
+
+type RepairFormFile = {
+  id: string
+  name: string
+  url: string
+  type: number
 }
 
 type PlanOption = {
@@ -144,6 +153,7 @@ function createEmptyForm(): WorkOrderFormState {
     content: "",
     inspectionWorkOrderUuid: "",
     workOrderInspectionBuildUuid: [],
+    repairFiles: [],
   }
 }
 
@@ -170,6 +180,8 @@ const repairInspectionWorkOrdersError = ref("")
 const repairInspectionItemsLoading = ref(false)
 const repairInspectionItemsError = ref("")
 const repairInspectionSourceWorkOrder = ref<RepairInspectionSourceWorkOrder | null>(null)
+const repairFileInputRef = ref<HTMLInputElement | null>(null)
+const repairFilesUploading = ref(false)
 const anchorItems = ref<QuickNavItem[]>([])
 const activeNavId = ref("")
 const formSectionsRef = ref<HTMLElement | null>(null)
@@ -347,6 +359,7 @@ const canSubmit = computed(() => {
       && !customerLoading.value
       && !relatedOptionsLoading.value
       && !repairDictionariesLoading.value
+      && !repairFilesUploading.value
     )
   }
 
@@ -584,12 +597,17 @@ function buildRepairWorkOrderPayload() {
     return null
   }
 
+  const repairFiles = form.repairFiles
+    .map(file => ({ Type: file.type, Url: normalizeText(file.url) }))
+    .filter(file => file.Url)
+
   return {
     CustomerUuid: normalizeText(form.customerUuid),
     ParkUuid: normalizeText(form.parkUuid),
     ReportType: reportType,
     Important: important,
     Content: content,
+    RepairFile: repairFiles,
     WorkOrderInspectionBuildUuid: selectedInspectionItemUuids,
   }
 }
@@ -699,6 +717,84 @@ async function handleRepairUpdateSubmit() {
 
 function handleReset() {
   Object.assign(form, cloneFormState(initialFormState.value))
+}
+
+function triggerRepairFileSelect() {
+  if (repairFilesUploading.value || submitting.value) {
+    return
+  }
+
+  repairFileInputRef.value?.click()
+}
+
+async function handleRepairFileChange(event: Event) {
+  const input = event.target as HTMLInputElement | null
+  const files = Array.from(input?.files ?? [])
+
+  try {
+    await uploadRepairFiles(files)
+  } finally {
+    if (input) {
+      input.value = ""
+    }
+  }
+}
+
+async function handleRepairFileDrop(event: DragEvent) {
+  await uploadRepairFiles(Array.from(event.dataTransfer?.files ?? []))
+}
+
+async function uploadRepairFiles(files: File[]) {
+  if (!files.length || repairFilesUploading.value || submitting.value) {
+    return
+  }
+
+  const imageFiles = files.filter(file => file.type.startsWith("image/"))
+
+  if (imageFiles.length !== files.length) {
+    toast.error("请上传图片格式的需维修图片")
+  }
+
+  if (!imageFiles.length) {
+    return
+  }
+
+  repairFilesUploading.value = true
+
+  try {
+    for (const file of imageFiles) {
+      const result = await uploadTencentCosFile({
+        file,
+        key: createRepairFileObjectKey(file),
+        contentType: file.type || undefined,
+      })
+
+      form.repairFiles.push({
+        id: createLocalId("repair-file"),
+        name: file.name,
+        url: result.url,
+        type: 1,
+      })
+    }
+
+    toast.success(imageFiles.length > 1 ? `已上传 ${imageFiles.length} 张需维修图片` : "需维修图片已上传")
+  } catch (error) {
+    toast.error("需维修图片上传失败", {
+      description: getApiErrorMessage(error, "请稍后重试。"),
+    })
+  } finally {
+    repairFilesUploading.value = false
+  }
+}
+
+function removeRepairFile(fileId: string) {
+  form.repairFiles = form.repairFiles.filter(file => file.id !== fileId)
+}
+
+function getRepairFileExtension(fileName: string) {
+  const extension = normalizeText(fileName).split(".").pop()?.toUpperCase() ?? ""
+
+  return extension && extension !== normalizeText(fileName).toUpperCase() ? extension : "IMG"
 }
 
 async function loadFormContext() {
@@ -1641,7 +1737,24 @@ function cloneFormState(value: WorkOrderFormState): WorkOrderFormState {
   return {
     ...value,
     workOrderInspectionBuildUuid: [...value.workOrderInspectionBuildUuid],
+    repairFiles: value.repairFiles.map(file => ({ ...file })),
   }
+}
+
+function createRepairFileObjectKey(file: File) {
+  const random = Math.random().toString(36).slice(2, 10)
+
+  return `repair/${Date.now()}-${random}-${sanitizeObjectKeyFileName(file.name)}`
+}
+
+function createLocalId(prefix: string) {
+  return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`
+}
+
+function sanitizeObjectKeyFileName(value: string) {
+  const normalized = value.trim().replace(/[\\/:*?"<>|\s]+/g, "-").replace(/^-+|-+$/g, "")
+
+  return normalized || "repair-file"
 }
 
 function getOptionalText(value: unknown) {
@@ -1779,6 +1892,7 @@ watch(
       form.parkUuid = ""
       form.inspectionWorkOrderUuid = ""
       form.workOrderInspectionBuildUuid = []
+      form.repairFiles = []
       return
     }
 
@@ -1786,6 +1900,7 @@ watch(
     customerName.value = matchedCustomer?.name ?? ""
 
     relatedOptionsLoading.value = true
+    form.repairFiles = []
 
     try {
       await loadRelatedOptionsForCustomer(nextCustomerUuid)
@@ -2029,6 +2144,103 @@ watch(
                   </SelectItem>
                 </SelectContent>
               </Select>
+            </FormFieldSection>
+
+            <FormFieldSection
+              v-if="!isRepairEditMode"
+              id="section-repair-files"
+              quick-nav-label="需维修图片"
+              label="需维修图片"
+              align="start"
+              layout="vertical"
+            >
+              <div
+                :class="cn(
+                  'relative flex w-full flex-col rounded-lg border border-dashed border-input bg-background/92 px-4 py-4 transition-[background-color,color] duration-180 ease-out',
+                  repairFilesUploading || submitting ? 'cursor-not-allowed opacity-75' : 'hover:bg-[var(--form-control-hover-background)]',
+                )"
+                @dragover.prevent
+                @drop.prevent="handleRepairFileDrop"
+              >
+                <input
+                  ref="repairFileInputRef"
+                  type="file"
+                  accept="image/png,image/jpeg,image/jpg,image/webp"
+                  multiple
+                  class="hidden"
+                  :disabled="repairFilesUploading || submitting"
+                  @change="handleRepairFileChange"
+                >
+
+                <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                  <div class="flex min-w-0 gap-3">
+                    <div class="flex size-10 shrink-0 items-center justify-center rounded-md border border-border/70 bg-muted/35 text-muted-foreground">
+                      <i :class="repairFilesUploading ? 'ri-loader-4-line animate-spin text-[20px]' : 'ri-image-add-line text-[20px]'" />
+                    </div>
+                    <div class="min-w-0 pt-0.5">
+                      <div class="flex flex-wrap items-center gap-2">
+                        <p class="text-sm font-medium text-foreground">
+                          {{ repairFilesUploading ? "正在上传图片" : "上传现场需维修图片" }}
+                        </p>
+                        <span
+                          v-if="form.repairFiles.length"
+                          class="inline-flex h-5 items-center rounded-md bg-muted px-1.5 text-[12px] font-medium text-muted-foreground tabular-nums"
+                        >
+                          {{ form.repairFiles.length }} 张
+                        </span>
+                      </div>
+                      <p class="mt-1 text-xs leading-5 text-muted-foreground">
+                        支持 JPG、PNG、WEBP，可多选上传，也可以将图片拖放到此处。
+                      </p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    type="button"
+                    class="h-9 shrink-0 gap-2 rounded-md"
+                    :disabled="repairFilesUploading || submitting"
+                    @click="triggerRepairFileSelect"
+                    @focus="handleFocus('section-repair-files')"
+                  >
+                    <i :class="repairFilesUploading ? 'ri-loader-4-line animate-spin text-sm' : 'ri-upload-2-line text-sm'" />
+                    {{ repairFilesUploading ? "上传中..." : form.repairFiles.length ? "继续上传" : "选择图片" }}
+                  </Button>
+                </div>
+
+                <div v-if="form.repairFiles.length" class="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4">
+                  <figure
+                    v-for="file in form.repairFiles"
+                    :key="file.id"
+                    class="group relative aspect-square overflow-hidden rounded-lg bg-muted shadow-(--shadow-border) transition-[background-color] duration-180 ease-out hover:bg-[var(--form-control-hover-background)]"
+                  >
+                    <img
+                      :src="file.url"
+                      :alt="file.name || '需维修图片'"
+                      class="h-full w-full object-cover outline outline-1 -outline-offset-1 outline-black/5"
+                    >
+                    <figcaption class="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/65 via-black/36 to-transparent px-2.5 pb-2 pt-8">
+                      <p class="truncate text-[12px] font-medium leading-4 text-white">
+                        {{ file.name || "需维修图片" }}
+                      </p>
+                      <p class="mt-0.5 text-[11px] leading-4 text-white/72">
+                        {{ getRepairFileExtension(file.name) }}
+                      </p>
+                    </figcaption>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="icon"
+                      class="absolute right-1.5 top-1.5 size-8 bg-background/92 text-foreground opacity-0 shadow-sm transition-[opacity,background-color] duration-180 ease-out hover:bg-background group-hover:opacity-100 focus-visible:opacity-100"
+                      :disabled="repairFilesUploading || submitting"
+                      :aria-label="`移除${file.name || '需维修图片'}`"
+                      @click="removeRepairFile(file.id)"
+                    >
+                      <i class="ri-close-line text-base" />
+                    </Button>
+                  </figure>
+                </div>
+              </div>
             </FormFieldSection>
 
             <FormFieldSection

@@ -91,6 +91,7 @@ export type CreateRepairWorkOrderPayload = {
   ReportType: string
   Important: string
   Content?: string
+  RepairFile?: WorkOrderFile[]
   WorkOrderInspectionBuildUuid?: string[]
 }
 
@@ -306,6 +307,7 @@ export async function createRepairWorkOrder(payload: CreateRepairWorkOrderPayloa
     ReportType: getRequiredString(payload.ReportType, "ReportType"),
     Important: getRequiredString(payload.Important, "Important"),
     Content: getOptionalString(payload.Content) ?? "",
+    RepairFile: normalizeOptionalWorkOrderFiles(payload.RepairFile),
     WorkOrderInspectionBuildUuid: normalizeOptionalStringArray(payload.WorkOrderInspectionBuildUuid),
   }
 
@@ -974,6 +976,30 @@ function normalizeOptionalStringArray(value: unknown) {
   ))
 
   return normalized.length ? normalized : undefined
+}
+
+function normalizeOptionalWorkOrderFiles(value: unknown) {
+  if (!Array.isArray(value)) {
+    return undefined
+  }
+
+  const files: WorkOrderFile[] = []
+
+  value.forEach((item) => {
+    const record = asRecord(item)
+    const url = getOptionalStringSilently(record?.Url)
+
+    if (!url) {
+      return
+    }
+
+    files.push({
+      Type: getOptionalNumber(record?.Type, "Type") ?? 1,
+      Url: url,
+    })
+  })
+
+  return files.length ? files : undefined
 }
 
 function getFirstText(record: Record<string, unknown>, keys: string[]) {
