@@ -555,14 +555,14 @@ function buildRepairWorkOrderPayload() {
     return null
   }
 
-  const reportType = normalizeText(form.reportType)
+  const reportType = resolveRepairDictionarySubmitText(form.reportType, repairTypeOptions.value)
 
   if (!reportType) {
     toast.error("请选择报修类型")
     return null
   }
 
-  const important = normalizeText(form.important)
+  const important = resolveRepairDictionarySubmitText(form.important, repairImportanceOptions.value)
 
   if (!important) {
     toast.error("请选择重要程度")
@@ -582,6 +582,23 @@ function buildRepairWorkOrderPayload() {
     Content: normalizeText(form.content),
     WorkOrderInspectionBuildUuid: normalizeTextArray(form.workOrderInspectionBuildUuid),
   }
+}
+
+function resolveRepairDictionarySubmitText(value: unknown, options: RepairDictionaryOption[]) {
+  const normalizedValue = normalizeText(value)
+
+  if (!normalizedValue) {
+    return ""
+  }
+
+  const matchedOption = options.find(option => (
+    option.value === normalizedValue
+    || option.uuid === normalizedValue
+    || option.label === normalizedValue
+    || (option.numericValue !== null && String(option.numericValue) === normalizedValue)
+  ))
+
+  return normalizeText(matchedOption?.label) || normalizedValue
 }
 
 async function handleRepairCreateSubmit() {
