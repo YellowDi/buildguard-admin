@@ -2,10 +2,11 @@
 import { computed } from "vue"
 
 import TitleBlock from "@/components/layout/TitleBlock.vue"
+import MediaLightbox from "@/components/media/MediaLightbox.vue"
 import TableStatusChip from "@/components/table-page/TableStatusChip.vue"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import type { DetailContactValue, DetailFieldRow, DetailFieldSection, DetailFieldValue, DetailStatusValue } from "@/components/detail/types"
+import type { DetailContactValue, DetailFieldMediaFile, DetailFieldRow, DetailFieldSection, DetailFieldValue, DetailStatusValue } from "@/components/detail/types"
 import { remixIconForDetailFieldAction } from "@/lib/actionIcons"
 import { cn } from "@/lib/utils"
 
@@ -54,9 +55,13 @@ function isStatusValue(value: DetailFieldValue): value is DetailStatusValue {
 
 function shouldTruncateValueContainer(row: DetailFieldRow) {
   if (row.truncate === false) return false
-  if (row.action || row.suffixAction || row.linkAction || row.imageUrl) return false
+  if (row.action || row.suffixAction || row.linkAction || row.imageUrl || row.mediaFiles?.length) return false
   if (isContactValue(row.value) || isStatusValue(row.value)) return false
   return true
+}
+
+function isVideoMedia(file: DetailFieldMediaFile) {
+  return file.type === "video" || /\.(mp4|mov|m4v|webm|ogg)(\?|#|$)/i.test(file.src)
 }
 </script>
 
@@ -81,7 +86,7 @@ function shouldTruncateValueContainer(row: DetailFieldRow) {
             :key="row.key"
             :class="cn(
               'detail-field-row group',
-              (row.imageUrl || (row.truncate === false && !row.action)) && 'detail-field-row--top-aligned',
+              (row.imageUrl || row.mediaFiles?.length || (row.truncate === false && !row.action)) && 'detail-field-row--top-aligned',
             )"
           >
             <div class="detail-field-row__label">{{ row.label }}</div>
@@ -136,6 +141,41 @@ function shouldTruncateValueContainer(row: DetailFieldRow) {
                     class="detail-field-row__image object-contain"
                   >
                 </div>
+              </template>
+              <template v-else-if="row.mediaFiles?.length">
+                <MediaLightbox v-slot="{ open: openMediaLightbox }">
+                  <div class="grid max-w-[360px] grid-cols-[repeat(auto-fill,minmax(72px,1fr))] gap-2">
+                    <button
+                      v-for="(file, index) in row.mediaFiles"
+                      :key="file.key"
+                      type="button"
+                      class="group relative aspect-[4/3] min-h-10 overflow-hidden rounded-[4px] bg-muted text-left outline outline-1 -outline-offset-1 outline-black/10 transition-transform duration-180 ease-out hover:scale-[1.01] active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#097fe8]/50"
+                      :aria-label="`预览${isVideoMedia(file) ? '视频' : '图片'}：${file.alt ?? `${row.label} ${index + 1}`}`"
+                      @click="openMediaLightbox(file, row.label, $event)"
+                    >
+                      <video
+                        v-if="isVideoMedia(file)"
+                        :src="file.src"
+                        preload="metadata"
+                        playsinline
+                        muted
+                        class="h-full w-full bg-black object-cover"
+                      />
+                      <img
+                        v-else
+                        :src="file.src"
+                        :alt="file.alt ?? `${row.label} ${index + 1}`"
+                        class="h-full w-full object-cover"
+                      >
+                      <span
+                        v-if="isVideoMedia(file)"
+                        class="pointer-events-none absolute left-1/2 top-1/2 flex h-8 w-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-white shadow-[0_8px_18px_rgba(0,0,0,0.18)] backdrop-blur-sm transition-transform duration-200 ease-out group-hover:scale-105"
+                      >
+                        <i class="ri-play-fill translate-x-px text-[18px]" />
+                      </span>
+                    </button>
+                  </div>
+                </MediaLightbox>
               </template>
               <template v-else-if="row.linkAction">
                 <button

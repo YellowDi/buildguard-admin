@@ -162,13 +162,21 @@ export type RepairWorkOrderDetailResult = {
   Important?: string
   ReportType?: string
   Content?: string
+  BeforeContent?: string[]
   Title?: string
   Status?: number
   CreatedAt?: string
   AfterRepairFile?: WorkOrderFile[]
   BeforeRepairFile?: WorkOrderFile[]
+  RepairFile?: WorkOrderFile[]
   RepairContent?: string
-  WorkOrderInspectionBuildUuid?: string[]
+  CategoryContent?: string
+  CategoryName?: string
+  CategoryUuid?: string
+  InspectionItemName?: string
+  InspectionItemUuid?: string
+  Result?: number
+  WorkOrderInspectionBuildUuid?: string | string[]
   [property: string]: unknown
 }
 
@@ -679,6 +687,7 @@ function normalizeRepairWorkOrderListItem(value: unknown): RepairWorkOrderListIt
     Important: getFirstText(record, ["Important", "important"]),
     ReportType: getFirstText(record, ["ReportType", "reportType"]),
     Content: getFirstText(record, ["Content", "content"]),
+    BeforeContent: getFirstTextArray(record, ["BeforeContent", "beforeContent"]),
     Title: getFirstText(record, ["Title", "title"]),
     Status: getFirstNumber(record, ["Status", "status"]),
     CreatedStartAt: getFirstText(record, ["CreatedStartAt", "createdStartAt"]),
@@ -687,10 +696,18 @@ function normalizeRepairWorkOrderListItem(value: unknown): RepairWorkOrderListIt
     UpdatedAt: getFirstText(record, ["UpdatedAt", "updatedAt", "UpdateTime", "updateTime"]),
     AfterRepairFile: getFirstWorkOrderFiles(record, ["AfterRepairFile", "afterRepairFile"]),
     BeforeRepairFile: getFirstWorkOrderFiles(record, ["BeforeRepairFile", "beforeRepairFile"]),
+    RepairFile: getFirstWorkOrderFiles(record, ["RepairFile", "repairFile"]),
     RepairContent: getFirstText(record, ["RepairContent", "repairContent"]),
-    WorkOrderInspectionBuildUuid: getFirstTextArray(record, [
+    CategoryContent: getFirstText(record, ["CategoryContent", "categoryContent"]),
+    CategoryName: getFirstText(record, ["CategoryName", "categoryName"]),
+    CategoryUuid: getFirstText(record, ["CategoryUuid", "categoryUuid"]),
+    InspectionItemName: getFirstText(record, ["InspectionItemName", "inspectionItemName"]),
+    InspectionItemUuid: getFirstText(record, ["InspectionItemUuid", "inspectionItemUuid"]),
+    Result: getFirstNumber(record, ["Result", "result"]),
+    WorkOrderInspectionBuildUuid: getFirstText(record, [
       "WorkOrderInspectionBuildUuid",
       "workOrderInspectionBuildUuid",
+    ]) ?? getFirstTextArray(record, [
       "WorkOrderInspectionBuildUuids",
       "workOrderInspectionBuildUuids",
     ]),

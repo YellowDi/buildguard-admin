@@ -27,6 +27,13 @@ export type DetailFieldLinkAction = {
   onClick: () => void
 }
 
+export type DetailFieldMediaFile = {
+  key: string
+  src: string
+  type?: "image" | "video"
+  alt?: string
+}
+
 export type DetailFieldRow = {
   key: string
   label: string
@@ -34,6 +41,7 @@ export type DetailFieldRow = {
   suffixHint?: string
   suffixHintClass?: string
   imageUrl?: string | null
+  mediaFiles?: DetailFieldMediaFile[]
   /** 仅展示按钮，不展示 value */
   action?: DetailFieldAction
   /** 与 value 同格展示在右侧（如地址后的操作按钮） */

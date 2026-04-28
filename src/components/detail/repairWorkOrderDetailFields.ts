@@ -1,9 +1,9 @@
-import type { DetailContactValue, DetailFieldSection, DetailStatusValue } from "@/components/detail/types"
+import type { DetailContactValue, DetailFieldMediaFile, DetailFieldSection, DetailStatusValue } from "@/components/detail/types"
 import { workOrderStatusMap } from "@/components/table-page/statusPresets"
 import type { CustomerDetailResult } from "@/lib/customers-api"
 import { formatRepairDictionaryLabel, type RepairDictionaryOption } from "@/lib/repair-work-order-dictionaries"
 import { getRepairWorkOrderStatusLabel } from "@/lib/work-order-status"
-import type { RepairWorkOrderDetailResult } from "@/lib/work-orders-api"
+import type { RepairWorkOrderDetailResult, WorkOrderFile } from "@/lib/work-orders-api"
 
 export type RepairWorkOrderDictionaryLabels = {
   importanceOptions?: RepairDictionaryOption[]
@@ -38,6 +38,7 @@ export function buildRepairWorkOrderPrimarySections(
           truncate: false,
           valueClass: "leading-6",
         },
+        ...buildRepairFileRows(workOrder.RepairFile),
         { key: "status", label: "状态", value: buildRepairWorkOrderStatusValue(workOrder.Status) },
         { key: "created-at", label: "创建时间", value: toText(workOrder.CreatedAt, "-") },
         { key: "executors", label: "执行人", value: formatExecutors(workOrder.Executors) },
@@ -133,6 +134,51 @@ function formatFileCount(value: unknown) {
   }
 
   return `${value.length} 个附件`
+}
+
+function buildRepairFileRows(value: unknown) {
+  const mediaFiles = normalizeWorkOrderMediaFiles(value)
+
+  if (!mediaFiles.length) {
+    return []
+  }
+
+  return [{
+    key: "repair-file",
+    label: "需维修图片",
+    value: `${mediaFiles.length} 个附件`,
+    mediaFiles,
+  }]
+}
+
+function normalizeWorkOrderMediaFiles(value: unknown): DetailFieldMediaFile[] {
+  if (!Array.isArray(value)) {
+    return []
+  }
+
+  return value
+    .map((file, index) => normalizeWorkOrderMediaFile(file, index))
+    .filter((file): file is DetailFieldMediaFile => file !== null)
+}
+
+function normalizeWorkOrderMediaFile(value: unknown, index: number): DetailFieldMediaFile | null {
+  if (!value || typeof value !== "object") {
+    return null
+  }
+
+  const file = value as WorkOrderFile
+  const src = toText(file.Url)
+
+  if (!src) {
+    return null
+  }
+
+  return {
+    key: `repair-file-${index}-${src}`,
+    src,
+    type: file.Type === 2 || /\.(mp4|mov|m4v|webm|ogg)(\?|#|$)/i.test(src) ? "video" : "image",
+    alt: `需维修图片 ${index + 1}`,
+  }
 }
 
 function formatExecutors(value: unknown) {

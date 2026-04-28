@@ -1539,6 +1539,11 @@ function normalizeText(value: unknown) {
 }
 
 function normalizeTextArray(value: unknown) {
+  if (typeof value === "string" || typeof value === "number") {
+    const normalized = normalizeText(value)
+    return normalized ? [normalized] : []
+  }
+
   if (!Array.isArray(value)) {
     return []
   }
