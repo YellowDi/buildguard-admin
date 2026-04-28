@@ -10,8 +10,17 @@
           else if (legacy === 'false') stored = 'light';
           else stored = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
         }
-        if (stored === 'dark') document.documentElement.classList.add('dark');
+        var isDark = stored === 'dark';
+        if (isDark) document.documentElement.classList.add('dark');
         else document.documentElement.classList.remove('dark');
+
+        var themeColorMeta = document.querySelector('meta[name="theme-color"]');
+        if (!themeColorMeta) {
+          themeColorMeta = document.createElement('meta');
+          themeColorMeta.setAttribute('name', 'theme-color');
+          document.head.appendChild(themeColorMeta);
+        }
+        themeColorMeta.setAttribute('content', isDark ? '#191919' : '#ffffff');
       })();
     </script>
     <meta charset="UTF-8" />
@@ -20,6 +29,7 @@
       name="viewport"
       content="width=device-width, initial-scale=1.0"
     />
+    <meta name="theme-color" content="#ffffff" />
     <title>宝京云维</title>
     <style>
       html, body {
