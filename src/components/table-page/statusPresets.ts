@@ -50,3 +50,8 @@ export const workOrderStatusMap = {
   已结单: { tone: "green", icon: "check" },
   已关闭: { tone: "gray", icon: "minus" },
 } satisfies Record<string, TableStatusOption>
+
+export const subAccountStatusMap = {
+  正常: { tone: "green", icon: "check" },
+  禁用: { tone: "gray", icon: "minus" },
+} satisfies Record<string, TableStatusOption>

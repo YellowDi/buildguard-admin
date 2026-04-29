@@ -35,7 +35,7 @@ import CustomerDetailContentLoading from "@/components/loading/CustomerDetailCon
 import DetailFieldsSkeleton from "@/components/loading/DetailFieldsSkeleton.vue"
 import TopTabSwitch from "@/components/layout/TopTabSwitch.vue"
 import ExportTableDialog from "@/components/table-page/ExportTableDialog.vue"
-import { customerStatusMap, workOrderStatusMap } from "@/components/table-page/statusPresets"
+import { customerStatusMap, subAccountStatusMap, workOrderStatusMap } from "@/components/table-page/statusPresets"
 import {
   Pagination,
   PaginationContent,
@@ -78,6 +78,8 @@ import {
   appendCustomerSubAccountLocalRecord,
   createCustomerSubAccount,
   fetchCustomerSubAccounts,
+  resetCustomerSubAccountPassword,
+  updateCustomerSubAccountPassword,
   readCustomerSubAccountLocalRecords,
   type CustomerSubAccountListItem,
   type CustomerSubAccountLocalRecord,
@@ -324,6 +326,14 @@ const assignSubmitting = ref(false)
 const subAccountCreateDialogOpen = ref(false)
 const subAccountCreateSubmitting = ref(false)
 const subAccountCreateForm = ref<CustomerSubAccountCreateFormState>(createEmptySubAccountCreateForm())
+type SubAccountPasswordResetDialogKind = "passwdReset" | "pwdUpdate"
+const subAccountPasswordResetDialogKind = ref<SubAccountPasswordResetDialogKind>("passwdReset")
+const subAccountPasswordResetDialogOpen = ref(false)
+const subAccountPasswordResetSubmitting = ref(false)
+const subAccountPasswordResetTargetUuid = ref("")
+const subAccountPasswordResetTargetName = ref("")
+const subAccountPasswordResetOldPassword = ref("")
+const subAccountPasswordResetPassword = ref("")
 const buildingDetailSheetOpen = ref(false)
 const activeBuildingUuid = ref("")
 const activeBuildingParkUuid = ref("")
@@ -381,6 +391,27 @@ const canSubmitSubAccountCreate = computed(() => (
     && !subAccountCreateSubmitting.value,
   )
 ))
+
+const canSubmitSubAccountPasswordReset = computed(() => {
+  if (subAccountPasswordResetSubmitting.value) {
+    return false
+  }
+
+  const targetUuid = normalizeDialogText(subAccountPasswordResetTargetUuid.value)
+  const newPassword = normalizeDialogText(subAccountPasswordResetPassword.value)
+
+  if (!targetUuid || !newPassword) {
+    return false
+  }
+
+  if (subAccountPasswordResetDialogKind.value === "pwdUpdate") {
+    const oldPassword = normalizeDialogText(subAccountPasswordResetOldPassword.value)
+    return Boolean(oldPassword)
+  }
+
+  return true
+})
+
 const detailTabActionsByTab: Record<CustomerDetailTab, CustomerDetailTabActions> = {
   "basic-info": {
     deleteCustomer: true,
@@ -1555,7 +1586,12 @@ const subAccountsSchema: TablePageSchema<SubAccountRow> = {
     {
       key: "reset-password",
       label: "重置密码",
-      onClick: row => handleResetSubAccountPassword(row as SubAccountRow),
+      onClick: row => handleOpenSubAccountPasswordResetDialog("passwdReset", row as SubAccountRow),
+    },
+    {
+      key: "update-password",
+      label: "更新密码",
+      onClick: row => handleOpenSubAccountPasswordResetDialog("pwdUpdate", row as SubAccountRow),
     },
   ],
   columns: [
@@ -1600,6 +1636,11 @@ const subAccountsSchema: TablePageSchema<SubAccountRow> = {
       filter: {
         type: "tag",
         defaultVisible: true,
+      },
+      cellRenderer: {
+        kind: "status",
+        map: subAccountStatusMap,
+        fallback: { tone: "gray", icon: "dot" },
       },
       sort: true,
     },
@@ -2242,8 +2283,105 @@ function handleAddSubAccount() {
   subAccountCreateDialogOpen.value = true
 }
 
-function handleResetSubAccountPassword(row: SubAccountRow) {
-  toast.info(`重置子账号「${row.name}」密码功能暂未接入`)
+function handleOpenSubAccountPasswordResetDialog(kind: SubAccountPasswordResetDialogKind, row: SubAccountRow) {
+  if (!row.uuid) {
+    toast.error("子账号 UUID 缺失，无法重置密码")
+    return
+  }
+
+  subAccountPasswordResetDialogKind.value = kind
+  subAccountPasswordResetTargetUuid.value = row.uuid
+  subAccountPasswordResetTargetName.value = row.name
+  subAccountPasswordResetOldPassword.value = ""
+  subAccountPasswordResetPassword.value = ""
+  subAccountPasswordResetDialogOpen.value = true
+}
+
+function closeSubAccountPasswordResetDialog(force = false) {
+  if (subAccountPasswordResetSubmitting.value && !force) {
+    return
+  }
+
+  subAccountPasswordResetDialogOpen.value = false
+  subAccountPasswordResetDialogKind.value = "passwdReset"
+  subAccountPasswordResetTargetUuid.value = ""
+  subAccountPasswordResetTargetName.value = ""
+  subAccountPasswordResetOldPassword.value = ""
+  subAccountPasswordResetPassword.value = ""
+}
+
+function handleSubAccountPasswordResetDialogOpenChange(open: boolean) {
+  if (open) {
+    return
+  }
+
+  closeSubAccountPasswordResetDialog()
+}
+
+async function submitSubAccountPasswordReset() {
+  const kind = subAccountPasswordResetDialogKind.value
+  const targetUuid = normalizeDialogText(subAccountPasswordResetTargetUuid.value)
+  const targetName = subAccountPasswordResetTargetName.value
+  const newPassword = normalizeDialogText(subAccountPasswordResetPassword.value)
+
+  if (!targetUuid) {
+    toast.error("子账号 UUID 缺失，无法提交")
+    return
+  }
+
+  if (!newPassword) {
+    toast.error("请填写新密码")
+    return
+  }
+
+  if (kind === "pwdUpdate") {
+    const oldPassword = normalizeDialogText(subAccountPasswordResetOldPassword.value)
+    if (!oldPassword) {
+      toast.error("请填写旧密码")
+      return
+    }
+
+    subAccountPasswordResetSubmitting.value = true
+
+    try {
+      await updateCustomerSubAccountPassword({
+        Uuid: targetUuid,
+        OldPassword: oldPassword,
+        Password: newPassword,
+      })
+
+      toast.success(`子账号「${targetName}」密码已更新`)
+      closeSubAccountPasswordResetDialog(true)
+    } catch (error) {
+      handleApiError(error, {
+        title: "子账号密码更新失败",
+        fallback: "子账号密码更新失败，请稍后重试。",
+      })
+    } finally {
+      subAccountPasswordResetSubmitting.value = false
+    }
+
+    return
+  }
+
+  subAccountPasswordResetSubmitting.value = true
+
+  try {
+    await resetCustomerSubAccountPassword({
+      Uuid: targetUuid,
+      Password: newPassword,
+    })
+
+    toast.success(`子账号「${targetName}」密码已重置`)
+    closeSubAccountPasswordResetDialog(true)
+  } catch (error) {
+    handleApiError(error, {
+      title: "子账号密码重置失败",
+      fallback: "子账号密码重置失败，请稍后重试。",
+    })
+  } finally {
+    subAccountPasswordResetSubmitting.value = false
+  }
 }
 
 function resetSubAccountCreateDialog() {
@@ -4674,6 +4812,63 @@ function toDisplayText(value: unknown, fallback = "未填写") {
           {{ assignSubmitting ? "提交中..." : "确认指派" }}
         </Button>
       </DialogFooter>
+    </DialogContent>
+  </Dialog>
+
+  <Dialog :open="subAccountPasswordResetDialogOpen" @update:open="handleSubAccountPasswordResetDialogOpenChange">
+    <DialogContent class="sm:max-w-[520px]">
+      <DialogHeader>
+        <DialogTitle>{{ subAccountPasswordResetDialogKind === "pwdUpdate" ? "更新子账号密码" : "重置子账号密码" }}</DialogTitle>
+        <DialogDescription>
+          {{
+            subAccountPasswordResetDialogKind === "pwdUpdate"
+              ? `请为子账号「${subAccountPasswordResetTargetName}」输入旧密码与新密码。`
+              : `请为子账号「${subAccountPasswordResetTargetName}」输入新密码。`
+          }}
+        </DialogDescription>
+      </DialogHeader>
+
+      <form class="grid gap-4" @submit.prevent="submitSubAccountPasswordReset">
+        <div v-if="subAccountPasswordResetDialogKind === 'pwdUpdate'" class="grid gap-2">
+          <label class="text-sm font-medium text-foreground" for="sub-account-reset-old-password">旧密码</label>
+          <Input
+            id="sub-account-reset-old-password"
+            v-model="subAccountPasswordResetOldPassword"
+            :disabled="subAccountPasswordResetSubmitting"
+            type="password"
+            placeholder="请输入旧密码"
+          />
+        </div>
+
+        <div class="grid gap-2">
+          <label class="text-sm font-medium text-foreground" for="sub-account-reset-password">新密码</label>
+          <Input
+            id="sub-account-reset-password"
+            v-model="subAccountPasswordResetPassword"
+            :disabled="subAccountPasswordResetSubmitting"
+            type="password"
+            placeholder="请输入新密码"
+          />
+        </div>
+
+        <DialogFooter class="pt-2">
+          <Button
+            type="button"
+            variant="outline"
+            :disabled="subAccountPasswordResetSubmitting"
+            @click="closeSubAccountPasswordResetDialog"
+          >
+            取消
+          </Button>
+          <Button type="submit" :disabled="!canSubmitSubAccountPasswordReset">
+            {{
+              subAccountPasswordResetSubmitting
+                ? "提交中..."
+                : (subAccountPasswordResetDialogKind === "pwdUpdate" ? "确认更新" : "确认重置")
+            }}
+          </Button>
+        </DialogFooter>
+      </form>
     </DialogContent>
   </Dialog>
 

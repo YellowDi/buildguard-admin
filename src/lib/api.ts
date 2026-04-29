@@ -18,6 +18,8 @@ export const API_PATHS = {
   customerDelete: "/bqi/customer/del",
   customerSubAccountsList: "/bqi/customer/account/list",
   customerSubAccountCreate: "/bqi/customer/account/new",
+  customerSubAccountPasswordResetOld: "/bqi/customer/account/passwd/reset",
+  customerSubAccountPasswordResetNew: "/bqi/customer/account/pwd/reset",
   parksList: "/bqi/park/list",
   parkCreate: "/bqi/park/new",
   parkUpdate: "/bqi/park/update",

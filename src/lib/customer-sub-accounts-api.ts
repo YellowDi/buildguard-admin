@@ -54,8 +54,12 @@ export type CustomerSubAccountLocalRecord = {
 
 const CUSTOMER_SUB_ACCOUNTS_LIST_API_URL = buildApiUrl(API_PATHS.customerSubAccountsList)
 const CUSTOMER_SUB_ACCOUNT_CREATE_API_URL = buildApiUrl(API_PATHS.customerSubAccountCreate)
+const CUSTOMER_SUB_ACCOUNT_PASSWORD_RESET_OLD_API_URL = buildApiUrl(API_PATHS.customerSubAccountPasswordResetOld)
+const CUSTOMER_SUB_ACCOUNT_PASSWORD_RESET_NEW_API_URL = buildApiUrl(API_PATHS.customerSubAccountPasswordResetNew)
 const CUSTOMER_SUB_ACCOUNTS_LOAD_ERROR_MESSAGE = "子账号列表加载失败，请稍后重试。"
 const CUSTOMER_SUB_ACCOUNT_CREATE_ERROR_MESSAGE = "子账号创建失败，请稍后重试。"
+const CUSTOMER_SUB_ACCOUNT_PASSWORD_RESET_OLD_ERROR_MESSAGE = "子账号密码重置失败，请稍后重试。"
+const CUSTOMER_SUB_ACCOUNT_PASSWORD_RESET_NEW_ERROR_MESSAGE = "子账号密码更新失败，请稍后重试。"
 const CUSTOMER_SUB_ACCOUNT_STORAGE_KEY = "customer-sub-accounts:local-records"
 
 export async function fetchCustomerSubAccounts(payload: ListCustomerSubAccountsPayload = {}): Promise<CustomerSubAccountsListResult> {
@@ -113,6 +117,79 @@ export async function createCustomerSubAccount(payload: CreateCustomerSubAccount
   assertApiSuccess(responseBody, CUSTOMER_SUB_ACCOUNT_CREATE_ERROR_MESSAGE)
 
   return extractCreateResult(responseBody)
+}
+
+export type ResetCustomerSubAccountPasswordOldPayload = {
+  /**
+   * 子账号 UUID
+   */
+  Uuid: string
+  /**
+   * 新密码
+   */
+  Password: string
+}
+
+export async function resetCustomerSubAccountPassword(payload: ResetCustomerSubAccountPasswordOldPayload): Promise<void> {
+  const normalizedPayload = {
+    Uuid: getRequiredString(payload.Uuid, "Uuid"),
+    Password: getRequiredString(payload.Password, "Password"),
+  }
+
+  const response = await fetch(CUSTOMER_SUB_ACCOUNT_PASSWORD_RESET_OLD_API_URL, {
+    method: "POST",
+    headers: buildApiHeaders({
+      "Content-Type": "application/json",
+    }),
+    body: JSON.stringify(normalizedPayload),
+  })
+
+  const responseBody = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responseBody, CUSTOMER_SUB_ACCOUNT_PASSWORD_RESET_OLD_ERROR_MESSAGE)
+  }
+
+  assertApiSuccess(responseBody, CUSTOMER_SUB_ACCOUNT_PASSWORD_RESET_OLD_ERROR_MESSAGE)
+}
+
+export type ResetCustomerSubAccountPasswordNewPayload = {
+  /**
+   * 子账号 UUID
+   */
+  Uuid: string
+  /**
+   * 旧密码
+   */
+  OldPassword: string
+  /**
+   * 新密码
+   */
+  Password: string
+}
+
+export async function updateCustomerSubAccountPassword(payload: ResetCustomerSubAccountPasswordNewPayload): Promise<void> {
+  const normalizedPayload = {
+    Uuid: getRequiredString(payload.Uuid, "Uuid"),
+    OldPassword: getRequiredString(payload.OldPassword, "OldPassword"),
+    Password: getRequiredString(payload.Password, "Password"),
+  }
+
+  const response = await fetch(CUSTOMER_SUB_ACCOUNT_PASSWORD_RESET_NEW_API_URL, {
+    method: "POST",
+    headers: buildApiHeaders({
+      "Content-Type": "application/json",
+    }),
+    body: JSON.stringify(normalizedPayload),
+  })
+
+  const responseBody = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responseBody, CUSTOMER_SUB_ACCOUNT_PASSWORD_RESET_NEW_ERROR_MESSAGE)
+  }
+
+  assertApiSuccess(responseBody, CUSTOMER_SUB_ACCOUNT_PASSWORD_RESET_NEW_ERROR_MESSAGE)
 }
 
 export function readCustomerSubAccountLocalRecords(customerUuid: string) {
