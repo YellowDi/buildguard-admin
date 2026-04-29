@@ -335,6 +335,7 @@ const disabledRepairInspectionItemKeys = computed(() => repairInspectionItemOpti
 const selectedRepairInspectionItemKeys = computed(() => normalizeTextArray(form.workOrderInspectionBuildUuid)
   .filter(uuid => !disabledRepairInspectionItemKeys.value.includes(uuid)))
 const hasSelectedRepairInspectionItems = computed(() => selectedRepairInspectionItemKeys.value.length > 0)
+const isRepairFilesDisabled = computed(() => hasSelectedRepairInspectionItems.value || repairFilesUploading.value || submitting.value)
 const optionalRepairInspectionWorkOrderUuid = computed({
   get: () => form.inspectionWorkOrderUuid || NO_REPAIR_INSPECTION_WORK_ORDER_VALUE,
   set: (value: string) => {
@@ -597,9 +598,11 @@ function buildRepairWorkOrderPayload() {
     return null
   }
 
-  const repairFiles = form.repairFiles
-    .map(file => ({ Type: file.type, Url: normalizeText(file.url) }))
-    .filter(file => file.Url)
+  const repairFiles = selectedInspectionItemUuids.length
+    ? []
+    : form.repairFiles
+        .map(file => ({ Type: file.type, Url: normalizeText(file.url) }))
+        .filter(file => file.Url)
 
   return {
     CustomerUuid: normalizeText(form.customerUuid),
@@ -720,7 +723,7 @@ function handleReset() {
 }
 
 function triggerRepairFileSelect() {
-  if (repairFilesUploading.value || submitting.value) {
+  if (isRepairFilesDisabled.value) {
     return
   }
 
@@ -745,7 +748,7 @@ async function handleRepairFileDrop(event: DragEvent) {
 }
 
 async function uploadRepairFiles(files: File[]) {
-  if (!files.length || repairFilesUploading.value || submitting.value) {
+  if (!files.length || isRepairFilesDisabled.value) {
     return
   }
 
@@ -760,6 +763,7 @@ async function uploadRepairFiles(files: File[]) {
   }
 
   repairFilesUploading.value = true
+  let uploadedCount = 0
 
   try {
     for (const file of imageFiles) {
@@ -769,15 +773,22 @@ async function uploadRepairFiles(files: File[]) {
         contentType: file.type || undefined,
       })
 
+      if (hasSelectedRepairInspectionItems.value) {
+        continue
+      }
+
       form.repairFiles.push({
         id: createLocalId("repair-file"),
         name: file.name,
         url: result.url,
         type: 1,
       })
+      uploadedCount += 1
     }
 
-    toast.success(imageFiles.length > 1 ? `已上传 ${imageFiles.length} 张需维修图片` : "需维修图片已上传")
+    if (uploadedCount) {
+      toast.success(uploadedCount > 1 ? `已上传 ${uploadedCount} 张需维修图片` : "需维修图片已上传")
+    }
   } catch (error) {
     toast.error("需维修图片上传失败", {
       description: getApiErrorMessage(error, "请稍后重试。"),
@@ -788,6 +799,10 @@ async function uploadRepairFiles(files: File[]) {
 }
 
 function removeRepairFile(fileId: string) {
+  if (isRepairFilesDisabled.value) {
+    return
+  }
+
   form.repairFiles = form.repairFiles.filter(file => file.id !== fileId)
 }
 
@@ -1950,6 +1965,10 @@ watch(
     if (nextSelectedItemKeys.length && normalizeText(form.content)) {
       form.content = ""
     }
+
+    if (nextSelectedItemKeys.length && form.repairFiles.length) {
+      form.repairFiles = []
+    }
   },
 )
 
@@ -2161,8 +2180,9 @@ watch(
               <div
                 :class="cn(
                   'relative flex w-full flex-col rounded-lg border border-dashed border-input bg-background/92 px-4 py-4 transition-[background-color,color] duration-180 ease-out',
-                  repairFilesUploading || submitting ? 'cursor-not-allowed opacity-75' : 'hover:bg-[var(--form-control-hover-background)]',
+                  isRepairFilesDisabled ? 'cursor-not-allowed opacity-75' : 'hover:bg-[var(--form-control-hover-background)]',
                 )"
+                :aria-disabled="isRepairFilesDisabled"
                 @dragover.prevent
                 @drop.prevent="handleRepairFileDrop"
               >
@@ -2172,7 +2192,7 @@ watch(
                   accept="image/png,image/jpeg,image/jpg,image/webp"
                   multiple
                   class="hidden"
-                  :disabled="repairFilesUploading || submitting"
+                  :disabled="isRepairFilesDisabled"
                   @change="handleRepairFileChange"
                 >
 
@@ -2184,7 +2204,7 @@ watch(
                     <div class="min-w-0 pt-0.5">
                       <div class="flex flex-wrap items-center gap-2">
                         <p class="text-sm font-medium text-foreground">
-                          {{ repairFilesUploading ? "正在上传图片" : "上传现场需维修图片" }}
+                          {{ repairFilesUploading ? "正在上传图片" : hasSelectedRepairInspectionItems ? "已选择检测条目，无需上传图片" : "上传现场需维修图片" }}
                         </p>
                         <span
                           v-if="form.repairFiles.length"
@@ -2194,7 +2214,7 @@ watch(
                         </span>
                       </div>
                       <p class="mt-1 text-xs leading-5 text-muted-foreground">
-                        支持 JPG、PNG、WEBP，可多选上传，也可以将图片拖放到此处。
+                        {{ hasSelectedRepairInspectionItems ? "检测项已关联现场问题，需维修图片已禁用。" : "支持 JPG、PNG、WEBP，可多选上传，也可以将图片拖放到此处。" }}
                       </p>
                     </div>
                   </div>
@@ -2203,12 +2223,12 @@ watch(
                     size="sm"
                     type="button"
                     class="h-9 shrink-0 gap-2 rounded-md"
-                    :disabled="repairFilesUploading || submitting"
+                    :disabled="isRepairFilesDisabled"
                     @click="triggerRepairFileSelect"
                     @focus="handleFocus('section-repair-files')"
                   >
-                    <i :class="repairFilesUploading ? 'ri-loader-4-line animate-spin text-sm' : 'ri-upload-2-line text-sm'" />
-                    {{ repairFilesUploading ? "上传中..." : form.repairFiles.length ? "继续上传" : "选择图片" }}
+                    <i :class="repairFilesUploading ? 'ri-loader-4-line animate-spin text-sm' : hasSelectedRepairInspectionItems ? 'ri-lock-line text-sm' : 'ri-upload-2-line text-sm'" />
+                    {{ repairFilesUploading ? "上传中..." : hasSelectedRepairInspectionItems ? "已禁用" : form.repairFiles.length ? "继续上传" : "选择图片" }}
                   </Button>
                 </div>
 
@@ -2236,7 +2256,7 @@ watch(
                       variant="secondary"
                       size="icon"
                       class="absolute right-1.5 top-1.5 size-8 bg-background/92 text-foreground opacity-0 shadow-sm transition-[opacity,background-color] duration-180 ease-out hover:bg-background group-hover:opacity-100 focus-visible:opacity-100"
-                      :disabled="repairFilesUploading || submitting"
+                      :disabled="isRepairFilesDisabled"
                       :aria-label="`移除${file.name || '需维修图片'}`"
                       @click="removeRepairFile(file.id)"
                     >
