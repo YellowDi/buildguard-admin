@@ -1891,7 +1891,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
         />
         </template>
 
-        <div class="flex flex-nowrap items-center justify-end gap-2">
+        <div class="flex flex-nowrap items-center justify-end gap-1">
           <SettingsToolbarSearchInput
             v-model="searchQuery"
             :expanded="searchExpanded"

@@ -633,7 +633,7 @@ function getRemainingDaysHint(value: unknown) {
     @back="goBack"
   >
     <template #headerActions>
-      <div class="flex items-center gap-2">
+      <div class="flex items-center gap-1">
         <AlertDialog :open="deleteConfirmOpen" @update:open="deleteConfirmOpen = $event">
           <Button
             variant="outline"

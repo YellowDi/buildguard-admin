@@ -1240,7 +1240,7 @@ async function submitAssign() {
           type="button"
           variant="outline"
           size="sm"
-          class="gap-2 text-destructive hover:bg-destructive/10 hover:text-destructive"
+          class="h-8 gap-1 px-3 text-[14px] font-medium text-destructive hover:bg-destructive/10 hover:text-destructive"
           @click="deleteConfirmOpen = true"
         >
           <i class="ri-delete-bin-line text-base" />
@@ -1272,7 +1272,7 @@ async function submitAssign() {
         type="button"
         variant="outline"
         size="sm"
-        class="gap-2"
+        class="h-8 gap-1 px-3 text-[14px] font-medium"
         @click="openAssignDialog"
       >
         <i class="ri-user-shared-line text-base" />
@@ -1283,7 +1283,7 @@ async function submitAssign() {
         type="button"
         variant="outline"
         size="sm"
-        class="gap-2"
+        class="h-8 gap-1 px-3 text-[14px] font-medium"
         @click="openRepairEditPage"
       >
         <i class="ri-edit-line text-base" />

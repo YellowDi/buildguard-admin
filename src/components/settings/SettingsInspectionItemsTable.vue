@@ -671,7 +671,7 @@ defineExpose({
 <template>
   <section class="space-y-5">
     <SettingsToolbarRow v-if="!props.hideToolbar">
-      <div class="flex flex-nowrap items-center justify-end gap-2">
+      <div class="flex flex-nowrap items-center justify-end gap-1">
         <SettingsToolbarSearchInput
           v-model="searchQuery"
           :expanded="searchExpanded"

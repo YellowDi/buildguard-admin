@@ -989,7 +989,7 @@ function escapeHtml(value: string) {
           </div>
         </template>
 
-        <div class="flex flex-nowrap items-center justify-end gap-2">
+        <div class="flex flex-nowrap items-center justify-end gap-1">
           <div class="flex shrink-0 items-center gap-1">
             <Button
               v-for="view in currentViewTabs"

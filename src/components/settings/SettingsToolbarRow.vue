@@ -7,7 +7,7 @@
       <slot name="leading" />
     </div>
 
-    <div class="-my-1 min-w-0 shrink-0 overflow-x-auto py-1">
+    <div class="-my-1 flex min-w-0 shrink-0 items-center justify-end gap-1 overflow-x-auto py-1">
       <slot />
     </div>
   </div>

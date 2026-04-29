@@ -1267,7 +1267,7 @@ function formatDateTime(...values: unknown[]) {
         />
         </template>
 
-        <div class="flex flex-nowrap items-center justify-end gap-2">
+        <div class="flex flex-nowrap items-center justify-end gap-1">
           <input
             ref="apiImportInput"
             type="file"

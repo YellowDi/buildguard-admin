@@ -86,7 +86,7 @@ const hasActions = computed(() => props.hasActions ?? Boolean(slots.actions))
     <div
       v-if="hasActions"
       :class="cn(
-        'flex w-full items-center justify-start md:w-auto md:justify-end',
+        'flex w-full items-center justify-start gap-1 md:w-auto md:justify-end',
         props.actionsClass,
       )"
     >
