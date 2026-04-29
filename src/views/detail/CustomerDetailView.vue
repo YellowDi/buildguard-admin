@@ -480,7 +480,7 @@ const activeDetailMobileActionItems = computed(() => {
   if (activeDetailTabActions.value.deleteCustomer) {
     items.push({
       key: "delete-customer",
-      label: "删除用户",
+      label: "删除",
       iconClass: "ri-delete-bin-line",
       destructive: true,
     })
@@ -511,7 +511,7 @@ const activeDetailMobileActionItems = computed(() => {
   }
 
   if (activeDetailTabActions.value.editCustomer) {
-    items.push({ key: "edit-customer", label: "修改客户信息", iconClass: "ri-edit-line" })
+    items.push({ key: "edit-customer", label: "编辑", iconClass: "ri-edit-line" })
   }
 
   return items
@@ -4078,7 +4078,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
               @click="deleteConfirmOpen = true"
             >
               <i class="ri-delete-bin-line text-base" />
-              删除用户
+              删除
             </Button>
             <AlertDialogContent>
               <AlertDialogHeader>
@@ -4170,7 +4170,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
             @click="goToCustomerEdit"
           >
             <i class="ri-edit-line text-base" />
-            修改客户信息
+            编辑
           </Button>
           <Button
             v-if="activeDetailTabActions.back"
@@ -4180,7 +4180,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
             @click="goBack"
           >
             <i class="ri-arrow-left-line text-base" />
-            返回客户列表
+            返回
           </Button>
         </template>
       </DetailTabActionsGroup>
@@ -4850,7 +4850,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
             @click="goToParkEdit(activeParkDetail.Uuid, activeParkDetail.CustomerUuid || customer?.Uuid || '')"
           >
             <i class="ri-edit-line text-base" />
-            编辑园区
+            编辑
           </Button>
         </div>
       </div>

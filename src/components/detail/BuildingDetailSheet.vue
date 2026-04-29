@@ -225,7 +225,7 @@ function resetState() {
             @click="goToBuildingEdit"
           >
             <i class="ri-edit-line text-base" />
-            编辑建筑信息
+            编辑
           </Button>
         </div>
       </div>
