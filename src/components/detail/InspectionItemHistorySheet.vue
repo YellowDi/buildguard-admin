@@ -54,7 +54,7 @@ const sections = computed<DetailFieldSection[]>(() => {
 const historyEntries = computed<HistoryEntry[]>(() => (
   props.model?.historyEntries.map((entry, index) => ({
     key: entry.key,
-    title: entry.isLatest ? "最新检测结果" : `历史记录 ${props.model!.historyEntries.length - index}`,
+    title: resolveHistoryEntryTitle(index, props.model!.historyEntries.length),
     statusLabel: entry.resultLabel,
     statusTone: resolveStatusTone(entry.resultLabel),
     badges: buildEntryBadges(entry),
@@ -75,11 +75,27 @@ function handleOpenChange(open: boolean) {
   emit("update:open", open)
 }
 
+function resolveHistoryEntryTitle(index: number, total: number) {
+  if (total <= 1) {
+    return "原始检测记录"
+  }
+
+  if (index === 0) {
+    return "最新复检记录"
+  }
+
+  if (index === total - 1) {
+    return "原始检测记录"
+  }
+
+  return `第 ${total - index - 1} 次复检记录`
+}
+
 function buildEntryFields(entry: InspectionItemHistoryRecord): HistoryEntryField[] {
   return [
     ...(entry.inspectorName ? [{ key: `${entry.key}-inspector`, label: "检测人", value: entry.inspectorName }] : []),
     ...(entry.scoreText ? [{ key: `${entry.key}-score`, label: "扣分", value: entry.scoreText }] : []),
-    ...(entry.contentText ? [{ key: `${entry.key}-content`, label: "内容", value: entry.contentText }] : []),
+    ...(entry.contentText ? [{ key: `${entry.key}-content`, label: "风险评估", value: entry.contentText }] : []),
     ...(entry.measureValue ? [{ key: `${entry.key}-measure`, label: "测量内容", value: entry.measureValue }] : []),
     ...(entry.remark ? [{ key: `${entry.key}-remark`, label: "备注", value: entry.remark }] : []),
   ]

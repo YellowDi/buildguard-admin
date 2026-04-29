@@ -816,7 +816,6 @@ function buildInspectionItemHistoryEntries(
   return items.map((item, index) => ({
     key: toText(item.Uuid, `inspection-history-${index + 1}`),
     resultLabel: formatInspectionHistoryResultLabel(item.Result),
-    summary: resolveInspectionHistorySummary(item, inspectionItemName),
     contentText: resolveInspectionHistoryContentText(item, inspectionItemName),
     measureValue: toText(item.MeasureContent, ""),
     mediaFiles: resolveInspectionHistoryMediaFiles(item.PhotoFile),
@@ -955,25 +954,6 @@ function formatInspectionHistoryResultLabel(value: unknown) {
   return "未反馈"
 }
 
-function resolveInspectionHistorySummary(
-  item: WorkOrderInspectionHistoryDetailItem,
-  inspectionItemName: string,
-) {
-  const content = toText(item.Content, "")
-  const name = toText(item.Name, "")
-  const normalizedInspectionItemName = normalizeComparableText(inspectionItemName)
-
-  if (content && normalizeComparableText(content) !== normalizedInspectionItemName) {
-    return content
-  }
-
-  if (name && normalizeComparableText(name) !== normalizedInspectionItemName) {
-    return name
-  }
-
-  return ""
-}
-
 function resolveInspectionHistoryContentText(
   item: WorkOrderInspectionHistoryDetailItem,
   inspectionItemName: string,
@@ -984,19 +964,19 @@ function resolveInspectionHistoryContentText(
   const normalizedContent = normalizeComparableText(content)
   const normalizedName = normalizeComparableText(name)
 
+  if (normalizedContent && normalizedContent !== normalizedInspectionItemName) {
+    return content
+  }
+
+  if (normalizedName && normalizedName !== normalizedInspectionItemName) {
+    return name
+  }
+
   if (!content) {
     return ""
   }
 
-  if (normalizedContent === normalizedInspectionItemName) {
-    return ""
-  }
-
-  if (normalizedContent && normalizedContent === normalizedName) {
-    return ""
-  }
-
-  return content
+  return ""
 }
 
 function normalizeComparableText(value: string) {
