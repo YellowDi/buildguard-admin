@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import videoPreviewAsset from "@/assets/video.png"
 import { Input } from "@/components/ui/input"
+import { RichTextEditor } from "@/components/ui/rich-text-editor"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ResponsiveRightSheet } from "@/components/ui/sheet"
 import {
@@ -264,7 +265,7 @@ const sheetDescription = computed(() => {
   if (sheetMode.value === "create") {
     return activeModule.value === "videos"
       ? "先用 mock 数据把视频标题、摘要和基础信息定下来。"
-      : "先用 Markdown 组织正文、摘要和基础信息。"
+      : "先用富文本组织正文和基础信息。"
   }
 
   if (sheetMode.value === "edit") {
@@ -274,12 +275,12 @@ const sheetDescription = computed(() => {
   return getPreviewDescription()
 })
 
-const previewMarkdownHtml = computed(() => {
+const previewArticleContentHtml = computed(() => {
   if (sheetMode.value === "preview") {
-    return renderMockMarkdown(activeArticle.value?.markdown ?? "")
+    return renderArticleContentHtml(activeArticle.value?.markdown ?? "")
   }
 
-  return renderMockMarkdown(formState.markdown)
+  return renderArticleContentHtml(formState.markdown)
 })
 
 const videoPreviewSections = computed<DetailFieldSection[]>(() => {
@@ -391,7 +392,7 @@ function openCreate(kind: SheetEntityKind, defaults: Partial<MediaEditorForm> = 
 
   applyForm(createEmptyForm(kind, {
     categoryId: kind === "article" ? fallbackArticleCategory : fallbackVideoCategory,
-    markdown: kind === "article" ? "# 新文章标题\n\n请先输入摘要和正文。" : "",
+    markdown: kind === "article" ? "<h2>新文章标题</h2><p>请先输入正文内容。</p>" : "",
     sortOrder: kind === "article"
       ? (articleItems.value[0]?.sortOrder ?? 0) + 1
       : (videoItems.value[0]?.sortOrder ?? 0) + 1,
@@ -444,7 +445,7 @@ function openEdit(kind: SheetEntityKind, id: string) {
       categoryId: entity.categoryId,
       cover: entity.cover,
       summary: entity.summary,
-      markdown: entity.markdown,
+      markdown: renderArticleContentHtml(entity.markdown),
       tagsText: entity.tags.join(", "),
       status: entity.status,
       featured: entity.featured,
@@ -556,7 +557,7 @@ function saveCurrentForm() {
     title: formState.title.trim(),
     cover: formState.cover.trim() || formState.title.trim(),
     summary: formState.summary.trim(),
-    markdown: formState.markdown.trim(),
+    markdown: normalizeRichTextContent(formState.markdown),
     tags: parseTagText(formState.tagsText),
     status: formState.status,
     featured: formState.featured,
@@ -1027,6 +1028,28 @@ function renderMockMarkdown(markdown: string) {
   return html.join("")
 }
 
+function renderArticleContentHtml(value: string) {
+  const normalized = value.trim()
+  if (!normalized) {
+    return "<p>暂无正文。</p>"
+  }
+
+  if (looksLikeHtml(normalized)) {
+    return normalized
+  }
+
+  return renderMockMarkdown(normalized)
+}
+
+function normalizeRichTextContent(value: string) {
+  const normalized = value.trim()
+  return normalized || "<p>暂无正文。</p>"
+}
+
+function looksLikeHtml(value: string) {
+  return /<\/?(p|h1|h2|h3|blockquote|ul|ol|li|strong|em|b|i|a|pre|code|div|br)\b/i.test(value)
+}
+
 function renderInlineMarkdown(text: string) {
   return text
     .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
@@ -1420,7 +1443,7 @@ function escapeHtml(value: string) {
             </div>
 
             <div class="px-4 py-3">
-              <div class="media-markdown" v-html="previewMarkdownHtml" />
+              <div class="media-markdown" v-html="previewArticleContentHtml" />
             </div>
 
             <DetailFieldSections
@@ -1568,16 +1591,15 @@ function escapeHtml(value: string) {
               </span>
             </label>
 
-            <label class="article-editor-row article-editor-row--top">
+            <div class="article-editor-row article-editor-row--top">
               <span class="article-editor-label">正文</span>
-              <span class="article-editor-control">
-                <Textarea
+              <div class="article-editor-control">
+                <RichTextEditor
                   v-model="formState.markdown"
-                  class="article-editor-textarea min-h-[560px] font-mono text-sm leading-6"
-                  placeholder="输入 Markdown 正文"
+                  placeholder="输入正文内容"
                 />
-              </span>
-            </label>
+              </div>
+            </div>
           </div>
 
           <div v-else class="grid gap-4 px-4 md:grid-cols-2">
