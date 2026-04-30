@@ -616,9 +616,13 @@ function createId(prefix: string) {
         </div>
       </aside>
 
-      <main class="min-h-0 min-w-0 flex-1 overflow-y-auto pt-4">
-        <div class="mx-auto w-full max-w-[430px] rounded-[22px] bg-[#f5f5f5] p-4 shadow-[0_18px_48px_rgba(15,23,42,0.12)]">
-          <div class="app-home-preview-scroll max-h-[calc(100vh-190px)] min-h-[620px] overflow-y-auto rounded-[18px] bg-[#f4f4f4] py-1">
+      <main class="flex min-h-0 min-w-0 flex-1 overflow-visible px-4 pb-8 pt-4">
+        <div class="app-home-preview-shell mx-auto flex min-h-0 w-full max-w-[430px] self-stretch flex-col rounded-[30px] bg-zinc-950/5 p-2.5">
+          <div class="flex h-8 shrink-0 items-center justify-center">
+            <span class="h-1.5 w-20 rounded-full bg-zinc-300/90 shadow-[inset_0_1px_1px_rgba(0,0,0,0.08)]" aria-hidden="true" />
+          </div>
+
+          <div class="app-home-preview-scroll min-h-0 flex-1 overflow-y-auto rounded-[22px] bg-[#f4f4f4] px-4 py-1">
             <div
               v-for="module in enabledModules"
               :key="module.id"
@@ -647,7 +651,7 @@ function createId(prefix: string) {
                     <article
                       v-for="item in resolveCategoryVideos(getVideoModuleActiveCategory(module)!).slice(0, 8)"
                       :key="item.id"
-                      class="relative h-48 w-36 shrink-0 overflow-hidden rounded-lg bg-zinc-950 text-white shadow-[0_8px_18px_rgba(15,23,42,0.12)]"
+                      class="relative h-48 w-36 shrink-0 overflow-hidden rounded-[8px] bg-zinc-950 text-white shadow-[0_8px_18px_rgba(15,23,42,0.12)]"
                     >
                       <img
                         :src="getCoverSrc(item.cover)"
@@ -656,9 +660,6 @@ function createId(prefix: string) {
                       />
                       <div class="absolute inset-0 bg-black/5" />
                       <div class="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/85 via-black/42 to-transparent" />
-                      <span class="absolute right-2 top-2 flex size-6 items-center justify-center rounded-full bg-white/92 text-orange-400">
-                        <i class="ri-play-fill translate-x-[1px] text-[13px] leading-none" />
-                      </span>
                       <h3 class="absolute inset-x-0 bottom-0 line-clamp-2 p-3 text-[14px] font-semibold leading-[1.35] text-white">
                         {{ item.title }}
                       </h3>
@@ -682,20 +683,18 @@ function createId(prefix: string) {
                 <section>
                   <article
                     v-if="getArticle(module)"
-                    class="overflow-hidden rounded-lg bg-white shadow-[0_8px_18px_rgba(15,23,42,0.08)]"
+                    class="app-home-article-card relative aspect-[1.34/1] overflow-hidden bg-white shadow-[0_8px_18px_rgba(15,23,42,0.08)]"
                   >
-                    <div class="relative aspect-[2.45/1] overflow-hidden">
-                      <img
-                        :src="getCoverSrc(getArticle(module)!.cover)"
-                        alt=""
-                        class="h-full w-full object-cover"
-                      />
-                    </div>
-                    <div class="flex items-center gap-3 bg-gradient-to-r from-teal-400 to-slate-300 px-4 py-4 text-white">
+                    <img
+                      :src="getCoverSrc(getArticle(module)!.cover)"
+                      alt=""
+                      class="absolute inset-0 h-full w-full object-cover"
+                    />
+                    <div class="app-home-article-glass absolute inset-x-0 bottom-0 flex min-h-16 items-center gap-3 px-4 py-4 text-white">
                       <h3 class="min-w-0 flex-1 truncate text-[15px] font-semibold">
                         {{ module.title || getArticle(module)!.title }}
                       </h3>
-                      <span class="shrink-0 rounded-full bg-white/24 px-4 py-2 text-sm font-medium">
+                      <span class="shrink-0 rounded-full bg-white/22 px-4 py-2 text-sm font-medium text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] backdrop-blur-md">
                         查看详情
                       </span>
                     </div>
@@ -966,12 +965,40 @@ function createId(prefix: string) {
 </template>
 
 <style scoped>
+.app-home-preview-shell {
+  box-shadow:
+    inset 0 0 0 1px rgba(24, 24, 27, 0.08),
+    0 14px 30px rgba(15, 23, 42, 0.12),
+    0 4px 10px rgba(15, 23, 42, 0.06);
+}
+
 .app-home-preview-scroll {
   scrollbar-width: none;
+  box-shadow:
+    inset 0 0 0 1px rgba(24, 24, 27, 0.06),
+    inset 0 1px 3px rgba(24, 24, 27, 0.06);
 }
 
 .app-home-preview-scroll::-webkit-scrollbar {
   display: none;
+}
+
+.app-home-article-card {
+  border-radius: 12px;
+  isolation: isolate;
+}
+
+.app-home-article-glass {
+  background: rgba(128, 128, 128, 0.3);
+  background-blend-mode: luminosity;
+  border-bottom-left-radius: inherit;
+  border-bottom-right-radius: inherit;
+  border-width: 1.5px 0 0;
+  border-style: solid;
+  border-image: linear-gradient(94deg, rgba(255, 255, 255, 0.4) -31%, rgba(255, 255, 255, 0.0001) 40%, rgba(255, 255, 255, 0.0001) 80%, rgba(255, 255, 255, 0.1) 164%) 1.5 0 0 0;
+  box-sizing: border-box;
+  -webkit-backdrop-filter: blur(100px) saturate(100%);
+  backdrop-filter: blur(100px) saturate(100%);
 }
 
 .article-editor-list {
