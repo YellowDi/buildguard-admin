@@ -2,7 +2,6 @@
 import type { DropdownMenuSubTriggerProps } from "reka-ui"
 import type { HTMLAttributes } from "vue"
 import { reactiveOmit } from "@vueuse/core"
-import { ChevronRightIcon } from '@radix-icons/vue'
 import {
   DropdownMenuSubTrigger,
   useForwardProps,
@@ -26,6 +25,6 @@ const forwardedProps = useForwardProps(delegatedProps)
     )"
   >
     <slot />
-    <ChevronRightIcon class="ml-auto size-4" />
+    <i class="ri-arrow-right-s-line ml-auto text-base leading-none" />
   </DropdownMenuSubTrigger>
 </template>

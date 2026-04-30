@@ -2,7 +2,6 @@
 import type { ListboxFilterProps } from "reka-ui"
 import type { HTMLAttributes } from "vue"
 import { reactiveOmit } from "@vueuse/core"
-import { MagnifyingGlassIcon } from '@radix-icons/vue'
 import { ListboxFilter, useForwardProps } from "reka-ui"
 import { computed, watch } from "vue"
 import { cn } from "@/lib/utils"
@@ -46,7 +45,7 @@ watch(() => props.modelValue, (value) => {
     data-slot="command-input-wrapper"
     class="flex h-9 items-center gap-2 border-b px-3"
   >
-    <MagnifyingGlassIcon class="size-4 shrink-0 opacity-50" />
+    <i class="ri-search-line shrink-0 text-base leading-none opacity-50" />
     <ListboxFilter
       v-bind="{ ...forwardedProps, ...$attrs }"
       v-model="searchValue"

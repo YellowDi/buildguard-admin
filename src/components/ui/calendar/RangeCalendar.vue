@@ -3,7 +3,6 @@ import type { DateValue, RangeCalendarRootEmits, RangeCalendarRootProps } from "
 import type { HTMLAttributes, Ref } from "vue"
 import type { LayoutTypes } from "."
 import { getLocalTimeZone, today } from "@internationalized/date"
-import { ChevronLeftIcon, ChevronRightIcon } from "@radix-icons/vue"
 import { createReusableTemplate, reactiveOmit, useVModel } from "@vueuse/core"
 import {
   RangeCalendarCell,
@@ -113,7 +112,7 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
             aria-label="切换到上个月"
             :class="cn(buttonVariants({ variant: 'ghost' }), 'size-8 justify-self-start p-0')"
           >
-            <ChevronLeftIcon class="size-4" />
+            <i class="ri-arrow-left-s-line text-base leading-none" />
           </RangeCalendarPrev>
         </TooltipWrap>
 
@@ -146,7 +145,7 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
             aria-label="切换到下个月"
             :class="cn(buttonVariants({ variant: 'ghost' }), 'size-8 justify-self-end p-0')"
           >
-            <ChevronRightIcon class="size-4" />
+            <i class="ri-arrow-right-s-line text-base leading-none" />
           </RangeCalendarNext>
         </TooltipWrap>
       </div>

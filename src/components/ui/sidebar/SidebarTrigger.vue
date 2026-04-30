@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { HTMLAttributes } from "vue"
-import { ViewVerticalIcon } from '@radix-icons/vue'
 import { cn } from "@/lib/utils"
 import { Button } from '@/components/ui/button'
 import { TooltipWrap } from "@/components/ui/tooltip"
@@ -23,7 +22,7 @@ const { toggleSidebar } = useSidebar()
       :class="cn('h-7 w-7', props.class)"
       @click="toggleSidebar"
     >
-      <ViewVerticalIcon />
+      <i class="ri-side-bar-line text-base leading-none" />
       <span class="sr-only">切换侧边栏</span>
     </Button>
   </TooltipWrap>

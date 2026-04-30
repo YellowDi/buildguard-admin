@@ -2,7 +2,6 @@
 import type { DialogContentEmits, DialogContentProps } from "reka-ui"
 import type { HTMLAttributes } from "vue"
 import { reactiveOmit } from "@vueuse/core"
-import { Cross2Icon } from '@radix-icons/vue'
 import {
   DialogClose,
   DialogContent,
@@ -65,7 +64,7 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
             type="button"
             class="absolute top-4 right-4 rounded-md p-0.5 transition-colors hover:bg-secondary"
           >
-            <Cross2Icon class="w-4 h-4" />
+            <i class="ri-close-line text-base leading-none" />
             <span class="sr-only">关闭弹窗</span>
           </DialogClose>
         </TooltipWrap>

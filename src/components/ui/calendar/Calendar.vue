@@ -4,7 +4,6 @@ import type { HTMLAttributes, Ref } from "vue"
 import type { LayoutTypes } from "."
 import { getLocalTimeZone, today } from "@internationalized/date"
 import { createReusableTemplate, reactiveOmit, useVModel } from "@vueuse/core"
-import { ChevronLeftIcon, ChevronRightIcon } from "@radix-icons/vue"
 import { CalendarRoot, useDateFormatter, useForwardPropsEmits } from "reka-ui"
 import { createYear, createYearRange, toDate } from "reka-ui/date"
 import { computed, toRaw } from "vue"
@@ -93,7 +92,7 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
       <div class="grid w-full grid-cols-[2rem_minmax(0,1fr)_2rem] items-center gap-1">
         <CalendarPrevButton class="justify-self-start">
           <slot name="calendar-prev-icon">
-            <ChevronLeftIcon class="size-4" />
+            <i class="ri-arrow-left-s-line text-base leading-none" />
           </slot>
         </CalendarPrevButton>
 
@@ -125,7 +124,7 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
 
         <CalendarNextButton class="justify-self-end">
           <slot name="calendar-next-icon">
-            <ChevronRightIcon class="size-4" />
+            <i class="ri-arrow-right-s-line text-base leading-none" />
           </slot>
         </CalendarNextButton>
       </div>

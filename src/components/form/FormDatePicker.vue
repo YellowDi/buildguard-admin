@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { DateFormatter, getLocalTimeZone, parseDate } from "@internationalized/date"
-import { Calendar as CalendarIcon } from "lucide-vue-next"
 import { computed } from "vue"
 
 import { Calendar } from "@/components/ui/calendar"
@@ -73,7 +72,7 @@ const displayValue = computed(() => {
         "
         @focus="emit('focus')"
       >
-        <CalendarIcon class="mr-2 h-4 w-4" />
+        <i class="ri-calendar-line mr-2 text-base leading-none" />
         {{ displayValue }}
       </button>
     </PopoverTrigger>

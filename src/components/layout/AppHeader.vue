@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { computed } from "vue"
 import type { HTMLAttributes } from "vue"
-import { ViewVerticalIcon } from "@radix-icons/vue"
 import { useWindowSize } from "@vueuse/core"
 
 import BrandLogo from "@/components/layout/BrandLogo.vue"
@@ -124,7 +123,7 @@ const visibleTrailingItems = computed(() => {
         aria-label="打开侧边栏"
         @click.stop="props.onToggleMobileSidebar?.()"
       >
-        <ViewVerticalIcon class="h-4 w-4" />
+        <i class="ri-side-bar-line text-base leading-none" />
       </button>
     </TooltipWrap>
     <TooltipWrap content="切换侧边栏">
@@ -134,7 +133,7 @@ const visibleTrailingItems = computed(() => {
         aria-label="切换侧边栏"
         @click.stop="props.onToggleDesktopSidebar?.()"
       >
-        <ViewVerticalIcon class="h-4 w-4" />
+        <i class="ri-side-bar-line text-base leading-none" />
       </button>
     </TooltipWrap>
     <Separator orientation="vertical" class="mr-2 h-4! self-center shrink-0" />

@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from "vue"
-import { Check, ChevronDown } from "lucide-vue-next"
 
 import { cn } from "@/lib/utils"
 
@@ -111,7 +110,7 @@ onBeforeUnmount(() => {
       @click="toggleOpen"
     >
       <span :class="variant === 'field' ? 'truncate' : 'whitespace-nowrap leading-none'">{{ selectedLabel }}</span>
-      <ChevronDown :class="variant === 'field' ? 'size-4 shrink-0 opacity-50' : 'size-3.5 shrink-0 opacity-60'" />
+      <i :class="variant === 'field' ? 'ri-arrow-down-s-line shrink-0 text-base leading-none opacity-50' : 'ri-arrow-down-s-line shrink-0 text-sm leading-none opacity-60'" />
     </button>
 
     <div
@@ -135,7 +134,7 @@ onBeforeUnmount(() => {
       >
         <span class="truncate">{{ option.label }}</span>
         <span class="absolute right-2 flex size-3.5 items-center justify-center">
-          <Check v-if="props.modelValue === option.value" class="size-4" />
+          <i v-if="props.modelValue === option.value" class="ri-check-line text-base leading-none" />
         </span>
       </button>
     </div>

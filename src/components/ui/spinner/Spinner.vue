@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import type { HTMLAttributes } from "vue"
-import { LoaderCircleIcon } from "lucide-vue-next"
 import { cn } from "@/lib/utils"
 
 const props = defineProps<{
@@ -10,9 +9,9 @@ const props = defineProps<{
 </script>
 
 <template>
-  <LoaderCircleIcon
+  <i
     role="status"
     :aria-label="props.label ?? 'Loading'"
-    :class="cn('size-4 animate-spin', props.class)"
+    :class="cn('ri-loader-4-line inline-flex text-base leading-none animate-spin', props.class)"
   />
 </template>

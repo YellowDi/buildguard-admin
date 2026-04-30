@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue"
-import { Check, ChevronDown } from "lucide-vue-next"
 
 import { cn } from "@/lib/utils"
 
@@ -106,7 +105,7 @@ watch(open, async (isOpen) => {
       @click="toggleOpen"
     >
       <span class="whitespace-nowrap">{{ options.find(option => option.value === modelValue)?.label }}</span>
-      <ChevronDown class="pointer-events-none absolute right-2 size-4 shrink-0 opacity-50" />
+      <i class="ri-arrow-down-s-line pointer-events-none absolute right-2 shrink-0 text-base leading-none opacity-50" />
     </button>
 
     <div
@@ -137,7 +136,7 @@ watch(open, async (isOpen) => {
       >
         <span class="whitespace-nowrap">{{ option.label }}</span>
         <span class="absolute right-2 flex size-3.5 items-center justify-center">
-          <Check v-if="modelValue === option.value" class="size-4" />
+          <i v-if="modelValue === option.value" class="ri-check-line text-base leading-none" />
         </span>
       </button>
     </div>

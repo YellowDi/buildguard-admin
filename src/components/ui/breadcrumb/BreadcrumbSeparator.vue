@@ -1,6 +1,5 @@
 <script lang="ts" setup>
 import type { HTMLAttributes } from "vue"
-import { ChevronRightIcon } from '@radix-icons/vue'
 import { cn } from "@/lib/utils"
 
 const props = defineProps<{
@@ -16,7 +15,7 @@ const props = defineProps<{
     :class="cn('[&>svg]:size-3.5', props.class)"
   >
     <slot>
-      <ChevronRightIcon />
+      <i class="ri-arrow-right-s-line text-base leading-none" />
     </slot>
   </li>
 </template>

@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { CheckboxRootEmits, CheckboxRootProps } from "reka-ui"
 import type { HTMLAttributes } from "vue"
-import { CheckIcon, DividerHorizontalIcon } from "@radix-icons/vue"
 import { reactiveOmit } from "@vueuse/core"
 import { CheckboxIndicator, CheckboxRoot, useForwardPropsEmits } from "reka-ui"
 
@@ -29,8 +28,8 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
   >
     <CheckboxIndicator class="flex items-center justify-center text-current transition-none">
       <slot>
-        <CheckIcon class="size-3.5 group-data-[state=indeterminate]:hidden" />
-        <DividerHorizontalIcon class="hidden size-3.5 group-data-[state=indeterminate]:block" />
+        <i class="ri-check-line text-[14px] leading-none group-data-[state=indeterminate]:hidden" />
+        <i class="ri-subtract-line hidden text-[14px] leading-none group-data-[state=indeterminate]:block" />
       </slot>
     </CheckboxIndicator>
   </CheckboxRoot>

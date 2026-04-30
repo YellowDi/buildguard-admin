@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { Plus, X } from "lucide-vue-next"
 import { Button } from "@/components/ui/button"
 import { DrawerClose, DrawerFooter } from "@/components/ui/drawer"
 import { useSidebar } from "@/components/ui/sidebar"
@@ -54,7 +53,7 @@ function getEventTitleText(event: AppSidebarCalendarItem) {
           aria-label="添加"
           @click="emit('add')"
         >
-          <Plus class="size-4" />
+          <i class="ri-add-line text-base leading-none" />
         </Button>
         <Button
           type="button"
@@ -64,7 +63,7 @@ function getEventTitleText(event: AppSidebarCalendarItem) {
           aria-label="关闭"
           @click="emit('close')"
         >
-          <X class="size-4" />
+          <i class="ri-close-line text-base leading-none" />
         </Button>
       </template>
     </header>

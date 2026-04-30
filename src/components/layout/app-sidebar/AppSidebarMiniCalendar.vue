@@ -2,7 +2,6 @@
 import type { DateValue } from "reka-ui"
 import { computed, ref, watch } from "vue"
 import { getLocalTimeZone, today } from "@internationalized/date"
-import { ChevronDown, ChevronUp, CornerUpLeft } from "lucide-vue-next"
 import { CalendarRoot, CalendarCellTrigger as RekaCalendarCellTrigger } from "reka-ui"
 import { Button } from "@/components/ui/button"
 import {
@@ -125,7 +124,7 @@ function getEventDotClass(date: AppSidebarCalendarDate) {
                   aria-label="回到今天"
                   @click="goToCurrentMonth"
                 >
-                  <CornerUpLeft class="size-3" />
+                  <i class="ri-corner-up-left-line text-xs leading-none" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>回到今天</TooltipContent>
@@ -140,7 +139,7 @@ function getEventDotClass(date: AppSidebarCalendarDate) {
                   aria-label="转到上个月"
                   @click="goToPreviousMonth"
                 >
-                  <ChevronUp class="size-3" />
+                  <i class="ri-arrow-up-s-line text-xs leading-none" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>转到上个月</TooltipContent>
@@ -155,7 +154,7 @@ function getEventDotClass(date: AppSidebarCalendarDate) {
                   aria-label="转到下个月"
                   @click="goToNextMonth"
                 >
-                  <ChevronDown class="size-3" />
+                  <i class="ri-arrow-down-s-line text-xs leading-none" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>转到下个月</TooltipContent>

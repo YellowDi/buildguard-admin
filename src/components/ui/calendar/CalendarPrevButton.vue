@@ -2,7 +2,6 @@
 import type { CalendarPrevProps } from "reka-ui"
 import type { HTMLAttributes } from "vue"
 import { reactiveOmit } from "@vueuse/core"
-import { ChevronLeftIcon } from '@radix-icons/vue'
 import { CalendarPrev, useForwardProps } from "reka-ui"
 import { TooltipWrap } from "@/components/ui/tooltip"
 import { cn } from "@/lib/utils"
@@ -28,7 +27,7 @@ const forwardedProps = useForwardProps(delegatedProps)
       v-bind="forwardedProps"
     >
       <slot>
-        <ChevronLeftIcon class="size-4" />
+        <i class="ri-arrow-left-s-line text-base leading-none" />
       </slot>
     </CalendarPrev>
   </TooltipWrap>
