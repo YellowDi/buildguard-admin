@@ -521,6 +521,15 @@ function createId(prefix: string) {
             </Badge>
           </div>
         </template>
+
+        <Button variant="outline" size="sm" class="h-8 rounded-md px-3" @click="resetMockConfig">
+          <i class="ri-refresh-line text-base" />
+          <span>重置</span>
+        </Button>
+        <Button size="sm" class="h-8 rounded-md px-3" @click="saveMockConfig">
+          <i class="ri-save-line text-base" />
+          <span>保存</span>
+        </Button>
       </SettingsToolbarRow>
     </SettingsPageHeader>
 
@@ -539,7 +548,7 @@ function createId(prefix: string) {
             :class="cn(
               'group rounded-md px-1 py-0.5 transition-[opacity,background-color] duration-180 ease-out',
               selectedModuleId === module.id ? 'bg-accent' : 'hover:bg-accent/50',
-              draggingTarget === 'module' && dragOverId === module.id && draggingId !== module.id ? 'ring-2 ring-primary/20' : '',
+              draggingTarget === 'module' && dragOverId === module.id && draggingId !== module.id ? 'bg-accent/70 shadow-[inset_0_0_0_2px_hsl(var(--primary)/0.2)]' : '',
               draggingId === module.id ? 'opacity-60' : '',
             )"
             @dragover="handleDragOver($event, 'module', module.id)"
@@ -603,15 +612,6 @@ function createId(prefix: string) {
           >
             <i class="ri-add-line text-[15px]" />
             <span>添加文章模块</span>
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            class="h-8 w-full justify-start rounded-md px-2 text-muted-foreground"
-            @click="resetMockConfig"
-          >
-            <i class="ri-refresh-line text-[15px]" />
-            <span>重置 mock 配置</span>
           </Button>
         </div>
       </aside>
