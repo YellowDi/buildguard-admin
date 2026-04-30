@@ -99,7 +99,7 @@ const articleItems = ref(initialState.articleItems)
 
 const activeModule = ref<MediaModuleKey>("videos")
 const activeVideoView = ref<VideoMediaViewKey>("grid")
-const activeArticleView = ref<ArticleMediaViewKey>("grid")
+const activeArticleView = ref<ArticleMediaViewKey>("list")
 const selectedVideoCategoryId = ref(initialState.videoCategories[0]?.id ?? "")
 const selectedArticleCategoryId = ref(initialState.articleCategories[0]?.id ?? "")
 const searchQuery = ref("")
