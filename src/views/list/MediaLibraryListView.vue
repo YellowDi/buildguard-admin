@@ -14,6 +14,13 @@ import videoPreviewAsset from "@/assets/video.png"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ResponsiveRightSheet } from "@/components/ui/sheet"
+import {
+  TagsInput,
+  TagsInputInput,
+  TagsInputItem,
+  TagsInputItemDelete,
+  TagsInputItemText,
+} from "@/components/ui/tags-input"
 import { Textarea } from "@/components/ui/textarea"
 import {
   MEDIA_STATUS_OPTIONS,
@@ -114,11 +121,19 @@ const sheetMode = ref<SheetMode>("preview")
 const sheetEntityKind = ref<SheetEntityKind>("video")
 const activeEntityId = ref("")
 const videoFileInputRef = ref<HTMLInputElement | null>(null)
+const articleCoverInputRef = ref<HTMLInputElement | null>(null)
 const uploadingVideoFile = ref(false)
 const formState = reactive<MediaEditorForm>(createEmptyForm("video"))
 const canUseVideoUploadTest = import.meta.env.DEV
 
 const normalizedSearch = computed(() => searchQuery.value.trim().toLowerCase())
+const articleCoverPreviewSrc = computed(() => normalizeArticleCoverSource(formState.cover))
+const articleTagValues = computed<string[]>({
+  get: () => parseTagText(formState.tagsText),
+  set: value => {
+    formState.tagsText = value.map(tag => tag.trim()).filter(Boolean).join(", ")
+  },
+})
 const currentViewTabs = computed(() => activeModule.value === "videos" ? videoViewTabs : articleViewTabs)
 const currentView = computed(() => activeModule.value === "videos" ? activeVideoView.value : activeArticleView.value)
 const currentSearchPlaceholder = computed(() => activeModule.value === "videos"
@@ -452,6 +467,49 @@ function closeSheet() {
   sheetOpen.value = false
 }
 
+function triggerArticleCoverFileSelect() {
+  articleCoverInputRef.value?.click()
+}
+
+function handleArticleCoverFileChange(event: Event) {
+  const input = event.target as HTMLInputElement | null
+  const file = input?.files?.[0]
+
+  if (!file) {
+    return
+  }
+
+  if (!file.type.startsWith("image/")) {
+    toast.error("请选择图片文件")
+    if (input) {
+      input.value = ""
+    }
+    return
+  }
+
+  const reader = new FileReader()
+  reader.onload = () => {
+    formState.cover = typeof reader.result === "string" ? reader.result : ""
+    if (input) {
+      input.value = ""
+    }
+  }
+  reader.onerror = () => {
+    toast.error("封面图片读取失败")
+    if (input) {
+      input.value = ""
+    }
+  }
+  reader.readAsDataURL(file)
+}
+
+function removeArticleCover() {
+  formState.cover = ""
+  if (articleCoverInputRef.value) {
+    articleCoverInputRef.value.value = ""
+  }
+}
+
 function saveCurrentForm() {
   if (!formState.title.trim()) {
     toast.error("请先填写标题")
@@ -499,10 +557,7 @@ function saveCurrentForm() {
     cover: formState.cover.trim() || formState.title.trim(),
     summary: formState.summary.trim(),
     markdown: formState.markdown.trim(),
-    tags: formState.tagsText
-      .split(",")
-      .map(tag => tag.trim())
-      .filter(Boolean),
+    tags: parseTagText(formState.tagsText),
     status: formState.status,
     featured: formState.featured,
     sortOrder: Number(formState.sortOrder) || 0,
@@ -638,6 +693,26 @@ function getCoverTone(seed: string) {
     surface: coverToneClasses[index],
     accent: coverAccentClasses[index],
   }
+}
+
+function normalizeArticleCoverSource(value: string) {
+  const normalized = value.trim()
+  if (/^(https?:\/\/|data:image\/|blob:|\/)/i.test(normalized)) {
+    return normalized
+  }
+
+  return ""
+}
+
+function getArticleCoverSrc(value: string) {
+  return normalizeArticleCoverSource(value) || videoPreviewAsset
+}
+
+function parseTagText(value: string) {
+  return value
+    .split(",")
+    .map(tag => tag.trim())
+    .filter(Boolean)
 }
 
 function getCategoryPathLabel(module: MediaModuleKey, categoryId: string) {
@@ -1096,7 +1171,7 @@ function escapeHtml(value: string) {
               >
                 <img
                   class="absolute inset-0 h-full w-full object-cover"
-                  :src="videoPreviewAsset"
+                  :src="getArticleCoverSrc(item.cover)"
                   alt=""
                   aria-hidden="true"
                 />
@@ -1142,7 +1217,7 @@ function escapeHtml(value: string) {
                 <div class="relative size-14 shrink-0 overflow-hidden rounded-md bg-muted/40">
                   <img
                     class="h-full w-full object-cover transition-transform duration-200 ease-out group-hover:scale-[1.03]"
-                    :src="videoPreviewAsset"
+                    :src="getArticleCoverSrc(item.cover)"
                     alt=""
                     aria-hidden="true"
                   />
@@ -1338,7 +1413,7 @@ function escapeHtml(value: string) {
             <div class="overflow-hidden border border-border/70 bg-background">
               <img
                 class="aspect-video w-full object-cover"
-                :src="videoPreviewAsset"
+                :src="getArticleCoverSrc(activeArticle.cover)"
                 alt=""
                 aria-hidden="true"
               />
@@ -1364,12 +1439,149 @@ function escapeHtml(value: string) {
           </template>
         </div>
 
-        <div v-else class="space-y-4 px-4 pb-4 pt-1">
-          <div class="grid gap-4 md:grid-cols-2">
-            <div
-              v-if="formState.kind === 'video'"
-              class="space-y-3 md:col-span-2"
-            >
+        <div v-else class="pb-4 pt-1">
+          <div v-if="formState.kind === 'article'" class="article-editor-list">
+            <label class="article-editor-row">
+              <span class="article-editor-label">标题</span>
+              <span class="article-editor-control">
+                <Input
+                  v-model="formState.title"
+                  class="article-editor-input"
+                  placeholder="输入标题"
+                />
+              </span>
+            </label>
+
+            <div class="article-editor-row">
+              <span class="article-editor-label">分类</span>
+              <div class="article-editor-control">
+                <Select v-model="formState.categoryId">
+                  <SelectTrigger class="w-full">
+                    <SelectValue placeholder="请选择分类" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem
+                      v-for="category in articleLeafCategories"
+                      :key="category.id"
+                      :value="category.id"
+                    >
+                      {{ getCategoryPathLabel('articles', category.id) }}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div class="article-editor-row">
+              <span class="article-editor-label">封面</span>
+              <div class="article-editor-control">
+                <input
+                  ref="articleCoverInputRef"
+                  class="sr-only"
+                  type="file"
+                  accept="image/png,image/jpeg,image/jpg,image/webp"
+                  @change="handleArticleCoverFileChange"
+                >
+
+                <figure
+                  v-if="articleCoverPreviewSrc"
+                  class="group relative h-28 w-44 overflow-hidden rounded-lg bg-muted shadow-(--shadow-border)"
+                >
+                  <button
+                    type="button"
+                    class="block h-full w-full text-left"
+                    aria-label="更换文章封面"
+                    @click="triggerArticleCoverFileSelect"
+                  >
+                    <img
+                      class="h-full w-full object-cover"
+                      :src="articleCoverPreviewSrc"
+                      alt=""
+                      aria-hidden="true"
+                    >
+                  </button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="icon"
+                    class="absolute right-1.5 top-1.5 size-8 bg-background/92 text-foreground opacity-0 shadow-sm transition-[opacity,background-color] duration-180 ease-out hover:bg-background group-hover:opacity-100 focus-visible:opacity-100"
+                    aria-label="移除文章封面"
+                    @click.stop="removeArticleCover"
+                  >
+                    <i class="ri-close-line text-base" />
+                  </Button>
+                </figure>
+
+                <button
+                  v-else
+                  type="button"
+                  class="flex h-28 w-44 flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-input bg-background/92 text-muted-foreground transition-[background-color,color,border-color] duration-180 ease-out hover:border-ring/60 hover:bg-[var(--form-control-hover-background)] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/45"
+                  @click="triggerArticleCoverFileSelect"
+                >
+                  <span class="flex size-10 items-center justify-center rounded-md border border-border/70 bg-muted/35">
+                    <i class="ri-image-add-line text-[20px]" />
+                  </span>
+                  <span class="text-sm font-medium">上传封面</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="article-editor-row">
+              <span class="article-editor-label">状态</span>
+              <div class="article-editor-control">
+                <Select v-model="formState.status">
+                  <SelectTrigger class="w-full">
+                    <SelectValue placeholder="请选择状态" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem
+                      v-for="status in MEDIA_STATUS_OPTIONS"
+                      :key="status.value"
+                      :value="status.value"
+                    >
+                      {{ status.label }}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <label class="article-editor-row">
+              <span class="article-editor-label">标签</span>
+              <span class="article-editor-control">
+                <TagsInput
+                  v-model="articleTagValues"
+                  add-on-blur
+                  add-on-paste
+                  delimiter=","
+                >
+                  <TagsInputItem
+                    v-for="tag in articleTagValues"
+                    :key="tag"
+                    :value="tag"
+                  >
+                    <TagsInputItemText />
+                    <TagsInputItemDelete />
+                  </TagsInputItem>
+                  <TagsInputInput placeholder="输入标签后按回车" />
+                </TagsInput>
+              </span>
+            </label>
+
+            <label class="article-editor-row article-editor-row--top">
+              <span class="article-editor-label">正文</span>
+              <span class="article-editor-control">
+                <Textarea
+                  v-model="formState.markdown"
+                  class="article-editor-textarea min-h-[560px] font-mono text-sm leading-6"
+                  placeholder="输入 Markdown 正文"
+                />
+              </span>
+            </label>
+          </div>
+
+          <div v-else class="grid gap-4 px-4 md:grid-cols-2">
+            <div class="space-y-3 md:col-span-2">
               <label class="space-y-2">
                 <span class="text-sm font-medium text-foreground">视频文件</span>
                 <div class="border border-dashed border-border/80 px-4 py-5">
@@ -1410,93 +1622,70 @@ function escapeHtml(value: string) {
               </label>
             </div>
 
-              <label class="space-y-2 md:col-span-2">
-                <span class="text-sm font-medium text-foreground">标题</span>
-                <Input v-model="formState.title" placeholder="输入标题" />
-              </label>
+            <label class="space-y-2 md:col-span-2">
+              <span class="text-sm font-medium text-foreground">标题</span>
+              <Input v-model="formState.title" placeholder="输入标题" />
+            </label>
 
-              <label class="space-y-2">
-                <span class="text-sm font-medium text-foreground">分类</span>
-                <Select v-model="formState.categoryId">
-                  <SelectTrigger class="w-full">
-                    <SelectValue placeholder="请选择分类" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem
-                      v-for="category in formState.kind === 'article' ? articleLeafCategories : videoLeafCategories"
-                      :key="category.id"
-                      :value="category.id"
-                    >
-                      {{ getCategoryPathLabel(formState.kind === 'article' ? 'articles' : 'videos', category.id) }}
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </label>
+            <label class="space-y-2">
+              <span class="text-sm font-medium text-foreground">分类</span>
+              <Select v-model="formState.categoryId">
+                <SelectTrigger class="w-full">
+                  <SelectValue placeholder="请选择分类" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem
+                    v-for="category in videoLeafCategories"
+                    :key="category.id"
+                    :value="category.id"
+                  >
+                    {{ getCategoryPathLabel('videos', category.id) }}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </label>
 
-              <label v-if="formState.kind === 'video'" class="space-y-2">
-                <span class="text-sm font-medium text-foreground">封面文案</span>
-                <Input v-model="formState.cover" placeholder="封面主文案或主题词" />
-              </label>
+            <label class="space-y-2">
+              <span class="text-sm font-medium text-foreground">封面文案</span>
+              <Input v-model="formState.cover" placeholder="封面主文案或主题词" />
+            </label>
 
-              <label v-else class="space-y-2">
-                <span class="text-sm font-medium text-foreground">封面文案</span>
-                <Input v-model="formState.cover" placeholder="封面主文案或主题词" />
-              </label>
+            <label class="space-y-2">
+              <span class="text-sm font-medium text-foreground">时长</span>
+              <Input v-model="formState.duration" placeholder="例如 05:30" />
+            </label>
 
-              <label v-if="formState.kind === 'video'" class="space-y-2">
-                <span class="text-sm font-medium text-foreground">时长</span>
-                <Input v-model="formState.duration" placeholder="例如 05:30" />
-              </label>
+            <label class="space-y-2">
+              <span class="text-sm font-medium text-foreground">状态</span>
+              <Select v-model="formState.status">
+                <SelectTrigger class="w-full">
+                  <SelectValue placeholder="请选择状态" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem
+                    v-for="status in MEDIA_STATUS_OPTIONS"
+                    :key="status.value"
+                    :value="status.value"
+                  >
+                    {{ status.label }}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </label>
 
-              <label class="space-y-2">
-                <span class="text-sm font-medium text-foreground">状态</span>
-                <Select v-model="formState.status">
-                  <SelectTrigger class="w-full">
-                    <SelectValue placeholder="请选择状态" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem
-                      v-for="status in MEDIA_STATUS_OPTIONS"
-                      :key="status.value"
-                      :value="status.value"
-                    >
-                      {{ status.label }}
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
-              </label>
+            <label class="space-y-2">
+              <span class="text-sm font-medium text-foreground">排序权重</span>
+              <Input v-model="formState.sortOrder" type="number" placeholder="输入排序权重" />
+            </label>
 
-              <label class="space-y-2">
-                <span class="text-sm font-medium text-foreground">排序权重</span>
-                <Input v-model="formState.sortOrder" type="number" placeholder="输入排序权重" />
-              </label>
-
-              <label
-                v-if="formState.kind === 'video'"
-                class="space-y-2 md:col-span-2"
-              >
-                <span class="text-sm font-medium text-foreground">摘要</span>
-                <Textarea
-                  v-model="formState.summary"
-                  class="min-h-[108px]"
-                  placeholder="输入内容简介，说明适用场景和主要收益"
-                />
-              </label>
-            
-            <template v-if="formState.kind === 'article'">
-              <label class="space-y-2">
-                <span class="text-sm font-medium text-foreground">标签</span>
-                <Input v-model="formState.tagsText" placeholder="多个标签使用英文逗号分隔" />
-              </label>
-              <label class="space-y-2 md:col-span-2">
-                <span class="text-sm font-medium text-foreground">Markdown</span>
-                <Textarea
-                  v-model="formState.markdown"
-                  class="min-h-[560px] font-mono text-sm"
-                  placeholder="输入 Markdown 正文"
-                />
-              </label>
-            </template>
+            <label class="space-y-2 md:col-span-2">
+              <span class="text-sm font-medium text-foreground">摘要</span>
+              <Textarea
+                v-model="formState.summary"
+                class="min-h-[108px]"
+                placeholder="输入内容简介，说明适用场景和主要收益"
+              />
+            </label>
           </div>
         </div>
       </div>
@@ -1505,6 +1694,60 @@ function escapeHtml(value: string) {
 </template>
 
 <style scoped>
+.article-editor-list {
+  padding: 0 1rem;
+}
+
+.article-editor-row {
+  display: grid;
+  grid-template-columns: 7.25rem minmax(0, 1fr);
+  align-items: start;
+  gap: 1rem;
+  border-bottom: 1px dashed var(--border);
+  padding: 0.75rem 0;
+  font-size: 14px;
+  line-height: 1.5rem;
+}
+
+.article-editor-row:last-child {
+  border-bottom: 0;
+}
+
+.article-editor-row--top {
+  align-items: start;
+}
+
+.article-editor-label {
+  padding-top: 0.375rem;
+  color: var(--muted-foreground);
+  font-weight: 400;
+  transition: color 150ms ease;
+}
+
+.article-editor-row:hover .article-editor-label {
+  color: var(--foreground);
+}
+
+.article-editor-control {
+  min-width: 0;
+  width: 100%;
+}
+
+.article-editor-textarea {
+  resize: vertical;
+}
+
+@media (max-width: 640px) {
+  .article-editor-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.5rem;
+  }
+
+  .article-editor-label {
+    line-height: 1.25rem;
+  }
+}
+
 .media-card-summary {
   display: -webkit-box;
   overflow: hidden;
