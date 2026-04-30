@@ -617,19 +617,15 @@ function createId(prefix: string) {
       </aside>
 
       <main class="flex min-h-0 min-w-0 flex-1 overflow-visible px-4 pb-8 pt-4">
-        <div class="app-home-preview-shell mx-auto flex min-h-0 w-full max-w-[430px] self-stretch flex-col rounded-[30px] bg-zinc-950/5 p-2.5">
-          <div class="flex h-8 shrink-0 items-center justify-center">
-            <span class="h-1.5 w-20 rounded-full bg-zinc-300/90 shadow-[inset_0_1px_1px_rgba(0,0,0,0.08)]" aria-hidden="true" />
-          </div>
-
-          <div class="app-home-preview-scroll min-h-0 flex-1 overflow-y-auto rounded-[22px] bg-[#f4f4f4] px-4 py-1">
+        <div class="app-home-preview-shell mx-auto flex min-h-0 w-full max-w-[410px] self-stretch flex-col bg-zinc-950 p-[10px]">
+          <div class="app-home-preview-scroll min-h-0 flex-1 overflow-y-auto bg-[#f4f4f4] px-4 py-4">
             <div
               v-for="module in enabledModules"
               :key="module.id"
               class="border-b border-dashed border-zinc-300/90 py-4 last:border-b-0"
             >
               <template v-if="module.type === 'video'">
-                <section class="overflow-hidden">
+                <section class="min-w-0">
                   <h2 class="px-0 text-[18px] font-semibold leading-none text-zinc-950">
                     {{ module.title || '视频模块' }}
                   </h2>
@@ -647,7 +643,7 @@ function createId(prefix: string) {
                     </button>
                   </div>
 
-                  <div v-if="getVideoModuleActiveCategory(module)" class="-mx-4 mt-5 flex gap-4 overflow-x-auto px-4 pb-1">
+                  <div v-if="getVideoModuleActiveCategory(module)" class="app-home-video-rail -mx-4 mt-5 flex gap-4 overflow-x-auto px-4 pb-1">
                     <article
                       v-for="item in resolveCategoryVideos(getVideoModuleActiveCategory(module)!).slice(0, 8)"
                       :key="item.id"
@@ -966,20 +962,33 @@ function createId(prefix: string) {
 
 <style scoped>
 .app-home-preview-shell {
+  position: relative;
+  border-radius: 46px;
   box-shadow:
-    inset 0 0 0 1px rgba(24, 24, 27, 0.08),
-    0 14px 30px rgba(15, 23, 42, 0.12),
-    0 4px 10px rgba(15, 23, 42, 0.06);
+    inset 0 0 0 1px rgba(255, 255, 255, 0.1),
+    inset 0 0 0 2px rgba(24, 24, 27, 0.9),
+    0 18px 36px rgba(15, 23, 42, 0.18),
+    0 5px 12px rgba(15, 23, 42, 0.08);
 }
 
 .app-home-preview-scroll {
   scrollbar-width: none;
+  border-radius: 36px;
   box-shadow:
-    inset 0 0 0 1px rgba(24, 24, 27, 0.06),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.18),
     inset 0 1px 3px rgba(24, 24, 27, 0.06);
 }
 
 .app-home-preview-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.app-home-video-rail {
+  scrollbar-width: none;
+  scroll-padding-inline: 1rem;
+}
+
+.app-home-video-rail::-webkit-scrollbar {
   display: none;
 }
 
