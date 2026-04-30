@@ -392,7 +392,6 @@ function openCreate(kind: SheetEntityKind, defaults: Partial<MediaEditorForm> = 
 
   applyForm(createEmptyForm(kind, {
     categoryId: kind === "article" ? fallbackArticleCategory : fallbackVideoCategory,
-    markdown: kind === "article" ? "<h2>新文章标题</h2><p>请先输入正文内容。</p>" : "",
     sortOrder: kind === "article"
       ? (articleItems.value[0]?.sortOrder ?? 0) + 1
       : (videoItems.value[0]?.sortOrder ?? 0) + 1,

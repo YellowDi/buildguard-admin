@@ -62,6 +62,56 @@ function runCommand(command: string, value?: string) {
   syncValue()
 }
 
+function runBlockCommand(command: string, value?: string) {
+  focusEditor()
+  document.execCommand(command, false, value)
+  ensureExitParagraphAfterActiveBlock()
+  syncValue()
+}
+
+function ensureExitParagraphAfterActiveBlock() {
+  const editor = editorRef.value
+  const selection = window.getSelection()
+  if (!editor || !selection?.rangeCount) {
+    return
+  }
+
+  const activeRange = selection.getRangeAt(0).cloneRange()
+  const anchorNode = selection.anchorNode
+  const anchorElement = anchorNode instanceof HTMLElement
+    ? anchorNode
+    : anchorNode?.parentElement
+
+  if (!anchorElement || !editor.contains(anchorElement)) {
+    return
+  }
+
+  const listItem = anchorElement.closest("li")
+  const activeBlock = listItem?.closest("ul, ol")
+    ?? anchorElement.closest("blockquote, pre")
+
+  if (!activeBlock || !editor.contains(activeBlock)) {
+    return
+  }
+
+  const nextElement = activeBlock.nextElementSibling
+  if (nextElement instanceof HTMLParagraphElement && isEmptyParagraph(nextElement)) {
+    return
+  }
+
+  const exitParagraph = document.createElement("p")
+  exitParagraph.append(document.createElement("br"))
+  activeBlock.after(exitParagraph)
+
+  selection.removeAllRanges()
+  selection.addRange(activeRange)
+}
+
+function isEmptyParagraph(paragraph: HTMLParagraphElement) {
+  const text = paragraph.textContent?.replace(/\u200B/g, "").trim()
+  return !text && (!paragraph.children.length || Array.from(paragraph.children).every(child => child.tagName === "BR"))
+}
+
 function applyBlock(value: string | number | bigint | boolean | Record<string, unknown> | null) {
   const next = typeof value === "string" ? value : "p"
   selectedBlock.value = next
@@ -217,7 +267,7 @@ function handlePaste(event: ClipboardEvent) {
           class="rich-text-tool-button"
           title="引用"
           aria-label="引用"
-          @click="runCommand('formatBlock', 'blockquote')"
+          @click="runBlockCommand('formatBlock', 'blockquote')"
         >
           <i class="ri-double-quotes-l text-base" />
         </Button>
@@ -228,7 +278,7 @@ function handlePaste(event: ClipboardEvent) {
           class="rich-text-tool-button"
           title="代码"
           aria-label="代码"
-          @click="runCommand('formatBlock', 'pre')"
+          @click="runBlockCommand('formatBlock', 'pre')"
         >
           <i class="ri-code-line text-base" />
         </Button>
@@ -239,7 +289,7 @@ function handlePaste(event: ClipboardEvent) {
           class="rich-text-tool-button"
           title="无序列表"
           aria-label="无序列表"
-          @click="runCommand('insertUnorderedList')"
+          @click="runBlockCommand('insertUnorderedList')"
         >
           <i class="ri-list-unordered text-base" />
         </Button>
@@ -250,7 +300,7 @@ function handlePaste(event: ClipboardEvent) {
           class="rich-text-tool-button"
           title="有序列表"
           aria-label="有序列表"
-          @click="runCommand('insertOrderedList')"
+          @click="runBlockCommand('insertOrderedList')"
         >
           <i class="ri-list-ordered text-base" />
         </Button>
