@@ -1601,19 +1601,19 @@ function escapeHtml(value: string) {
             </div>
           </div>
 
-          <div v-else class="grid gap-4 px-4 md:grid-cols-2">
-            <div class="space-y-3 md:col-span-2">
-              <label class="space-y-2">
-                <span class="text-sm font-medium text-foreground">视频文件</span>
-                <div class="border border-dashed border-border/80 px-4 py-5">
-                  <div class="flex flex-wrap items-center gap-3">
-                    <input
-                      ref="videoFileInputRef"
-                      class="sr-only"
-                      type="file"
-                      accept="video/*"
-                      @change="handleVideoFileChange"
-                    >
+          <div v-else class="article-editor-list">
+            <div class="article-editor-row article-editor-row--top">
+              <span class="article-editor-label">视频文件</span>
+              <div class="article-editor-control">
+                <input
+                  ref="videoFileInputRef"
+                  class="sr-only"
+                  type="file"
+                  accept="video/*"
+                  @change="handleVideoFileChange"
+                >
+                <div class="rounded-lg border border-dashed border-input bg-background/92 px-4 py-4">
+                  <div class="flex min-w-0 flex-wrap items-center gap-3">
                     <Button
                       type="button"
                       variant="outline"
@@ -1635,78 +1635,71 @@ function escapeHtml(value: string) {
                       <i class="ri-flask-line text-sm" />
                       <span>测试上传</span>
                     </Button>
-                    <span class="min-w-0 truncate text-sm text-muted-foreground">
+                    <span class="min-w-0 flex-1 truncate text-sm text-muted-foreground">
                       {{ formState.sourceFileName || formState.sourceUrl || "暂未选择文件" }}
                     </span>
                   </div>
                 </div>
-              </label>
+              </div>
             </div>
 
-            <label class="space-y-2 md:col-span-2">
-              <span class="text-sm font-medium text-foreground">标题</span>
-              <Input v-model="formState.title" placeholder="输入标题" />
-            </label>
+            <div class="article-editor-row">
+              <span class="article-editor-label">标题</span>
+              <div class="article-editor-control">
+                <Input v-model="formState.title" placeholder="输入标题" />
+              </div>
+            </div>
 
-            <label class="space-y-2">
-              <span class="text-sm font-medium text-foreground">分类</span>
-              <Select v-model="formState.categoryId">
-                <SelectTrigger class="w-full">
-                  <SelectValue placeholder="请选择分类" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem
-                    v-for="category in videoLeafCategories"
-                    :key="category.id"
-                    :value="category.id"
-                  >
-                    {{ getCategoryPathLabel('videos', category.id) }}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </label>
+            <div class="article-editor-row">
+              <span class="article-editor-label">分类</span>
+              <div class="article-editor-control">
+                <Select v-model="formState.categoryId">
+                  <SelectTrigger class="w-full">
+                    <SelectValue placeholder="请选择分类" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem
+                      v-for="category in videoLeafCategories"
+                      :key="category.id"
+                      :value="category.id"
+                    >
+                      {{ getCategoryPathLabel('videos', category.id) }}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
 
-            <label class="space-y-2">
-              <span class="text-sm font-medium text-foreground">封面文案</span>
-              <Input v-model="formState.cover" placeholder="封面主文案或主题词" />
-            </label>
+            <div class="article-editor-row">
+              <span class="article-editor-label">状态</span>
+              <div class="article-editor-control">
+                <Select v-model="formState.status">
+                  <SelectTrigger class="w-full">
+                    <SelectValue placeholder="请选择状态" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem
+                      v-for="status in MEDIA_STATUS_OPTIONS"
+                      :key="status.value"
+                      :value="status.value"
+                    >
+                      {{ status.label }}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
 
-            <label class="space-y-2">
-              <span class="text-sm font-medium text-foreground">时长</span>
-              <Input v-model="formState.duration" placeholder="例如 05:30" />
-            </label>
-
-            <label class="space-y-2">
-              <span class="text-sm font-medium text-foreground">状态</span>
-              <Select v-model="formState.status">
-                <SelectTrigger class="w-full">
-                  <SelectValue placeholder="请选择状态" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem
-                    v-for="status in MEDIA_STATUS_OPTIONS"
-                    :key="status.value"
-                    :value="status.value"
-                  >
-                    {{ status.label }}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </label>
-
-            <label class="space-y-2">
-              <span class="text-sm font-medium text-foreground">排序权重</span>
-              <Input v-model="formState.sortOrder" type="number" placeholder="输入排序权重" />
-            </label>
-
-            <label class="space-y-2 md:col-span-2">
-              <span class="text-sm font-medium text-foreground">摘要</span>
-              <Textarea
-                v-model="formState.summary"
-                class="min-h-[108px]"
-                placeholder="输入内容简介，说明适用场景和主要收益"
-              />
-            </label>
+            <div class="article-editor-row article-editor-row--top">
+              <span class="article-editor-label">摘要</span>
+              <div class="article-editor-control">
+                <Textarea
+                  v-model="formState.summary"
+                  class="min-h-[108px]"
+                  placeholder="输入内容简介，说明适用场景和主要收益"
+                />
+              </div>
+            </div>
           </div>
         </div>
       </div>
