@@ -357,6 +357,15 @@ const router = createRouter({
           } satisfies RouteMetaConfig,
         },
         {
+          path: "app-home",
+          name: "app-home",
+          component: () => import("@/views/app-home/AppHomeConfigView.vue"),
+          meta: {
+            title: "App 首页",
+            loading: "table",
+          } satisfies RouteMetaConfig,
+        },
+        {
           path: "inspection-services/:id",
           name: "inspection-service-detail",
           component: () => import("@/views/detail/InspectionServiceDetailView.vue"),
