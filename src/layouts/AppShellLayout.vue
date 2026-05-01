@@ -19,7 +19,10 @@ const useCompactMainTopPadding = computed(() => {
   const routeKind = resolveRouteLoadingKind(route.meta.loading)
   return routeKind !== "detail" && routeKind !== "form"
 })
-const isAppHomeRoute = computed(() => route.name === "app-home")
+const usesFlushPageEdges = computed(() =>
+  route.name === "app-home"
+  || route.name === "media-library",
+)
 const usesFlushStickyPageHeader = computed(() =>
   route.name === "app-home"
   || route.name === "media-library"
@@ -91,7 +94,7 @@ function closeMobileSidebar() {
       <main
         :class="[
           'flex min-w-0 min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4',
-          isAppHomeRoute ? 'pb-0' : 'pb-4',
+          usesFlushPageEdges ? 'pb-0' : 'pb-4',
           usesFlushStickyPageHeader ? 'pt-0' : (useCompactMainTopPadding ? 'pt-2' : 'pt-0'),
         ]"
       >
@@ -108,7 +111,7 @@ function closeMobileSidebar() {
             <div
               :key="route.name ?? route.fullPath"
               class="route-page-shell flex flex-col"
-              :class="isAppHomeRoute ? 'min-h-full' : 'min-h-0 flex-1'"
+              :class="usesFlushPageEdges ? 'min-h-full' : 'min-h-0 flex-1'"
             >
               <component :is="Component" />
             </div>

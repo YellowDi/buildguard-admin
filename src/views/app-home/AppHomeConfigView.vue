@@ -487,7 +487,7 @@ function createId(prefix: string) {
 </script>
 
 <template>
-  <section class="app-home-page relative mx-auto flex min-h-0 w-full max-w-4xl flex-1 gap-8 overflow-visible bg-background pb-4">
+  <section class="app-home-page relative mx-auto flex min-h-0 w-full max-w-4xl flex-1 gap-8 overflow-visible bg-background">
     <aside class="flex w-[240px] shrink-0 flex-col overflow-visible bg-background">
       <div class="min-h-0 flex-1 overflow-y-auto pt-4">
         <div class="mb-6">

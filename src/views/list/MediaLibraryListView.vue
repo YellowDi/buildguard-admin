@@ -1067,7 +1067,7 @@ function escapeHtml(value: string) {
 </script>
 
 <template>
-  <section class="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-background">
+  <section class="relative flex min-h-0 flex-1 flex-col overflow-visible bg-background">
     <SettingsPageHeader
       title="媒体库"
       description="为客户 app 首页维护视频教程与图文内容。当前版本全部基于 mock 数据，重点先验证后台维护结构和操作节奏。"
@@ -1121,8 +1121,8 @@ function escapeHtml(value: string) {
       </SettingsToolbarRow>
     </SettingsPageHeader>
 
-    <div class="mx-auto flex min-h-0 w-full max-w-4xl flex-1 gap-8 overflow-hidden pb-4">
-      <aside class="w-[240px] shrink-0 overflow-y-auto pt-4">
+    <div class="mx-auto flex min-h-0 w-full max-w-4xl flex-1 gap-8 overflow-visible">
+      <aside class="w-[240px] shrink-0 overflow-visible pt-4">
         <div class="mb-2 px-1">
           <p class="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
             分类
@@ -1174,7 +1174,7 @@ function escapeHtml(value: string) {
         </Button>
       </aside>
 
-      <main class="min-h-0 min-w-0 flex-1 overflow-y-auto pt-4">
+      <main class="min-h-0 min-w-0 flex-1 overflow-visible pt-4">
         <section
           v-if="activeModule === 'videos' && currentView === 'grid'"
           class="space-y-0"
