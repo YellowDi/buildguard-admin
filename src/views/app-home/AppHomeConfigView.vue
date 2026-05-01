@@ -596,95 +596,110 @@ function createId(prefix: string) {
 
     <main class="app-home-preview-pane flex min-w-0 flex-1 items-center justify-center overflow-hidden px-6 py-4">
       <div class="app-home-preview-shell flex min-h-0 flex-col bg-zinc-950 p-[10px]">
+        <span class="app-home-phone-button app-home-phone-button--mute" aria-hidden="true" />
+        <span class="app-home-phone-button app-home-phone-button--volume-up" aria-hidden="true" />
+        <span class="app-home-phone-button app-home-phone-button--volume-down" aria-hidden="true" />
+        <span class="app-home-phone-button app-home-phone-button--power" aria-hidden="true" />
+
+        <div class="app-home-device-screen flex min-h-0 flex-1 flex-col overflow-hidden bg-[#f4f4f4]">
+          <div class="app-home-preview-reserved app-home-preview-reserved--top shrink-0">
+            <span>顶部导航栏</span>
+          </div>
+
           <div class="app-home-preview-scroll min-h-0 flex-1 overflow-y-auto bg-[#f4f4f4] px-4 py-4">
             <div
               v-for="module in enabledModules"
               :key="module.id"
-              class="border-b border-dashed border-zinc-300/90 py-4 last:border-b-0"
+              class="border-b border-dashed border-zinc-300/90 py-4 first:pt-0 last:border-b-0"
             >
-              <template v-if="module.type === 'video'">
-                <section class="min-w-0">
-                  <h2 class="px-0 text-[18px] font-semibold leading-none text-zinc-950">
-                    {{ module.title || '视频模块' }}
-                  </h2>
+            <template v-if="module.type === 'video'">
+              <section class="min-w-0">
+                <h2 class="px-0 text-[18px] font-semibold leading-none text-zinc-950">
+                  {{ module.title || '视频模块' }}
+                </h2>
 
-                  <div v-if="module.categories.length" class="mt-4 flex gap-4 overflow-x-auto pb-0.5">
-                    <button
-                      v-for="category in [...module.categories].sort(compareBySortOrder)"
-                      :key="category.id"
-                      type="button"
-                      class="shrink-0 border-r border-zinc-300 pr-4 text-[15px] leading-none text-zinc-500 last:border-r-0"
-                      :class="getVideoModuleActiveCategory(module)?.id === category.id ? 'font-medium text-zinc-950' : ''"
-                      @click="setVideoModuleActiveCategory(module.id, category.id)"
-                    >
-                      {{ category.title || '分类标题' }}
-                    </button>
-                  </div>
+                <div v-if="module.categories.length" class="mt-4 flex gap-4 overflow-x-auto pb-0.5">
+                  <button
+                    v-for="category in [...module.categories].sort(compareBySortOrder)"
+                    :key="category.id"
+                    type="button"
+                    class="shrink-0 border-r border-zinc-300 pr-4 text-[15px] leading-none text-zinc-500 last:border-r-0"
+                    :class="getVideoModuleActiveCategory(module)?.id === category.id ? 'font-medium text-zinc-950' : ''"
+                    @click="setVideoModuleActiveCategory(module.id, category.id)"
+                  >
+                    {{ category.title || '分类标题' }}
+                  </button>
+                </div>
 
-                  <div v-if="getVideoModuleActiveCategory(module)" class="app-home-video-rail -mx-4 mt-5 flex gap-4 overflow-x-auto px-4 pb-1">
-                    <article
-                      v-for="item in resolveCategoryVideos(getVideoModuleActiveCategory(module)!).slice(0, 8)"
-                      :key="item.id"
-                      class="relative h-48 w-36 shrink-0 overflow-hidden rounded-[8px] bg-zinc-950 text-white shadow-[0_8px_18px_rgba(15,23,42,0.12)]"
-                    >
-                      <img
-                        :src="getCoverSrc(item.cover)"
-                        alt=""
-                        class="absolute inset-0 h-full w-full object-cover"
-                      />
-                      <div class="absolute inset-0 bg-black/5" />
-                      <div class="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/85 via-black/42 to-transparent" />
-                      <h3 class="absolute inset-x-0 bottom-0 line-clamp-2 p-3 text-[14px] font-semibold leading-[1.35] text-white">
-                        {{ item.title }}
-                      </h3>
-                    </article>
-
-                    <div
-                      v-if="!resolveCategoryVideos(getVideoModuleActiveCategory(module)!).length"
-                      class="flex h-32 min-w-full items-center justify-center rounded-lg border border-dashed border-zinc-300 text-sm text-zinc-500"
-                    >
-                      当前分类暂无视频
-                    </div>
-                  </div>
-
-                  <div v-else class="mt-5 rounded-lg border border-dashed border-zinc-300 py-8 text-center text-sm text-zinc-500">
-                    暂未配置分类
-                  </div>
-                </section>
-              </template>
-
-              <template v-else>
-                <section>
+                <div v-if="getVideoModuleActiveCategory(module)" class="app-home-video-rail -mx-4 mt-5 flex gap-4 overflow-x-auto px-4 pb-1">
                   <article
-                    v-if="getArticle(module)"
-                    class="app-home-article-card relative aspect-[1.34/1] overflow-hidden bg-white shadow-[0_8px_18px_rgba(15,23,42,0.08)]"
+                    v-for="item in resolveCategoryVideos(getVideoModuleActiveCategory(module)!).slice(0, 8)"
+                    :key="item.id"
+                    class="relative h-48 w-36 shrink-0 overflow-hidden rounded-[8px] bg-zinc-950 text-white shadow-[0_8px_18px_rgba(15,23,42,0.12)]"
                   >
                     <img
-                      :src="getCoverSrc(getArticle(module)!.cover)"
+                      :src="getCoverSrc(item.cover)"
                       alt=""
                       class="absolute inset-0 h-full w-full object-cover"
                     />
-                    <div class="app-home-article-glass absolute inset-x-0 bottom-0 flex min-h-16 items-center gap-3 px-4 py-4 text-white">
-                      <h3 class="min-w-0 flex-1 truncate text-[15px] font-semibold">
-                        {{ module.title || getArticle(module)!.title }}
-                      </h3>
-                      <span class="shrink-0 rounded-full bg-white/22 px-4 py-2 text-sm font-medium text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] backdrop-blur-md">
-                        查看详情
-                      </span>
-                    </div>
+                    <div class="absolute inset-0 bg-black/5" />
+                    <div class="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/85 via-black/42 to-transparent" />
+                    <h3 class="absolute inset-x-0 bottom-0 line-clamp-2 p-3 text-[14px] font-semibold leading-[1.35] text-white">
+                      {{ item.title }}
+                    </h3>
                   </article>
 
-                  <div v-else class="rounded-lg border border-dashed border-zinc-300 py-8 text-center text-sm text-zinc-500">
-                    暂未选择文章
+                  <div
+                    v-if="!resolveCategoryVideos(getVideoModuleActiveCategory(module)!).length"
+                    class="flex h-32 min-w-full items-center justify-center rounded-lg border border-dashed border-zinc-300 text-sm text-zinc-500"
+                  >
+                    当前分类暂无视频
                   </div>
-                </section>
-              </template>
-            </div>
+                </div>
 
-            <div v-if="!enabledModules.length" class="py-20 text-center text-sm text-zinc-500">
-              暂无启用模块
-            </div>
+                <div v-else class="mt-5 rounded-lg border border-dashed border-zinc-300 py-8 text-center text-sm text-zinc-500">
+                  暂未配置分类
+                </div>
+              </section>
+            </template>
+
+            <template v-else>
+              <section>
+                <article
+                  v-if="getArticle(module)"
+                  class="app-home-article-card relative aspect-[1.34/1] overflow-hidden bg-white shadow-[0_8px_18px_rgba(15,23,42,0.08)]"
+                >
+                  <img
+                    :src="getCoverSrc(getArticle(module)!.cover)"
+                    alt=""
+                    class="absolute inset-0 h-full w-full object-cover"
+                  />
+                  <div class="app-home-article-glass absolute inset-x-0 bottom-0 flex min-h-16 items-center gap-3 px-4 py-4 text-white">
+                    <h3 class="min-w-0 flex-1 truncate text-[15px] font-semibold">
+                      {{ module.title || getArticle(module)!.title }}
+                    </h3>
+                    <span class="shrink-0 rounded-full bg-white/22 px-4 py-2 text-sm font-medium text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] backdrop-blur-md">
+                      查看详情
+                    </span>
+                  </div>
+                </article>
+
+                <div v-else class="rounded-lg border border-dashed border-zinc-300 py-8 text-center text-sm text-zinc-500">
+                  暂未选择文章
+                </div>
+              </section>
+            </template>
           </div>
+
+          <div v-if="!enabledModules.length" class="py-20 text-center text-sm text-zinc-500">
+            暂无启用模块
+          </div>
+        </div>
+
+          <div class="app-home-preview-reserved app-home-preview-reserved--bottom shrink-0">
+            <span>Tab 栏</span>
+          </div>
+        </div>
       </div>
     </main>
 
@@ -943,20 +958,104 @@ function createId(prefix: string) {
   aspect-ratio: 390 / 844;
   width: min(410px, calc((100svh - 5.5rem) * 390 / 844), 100%);
   max-height: calc(100svh - 5.5rem);
-  border-radius: 46px;
+  border-radius: 56px;
   box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.12),
     inset 0 0 0 1px rgba(255, 255, 255, 0.1),
-    inset 0 0 0 2px rgba(24, 24, 27, 0.9),
-    0 18px 36px rgba(15, 23, 42, 0.18),
-    0 5px 12px rgba(15, 23, 42, 0.08);
+    inset 0 0 0 2px rgba(9, 9, 11, 0.95),
+    inset 0 0 0 7px rgba(39, 39, 42, 0.85),
+    0 24px 48px rgba(15, 23, 42, 0.22),
+    0 6px 14px rgba(15, 23, 42, 0.1);
+}
+
+.app-home-phone-button {
+  position: absolute;
+  z-index: 0;
+  width: 4px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #3f3f46 0%, #18181b 48%, #09090b 100%);
+  box-shadow:
+    inset 1px 0 0 rgba(255, 255, 255, 0.14),
+    0 1px 2px rgba(15, 23, 42, 0.28);
+}
+
+.app-home-phone-button--mute {
+  top: 13.2%;
+  left: -4px;
+  height: 28px;
+}
+
+.app-home-phone-button--volume-up {
+  top: 20.2%;
+  left: -5px;
+  height: 54px;
+}
+
+.app-home-phone-button--volume-down {
+  top: 28.6%;
+  left: -5px;
+  height: 54px;
+}
+
+.app-home-phone-button--power {
+  top: 22.8%;
+  right: -5px;
+  height: 76px;
+}
+
+.app-home-device-screen {
+  position: relative;
+  z-index: 1;
+  border-radius: 44px;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.18),
+    inset 0 1px 3px rgba(24, 24, 27, 0.06);
+}
+
+.app-home-preview-reserved {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  background:
+    repeating-linear-gradient(
+      -45deg,
+      rgba(245, 158, 11, 0.14) 0,
+      rgba(245, 158, 11, 0.14) 8px,
+      rgba(254, 243, 199, 0.72) 8px,
+      rgba(254, 243, 199, 0.72) 16px
+    );
+  box-shadow:
+    inset 0 0 0 1px rgba(245, 158, 11, 0.28),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.35);
+}
+
+.app-home-preview-reserved > span {
+  position: relative;
+  z-index: 1;
+  border: 1px dashed rgba(180, 83, 9, 0.45);
+  border-radius: 999px;
+  background: rgba(255, 251, 235, 0.82);
+  padding: 0.25rem 0.75rem;
+  color: rgb(146, 64, 14);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.app-home-preview-reserved--top {
+  height: 86px;
+  border-bottom: 1px dashed rgba(180, 83, 9, 0.42);
+}
+
+.app-home-preview-reserved--bottom {
+  height: 72px;
+  border-top: 1px dashed rgba(180, 83, 9, 0.42);
 }
 
 .app-home-preview-scroll {
   scrollbar-width: none;
-  border-radius: 36px;
-  box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.18),
-    inset 0 1px 3px rgba(24, 24, 27, 0.06);
 }
 
 .app-home-preview-scroll::-webkit-scrollbar {
