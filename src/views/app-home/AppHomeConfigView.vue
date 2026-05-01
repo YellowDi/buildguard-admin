@@ -487,9 +487,9 @@ function createId(prefix: string) {
 </script>
 
 <template>
-  <section class="app-home-page relative -mx-4 flex min-h-full bg-background">
-    <aside class="flex w-[320px] shrink-0 flex-col border-r border-border/70 bg-background">
-      <div class="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+  <section class="app-home-page relative mx-auto flex min-h-0 w-full max-w-4xl flex-1 gap-8 overflow-visible bg-background pb-4">
+    <aside class="flex w-[240px] shrink-0 flex-col overflow-visible bg-background">
+      <div class="min-h-0 flex-1 overflow-y-auto pt-4">
         <div class="mb-6">
           <h1 class="text-[1.625rem] font-semibold tracking-tight text-foreground">
             App 首页
@@ -580,7 +580,7 @@ function createId(prefix: string) {
         </div>
       </div>
 
-      <div class="shrink-0 border-t border-border/70 bg-background p-4">
+      <div class="shrink-0 border-t border-border/70 bg-background py-4">
         <div class="flex items-center gap-2">
           <Button variant="outline" size="sm" class="h-9 flex-1 rounded-md px-3" @click="resetMockConfig">
             <i class="ri-refresh-line text-base" />
@@ -594,7 +594,7 @@ function createId(prefix: string) {
       </div>
     </aside>
 
-    <main class="app-home-preview-pane flex min-w-0 flex-1 items-center justify-center overflow-hidden px-6 py-4">
+    <main class="app-home-preview-pane flex min-w-0 flex-1 items-center justify-center overflow-hidden py-4">
       <div class="app-home-preview-shell flex min-h-0 flex-col bg-zinc-950 p-[10px]">
         <span class="app-home-phone-button app-home-phone-button--mute" aria-hidden="true" />
         <span class="app-home-phone-button app-home-phone-button--volume-up" aria-hidden="true" />
