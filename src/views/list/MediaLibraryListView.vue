@@ -1067,7 +1067,7 @@ function escapeHtml(value: string) {
 </script>
 
 <template>
-  <section class="relative flex min-h-0 flex-1 flex-col overflow-visible bg-background">
+  <section class="relative flex flex-col overflow-visible bg-background">
     <SettingsPageHeader
       title="媒体库"
       description="为客户 app 首页维护视频教程与图文内容。当前版本全部基于 mock 数据，重点先验证后台维护结构和操作节奏。"
@@ -1121,60 +1121,65 @@ function escapeHtml(value: string) {
       </SettingsToolbarRow>
     </SettingsPageHeader>
 
-    <div class="mx-auto flex min-h-0 w-full max-w-4xl flex-1 gap-8 overflow-visible">
-      <aside class="w-[240px] shrink-0 overflow-visible pt-4">
-        <div class="mb-2 px-1">
-          <p class="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-            分类
-          </p>
-        </div>
+    <div class="px-3 pb-8 sm:px-4">
+      <div class="mx-auto flex w-full max-w-4xl gap-8 overflow-visible">
+        <aside class="w-[240px] shrink-0 pt-4">
+        <div class="sticky top-[11rem] flex max-h-[calc(100svh-12rem)] flex-col overflow-hidden">
+          <div class="mb-2 shrink-0 px-1">
+            <p class="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+              分类
+            </p>
+          </div>
 
-        <div class="space-y-0.5">
-          <div
-            v-for="row in visibleCurrentCategoryRows"
-            :key="row.id"
-            class="flex w-full items-center gap-1.5 px-1 py-0.5"
-          >
-            <span :style="{ width: `${row.depth * 14}px` }" class="shrink-0" aria-hidden="true" />
-            <button
-              v-if="row.hasChildren"
-              type="button"
-              class="flex size-4 shrink-0 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
-              @click.stop="toggleCategory(activeModule, row.id)"
+          <div class="min-h-0 flex-1 overflow-y-auto">
+            <div class="space-y-0.5">
+              <div
+                v-for="row in visibleCurrentCategoryRows"
+                :key="row.id"
+                class="flex w-full items-center gap-1.5 px-1 py-0.5"
+              >
+                <span :style="{ width: `${row.depth * 14}px` }" class="shrink-0" aria-hidden="true" />
+                <button
+                  v-if="row.hasChildren"
+                  type="button"
+                  class="flex size-4 shrink-0 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
+                  @click.stop="toggleCategory(activeModule, row.id)"
+                >
+                  <i :class="[row.expanded ? 'ri-arrow-down-s-line' : 'ri-arrow-right-s-line', 'text-sm']" />
+                </button>
+                <span v-else class="flex size-4 shrink-0 items-center justify-center text-muted-foreground/40">
+                  <i class="ri-corner-down-right-line text-[11px]" />
+                </span>
+
+                <button
+                  type="button"
+                  class="min-w-0 flex-1 rounded-md px-1.5 py-1 text-left text-sm transition-colors"
+                  :class="currentSelectedCategoryId === row.id ? 'bg-accent text-foreground' : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'"
+                  @click="selectCategory(activeModule, row.id)"
+                >
+                  <span class="truncate">{{ row.name }}</span>
+                </button>
+
+                <span class="shrink-0 px-1 text-[11px] text-muted-foreground">
+                  {{ row.count }}
+                </span>
+              </div>
+            </div>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              class="mt-3 h-8 w-full justify-start rounded-md px-2 text-muted-foreground"
+              @click="addCategory(activeModule)"
             >
-              <i :class="[row.expanded ? 'ri-arrow-down-s-line' : 'ri-arrow-right-s-line', 'text-sm']" />
-            </button>
-            <span v-else class="flex size-4 shrink-0 items-center justify-center text-muted-foreground/40">
-              <i class="ri-corner-down-right-line text-[11px]" />
-            </span>
-
-            <button
-              type="button"
-              class="min-w-0 flex-1 rounded-md px-1.5 py-1 text-left text-sm transition-colors"
-              :class="currentSelectedCategoryId === row.id ? 'bg-accent text-foreground' : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'"
-              @click="selectCategory(activeModule, row.id)"
-            >
-              <span class="truncate">{{ row.name }}</span>
-            </button>
-
-            <span class="shrink-0 px-1 text-[11px] text-muted-foreground">
-              {{ row.count }}
-            </span>
+              <i class="ri-add-line text-[15px]" />
+              <span>添加分类</span>
+            </Button>
           </div>
         </div>
+        </aside>
 
-        <Button
-          variant="ghost"
-          size="sm"
-          class="mt-3 h-8 w-full justify-start rounded-md px-2 text-muted-foreground"
-          @click="addCategory(activeModule)"
-        >
-          <i class="ri-add-line text-[15px]" />
-          <span>添加分类</span>
-        </Button>
-      </aside>
-
-      <main class="min-h-0 min-w-0 flex-1 overflow-visible pt-4">
+        <main class="min-w-0 flex-1 overflow-visible pt-4">
         <section
           v-if="activeModule === 'videos' && currentView === 'grid'"
           class="space-y-0"
@@ -1342,7 +1347,8 @@ function escapeHtml(value: string) {
             当前筛选下没有文章内容。
           </div>
         </section>
-      </main>
+        </main>
+      </div>
     </div>
 
     <ResponsiveRightSheet
