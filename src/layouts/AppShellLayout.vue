@@ -20,6 +20,11 @@ const useCompactMainTopPadding = computed(() => {
   return routeKind !== "detail" && routeKind !== "form"
 })
 const isAppHomeRoute = computed(() => route.name === "app-home")
+const usesFlushStickyPageHeader = computed(() =>
+  route.name === "app-home"
+  || route.name === "media-library"
+  || route.path.startsWith("/settings"),
+)
 const routeTransitionName = ref("route-page-fade")
 const currentRouteKind = ref<RouteLoadingKind | null>(resolveRouteLoadingKind(route.meta.loading))
 
@@ -87,7 +92,7 @@ function closeMobileSidebar() {
         :class="[
           'flex min-w-0 min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4',
           isAppHomeRoute ? 'pb-0' : 'pb-4',
-          useCompactMainTopPadding ? 'pt-2' : 'pt-0',
+          usesFlushStickyPageHeader ? 'pt-0' : (useCompactMainTopPadding ? 'pt-2' : 'pt-0'),
         ]"
       >
         <RouterView v-slot="{ Component }">
