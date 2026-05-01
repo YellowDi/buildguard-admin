@@ -2,9 +2,6 @@
 import { computed, reactive, ref, watch } from "vue"
 import { toast } from "vue-sonner"
 
-import SettingsPageHeader from "@/components/settings/SettingsPageHeader.vue"
-import SettingsToolbarRow from "@/components/settings/SettingsToolbarRow.vue"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -71,18 +68,6 @@ const articleOptions = computed(() => [...mediaState.articleItems].sort(compareB
 const videoOptions = computed(() => [...mediaState.videoItems].sort(compareBySortOrder))
 const videoItemMap = computed(() => new Map(mediaState.videoItems.map(item => [item.id, item])))
 const articleItemMap = computed(() => new Map(mediaState.articleItems.map(item => [item.id, item])))
-
-const stats = computed(() => {
-  const videoModuleCount = modules.value.filter(module => module.type === "video").length
-  const articleModuleCount = modules.value.filter(module => module.type === "article").length
-
-  return {
-    total: modules.value.length,
-    enabled: modules.value.filter(module => module.enabled).length,
-    videoModuleCount,
-    articleModuleCount,
-  }
-})
 
 watch(selectedVideoModule, (module) => {
   if (!module?.categories.length) {
@@ -502,39 +487,18 @@ function createId(prefix: string) {
 </script>
 
 <template>
-  <section class="relative flex flex-col bg-background">
-    <SettingsPageHeader
-      title="App 首页"
-      description="维护客户端首页展示模块。当前版本使用前端 mock 数据，刷新页面会恢复初始配置。"
-    >
-      <SettingsToolbarRow>
-        <template #leading>
-          <div class="flex min-w-max items-center gap-2 text-xs text-muted-foreground">
-            <Badge variant="outline" class="rounded-md font-normal">
-              {{ stats.total }} 个模块
-            </Badge>
-            <Badge variant="outline" class="rounded-md font-normal">
-              {{ stats.enabled }} 个启用
-            </Badge>
-            <Badge variant="outline" class="rounded-md font-normal">
-              {{ stats.videoModuleCount }} 视频 / {{ stats.articleModuleCount }} 文章
-            </Badge>
-          </div>
-        </template>
+  <section class="app-home-page relative -mx-4 flex min-h-full bg-background">
+    <aside class="flex w-[320px] shrink-0 flex-col border-r border-border/70 bg-background">
+      <div class="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+        <div class="mb-6">
+          <h1 class="text-[1.625rem] font-semibold tracking-tight text-foreground">
+            App 首页
+          </h1>
+          <p class="mt-1 text-sm leading-6 text-muted-foreground">
+            维护客户端首页展示模块。当前版本使用前端 mock 数据，刷新页面会恢复初始配置。
+          </p>
+        </div>
 
-        <Button variant="outline" size="sm" class="h-8 rounded-md px-3" @click="resetMockConfig">
-          <i class="ri-refresh-line text-base" />
-          <span>重置</span>
-        </Button>
-        <Button size="sm" class="h-8 rounded-md px-3" @click="saveMockConfig">
-          <i class="ri-save-line text-base" />
-          <span>保存</span>
-        </Button>
-      </SettingsToolbarRow>
-    </SettingsPageHeader>
-
-    <div class="mx-auto flex w-full max-w-4xl gap-8 overflow-visible">
-      <aside class="flex w-[240px] shrink-0 flex-col pt-4">
         <div class="mb-2 px-1">
           <p class="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
             模块
@@ -614,10 +578,24 @@ function createId(prefix: string) {
             <span>添加文章模块</span>
           </Button>
         </div>
-      </aside>
+      </div>
 
-      <main class="flex min-w-0 flex-1 overflow-visible px-4 pt-4">
-        <div class="app-home-preview-shell mx-auto flex min-h-0 w-full max-w-[410px] self-start flex-col bg-zinc-950 p-[10px]">
+      <div class="shrink-0 border-t border-border/70 bg-background p-4">
+        <div class="flex items-center gap-2">
+          <Button variant="outline" size="sm" class="h-9 flex-1 rounded-md px-3" @click="resetMockConfig">
+            <i class="ri-refresh-line text-base" />
+            <span>重置</span>
+          </Button>
+          <Button size="sm" class="h-9 flex-1 rounded-md px-3" @click="saveMockConfig">
+            <i class="ri-save-line text-base" />
+            <span>保存</span>
+          </Button>
+        </div>
+      </div>
+    </aside>
+
+    <main class="app-home-preview-pane flex min-w-0 flex-1 items-center justify-center overflow-hidden px-6 py-4">
+      <div class="app-home-preview-shell flex min-h-0 flex-col bg-zinc-950 p-[10px]">
           <div class="app-home-preview-scroll min-h-0 flex-1 overflow-y-auto bg-[#f4f4f4] px-4 py-4">
             <div
               v-for="module in enabledModules"
@@ -707,9 +685,8 @@ function createId(prefix: string) {
               暂无启用模块
             </div>
           </div>
-        </div>
-      </main>
-    </div>
+      </div>
+    </main>
 
     <ResponsiveRightSheet
       v-model:open="sheetOpen"
@@ -964,6 +941,8 @@ function createId(prefix: string) {
 .app-home-preview-shell {
   position: relative;
   aspect-ratio: 390 / 844;
+  width: min(410px, calc((100svh - 5.5rem) * 390 / 844), 100%);
+  max-height: calc(100svh - 5.5rem);
   border-radius: 46px;
   box-shadow:
     inset 0 0 0 1px rgba(255, 255, 255, 0.1),
