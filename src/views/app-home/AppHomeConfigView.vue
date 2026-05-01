@@ -502,7 +502,7 @@ function createId(prefix: string) {
 </script>
 
 <template>
-  <section class="relative flex min-h-0 flex-1 flex-col overflow-hidden bg-background">
+  <section class="relative flex flex-col bg-background">
     <SettingsPageHeader
       title="App 首页"
       description="维护客户端首页展示模块。当前版本使用前端 mock 数据，刷新页面会恢复初始配置。"
@@ -533,8 +533,8 @@ function createId(prefix: string) {
       </SettingsToolbarRow>
     </SettingsPageHeader>
 
-    <div class="mx-auto flex min-h-0 w-full max-w-4xl flex-1 gap-8 overflow-hidden pb-4">
-      <aside class="flex w-[240px] shrink-0 flex-col overflow-y-auto pt-4">
+    <div class="mx-auto flex w-full max-w-4xl gap-8 overflow-visible">
+      <aside class="flex w-[240px] shrink-0 flex-col pt-4">
         <div class="mb-2 px-1">
           <p class="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
             模块
@@ -616,8 +616,8 @@ function createId(prefix: string) {
         </div>
       </aside>
 
-      <main class="flex min-h-0 min-w-0 flex-1 overflow-visible px-4 pb-8 pt-4">
-        <div class="app-home-preview-shell mx-auto flex min-h-0 w-full max-w-[410px] self-stretch flex-col bg-zinc-950 p-[10px]">
+      <main class="flex min-w-0 flex-1 overflow-visible px-4 pt-4">
+        <div class="app-home-preview-shell mx-auto flex min-h-0 w-full max-w-[410px] self-start flex-col bg-zinc-950 p-[10px]">
           <div class="app-home-preview-scroll min-h-0 flex-1 overflow-y-auto bg-[#f4f4f4] px-4 py-4">
             <div
               v-for="module in enabledModules"
@@ -963,6 +963,7 @@ function createId(prefix: string) {
 <style scoped>
 .app-home-preview-shell {
   position: relative;
+  aspect-ratio: 390 / 844;
   border-radius: 46px;
   box-shadow:
     inset 0 0 0 1px rgba(255, 255, 255, 0.1),

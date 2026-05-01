@@ -19,6 +19,7 @@ const useCompactMainTopPadding = computed(() => {
   const routeKind = resolveRouteLoadingKind(route.meta.loading)
   return routeKind !== "detail" && routeKind !== "form"
 })
+const isAppHomeRoute = computed(() => route.name === "app-home")
 const routeTransitionName = ref("route-page-fade")
 const currentRouteKind = ref<RouteLoadingKind | null>(resolveRouteLoadingKind(route.meta.loading))
 
@@ -84,7 +85,8 @@ function closeMobileSidebar() {
       />
       <main
         :class="[
-          'flex min-w-0 min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 pb-4',
+          'flex min-w-0 min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4',
+          isAppHomeRoute ? 'pb-0' : 'pb-4',
           useCompactMainTopPadding ? 'pt-2' : 'pt-0',
         ]"
       >
@@ -98,7 +100,11 @@ function closeMobileSidebar() {
             :name="routeTransitionName"
             mode="out-in"
           >
-            <div :key="route.name ?? route.fullPath" class="route-page-shell flex min-h-0 flex-1 flex-col">
+            <div
+              :key="route.name ?? route.fullPath"
+              class="route-page-shell flex flex-col"
+              :class="isAppHomeRoute ? 'min-h-full' : 'min-h-0 flex-1'"
+            >
               <component :is="Component" />
             </div>
           </Transition>
