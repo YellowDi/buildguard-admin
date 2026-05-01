@@ -953,11 +953,15 @@ function createId(prefix: string) {
 </template>
 
 <style scoped>
+.app-home-preview-pane {
+  min-width: calc(360px + 3rem);
+}
+
 .app-home-preview-shell {
   position: relative;
   aspect-ratio: 390 / 844;
-  width: min(410px, calc((100svh - 5.5rem) * 390 / 844), 100%);
-  max-height: calc(100svh - 5.5rem);
+  width: clamp(360px, calc((100svh - 5.5rem) * 390 / 844), 410px);
+  min-width: 360px;
   border-radius: 56px;
   box-shadow:
     inset 0 0 0 1px rgba(255, 255, 255, 0.12),
