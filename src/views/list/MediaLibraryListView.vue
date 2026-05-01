@@ -1184,7 +1184,7 @@ function escapeHtml(value: string) {
           v-if="activeModule === 'videos' && currentView === 'grid'"
           class="space-y-0"
         >
-          <div v-if="filteredVideoItems.length" class="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
+          <div v-if="filteredVideoItems.length" class="grid grid-cols-3 gap-4">
             <button
               v-for="item in filteredVideoItems"
               :key="item.id"
@@ -1271,7 +1271,7 @@ function escapeHtml(value: string) {
           v-else-if="activeModule === 'articles' && currentView === 'grid'"
           class="space-y-0"
         >
-          <div v-if="filteredArticles.length" class="grid gap-4 md:grid-cols-2 2xl:grid-cols-3">
+          <div v-if="filteredArticles.length" class="grid grid-cols-3 gap-4">
             <button
               v-for="item in filteredArticles"
               :key="item.id"
