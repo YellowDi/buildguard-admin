@@ -597,7 +597,7 @@ function createId(prefix: string) {
 
         </aside>
 
-        <main class="app-home-preview-pane flex min-w-0 flex-1 items-center justify-center overflow-visible px-12 pb-20 pt-8">
+        <main class="app-home-preview-pane flex min-w-0 flex-1 items-center justify-center overflow-visible px-10 py-6">
       <div class="app-home-preview-shell flex min-h-0 flex-col bg-zinc-950 p-[10px]">
         <span class="app-home-phone-button app-home-phone-button--mute" aria-hidden="true" />
         <span class="app-home-phone-button app-home-phone-button--volume-up" aria-hidden="true" />
@@ -959,13 +959,13 @@ function createId(prefix: string) {
 
 <style scoped>
 .app-home-preview-pane {
-  min-width: calc(410px + 6rem);
+  min-width: calc(390px + 5rem);
 }
 
 .app-home-preview-shell {
   position: relative;
   aspect-ratio: 390 / 844;
-  width: clamp(360px, calc((100svh - 5.5rem) * 390 / 844), 410px);
+  width: clamp(360px, calc((100svh - 12rem) * 390 / 844), 390px);
   min-width: 360px;
   border-radius: 56px;
   box-shadow:
