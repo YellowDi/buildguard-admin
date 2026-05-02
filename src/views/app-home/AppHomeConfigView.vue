@@ -2,6 +2,7 @@
 import { computed, reactive, ref, watch } from "vue"
 import { toast } from "vue-sonner"
 
+import TitleBlock from "@/components/layout/TitleBlock.vue"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -487,18 +488,32 @@ function createId(prefix: string) {
 </script>
 
 <template>
-  <section class="app-home-page relative mx-auto flex min-h-0 w-full max-w-4xl flex-1 gap-8 overflow-visible bg-background">
-    <aside class="flex w-[240px] shrink-0 flex-col overflow-visible bg-background">
-      <div class="min-h-0 flex-1 overflow-y-auto pt-4">
-        <div class="mb-6">
-          <h1 class="text-[1.625rem] font-semibold tracking-tight text-foreground">
-            App 首页
-          </h1>
-          <p class="mt-1 text-sm leading-6 text-muted-foreground">
-            维护客户端首页展示模块。当前版本使用前端 mock 数据，刷新页面会恢复初始配置。
-          </p>
-        </div>
+  <section class="app-home-page relative flex flex-col overflow-visible bg-background">
+    <div class="sticky top-0 z-[6] shrink-0 bg-background px-3 pb-3 pt-4 sm:px-4">
+      <div class="mx-auto flex w-full max-w-4xl items-end justify-between gap-3">
+        <TitleBlock
+          class="min-w-0 flex-1"
+          title="App 首页"
+          description="维护客户端首页展示模块。当前版本使用前端 mock 数据，刷新页面会恢复初始配置。"
+        />
 
+        <div class="flex shrink-0 flex-nowrap items-center justify-end gap-2 pb-0.5">
+          <Button variant="outline" size="sm" class="h-8 rounded-md px-3" @click="resetMockConfig">
+            <i class="ri-refresh-line text-base" />
+            <span>重置</span>
+          </Button>
+          <Button size="sm" class="h-8 rounded-md px-3" @click="saveMockConfig">
+            <i class="ri-save-line text-base" />
+            <span>保存</span>
+          </Button>
+        </div>
+      </div>
+    </div>
+
+    <div class="px-3 sm:px-4">
+      <div class="mx-auto flex w-full max-w-4xl gap-8 overflow-visible">
+        <aside class="flex w-[240px] shrink-0 flex-col overflow-visible bg-background">
+          <div class="min-h-0 flex-1 overflow-y-auto pt-4">
         <div class="mb-2 px-1">
           <p class="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
             模块
@@ -580,21 +595,9 @@ function createId(prefix: string) {
         </div>
       </div>
 
-      <div class="shrink-0 border-t border-border/70 bg-background py-4">
-        <div class="flex items-center gap-2">
-          <Button variant="outline" size="sm" class="h-9 flex-1 rounded-md px-3" @click="resetMockConfig">
-            <i class="ri-refresh-line text-base" />
-            <span>重置</span>
-          </Button>
-          <Button size="sm" class="h-9 flex-1 rounded-md px-3" @click="saveMockConfig">
-            <i class="ri-save-line text-base" />
-            <span>保存</span>
-          </Button>
-        </div>
-      </div>
-    </aside>
+        </aside>
 
-    <main class="app-home-preview-pane flex min-w-0 flex-1 items-center justify-center overflow-hidden py-4">
+        <main class="app-home-preview-pane flex min-w-0 flex-1 items-center justify-center overflow-hidden py-4">
       <div class="app-home-preview-shell flex min-h-0 flex-col bg-zinc-950 p-[10px]">
         <span class="app-home-phone-button app-home-phone-button--mute" aria-hidden="true" />
         <span class="app-home-phone-button app-home-phone-button--volume-up" aria-hidden="true" />
@@ -701,7 +704,9 @@ function createId(prefix: string) {
           </div>
         </div>
       </div>
-    </main>
+        </main>
+      </div>
+    </div>
 
     <ResponsiveRightSheet
       v-model:open="sheetOpen"
