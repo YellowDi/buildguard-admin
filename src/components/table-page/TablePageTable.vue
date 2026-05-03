@@ -49,6 +49,7 @@ const HORIZONTAL_SCROLL_HINT_SESSION_PREFIX = "buildguard:table-hscroll-hint:"
 const ROW_CLICK_DRAG_THRESHOLD = 5
 const ALIGN_TO_HEADER_WIDE_BREAKPOINT = 2000
 const COMPACT_DETAIL_TABLE_WIDTH_THRESHOLD = 48
+const HORIZONTAL_OVERFLOW_ACTIVATION_THRESHOLD = 24
 const HORIZONTAL_SCROLLBAR_MIN_THUMB_SIZE = 40
 const NATIVE_HORIZONTAL_SCROLLBAR_MASK_SIZE = 18
 const ACTION_COLUMN_KEYS = new Set(["action", "actions", "operation", "operations"])
@@ -184,18 +185,6 @@ const inlineSecondaryActions = computed(() => (
   (props.rowActions ?? []).filter(action => !isInlinePreviewAction(action))
 ))
 const resolvedFillColumnIndexes = computed(() => {
-  const explicitFillColumnIndexes = props.columns.reduce<number[]>((indexes, column, index) => {
-    if (column.width === "fill" && !isActionLikeColumn(column)) {
-      indexes.push(index)
-    }
-
-    return indexes
-  }, [])
-
-  if (explicitFillColumnIndexes.length > 0) {
-    return explicitFillColumnIndexes
-  }
-
   const autoFillColumnIndex = getAutoFillColumnIndex()
   return autoFillColumnIndex >= 0 ? [autoFillColumnIndex] : []
 })
@@ -265,11 +254,17 @@ const leadingEdgeGutter = computed(() => {
 
   return props.listLevelTable ? edgeGutterSize.value : embeddedLeadingInset.value
 })
-const trailingEdgeGutter = computed(() => (
-  props.edgeGutter && horizontalOverflow.value
-    ? (props.listLevelTable ? edgeGutterSize.value : embeddedTrailingInset.value)
-    : 0
-))
+const trailingEdgeGutter = computed(() => {
+  if (!props.edgeGutter) {
+    return 0
+  }
+
+  if (props.listLevelTable) {
+    return edgeGutterSize.value
+  }
+
+  return horizontalOverflow.value ? embeddedTrailingInset.value : 0
+})
 const tableInlineTrailingInset = computed(() => {
   if (!props.listLevelTable && compactTableActive.value) {
     return embeddedTrailingInset.value
@@ -1084,14 +1079,13 @@ function getNoteColumnMinWidthClass(column: TableColumn) {
 
 function getResolvedColumnHeaderClass(column: TableColumn, columnIndex: number) {
   const fillActive = isFillColumnActive(columnIndex)
-  const resolvedFillColumn = isResolvedFillColumn(columnIndex)
 
   return [
     getColumnHeaderClass(column, fillActive),
     props.rows.length === 0
       ? getEmptyColumnWidthClass(column, columnIndex)
       : getNoteColumnMinWidthClass(column),
-    resolvedFillColumn ? "" : "w-px",
+    fillActive ? "" : "w-px",
   ]
 }
 
@@ -1111,7 +1105,7 @@ function getResolvedColumnCellClass(column: TableColumn, columnIndex: number) {
     props.rows.length === 0
       ? getEmptyColumnWidthClass(column, columnIndex)
       : getNoteColumnMinWidthClass(column),
-    resolvedFillColumn ? "" : "w-px",
+    fillActive ? "" : "w-px",
     resolvedFillColumn
       ? fillActive
         ? "max-w-none"
@@ -1257,7 +1251,7 @@ function syncHorizontalScrollState(measuredOverflow?: boolean) {
 
   const wrapper = tableWrapperRef.value
   const contentWidth = Math.max(wrapper.scrollWidth, tableRef.value.scrollWidth)
-  const overflow = contentWidth > wrapper.clientWidth + 1
+  const overflow = contentWidth > wrapper.clientWidth + HORIZONTAL_OVERFLOW_ACTIVATION_THRESHOLD
     || measuredOverflow === true
 
   horizontalOverflow.value = overflow
@@ -1331,11 +1325,12 @@ function measureTableLayout() {
     && wrapperClientWidth - intrinsicWidth >= COMPACT_DETAIL_TABLE_WIDTH_THRESHOLD
 
   if (!compactTableActive) {
-    fillColumnActive = intrinsicWidth <= wrapperClientWidth + 1
+    const extraWidth = wrapperClientWidth - intrinsicWidth
+    fillColumnActive = extraWidth >= 0
   }
 
   return {
-    overflow: intrinsicWidth > wrapperClientWidth + 1,
+    overflow: intrinsicWidth > wrapperClientWidth + HORIZONTAL_OVERFLOW_ACTIVATION_THRESHOLD,
     fillColumnActive,
     compactTableActive,
   }
