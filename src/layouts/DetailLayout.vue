@@ -4,13 +4,6 @@ import { computed, onBeforeUnmount, onMounted, ref, useSlots } from "vue"
 import SectionHeader from "@/components/layout/SectionHeader.vue"
 import { useSlidingTabIndicator } from "@/composables/useSlidingTabIndicator"
 import { Button } from "@/components/ui/button"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
 
 // 详情页页面骨架。
@@ -63,6 +56,10 @@ const { indicatorStyle, setTabRef } = useSlidingTabIndicator({
   activeKey: activeTabId,
   watchSource: computed(() => props.tabs.map(tab => `${tab.id}:${tab.label}:${Number(Boolean(tab.active))}:${Number(Boolean(tab.disabled))}`)),
 })
+const { indicatorStyle: mobileIndicatorStyle, setTabRef: setMobileTabRef } = useSlidingTabIndicator({
+  activeKey: activeTabId,
+  watchSource: computed(() => props.tabs.map(tab => `${tab.id}:${tab.label}:${Number(Boolean(tab.active))}:${Number(Boolean(tab.disabled))}`)),
+})
 
 let headerResizeObserver: ResizeObserver | null = null
 
@@ -86,11 +83,6 @@ onBeforeUnmount(() => {
   headerResizeObserver = null
 })
 
-function handleTabSelect(value: unknown) {
-  if (typeof value === "string" && value) {
-    emit("tabClick", value)
-  }
-}
 </script>
 
 <template>
@@ -160,27 +152,41 @@ function handleTabSelect(value: unknown) {
           </SectionHeader>
 
           <div v-if="hasTabs" class="mt-4 border-b border-border text-muted-foreground">
-            <div class="flex min-w-0 items-center justify-between gap-2 pb-2 sm:hidden">
-              <Select :model-value="activeTabId" @update:model-value="handleTabSelect">
-                <SelectTrigger
-                  size="sm"
-                  class="h-8 max-w-[calc(100vw-11rem)] rounded-full bg-background px-3 text-[14px]"
+            <div class="flex min-w-0 items-end justify-between gap-2 sm:hidden">
+              <div class="min-w-0 flex-1">
+                <div
+                  data-detail-layout-tabs-scroll
+                  class="min-w-0 -mt-1 overflow-x-auto whitespace-nowrap pt-1"
                 >
-                  <SelectValue placeholder="选择分页" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem
-                    v-for="tab in props.tabs"
-                    :key="tab.id"
-                    :value="tab.id"
-                    :disabled="tab.disabled"
-                  >
-                    {{ tab.label }}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
+                  <nav class="relative flex min-w-max flex-nowrap items-center text-[14px]" :aria-label="props.tabsAriaLabel">
+                    <button
+                      v-for="tab in props.tabs"
+                      :key="tab.id"
+                      :ref="(element) => setMobileTabRef(tab.id, element)"
+                      type="button"
+                      :aria-pressed="Boolean(tab.active)"
+                      :disabled="tab.disabled"
+                      :class="[
+                        'group relative shrink-0 px-3 pb-[11px] text-muted-foreground transition-colors hover:text-foreground disabled:pointer-events-none disabled:opacity-40',
+                        tab.active ? 'font-semibold text-foreground' : '',
+                      ]"
+                      @click="emit('tabClick', tab.id)"
+                    >
+                      <span class="relative isolate inline-block">
+                        <span class="pointer-events-none absolute -inset-x-2 -inset-y-1 rounded-md transition-colors group-hover:bg-surface-tertiary" />
+                        <span class="relative z-10">{{ tab.label }}</span>
+                      </span>
+                    </button>
+                    <span
+                      aria-hidden="true"
+                      class="pointer-events-none absolute bottom-0 left-0 h-0.5 rounded-full bg-foreground transition-[transform,width,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
+                      :style="mobileIndicatorStyle"
+                    />
+                  </nav>
+                </div>
+              </div>
 
-              <div v-if="hasTabActions" class="ml-auto shrink-0">
+              <div v-if="hasTabActions" class="ml-auto shrink-0 pb-2">
                 <slot v-if="$slots.tabActions" name="tabActions" />
                 <slot v-else name="actions" />
               </div>
