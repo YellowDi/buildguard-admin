@@ -186,33 +186,38 @@ function handleTabSelect(value: unknown) {
               </div>
             </div>
 
-            <div class="hidden min-w-0 items-end gap-6 sm:flex">
+            <div class="hidden min-w-0 items-end gap-6 sm:flex sm:flex-nowrap">
               <div class="min-w-0 flex-1">
-                <nav class="relative flex min-w-0 flex-wrap items-center text-[14px]" :aria-label="props.tabsAriaLabel">
-                  <button
-                    v-for="tab in props.tabs"
-                    :key="tab.id"
-                    :ref="(element) => setTabRef(tab.id, element)"
-                    type="button"
-                    :aria-pressed="Boolean(tab.active)"
-                    :disabled="tab.disabled"
-                    :class="[
-                      'group relative px-3 pb-[11px] text-muted-foreground transition-colors hover:text-foreground disabled:pointer-events-none disabled:opacity-40',
-                      tab.active ? 'font-semibold text-foreground' : '',
-                    ]"
-                    @click="emit('tabClick', tab.id)"
-                  >
-                    <span class="relative isolate inline-block">
-                      <span class="pointer-events-none absolute -inset-x-2 -inset-y-1 rounded-md transition-colors group-hover:bg-surface-tertiary" />
-                      <span class="relative z-10">{{ tab.label }}</span>
-                    </span>
-                  </button>
-                  <span
-                    aria-hidden="true"
-                    class="pointer-events-none absolute bottom-0 left-0 h-0.5 rounded-full bg-foreground transition-[transform,width,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
-                    :style="indicatorStyle"
-                  />
-                </nav>
+                <div
+                  data-detail-layout-tabs-scroll
+                  class="min-w-0 -mt-1 overflow-x-auto whitespace-nowrap pt-1"
+                >
+                  <nav class="relative flex min-w-max flex-nowrap items-center text-[14px]" :aria-label="props.tabsAriaLabel">
+                    <button
+                      v-for="tab in props.tabs"
+                      :key="tab.id"
+                      :ref="(element) => setTabRef(tab.id, element)"
+                      type="button"
+                      :aria-pressed="Boolean(tab.active)"
+                      :disabled="tab.disabled"
+                      :class="[
+                        'group relative shrink-0 px-3 pb-[11px] text-muted-foreground transition-colors hover:text-foreground disabled:pointer-events-none disabled:opacity-40',
+                        tab.active ? 'font-semibold text-foreground' : '',
+                      ]"
+                      @click="emit('tabClick', tab.id)"
+                    >
+                      <span class="relative isolate inline-block">
+                        <span class="pointer-events-none absolute -inset-x-2 -inset-y-1 rounded-md transition-colors group-hover:bg-surface-tertiary" />
+                        <span class="relative z-10">{{ tab.label }}</span>
+                      </span>
+                    </button>
+                    <span
+                      aria-hidden="true"
+                      class="pointer-events-none absolute bottom-0 left-0 h-0.5 rounded-full bg-foreground transition-[transform,width,opacity] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)]"
+                      :style="indicatorStyle"
+                    />
+                  </nav>
+                </div>
               </div>
 
               <div
@@ -263,3 +268,16 @@ function handleTabSelect(value: unknown) {
     </template>
   </section>
 </template>
+
+<style>
+[data-detail-layout-tabs-scroll] {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+[data-detail-layout-tabs-scroll]::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+</style>
