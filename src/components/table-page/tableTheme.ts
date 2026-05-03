@@ -57,6 +57,7 @@ export const tableTheme = {
   pinnedAction: {
     base: "sticky right-0 isolate bg-background bg-clip-padding",
     fade: "before:pointer-events-none before:absolute before:top-px before:bottom-px before:left-0 before:w-[var(--table-pinned-action-fade-width,2.5rem)] before:-translate-x-full before:bg-gradient-to-l before:from-background before:to-transparent",
+    rightFade: "pointer-events-none absolute top-px bottom-px left-full w-[var(--table-pinned-action-right-fade-width,0px)] bg-background",
     headerBorder: "!border-b-0 after:pointer-events-none after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-border",
     bodyBorder: "!border-b-0 after:pointer-events-none after:absolute after:inset-x-0 after:bottom-0 after:h-px after:bg-border",
     header: "z-30 hover:bg-surface-hover-subtle",

@@ -51,6 +51,7 @@ const ALIGN_TO_HEADER_WIDE_BREAKPOINT = 2000
 const COMPACT_DETAIL_TABLE_WIDTH_THRESHOLD = 48
 const HORIZONTAL_SCROLLBAR_MIN_THUMB_SIZE = 40
 const NATIVE_HORIZONTAL_SCROLLBAR_MASK_SIZE = 18
+const ACTION_COLUMN_KEYS = new Set(["action", "actions", "operation", "operations"])
 const ROW_CLICK_IGNORE_SELECTOR = [
   "button",
   "a[href]",
@@ -161,6 +162,7 @@ const stickyTableWidth = ref(0)
 const stickyScrollLeft = ref(0)
 const stickyColumnWidths = ref<number[]>([])
 const actionColumnWidth = ref(0)
+const actionColumnContentWidth = ref(0)
 const actionColumnFadeWidth = ref(0)
 const horizontalScrollContentWidth = ref(0)
 const horizontalScrollViewportWidth = ref(0)
@@ -181,6 +183,22 @@ const inlineQuickActionEnabled = computed(() => (
 const inlineSecondaryActions = computed(() => (
   (props.rowActions ?? []).filter(action => !isInlinePreviewAction(action))
 ))
+const resolvedFillColumnIndexes = computed(() => {
+  const explicitFillColumnIndexes = props.columns.reduce<number[]>((indexes, column, index) => {
+    if (column.width === "fill" && !isActionLikeColumn(column)) {
+      indexes.push(index)
+    }
+
+    return indexes
+  }, [])
+
+  if (explicitFillColumnIndexes.length > 0) {
+    return explicitFillColumnIndexes
+  }
+
+  const autoFillColumnIndex = getAutoFillColumnIndex()
+  return autoFillColumnIndex >= 0 ? [autoFillColumnIndex] : []
+})
 const showLoadingRows = computed(() => props.loading && props.rows.length === 0)
 const hasDataRows = computed(() => props.rows.length > 0)
 const showEmptyState = computed(() => !props.loading && props.rows.length === 0)
@@ -213,9 +231,18 @@ const pinRowActionsActive = computed(() => (
   && hasRowActions.value
   && horizontalOverflow.value
 ))
-const showPinnedActionFade = computed(() => (
+const pinnedActionTrailingOverflow = computed(() => (
   pinRowActionsActive.value
-  && stickyScrollLeft.value < horizontalScrollMax.value - 1
+    ? Math.max(0, horizontalScrollMax.value - stickyScrollLeft.value)
+    : 0
+))
+const pinnedActionFadeWidth = computed(() => (
+  Math.min(actionColumnFadeWidth.value, Math.ceil(pinnedActionTrailingOverflow.value))
+))
+const showPinnedActionRightFade = computed(() => (
+  pinRowActionsActive.value
+  && props.edgeGutter
+  && props.listLevelTable
 ))
 const shouldMaskNativeHorizontalScrollbar = computed(() => (
   props.fillAvailableHeight
@@ -890,17 +917,38 @@ function getStickyCellStyle(columnIndex: number) {
 
 function getActionColumnStyle(fallbackWidth?: number) {
   const width = fallbackWidth ?? actionColumnWidth.value
+  const style: Record<string, string> = {
+    paddingRight: "0px",
+    "--table-pinned-action-fade-width": `${pinnedActionFadeWidth.value}px`,
+    "--table-pinned-action-right-fade-width": showPinnedActionRightFade.value
+      ? `${edgeGutterSize.value}px`
+      : "0px",
+  }
+
+  if (pinRowActionsActive.value && props.edgeGutter && props.listLevelTable) {
+    style.right = `${edgeGutterSize.value}px`
+  }
 
   if (!width) {
-    return undefined
+    return style
   }
 
-  return {
-    width: `${width}px`,
-    minWidth: `${width}px`,
-    maxWidth: `${width}px`,
-    "--table-pinned-action-fade-width": `${actionColumnFadeWidth.value}px`,
+  style.width = `${width}px`
+  style.minWidth = `${width}px`
+  style.maxWidth = `${width}px`
+
+  return style
+}
+
+function getActionContentStyle(options?: { matchButtonGroupWidth?: boolean }) {
+  const style: Record<string, string> = {}
+
+  if (options?.matchButtonGroupWidth && actionColumnContentWidth.value > 0) {
+    style.width = `${actionColumnContentWidth.value}px`
+    style.minWidth = `${actionColumnContentWidth.value}px`
   }
+
+  return style
 }
 
 function getActionHeaderClass(isStickyClone = false) {
@@ -910,7 +958,7 @@ function getActionHeaderClass(isStickyClone = false) {
 
   return [
     tableTheme.pinnedAction.base,
-    showPinnedActionFade.value ? tableTheme.pinnedAction.fade : "",
+    tableTheme.pinnedAction.fade,
     tableTheme.pinnedAction.headerBorder,
     isStickyClone ? tableTheme.pinnedAction.headerClone : tableTheme.pinnedAction.header,
   ]
@@ -923,7 +971,7 @@ function getActionCellClass(options?: { selected?: boolean; loading?: boolean })
 
   return [
     tableTheme.pinnedAction.base,
-    showPinnedActionFade.value ? tableTheme.pinnedAction.fade : "",
+    tableTheme.pinnedAction.fade,
     tableTheme.pinnedAction.bodyBorder,
     options?.selected
       ? tableTheme.pinnedAction.bodySelected
@@ -990,21 +1038,28 @@ function getLoadingPrimaryLineClass(rowIndex: number) {
 }
 
 function getFillColumnIndexes() {
-  return props.columns.reduce<number[]>((indexes, _column, index) => {
-    if (isResolvedFillColumn(index)) {
-      indexes.push(index)
-    }
+  return resolvedFillColumnIndexes.value
+}
 
-    return indexes
-  }, [])
+function isActionLikeColumn(column: TableColumn) {
+  const key = column.key.trim().toLowerCase()
+  const slot = column.slot?.trim().toLowerCase() ?? ""
+
+  return ACTION_COLUMN_KEYS.has(key) || slot.includes("action")
 }
 
 function getAutoFillColumnIndex() {
-  return props.columns.length > 0 ? props.columns.length - 1 : -1
+  for (let index = props.columns.length - 1; index >= 0; index -= 1) {
+    if (!isActionLikeColumn(props.columns[index])) {
+      return index
+    }
+  }
+
+  return -1
 }
 
 function isResolvedFillColumn(columnIndex: number) {
-  return columnIndex === getAutoFillColumnIndex()
+  return resolvedFillColumnIndexes.value.includes(columnIndex)
 }
 
 function isFillColumnActive(columnIndex: number) {
@@ -1066,6 +1121,10 @@ function getResolvedColumnCellClass(column: TableColumn, columnIndex: number) {
 }
 
 function getEmptyColumnWidthClass(column: TableColumn, columnIndex: number) {
+  if (isActionLikeColumn(column)) {
+    return ""
+  }
+
   if (isResolvedFillColumn(columnIndex) || isNoteLikeColumn(column)) {
     return "min-w-[16rem]"
   }
@@ -1147,17 +1206,33 @@ function clearStickyState() {
 function syncActionColumnWidth(headerCells?: HTMLElement[]) {
   if (!hasRowActions.value) {
     actionColumnWidth.value = 0
+    actionColumnContentWidth.value = 0
     actionColumnFadeWidth.value = 0
     return
   }
 
   const targetCells = headerCells ?? getHeaderCells()
-  const headerWidth = targetCells[props.columns.length]?.getBoundingClientRect().width ?? 0
+  const actionHeader = targetCells[props.columns.length]
+  const headerLabelElement = tableRef.value?.querySelector("[data-table-action-header-label]") as HTMLElement | null
+  const headerLabelWidth = Math.ceil(headerLabelElement?.getBoundingClientRect().width ?? 0)
   const contentElement = tableRef.value?.querySelector("[data-table-action-buttons]") as HTMLElement | null
   const actionCell = contentElement?.closest("[data-table-action-cell]") as HTMLElement | null
 
-  if (!contentElement || !actionCell || typeof window === "undefined") {
+  if (typeof window === "undefined") {
+    actionColumnWidth.value = Math.max(0, headerLabelWidth)
+    actionColumnContentWidth.value = Math.max(0, headerLabelWidth)
+    actionColumnFadeWidth.value = 0
+    return
+  }
+
+  const headerStyles = actionHeader ? window.getComputedStyle(actionHeader) : null
+  const headerPaddingLeft = Number.parseFloat(headerStyles?.paddingLeft || "0")
+  const headerPaddingRight = Number.parseFloat(headerStyles?.paddingRight || "0")
+  const headerWidth = headerLabelWidth + headerPaddingLeft + headerPaddingRight
+
+  if (!contentElement || !actionCell) {
     actionColumnWidth.value = Math.max(0, Math.ceil(headerWidth))
+    actionColumnContentWidth.value = Math.max(0, headerLabelWidth)
     actionColumnFadeWidth.value = 0
     return
   }
@@ -1169,6 +1244,7 @@ function syncActionColumnWidth(headerCells?: HTMLElement[]) {
   const measuredWidth = Math.max(headerWidth, contentWidth + paddingLeft + paddingRight)
 
   actionColumnWidth.value = Math.max(0, Math.ceil(measuredWidth))
+  actionColumnContentWidth.value = Math.max(0, Math.max(headerLabelWidth, contentWidth))
   actionColumnFadeWidth.value = Math.max(0, Math.round(measuredWidth - contentWidth - paddingRight))
 }
 
@@ -1555,7 +1631,10 @@ onBeforeUnmount(() => {
                   :class="[tableTheme.actionHeader, tableTheme.actionHeaderSticky, getActionHeaderClass(true)]"
                   :style="getActionColumnStyle(stickyColumnWidths[columns.length])"
                 >
-                  操作
+                  <div class="ml-auto text-left" :style="getActionContentStyle({ matchButtonGroupWidth: true })">
+                    <span data-table-action-header-label>操作</span>
+                  </div>
+                  <span v-if="showPinnedActionRightFade" aria-hidden="true" :class="tableTheme.pinnedAction.rightFade" />
                 </th>
               </tr>
             </thead>
@@ -1645,7 +1724,10 @@ onBeforeUnmount(() => {
                   :class="[tableTheme.actionHeader, getActionHeaderClass()]"
                   :style="getActionColumnStyle()"
                 >
-                  操作
+                  <div class="ml-auto text-left" :style="getActionContentStyle({ matchButtonGroupWidth: true })">
+                    <span data-table-action-header-label>操作</span>
+                  </div>
+                  <span v-if="showPinnedActionRightFade" aria-hidden="true" :class="tableTheme.pinnedAction.rightFade" />
                 </th>
               </tr>
             </thead>
@@ -1693,11 +1775,12 @@ onBeforeUnmount(() => {
                     :style="getActionColumnStyle()"
                     data-table-action-cell
                   >
-                    <div :class="tableTheme.actionCellContent">
+                    <div :class="tableTheme.actionCellContent" :style="getActionContentStyle()">
                       <div :class="tableTheme.actionCellButtons" data-table-action-buttons>
                         <Skeleton :class="getLoadingActionSkeletonClass(rowIndex)" />
                       </div>
                     </div>
+                    <span v-if="showPinnedActionRightFade" aria-hidden="true" :class="tableTheme.pinnedAction.rightFade" />
                   </td>
                 </tr>
               </template>
@@ -1910,7 +1993,7 @@ onBeforeUnmount(() => {
                   :style="getActionColumnStyle()"
                   data-table-action-cell
                 >
-                  <div :class="tableTheme.actionCellContent">
+                  <div :class="tableTheme.actionCellContent" :style="getActionContentStyle()">
                     <div :class="tableTheme.actionCellButtons" data-table-action-buttons>
                       <Button
                         v-for="action in rowActions"
@@ -1925,6 +2008,7 @@ onBeforeUnmount(() => {
                       </Button>
                     </div>
                   </div>
+                  <span v-if="showPinnedActionRightFade" aria-hidden="true" :class="tableTheme.pinnedAction.rightFade" />
                 </td>
               </tr>
             </tbody>
