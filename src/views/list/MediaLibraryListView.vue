@@ -1122,9 +1122,9 @@ function escapeHtml(value: string) {
     </SettingsPageHeader>
 
     <div class="px-3 pb-8 sm:px-4">
-      <div class="mx-auto flex w-full max-w-4xl gap-8 overflow-visible">
-        <aside class="w-[240px] shrink-0 pt-4">
-        <div class="sticky top-[11rem] flex max-h-[calc(100svh-12rem)] flex-col overflow-hidden">
+      <div class="media-library-layout mx-auto flex w-full max-w-4xl gap-8 overflow-visible">
+        <aside class="media-library-sidebar w-[240px] shrink-0 pt-4">
+        <div class="media-library-sidebar-panel sticky top-[11rem] flex max-h-[calc(100svh-12rem)] flex-col overflow-hidden">
           <div class="mb-2 shrink-0 px-1">
             <p class="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
               分类
@@ -1179,12 +1179,12 @@ function escapeHtml(value: string) {
         </div>
         </aside>
 
-        <main class="min-w-0 flex-1 overflow-visible pt-4">
+        <main class="media-library-content min-w-0 flex-1 overflow-visible pt-4">
         <section
           v-if="activeModule === 'videos' && currentView === 'grid'"
           class="space-y-0"
         >
-          <div v-if="filteredVideoItems.length" class="grid grid-cols-3 gap-4">
+          <div v-if="filteredVideoItems.length" class="media-library-grid grid grid-cols-2 gap-4 sm:grid-cols-3">
             <button
               v-for="item in filteredVideoItems"
               :key="item.id"
@@ -1271,7 +1271,7 @@ function escapeHtml(value: string) {
           v-else-if="activeModule === 'articles' && currentView === 'grid'"
           class="space-y-0"
         >
-          <div v-if="filteredArticles.length" class="grid grid-cols-3 gap-4">
+          <div v-if="filteredArticles.length" class="media-library-grid grid grid-cols-2 gap-4 sm:grid-cols-3">
             <button
               v-for="item in filteredArticles"
               :key="item.id"
@@ -1757,17 +1757,6 @@ function escapeHtml(value: string) {
   resize: vertical;
 }
 
-@media (max-width: 640px) {
-  .article-editor-row {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 0.5rem;
-  }
-
-  .article-editor-label {
-    line-height: 1.25rem;
-  }
-}
-
 .media-card-summary {
   display: -webkit-box;
   overflow: hidden;
@@ -1854,5 +1843,47 @@ function escapeHtml(value: string) {
 .media-markdown-preview {
   max-height: 220px;
   overflow: hidden;
+}
+
+@media (max-width: 768px) {
+  .media-library-layout {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .media-library-sidebar {
+    width: 100%;
+    padding-top: 1rem;
+  }
+
+  .media-library-sidebar-panel {
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
+
+  .media-library-sidebar-panel > .min-h-0 {
+    max-height: 42svh;
+    min-height: 0;
+  }
+
+  .media-library-content {
+    padding-top: 0;
+  }
+
+  .media-library-grid {
+    gap: 0.75rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .article-editor-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.5rem;
+  }
+
+  .article-editor-label {
+    line-height: 1.25rem;
+  }
 }
 </style>

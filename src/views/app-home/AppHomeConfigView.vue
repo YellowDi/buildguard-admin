@@ -490,7 +490,7 @@ function createId(prefix: string) {
 <template>
   <section class="app-home-page relative flex flex-col overflow-visible bg-background">
     <div class="sticky top-0 z-[6] shrink-0 bg-background px-3 pb-3 pt-4 sm:px-4">
-      <div class="mx-auto flex w-full max-w-4xl items-end justify-between gap-3">
+      <div class="app-home-header-row mx-auto flex w-full max-w-4xl items-end justify-between gap-3">
         <TitleBlock
           class="min-w-0 flex-1"
           title="App 首页"
@@ -511,9 +511,9 @@ function createId(prefix: string) {
     </div>
 
     <div class="px-3 sm:px-4">
-      <div class="mx-auto flex w-full max-w-4xl gap-8 overflow-visible">
-        <aside class="flex w-[240px] shrink-0 flex-col overflow-visible bg-background">
-          <div class="min-h-0 flex-1 overflow-y-auto pt-4">
+      <div class="app-home-layout mx-auto flex w-full max-w-4xl gap-8 overflow-visible">
+        <aside class="app-home-sidebar flex w-[240px] shrink-0 flex-col overflow-visible bg-background">
+          <div class="app-home-module-panel min-h-0 flex-1 overflow-y-auto pt-4">
         <div class="mb-2 px-1">
           <p class="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
             模块
@@ -1136,6 +1136,58 @@ function createId(prefix: string) {
 .article-editor-control {
   min-width: 0;
   width: 100%;
+}
+
+@media (max-width: 768px) {
+  .app-home-header-row {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .app-home-layout {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .app-home-sidebar {
+    width: 100%;
+  }
+
+  .app-home-module-panel {
+    max-height: 42svh;
+    min-height: 0;
+    padding-top: 1rem;
+  }
+
+  .app-home-preview-pane {
+    min-width: 0;
+    justify-content: center;
+    padding: 0.75rem 0 2rem;
+    width: 100%;
+  }
+
+  .app-home-preview-shell {
+    width: min(100%, 360px);
+    min-width: 0;
+    border-radius: 46px;
+  }
+
+  .app-home-device-screen {
+    border-radius: 36px;
+  }
+
+  .app-home-phone-button--mute {
+    left: -3px;
+  }
+
+  .app-home-phone-button--volume-up,
+  .app-home-phone-button--volume-down {
+    left: -4px;
+  }
+
+  .app-home-phone-button--power {
+    right: -4px;
+  }
 }
 
 @media (max-width: 640px) {
