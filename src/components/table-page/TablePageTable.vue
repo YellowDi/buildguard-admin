@@ -42,6 +42,11 @@ type HorizontalScrollbarDragState = {
   startClientX: number
   startScrollLeft: number
 }
+type TableLayoutMeasurement = {
+  overflow: boolean
+  fillColumnActive: boolean
+  compactTableActive: boolean
+}
 
 const HORIZONTAL_SCROLL_HINT_MESSAGE = "可按住 Shift + 鼠标滚轮进行横向移动。"
 /** 同一路由在本次浏览器会话内只提示一次，避免布局抖动或重复挂载反复弹出 */
@@ -49,6 +54,7 @@ const HORIZONTAL_SCROLL_HINT_SESSION_PREFIX = "buildguard:table-hscroll-hint:"
 const ROW_CLICK_DRAG_THRESHOLD = 5
 const ALIGN_TO_HEADER_WIDE_BREAKPOINT = 2000
 const COMPACT_DETAIL_TABLE_WIDTH_THRESHOLD = 48
+/** 避免像素舍入或临界差值触发固定操作列和自定义横向滚动条。 */
 const HORIZONTAL_OVERFLOW_ACTIVATION_THRESHOLD = 24
 const HORIZONTAL_SCROLLBAR_MIN_THUMB_SIZE = 40
 const NATIVE_HORIZONTAL_SCROLLBAR_MASK_SIZE = 18
@@ -184,7 +190,11 @@ const inlineQuickActionEnabled = computed(() => (
 const inlineSecondaryActions = computed(() => (
   (props.rowActions ?? []).filter(action => !isInlinePreviewAction(action))
 ))
-const resolvedFillColumnIndexes = computed(() => {
+/**
+ * 布局层只允许最后一个非操作列吃剩余宽度。
+ * 这样前面列保持内容宽度，操作列也不会被中间列或表格余量挤到视口边缘。
+ */
+const layoutFillColumnIndexes = computed(() => {
   const autoFillColumnIndex = getAutoFillColumnIndex()
   return autoFillColumnIndex >= 0 ? [autoFillColumnIndex] : []
 })
@@ -254,6 +264,7 @@ const leadingEdgeGutter = computed(() => {
 
   return props.listLevelTable ? edgeGutterSize.value : embeddedLeadingInset.value
 })
+/** 列表页右侧留白始终保留，避免无横向溢出时操作列贴住窗口右边。 */
 const trailingEdgeGutter = computed(() => {
   if (!props.edgeGutter) {
     return 0
@@ -997,7 +1008,7 @@ function getLoadingCellWidthClass(column: TableColumn, columnIndex: number, rowI
     return rowIndex % 2 === 0 ? "h-5 w-16 rounded-full" : "h-5 w-20 rounded-full"
   }
 
-  if (column.variant === "note" || column.cellRenderer?.kind === "note" || isResolvedFillColumn(columnIndex)) {
+  if (column.variant === "note" || column.cellRenderer?.kind === "note" || isLayoutFillColumn(columnIndex)) {
     return rowIndex % 2 === 0 ? "h-4 w-full max-w-[14rem]" : "h-4 w-full max-w-[11rem]"
   }
 
@@ -1033,7 +1044,7 @@ function getLoadingPrimaryLineClass(rowIndex: number) {
 }
 
 function getFillColumnIndexes() {
-  return resolvedFillColumnIndexes.value
+  return layoutFillColumnIndexes.value
 }
 
 function isActionLikeColumn(column: TableColumn) {
@@ -1053,12 +1064,12 @@ function getAutoFillColumnIndex() {
   return -1
 }
 
-function isResolvedFillColumn(columnIndex: number) {
-  return resolvedFillColumnIndexes.value.includes(columnIndex)
+function isLayoutFillColumn(columnIndex: number) {
+  return layoutFillColumnIndexes.value.includes(columnIndex)
 }
 
 function isFillColumnActive(columnIndex: number) {
-  return isResolvedFillColumn(columnIndex) && fillColumnActive.value
+  return isLayoutFillColumn(columnIndex) && fillColumnActive.value
 }
 
 function isNoteLikeColumn(column: TableColumn) {
@@ -1098,7 +1109,7 @@ function getStickyHeaderCellClass(column: TableColumn, columnIndex: number) {
 
 function getResolvedColumnCellClass(column: TableColumn, columnIndex: number) {
   const fillActive = isFillColumnActive(columnIndex)
-  const resolvedFillColumn = isResolvedFillColumn(columnIndex)
+  const layoutFillColumn = isLayoutFillColumn(columnIndex)
 
   return [
     getColumnCellClass(column, fillActive),
@@ -1106,7 +1117,7 @@ function getResolvedColumnCellClass(column: TableColumn, columnIndex: number) {
       ? getEmptyColumnWidthClass(column, columnIndex)
       : getNoteColumnMinWidthClass(column),
     fillActive ? "" : "w-px",
-    resolvedFillColumn
+    layoutFillColumn
       ? fillActive
         ? "max-w-none"
         : "max-w-none whitespace-nowrap"
@@ -1119,7 +1130,7 @@ function getEmptyColumnWidthClass(column: TableColumn, columnIndex: number) {
     return ""
   }
 
-  if (isResolvedFillColumn(columnIndex) || isNoteLikeColumn(column)) {
+  if (isLayoutFillColumn(columnIndex) || isNoteLikeColumn(column)) {
     return "min-w-[16rem]"
   }
 
@@ -1145,7 +1156,7 @@ function getEmptyColumnWidthClass(column: TableColumn, columnIndex: number) {
 function getNoteContentClass(column: TableColumn, columnIndex: number) {
   const fillActive = isFillColumnActive(columnIndex)
 
-  if (isResolvedFillColumn(columnIndex)) {
+  if (isLayoutFillColumn(columnIndex)) {
     return fillActive
       ? "w-full max-w-none whitespace-normal leading-6 text-muted-foreground"
       : "max-w-none whitespace-nowrap text-muted-foreground"
@@ -1222,6 +1233,7 @@ function syncActionColumnWidth(headerCells?: HTMLElement[]) {
   const headerStyles = actionHeader ? window.getComputedStyle(actionHeader) : null
   const headerPaddingLeft = Number.parseFloat(headerStyles?.paddingLeft || "0")
   const headerPaddingRight = Number.parseFloat(headerStyles?.paddingRight || "0")
+  // 只测标题文本和按钮组本身，避免 table-auto 拉伸后的操作列宽度反向污染布局状态。
   const headerWidth = headerLabelWidth + headerPaddingLeft + headerPaddingRight
 
   if (!contentElement || !actionCell) {
@@ -1242,6 +1254,11 @@ function syncActionColumnWidth(headerCells?: HTMLElement[]) {
   actionColumnFadeWidth.value = Math.max(0, Math.round(measuredWidth - contentWidth - paddingRight))
 }
 
+function hasMeaningfulHorizontalOverflow(contentWidth: number, viewportWidth: number, measuredOverflow = false) {
+  return contentWidth > viewportWidth + HORIZONTAL_OVERFLOW_ACTIVATION_THRESHOLD
+    || measuredOverflow
+}
+
 function syncHorizontalScrollState(measuredOverflow?: boolean) {
   if (!tableWrapperRef.value || !tableRef.value) {
     horizontalOverflow.value = false
@@ -1251,8 +1268,7 @@ function syncHorizontalScrollState(measuredOverflow?: boolean) {
 
   const wrapper = tableWrapperRef.value
   const contentWidth = Math.max(wrapper.scrollWidth, tableRef.value.scrollWidth)
-  const overflow = contentWidth > wrapper.clientWidth + HORIZONTAL_OVERFLOW_ACTIVATION_THRESHOLD
-    || measuredOverflow === true
+  const overflow = hasMeaningfulHorizontalOverflow(contentWidth, wrapper.clientWidth, measuredOverflow === true)
 
   horizontalOverflow.value = overflow
   stickyScrollLeft.value = wrapper.scrollLeft
@@ -1272,7 +1288,7 @@ function createMeasurementHost() {
   return measurementHost
 }
 
-function measureTableLayout() {
+function measureTableLayout(): TableLayoutMeasurement {
   if (!tableWrapperRef.value || !tableRef.value || typeof document === "undefined") {
     return {
       overflow: false,
@@ -1285,6 +1301,7 @@ function measureTableLayout() {
   const measurementHost = createMeasurementHost()
   const fillColumnIndexes = getFillColumnIndexes()
 
+  // 离屏克隆用于测内容本征宽度，避免真实表格已补宽后的尺寸影响判断。
   const tableClone = tableRef.value.cloneNode(true) as HTMLTableElement
   tableClone.style.minWidth = "0"
   tableClone.style.width = "max-content"
@@ -1302,6 +1319,7 @@ function measureTableLayout() {
         const cell = row.children.item(fillColumnIndex)
 
         if (cell instanceof HTMLElement) {
+          // fill 列先按内容宽度测量；只有表格整体放得下时才在真实表格中吃剩余空间。
           cell.style.width = "auto"
           cell.style.maxWidth = "none"
           cell.style.whiteSpace = "normal"
@@ -1330,7 +1348,7 @@ function measureTableLayout() {
   }
 
   return {
-    overflow: intrinsicWidth > wrapperClientWidth + HORIZONTAL_OVERFLOW_ACTIVATION_THRESHOLD,
+    overflow: hasMeaningfulHorizontalOverflow(intrinsicWidth, wrapperClientWidth),
     fillColumnActive,
     compactTableActive,
   }
