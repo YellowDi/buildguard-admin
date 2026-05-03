@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref, useSlots } from "vue"
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, useSlots, watch } from "vue"
 
 import SectionHeader from "@/components/layout/SectionHeader.vue"
 import { useSlidingTabIndicator } from "@/composables/useSlidingTabIndicator"
@@ -52,6 +52,14 @@ const hasHeaderActionSlot = computed(() => Boolean(slots.headerActions) || (!has
 const hasTabActions = computed(() => hasTabs.value && (Boolean(slots.tabActions) || Boolean(slots.actions)))
 const hasHeaderBottom = computed(() => Boolean(slots.headerBottom))
 const activeTabId = computed(() => props.tabs.find(tab => tab.active)?.id ?? props.tabs[0]?.id ?? "")
+const mobileTabsScrollViewportRef = ref<HTMLElement | null>(null)
+const mobileTabsOverflowLeft = ref(false)
+const mobileTabsOverflowRight = ref(false)
+let mobileTabsResizeObserver: ResizeObserver | null = null
+const tabsScrollViewportRef = ref<HTMLElement | null>(null)
+const tabsOverflowLeft = ref(false)
+const tabsOverflowRight = ref(false)
+let tabsResizeObserver: ResizeObserver | null = null
 const { indicatorStyle, setTabRef } = useSlidingTabIndicator({
   activeKey: activeTabId,
   watchSource: computed(() => props.tabs.map(tab => `${tab.id}:${tab.label}:${Number(Boolean(tab.active))}:${Number(Boolean(tab.disabled))}`)),
@@ -67,6 +75,40 @@ function syncHeaderHeight() {
   headerHeight.value = headerRef.value?.offsetHeight ?? 0
 }
 
+function syncMobileTabsOverflowState() {
+  const element = mobileTabsScrollViewportRef.value
+  if (!element) {
+    mobileTabsOverflowLeft.value = false
+    mobileTabsOverflowRight.value = false
+    return
+  }
+
+  const maxScrollLeft = Math.max(0, element.scrollWidth - element.clientWidth)
+  mobileTabsOverflowLeft.value = element.scrollLeft > 2
+  mobileTabsOverflowRight.value = maxScrollLeft - element.scrollLeft > 2
+}
+
+function handleMobileTabsScroll() {
+  syncMobileTabsOverflowState()
+}
+
+function syncTabsOverflowState() {
+  const element = tabsScrollViewportRef.value
+  if (!element) {
+    tabsOverflowLeft.value = false
+    tabsOverflowRight.value = false
+    return
+  }
+
+  const maxScrollLeft = Math.max(0, element.scrollWidth - element.clientWidth)
+  tabsOverflowLeft.value = element.scrollLeft > 2
+  tabsOverflowRight.value = maxScrollLeft - element.scrollLeft > 2
+}
+
+function handleTabsScroll() {
+  syncTabsOverflowState()
+}
+
 onMounted(() => {
   syncHeaderHeight()
 
@@ -76,12 +118,54 @@ onMounted(() => {
     })
     headerResizeObserver.observe(headerRef.value)
   }
+
+  nextTick(() => {
+    syncMobileTabsOverflowState()
+    syncTabsOverflowState()
+
+    if (typeof ResizeObserver !== "undefined" && mobileTabsScrollViewportRef.value) {
+      mobileTabsResizeObserver = new ResizeObserver(() => {
+        syncMobileTabsOverflowState()
+      })
+      mobileTabsResizeObserver.observe(mobileTabsScrollViewportRef.value)
+    }
+
+    if (typeof ResizeObserver !== "undefined" && tabsScrollViewportRef.value) {
+      tabsResizeObserver = new ResizeObserver(() => {
+        syncTabsOverflowState()
+      })
+      tabsResizeObserver.observe(tabsScrollViewportRef.value)
+    }
+  })
+
+  window.addEventListener("resize", syncMobileTabsOverflowState)
+  window.addEventListener("resize", syncTabsOverflowState)
 })
 
 onBeforeUnmount(() => {
   headerResizeObserver?.disconnect()
   headerResizeObserver = null
+  mobileTabsResizeObserver?.disconnect()
+  mobileTabsResizeObserver = null
+  tabsResizeObserver?.disconnect()
+  tabsResizeObserver = null
+  window.removeEventListener("resize", syncMobileTabsOverflowState)
+  window.removeEventListener("resize", syncTabsOverflowState)
 })
+
+watch(
+  () => [
+    props.tabs.length,
+    activeTabId.value,
+    hasTabActions.value,
+  ],
+  () => {
+    nextTick(() => {
+      syncMobileTabsOverflowState()
+      syncTabsOverflowState()
+    })
+  },
+)
 
 </script>
 
@@ -153,10 +237,12 @@ onBeforeUnmount(() => {
 
           <div v-if="hasTabs" class="mt-4 border-b border-border text-muted-foreground">
             <div class="flex min-w-0 items-end justify-between gap-2 sm:hidden">
-              <div class="min-w-0 flex-1">
+              <div class="relative min-w-0 flex-1 overflow-visible">
                 <div
+                  ref="mobileTabsScrollViewportRef"
                   data-detail-layout-tabs-scroll
                   class="min-w-0 -mt-1 overflow-x-auto whitespace-nowrap pt-1"
+                  @scroll="handleMobileTabsScroll"
                 >
                   <nav class="relative flex min-w-max flex-nowrap items-center text-[14px]" :aria-label="props.tabsAriaLabel">
                     <button
@@ -184,6 +270,15 @@ onBeforeUnmount(() => {
                     />
                   </nav>
                 </div>
+
+                <div
+                  v-if="mobileTabsOverflowLeft"
+                  class="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 bg-gradient-to-r from-background via-background/88 to-transparent"
+                />
+                <div
+                  v-if="mobileTabsOverflowRight"
+                  class="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-background via-background/92 to-transparent"
+                />
               </div>
 
               <div v-if="hasTabActions" class="ml-auto shrink-0 pb-2">
@@ -193,10 +288,12 @@ onBeforeUnmount(() => {
             </div>
 
             <div class="hidden min-w-0 items-end gap-6 sm:flex sm:flex-nowrap">
-              <div class="min-w-0 flex-1">
+              <div class="relative min-w-0 flex-1 overflow-visible">
                 <div
+                  ref="tabsScrollViewportRef"
                   data-detail-layout-tabs-scroll
                   class="min-w-0 -mt-1 overflow-x-auto whitespace-nowrap pt-1"
+                  @scroll="handleTabsScroll"
                 >
                   <nav class="relative flex min-w-max flex-nowrap items-center text-[14px]" :aria-label="props.tabsAriaLabel">
                     <button
@@ -224,6 +321,15 @@ onBeforeUnmount(() => {
                     />
                   </nav>
                 </div>
+
+                <div
+                  v-if="tabsOverflowLeft"
+                  class="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 bg-gradient-to-r from-background via-background/88 to-transparent"
+                />
+                <div
+                  v-if="tabsOverflowRight"
+                  class="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-background via-background/92 to-transparent"
+                />
               </div>
 
               <div
