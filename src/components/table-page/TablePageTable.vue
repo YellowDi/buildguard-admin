@@ -238,10 +238,17 @@ const pinnedActionTrailingOverflow = computed(() => (
 const pinnedActionFadeWidth = computed(() => (
   Math.min(actionColumnFadeWidth.value, Math.ceil(pinnedActionTrailingOverflow.value))
 ))
+const pinnedActionRightInset = computed(() => {
+  if (!pinRowActionsActive.value || !props.edgeGutter) {
+    return 0
+  }
+
+  return props.listLevelTable ? edgeGutterSize.value : embeddedTrailingInset.value
+})
 const showPinnedActionRightFade = computed(() => (
   pinRowActionsActive.value
   && props.edgeGutter
-  && props.listLevelTable
+  && pinnedActionRightInset.value > 0
 ))
 const shouldMaskNativeHorizontalScrollbar = computed(() => (
   props.fillAvailableHeight
@@ -264,7 +271,7 @@ const leadingEdgeGutter = computed(() => {
 
   return props.listLevelTable ? edgeGutterSize.value : embeddedLeadingInset.value
 })
-/** 列表页右侧留白始终保留，避免无横向溢出时操作列贴住窗口右边。 */
+/** 右侧留白始终保留，避免无横向溢出时操作列贴住窗口右边。 */
 const trailingEdgeGutter = computed(() => {
   if (!props.edgeGutter) {
     return 0
@@ -274,7 +281,7 @@ const trailingEdgeGutter = computed(() => {
     return edgeGutterSize.value
   }
 
-  return horizontalOverflow.value ? embeddedTrailingInset.value : 0
+  return embeddedTrailingInset.value
 })
 const tableInlineTrailingInset = computed(() => {
   if (!props.listLevelTable && compactTableActive.value) {
@@ -927,12 +934,12 @@ function getActionColumnStyle(fallbackWidth?: number) {
     paddingRight: "0px",
     "--table-pinned-action-fade-width": `${pinnedActionFadeWidth.value}px`,
     "--table-pinned-action-right-fade-width": showPinnedActionRightFade.value
-      ? `${edgeGutterSize.value}px`
+      ? `${pinnedActionRightInset.value}px`
       : "0px",
   }
 
-  if (pinRowActionsActive.value && props.edgeGutter && props.listLevelTable) {
-    style.right = `${edgeGutterSize.value}px`
+  if (pinnedActionRightInset.value > 0) {
+    style.right = `${pinnedActionRightInset.value}px`
   }
 
   if (!width) {
