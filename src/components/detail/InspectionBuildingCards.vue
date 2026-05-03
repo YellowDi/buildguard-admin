@@ -178,26 +178,26 @@ function resolveStatusIcon(status: InspectionBuildingStatus) {
 
 function resolveStatusIconWrapClass(status: InspectionBuildingStatus) {
   if (status === "completed") {
-    return "bg-[#eaf6f0] text-[#2f8f62] shadow-[inset_0_0_0_1px_rgba(47,143,98,0.08)]"
+    return "bg-success-surface text-success ring-1 ring-success/15"
   }
 
   if (status === "processing") {
-    return "bg-[#edf4ff] text-[#2f7df6] shadow-[inset_0_0_0_1px_rgba(47,125,246,0.08)]"
+    return "bg-brand-surface text-link ring-1 ring-brand-border"
   }
 
-  return "bg-[#fff4e8] text-[#d97706] shadow-[inset_0_0_0_1px_rgba(217,119,6,0.08)]"
+  return "bg-warning-surface text-warning ring-1 ring-warning/15"
 }
 
 function resolveScoreTone(scoreValue: number | null) {
   if (scoreValue === null) {
-    return "text-[#202126]"
+    return "text-foreground"
   }
 
   if (scoreValue > 0) {
-    return "text-[#1f2937]"
+    return "text-foreground"
   }
 
-  return "text-[#9aa0a7]"
+  return "text-muted-foreground"
 }
 
 function resolveItemResultBadgeTone(resultLabel: string | undefined) {
@@ -317,12 +317,12 @@ function handleExpandAfterLeave(element: Element) {
           <article
             v-for="building in props.buildings"
             :key="building.key"
-            class="overflow-hidden rounded-[20px] border border-black/4.5 bg-[#faf9f7] text-[#202126]"
+            class="overflow-hidden rounded-[20px] border border-border/60 bg-surface-secondary text-foreground shadow-(--shadow-border) dark:shadow-(--shadow-card)"
           >
             <div
               role="button"
               tabindex="0"
-              class="block w-full rounded-[16px] bg-white px-4 py-3.5 text-left shadow-[0_1px_2px_rgba(17,24,39,0.04),0_5px_10px_rgba(17,24,39,0.05)]"
+              class="block w-full rounded-[16px] bg-card px-4 py-3.5 text-left shadow-(--shadow-border) transition-[background-color,box-shadow] duration-180"
               :aria-expanded="isExpanded(building.key)"
               @click="handleBaseCardClick(building.key)"
               @keydown="handleBaseCardKeydown($event, building.key)"
@@ -344,22 +344,22 @@ function handleExpandAfterLeave(element: Element) {
                         ]"
                       />
                     </div>
-                    <div class="truncate whitespace-nowrap text-[18px] font-semibold tracking-[-0.025em] text-[#17181c]">
+                    <div class="truncate whitespace-nowrap text-[18px] font-semibold text-foreground">
                       {{ building.buildName }}
                     </div>
                   </div>
 
                   <Progress
                     :model-value="building.progressValue"
-                    class="mt-3.5 h-[6px] rounded-full bg-[#ebecef] **:data-[slot=progress-indicator]:bg-[#1d1d20]"
+                    class="mt-3.5 h-[6px] rounded-full bg-muted **:data-[slot=progress-indicator]:bg-foreground"
                   />
 
-                  <div class="mt-3 flex min-w-0 items-center justify-between gap-3 whitespace-nowrap text-[12px] text-[#a0a4ac]">
+                  <div class="mt-3 flex min-w-0 items-center justify-between gap-3 whitespace-nowrap text-[12px] text-muted-foreground">
                     <div class="min-w-0 truncate tabular-nums">
-                      <span class="text-[#2b2d33]">{{ building.completedCount }}</span>
+                      <span class="text-foreground">{{ building.completedCount }}</span>
                       <span class="ml-1">{{ building.progressLabel || "已完成" }}</span>
                       <span class="mx-1.5">/</span>
-                      <span class="text-[#2b2d33]">{{ building.totalCount }}</span>
+                      <span class="text-foreground">{{ building.totalCount }}</span>
                       <span class="ml-1">{{ props.totalLabel }}</span>
                     </div>
                     <div class="shrink-0 truncate tabular-nums text-right">
@@ -384,7 +384,7 @@ function handleExpandAfterLeave(element: Element) {
               >
                 <div
                   v-if="building.groups.length === 0"
-                  class="px-4 py-1 text-sm text-[#8f949c]"
+                  class="px-4 py-1 text-sm text-muted-foreground"
                 >
                   {{ props.emptyItemsText }}
                 </div>
@@ -400,18 +400,18 @@ function handleExpandAfterLeave(element: Element) {
                   >
                     <div class="flex items-center gap-3 px-4 py-2.5">
                       <div class="flex min-w-0 items-center gap-2">
-                        <div class="truncate text-[13px] font-semibold tracking-[0.01em] text-[#6f7680]">
+                        <div class="truncate text-[13px] font-semibold tracking-[0.01em] text-muted-foreground">
                           {{ group.title }}
                         </div>
                         <Badge
                           variant="secondary"
-                          class="min-w-6 justify-center rounded-md border border-black/6 bg-[#f3f4f6] px-1.5 py-0.5 text-[11px] font-medium leading-none text-[#6b7280]"
+                          class="min-w-6 justify-center rounded-md border border-border/60 bg-muted px-1.5 py-0.5 text-[11px] font-medium leading-none text-muted-foreground"
                         >
                           {{ group.items.length }}
                         </Badge>
                       </div>
 
-                      <div class="h-px flex-1 bg-black/6" />
+                      <div class="h-px flex-1 bg-border/70" />
 
                       <div
                         :class="[
@@ -431,8 +431,8 @@ function handleExpandAfterLeave(element: Element) {
                         tabindex="0"
                         :aria-pressed="props.selectable ? isItemSelected(item.key) : undefined"
                         :class="[
-                          'flex min-h-10 w-full items-center justify-between gap-4 border-b border-black/5 px-4 py-2.5 text-left transition-colors duration-180 ease-out last:border-b-0 hover:bg-black/1.5',
-                          props.selectable && isItemSelected(item.key) ? 'bg-black/2' : '',
+                          'flex min-h-10 w-full items-center justify-between gap-4 border-b border-border/60 px-4 py-2.5 text-left transition-colors duration-180 ease-out last:border-b-0 hover:bg-interactive-hover',
+                          props.selectable && isItemSelected(item.key) ? 'bg-interactive-active-surface' : '',
                           isItemSelectionDisabled(item.key) ? 'cursor-not-allowed opacity-55 hover:bg-transparent' : '',
                           !props.selectable && !item.onSelect ? 'cursor-default' : 'cursor-pointer',
                         ]"
@@ -456,7 +456,7 @@ function handleExpandAfterLeave(element: Element) {
                             :icon="resolveItemResultBadgeIcon(item.resultLabel)"
                             class="shrink-0"
                           />
-                          <div class="truncate whitespace-nowrap text-[14px] font-medium text-[#1e1f23]">
+                          <div class="truncate whitespace-nowrap text-[14px] font-medium text-foreground">
                             {{ item.name }}
                           </div>
                         </div>
@@ -483,7 +483,7 @@ function handleExpandAfterLeave(element: Element) {
             >
               <button
                 type="button"
-                class="inline-flex items-center gap-1.5 whitespace-nowrap text-[12px] font-medium text-[#8f949c] transition-colors duration-180 hover:text-[#1f2024]"
+                class="inline-flex items-center gap-1.5 whitespace-nowrap text-[12px] font-medium text-muted-foreground transition-colors duration-180 hover:text-foreground"
                 :aria-expanded="isExpanded(building.key)"
                 @click="toggleBuilding(building.key)"
               >
