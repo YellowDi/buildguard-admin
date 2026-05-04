@@ -548,6 +548,18 @@ const router = createRouter({
             ] satisfies BreadcrumbMetaItem[],
           } satisfies RouteMetaConfig,
         },
+        {
+          path: ":pathMatch(.*)*",
+          name: "not-found",
+          component: () => import("@/views/NotFoundView.vue"),
+          meta: {
+            title: "页面未找到",
+            loading: "dashboard",
+            breadcrumb: [
+              { title: "页面未找到" },
+            ] satisfies BreadcrumbMetaItem[],
+          } satisfies RouteMetaConfig,
+        },
       ],
     },
   ],
