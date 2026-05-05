@@ -1128,6 +1128,11 @@ function toDictionaryValue(value: unknown) {
   return null
 }
 
+function shouldShowRepairRemarkTooltip(value: unknown) {
+  const text = toText(value)
+  return text.length > 12
+}
+
 function compareWorkOrderRows(
   left: WorkOrderRecord,
   right: WorkOrderRecord,
@@ -1431,9 +1436,9 @@ async function ensureRepairDictionaries() {
       <template #cell-repairRemark="{ row }">
         <TooltipWrap
           :content="toText(row.remark, '-')"
-          :disabled="!toText(row.remark) || toText(row.remark) === '-'"
+          :disabled="!shouldShowRepairRemarkTooltip(row.remark)"
           align="start"
-          class="max-w-[min(32rem,calc(100vw-3rem))] whitespace-normal break-words text-left leading-5"
+          class="w-auto max-w-xs whitespace-normal text-left leading-5 [overflow-wrap:anywhere] [text-wrap:wrap]"
         >
           <span class="block max-w-[min(34rem,42vw)] cursor-default truncate text-foreground">
             {{ toText(row.remark, "-") }}
