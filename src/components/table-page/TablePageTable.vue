@@ -101,8 +101,6 @@ const props = withDefaults(defineProps<{
    * 一般请用 `stickyHeader`（fixed 克隆，已 Teleport 到 body）；勿与 `stickyHeader` 同时开启。
    */
   stickyThead?: boolean
-  /** 兼容旧调用保留；尾部占位列已移除，不再影响结构。 */
-  endSpacer?: boolean
   /** 是否显示序号列中的 checkbox 选择交互。 */
   showIndexCheckbox?: boolean
   /** 是否启用滚动内容的动态边缘留白。 */
@@ -127,7 +125,6 @@ const props = withDefaults(defineProps<{
   emptyState: undefined,
   listLevelTable: true,
   stickyThead: false,
-  endSpacer: true,
   showIndexCheckbox: true,
   edgeGutter: true,
   showRowActionIcons: false,
@@ -149,7 +146,6 @@ const scrollViewportClassName = computed(() => cn(
 ))
 const tableClassName = computed(() => getTableClass(props.tableClass))
 const hasRowActions = computed(() => (props.rowActions?.length ?? 0) > 0)
-const tableColumnSpan = computed(() => props.columns.length + (hasRowActions.value ? 1 : 0))
 const tableOuterRef = ref<HTMLElement | null>(null)
 const tableWrapperRef = ref<HTMLElement | null>(null)
 const horizontalScrollbarTrackRef = ref<HTMLElement | null>(null)
@@ -2033,16 +2029,6 @@ onBeforeUnmount(() => {
                 </td>
               </tr>
 
-              <tr
-                v-if="props.fillAvailableHeight && props.endSpacer"
-                aria-hidden="true"
-                class="pointer-events-none"
-              >
-                <td
-                  :colspan="tableColumnSpan"
-                  class="h-[var(--app-page-bottom-gap)] border-0 p-0"
-                />
-              </tr>
             </tbody>
           </table>
           <div :class="tableTheme.edgeGutter" :style="getEdgeGutterStyle(trailingEdgeGutter)" />
