@@ -149,6 +149,7 @@ const scrollViewportClassName = computed(() => cn(
 ))
 const tableClassName = computed(() => getTableClass(props.tableClass))
 const hasRowActions = computed(() => (props.rowActions?.length ?? 0) > 0)
+const tableColumnSpan = computed(() => props.columns.length + (hasRowActions.value ? 1 : 0))
 const tableOuterRef = ref<HTMLElement | null>(null)
 const tableWrapperRef = ref<HTMLElement | null>(null)
 const horizontalScrollbarTrackRef = ref<HTMLElement | null>(null)
@@ -2030,6 +2031,17 @@ onBeforeUnmount(() => {
                   </div>
                   <span v-if="showPinnedActionRightFade" aria-hidden="true" :class="tableTheme.pinnedAction.rightFade" />
                 </td>
+              </tr>
+
+              <tr
+                v-if="props.fillAvailableHeight && props.endSpacer"
+                aria-hidden="true"
+                class="pointer-events-none"
+              >
+                <td
+                  :colspan="tableColumnSpan"
+                  class="h-[var(--app-page-bottom-gap)] border-0 p-0"
+                />
               </tr>
             </tbody>
           </table>

@@ -189,7 +189,7 @@ async function handleExportConfirm(payload: { scope: TableExportScope; format: T
     ]"
     style="--table-page-sticky-top: -1rem;"
   >
-    <div :class="cn('flex min-h-0 min-w-0 flex-1 flex-col pt-3', slots.footer ? '' : 'pb-3')">
+    <div :class="cn('flex min-h-0 min-w-0 flex-1 flex-col pt-3', slots.footer || props.fillAvailableHeight ? '' : 'pb-3')">
       <div class="flex min-h-0 min-w-0 flex-1 flex-col">
         <Header
           class="min-w-0 w-full"
