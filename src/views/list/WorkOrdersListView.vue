@@ -9,6 +9,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import TablePage from "@/components/table-page/TablePage.vue"
+import { TooltipWrap } from "@/components/ui/tooltip"
 import { workOrderStatusMap } from "@/components/table-page/statusPresets"
 import { createTablePageDefinition, useTablePage } from "@/components/table-page/useTablePage"
 import type { TablePageSchema, TableQueryBarConfig } from "@/components/table-page/types"
@@ -1055,6 +1056,7 @@ function createRepairColumns(): TablePageSchema<WorkOrderRecord>["columns"] {
       key: "remark",
       label: "内容说明",
       filterType: "text",
+      slot: "cell-repairRemark",
       format: "note",
       filter: {
         type: "text",
@@ -1424,6 +1426,19 @@ async function ensureRepairDictionaries() {
         <span :class="props.kind === 'repair' && row.executor === '未指派' ? 'text-muted-foreground' : undefined">
           {{ row.executor }}
         </span>
+      </template>
+
+      <template #cell-repairRemark="{ row }">
+        <TooltipWrap
+          :content="toText(row.remark, '-')"
+          :disabled="!toText(row.remark) || toText(row.remark) === '-'"
+          align="start"
+          class="max-w-[min(32rem,calc(100vw-3rem))] whitespace-normal break-words text-left leading-5"
+        >
+          <span class="block max-w-[min(34rem,42vw)] cursor-default truncate text-foreground">
+            {{ toText(row.remark, "-") }}
+          </span>
+        </TooltipWrap>
       </template>
 
       <template #cell-customerName="{ row }">
