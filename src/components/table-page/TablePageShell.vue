@@ -323,7 +323,7 @@ async function handleExportConfirm(payload: { scope: TableExportScope; format: T
 
     <div
       v-if="slots.footer"
-      class="min-w-0 shrink-0 pt-3"
+      class="min-w-0 shrink-0"
     >
       <div :class="cn(props.listLevelTable ? 'flex w-full justify-end px-4' : 'min-w-0')">
         <slot name="footer" />
