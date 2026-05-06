@@ -25,6 +25,7 @@ const activeMedia = ref<ActiveMedia | null>(null)
 const frameStyle = ref<Record<string, string>>({})
 const backdropVisible = ref(false)
 const closing = ref(false)
+const mediaRatio = ref<number | null>(null)
 let sourceRect: DOMRect | null = null
 let closeTimer: number | null = null
 let suppressOpenUntil = 0
@@ -53,6 +54,7 @@ function open(item: MediaLightboxItem, title: string, event: MouseEvent) {
 
   clearCloseTimer()
   sourceRect = sourceElement.getBoundingClientRect()
+  mediaRatio.value = resolveElementRatio(sourceElement)
   activeMedia.value = {
     ...item,
     title,
@@ -70,7 +72,7 @@ function open(item: MediaLightboxItem, title: string, event: MouseEvent) {
       }
 
       backdropVisible.value = true
-      frameStyle.value = buildFrameStyle(resolveTargetRect(sourceRect), true, 18)
+      frameStyle.value = buildFrameStyle(resolveTargetRect(sourceRect, mediaRatio.value), true, 18)
     })
   })
 }
@@ -101,6 +103,7 @@ function reset() {
   activeMedia.value = null
   backdropVisible.value = false
   closing.value = false
+  mediaRatio.value = null
   sourceRect = null
   frameStyle.value = {}
   unlockBodyScroll()
@@ -126,6 +129,21 @@ function isVideo(item: MediaLightboxItem) {
   return item.type === "video"
 }
 
+function handleMediaLoaded(event: Event) {
+  if (!activeMedia.value || !sourceRect) {
+    return
+  }
+
+  const nextRatio = resolveMediaElementRatio(event.currentTarget)
+
+  if (!nextRatio || Math.abs((mediaRatio.value ?? 0) - nextRatio) < 0.01) {
+    return
+  }
+
+  mediaRatio.value = nextRatio
+  frameStyle.value = buildFrameStyle(resolveTargetRect(sourceRect, nextRatio), true, 18)
+}
+
 function buildFrameStyle(rect: DOMRect | LightboxRect, animated: boolean, borderRadius: number) {
   return {
     left: `${rect.left}px`,
@@ -146,14 +164,16 @@ type LightboxRect = {
   height: number
 }
 
-function resolveTargetRect(origin: DOMRect): LightboxRect {
+function resolveTargetRect(origin: DOMRect, preferredRatio: number | null): LightboxRect {
   const viewportWidth = window.innerWidth
   const viewportHeight = window.innerHeight
   const viewportPaddingX = viewportWidth < 640 ? 20 : 56
   const viewportPaddingY = viewportHeight < 720 ? 28 : 64
   const maxWidth = Math.min(1120, Math.max(160, viewportWidth - viewportPaddingX * 2))
   const maxHeight = Math.min(820, Math.max(120, viewportHeight - viewportPaddingY * 2))
-  const ratio = origin.width > 0 && origin.height > 0 ? origin.width / origin.height : 1
+  const ratio = preferredRatio && Number.isFinite(preferredRatio) && preferredRatio > 0
+    ? preferredRatio
+    : origin.width > 0 && origin.height > 0 ? origin.width / origin.height : 1
   let width = maxWidth
   let height = width / ratio
 
@@ -168,6 +188,26 @@ function resolveTargetRect(origin: DOMRect): LightboxRect {
     width,
     height,
   }
+}
+
+function resolveElementRatio(element: HTMLElement) {
+  return resolveMediaElementRatio(element.querySelector("img, video"))
+}
+
+function resolveMediaElementRatio(value: EventTarget | Element | null) {
+  if (value instanceof HTMLImageElement) {
+    return resolveRatio(value.naturalWidth, value.naturalHeight)
+  }
+
+  if (value instanceof HTMLVideoElement) {
+    return resolveRatio(value.videoWidth, value.videoHeight)
+  }
+
+  return null
+}
+
+function resolveRatio(width: number, height: number) {
+  return width > 0 && height > 0 ? width / height : null
 }
 
 function lockBodyScroll() {
@@ -226,12 +266,14 @@ onBeforeUnmount(() => {
           controls
           autoplay
           playsinline
+          @loadedmetadata="handleMediaLoaded"
           class="h-full w-full bg-black object-contain"
         />
         <img
           v-else
           :src="activeMedia.src"
           :alt="activeMedia.alt ?? activeMedia.title"
+          @load="handleMediaLoaded"
           class="h-full w-full bg-black object-contain"
         >
       </div>
