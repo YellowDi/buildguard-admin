@@ -638,7 +638,7 @@ function createId(prefix: string) {
                   <article
                     v-for="item in resolveCategoryVideos(getVideoModuleActiveCategory(module)!).slice(0, 8)"
                     :key="item.id"
-                    class="relative h-48 w-36 shrink-0 overflow-hidden rounded-[8px] bg-zinc-950 text-white shadow-[0_8px_18px_rgba(15,23,42,0.12)]"
+                    class="relative h-48 w-36 shrink-0 overflow-hidden rounded-[8px] bg-zinc-950 text-white"
                   >
                     <img
                       :src="getCoverSrc(item.cover)"
@@ -670,7 +670,7 @@ function createId(prefix: string) {
               <section>
                 <article
                   v-if="getArticle(module)"
-                  class="app-home-article-card relative aspect-[1.34/1] overflow-hidden bg-white shadow-[0_8px_18px_rgba(15,23,42,0.08)]"
+                  class="app-home-article-card relative aspect-[1.34/1] overflow-hidden bg-white"
                 >
                   <img
                     :src="getCoverSrc(getArticle(module)!.cover)"
