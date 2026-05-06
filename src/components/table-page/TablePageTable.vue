@@ -58,6 +58,7 @@ const COMPACT_DETAIL_TABLE_WIDTH_THRESHOLD = 48
 const HORIZONTAL_OVERFLOW_ACTIVATION_THRESHOLD = 24
 const HORIZONTAL_SCROLLBAR_MIN_THUMB_SIZE = 40
 const NATIVE_HORIZONTAL_SCROLLBAR_MASK_SIZE = 18
+const ACTION_COLUMN_TRAILING_SAFE_AREA = 4
 const ACTION_COLUMN_KEYS = new Set(["action", "actions", "operation", "operations"])
 const ROW_CLICK_IGNORE_SELECTOR = [
   "button",
@@ -928,7 +929,7 @@ function getStickyCellStyle(columnIndex: number) {
 function getActionColumnStyle(fallbackWidth?: number) {
   const width = fallbackWidth ?? actionColumnWidth.value
   const style: Record<string, string> = {
-    paddingRight: "0px",
+    paddingRight: `${ACTION_COLUMN_TRAILING_SAFE_AREA}px`,
     "--table-pinned-action-fade-width": `${pinnedActionFadeWidth.value}px`,
     "--table-pinned-action-right-fade-width": showPinnedActionRightFade.value
       ? `${pinnedActionRightInset.value}px`
@@ -1101,6 +1102,7 @@ function getResolvedColumnHeaderClass(column: TableColumn, columnIndex: number) 
       ? getEmptyColumnWidthClass(column, columnIndex)
       : getNoteColumnMinWidthClass(column),
     fillActive ? "" : "w-px",
+    isActionLikeColumn(column) ? "overflow-visible" : "",
   ]
 }
 
@@ -1121,6 +1123,7 @@ function getResolvedColumnCellClass(column: TableColumn, columnIndex: number) {
       ? getEmptyColumnWidthClass(column, columnIndex)
       : getNoteColumnMinWidthClass(column),
     fillActive ? "" : "w-px",
+    isActionLikeColumn(column) ? "overflow-visible" : "",
     layoutFillColumn
       ? fillActive
         ? "max-w-none"
