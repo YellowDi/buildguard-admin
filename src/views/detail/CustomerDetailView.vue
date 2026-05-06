@@ -1644,6 +1644,17 @@ const subAccountsSchema: TablePageSchema<SubAccountRow> = {
       },
       sort: true,
     },
+    {
+      key: "uuid",
+      label: "Uuid",
+      filterType: "text",
+      tone: "muted",
+      filter: {
+        type: "text",
+        placeholder: "输入 Uuid",
+      },
+      sort: true,
+    },
   ],
   filters: [],
   sort: {
