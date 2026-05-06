@@ -1349,10 +1349,8 @@ function measureTableLayout(): TableLayoutMeasurement {
   const compactTableActive = !props.listLevelTable
     && wrapperClientWidth - intrinsicWidth >= COMPACT_DETAIL_TABLE_WIDTH_THRESHOLD
 
-  if (!compactTableActive) {
-    const extraWidth = wrapperClientWidth - intrinsicWidth
-    fillColumnActive = extraWidth >= 0
-  }
+  const extraWidth = wrapperClientWidth - intrinsicWidth
+  fillColumnActive = extraWidth >= 0
 
   return {
     overflow: hasMeaningfulHorizontalOverflow(intrinsicWidth, wrapperClientWidth),
