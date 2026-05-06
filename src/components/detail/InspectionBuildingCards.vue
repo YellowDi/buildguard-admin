@@ -317,12 +317,12 @@ function handleExpandAfterLeave(element: Element) {
           <article
             v-for="building in props.buildings"
             :key="building.key"
-            class="overflow-hidden rounded-[20px] border border-border/60 bg-surface-secondary text-foreground shadow-(--shadow-border) dark:shadow-(--shadow-card)"
+            class="overflow-hidden rounded-[20px] border border-border/60 bg-surface-secondary text-foreground"
           >
             <div
               role="button"
               tabindex="0"
-              class="block w-full rounded-[16px] bg-card px-4 py-3.5 text-left shadow-(--shadow-border) transition-[background-color,box-shadow] duration-180"
+              class="block w-full rounded-[16px] bg-card px-4 py-3.5 text-left shadow-(--shadow-border) transition-colors duration-180"
               :aria-expanded="isExpanded(building.key)"
               @click="handleBaseCardClick(building.key)"
               @keydown="handleBaseCardKeydown($event, building.key)"
