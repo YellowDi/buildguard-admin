@@ -123,7 +123,7 @@ const visibleTrailingItems = computed(() => {
         aria-label="打开侧边栏"
         @click.stop="props.onToggleMobileSidebar?.()"
       >
-        <i class="ri-side-bar-line text-base leading-none" />
+        <i class="ri-layout-left-2-line text-base leading-none" />
       </button>
     </TooltipWrap>
     <TooltipWrap content="切换侧边栏">
@@ -133,7 +133,7 @@ const visibleTrailingItems = computed(() => {
         aria-label="切换侧边栏"
         @click.stop="props.onToggleDesktopSidebar?.()"
       >
-        <i class="ri-side-bar-line text-base leading-none" />
+        <i class="ri-layout-left-2-line text-base leading-none" />
       </button>
     </TooltipWrap>
     <Separator orientation="vertical" class="mr-2 h-4! self-center shrink-0" />

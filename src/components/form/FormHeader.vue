@@ -113,7 +113,7 @@ const primaryActionText = "确认"
             <TooltipWrap content="返回">
               <button
                 type="button"
-                class="inline-flex size-8 items-center justify-center rounded-md text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+                class="-ml-2 inline-flex size-8 items-center justify-center rounded-md text-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
                 aria-label="返回"
                 @click="emit('back')"
               >

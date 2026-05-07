@@ -22,7 +22,7 @@ const { toggleSidebar } = useSidebar()
       :class="cn('h-7 w-7', props.class)"
       @click="toggleSidebar"
     >
-      <i class="ri-side-bar-line text-base leading-none" />
+      <i class="ri-layout-left-2-line text-base leading-none" />
       <span class="sr-only">切换侧边栏</span>
     </Button>
   </TooltipWrap>
