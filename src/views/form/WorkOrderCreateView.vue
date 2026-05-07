@@ -2163,10 +2163,11 @@ watch(
                 :button-label="hasSelectedRepairInspectionItems ? '已禁用' : form.repairFiles.length ? '继续上传' : '选择图片'"
                 loading-label="上传中..."
                 icon="ri-image-add-line"
+                :show-supplement="Boolean(form.repairFiles.length)"
                 @files-selected="files => { void uploadRepairFiles(files); handleFocus('section-repair-files') }"
               >
 
-                <div v-if="form.repairFiles.length" class="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4">
+                <div v-if="form.repairFiles.length" class="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4">
                   <figure
                     v-for="file in form.repairFiles"
                     :key="file.id"

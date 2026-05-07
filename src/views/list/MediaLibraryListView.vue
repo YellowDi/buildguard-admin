@@ -1478,34 +1478,42 @@ function escapeHtml(value: string) {
                   button-label="选择封面"
                   icon="ri-image-add-line"
                   compact
+                  :show-supplement="Boolean(articleCoverPreviewSrc)"
                   @files-selected="files => handleArticleCoverFiles(files)"
                 >
                   <template v-if="articleCoverPreviewSrc" #preview="{ open }">
-                    <figure class="group relative h-28 w-full overflow-hidden rounded-lg bg-muted shadow-(--shadow-border) sm:w-44">
-                      <button
-                        type="button"
-                        class="block h-full w-full text-left"
-                        aria-label="更换文章封面"
-                        @click="open"
-                      >
-                        <img
-                          class="h-full w-full object-cover outline outline-1 -outline-offset-1 outline-black/5"
-                          :src="articleCoverPreviewSrc"
-                          alt=""
-                          aria-hidden="true"
+                    <div class="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+                      <figure class="group relative aspect-[4/3] overflow-hidden rounded-lg bg-muted shadow-(--shadow-border)">
+                        <button
+                          type="button"
+                          class="block h-full w-full text-left"
+                          aria-label="更换文章封面"
+                          @click="open"
                         >
-                      </button>
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        size="icon"
-                        class="absolute right-1.5 top-1.5 size-8 bg-background/92 text-foreground opacity-0 shadow-sm transition-[opacity,background-color] duration-180 ease-out hover:bg-background group-hover:opacity-100 focus-visible:opacity-100"
-                        aria-label="移除文章封面"
-                        @click.stop="removeArticleCover"
-                      >
-                        <i class="ri-close-line text-base" />
-                      </Button>
-                    </figure>
+                          <img
+                            class="h-full w-full object-cover outline outline-1 -outline-offset-1 outline-black/5"
+                            :src="articleCoverPreviewSrc"
+                            alt=""
+                            aria-hidden="true"
+                          >
+                        </button>
+                        <figcaption class="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 via-black/28 to-transparent px-2.5 pb-2 pt-8">
+                          <p class="truncate text-[12px] font-medium leading-4 text-white">
+                            封面图片
+                          </p>
+                        </figcaption>
+                        <Button
+                          type="button"
+                          variant="secondary"
+                          size="icon"
+                          class="absolute right-1.5 top-1.5 size-8 bg-background/92 text-foreground opacity-0 shadow-sm transition-[opacity,background-color] duration-180 ease-out hover:bg-background group-hover:opacity-100 focus-visible:opacity-100"
+                          aria-label="移除文章封面"
+                          @click.stop="removeArticleCover"
+                        >
+                          <i class="ri-close-line text-base" />
+                        </Button>
+                      </figure>
+                    </div>
                   </template>
                 </FileUploadField>
               </div>
@@ -1580,7 +1588,7 @@ function escapeHtml(value: string) {
                   compact
                   @files-selected="files => { void handleVideoFiles(files) }"
                 >
-                  <div v-if="canUseVideoUploadTest" class="flex min-w-0 flex-wrap items-center gap-3">
+                  <template v-if="canUseVideoUploadTest" #actions>
                     <Button
                       type="button"
                       variant="ghost"
@@ -1591,7 +1599,7 @@ function escapeHtml(value: string) {
                       <i class="ri-flask-line text-sm" />
                       <span>测试上传</span>
                     </Button>
-                  </div>
+                  </template>
                 </FileUploadField>
               </div>
             </div>

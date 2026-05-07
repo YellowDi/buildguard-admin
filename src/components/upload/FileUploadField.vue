@@ -19,6 +19,7 @@ const props = withDefaults(defineProps<{
   loadingIcon?: string
   disabledIcon?: string
   compact?: boolean
+  showSupplement?: boolean
   class?: string
 }>(), {
   accept: undefined,
@@ -34,6 +35,7 @@ const props = withDefaults(defineProps<{
   loadingIcon: "ri-loader-4-line animate-spin",
   disabledIcon: "ri-lock-line",
   compact: false,
+  showSupplement: false,
   class: "",
 })
 
@@ -52,6 +54,8 @@ const resolvedIcon = computed(() => {
 })
 const resolvedButtonLabel = computed(() => props.loading ? props.loadingLabel : props.buttonLabel)
 const hasPreview = computed(() => Boolean(slots.preview))
+const hasActions = computed(() => Boolean(slots.actions))
+const hasSupplement = computed(() => props.showSupplement && Boolean(slots.preview || slots.default))
 
 function openFileDialog() {
   if (!isInteractive.value) {
@@ -109,10 +113,6 @@ function handleDrop(event: DragEvent) {
       @change="handleInputChange"
     >
 
-    <div v-if="hasPreview" class="min-w-0">
-      <slot name="preview" :open="openFileDialog" />
-    </div>
-
     <div class="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
       <div class="flex min-w-0 gap-3">
         <div class="flex size-10 shrink-0 items-center justify-center rounded-md border border-border/70 bg-muted/35 text-muted-foreground">
@@ -135,19 +135,27 @@ function handleDrop(event: DragEvent) {
         </div>
       </div>
 
-      <Button
-        variant="outline"
-        size="sm"
-        type="button"
-        class="h-9 shrink-0 gap-2 rounded-md"
-        :disabled="!isInteractive"
-        @click="openFileDialog"
-      >
-        <i :class="cn(resolvedIcon, 'text-sm')" />
-        {{ resolvedButtonLabel }}
-      </Button>
+      <div class="flex shrink-0 flex-wrap items-center gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          type="button"
+          class="h-9 shrink-0 gap-2 rounded-md"
+          :disabled="!isInteractive"
+          @click="openFileDialog"
+        >
+          <i :class="cn(resolvedIcon, 'text-sm')" />
+          {{ resolvedButtonLabel }}
+        </Button>
+        <slot v-if="hasActions" name="actions" />
+      </div>
     </div>
 
-    <slot :open="openFileDialog" />
+    <div v-if="hasSupplement" class="min-w-0 border-t border-dashed border-border pt-3">
+      <div v-if="hasPreview" class="min-w-0">
+        <slot name="preview" :open="openFileDialog" />
+      </div>
+      <slot :open="openFileDialog" />
+    </div>
   </div>
 </template>
