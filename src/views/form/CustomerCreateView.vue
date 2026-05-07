@@ -797,7 +797,6 @@ function dedupeSelectOptions(options: SelectOption[]) {
               accept="image/png,image/jpeg,image/jpg,image/webp"
               title="上传营业执照照片"
               description="支持 JPG、PNG、WEBP，可点击选择，也可以将图片拖放到此处。"
-              :selected-label="businessLicenseFileName || (form.usciFile ? '已选择营业执照图片' : '')"
               button-label="选择图片"
               icon="ri-image-add-line"
               :show-supplement="Boolean(form.usciFile)"
@@ -815,14 +814,9 @@ function dedupeSelectOptions(options: SelectOption[]) {
                       <img
                         :src="form.usciFile"
                         alt="营业执照预览"
-                        class="h-full w-full object-contain p-2 outline outline-1 -outline-offset-1 outline-black/5"
+                        class="h-full w-full object-cover outline outline-1 -outline-offset-1 outline-black/5"
                       >
                     </button>
-                    <figcaption class="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 via-black/28 to-transparent px-2.5 pb-2 pt-8">
-                      <p class="truncate text-[12px] font-medium leading-4 text-white">
-                        {{ businessLicenseFileName || "营业执照照片" }}
-                      </p>
-                    </figcaption>
                     <Button
                       type="button"
                       variant="secondary"

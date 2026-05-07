@@ -1474,7 +1474,6 @@ function escapeHtml(value: string) {
                   accept="image/png,image/jpeg,image/jpg,image/webp"
                   title="上传封面"
                   description="支持 JPG、PNG、WEBP，可点击选择，也可以将图片拖放到此处。"
-                  :selected-label="formState.cover ? '已选择封面图片' : ''"
                   button-label="选择封面"
                   icon="ri-image-add-line"
                   compact
@@ -1497,11 +1496,6 @@ function escapeHtml(value: string) {
                             aria-hidden="true"
                           >
                         </button>
-                        <figcaption class="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 via-black/28 to-transparent px-2.5 pb-2 pt-8">
-                          <p class="truncate text-[12px] font-medium leading-4 text-white">
-                            封面图片
-                          </p>
-                        </figcaption>
                         <Button
                           type="button"
                           variant="secondary"
