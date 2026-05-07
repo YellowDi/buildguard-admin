@@ -7,6 +7,7 @@ import FormBodyLoading from "@/components/loading/FormBodyLoading.vue"
 import FormFieldSection from "@/components/form/FormFieldSection.vue"
 import FormHeader from "@/components/form/FormHeader.vue"
 import FormQuickNav from "@/components/form/FormQuickNav.vue"
+import FileUploadField from "@/components/upload/FileUploadField.vue"
 import { Button } from "@/components/ui/button"
 import { FieldDescription, FieldGroup, FieldLegend, FieldSet } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
@@ -90,7 +91,6 @@ const loadErrorMessage = ref("")
 const anchorItems = ref<QuickNavItem[]>([])
 const activeNavId = ref("")
 const formSectionsRef = ref<HTMLElement | null>(null)
-const businessLicenseInput = ref<HTMLInputElement | null>(null)
 const businessLicenseFileName = ref("")
 const initialSnapshot = ref<CustomerFormSnapshot>(createEmptySnapshot())
 const businessPresetLoading = ref(false)
@@ -240,18 +240,8 @@ function setMainPrincipal(id: number, checked: boolean) {
   syncMainPrincipalFlags()
 }
 
-async function handleBusinessLicenseFile(event: Event) {
-  const file = (event.target as HTMLInputElement).files?.[0]
-
-  if (!file) {
-    return
-  }
-
-  await applyBusinessLicenseFile(file)
-}
-
-async function handleBusinessLicenseDrop(event: DragEvent) {
-  const file = event.dataTransfer?.files?.[0]
+async function handleBusinessLicenseFiles(files: File[]) {
+  const file = files[0]
 
   if (!file) {
     return
@@ -272,10 +262,6 @@ async function applyBusinessLicenseFile(file: File) {
   } catch {
     toast.error("营业执照读取失败")
   }
-}
-
-function triggerBusinessLicenseSelect() {
-  businessLicenseInput.value?.click()
 }
 
 async function handleSubmit() {
@@ -802,42 +788,30 @@ function dedupeSelectOptions(options: SelectOption[]) {
             description="上传营业执照图片，当前会以图片内容编码字符串提交到接口。"
             align="start"
           >
-            <div
-              class="flex w-full flex-col items-center justify-center gap-3 rounded-md border-2 border-dashed border-input bg-muted/30 px-3 py-6 text-center transition-colors hover:border-muted-foreground/50 sm:px-4 sm:py-8"
-              @dragover.prevent
-              @drop.prevent="handleBusinessLicenseDrop"
+            <FileUploadField
+              accept="image/png,image/jpeg,image/jpg,image/webp"
+              title="上传营业执照照片"
+              description="支持 JPG、PNG、WEBP，可点击选择，也可以将图片拖放到此处。"
+              :selected-label="businessLicenseFileName || (form.usciFile ? '已选择营业执照图片' : '')"
+              button-label="选择图片"
+              icon="ri-image-add-line"
+              @files-selected="files => { void handleBusinessLicenseFiles(files); handleFocus('section-license') }"
             >
-              <input
-                ref="businessLicenseInput"
-                type="file"
-                accept="image/png,image/jpeg,image/jpg,image/webp"
-                class="hidden"
-                @change="handleBusinessLicenseFile"
-              >
-
-              <template v-if="form.usciFile">
-                <img
-                  :src="form.usciFile"
-                  alt="营业执照预览"
-                  class="max-h-56 w-auto max-w-full rounded-md border border-border object-contain"
+              <template v-if="form.usciFile" #preview="{ open }">
+                <button
+                  type="button"
+                  class="block w-full rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/45"
+                  aria-label="更换营业执照照片"
+                  @click="open"
                 >
-                <p class="text-sm text-muted-foreground">{{ businessLicenseFileName || "已选择营业执照图片" }}</p>
+                  <img
+                    :src="form.usciFile"
+                    alt="营业执照预览"
+                    class="mx-auto max-h-56 w-auto max-w-full rounded-md object-contain outline outline-1 -outline-offset-1 outline-black/5"
+                  >
+                </button>
               </template>
-              <template v-else>
-                <p class="text-sm text-muted-foreground">选择一张图片，或者将其拖放到此处</p>
-                <p class="text-xs text-muted-foreground">支持 JPG、PNG、WEBP，建议上传清晰的营业执照照片</p>
-              </template>
-
-              <Button
-                variant="outline"
-                size="sm"
-                type="button"
-                @click="triggerBusinessLicenseSelect"
-                @focus="handleFocus('section-license')"
-              >
-                选择图片
-              </Button>
-            </div>
+            </FileUploadField>
           </FormFieldSection>
 
           <FormFieldSection

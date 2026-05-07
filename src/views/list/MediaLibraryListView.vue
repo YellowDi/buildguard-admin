@@ -8,6 +8,7 @@ import TopTabSwitch from "@/components/layout/TopTabSwitch.vue"
 import SettingsPageHeader from "@/components/settings/SettingsPageHeader.vue"
 import SettingsToolbarRow from "@/components/settings/SettingsToolbarRow.vue"
 import SettingsToolbarSearchInput from "@/components/settings/SettingsToolbarSearchInput.vue"
+import FileUploadField from "@/components/upload/FileUploadField.vue"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import videoPreviewAsset from "@/assets/video.png"
@@ -121,8 +122,6 @@ const sheetOpen = ref(false)
 const sheetMode = ref<SheetMode>("preview")
 const sheetEntityKind = ref<SheetEntityKind>("video")
 const activeEntityId = ref("")
-const videoFileInputRef = ref<HTMLInputElement | null>(null)
-const articleCoverInputRef = ref<HTMLInputElement | null>(null)
 const uploadingVideoFile = ref(false)
 const formState = reactive<MediaEditorForm>(createEmptyForm("video"))
 const canUseVideoUploadTest = import.meta.env.DEV
@@ -467,13 +466,8 @@ function closeSheet() {
   sheetOpen.value = false
 }
 
-function triggerArticleCoverFileSelect() {
-  articleCoverInputRef.value?.click()
-}
-
-function handleArticleCoverFileChange(event: Event) {
-  const input = event.target as HTMLInputElement | null
-  const file = input?.files?.[0]
+function handleArticleCoverFiles(files: File[]) {
+  const file = files[0]
 
   if (!file) {
     return
@@ -481,33 +475,21 @@ function handleArticleCoverFileChange(event: Event) {
 
   if (!file.type.startsWith("image/")) {
     toast.error("请选择图片文件")
-    if (input) {
-      input.value = ""
-    }
     return
   }
 
   const reader = new FileReader()
   reader.onload = () => {
     formState.cover = typeof reader.result === "string" ? reader.result : ""
-    if (input) {
-      input.value = ""
-    }
   }
   reader.onerror = () => {
     toast.error("封面图片读取失败")
-    if (input) {
-      input.value = ""
-    }
   }
   reader.readAsDataURL(file)
 }
 
 function removeArticleCover() {
   formState.cover = ""
-  if (articleCoverInputRef.value) {
-    articleCoverInputRef.value.value = ""
-  }
 }
 
 function saveCurrentForm() {
@@ -571,29 +553,14 @@ function saveCurrentForm() {
   toast.success(created ? "文章已创建" : "文章已保存")
 }
 
-function triggerVideoFileSelect() {
-  if (uploadingVideoFile.value) {
-    return
-  }
-
-  videoFileInputRef.value?.click()
-}
-
-async function handleVideoFileChange(event: Event) {
-  const input = event.target as HTMLInputElement | null
-  const file = input?.files?.[0]
+async function handleVideoFiles(files: File[]) {
+  const file = files[0]
 
   if (!file) {
     return
   }
 
-  try {
-    await uploadVideoFile(file)
-  } finally {
-    if (input) {
-      input.value = ""
-    }
-  }
+  await uploadVideoFile(file)
 }
 
 async function uploadVideoTestFile() {
@@ -1503,54 +1470,44 @@ function escapeHtml(value: string) {
             <div class="article-editor-row">
               <span class="article-editor-label">封面</span>
               <div class="article-editor-control">
-                <input
-                  ref="articleCoverInputRef"
-                  class="sr-only"
-                  type="file"
+                <FileUploadField
                   accept="image/png,image/jpeg,image/jpg,image/webp"
-                  @change="handleArticleCoverFileChange"
+                  title="上传封面"
+                  description="支持 JPG、PNG、WEBP，可点击选择，也可以将图片拖放到此处。"
+                  :selected-label="formState.cover ? '已选择封面图片' : ''"
+                  button-label="选择封面"
+                  icon="ri-image-add-line"
+                  compact
+                  @files-selected="files => handleArticleCoverFiles(files)"
                 >
-
-                <figure
-                  v-if="articleCoverPreviewSrc"
-                  class="group relative h-28 w-44 overflow-hidden rounded-lg bg-muted shadow-(--shadow-border)"
-                >
-                  <button
-                    type="button"
-                    class="block h-full w-full text-left"
-                    aria-label="更换文章封面"
-                    @click="triggerArticleCoverFileSelect"
-                  >
-                    <img
-                      class="h-full w-full object-cover"
-                      :src="articleCoverPreviewSrc"
-                      alt=""
-                      aria-hidden="true"
-                    >
-                  </button>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    size="icon"
-                    class="absolute right-1.5 top-1.5 size-8 bg-background/92 text-foreground opacity-0 shadow-sm transition-[opacity,background-color] duration-180 ease-out hover:bg-background group-hover:opacity-100 focus-visible:opacity-100"
-                    aria-label="移除文章封面"
-                    @click.stop="removeArticleCover"
-                  >
-                    <i class="ri-close-line text-base" />
-                  </Button>
-                </figure>
-
-                <button
-                  v-else
-                  type="button"
-                  class="flex h-28 w-44 flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-input bg-background/92 text-muted-foreground transition-[background-color,color,border-color] duration-180 ease-out hover:border-ring/60 hover:bg-[var(--form-control-hover-background)] hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/45"
-                  @click="triggerArticleCoverFileSelect"
-                >
-                  <span class="flex size-10 items-center justify-center rounded-md border border-border/70 bg-muted/35">
-                    <i class="ri-image-add-line text-[20px]" />
-                  </span>
-                  <span class="text-sm font-medium">上传封面</span>
-                </button>
+                  <template v-if="articleCoverPreviewSrc" #preview="{ open }">
+                    <figure class="group relative h-28 w-full overflow-hidden rounded-lg bg-muted shadow-(--shadow-border) sm:w-44">
+                      <button
+                        type="button"
+                        class="block h-full w-full text-left"
+                        aria-label="更换文章封面"
+                        @click="open"
+                      >
+                        <img
+                          class="h-full w-full object-cover outline outline-1 -outline-offset-1 outline-black/5"
+                          :src="articleCoverPreviewSrc"
+                          alt=""
+                          aria-hidden="true"
+                        >
+                      </button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="icon"
+                        class="absolute right-1.5 top-1.5 size-8 bg-background/92 text-foreground opacity-0 shadow-sm transition-[opacity,background-color] duration-180 ease-out hover:bg-background group-hover:opacity-100 focus-visible:opacity-100"
+                        aria-label="移除文章封面"
+                        @click.stop="removeArticleCover"
+                      >
+                        <i class="ri-close-line text-base" />
+                      </Button>
+                    </figure>
+                  </template>
+                </FileUploadField>
               </div>
             </div>
 
@@ -1611,27 +1568,20 @@ function escapeHtml(value: string) {
             <div class="article-editor-row article-editor-row--top">
               <span class="article-editor-label">视频文件</span>
               <div class="article-editor-control">
-                <input
-                  ref="videoFileInputRef"
-                  class="sr-only"
-                  type="file"
+                <FileUploadField
                   accept="video/*"
-                  @change="handleVideoFileChange"
+                  :loading="uploadingVideoFile"
+                  title="上传视频文件"
+                  description="支持浏览器可选择的视频文件，上传后会写入视频地址和文件名。"
+                  :selected-label="formState.sourceFileName || formState.sourceUrl || '暂未选择文件'"
+                  button-label="上传视频"
+                  loading-label="上传中..."
+                  icon="ri-upload-2-line"
+                  compact
+                  @files-selected="files => { void handleVideoFiles(files) }"
                 >
-                <div class="rounded-lg border border-dashed border-input bg-background/92 px-4 py-4">
-                  <div class="flex min-w-0 flex-wrap items-center gap-3">
+                  <div v-if="canUseVideoUploadTest" class="flex min-w-0 flex-wrap items-center gap-3">
                     <Button
-                      type="button"
-                      variant="outline"
-                      class="rounded-md"
-                      :disabled="uploadingVideoFile"
-                      @click="triggerVideoFileSelect"
-                    >
-                      <i :class="uploadingVideoFile ? 'ri-loader-4-line animate-spin text-sm' : 'ri-upload-2-line text-sm'" />
-                      <span>{{ uploadingVideoFile ? "上传中..." : "上传视频" }}</span>
-                    </Button>
-                    <Button
-                      v-if="canUseVideoUploadTest"
                       type="button"
                       variant="ghost"
                       class="rounded-md"
@@ -1641,11 +1591,8 @@ function escapeHtml(value: string) {
                       <i class="ri-flask-line text-sm" />
                       <span>测试上传</span>
                     </Button>
-                    <span class="min-w-0 flex-1 truncate text-sm text-muted-foreground">
-                      {{ formState.sourceFileName || formState.sourceUrl || "暂未选择文件" }}
-                    </span>
                   </div>
-                </div>
+                </FileUploadField>
               </div>
             </div>
 

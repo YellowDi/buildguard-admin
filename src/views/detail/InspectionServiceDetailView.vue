@@ -12,6 +12,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import LinkedEntityDetailSheet from "@/components/detail/LinkedEntityDetailSheet.vue"
 import TitleBlock from "@/components/layout/TitleBlock.vue"
 import FormDatePicker from "@/components/form/FormDatePicker.vue"
+import FileUploadField from "@/components/upload/FileUploadField.vue"
 import DetailFieldsSkeleton from "@/components/loading/DetailFieldsSkeleton.vue"
 import DetailRelationSkeleton from "@/components/loading/DetailRelationSkeleton.vue"
 import type { DetailContactValue, DetailFieldSection, DetailRelationModuleSchema, DetailStatusValue } from "@/components/detail/types"
@@ -28,7 +29,6 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
 import { ResponsiveRightSheet } from "@/components/ui/sheet"
 import { TooltipWrap } from "@/components/ui/tooltip"
 import { detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
@@ -84,7 +84,6 @@ const deleteConfirmOpen = ref(false)
 const deleteSubmitting = ref(false)
 const uploadContractDialogOpen = ref(false)
 const uploadingContract = ref(false)
-const uploadContractFileInputRef = ref<HTMLInputElement | null>(null)
 const linkedDetailSheetOpen = ref(false)
 const inspectionItemDetailSheetOpen = ref(false)
 const uploadContractForm = ref({
@@ -405,13 +404,8 @@ function openUploadContractDialog() {
   uploadContractDialogOpen.value = true
 }
 
-function triggerSelectContractFile() {
-  uploadContractFileInputRef.value?.click()
-}
-
-async function handleContractFileChange(event: Event) {
-  const input = event.target as HTMLInputElement | null
-  const file = input?.files?.[0]
+async function handleContractFiles(files: File[]) {
+  const file = files[0]
 
   if (!file) {
     return
@@ -423,10 +417,6 @@ async function handleContractFileChange(event: Event) {
     uploadContractForm.value.contractFileName = file.name
   } catch {
     toast.error("合同文件读取失败，请重新选择文件")
-  } finally {
-    if (input) {
-      input.value = ""
-    }
   }
 }
 
@@ -1347,31 +1337,17 @@ function readFileAsDataUrl(file: File) {
 
         <div class="space-y-2">
           <p class="text-sm text-foreground">合同文件（选填）</p>
-          <input
-            ref="uploadContractFileInputRef"
-            type="file"
-            class="hidden"
+          <FileUploadField
             accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp"
-            @change="handleContractFileChange"
-          >
-          <div class="grid w-full min-w-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              class="shrink-0 gap-2"
-              :disabled="uploadingContract"
-              @click="triggerSelectContractFile"
-            >
-              <i class="ri-file-upload-line text-base" />
-              选择文件
-            </Button>
-            <span
-              class="block min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-sm text-muted-foreground"
-              :title="uploadContractForm.contractFileName || '未选择文件'"
-            >
-              {{ uploadContractForm.contractFileName || "未选择文件" }}
-            </span>
-          </div>
+            title="选择合同文件"
+            description="支持 PDF、Word 和常见图片格式；如无需替换文件可留空。"
+            :selected-label="uploadContractForm.contractFileName || '未选择文件'"
+            button-label="选择文件"
+            icon="ri-file-upload-line"
+            compact
+            :disabled="uploadingContract"
+            @files-selected="files => { void handleContractFiles(files) }"
+          />
         </div>
       </div>
 

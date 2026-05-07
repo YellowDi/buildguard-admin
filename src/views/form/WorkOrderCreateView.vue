@@ -7,6 +7,7 @@ import FormDatePicker from "@/components/form/FormDatePicker.vue"
 import FormFieldSection from "@/components/form/FormFieldSection.vue"
 import FormHeader from "@/components/form/FormHeader.vue"
 import FormQuickNav from "@/components/form/FormQuickNav.vue"
+import FileUploadField from "@/components/upload/FileUploadField.vue"
 import InspectionBuildingCards from "@/components/detail/InspectionBuildingCards.vue"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -180,7 +181,6 @@ const repairInspectionWorkOrdersError = ref("")
 const repairInspectionItemsLoading = ref(false)
 const repairInspectionItemsError = ref("")
 const repairInspectionSourceWorkOrder = ref<RepairInspectionSourceWorkOrder | null>(null)
-const repairFileInputRef = ref<HTMLInputElement | null>(null)
 const repairFilesUploading = ref(false)
 const anchorItems = ref<QuickNavItem[]>([])
 const activeNavId = ref("")
@@ -720,31 +720,6 @@ async function handleRepairUpdateSubmit() {
 
 function handleReset() {
   Object.assign(form, cloneFormState(initialFormState.value))
-}
-
-function triggerRepairFileSelect() {
-  if (isRepairFilesDisabled.value) {
-    return
-  }
-
-  repairFileInputRef.value?.click()
-}
-
-async function handleRepairFileChange(event: Event) {
-  const input = event.target as HTMLInputElement | null
-  const files = Array.from(input?.files ?? [])
-
-  try {
-    await uploadRepairFiles(files)
-  } finally {
-    if (input) {
-      input.value = ""
-    }
-  }
-}
-
-async function handleRepairFileDrop(event: DragEvent) {
-  await uploadRepairFiles(Array.from(event.dataTransfer?.files ?? []))
 }
 
 async function uploadRepairFiles(files: File[]) {
@@ -2177,60 +2152,19 @@ watch(
               align="start"
               layout="vertical"
             >
-              <div
-                :class="cn(
-                  'relative flex w-full flex-col rounded-lg border border-dashed border-input bg-background/92 px-4 py-4 transition-[background-color,color] duration-180 ease-out',
-                  isRepairFilesDisabled ? 'cursor-not-allowed opacity-75' : 'hover:bg-[var(--form-control-hover-background)]',
-                )"
-                :aria-disabled="isRepairFilesDisabled"
-                @dragover.prevent
-                @drop.prevent="handleRepairFileDrop"
+              <FileUploadField
+                accept="image/png,image/jpeg,image/jpg,image/webp"
+                multiple
+                :disabled="isRepairFilesDisabled"
+                :loading="repairFilesUploading"
+                :title="repairFilesUploading ? '正在上传图片' : hasSelectedRepairInspectionItems ? '已选择检测条目，无需上传图片' : '上传现场需维修图片'"
+                :description="hasSelectedRepairInspectionItems ? '检测项已关联现场问题，需维修图片已禁用。' : '支持 JPG、PNG、WEBP，可多选上传，也可以将图片拖放到此处。'"
+                :selected-label="form.repairFiles.length ? `${form.repairFiles.length} 张图片已上传` : ''"
+                :button-label="hasSelectedRepairInspectionItems ? '已禁用' : form.repairFiles.length ? '继续上传' : '选择图片'"
+                loading-label="上传中..."
+                icon="ri-image-add-line"
+                @files-selected="files => { void uploadRepairFiles(files); handleFocus('section-repair-files') }"
               >
-                <input
-                  ref="repairFileInputRef"
-                  type="file"
-                  accept="image/png,image/jpeg,image/jpg,image/webp"
-                  multiple
-                  class="hidden"
-                  :disabled="isRepairFilesDisabled"
-                  @change="handleRepairFileChange"
-                >
-
-                <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                  <div class="flex min-w-0 gap-3">
-                    <div class="flex size-10 shrink-0 items-center justify-center rounded-md border border-border/70 bg-muted/35 text-muted-foreground">
-                      <i :class="repairFilesUploading ? 'ri-loader-4-line animate-spin text-[20px]' : 'ri-image-add-line text-[20px]'" />
-                    </div>
-                    <div class="min-w-0 pt-0.5">
-                      <div class="flex flex-wrap items-center gap-2">
-                        <p class="text-sm font-medium text-foreground">
-                          {{ repairFilesUploading ? "正在上传图片" : hasSelectedRepairInspectionItems ? "已选择检测条目，无需上传图片" : "上传现场需维修图片" }}
-                        </p>
-                        <span
-                          v-if="form.repairFiles.length"
-                          class="inline-flex h-5 items-center rounded-md bg-muted px-1.5 text-[12px] font-medium text-muted-foreground tabular-nums"
-                        >
-                          {{ form.repairFiles.length }} 张
-                        </span>
-                      </div>
-                      <p class="mt-1 text-xs leading-5 text-muted-foreground">
-                        {{ hasSelectedRepairInspectionItems ? "检测项已关联现场问题，需维修图片已禁用。" : "支持 JPG、PNG、WEBP，可多选上传，也可以将图片拖放到此处。" }}
-                      </p>
-                    </div>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    type="button"
-                    class="h-9 shrink-0 gap-2 rounded-md"
-                    :disabled="isRepairFilesDisabled"
-                    @click="triggerRepairFileSelect"
-                    @focus="handleFocus('section-repair-files')"
-                  >
-                    <i :class="repairFilesUploading ? 'ri-loader-4-line animate-spin text-sm' : hasSelectedRepairInspectionItems ? 'ri-lock-line text-sm' : 'ri-upload-2-line text-sm'" />
-                    {{ repairFilesUploading ? "上传中..." : hasSelectedRepairInspectionItems ? "已禁用" : form.repairFiles.length ? "继续上传" : "选择图片" }}
-                  </Button>
-                </div>
 
                 <div v-if="form.repairFiles.length" class="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-4">
                   <figure
@@ -2264,7 +2198,7 @@ watch(
                     </Button>
                   </figure>
                 </div>
-              </div>
+              </FileUploadField>
             </FormFieldSection>
 
             <FormFieldSection
