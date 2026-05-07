@@ -109,7 +109,7 @@ export async function createMediaType(payload: CreateMediaTypePayload) {
     body: JSON.stringify({
       Type: getRequiredNumber(payload.Type, "Type"),
       Name: getRequiredString(payload.Name, "Name"),
-      ParentUuid: getOptionalString(payload.ParentUuid),
+      ParentUuid: getStringOrEmpty(payload.ParentUuid),
       SortNum: getOptionalNumber(payload.SortNum, "SortNum") ?? 0,
     }),
   })
@@ -277,6 +277,10 @@ function getOptionalString(value: unknown) {
 
   const normalized = value.trim()
   return normalized || undefined
+}
+
+function getStringOrEmpty(value: unknown) {
+  return typeof value === "string" ? value.trim() : ""
 }
 
 function getRequiredNumber(value: unknown, fieldName: string) {

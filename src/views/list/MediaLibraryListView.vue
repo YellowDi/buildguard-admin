@@ -125,6 +125,7 @@ const MEDIA_TYPE_MAP: Record<MediaModuleKey, MediaTypeKind> = {
 }
 const MEDIA_CATEGORY_PAGE_SIZE = 500
 const MEDIA_CATEGORY_LOAD_ERROR_MESSAGE = "媒体分类列表加载失败，请稍后重试。"
+const ROOT_CATEGORY_PARENT_VALUE = "__root__"
 
 const statusLabelMap = new Map(MEDIA_STATUS_OPTIONS.map(option => [option.value, option.label]))
 const coverToneClasses = [
@@ -270,6 +271,8 @@ const visibleArticleCategoryRows = computed(() => buildCategoryRows(
 const visibleCurrentCategoryRows = computed(() => (
   activeModule.value === "videos" ? visibleVideoCategoryRows.value : visibleArticleCategoryRows.value
 ))
+const categoryCreateParentOptions = computed(() => flattenCategoryTree(getModuleCategories(categoryCreateModule.value)))
+const categoryCreateParentModel = computed(() => categoryCreateForm.parentUuid || ROOT_CATEGORY_PARENT_VALUE)
 
 const filteredVideoItems = computed(() => {
   const query = normalizedSearch.value
@@ -491,6 +494,13 @@ function openCreateCategoryDialog(module: MediaModuleKey, parentUuid: string) {
   categoryCreateDialogOpen.value = true
 }
 
+function updateCreateCategoryParent(value: unknown) {
+  const nextParentUuid = typeof value === "string" && value !== ROOT_CATEGORY_PARENT_VALUE ? value : ""
+
+  categoryCreateForm.parentUuid = nextParentUuid
+  categoryCreateForm.sortNum = getNextCategorySortNum(categoryCreateModule.value, nextParentUuid)
+}
+
 async function submitCreateCategory() {
   const name = categoryCreateForm.name.trim()
 
@@ -505,7 +515,7 @@ async function submitCreateCategory() {
     const created = await createMediaType({
       Type: MEDIA_TYPE_MAP[categoryCreateModule.value],
       Name: name,
-      ParentUuid: categoryCreateForm.parentUuid || undefined,
+      ParentUuid: categoryCreateForm.parentUuid,
       SortNum: categoryCreateForm.sortNum,
     })
     await loadMediaCategories(categoryCreateModule.value)
@@ -2171,6 +2181,37 @@ function escapeHtml(value: string) {
               @keydown.enter.prevent="submitCreateCategory"
             />
           </label>
+
+          <div class="grid gap-2 text-sm">
+            <span class="font-medium text-foreground">父级分类</span>
+            <Select
+              :model-value="categoryCreateParentModel"
+              :disabled="categoryCreateSubmitting || categoryLoading[categoryCreateModule]"
+              @update:model-value="updateCreateCategoryParent"
+            >
+              <SelectTrigger class="w-full">
+                <SelectValue placeholder="选择父级分类" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem :value="ROOT_CATEGORY_PARENT_VALUE">
+                  {{ categoryCreateModule === 'videos' ? '视频根分类' : '文章根分类' }}
+                </SelectItem>
+                <SelectItem
+                  v-for="category in categoryCreateParentOptions"
+                  :key="category.id"
+                  :value="category.id"
+                >
+                  {{ getCategoryPathLabel(categoryCreateModule, category.id) }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            <p
+              v-if="!categoryCreateParentOptions.length"
+              class="text-xs leading-5 text-muted-foreground"
+            >
+              当前还没有可选父级，只能尝试创建根分类。
+            </p>
+          </div>
 
           <label class="grid gap-2 text-sm">
             <span class="font-medium text-foreground">排序</span>
