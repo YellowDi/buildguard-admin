@@ -10,6 +10,9 @@ export type MediaCategoryNode = {
   slug: string
   count: number
   module: MediaModuleKey
+  isDefault?: boolean
+  parentUuid?: string
+  sortOrder?: number
   children?: MediaCategoryNode[]
 }
 

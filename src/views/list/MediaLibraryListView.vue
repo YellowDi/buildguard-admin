@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from "vue"
+import { computed, onMounted, reactive, ref, watch } from "vue"
 import { toast } from "vue-sonner"
 
 import DetailFieldSections from "@/components/detail/DetailFieldSections.vue"
@@ -8,10 +8,28 @@ import TopTabSwitch from "@/components/layout/TopTabSwitch.vue"
 import SettingsPageHeader from "@/components/settings/SettingsPageHeader.vue"
 import SettingsToolbarRow from "@/components/settings/SettingsToolbarRow.vue"
 import SettingsToolbarSearchInput from "@/components/settings/SettingsToolbarSearchInput.vue"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import FileUploadField from "@/components/upload/FileUploadField.vue"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import videoPreviewAsset from "@/assets/video.png"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { RichTextEditor } from "@/components/ui/rich-text-editor"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -35,7 +53,16 @@ import {
   type VideoItem,
   type VideoMediaViewKey,
 } from "@/lib/media-library-mock"
-import { getApiErrorMessage } from "@/lib/api-errors"
+import { getApiErrorMessage, handleApiError } from "@/lib/api-errors"
+import {
+  createMediaType,
+  deleteMediaType,
+  fetchMediaTypes,
+  getMediaTypeDetail,
+  type MediaTypeKind,
+  type MediaTypeRecord,
+  updateMediaType,
+} from "@/lib/media-types-api"
 import { uploadTencentCosFile } from "@/lib/tencent-cos-sdk"
 import { cn } from "@/lib/utils"
 
@@ -65,6 +92,14 @@ type CategoryTreeRow = {
   hasChildren: boolean
   expanded: boolean
   count: number
+  isDefault: boolean
+  sortOrder: number
+}
+
+type MediaCategoryForm = {
+  name: string
+  sortNum: number
+  parentUuid: string
 }
 
 type SwitchTab = {
@@ -83,6 +118,13 @@ const articleViewTabs: SwitchTab[] = [
   { id: "grid", label: "缩略图", icon: "ri-layout-grid-line" },
   { id: "list", label: "列表", icon: "ri-align-justify" },
 ]
+
+const MEDIA_TYPE_MAP: Record<MediaModuleKey, MediaTypeKind> = {
+  videos: 1,
+  articles: 2,
+}
+const MEDIA_CATEGORY_PAGE_SIZE = 500
+const MEDIA_CATEGORY_LOAD_ERROR_MESSAGE = "媒体分类列表加载失败，请稍后重试。"
 
 const statusLabelMap = new Map(MEDIA_STATUS_OPTIONS.map(option => [option.value, option.label]))
 const coverToneClasses = [
@@ -117,6 +159,14 @@ const expandedCategoryIds = reactive<Record<MediaModuleKey, string[]>>({
   videos: videoCategories.value.map(category => category.id),
   articles: articleCategories.value.map(category => category.id),
 })
+const categoryLoading = reactive<Record<MediaModuleKey, boolean>>({
+  videos: false,
+  articles: false,
+})
+const categoryErrorMessages = reactive<Record<MediaModuleKey, string>>({
+  videos: "",
+  articles: "",
+})
 
 const sheetOpen = ref(false)
 const sheetMode = ref<SheetMode>("preview")
@@ -125,6 +175,20 @@ const activeEntityId = ref("")
 const uploadingVideoFile = ref(false)
 const formState = reactive<MediaEditorForm>(createEmptyForm("video"))
 const canUseVideoUploadTest = import.meta.env.DEV
+const categoryCreateDialogOpen = ref(false)
+const categoryEditDialogOpen = ref(false)
+const categoryDeleteConfirmOpen = ref(false)
+const categoryCreateSubmitting = ref(false)
+const categoryEditSubmitting = ref(false)
+const categoryDeleteSubmitting = ref(false)
+const categoryDetailLoading = ref(false)
+const categoryCreateModule = ref<MediaModuleKey>("videos")
+const categoryEditModule = ref<MediaModuleKey>("videos")
+const categoryDeleteModule = ref<MediaModuleKey>("videos")
+const editingCategoryId = ref("")
+const deletingCategoryId = ref("")
+const categoryCreateForm = reactive<MediaCategoryForm>(createEmptyCategoryForm())
+const categoryEditForm = reactive<MediaCategoryForm>(createEmptyCategoryForm())
 
 const normalizedSearch = computed(() => searchQuery.value.trim().toLowerCase())
 const articleCoverPreviewSrc = computed(() => normalizeArticleCoverSource(formState.cover))
@@ -142,6 +206,8 @@ const currentSearchPlaceholder = computed(() => activeModule.value === "videos"
 const currentSelectedCategoryId = computed(() => (
   activeModule.value === "videos" ? selectedVideoCategoryId.value : selectedArticleCategoryId.value
 ))
+const currentCategoryLoading = computed(() => categoryLoading[activeModule.value])
+const currentCategoryErrorMessage = computed(() => categoryErrorMessages[activeModule.value])
 const moduleSwitchTabs = computed<SwitchTab[]>(() => [
   {
     id: "videos",
@@ -161,6 +227,14 @@ const allVideoCategories = computed(() => flattenCategoryTree(videoCategories.va
 const allArticleCategories = computed(() => flattenCategoryTree(articleCategories.value))
 const videoLeafCategories = computed(() => allVideoCategories.value.filter(node => !node.children?.length))
 const articleLeafCategories = computed(() => allArticleCategories.value.filter(node => !node.children?.length))
+const editingCategory = computed(() => findCategoryById(
+  categoryEditModule.value === "videos" ? videoCategories.value : articleCategories.value,
+  editingCategoryId.value,
+))
+const deletingCategory = computed(() => findCategoryById(
+  categoryDeleteModule.value === "videos" ? videoCategories.value : articleCategories.value,
+  deletingCategoryId.value,
+))
 
 const videoItemMap = computed(() => new Map(videoItems.value.map(item => [item.id, item])))
 const articleItemMap = computed(() => new Map(articleItems.value.map(item => [item.id, item])))
@@ -176,11 +250,11 @@ const selectedArticleCategoryIds = computed(() => resolveSelectedCategoryIds(
 
 const videoCategoryCounts = computed(() => buildCategoryCounts(
   videoCategories.value,
-  videoItems.value.map(item => item.categoryId),
+  videoItems.value.map(item => normalizeItemCategoryId("videos", item.categoryId)),
 ))
 const articleCategoryCounts = computed(() => buildCategoryCounts(
   articleCategories.value,
-  articleItems.value.map(item => item.categoryId),
+  articleItems.value.map(item => normalizeItemCategoryId("articles", item.categoryId)),
 ))
 
 const visibleVideoCategoryRows = computed(() => buildCategoryRows(
@@ -202,7 +276,9 @@ const filteredVideoItems = computed(() => {
 
   return [...videoItems.value]
     .filter((item) => {
-      if (!matchesSelectedCategory(item.categoryId, selectedVideoCategoryIds.value)) {
+      const categoryId = normalizeItemCategoryId("videos", item.categoryId)
+
+      if (!matchesSelectedCategory(categoryId, selectedVideoCategoryIds.value)) {
         return false
       }
 
@@ -214,7 +290,7 @@ const filteredVideoItems = computed(() => {
         item.title,
         item.summary,
         item.cover,
-        getCategoryPathLabel("videos", item.categoryId),
+        getCategoryPathLabel("videos", categoryId),
       ])
     })
     .sort(compareBySortOrder)
@@ -225,7 +301,9 @@ const filteredArticles = computed(() => {
 
   return [...articleItems.value]
     .filter((item) => {
-      if (!matchesSelectedCategory(item.categoryId, selectedArticleCategoryIds.value)) {
+      const categoryId = normalizeItemCategoryId("articles", item.categoryId)
+
+      if (!matchesSelectedCategory(categoryId, selectedArticleCategoryIds.value)) {
         return false
       }
 
@@ -239,7 +317,7 @@ const filteredArticles = computed(() => {
         item.cover,
         item.tags.join(" "),
         item.markdown,
-        getCategoryPathLabel("articles", item.categoryId),
+        getCategoryPathLabel("articles", categoryId),
       ])
     })
     .sort(compareBySortOrder)
@@ -282,6 +360,10 @@ const previewArticleContentHtml = computed(() => {
   return renderArticleContentHtml(formState.markdown)
 })
 
+onMounted(() => {
+  void loadAllMediaCategories()
+})
+
 const videoPreviewSections = computed<DetailFieldSection[]>(() => {
   if (!activeVideo.value) return []
 
@@ -292,7 +374,7 @@ const videoPreviewSections = computed<DetailFieldSection[]>(() => {
       rows: [
         { key: "cover", label: "封面文案", value: activeVideo.value.cover || "—" },
         { key: "sourceUrl", label: "视频文件", value: activeVideo.value.sourceFileName || activeVideo.value.sourceUrl || "—", truncate: false },
-        { key: "category", label: "分类", value: getCategoryPathLabel("videos", activeVideo.value.categoryId) },
+        { key: "category", label: "分类", value: getCategoryPathLabel("videos", normalizeItemCategoryId("videos", activeVideo.value.categoryId)) },
         { key: "status", label: "状态", value: getStatusLabel(activeVideo.value.status) },
         { key: "duration", label: "时长", value: activeVideo.value.duration || "—" },
         { key: "sortOrder", label: "排序", value: `${activeVideo.value.sortOrder}` },
@@ -312,7 +394,7 @@ const articlePreviewSections = computed<DetailFieldSection[]>(() => {
       title: "",
       rows: [
         { key: "cover", label: "封面文案", value: activeArticle.value.cover || "—" },
-        { key: "category", label: "分类", value: getCategoryPathLabel("articles", activeArticle.value.categoryId) },
+        { key: "category", label: "分类", value: getCategoryPathLabel("articles", normalizeItemCategoryId("articles", activeArticle.value.categoryId)) },
         { key: "status", label: "状态", value: getStatusLabel(activeArticle.value.status) },
         { key: "sortOrder", label: "排序", value: `${activeArticle.value.sortOrder}` },
         { key: "updatedAt", label: "更新时间", value: activeArticle.value.updatedAt },
@@ -328,6 +410,42 @@ watch(activeModule, () => {
   searchExpanded.value = false
   sheetOpen.value = false
 })
+
+async function loadAllMediaCategories() {
+  await Promise.all([
+    loadMediaCategories("videos"),
+    loadMediaCategories("articles"),
+  ])
+}
+
+async function loadMediaCategories(module: MediaModuleKey) {
+  categoryLoading[module] = true
+  categoryErrorMessages[module] = ""
+
+  try {
+    const result = await fetchMediaTypes({
+      Type: MEDIA_TYPE_MAP[module],
+      PageNum: 1,
+      PageSize: MEDIA_CATEGORY_PAGE_SIZE,
+    })
+    const nextTree = normalizeMediaCategoryTree(result.list, module)
+    setModuleCategories(module, nextTree)
+    syncExpandedCategoryIds(module, nextTree)
+    ensureSelectedCategory(module)
+  } catch (error) {
+    categoryErrorMessages[module] = handleApiError(error, {
+      title: "媒体分类加载失败",
+      fallback: MEDIA_CATEGORY_LOAD_ERROR_MESSAGE,
+      mode: "silent",
+    })
+  } finally {
+    categoryLoading[module] = false
+  }
+}
+
+function refreshCurrentCategories() {
+  void loadMediaCategories(activeModule.value)
+}
 
 function toggleSearch() {
   if (searchExpanded.value && searchQuery.value) {
@@ -356,29 +474,183 @@ function selectCategory(module: MediaModuleKey, id: string) {
   selectedArticleCategoryId.value = id
 }
 
-function addCategory(module: MediaModuleKey) {
-  const prefix = module === "videos" ? "video" : "article"
-  const nextIndex = flattenCategoryTree(module === "videos" ? videoCategories.value : articleCategories.value).length + 1
-  const newCategory: MediaCategoryNode = {
-    id: `${prefix}-category-${Date.now()}`,
-    name: `新分类 ${nextIndex}`,
-    slug: `${prefix}-category-${nextIndex}`,
-    count: 0,
-    module,
-  }
+function openCreateRootCategoryDialog(module: MediaModuleKey) {
+  openCreateCategoryDialog(module, "")
+}
 
-  if (module === "videos") {
-    videoCategories.value = [...videoCategories.value, newCategory]
-    selectedVideoCategoryId.value = newCategory.id
-    expandedCategoryIds.videos = [...expandedCategoryIds.videos, newCategory.id]
-    toast.success("已添加视频分类")
+function openCreateChildCategoryDialog(module: MediaModuleKey, parentUuid: string) {
+  openCreateCategoryDialog(module, parentUuid)
+}
+
+function openCreateCategoryDialog(module: MediaModuleKey, parentUuid: string) {
+  categoryCreateModule.value = module
+  Object.assign(categoryCreateForm, createEmptyCategoryForm({
+    parentUuid,
+    sortNum: getNextCategorySortNum(module, parentUuid),
+  }))
+  categoryCreateDialogOpen.value = true
+}
+
+async function submitCreateCategory() {
+  const name = categoryCreateForm.name.trim()
+
+  if (!name) {
+    toast.error("请先填写分类名称")
     return
   }
 
-  articleCategories.value = [...articleCategories.value, newCategory]
-  selectedArticleCategoryId.value = newCategory.id
-  expandedCategoryIds.articles = [...expandedCategoryIds.articles, newCategory.id]
-  toast.success("已添加文章分类")
+  categoryCreateSubmitting.value = true
+
+  try {
+    const created = await createMediaType({
+      Type: MEDIA_TYPE_MAP[categoryCreateModule.value],
+      Name: name,
+      ParentUuid: categoryCreateForm.parentUuid || undefined,
+      SortNum: categoryCreateForm.sortNum,
+    })
+    await loadMediaCategories(categoryCreateModule.value)
+    const createdUuid = typeof created.Uuid === "string" ? created.Uuid : ""
+
+    if (createdUuid) {
+      selectCategory(categoryCreateModule.value, createdUuid)
+      expandCategoryAncestors(categoryCreateModule.value, createdUuid)
+    }
+
+    categoryCreateDialogOpen.value = false
+    toast.success("媒体分类已创建", {
+      description: `${name} 已加入当前分类树。`,
+    })
+  } catch (error) {
+    handleApiError(error, {
+      title: "媒体分类创建失败",
+      fallback: "媒体分类创建失败，请稍后重试。",
+    })
+  } finally {
+    categoryCreateSubmitting.value = false
+  }
+}
+
+async function openEditCategoryDialog(module: MediaModuleKey, id: string) {
+  const row = findCategoryById(getModuleCategories(module), id)
+
+  if (!row) {
+    return
+  }
+
+  categoryEditModule.value = module
+  editingCategoryId.value = id
+  Object.assign(categoryEditForm, createEmptyCategoryForm({
+    name: row.name,
+    sortNum: row.sortOrder ?? 0,
+    parentUuid: row.parentUuid ?? "",
+  }))
+  categoryDetailLoading.value = true
+  categoryEditDialogOpen.value = true
+
+  try {
+    const detail = await getMediaTypeDetail({ Uuid: id })
+    const detailNode = normalizeMediaCategory(detail, module)
+
+    if (editingCategoryId.value === id) {
+      Object.assign(categoryEditForm, createEmptyCategoryForm({
+        name: detailNode.name || row.name,
+        sortNum: detailNode.sortOrder ?? row.sortOrder ?? 0,
+        parentUuid: detailNode.parentUuid ?? row.parentUuid ?? "",
+      }))
+    }
+  } catch (error) {
+    handleApiError(error, {
+      title: "媒体分类详情加载失败",
+      fallback: "媒体分类详情加载失败，请稍后重试。",
+    })
+  } finally {
+    if (editingCategoryId.value === id) {
+      categoryDetailLoading.value = false
+    }
+  }
+}
+
+function closeEditCategoryDialog() {
+  categoryEditDialogOpen.value = false
+  editingCategoryId.value = ""
+  categoryDetailLoading.value = false
+  Object.assign(categoryEditForm, createEmptyCategoryForm())
+}
+
+async function submitEditCategory() {
+  const name = categoryEditForm.name.trim()
+
+  if (!editingCategoryId.value || !name) {
+    toast.error("请先填写分类名称")
+    return
+  }
+
+  categoryEditSubmitting.value = true
+
+  try {
+    await updateMediaType({
+      Uuid: editingCategoryId.value,
+      Name: name,
+      SortNum: categoryEditForm.sortNum,
+    })
+    await loadMediaCategories(categoryEditModule.value)
+    selectCategory(categoryEditModule.value, editingCategoryId.value)
+    expandCategoryAncestors(categoryEditModule.value, editingCategoryId.value)
+    closeEditCategoryDialog()
+    toast.success("媒体分类已更新", {
+      description: `${name} 的名称和排序已保存。`,
+    })
+  } catch (error) {
+    handleApiError(error, {
+      title: "媒体分类更新失败",
+      fallback: "媒体分类更新失败，请稍后重试。",
+    })
+  } finally {
+    categoryEditSubmitting.value = false
+  }
+}
+
+function promptDeleteCategory(module: MediaModuleKey, id: string) {
+  const row = findCategoryById(getModuleCategories(module), id)
+
+  if (!row || row.isDefault) {
+    return
+  }
+
+  categoryDeleteModule.value = module
+  deletingCategoryId.value = id
+  categoryDeleteConfirmOpen.value = true
+}
+
+async function confirmDeleteCategory() {
+  const target = deletingCategory.value
+
+  if (!target || categoryDeleteSubmitting.value) {
+    return
+  }
+
+  categoryDeleteSubmitting.value = true
+
+  try {
+    await deleteMediaType({ Uuid: target.id })
+    await loadMediaCategories(categoryDeleteModule.value)
+    ensureSelectedCategory(categoryDeleteModule.value)
+    categoryDeleteConfirmOpen.value = false
+    if (editingCategoryId.value === target.id) {
+      closeEditCategoryDialog()
+    }
+    deletingCategoryId.value = ""
+    toast.success("媒体分类已删除", {
+      description: `${target.name} 已从当前分类树移除。`,
+    })
+  } catch (error) {
+    handleApiError(error, {
+      title: "媒体分类删除失败",
+      fallback: "媒体分类删除失败，请稍后重试。",
+    })
+  } finally {
+    categoryDeleteSubmitting.value = false
+  }
 }
 
 function openCreate(kind: SheetEntityKind, defaults: Partial<MediaEditorForm> = {}) {
@@ -420,7 +692,7 @@ function openEdit(kind: SheetEntityKind, id: string) {
 
     applyForm(createEmptyForm("video", {
       title: entity.title,
-      categoryId: entity.categoryId,
+      categoryId: normalizeItemCategoryId("videos", entity.categoryId),
       cover: entity.cover,
       sourceUrl: entity.sourceUrl ?? "",
       sourceFileName: entity.sourceFileName ?? "",
@@ -440,7 +712,7 @@ function openEdit(kind: SheetEntityKind, id: string) {
 
     applyForm(createEmptyForm("article", {
       title: entity.title,
-      categoryId: entity.categoryId,
+      categoryId: normalizeItemCategoryId("articles", entity.categoryId),
       cover: entity.cover,
       summary: entity.summary,
       markdown: renderArticleContentHtml(entity.markdown),
@@ -623,7 +895,7 @@ function getPreviewDescription() {
   }
 
   if (sheetEntityKind.value === "article" && activeArticle.value) {
-    return getCategoryPathLabel("articles", activeArticle.value.categoryId)
+    return getCategoryPathLabel("articles", normalizeItemCategoryId("articles", activeArticle.value.categoryId))
   }
 
   return "媒体库预览"
@@ -689,7 +961,7 @@ function getCategoryPathLabel(module: MediaModuleKey, categoryId: string) {
 }
 
 function buildVideoPlacement(item: VideoItem) {
-  return [getCategoryPathLabel("videos", item.categoryId), item.duration].filter(Boolean).join(" · ")
+  return [getCategoryPathLabel("videos", normalizeItemCategoryId("videos", item.categoryId)), item.duration].filter(Boolean).join(" · ")
 }
 
 function matchesSelectedCategory(categoryId: string, selectedIds: Set<string> | null) {
@@ -739,6 +1011,159 @@ function createEmptyForm(kind: SheetEntityKind, overrides: Partial<MediaEditorFo
     tagsText: "",
     ...overrides,
   }
+}
+
+function createEmptyCategoryForm(overrides: Partial<MediaCategoryForm> = {}): MediaCategoryForm {
+  return {
+    name: "",
+    sortNum: 0,
+    parentUuid: "",
+    ...overrides,
+  }
+}
+
+function normalizeMediaCategoryTree(records: MediaTypeRecord[], module: MediaModuleKey) {
+  return records
+    .map(item => normalizeMediaCategory(item, module))
+    .sort(compareCategories)
+}
+
+function normalizeMediaCategory(item: MediaTypeRecord, module: MediaModuleKey): MediaCategoryNode {
+  const id = toOptionalText(item.Uuid) || `media-category-${item.Id ?? hashText(JSON.stringify(item))}`
+  const name = toOptionalText(item.Name) || `分类 ${item.Id ?? id}`
+  const children = Array.isArray(item.Children)
+    ? normalizeMediaCategoryTree(item.Children, module)
+    : undefined
+
+  return {
+    id,
+    name,
+    slug: id,
+    count: 0,
+    module,
+    isDefault: Number(item.IsDefault) === 1,
+    parentUuid: toOptionalText(item.ParentUuid),
+    sortOrder: toOptionalNumber(item.SortNum) ?? 0,
+    children,
+  }
+}
+
+function compareCategories(left: MediaCategoryNode, right: MediaCategoryNode) {
+  return (left.sortOrder ?? 0) - (right.sortOrder ?? 0)
+    || left.name.localeCompare(right.name, "zh-CN")
+    || left.id.localeCompare(right.id)
+}
+
+function getModuleCategories(module: MediaModuleKey) {
+  return module === "videos" ? videoCategories.value : articleCategories.value
+}
+
+function setModuleCategories(module: MediaModuleKey, categories: MediaCategoryNode[]) {
+  if (module === "videos") {
+    videoCategories.value = categories
+    return
+  }
+
+  articleCategories.value = categories
+}
+
+function getModuleSelectedCategoryId(module: MediaModuleKey) {
+  return module === "videos" ? selectedVideoCategoryId.value : selectedArticleCategoryId.value
+}
+
+function setModuleSelectedCategoryId(module: MediaModuleKey, id: string) {
+  if (module === "videos") {
+    selectedVideoCategoryId.value = id
+    return
+  }
+
+  selectedArticleCategoryId.value = id
+}
+
+function ensureSelectedCategory(module: MediaModuleKey) {
+  const tree = getModuleCategories(module)
+  const currentId = getModuleSelectedCategoryId(module)
+
+  if (currentId && findCategoryById(tree, currentId)) {
+    return
+  }
+
+  setModuleSelectedCategoryId(module, tree[0]?.id ?? "")
+}
+
+function syncExpandedCategoryIds(module: MediaModuleKey, tree: MediaCategoryNode[]) {
+  const existing = new Set(expandedCategoryIds[module])
+  const next = flattenCategoryTree(tree)
+    .filter(category => category.children?.length || existing.has(category.id))
+    .map(category => category.id)
+
+  expandedCategoryIds[module] = next
+}
+
+function expandCategoryAncestors(module: MediaModuleKey, id: string) {
+  const path = findCategoryPath(getModuleCategories(module), id)
+
+  if (!path.length) {
+    return
+  }
+
+  const expanded = new Set(expandedCategoryIds[module])
+  for (const category of path) {
+    expanded.add(category.id)
+  }
+  expandedCategoryIds[module] = [...expanded]
+}
+
+function getNextCategorySortNum(module: MediaModuleKey, parentUuid: string) {
+  const siblings = parentUuid
+    ? findCategoryById(getModuleCategories(module), parentUuid)?.children ?? []
+    : getModuleCategories(module)
+  const maxSort = siblings.reduce((max, item) => Math.max(max, item.sortOrder ?? 0), 0)
+
+  return maxSort + 10
+}
+
+function findCategoryById(nodes: MediaCategoryNode[], categoryId: string): MediaCategoryNode | null {
+  if (!categoryId) {
+    return null
+  }
+
+  for (const node of nodes) {
+    if (node.id === categoryId) {
+      return node
+    }
+
+    const childMatch = findCategoryById(node.children ?? [], categoryId)
+    if (childMatch) {
+      return childMatch
+    }
+  }
+
+  return null
+}
+
+function normalizeItemCategoryId(module: MediaModuleKey, categoryId: string) {
+  const tree = getModuleCategories(module)
+
+  if (findCategoryById(tree, categoryId)) {
+    return categoryId
+  }
+
+  return findFirstLeafCategoryId(tree) || tree[0]?.id || categoryId
+}
+
+function toOptionalText(value: unknown) {
+  return typeof value === "string" ? value.trim() : ""
+}
+
+function toOptionalNumber(value: unknown) {
+  const parsed = typeof value === "number"
+    ? value
+    : typeof value === "string" && value.trim()
+      ? Number(value.trim())
+      : NaN
+
+  return Number.isFinite(parsed) ? parsed : undefined
 }
 
 function sanitizeObjectKeyFileName(value: string) {
@@ -881,6 +1306,8 @@ function buildCategoryRows(
       hasChildren,
       expanded,
       count: counts.get(node.id) ?? 0,
+      isDefault: Boolean(node.isDefault),
+      sortOrder: node.sortOrder ?? 0,
     })
 
     if (hasChildren && expanded) {
@@ -1092,18 +1519,53 @@ function escapeHtml(value: string) {
       <div class="media-library-layout mx-auto flex w-full max-w-4xl gap-8 overflow-visible">
         <aside class="media-library-sidebar w-[240px] shrink-0 pt-4">
         <div class="media-library-sidebar-panel sticky top-[11rem] flex max-h-[calc(100svh-12rem)] flex-col overflow-hidden">
-          <div class="mb-2 shrink-0 px-1">
+          <div class="mb-2 flex shrink-0 items-center justify-between gap-2 px-1">
             <p class="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
               分类
             </p>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              class="size-7 rounded-md text-muted-foreground"
+              :disabled="currentCategoryLoading"
+              aria-label="刷新分类"
+              title="刷新分类"
+              @click="refreshCurrentCategories"
+            >
+              <i :class="[currentCategoryLoading ? 'ri-loader-4-line animate-spin' : 'ri-refresh-line', 'text-sm']" />
+            </Button>
           </div>
 
           <div class="min-h-0 flex-1 overflow-y-auto">
-            <div class="space-y-0.5">
+            <div
+              v-if="currentCategoryErrorMessage"
+              class="mb-3 rounded-lg border border-destructive/20 bg-destructive/5 px-3 py-2 text-xs leading-5 text-destructive"
+            >
+              <p>{{ currentCategoryErrorMessage }}</p>
+              <Button
+                variant="ghost"
+                size="sm"
+                class="mt-1 h-7 rounded-md px-2 text-destructive hover:text-destructive"
+                @click="refreshCurrentCategories"
+              >
+                <i class="ri-refresh-line text-sm" />
+                <span>重试</span>
+              </Button>
+            </div>
+
+            <div v-else-if="currentCategoryLoading && !visibleCurrentCategoryRows.length" class="space-y-2 px-1 py-2">
+              <div v-for="index in 5" :key="index" class="h-7 rounded-md bg-muted/70" />
+            </div>
+
+            <div v-else-if="!visibleCurrentCategoryRows.length" class="rounded-lg border border-dashed border-border px-3 py-5 text-center text-xs leading-5 text-muted-foreground">
+              暂无分类，先添加一个分类。
+            </div>
+
+            <div v-else class="space-y-0.5">
               <div
                 v-for="row in visibleCurrentCategoryRows"
                 :key="row.id"
-                class="flex w-full items-center gap-1.5 px-1 py-0.5"
+                class="group/category-row flex w-full items-center gap-1.5 px-1 py-0.5"
               >
                 <span :style="{ width: `${row.depth * 14}px` }" class="shrink-0" aria-hidden="true" />
                 <button
@@ -1130,6 +1592,37 @@ function escapeHtml(value: string) {
                 <span class="shrink-0 px-1 text-[11px] text-muted-foreground">
                   {{ row.count }}
                 </span>
+
+                <button
+                  type="button"
+                  class="flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground opacity-0 transition hover:bg-accent hover:text-foreground group-hover/category-row:opacity-100 focus-visible:opacity-100"
+                  aria-label="添加子分类"
+                  title="添加子分类"
+                  @click.stop="openCreateChildCategoryDialog(activeModule, row.id)"
+                >
+                  <i class="ri-node-tree text-[13px]" />
+                </button>
+
+                <button
+                  type="button"
+                  class="flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground opacity-0 transition hover:bg-accent hover:text-foreground group-hover/category-row:opacity-100 focus-visible:opacity-100"
+                  aria-label="编辑分类"
+                  title="编辑分类"
+                  @click.stop="openEditCategoryDialog(activeModule, row.id)"
+                >
+                  <i class="ri-edit-line text-[13px]" />
+                </button>
+
+                <button
+                  type="button"
+                  class="flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground opacity-0 transition hover:bg-destructive/10 hover:text-destructive disabled:pointer-events-none disabled:opacity-30 group-hover/category-row:opacity-100 focus-visible:opacity-100"
+                  :disabled="row.isDefault"
+                  :aria-label="row.isDefault ? '默认分类不可删除' : '删除分类'"
+                  :title="row.isDefault ? '默认分类不可删除' : '删除分类'"
+                  @click.stop="promptDeleteCategory(activeModule, row.id)"
+                >
+                  <i class="ri-delete-bin-line text-[13px]" />
+                </button>
               </div>
             </div>
 
@@ -1137,7 +1630,7 @@ function escapeHtml(value: string) {
               variant="ghost"
               size="sm"
               class="mt-3 h-8 w-full justify-start rounded-md px-2 text-muted-foreground"
-              @click="addCategory(activeModule)"
+              @click="openCreateRootCategoryDialog(activeModule)"
             >
               <i class="ri-add-line text-[15px]" />
               <span>添加分类</span>
@@ -1659,6 +2152,131 @@ function escapeHtml(value: string) {
         </div>
       </div>
     </ResponsiveRightSheet>
+
+    <Dialog v-model:open="categoryCreateDialogOpen">
+      <DialogContent class="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>添加媒体分类</DialogTitle>
+          <DialogDescription>
+            {{ categoryCreateForm.parentUuid ? `添加到 ${getCategoryPathLabel(categoryCreateModule, categoryCreateForm.parentUuid)} 下` : `添加${categoryCreateModule === 'videos' ? '视频' : '文章'}根分类` }}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div class="space-y-4 py-2">
+          <label class="grid gap-2 text-sm">
+            <span class="font-medium text-foreground">分类名称</span>
+            <Input
+              v-model="categoryCreateForm.name"
+              placeholder="输入分类名称"
+              @keydown.enter.prevent="submitCreateCategory"
+            />
+          </label>
+
+          <label class="grid gap-2 text-sm">
+            <span class="font-medium text-foreground">排序</span>
+            <Input
+              v-model.number="categoryCreateForm.sortNum"
+              type="number"
+              inputmode="numeric"
+              placeholder="输入排序值"
+              @keydown.enter.prevent="submitCreateCategory"
+            />
+          </label>
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" :disabled="categoryCreateSubmitting" @click="categoryCreateDialogOpen = false">
+            取消
+          </Button>
+          <Button :disabled="categoryCreateSubmitting || !categoryCreateForm.name.trim()" @click="submitCreateCategory">
+            <i :class="[categoryCreateSubmitting ? 'ri-loader-4-line animate-spin' : 'ri-save-line', 'text-sm']" />
+            <span>{{ categoryCreateSubmitting ? "保存中" : "保存分类" }}</span>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <Dialog :open="categoryEditDialogOpen" @update:open="value => value ? (categoryEditDialogOpen = value) : closeEditCategoryDialog()">
+      <DialogContent class="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>编辑媒体分类</DialogTitle>
+          <DialogDescription>
+            {{ categoryDetailLoading ? "正在同步分类详情..." : editingCategory ? `更新 ${editingCategory.name} 的名称和排序。` : "更新当前分类的名称和排序。" }}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div class="space-y-4 py-2">
+          <label class="grid gap-2 text-sm">
+            <span class="font-medium text-foreground">分类名称</span>
+            <Input
+              v-model="categoryEditForm.name"
+              placeholder="输入分类名称"
+              :disabled="categoryDetailLoading"
+              @keydown.enter.prevent="submitEditCategory"
+            />
+          </label>
+
+          <label class="grid gap-2 text-sm">
+            <span class="font-medium text-foreground">排序</span>
+            <Input
+              v-model.number="categoryEditForm.sortNum"
+              type="number"
+              inputmode="numeric"
+              placeholder="输入排序值"
+              :disabled="categoryDetailLoading"
+              @keydown.enter.prevent="submitEditCategory"
+            />
+          </label>
+        </div>
+
+        <DialogFooter class="gap-2 sm:justify-between">
+          <Button
+            variant="ghost"
+            class="text-destructive hover:text-destructive"
+            :disabled="categoryDetailLoading || categoryEditSubmitting || Boolean(editingCategory?.isDefault)"
+            @click="editingCategoryId && promptDeleteCategory(categoryEditModule, editingCategoryId)"
+          >
+            <i class="ri-delete-bin-line text-sm" />
+            <span>删除分类</span>
+          </Button>
+
+          <div class="flex justify-end gap-2">
+            <Button variant="outline" :disabled="categoryEditSubmitting" @click="closeEditCategoryDialog">
+              取消
+            </Button>
+            <Button :disabled="categoryDetailLoading || categoryEditSubmitting || !categoryEditForm.name.trim()" @click="submitEditCategory">
+              <i :class="[categoryEditSubmitting ? 'ri-loader-4-line animate-spin' : 'ri-save-line', 'text-sm']" />
+              <span>{{ categoryEditSubmitting ? "保存中" : "保存修改" }}</span>
+            </Button>
+          </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+
+    <AlertDialog v-model:open="categoryDeleteConfirmOpen">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>删除媒体分类？</AlertDialogTitle>
+          <AlertDialogDescription>
+            删除后将无法恢复。请确认该分类下没有仍需保留的内容或子分类。
+            <span v-if="deletingCategory" class="mt-2 block font-medium text-foreground">
+              {{ deletingCategory.name }}
+            </span>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel :disabled="categoryDeleteSubmitting">取消</AlertDialogCancel>
+          <AlertDialogAction
+            class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            :disabled="categoryDeleteSubmitting"
+            @click.prevent="confirmDeleteCategory"
+          >
+            <i :class="[categoryDeleteSubmitting ? 'ri-loader-4-line animate-spin' : 'ri-delete-bin-line', 'text-sm']" />
+            <span>{{ categoryDeleteSubmitting ? "删除中" : "删除分类" }}</span>
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   </section>
 </template>
 
