@@ -19,7 +19,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import FileUploadField from "@/components/upload/FileUploadField.vue"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import videoPreviewAsset from "@/assets/video.png"
 import {
@@ -43,17 +42,9 @@ import {
 } from "@/components/ui/tags-input"
 import { Textarea } from "@/components/ui/textarea"
 import {
-  MEDIA_STATUS_OPTIONS,
-  createMediaLibraryMockState,
-  type ArticleItem,
-  type ArticleMediaViewKey,
-  type MediaCategoryNode,
-  type MediaModuleKey,
-  type MediaStatus,
-  type VideoItem,
-  type VideoMediaViewKey,
-} from "@/lib/media-library-mock"
-import { getApiErrorMessage, handleApiError } from "@/lib/api-errors"
+  getApiErrorMessage,
+  handleApiError,
+} from "@/lib/api-errors"
 import {
   createMediaArticle,
   deleteMediaArticle,
@@ -82,10 +73,47 @@ import {
   updateMediaVideo,
 } from "@/lib/media-videos-api"
 import { uploadTencentCosFile } from "@/lib/tencent-cos-sdk"
-import { cn } from "@/lib/utils"
 
 type SheetMode = "preview" | "edit" | "create"
 type SheetEntityKind = "video" | "article"
+type MediaModuleKey = "videos" | "articles"
+type MediaStatus = "draft" | "published" | "scheduled"
+type VideoMediaViewKey = "grid" | "list"
+type ArticleMediaViewKey = "grid" | "list"
+
+type MediaCategoryNode = {
+  id: string
+  name: string
+  slug: string
+  count: number
+  module: MediaModuleKey
+  isDefault?: boolean
+  parentUuid?: string
+  sortOrder?: number
+  children?: MediaCategoryNode[]
+}
+
+type VideoItem = {
+  id: string
+  categoryId: string
+  title: string
+  sourceUrl: string
+  sourceFileName: string
+  summary: string
+  status: MediaStatus
+  sortOrder: number
+}
+
+type ArticleItem = {
+  id: string
+  categoryId: string
+  title: string
+  cover: string
+  content: string
+  tags: string[]
+  status: MediaStatus
+  sortOrder: number
+}
 
 type MediaEditorForm = {
   kind: SheetEntityKind
@@ -95,11 +123,9 @@ type MediaEditorForm = {
   sourceUrl: string
   sourceFileName: string
   summary: string
-  duration: string
   status: MediaStatus
-  featured: boolean
   sortOrder: number
-  markdown: string
+  content: string
   tagsText: string
 }
 
@@ -148,39 +174,29 @@ const MEDIA_VIDEO_LOAD_ERROR_MESSAGE = "媒体视频列表加载失败，请稍�
 const MEDIA_ARTICLE_PAGE_SIZE = 500
 const MEDIA_ARTICLE_LOAD_ERROR_MESSAGE = "媒体文章列表加载失败，请稍后重试。"
 const ROOT_CATEGORY_PARENT_VALUE = "__root__"
+const MEDIA_STATUS_OPTIONS: Array<{ value: MediaStatus; label: string }> = [
+  { value: "published", label: "已发布" },
+  { value: "scheduled", label: "待上线" },
+  { value: "draft", label: "草稿" },
+]
 
 const statusLabelMap = new Map(MEDIA_STATUS_OPTIONS.map(option => [option.value, option.label]))
-const coverToneClasses = [
-  "bg-slate-100",
-  "bg-zinc-100",
-  "bg-stone-100",
-  "bg-neutral-100",
-  "bg-slate-100",
-] as const
-const coverAccentClasses = [
-  "text-slate-700",
-  "text-slate-700",
-  "text-slate-700",
-  "text-slate-700",
-  "text-slate-700",
-] as const
 
-const initialState = createMediaLibraryMockState()
-const videoCategories = ref(initialState.videoCategories)
-const articleCategories = ref(initialState.articleCategories)
+const videoCategories = ref<MediaCategoryNode[]>([])
+const articleCategories = ref<MediaCategoryNode[]>([])
 const videoItems = ref<VideoItem[]>([])
 const articleItems = ref<ArticleItem[]>([])
 
 const activeModule = ref<MediaModuleKey>("videos")
 const activeVideoView = ref<VideoMediaViewKey>("grid")
 const activeArticleView = ref<ArticleMediaViewKey>("list")
-const selectedVideoCategoryId = ref(initialState.videoCategories[0]?.id ?? "")
-const selectedArticleCategoryId = ref(initialState.articleCategories[0]?.id ?? "")
+const selectedVideoCategoryId = ref("")
+const selectedArticleCategoryId = ref("")
 const searchQuery = ref("")
 const searchExpanded = ref(false)
 const expandedCategoryIds = reactive<Record<MediaModuleKey, string[]>>({
-  videos: videoCategories.value.map(category => category.id),
-  articles: articleCategories.value.map(category => category.id),
+  videos: [],
+  articles: [],
 })
 const categoryLoading = reactive<Record<MediaModuleKey, boolean>>({
   videos: false,
@@ -208,8 +224,8 @@ const sheetMode = ref<SheetMode>("preview")
 const sheetEntityKind = ref<SheetEntityKind>("video")
 const activeEntityId = ref("")
 const uploadingVideoFile = ref(false)
+const uploadingArticleCover = ref(false)
 const formState = reactive<MediaEditorForm>(createEmptyForm("video"))
-const canUseVideoUploadTest = import.meta.env.DEV
 const categoryCreateDialogOpen = ref(false)
 const categoryEditDialogOpen = ref(false)
 const categoryDeleteConfirmOpen = ref(false)
@@ -326,7 +342,6 @@ const filteredVideoItems = computed(() => {
       return matchesQuery(query, [
         item.title,
         item.summary,
-        item.cover,
         getCategoryPathLabel("videos", categoryId),
       ])
     })
@@ -350,10 +365,9 @@ const filteredArticles = computed(() => {
 
       return matchesQuery(query, [
         item.title,
-        item.summary,
         item.cover,
         item.tags.join(" "),
-        item.markdown,
+        item.content,
         getCategoryPathLabel("articles", categoryId),
       ])
     })
@@ -363,7 +377,9 @@ const filteredArticles = computed(() => {
 const activeVideo = computed(() => videoItemMap.value.get(activeEntityId.value) ?? null)
 const activeArticle = computed(() => articleItemMap.value.get(activeEntityId.value) ?? null)
 const isMediaFormSubmitting = computed(() => (
-  formState.kind === "video" ? videoCreateSubmitting.value : articleCreateSubmitting.value
+  formState.kind === "video"
+    ? videoCreateSubmitting.value || uploadingVideoFile.value
+    : articleCreateSubmitting.value || uploadingArticleCover.value
 ))
 
 const sheetTitle = computed(() => {
@@ -381,12 +397,12 @@ const sheetTitle = computed(() => {
 const sheetDescription = computed(() => {
   if (sheetMode.value === "create") {
     return activeModule.value === "videos"
-      ? "先用 mock 数据把视频标题、摘要和基础信息定下来。"
-      : "先用富文本组织正文和基础信息。"
+      ? "上传视频文件并维护标题、分类、状态和摘要。"
+      : "维护文章标题、分类、封面、状态、标签和正文。"
   }
 
   if (sheetMode.value === "edit") {
-    return "保存后仅更新本地 mock 数据，便于先打磨维护流程。"
+    return "保存后将同步更新媒体库内容。"
   }
 
   return getPreviewDescription()
@@ -394,10 +410,10 @@ const sheetDescription = computed(() => {
 
 const previewArticleContentHtml = computed(() => {
   if (sheetMode.value === "preview") {
-    return renderArticleContentHtml(activeArticle.value?.markdown ?? "")
+    return renderArticleContentHtml(activeArticle.value?.content ?? "")
   }
 
-  return renderArticleContentHtml(formState.markdown)
+  return renderArticleContentHtml(formState.content)
 })
 
 onMounted(() => {
@@ -414,13 +430,9 @@ const videoPreviewSections = computed<DetailFieldSection[]>(() => {
       key: "video-preview-fields",
       title: "",
       rows: [
-        { key: "cover", label: "封面文案", value: activeVideo.value.cover || "—" },
         { key: "sourceUrl", label: "视频文件", value: activeVideo.value.sourceFileName || activeVideo.value.sourceUrl || "—", truncate: false },
         { key: "category", label: "分类", value: getCategoryPathLabel("videos", normalizeItemCategoryId("videos", activeVideo.value.categoryId)) },
         { key: "status", label: "状态", value: getStatusLabel(activeVideo.value.status) },
-        { key: "duration", label: "时长", value: activeVideo.value.duration || "—" },
-        { key: "sortOrder", label: "排序", value: `${activeVideo.value.sortOrder}` },
-        { key: "updatedAt", label: "更新时间", value: activeVideo.value.updatedAt },
         { key: "summary", label: "摘要", value: activeVideo.value.summary || "—", truncate: false, valueClass: "leading-6" },
       ],
     },
@@ -435,12 +447,8 @@ const articlePreviewSections = computed<DetailFieldSection[]>(() => {
       key: "article-preview-fields",
       title: "",
       rows: [
-        { key: "cover", label: "封面文案", value: activeArticle.value.cover || "—" },
         { key: "category", label: "分类", value: getCategoryPathLabel("articles", normalizeItemCategoryId("articles", activeArticle.value.categoryId)) },
         { key: "status", label: "状态", value: getStatusLabel(activeArticle.value.status) },
-        { key: "sortOrder", label: "排序", value: `${activeArticle.value.sortOrder}` },
-        { key: "updatedAt", label: "更新时间", value: activeArticle.value.updatedAt },
-        { key: "summary", label: "摘要", value: activeArticle.value.summary || "—", truncate: false, valueClass: "leading-6" },
         { key: "tags", label: "标签", value: activeArticle.value.tags.length ? activeArticle.value.tags.join("、") : "—", truncate: false },
       ],
     },
@@ -816,13 +824,10 @@ function openEdit(kind: SheetEntityKind, id: string) {
     applyForm(createEmptyForm("video", {
       title: entity.title,
       categoryId: normalizeItemCategoryId("videos", entity.categoryId),
-      cover: entity.cover,
-      sourceUrl: entity.sourceUrl ?? "",
-      sourceFileName: entity.sourceFileName ?? "",
-      duration: entity.duration,
+      sourceUrl: entity.sourceUrl,
+      sourceFileName: entity.sourceFileName,
       summary: entity.summary,
       status: entity.status,
-      featured: entity.featured,
       sortOrder: entity.sortOrder,
     }))
   }
@@ -837,11 +842,9 @@ function openEdit(kind: SheetEntityKind, id: string) {
       title: entity.title,
       categoryId: normalizeItemCategoryId("articles", entity.categoryId),
       cover: entity.cover,
-      summary: entity.summary,
-      markdown: renderArticleContentHtml(entity.markdown),
+      content: renderArticleContentHtml(entity.content),
       tagsText: entity.tags.join(", "),
       status: entity.status,
-      featured: entity.featured,
       sortOrder: entity.sortOrder,
     }))
   }
@@ -907,7 +910,7 @@ function closeSheet() {
   sheetOpen.value = false
 }
 
-function handleArticleCoverFiles(files: File[]) {
+async function handleArticleCoverFiles(files: File[]) {
   const file = files[0]
 
   if (!file) {
@@ -919,14 +922,24 @@ function handleArticleCoverFiles(files: File[]) {
     return
   }
 
-  const reader = new FileReader()
-  reader.onload = () => {
-    formState.cover = typeof reader.result === "string" ? reader.result : ""
+  uploadingArticleCover.value = true
+
+  try {
+    const result = await uploadTencentCosFile({
+      file,
+      key: `media-library/articles/covers/${Date.now()}-${sanitizeObjectKeyFileName(file.name)}`,
+      contentType: file.type || undefined,
+    })
+
+    formState.cover = result.url
+    toast.success("封面已上传到腾讯云 COS")
+  } catch (error) {
+    toast.error("封面上传失败", {
+      description: getApiErrorMessage(error, "请稍后重试。"),
+    })
+  } finally {
+    uploadingArticleCover.value = false
   }
-  reader.onerror = () => {
-    toast.error("封面图片读取失败")
-  }
-  reader.readAsDataURL(file)
 }
 
 function removeArticleCover() {
@@ -1009,7 +1022,7 @@ async function saveArticleForm() {
       Title: title,
       TypeUuid: formState.categoryId,
       CoverUrl: formState.cover.trim(),
-      Content: normalizeRichTextContent(formState.markdown),
+      Content: normalizeRichTextContent(formState.content),
       Tags: parseTagText(formState.tagsText),
       Status: toMediaArticleStatus(formState.status),
     }
@@ -1053,17 +1066,6 @@ async function handleVideoFiles(files: File[]) {
   if (!file) {
     return
   }
-
-  await uploadVideoFile(file)
-}
-
-async function uploadVideoTestFile() {
-  const fileName = `buildguard-cos-test-${Date.now()}.mp4`
-  const file = new File([
-    `buildguard cos upload test ${new Date().toISOString()}`,
-  ], fileName, {
-    type: "video/mp4",
-  })
 
   await uploadVideoFile(file)
 }
@@ -1206,26 +1208,6 @@ function getStatusLabel(status: MediaStatus) {
   return statusLabelMap.get(status) ?? "未知状态"
 }
 
-function getStatusBadgeClass(status: MediaStatus) {
-  if (status === "published") {
-    return "border-emerald-200 bg-emerald-50 text-emerald-700"
-  }
-
-  if (status === "scheduled") {
-    return "border-orange-200 bg-orange-50 text-orange-700"
-  }
-
-  return "border-border bg-muted text-muted-foreground"
-}
-
-function getCoverTone(seed: string) {
-  const index = Math.abs(hashText(seed)) % coverToneClasses.length
-  return {
-    surface: coverToneClasses[index],
-    accent: coverAccentClasses[index],
-  }
-}
-
 function normalizeArticleCoverSource(value: string) {
   const normalized = value.trim()
   if (/^(https?:\/\/|data:image\/|blob:|\/)/i.test(normalized)) {
@@ -1253,7 +1235,7 @@ function getCategoryPathLabel(module: MediaModuleKey, categoryId: string) {
 }
 
 function buildVideoPlacement(item: VideoItem) {
-  return [getCategoryPathLabel("videos", normalizeItemCategoryId("videos", item.categoryId)), item.duration].filter(Boolean).join(" · ")
+  return getCategoryPathLabel("videos", normalizeItemCategoryId("videos", item.categoryId))
 }
 
 function matchesSelectedCategory(categoryId: string, selectedIds: Set<string> | null) {
@@ -1263,27 +1245,11 @@ function matchesSelectedCategory(categoryId: string, selectedIds: Set<string> | 
 function compareBySortOrder<
   T extends {
     sortOrder: number
-    updatedAt?: string
     title?: string
   },
 >(left: T, right: T) {
   return left.sortOrder - right.sortOrder
-    || String(right.updatedAt ?? "").localeCompare(String(left.updatedAt ?? ""))
     || String(left.title ?? "").localeCompare(String(right.title ?? ""), "zh-CN")
-}
-
-function formatNow() {
-  const now = new Date()
-  const year = now.getFullYear()
-  const month = `${now.getMonth() + 1}`.padStart(2, "0")
-  const date = `${now.getDate()}`.padStart(2, "0")
-  const hours = `${now.getHours()}`.padStart(2, "0")
-  const minutes = `${now.getMinutes()}`.padStart(2, "0")
-  return `${year}-${month}-${date} ${hours}:${minutes}`
-}
-
-function createId(prefix: string) {
-  return `${prefix}-${Date.now()}`
 }
 
 function createEmptyForm(kind: SheetEntityKind, overrides: Partial<MediaEditorForm> = {}): MediaEditorForm {
@@ -1295,11 +1261,9 @@ function createEmptyForm(kind: SheetEntityKind, overrides: Partial<MediaEditorFo
     sourceUrl: "",
     sourceFileName: "",
     summary: "",
-    duration: "05:00",
     status: "draft",
-    featured: false,
     sortOrder: 10,
-    markdown: "",
+    content: "",
     tagsText: "",
     ...overrides,
   }
@@ -1434,14 +1398,8 @@ function findCategoryById(nodes: MediaCategoryNode[], categoryId: string): Media
   return null
 }
 
-function normalizeItemCategoryId(module: MediaModuleKey, categoryId: string) {
-  const tree = getModuleCategories(module)
-
-  if (findCategoryById(tree, categoryId)) {
-    return categoryId
-  }
-
-  return findFirstLeafCategoryId(tree) || tree[0]?.id || categoryId
+function normalizeItemCategoryId(_module: MediaModuleKey, categoryId: string) {
+  return categoryId.trim()
 }
 
 function normalizeMediaVideo(item: MediaVideoRecord, index: number): VideoItem {
@@ -1451,18 +1409,13 @@ function normalizeMediaVideo(item: MediaVideoRecord, index: number): VideoItem {
 
   return {
     id,
-    chapterId: "",
     categoryId: toOptionalText(item.TypeUuid),
     title,
-    cover: title,
     sourceUrl,
     sourceFileName: getFileNameFromUrl(sourceUrl),
-    duration: "",
     summary: toOptionalText(item.Abstract),
     status: normalizeMediaVideoStatus(item.Status),
-    featured: false,
     sortOrder: index + 1,
-    updatedAt: "",
   }
 }
 
@@ -1475,13 +1428,10 @@ function normalizeMediaArticle(item: MediaArticleRecord, index: number): Article
     categoryId: toOptionalText(item.TypeUuid),
     title,
     cover: toOptionalText(item.CoverUrl),
-    summary: "",
-    markdown: normalizeRichTextContent(toOptionalText(item.Content)),
+    content: normalizeRichTextContent(toOptionalText(item.Content)),
     tags: normalizeMediaArticleTags(item.Tags),
     status: normalizeMediaStatus(item.Status),
-    featured: false,
     sortOrder: index + 1,
-    updatedAt: "",
   }
 }
 
@@ -1573,17 +1523,6 @@ function stripFileExtension(value: string) {
   const lastDotIndex = normalized.lastIndexOf(".")
 
   return lastDotIndex > 0 ? normalized.slice(0, lastDotIndex) : normalized
-}
-
-function upsertById<T extends { id: string }>(list: T[], next: T) {
-  const index = list.findIndex(item => item.id === next.id)
-
-  if (index === -1) {
-    list.unshift(next)
-    return
-  }
-
-  list.splice(index, 1, next)
 }
 
 function flattenCategoryTree(nodes: MediaCategoryNode[]): MediaCategoryNode[] {
@@ -1744,77 +1683,15 @@ function matchesQuery(query: string, values: Array<string | undefined | null>) {
   return normalizedValues.includes(query)
 }
 
-function renderMockMarkdown(markdown: string) {
-  if (!markdown.trim()) {
+function renderPlainTextContent(value: string) {
+  if (!value.trim()) {
     return "<p>暂无正文。</p>"
   }
 
-  const lines = markdown.split("\n")
-  const html: string[] = []
-  let inList = false
-
-  const closeList = () => {
-    if (inList) {
-      html.push("</ul>")
-      inList = false
-    }
-  }
-
-  for (const rawLine of lines) {
-    const line = rawLine.trimEnd()
-
-    if (!line.trim()) {
-      closeList()
-      continue
-    }
-
-    const escaped = renderInlineMarkdown(escapeHtml(line.trim()))
-
-    if (line.startsWith("### ")) {
-      closeList()
-      html.push(`<h3>${renderInlineMarkdown(escapeHtml(line.slice(4)))}</h3>`)
-      continue
-    }
-
-    if (line.startsWith("## ")) {
-      closeList()
-      html.push(`<h2>${renderInlineMarkdown(escapeHtml(line.slice(3)))}</h2>`)
-      continue
-    }
-
-    if (line.startsWith("# ")) {
-      closeList()
-      html.push(`<h1>${renderInlineMarkdown(escapeHtml(line.slice(2)))}</h1>`)
-      continue
-    }
-
-    if (line.startsWith("- ")) {
-      if (!inList) {
-        html.push("<ul>")
-        inList = true
-      }
-      html.push(`<li>${renderInlineMarkdown(escapeHtml(line.slice(2)))}</li>`)
-      continue
-    }
-
-    if (/^\d+\.\s+/.test(line)) {
-      closeList()
-      html.push(`<p>${escaped}</p>`)
-      continue
-    }
-
-    if (line.startsWith("> ")) {
-      closeList()
-      html.push(`<blockquote>${renderInlineMarkdown(escapeHtml(line.slice(2)))}</blockquote>`)
-      continue
-    }
-
-    closeList()
-    html.push(`<p>${escaped}</p>`)
-  }
-
-  closeList()
-  return html.join("")
+  return value
+    .split(/\n{2,}/)
+    .map(paragraph => `<p>${escapeHtml(paragraph.trim()).replace(/\n/g, "<br>")}</p>`)
+    .join("")
 }
 
 function renderArticleContentHtml(value: string) {
@@ -1827,7 +1704,7 @@ function renderArticleContentHtml(value: string) {
     return normalized
   }
 
-  return renderMockMarkdown(normalized)
+  return renderPlainTextContent(normalized)
 }
 
 function normalizeRichTextContent(value: string) {
@@ -1837,13 +1714,6 @@ function normalizeRichTextContent(value: string) {
 
 function looksLikeHtml(value: string) {
   return /<\/?(p|h1|h2|h3|blockquote|ul|ol|li|strong|em|b|i|a|pre|code|div|br)\b/i.test(value)
-}
-
-function renderInlineMarkdown(text: string) {
-  return text
-    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-    .replace(/`(.+?)`/g, "<code>$1</code>")
-    .replace(/\[(.+?)\]\((.+?)\)/g, '<a href="$2" target="_blank" rel="noreferrer">$1</a>')
 }
 
 function escapeHtml(value: string) {
@@ -1860,7 +1730,7 @@ function escapeHtml(value: string) {
   <section class="relative flex flex-col overflow-visible bg-background">
     <SettingsPageHeader
       title="媒体库"
-      description="为客户 app 首页维护视频教程与图文内容。当前版本全部基于 mock 数据，重点先验证后台维护结构和操作节奏。"
+      description="维护客户 app 首页的视频教程与图文内容。"
     >
       <SettingsToolbarRow>
         <template #leading>
@@ -2053,7 +1923,7 @@ function escapeHtml(value: string) {
               >
                 <img
                   class="absolute inset-0 h-full w-full object-cover"
-                  :src="getArticleCoverSrc(item.cover)"
+                  :src="videoPreviewAsset"
                   alt=""
                   aria-hidden="true"
                 />
@@ -2119,7 +1989,7 @@ function escapeHtml(value: string) {
                 <div class="relative size-14 shrink-0 overflow-hidden rounded-md bg-muted/40">
                   <img
                     class="h-full w-full object-cover transition-transform duration-200 ease-out group-hover:scale-[1.03]"
-                    :src="getArticleCoverSrc(item.cover)"
+                    :src="videoPreviewAsset"
                     alt=""
                     aria-hidden="true"
                   />
@@ -2459,13 +2329,16 @@ function escapeHtml(value: string) {
               <div class="article-editor-control">
                 <FileUploadField
                   accept="image/png,image/jpeg,image/jpg,image/webp"
+                  :loading="uploadingArticleCover"
                   title="上传封面"
-                  description="支持 JPG、PNG、WEBP，可点击选择，也可以将图片拖放到此处。"
+                  description="支持 JPG、PNG、WEBP，上传后会写入封面地址。"
+                  :selected-label="formState.cover || '暂未选择封面'"
                   button-label="选择封面"
+                  loading-label="上传中..."
                   icon="ri-image-add-line"
                   compact
                   :show-supplement="Boolean(articleCoverPreviewSrc)"
-                  @files-selected="files => handleArticleCoverFiles(files)"
+                  @files-selected="files => { void handleArticleCoverFiles(files) }"
                 >
                   <template v-if="articleCoverPreviewSrc" #preview="{ open }">
                     <div class="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
@@ -2546,7 +2419,7 @@ function escapeHtml(value: string) {
               <span class="article-editor-label">正文</span>
               <div class="article-editor-control">
                 <RichTextEditor
-                  v-model="formState.markdown"
+                  v-model="formState.content"
                   placeholder="输入正文内容"
                 />
               </div>
@@ -2568,20 +2441,7 @@ function escapeHtml(value: string) {
                   icon="ri-upload-2-line"
                   compact
                   @files-selected="files => { void handleVideoFiles(files) }"
-                >
-                  <template v-if="canUseVideoUploadTest" #actions>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      class="rounded-md"
-                      :disabled="uploadingVideoFile"
-                      @click="uploadVideoTestFile"
-                    >
-                      <i class="ri-flask-line text-sm" />
-                      <span>测试上传</span>
-                    </Button>
-                  </template>
-                </FileUploadField>
+                />
               </div>
             </div>
 

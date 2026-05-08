@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from "vue"
+import { computed, onMounted, reactive, ref, watch } from "vue"
 import { toast } from "vue-sonner"
 
 import TitleBlock from "@/components/layout/TitleBlock.vue"
@@ -20,14 +20,42 @@ import {
   type AppHomeVideoSource,
 } from "@/lib/app-home-mock"
 import {
-  createMediaLibraryMockState,
-  type ArticleItem,
-  type MediaCategoryNode,
-  type VideoItem,
-} from "@/lib/media-library-mock"
+  fetchMediaArticles,
+  type MediaArticleRecord,
+} from "@/lib/media-articles-api"
+import {
+  fetchMediaTypes,
+  type MediaTypeRecord,
+} from "@/lib/media-types-api"
+import {
+  fetchMediaVideos,
+  type MediaVideoRecord,
+} from "@/lib/media-videos-api"
+import { handleApiError } from "@/lib/api-errors"
 import { cn } from "@/lib/utils"
 
 type DragTarget = "module" | "category"
+type MediaCategoryNode = {
+  id: string
+  name: string
+  sortOrder: number
+  children?: MediaCategoryNode[]
+}
+type VideoItem = {
+  id: string
+  categoryId: string
+  title: string
+  cover: string
+  sortOrder: number
+}
+type ArticleItem = {
+  id: string
+  categoryId: string
+  title: string
+  cover: string
+  summary: string
+  sortOrder: number
+}
 
 type NewVideoSourceForm = {
   kind: "category" | "video"
@@ -35,9 +63,20 @@ type NewVideoSourceForm = {
   videoId: string
 }
 
-const mediaState = createMediaLibraryMockState()
+const MEDIA_OPTION_PAGE_SIZE = 500
 const initialHomeState = createAppHomeMockState()
 
+const mediaState = reactive<{
+  videoCategories: MediaCategoryNode[]
+  articleCategories: MediaCategoryNode[]
+  videoItems: VideoItem[]
+  articleItems: ArticleItem[]
+}>({
+  videoCategories: [],
+  articleCategories: [],
+  videoItems: [],
+  articleItems: [],
+})
 const modules = ref<AppHomeModule[]>(normalizeModuleOrders(initialHomeState.modules))
 const selectedModuleId = ref(modules.value[0]?.id ?? "")
 const sheetOpen = ref(false)
@@ -47,8 +86,8 @@ const draggingTarget = ref<DragTarget | "">("")
 const dragOverId = ref("")
 const newVideoSource = reactive<NewVideoSourceForm>({
   kind: "category",
-  categoryId: mediaState.videoCategories[0]?.id ?? "",
-  videoId: mediaState.videoItems[0]?.id ?? "",
+  categoryId: "",
+  videoId: "",
 })
 
 const orderedModules = computed(() => [...modules.value].sort(compareBySortOrder))
@@ -70,6 +109,10 @@ const videoOptions = computed(() => [...mediaState.videoItems].sort(compareBySor
 const videoItemMap = computed(() => new Map(mediaState.videoItems.map(item => [item.id, item])))
 const articleItemMap = computed(() => new Map(mediaState.articleItems.map(item => [item.id, item])))
 
+onMounted(() => {
+  void loadMediaOptions()
+})
+
 watch(selectedVideoModule, (module) => {
   if (!module?.categories.length) {
     return
@@ -80,6 +123,34 @@ watch(selectedVideoModule, (module) => {
     activePreviewCategoryIds[module.id] = firstCategoryId
   }
 }, { immediate: true })
+
+async function loadMediaOptions() {
+  try {
+    const [
+      videoCategoryResult,
+      articleCategoryResult,
+      videoResult,
+      articleResult,
+    ] = await Promise.all([
+      fetchMediaTypes({ Type: 1, PageNum: 1, PageSize: MEDIA_OPTION_PAGE_SIZE }),
+      fetchMediaTypes({ Type: 2, PageNum: 1, PageSize: MEDIA_OPTION_PAGE_SIZE }),
+      fetchMediaVideos({ PageNum: 1, PageSize: MEDIA_OPTION_PAGE_SIZE }),
+      fetchMediaArticles({ PageNum: 1, PageSize: MEDIA_OPTION_PAGE_SIZE }),
+    ])
+
+    mediaState.videoCategories = normalizeMediaCategoryTree(videoCategoryResult.list)
+    mediaState.articleCategories = normalizeMediaCategoryTree(articleCategoryResult.list)
+    mediaState.videoItems = videoResult.list.map((item, index) => normalizeMediaVideo(item, index))
+    mediaState.articleItems = articleResult.list.map((item, index) => normalizeMediaArticle(item, index))
+    syncMediaOptionDefaults()
+    syncHomeMediaReferences()
+  } catch (error) {
+    handleApiError(error, {
+      title: "媒体库选项加载失败",
+      fallback: "媒体库选项加载失败，请稍后重试。",
+    })
+  }
+}
 
 function openModule(moduleId: string) {
   selectedModuleId.value = moduleId
@@ -291,6 +362,59 @@ function getCoverSrc(value: string) {
   return videoPreviewAsset
 }
 
+function syncMediaOptionDefaults() {
+  if (!newVideoSource.categoryId || !findCategoryPath(mediaState.videoCategories, newVideoSource.categoryId).length) {
+    newVideoSource.categoryId = videoCategoryOptions.value[0]?.id ?? ""
+  }
+
+  if (!newVideoSource.videoId || !videoItemMap.value.has(newVideoSource.videoId)) {
+    newVideoSource.videoId = videoOptions.value[0]?.id ?? ""
+  }
+}
+
+function syncHomeMediaReferences() {
+  const categoryIds = new Set(videoCategoryOptions.value.map(item => item.id))
+  const videoIds = new Set(videoOptions.value.map(item => item.id))
+  const articleIds = new Set(articleOptions.value.map(item => item.id))
+  const fallbackCategoryId = videoCategoryOptions.value[0]?.id ?? ""
+  const fallbackArticleId = articleOptions.value[0]?.id ?? ""
+
+  modules.value = modules.value.map((module) => {
+    if (module.type === "article") {
+      return articleIds.has(module.articleId)
+        ? module
+        : {
+            ...module,
+            articleId: fallbackArticleId,
+          }
+    }
+
+    return {
+      ...module,
+      categories: module.categories.map((category) => {
+        const sources = category.sources.filter((source) => {
+          if (source.kind === "category") {
+            return categoryIds.has(source.categoryId)
+          }
+
+          return videoIds.has(source.videoId)
+        })
+
+        return {
+          ...category,
+          sources: sources.length || !fallbackCategoryId
+            ? sources
+            : [{
+                id: createId("source"),
+                kind: "category",
+                categoryId: fallbackCategoryId,
+              }],
+        }
+      }),
+    }
+  })
+}
+
 function handleDragStart(event: DragEvent, target: DragTarget, id: string) {
   draggingTarget.value = target
   draggingId.value = id
@@ -414,6 +538,54 @@ function compareBySortOrder<T extends { sortOrder: number, title?: string }>(lef
     || String(left.title ?? "").localeCompare(String(right.title ?? ""), "zh-CN")
 }
 
+function normalizeMediaCategoryTree(records: MediaTypeRecord[]) {
+  return records
+    .map(normalizeMediaCategory)
+    .sort(compareBySortOrder)
+}
+
+function normalizeMediaCategory(item: MediaTypeRecord): MediaCategoryNode {
+  const id = toOptionalText(item.Uuid) || `media-category-${item.Id ?? hashText(JSON.stringify(item))}`
+  const name = toOptionalText(item.Name) || `分类 ${item.Id ?? id}`
+
+  return {
+    id,
+    name,
+    sortOrder: toOptionalNumber(item.SortNum) ?? 0,
+    children: Array.isArray(item.Children)
+      ? normalizeMediaCategoryTree(item.Children)
+      : undefined,
+  }
+}
+
+function normalizeMediaVideo(item: MediaVideoRecord, index: number): VideoItem {
+  const id = toOptionalText(item.Uuid) || `media-video-${item.Id ?? index + 1}`
+  const title = toOptionalText(item.Title) || `视频 ${index + 1}`
+
+  return {
+    id,
+    categoryId: toOptionalText(item.TypeUuid),
+    title,
+    cover: "",
+    sortOrder: index + 1,
+  }
+}
+
+function normalizeMediaArticle(item: MediaArticleRecord, index: number): ArticleItem {
+  const id = toOptionalText(item.Uuid) || `media-article-${item.Id ?? index + 1}`
+  const title = toOptionalText(item.Title) || `文章 ${index + 1}`
+  const content = toOptionalText(item.Content)
+
+  return {
+    id,
+    categoryId: toOptionalText(item.TypeUuid),
+    title,
+    cover: toOptionalText(item.CoverUrl),
+    summary: stripHtml(content).slice(0, 80),
+    sortOrder: index + 1,
+  }
+}
+
 function flattenCategoryTree(nodes: MediaCategoryNode[]) {
   const result: MediaCategoryNode[] = []
 
@@ -484,6 +656,28 @@ function findCategoryPath(nodes: MediaCategoryNode[], categoryId: string, stack:
 
 function createId(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
+}
+
+function toOptionalText(value: unknown) {
+  return typeof value === "string" ? value.trim() : ""
+}
+
+function toOptionalNumber(value: unknown) {
+  const parsed = typeof value === "number"
+    ? value
+    : typeof value === "string" && value.trim()
+      ? Number(value.trim())
+      : NaN
+
+  return Number.isFinite(parsed) ? parsed : undefined
+}
+
+function stripHtml(value: string) {
+  return value.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim()
+}
+
+function hashText(value: string) {
+  return [...value].reduce((sum, char) => sum * 31 + char.charCodeAt(0), 7)
 }
 </script>
 
