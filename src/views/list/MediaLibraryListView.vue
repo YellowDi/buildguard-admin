@@ -55,6 +55,15 @@ import {
 } from "@/lib/media-library-mock"
 import { getApiErrorMessage, handleApiError } from "@/lib/api-errors"
 import {
+  createMediaArticle,
+  deleteMediaArticle,
+  fetchMediaArticles,
+  getMediaArticleDetail,
+  type MediaArticleRecord,
+  type MediaArticleStatus,
+  updateMediaArticle,
+} from "@/lib/media-articles-api"
+import {
   createMediaType,
   deleteMediaType,
   fetchMediaTypes,
@@ -136,6 +145,8 @@ const MEDIA_CATEGORY_PAGE_SIZE = 500
 const MEDIA_CATEGORY_LOAD_ERROR_MESSAGE = "媒体分类列表加载失败，请稍后重试。"
 const MEDIA_VIDEO_PAGE_SIZE = 500
 const MEDIA_VIDEO_LOAD_ERROR_MESSAGE = "媒体视频列表加载失败，请稍后重试。"
+const MEDIA_ARTICLE_PAGE_SIZE = 500
+const MEDIA_ARTICLE_LOAD_ERROR_MESSAGE = "媒体文章列表加载失败，请稍后重试。"
 const ROOT_CATEGORY_PARENT_VALUE = "__root__"
 
 const statusLabelMap = new Map(MEDIA_STATUS_OPTIONS.map(option => [option.value, option.label]))
@@ -158,7 +169,7 @@ const initialState = createMediaLibraryMockState()
 const videoCategories = ref(initialState.videoCategories)
 const articleCategories = ref(initialState.articleCategories)
 const videoItems = ref<VideoItem[]>([])
-const articleItems = ref(initialState.articleItems)
+const articleItems = ref<ArticleItem[]>([])
 
 const activeModule = ref<MediaModuleKey>("videos")
 const activeVideoView = ref<VideoMediaViewKey>("grid")
@@ -185,6 +196,12 @@ const videoDetailLoading = ref(false)
 const videoCreateSubmitting = ref(false)
 const videoDeleteSubmitting = ref(false)
 const videoDeleteConfirmOpen = ref(false)
+const articleListLoading = ref(false)
+const articleListErrorMessage = ref("")
+const articleDetailLoading = ref(false)
+const articleCreateSubmitting = ref(false)
+const articleDeleteSubmitting = ref(false)
+const articleDeleteConfirmOpen = ref(false)
 
 const sheetOpen = ref(false)
 const sheetMode = ref<SheetMode>("preview")
@@ -345,6 +362,9 @@ const filteredArticles = computed(() => {
 
 const activeVideo = computed(() => videoItemMap.value.get(activeEntityId.value) ?? null)
 const activeArticle = computed(() => articleItemMap.value.get(activeEntityId.value) ?? null)
+const isMediaFormSubmitting = computed(() => (
+  formState.kind === "video" ? videoCreateSubmitting.value : articleCreateSubmitting.value
+))
 
 const sheetTitle = computed(() => {
   if (sheetMode.value === "create") {
@@ -383,6 +403,7 @@ const previewArticleContentHtml = computed(() => {
 onMounted(() => {
   void loadAllMediaCategories()
   void loadMediaVideos()
+  void loadMediaArticles()
 })
 
 const videoPreviewSections = computed<DetailFieldSection[]>(() => {
@@ -493,6 +514,33 @@ async function loadMediaVideos() {
 
 function refreshMediaVideos() {
   void loadMediaVideos()
+}
+
+async function loadMediaArticles() {
+  articleListLoading.value = true
+  articleListErrorMessage.value = ""
+
+  try {
+    const result = await fetchMediaArticles({
+      PageNum: 1,
+      PageSize: MEDIA_ARTICLE_PAGE_SIZE,
+    })
+
+    articleItems.value = result.list.map((item, index) => normalizeMediaArticle(item, index))
+  } catch (error) {
+    articleItems.value = []
+    articleListErrorMessage.value = handleApiError(error, {
+      title: "媒体文章加载失败",
+      fallback: MEDIA_ARTICLE_LOAD_ERROR_MESSAGE,
+      mode: "silent",
+    })
+  } finally {
+    articleListLoading.value = false
+  }
+}
+
+function refreshMediaArticles() {
+  void loadMediaArticles()
 }
 
 function toggleSearch() {
@@ -748,6 +796,10 @@ function openPreview(kind: SheetEntityKind, id: string) {
   if (kind === "video") {
     void syncActiveVideoDetail(id)
   }
+
+  if (kind === "article") {
+    void syncActiveArticleDetail(id)
+  }
 }
 
 function openEdit(kind: SheetEntityKind, id: string) {
@@ -828,6 +880,29 @@ async function syncActiveVideoDetail(id: string) {
   }
 }
 
+async function syncActiveArticleDetail(id: string) {
+  articleDetailLoading.value = true
+
+  try {
+    const detail = await getMediaArticleDetail({ Uuid: id })
+    const index = articleItems.value.findIndex(item => item.id === id)
+    const next = normalizeMediaArticle(detail, index >= 0 ? index : 0)
+
+    if (index === -1) {
+      articleItems.value = [next, ...articleItems.value]
+    } else {
+      articleItems.value.splice(index, 1, next)
+    }
+  } catch (error) {
+    handleApiError(error, {
+      title: "媒体文章详情加载失败",
+      fallback: "媒体文章详情加载失败，请稍后重试。",
+    })
+  } finally {
+    articleDetailLoading.value = false
+  }
+}
+
 function closeSheet() {
   sheetOpen.value = false
 }
@@ -869,33 +944,12 @@ async function saveCurrentForm() {
     return
   }
 
-  const timestamp = formatNow()
-
   if (formState.kind === "video") {
     await saveVideoForm()
     return
   }
 
-  const created = sheetMode.value === "create"
-  const nextArticle: ArticleItem = {
-    id: sheetMode.value === "edit" ? activeEntityId.value : createId("article"),
-    categoryId: formState.categoryId,
-    title: formState.title.trim(),
-    cover: formState.cover.trim() || formState.title.trim(),
-    summary: formState.summary.trim(),
-    markdown: normalizeRichTextContent(formState.markdown),
-    tags: parseTagText(formState.tagsText),
-    status: formState.status,
-    featured: formState.featured,
-    sortOrder: Number(formState.sortOrder) || 0,
-    updatedAt: timestamp,
-  }
-
-  upsertById(articleItems.value, nextArticle)
-  activeEntityId.value = nextArticle.id
-  sheetMode.value = "preview"
-  sheetEntityKind.value = "article"
-  toast.success(created ? "文章已创建" : "文章已保存")
+  await saveArticleForm()
 }
 
 async function saveVideoForm() {
@@ -942,6 +996,54 @@ async function saveVideoForm() {
     })
   } finally {
     videoCreateSubmitting.value = false
+  }
+}
+
+async function saveArticleForm() {
+  const title = formState.title.trim()
+  const created = sheetMode.value === "create"
+  articleCreateSubmitting.value = true
+
+  try {
+    const payload = {
+      Title: title,
+      TypeUuid: formState.categoryId,
+      CoverUrl: formState.cover.trim(),
+      Content: normalizeRichTextContent(formState.markdown),
+      Tags: parseTagText(formState.tagsText),
+      Status: toMediaArticleStatus(formState.status),
+    }
+    const saved = created
+      ? await createMediaArticle(payload)
+      : await updateMediaArticle({
+          Uuid: activeEntityId.value,
+          ...payload,
+        })
+    await loadMediaArticles()
+    const savedUuid = typeof saved.Uuid === "string" && saved.Uuid.trim()
+      ? saved.Uuid.trim()
+      : activeEntityId.value
+
+    if (savedUuid) {
+      activeEntityId.value = savedUuid
+      await syncActiveArticleDetail(savedUuid)
+    } else {
+      const matched = articleItems.value.find(item => item.title === title)
+      activeEntityId.value = matched?.id ?? ""
+    }
+
+    sheetMode.value = "preview"
+    sheetEntityKind.value = "article"
+    toast.success(created ? "文章已创建" : "文章已保存", {
+      description: created ? `${title} 已加入媒体库。` : `${title} 已更新。`,
+    })
+  } catch (error) {
+    handleApiError(error, {
+      title: created ? "媒体文章创建失败" : "媒体文章更新失败",
+      fallback: created ? "媒体文章创建失败，请稍后重试。" : "媒体文章更新失败，请稍后重试。",
+    })
+  } finally {
+    articleCreateSubmitting.value = false
   }
 }
 
@@ -1001,6 +1103,14 @@ function promptDeleteActiveVideo() {
   videoDeleteConfirmOpen.value = true
 }
 
+function promptDeleteActiveArticle() {
+  if (!activeArticle.value) {
+    return
+  }
+
+  articleDeleteConfirmOpen.value = true
+}
+
 async function confirmDeleteActiveVideo() {
   const target = activeVideo.value
 
@@ -1025,6 +1135,33 @@ async function confirmDeleteActiveVideo() {
     })
   } finally {
     videoDeleteSubmitting.value = false
+  }
+}
+
+async function confirmDeleteActiveArticle() {
+  const target = activeArticle.value
+
+  if (!target || articleDeleteSubmitting.value) {
+    return
+  }
+
+  articleDeleteSubmitting.value = true
+
+  try {
+    await deleteMediaArticle({ Uuid: target.id })
+    await loadMediaArticles()
+    articleDeleteConfirmOpen.value = false
+    closeSheet()
+    toast.success("媒体文章已删除", {
+      description: `${target.title} 已从媒体库移除。`,
+    })
+  } catch (error) {
+    handleApiError(error, {
+      title: "媒体文章删除失败",
+      fallback: "媒体文章删除失败，请稍后重试。",
+    })
+  } finally {
+    articleDeleteSubmitting.value = false
   }
 }
 
@@ -1329,7 +1466,36 @@ function normalizeMediaVideo(item: MediaVideoRecord, index: number): VideoItem {
   }
 }
 
+function normalizeMediaArticle(item: MediaArticleRecord, index: number): ArticleItem {
+  const id = toOptionalText(item.Uuid) || `media-article-${item.Id ?? index + 1}`
+  const title = toOptionalText(item.Title) || `文章 ${index + 1}`
+
+  return {
+    id,
+    categoryId: toOptionalText(item.TypeUuid),
+    title,
+    cover: toOptionalText(item.CoverUrl),
+    summary: "",
+    markdown: normalizeRichTextContent(toOptionalText(item.Content)),
+    tags: normalizeMediaArticleTags(item.Tags),
+    status: normalizeMediaStatus(item.Status),
+    featured: false,
+    sortOrder: index + 1,
+    updatedAt: "",
+  }
+}
+
+function normalizeMediaArticleTags(value: unknown) {
+  return Array.isArray(value)
+    ? value.map(item => typeof item === "string" ? item.trim() : "").filter(Boolean)
+    : []
+}
+
 function normalizeMediaVideoStatus(value: unknown): MediaStatus {
+  return normalizeMediaStatus(value)
+}
+
+function normalizeMediaStatus(value: unknown): MediaStatus {
   const parsed = typeof value === "number"
     ? value
     : typeof value === "string" && value.trim()
@@ -1348,6 +1514,14 @@ function normalizeMediaVideoStatus(value: unknown): MediaStatus {
 }
 
 function toMediaVideoStatus(status: MediaStatus): MediaVideoStatus {
+  return toMediaStatusCode(status)
+}
+
+function toMediaArticleStatus(status: MediaStatus): MediaArticleStatus {
+  return toMediaStatusCode(status)
+}
+
+function toMediaStatusCode(status: MediaStatus) {
   if (status === "scheduled") {
     return 2
   }
@@ -1972,7 +2146,27 @@ function escapeHtml(value: string) {
           v-else-if="activeModule === 'articles' && currentView === 'grid'"
           class="space-y-0"
         >
-          <div v-if="filteredArticles.length" class="media-library-grid grid grid-cols-2 gap-4 sm:grid-cols-3">
+          <div
+            v-if="articleListErrorMessage"
+            class="rounded-xl border border-destructive/20 bg-destructive/5 px-6 py-8 text-center text-sm text-destructive"
+          >
+            <p>{{ articleListErrorMessage }}</p>
+            <Button
+              variant="ghost"
+              size="sm"
+              class="mt-2 rounded-md text-destructive hover:text-destructive"
+              @click="refreshMediaArticles"
+            >
+              <i class="ri-refresh-line text-sm" />
+              <span>重试</span>
+            </Button>
+          </div>
+
+          <div v-else-if="articleListLoading" class="media-library-grid grid grid-cols-2 gap-4 sm:grid-cols-3">
+            <div v-for="index in 6" :key="index" class="aspect-[3/4] rounded-[18px] bg-muted/70" />
+          </div>
+
+          <div v-else-if="filteredArticles.length" class="media-library-grid grid grid-cols-2 gap-4 sm:grid-cols-3">
             <button
               v-for="item in filteredArticles"
               :key="item.id"
@@ -1986,7 +2180,7 @@ function escapeHtml(value: string) {
               >
                 <img
                   class="absolute inset-0 h-full w-full object-cover"
-                  :src="videoPreviewAsset"
+                  :src="getArticleCoverSrc(item.cover)"
                   alt=""
                   aria-hidden="true"
                 />
@@ -2011,7 +2205,27 @@ function escapeHtml(value: string) {
           v-else
           class="space-y-0"
         >
-          <div v-if="filteredArticles.length" class="space-y-1">
+          <div
+            v-if="articleListErrorMessage"
+            class="rounded-xl border border-destructive/20 bg-destructive/5 px-6 py-8 text-center text-sm text-destructive"
+          >
+            <p>{{ articleListErrorMessage }}</p>
+            <Button
+              variant="ghost"
+              size="sm"
+              class="mt-2 rounded-md text-destructive hover:text-destructive"
+              @click="refreshMediaArticles"
+            >
+              <i class="ri-refresh-line text-sm" />
+              <span>重试</span>
+            </Button>
+          </div>
+
+          <div v-else-if="articleListLoading" class="space-y-2">
+            <div v-for="index in 6" :key="index" class="h-[4.5rem] rounded-lg bg-muted/70" />
+          </div>
+
+          <div v-else-if="filteredArticles.length" class="space-y-1">
             <div
               v-for="item in filteredArticles"
               :key="item.id"
@@ -2026,7 +2240,7 @@ function escapeHtml(value: string) {
                 <div class="relative size-14 shrink-0 overflow-hidden rounded-md bg-muted/40">
                   <img
                     class="h-full w-full object-cover transition-transform duration-200 ease-out group-hover:scale-[1.03]"
-                    :src="videoPreviewAsset"
+                    :src="getArticleCoverSrc(item.cover)"
                     alt=""
                     aria-hidden="true"
                   />
@@ -2090,11 +2304,11 @@ function escapeHtml(value: string) {
               v-else
               size="sm"
               class="h-8 rounded-md px-2.5"
-              :disabled="formState.kind === 'video' && videoCreateSubmitting"
+              :disabled="isMediaFormSubmitting"
               @click="saveCurrentForm"
             >
-              <i :class="[formState.kind === 'video' && videoCreateSubmitting ? 'ri-loader-4-line animate-spin' : 'ri-save-line', 'text-sm']" />
-              <span>{{ formState.kind === 'video' && videoCreateSubmitting ? "保存中" : sheetMode === "create" ? "创建" : "保存" }}</span>
+              <i :class="[isMediaFormSubmitting ? 'ri-loader-4-line animate-spin' : 'ri-save-line', 'text-sm']" />
+              <span>{{ isMediaFormSubmitting ? "保存中" : sheetMode === "create" ? "创建" : "保存" }}</span>
             </Button>
           </div>
         </div>
@@ -2159,6 +2373,13 @@ function escapeHtml(value: string) {
           </template>
 
           <template v-else-if="sheetEntityKind === 'article' && activeArticle">
+            <div
+              v-if="articleDetailLoading"
+              class="rounded-lg border border-border/70 bg-muted/30 px-4 py-2 text-sm text-muted-foreground"
+            >
+              正在同步文章详情...
+            </div>
+
             <div class="overflow-hidden border border-border/70 bg-background">
               <img
                 class="aspect-video w-full object-cover"
@@ -2179,6 +2400,18 @@ function escapeHtml(value: string) {
               label-width-mobile="5.5rem"
               label-width-desktop="92px"
             />
+
+            <div class="flex justify-end px-4 pb-1">
+              <Button
+                variant="ghost"
+                class="text-destructive hover:text-destructive"
+                :disabled="articleDeleteSubmitting"
+                @click="promptDeleteActiveArticle"
+              >
+                <i class="ri-delete-bin-line text-sm" />
+                <span>删除文章</span>
+              </Button>
+            </div>
           </template>
 
           <template v-else-if="sheetEntityKind === 'article' && !activeArticle">
@@ -2601,6 +2834,31 @@ function escapeHtml(value: string) {
           >
             <i :class="[videoDeleteSubmitting ? 'ri-loader-4-line animate-spin' : 'ri-delete-bin-line', 'text-sm']" />
             <span>{{ videoDeleteSubmitting ? "删除中" : "删除视频" }}</span>
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
+    <AlertDialog v-model:open="articleDeleteConfirmOpen">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>删除媒体文章？</AlertDialogTitle>
+          <AlertDialogDescription>
+            删除后将无法恢复。
+            <span v-if="activeArticle" class="mt-2 block font-medium text-foreground">
+              {{ activeArticle.title }}
+            </span>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel :disabled="articleDeleteSubmitting">取消</AlertDialogCancel>
+          <AlertDialogAction
+            class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            :disabled="articleDeleteSubmitting"
+            @click.prevent="confirmDeleteActiveArticle"
+          >
+            <i :class="[articleDeleteSubmitting ? 'ri-loader-4-line animate-spin' : 'ri-delete-bin-line', 'text-sm']" />
+            <span>{{ articleDeleteSubmitting ? "删除中" : "删除文章" }}</span>
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
