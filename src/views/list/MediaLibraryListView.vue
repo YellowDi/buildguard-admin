@@ -632,6 +632,18 @@ function promptDeleteCategory(module: MediaModuleKey, id: string) {
   categoryDeleteConfirmOpen.value = true
 }
 
+function openCreateChildForEditingCategory() {
+  if (!editingCategoryId.value) {
+    return
+  }
+
+  const module = categoryEditModule.value
+  const parentUuid = editingCategoryId.value
+
+  closeEditCategoryDialog()
+  openCreateChildCategoryDialog(module, parentUuid)
+}
+
 async function confirmDeleteCategory() {
   const target = deletingCategory.value
 
@@ -1606,32 +1618,11 @@ function escapeHtml(value: string) {
                 <button
                   type="button"
                   class="flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground opacity-0 transition hover:bg-accent hover:text-foreground group-hover/category-row:opacity-100 focus-visible:opacity-100"
-                  aria-label="添加子分类"
-                  title="添加子分类"
-                  @click.stop="openCreateChildCategoryDialog(activeModule, row.id)"
-                >
-                  <i class="ri-node-tree text-[13px]" />
-                </button>
-
-                <button
-                  type="button"
-                  class="flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground opacity-0 transition hover:bg-accent hover:text-foreground group-hover/category-row:opacity-100 focus-visible:opacity-100"
                   aria-label="编辑分类"
                   title="编辑分类"
                   @click.stop="openEditCategoryDialog(activeModule, row.id)"
                 >
                   <i class="ri-edit-line text-[13px]" />
-                </button>
-
-                <button
-                  type="button"
-                  class="flex size-6 shrink-0 items-center justify-center rounded-md text-muted-foreground opacity-0 transition hover:bg-destructive/10 hover:text-destructive disabled:pointer-events-none disabled:opacity-30 group-hover/category-row:opacity-100 focus-visible:opacity-100"
-                  :disabled="row.isDefault"
-                  :aria-label="row.isDefault ? '默认分类不可删除' : '删除分类'"
-                  :title="row.isDefault ? '默认分类不可删除' : '删除分类'"
-                  @click.stop="promptDeleteCategory(activeModule, row.id)"
-                >
-                  <i class="ri-delete-bin-line text-[13px]" />
                 </button>
               </div>
             </div>
@@ -2271,15 +2262,26 @@ function escapeHtml(value: string) {
         </div>
 
         <DialogFooter class="gap-2 sm:justify-between">
-          <Button
-            variant="ghost"
-            class="text-destructive hover:text-destructive"
-            :disabled="categoryDetailLoading || categoryEditSubmitting || Boolean(editingCategory?.isDefault)"
-            @click="editingCategoryId && promptDeleteCategory(categoryEditModule, editingCategoryId)"
-          >
-            <i class="ri-delete-bin-line text-sm" />
-            <span>删除分类</span>
-          </Button>
+          <div class="flex flex-wrap justify-start gap-2">
+            <Button
+              variant="ghost"
+              :disabled="categoryDetailLoading || categoryEditSubmitting || !editingCategoryId"
+              @click="openCreateChildForEditingCategory"
+            >
+              <i class="ri-node-tree text-sm" />
+              <span>添加子分类</span>
+            </Button>
+
+            <Button
+              variant="ghost"
+              class="text-destructive hover:text-destructive"
+              :disabled="categoryDetailLoading || categoryEditSubmitting || Boolean(editingCategory?.isDefault)"
+              @click="editingCategoryId && promptDeleteCategory(categoryEditModule, editingCategoryId)"
+            >
+              <i class="ri-delete-bin-line text-sm" />
+              <span>删除分类</span>
+            </Button>
+          </div>
 
           <div class="flex justify-end gap-2">
             <Button variant="outline" :disabled="categoryEditSubmitting" @click="closeEditCategoryDialog">
