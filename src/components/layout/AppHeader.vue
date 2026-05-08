@@ -111,7 +111,7 @@ const visibleTrailingItems = computed(() => {
   <header
     :class="
       cn(
-        'relative z-30 flex h-16 shrink-0 items-center gap-2 overflow-hidden bg-background/95 px-4 backdrop-blur supports-backdrop-filter:bg-background/80',
+        'relative z-30 flex h-16 shrink-0 items-center gap-2 overflow-hidden bg-background/95 px-4 sm:px-8 backdrop-blur supports-backdrop-filter:bg-background/80',
         props.class,
       )
     "
@@ -123,7 +123,7 @@ const visibleTrailingItems = computed(() => {
         aria-label="打开侧边栏"
         @click.stop="props.onToggleMobileSidebar?.()"
       >
-        <i class="ri-layout-left-2-line text-base leading-none" />
+        <i class="ri-layout-column-fill text-lg leading-none text-muted-foreground" />
       </button>
     </TooltipWrap>
     <TooltipWrap content="切换侧边栏">
@@ -133,7 +133,7 @@ const visibleTrailingItems = computed(() => {
         aria-label="切换侧边栏"
         @click.stop="props.onToggleDesktopSidebar?.()"
       >
-        <i class="ri-layout-left-2-line text-base leading-none" />
+        <i class="ri-layout-column-fill text-lg leading-none text-muted-foreground" />
       </button>
     </TooltipWrap>
     <Separator orientation="vertical" class="mr-2 h-4! self-center shrink-0" />
