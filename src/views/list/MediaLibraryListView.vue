@@ -2160,6 +2160,30 @@ function escapeHtml(value: string) {
 
           <div class="right-sheet-actions__secondary">
             <Button
+              v-if="sheetMode === 'preview' && sheetEntityKind === 'video' && activeVideo"
+              variant="ghost"
+              size="sm"
+              class="right-sheet-text-button text-destructive hover:text-destructive"
+              :disabled="videoDeleteSubmitting"
+              @click="promptDeleteActiveVideo"
+            >
+              <i :class="[videoDeleteSubmitting ? 'ri-loader-4-line animate-spin' : 'ri-delete-bin-line', 'text-sm']" />
+              <span>删除</span>
+            </Button>
+
+            <Button
+              v-if="sheetMode === 'preview' && sheetEntityKind === 'article' && activeArticle"
+              variant="ghost"
+              size="sm"
+              class="right-sheet-text-button text-destructive hover:text-destructive"
+              :disabled="articleDeleteSubmitting"
+              @click="promptDeleteActiveArticle"
+            >
+              <i :class="[articleDeleteSubmitting ? 'ri-loader-4-line animate-spin' : 'ri-delete-bin-line', 'text-sm']" />
+              <span>删除</span>
+            </Button>
+
+            <Button
               v-if="sheetMode === 'preview'"
               variant="ghost"
               size="sm"
@@ -2228,18 +2252,6 @@ function escapeHtml(value: string) {
               label-width-mobile="5.5rem"
               label-width-desktop="92px"
             />
-
-            <div class="flex justify-end px-4 pb-1">
-              <Button
-                variant="ghost"
-                class="text-destructive hover:text-destructive"
-                :disabled="videoDeleteSubmitting"
-                @click="promptDeleteActiveVideo"
-              >
-                <i class="ri-delete-bin-line text-sm" />
-                <span>删除视频</span>
-              </Button>
-            </div>
           </template>
 
           <template v-else-if="sheetEntityKind === 'article' && activeArticle">
@@ -2270,18 +2282,6 @@ function escapeHtml(value: string) {
               label-width-mobile="5.5rem"
               label-width-desktop="92px"
             />
-
-            <div class="flex justify-end px-4 pb-1">
-              <Button
-                variant="ghost"
-                class="text-destructive hover:text-destructive"
-                :disabled="articleDeleteSubmitting"
-                @click="promptDeleteActiveArticle"
-              >
-                <i class="ri-delete-bin-line text-sm" />
-                <span>删除文章</span>
-              </Button>
-            </div>
           </template>
 
           <template v-else-if="sheetEntityKind === 'article' && !activeArticle">
