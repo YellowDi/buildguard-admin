@@ -68,7 +68,9 @@ import {
   deleteMediaVideo,
   fetchMediaVideos,
   getMediaVideoDetail,
+  type MediaVideoStatus,
   type MediaVideoRecord,
+  updateMediaVideo,
 } from "@/lib/media-videos-api"
 import { uploadTencentCosFile } from "@/lib/tencent-cos-sdk"
 import { cn } from "@/lib/utils"
@@ -897,28 +899,32 @@ async function saveCurrentForm() {
 }
 
 async function saveVideoForm() {
-  if (sheetMode.value !== "create") {
-    toast.error("媒体视频更新接口暂未提供")
-    return
-  }
-
   const title = formState.title.trim()
+  const created = sheetMode.value === "create"
   videoCreateSubmitting.value = true
 
   try {
-    const created = await createMediaVideo({
+    const payload = {
       Title: title,
       TypeUuid: formState.categoryId,
       Url: formState.sourceUrl.trim(),
       Abstract: formState.summary.trim(),
       Status: toMediaVideoStatus(formState.status),
-    })
+    }
+    const saved = created
+      ? await createMediaVideo(payload)
+      : await updateMediaVideo({
+          Uuid: activeEntityId.value,
+          ...payload,
+        })
     await loadMediaVideos()
-    const createdUuid = typeof created.Uuid === "string" ? created.Uuid : ""
+    const savedUuid = typeof saved.Uuid === "string" && saved.Uuid.trim()
+      ? saved.Uuid.trim()
+      : activeEntityId.value
 
-    if (createdUuid) {
-      activeEntityId.value = createdUuid
-      await syncActiveVideoDetail(createdUuid)
+    if (savedUuid) {
+      activeEntityId.value = savedUuid
+      await syncActiveVideoDetail(savedUuid)
     } else {
       const matched = videoItems.value.find(item => item.title === title)
       activeEntityId.value = matched?.id ?? ""
@@ -926,13 +932,13 @@ async function saveVideoForm() {
 
     sheetMode.value = "preview"
     sheetEntityKind.value = "video"
-    toast.success("视频已创建", {
-      description: `${title} 已加入媒体库。`,
+    toast.success(created ? "视频已创建" : "视频已保存", {
+      description: created ? `${title} 已加入媒体库。` : `${title} 已更新。`,
     })
   } catch (error) {
     handleApiError(error, {
-      title: "媒体视频创建失败",
-      fallback: "媒体视频创建失败，请稍后重试。",
+      title: created ? "媒体视频创建失败" : "媒体视频更新失败",
+      fallback: created ? "媒体视频创建失败，请稍后重试。" : "媒体视频更新失败，请稍后重试。",
     })
   } finally {
     videoCreateSubmitting.value = false
@@ -1341,7 +1347,7 @@ function normalizeMediaVideoStatus(value: unknown): MediaStatus {
   return "draft"
 }
 
-function toMediaVideoStatus(status: MediaStatus) {
+function toMediaVideoStatus(status: MediaStatus): MediaVideoStatus {
   if (status === "scheduled") {
     return 2
   }
