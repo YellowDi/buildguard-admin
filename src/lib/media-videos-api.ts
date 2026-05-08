@@ -1,5 +1,5 @@
 import { assertApiSuccess, createHttpError, readResponseBody } from "@/lib/api-errors"
-import { API_PATHS, buildApiHeaders, buildApiUrl } from "@/lib/api"
+import { API_PATHS, buildApiHeaders, buildApiRequestUrl, buildApiUrl } from "@/lib/api"
 
 type MediaVideosListEnvelope = {
   Total?: number
@@ -37,8 +37,37 @@ export type ListMediaVideosPayload = {
   [property: string]: unknown
 }
 
+export type MediaVideoDetailPayload = {
+  Uuid?: string
+  [property: string]: unknown
+}
+
+export type CreateMediaVideoPayload = {
+  Abstract?: string
+  Status?: MediaVideoStatus
+  Title?: string
+  TypeUuid?: string
+  Url?: string
+  [property: string]: unknown
+}
+
+export type UpdateMediaVideoPayload = CreateMediaVideoPayload & {
+  Uuid?: string
+}
+
+export type DeleteMediaVideoPayload = {
+  Uuid?: string
+  [property: string]: unknown
+}
+
 const MEDIA_VIDEO_LIST_API_URL = buildApiUrl(API_PATHS.mediaVideoList)
+const MEDIA_VIDEO_CREATE_API_URL = buildApiUrl(API_PATHS.mediaVideoCreate)
+const MEDIA_VIDEO_UPDATE_API_URL = buildApiUrl(API_PATHS.mediaVideoUpdate)
 const MEDIA_VIDEOS_LOAD_ERROR_MESSAGE = "媒体视频列表加载失败，请稍后重试。"
+const MEDIA_VIDEO_DETAIL_ERROR_MESSAGE = "媒体视频详情加载失败，请稍后重试。"
+const MEDIA_VIDEO_CREATE_ERROR_MESSAGE = "媒体视频创建失败，请稍后重试。"
+const MEDIA_VIDEO_UPDATE_ERROR_MESSAGE = "媒体视频更新失败，请稍后重试。"
+const MEDIA_VIDEO_DELETE_ERROR_MESSAGE = "媒体视频删除失败，请稍后重试。"
 
 export async function fetchMediaVideos(
   payload: ListMediaVideosPayload = {},
@@ -70,6 +99,97 @@ export async function fetchMediaVideos(
     list,
     total: extractTotal(responsePayload, list.length),
   }
+}
+
+export async function getMediaVideoDetail(
+  payload: MediaVideoDetailPayload,
+): Promise<MediaVideoRecord> {
+  const url = buildApiRequestUrl(API_PATHS.mediaVideoDetail)
+  url.searchParams.set("Uuid", getRequiredString(payload.Uuid, "Uuid"))
+
+  const response = await fetch(url.toString(), {
+    method: "GET",
+    headers: buildApiHeaders(),
+  })
+  const responseBody = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responseBody, MEDIA_VIDEO_DETAIL_ERROR_MESSAGE)
+  }
+
+  assertApiSuccess(responseBody, MEDIA_VIDEO_DETAIL_ERROR_MESSAGE)
+
+  return extractDetailRecord(responseBody)
+}
+
+export async function createMediaVideo(payload: CreateMediaVideoPayload) {
+  const response = await fetch(MEDIA_VIDEO_CREATE_API_URL, {
+    method: "POST",
+    headers: buildApiHeaders({
+      "Content-Type": "application/json",
+    }),
+    body: JSON.stringify({
+      Abstract: getOptionalString(payload.Abstract) ?? "",
+      Status: getOptionalNumber(payload.Status, "Status") ?? 1,
+      Title: getRequiredString(payload.Title, "Title"),
+      TypeUuid: getRequiredString(payload.TypeUuid, "TypeUuid"),
+      Url: getOptionalString(payload.Url) ?? "",
+    }),
+  })
+  const responseBody = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responseBody, MEDIA_VIDEO_CREATE_ERROR_MESSAGE)
+  }
+
+  assertApiSuccess(responseBody, MEDIA_VIDEO_CREATE_ERROR_MESSAGE)
+
+  return extractDetailRecord(responseBody)
+}
+
+export async function updateMediaVideo(payload: UpdateMediaVideoPayload) {
+  const response = await fetch(MEDIA_VIDEO_UPDATE_API_URL, {
+    method: "POST",
+    headers: buildApiHeaders({
+      "Content-Type": "application/json",
+    }),
+    body: JSON.stringify({
+      Uuid: getRequiredString(payload.Uuid, "Uuid"),
+      Abstract: getOptionalString(payload.Abstract) ?? "",
+      Status: getOptionalNumber(payload.Status, "Status") ?? 1,
+      Title: getRequiredString(payload.Title, "Title"),
+      TypeUuid: getRequiredString(payload.TypeUuid, "TypeUuid"),
+      Url: getOptionalString(payload.Url) ?? "",
+    }),
+  })
+  const responseBody = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responseBody, MEDIA_VIDEO_UPDATE_ERROR_MESSAGE)
+  }
+
+  assertApiSuccess(responseBody, MEDIA_VIDEO_UPDATE_ERROR_MESSAGE)
+
+  return extractDetailRecord(responseBody)
+}
+
+export async function deleteMediaVideo(payload: DeleteMediaVideoPayload) {
+  const url = buildApiRequestUrl(API_PATHS.mediaVideoDelete)
+  url.searchParams.set("Uuid", getRequiredString(payload.Uuid, "Uuid"))
+
+  const response = await fetch(url.toString(), {
+    method: "GET",
+    headers: buildApiHeaders(),
+  })
+  const responseBody = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responseBody, MEDIA_VIDEO_DELETE_ERROR_MESSAGE)
+  }
+
+  assertApiSuccess(responseBody, MEDIA_VIDEO_DELETE_ERROR_MESSAGE)
+
+  return extractDetailRecord(responseBody)
 }
 
 function extractList(payload: MediaVideosListEnvelope | unknown[]) {
@@ -132,6 +252,25 @@ function extractTotal(payload: MediaVideosListEnvelope | unknown[], fallback: nu
   return fallback
 }
 
+function extractDetailRecord(payload: unknown) {
+  const directRecord = asRecord(payload)
+
+  if (!directRecord) {
+    return {}
+  }
+
+  const nestedRecord = asRecord(directRecord.data)
+  return (nestedRecord ?? directRecord) as MediaVideoRecord
+}
+
+function getRequiredString(value: unknown, fieldName: string) {
+  if (typeof value === "string" && value.trim()) {
+    return value.trim()
+  }
+
+  throw new TypeError(`${fieldName} is required`)
+}
+
 function getOptionalString(value: unknown) {
   if (value === undefined || value === null) {
     return undefined
@@ -161,4 +300,10 @@ function getOptionalNumber(value: unknown, fieldName: string) {
   }
 
   return parsed
+}
+
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null
 }

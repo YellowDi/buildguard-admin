@@ -64,7 +64,10 @@ import {
   updateMediaType,
 } from "@/lib/media-types-api"
 import {
+  createMediaVideo,
+  deleteMediaVideo,
   fetchMediaVideos,
+  getMediaVideoDetail,
   type MediaVideoRecord,
 } from "@/lib/media-videos-api"
 import { uploadTencentCosFile } from "@/lib/tencent-cos-sdk"
@@ -176,6 +179,10 @@ const categoryErrorMessages = reactive<Record<MediaModuleKey, string>>({
 })
 const videoListLoading = ref(false)
 const videoListErrorMessage = ref("")
+const videoDetailLoading = ref(false)
+const videoCreateSubmitting = ref(false)
+const videoDeleteSubmitting = ref(false)
+const videoDeleteConfirmOpen = ref(false)
 
 const sheetOpen = ref(false)
 const sheetMode = ref<SheetMode>("preview")
@@ -735,6 +742,10 @@ function openPreview(kind: SheetEntityKind, id: string) {
   sheetEntityKind.value = kind
   activeEntityId.value = id
   sheetOpen.value = true
+
+  if (kind === "video") {
+    void syncActiveVideoDetail(id)
+  }
 }
 
 function openEdit(kind: SheetEntityKind, id: string) {
@@ -792,6 +803,29 @@ function editPreviewEntity() {
   openEdit(sheetEntityKind.value, activeEntityId.value)
 }
 
+async function syncActiveVideoDetail(id: string) {
+  videoDetailLoading.value = true
+
+  try {
+    const detail = await getMediaVideoDetail({ Uuid: id })
+    const index = videoItems.value.findIndex(item => item.id === id)
+    const next = normalizeMediaVideo(detail, index >= 0 ? index : 0)
+
+    if (index === -1) {
+      videoItems.value = [next, ...videoItems.value]
+    } else {
+      videoItems.value.splice(index, 1, next)
+    }
+  } catch (error) {
+    handleApiError(error, {
+      title: "媒体视频详情加载失败",
+      fallback: "媒体视频详情加载失败，请稍后重试。",
+    })
+  } finally {
+    videoDetailLoading.value = false
+  }
+}
+
 function closeSheet() {
   sheetOpen.value = false
 }
@@ -822,7 +856,7 @@ function removeArticleCover() {
   formState.cover = ""
 }
 
-function saveCurrentForm() {
+async function saveCurrentForm() {
   if (!formState.title.trim()) {
     toast.error("请先填写标题")
     return
@@ -836,28 +870,7 @@ function saveCurrentForm() {
   const timestamp = formatNow()
 
   if (formState.kind === "video") {
-    const created = sheetMode.value === "create"
-    const next: VideoItem = {
-      id: sheetMode.value === "edit" ? activeEntityId.value : createId("video"),
-      chapterId: "",
-      categoryId: formState.categoryId,
-      title: formState.title.trim(),
-      cover: formState.cover.trim() || formState.title.trim(),
-      sourceUrl: formState.sourceUrl.trim(),
-      sourceFileName: formState.sourceFileName.trim(),
-      duration: formState.duration.trim() || "05:00",
-      summary: formState.summary.trim(),
-      status: formState.status,
-      featured: formState.featured,
-      sortOrder: Number(formState.sortOrder) || 0,
-      updatedAt: timestamp,
-    }
-
-    upsertById(videoItems.value, next)
-    activeEntityId.value = next.id
-    sheetMode.value = "preview"
-    sheetEntityKind.value = "video"
-    toast.success(created ? "视频已创建" : "视频已保存")
+    await saveVideoForm()
     return
   }
 
@@ -881,6 +894,49 @@ function saveCurrentForm() {
   sheetMode.value = "preview"
   sheetEntityKind.value = "article"
   toast.success(created ? "文章已创建" : "文章已保存")
+}
+
+async function saveVideoForm() {
+  if (sheetMode.value !== "create") {
+    toast.error("媒体视频更新接口暂未提供")
+    return
+  }
+
+  const title = formState.title.trim()
+  videoCreateSubmitting.value = true
+
+  try {
+    const created = await createMediaVideo({
+      Title: title,
+      TypeUuid: formState.categoryId,
+      Url: formState.sourceUrl.trim(),
+      Abstract: formState.summary.trim(),
+      Status: toMediaVideoStatus(formState.status),
+    })
+    await loadMediaVideos()
+    const createdUuid = typeof created.Uuid === "string" ? created.Uuid : ""
+
+    if (createdUuid) {
+      activeEntityId.value = createdUuid
+      await syncActiveVideoDetail(createdUuid)
+    } else {
+      const matched = videoItems.value.find(item => item.title === title)
+      activeEntityId.value = matched?.id ?? ""
+    }
+
+    sheetMode.value = "preview"
+    sheetEntityKind.value = "video"
+    toast.success("视频已创建", {
+      description: `${title} 已加入媒体库。`,
+    })
+  } catch (error) {
+    handleApiError(error, {
+      title: "媒体视频创建失败",
+      fallback: "媒体视频创建失败，请稍后重试。",
+    })
+  } finally {
+    videoCreateSubmitting.value = false
+  }
 }
 
 async function handleVideoFiles(files: File[]) {
@@ -928,6 +984,41 @@ async function uploadVideoFile(file: File) {
     })
   } finally {
     uploadingVideoFile.value = false
+  }
+}
+
+function promptDeleteActiveVideo() {
+  if (!activeVideo.value) {
+    return
+  }
+
+  videoDeleteConfirmOpen.value = true
+}
+
+async function confirmDeleteActiveVideo() {
+  const target = activeVideo.value
+
+  if (!target || videoDeleteSubmitting.value) {
+    return
+  }
+
+  videoDeleteSubmitting.value = true
+
+  try {
+    await deleteMediaVideo({ Uuid: target.id })
+    await loadMediaVideos()
+    videoDeleteConfirmOpen.value = false
+    closeSheet()
+    toast.success("媒体视频已删除", {
+      description: `${target.title} 已从媒体库移除。`,
+    })
+  } catch (error) {
+    handleApiError(error, {
+      title: "媒体视频删除失败",
+      fallback: "媒体视频删除失败，请稍后重试。",
+    })
+  } finally {
+    videoDeleteSubmitting.value = false
   }
 }
 
@@ -1248,6 +1339,18 @@ function normalizeMediaVideoStatus(value: unknown): MediaStatus {
   }
 
   return "draft"
+}
+
+function toMediaVideoStatus(status: MediaStatus) {
+  if (status === "scheduled") {
+    return 2
+  }
+
+  if (status === "published") {
+    return 3
+  }
+
+  return 1
 }
 
 function getFileNameFromUrl(value: string) {
@@ -1981,10 +2084,11 @@ function escapeHtml(value: string) {
               v-else
               size="sm"
               class="h-8 rounded-md px-2.5"
+              :disabled="formState.kind === 'video' && videoCreateSubmitting"
               @click="saveCurrentForm"
             >
-              <i class="ri-save-line text-sm" />
-              <span>{{ sheetMode === "create" ? "创建" : "保存" }}</span>
+              <i :class="[formState.kind === 'video' && videoCreateSubmitting ? 'ri-loader-4-line animate-spin' : 'ri-save-line', 'text-sm']" />
+              <span>{{ formState.kind === 'video' && videoCreateSubmitting ? "保存中" : sheetMode === "create" ? "创建" : "保存" }}</span>
             </Button>
           </div>
         </div>
@@ -1993,6 +2097,13 @@ function escapeHtml(value: string) {
       <div class="min-h-0 flex-1 overflow-y-auto">
         <div v-if="sheetMode === 'preview'" class="space-y-5">
           <template v-if="sheetEntityKind === 'video' && activeVideo">
+            <div
+              v-if="videoDetailLoading"
+              class="rounded-lg border border-border/70 bg-muted/30 px-4 py-2 text-sm text-muted-foreground"
+            >
+              正在同步视频详情...
+            </div>
+
             <div
               class="overflow-hidden border border-border/70 bg-background"
             >
@@ -2027,6 +2138,18 @@ function escapeHtml(value: string) {
               label-width-mobile="5.5rem"
               label-width-desktop="92px"
             />
+
+            <div class="flex justify-end px-4 pb-1">
+              <Button
+                variant="ghost"
+                class="text-destructive hover:text-destructive"
+                :disabled="videoDeleteSubmitting"
+                @click="promptDeleteActiveVideo"
+              >
+                <i class="ri-delete-bin-line text-sm" />
+                <span>删除视频</span>
+              </Button>
+            </div>
           </template>
 
           <template v-else-if="sheetEntityKind === 'article' && activeArticle">
@@ -2447,6 +2570,31 @@ function escapeHtml(value: string) {
           >
             <i :class="[categoryDeleteSubmitting ? 'ri-loader-4-line animate-spin' : 'ri-delete-bin-line', 'text-sm']" />
             <span>{{ categoryDeleteSubmitting ? "删除中" : "删除分类" }}</span>
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
+    <AlertDialog v-model:open="videoDeleteConfirmOpen">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>删除媒体视频？</AlertDialogTitle>
+          <AlertDialogDescription>
+            删除后将无法恢复。
+            <span v-if="activeVideo" class="mt-2 block font-medium text-foreground">
+              {{ activeVideo.title }}
+            </span>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel :disabled="videoDeleteSubmitting">取消</AlertDialogCancel>
+          <AlertDialogAction
+            class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            :disabled="videoDeleteSubmitting"
+            @click.prevent="confirmDeleteActiveVideo"
+          >
+            <i :class="[videoDeleteSubmitting ? 'ri-loader-4-line animate-spin' : 'ri-delete-bin-line', 'text-sm']" />
+            <span>{{ videoDeleteSubmitting ? "删除中" : "删除视频" }}</span>
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
