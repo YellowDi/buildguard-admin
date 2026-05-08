@@ -63,6 +63,10 @@ import {
   type MediaTypeRecord,
   updateMediaType,
 } from "@/lib/media-types-api"
+import {
+  fetchMediaVideos,
+  type MediaVideoRecord,
+} from "@/lib/media-videos-api"
 import { uploadTencentCosFile } from "@/lib/tencent-cos-sdk"
 import { cn } from "@/lib/utils"
 
@@ -125,6 +129,8 @@ const MEDIA_TYPE_MAP: Record<MediaModuleKey, MediaTypeKind> = {
 }
 const MEDIA_CATEGORY_PAGE_SIZE = 500
 const MEDIA_CATEGORY_LOAD_ERROR_MESSAGE = "媒体分类列表加载失败，请稍后重试。"
+const MEDIA_VIDEO_PAGE_SIZE = 500
+const MEDIA_VIDEO_LOAD_ERROR_MESSAGE = "媒体视频列表加载失败，请稍后重试。"
 const ROOT_CATEGORY_PARENT_VALUE = "__root__"
 
 const statusLabelMap = new Map(MEDIA_STATUS_OPTIONS.map(option => [option.value, option.label]))
@@ -146,7 +152,7 @@ const coverAccentClasses = [
 const initialState = createMediaLibraryMockState()
 const videoCategories = ref(initialState.videoCategories)
 const articleCategories = ref(initialState.articleCategories)
-const videoItems = ref(initialState.videoItems)
+const videoItems = ref<VideoItem[]>([])
 const articleItems = ref(initialState.articleItems)
 
 const activeModule = ref<MediaModuleKey>("videos")
@@ -168,6 +174,8 @@ const categoryErrorMessages = reactive<Record<MediaModuleKey, string>>({
   videos: "",
   articles: "",
 })
+const videoListLoading = ref(false)
+const videoListErrorMessage = ref("")
 
 const sheetOpen = ref(false)
 const sheetMode = ref<SheetMode>("preview")
@@ -365,6 +373,7 @@ const previewArticleContentHtml = computed(() => {
 
 onMounted(() => {
   void loadAllMediaCategories()
+  void loadMediaVideos()
 })
 
 const videoPreviewSections = computed<DetailFieldSection[]>(() => {
@@ -448,6 +457,33 @@ async function loadMediaCategories(module: MediaModuleKey) {
 
 function refreshCurrentCategories() {
   void loadMediaCategories(activeModule.value)
+}
+
+async function loadMediaVideos() {
+  videoListLoading.value = true
+  videoListErrorMessage.value = ""
+
+  try {
+    const result = await fetchMediaVideos({
+      PageNum: 1,
+      PageSize: MEDIA_VIDEO_PAGE_SIZE,
+    })
+
+    videoItems.value = result.list.map((item, index) => normalizeMediaVideo(item, index))
+  } catch (error) {
+    videoItems.value = []
+    videoListErrorMessage.value = handleApiError(error, {
+      title: "媒体视频加载失败",
+      fallback: MEDIA_VIDEO_LOAD_ERROR_MESSAGE,
+      mode: "silent",
+    })
+  } finally {
+    videoListLoading.value = false
+  }
+}
+
+function refreshMediaVideos() {
+  void loadMediaVideos()
 }
 
 function toggleSearch() {
@@ -1174,6 +1210,61 @@ function normalizeItemCategoryId(module: MediaModuleKey, categoryId: string) {
   return findFirstLeafCategoryId(tree) || tree[0]?.id || categoryId
 }
 
+function normalizeMediaVideo(item: MediaVideoRecord, index: number): VideoItem {
+  const id = toOptionalText(item.Uuid) || `media-video-${item.Id ?? index + 1}`
+  const title = toOptionalText(item.Title) || `视频 ${index + 1}`
+  const sourceUrl = toOptionalText(item.Url)
+
+  return {
+    id,
+    chapterId: "",
+    categoryId: toOptionalText(item.TypeUuid),
+    title,
+    cover: title,
+    sourceUrl,
+    sourceFileName: getFileNameFromUrl(sourceUrl),
+    duration: "",
+    summary: toOptionalText(item.Abstract),
+    status: normalizeMediaVideoStatus(item.Status),
+    featured: false,
+    sortOrder: index + 1,
+    updatedAt: "",
+  }
+}
+
+function normalizeMediaVideoStatus(value: unknown): MediaStatus {
+  const parsed = typeof value === "number"
+    ? value
+    : typeof value === "string" && value.trim()
+      ? Number(value.trim())
+      : NaN
+
+  if (parsed === 2) {
+    return "scheduled"
+  }
+
+  if (parsed === 3) {
+    return "published"
+  }
+
+  return "draft"
+}
+
+function getFileNameFromUrl(value: string) {
+  if (!value) {
+    return ""
+  }
+
+  try {
+    const pathname = new URL(value).pathname
+    const segments = pathname.split("/").filter(Boolean)
+    return decodeURIComponent(segments[segments.length - 1] ?? "")
+  } catch {
+    const segments = (value.split("?")[0] ?? "").split("/").filter(Boolean)
+    return segments[segments.length - 1] ?? ""
+  }
+}
+
 function toOptionalText(value: unknown) {
   return typeof value === "string" ? value.trim() : ""
 }
@@ -1645,7 +1736,27 @@ function escapeHtml(value: string) {
           v-if="activeModule === 'videos' && currentView === 'grid'"
           class="space-y-0"
         >
-          <div v-if="filteredVideoItems.length" class="media-library-grid grid grid-cols-2 gap-4 sm:grid-cols-3">
+          <div
+            v-if="videoListErrorMessage"
+            class="rounded-xl border border-destructive/20 bg-destructive/5 px-6 py-8 text-center text-sm text-destructive"
+          >
+            <p>{{ videoListErrorMessage }}</p>
+            <Button
+              variant="ghost"
+              size="sm"
+              class="mt-2 rounded-md text-destructive hover:text-destructive"
+              @click="refreshMediaVideos"
+            >
+              <i class="ri-refresh-line text-sm" />
+              <span>重试</span>
+            </Button>
+          </div>
+
+          <div v-else-if="videoListLoading" class="media-library-grid grid grid-cols-2 gap-4 sm:grid-cols-3">
+            <div v-for="index in 6" :key="index" class="aspect-[3/4] rounded-[18px] bg-muted/70" />
+          </div>
+
+          <div v-else-if="filteredVideoItems.length" class="media-library-grid grid grid-cols-2 gap-4 sm:grid-cols-3">
             <button
               v-for="item in filteredVideoItems"
               :key="item.id"
@@ -1690,7 +1801,27 @@ function escapeHtml(value: string) {
           v-else-if="activeModule === 'videos' && currentView === 'list'"
           class="space-y-0"
         >
-          <div v-if="filteredVideoItems.length" class="space-y-1">
+          <div
+            v-if="videoListErrorMessage"
+            class="rounded-xl border border-destructive/20 bg-destructive/5 px-6 py-8 text-center text-sm text-destructive"
+          >
+            <p>{{ videoListErrorMessage }}</p>
+            <Button
+              variant="ghost"
+              size="sm"
+              class="mt-2 rounded-md text-destructive hover:text-destructive"
+              @click="refreshMediaVideos"
+            >
+              <i class="ri-refresh-line text-sm" />
+              <span>重试</span>
+            </Button>
+          </div>
+
+          <div v-else-if="videoListLoading" class="space-y-2">
+            <div v-for="index in 6" :key="index" class="h-[4.5rem] rounded-lg bg-muted/70" />
+          </div>
+
+          <div v-else-if="filteredVideoItems.length" class="space-y-1">
             <div
               v-for="item in filteredVideoItems"
               :key="item.id"

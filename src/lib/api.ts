@@ -99,6 +99,7 @@ export const API_PATHS = {
   mediaTypeDetail: "/bqi/media/type/detail",
   mediaTypeUpdate: "/bqi/media/type/update",
   mediaTypeDelete: "/bqi/media/type/del",
+  mediaVideoList: "/bqi/media/video/list",
   dictTypeList: "/bqi/sys/dict/type/list",
   dictTypeCreate: "/bqi/sys/dict/type/new",
   dictTypeDetail: "/bqi/sys/dict/type/detail",
