@@ -225,13 +225,6 @@ function submitRelease() {
                     {{ formatPlatform(release.platform) }}
                   </span>
                 </span>
-
-                <Badge
-                  variant="secondary"
-                  class="shrink-0"
-                >
-                  {{ release.forceUpdate ? "强更" : "普通" }}
-                </Badge>
               </button>
             </div>
           </div>
