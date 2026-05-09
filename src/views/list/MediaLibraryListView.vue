@@ -33,6 +33,7 @@ import { Input } from "@/components/ui/input"
 import { RichTextEditor } from "@/components/ui/rich-text-editor"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ResponsiveRightSheet } from "@/components/ui/sheet"
+import { Skeleton } from "@/components/ui/skeleton"
 import {
   TagsInput,
   TagsInputInput,
@@ -1926,7 +1927,15 @@ function escapeHtml(value: string) {
             </div>
 
             <div v-else-if="currentCategoryLoading && !visibleCurrentCategoryRows.length" class="space-y-2 px-1 py-2">
-              <div v-for="index in 5" :key="index" class="h-7 rounded-md bg-muted/70" />
+              <div
+                v-for="index in 5"
+                :key="index"
+                class="flex items-center gap-2"
+              >
+                <Skeleton class="size-4 shrink-0 rounded-sm" />
+                <Skeleton :class="['h-7 rounded-md', index % 3 === 0 ? 'w-28' : index % 2 === 0 ? 'w-36' : 'w-24']" />
+                <Skeleton class="ml-auto h-4 w-5 rounded-sm" />
+              </div>
             </div>
 
             <div v-else-if="!visibleCurrentCategoryRows.length" class="rounded-lg border border-dashed border-border px-3 py-5 text-center text-xs leading-5 text-muted-foreground">
@@ -2012,7 +2021,13 @@ function escapeHtml(value: string) {
           </div>
 
           <div v-else-if="videoListLoading" class="media-library-grid grid grid-cols-2 gap-4 sm:grid-cols-3">
-            <div v-for="index in 6" :key="index" class="aspect-[3/4] rounded-[18px] bg-muted/70" />
+            <div
+              v-for="index in 6"
+              :key="index"
+              class="aspect-[3/4] overflow-hidden rounded-[18px] bg-muted/30 p-3"
+            >
+              <Skeleton class="h-full w-full rounded-[14px]" />
+            </div>
           </div>
 
           <div v-else-if="filteredVideoItems.length" class="media-library-grid grid grid-cols-2 gap-4 sm:grid-cols-3">
@@ -2077,7 +2092,17 @@ function escapeHtml(value: string) {
           </div>
 
           <div v-else-if="videoListLoading" class="space-y-2">
-            <div v-for="index in 6" :key="index" class="h-[4.5rem] rounded-lg bg-muted/70" />
+            <div
+              v-for="index in 6"
+              :key="index"
+              class="flex h-[4.5rem] items-center gap-3 rounded-lg p-2"
+            >
+              <Skeleton class="size-14 shrink-0 rounded-md" />
+              <div class="min-w-0 flex-1 space-y-2">
+                <Skeleton :class="['h-4', index % 2 === 0 ? 'w-3/5' : 'w-4/5']" />
+                <Skeleton class="h-3 w-32" />
+              </div>
+            </div>
           </div>
 
           <div v-else-if="filteredVideoItems.length" class="space-y-1">
@@ -2139,7 +2164,13 @@ function escapeHtml(value: string) {
           </div>
 
           <div v-else-if="articleListLoading" class="media-library-grid grid grid-cols-2 gap-4 sm:grid-cols-3">
-            <div v-for="index in 6" :key="index" class="aspect-[3/4] rounded-[18px] bg-muted/70" />
+            <div
+              v-for="index in 6"
+              :key="index"
+              class="aspect-[3/4] overflow-hidden rounded-[18px] bg-muted/30 p-3"
+            >
+              <Skeleton class="h-full w-full rounded-[14px]" />
+            </div>
           </div>
 
           <div v-else-if="filteredArticles.length" class="media-library-grid grid grid-cols-2 gap-4 sm:grid-cols-3">
@@ -2198,7 +2229,17 @@ function escapeHtml(value: string) {
           </div>
 
           <div v-else-if="articleListLoading" class="space-y-2">
-            <div v-for="index in 6" :key="index" class="h-[4.5rem] rounded-lg bg-muted/70" />
+            <div
+              v-for="index in 6"
+              :key="index"
+              class="flex h-[4.5rem] items-center gap-3 rounded-lg p-2"
+            >
+              <Skeleton class="size-14 shrink-0 rounded-md" />
+              <div class="min-w-0 flex-1 space-y-2">
+                <Skeleton :class="['h-4', index % 2 === 0 ? 'w-3/5' : 'w-4/5']" />
+                <Skeleton class="h-3 w-40" />
+              </div>
+            </div>
           </div>
 
           <div v-else-if="filteredArticles.length" class="space-y-1">

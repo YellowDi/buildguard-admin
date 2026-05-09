@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ResponsiveRightSheet } from "@/components/ui/sheet"
+import { Skeleton } from "@/components/ui/skeleton"
 import { Switch } from "@/components/ui/switch"
 import { TooltipWrap } from "@/components/ui/tooltip"
 import videoPreviewAsset from "@/assets/video.png"
@@ -138,6 +139,7 @@ const videoOptions = computed(() => [...mediaState.videoItems].sort(compareBySor
 const videoItemMap = computed(() => new Map(mediaState.videoItems.map(item => [item.id, item])))
 const articleItemMap = computed(() => new Map(mediaState.articleItems.map(item => [item.id, item])))
 const hasLoadedModules = computed(() => modules.value.length > 0)
+const showInitialSkeleton = computed(() => loading.value && !modules.value.length)
 
 onMounted(() => {
   void loadInitialData()
@@ -1053,7 +1055,26 @@ function hashText(value: string) {
           </p>
         </div>
 
-        <div class="space-y-0.5">
+        <div v-if="showInitialSkeleton" class="space-y-2">
+          <div
+            v-for="index in 5"
+            :key="`module-skeleton-${index}`"
+            class="rounded-md px-1 py-1.5"
+          >
+            <div class="flex items-start gap-2">
+              <Skeleton class="size-7 shrink-0 rounded-md" />
+              <div class="min-w-0 flex-1 space-y-2">
+                <div class="flex items-center gap-2">
+                  <Skeleton class="h-4 w-28" />
+                  <Skeleton class="ml-auto h-5 w-9 rounded" />
+                </div>
+                <Skeleton :class="['h-3', index % 2 === 0 ? 'w-40' : 'w-32']" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div v-else class="space-y-0.5">
           <article
             v-for="module in orderedModules"
             :key="module.id"
@@ -1106,11 +1127,7 @@ function hashText(value: string) {
           </article>
         </div>
 
-        <div v-if="loading" class="rounded-md border border-dashed border-border px-3 py-8 text-center text-sm text-muted-foreground">
-          正在加载首页配置
-        </div>
-
-        <div v-else-if="!hasLoadedModules" class="rounded-md border border-dashed border-border px-3 py-8 text-center text-sm text-muted-foreground">
+        <div v-if="!showInitialSkeleton && !hasLoadedModules" class="rounded-md border border-dashed border-border px-3 py-8 text-center text-sm text-muted-foreground">
           暂无首页模块
         </div>
 
@@ -1151,11 +1168,36 @@ function hashText(value: string) {
           </div>
 
           <div class="app-home-preview-scroll min-h-0 flex-1 overflow-y-auto bg-[#f4f4f4] px-4 py-4">
-            <div
-              v-for="module in enabledModules"
-              :key="module.id"
-              class="border-b border-dashed border-zinc-300/90 py-4 first:pt-0 last:border-b-0"
-            >
+            <div v-if="showInitialSkeleton" class="space-y-6">
+              <section class="min-w-0 border-b border-dashed border-zinc-300/90 pb-4">
+                <Skeleton class="h-[18px] w-24 bg-zinc-300/90" />
+                <div class="mt-4 flex gap-4">
+                  <Skeleton class="h-4 w-12 bg-zinc-300/90" />
+                  <Skeleton class="h-4 w-12 bg-zinc-300/90" />
+                  <Skeleton class="h-4 w-12 bg-zinc-300/90" />
+                </div>
+                <div class="app-home-video-rail -mx-4 mt-5 flex gap-4 overflow-hidden px-4 pb-1">
+                  <div
+                    v-for="index in 3"
+                    :key="`preview-video-skeleton-${index}`"
+                    class="h-48 w-36 shrink-0 overflow-hidden rounded-[8px] bg-zinc-200/70 p-2"
+                  >
+                    <Skeleton class="h-full w-full rounded-md bg-zinc-300/90" />
+                  </div>
+                </div>
+              </section>
+
+              <section>
+                <Skeleton class="aspect-[1.34/1] w-full rounded-[12px] bg-zinc-300/90" />
+              </section>
+            </div>
+
+            <template v-else>
+              <div
+                v-for="module in enabledModules"
+                :key="module.id"
+                class="border-b border-dashed border-zinc-300/90 py-4 first:pt-0 last:border-b-0"
+              >
             <template v-if="module.type === 'video'">
               <section class="min-w-0">
                 <h2 class="px-0 text-[18px] font-semibold leading-none text-zinc-950">
@@ -1233,9 +1275,10 @@ function hashText(value: string) {
                 </div>
               </section>
             </template>
-          </div>
+              </div>
+            </template>
 
-          <div v-if="!enabledModules.length" class="py-20 text-center text-sm text-zinc-500">
+          <div v-if="!showInitialSkeleton && !enabledModules.length" class="py-20 text-center text-sm text-zinc-500">
             暂无启用模块
           </div>
         </div>
