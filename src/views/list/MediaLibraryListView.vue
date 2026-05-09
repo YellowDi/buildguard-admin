@@ -948,6 +948,29 @@ async function handleArticleCoverFiles(files: File[]) {
   }
 }
 
+async function uploadArticleContentImage(file: File) {
+  if (!file.type.startsWith("image/")) {
+    toast.error("请选择图片文件")
+    return ""
+  }
+
+  try {
+    const result = await uploadTencentCosFile({
+      file,
+      key: `media-library/articles/content-images/${Date.now()}-${sanitizeObjectKeyFileName(file.name)}`,
+      contentType: file.type || undefined,
+    })
+
+    toast.success("正文图片已上传到腾讯云 COS")
+    return result.url
+  } catch (error) {
+    toast.error("正文图片上传失败", {
+      description: getApiErrorMessage(error, "请稍后重试。"),
+    })
+    throw error
+  }
+}
+
 function removeArticleCover() {
   formState.cover = ""
 }
@@ -2432,6 +2455,7 @@ function escapeHtml(value: string) {
                 <RichTextEditor
                   v-model="formState.content"
                   placeholder="输入正文内容"
+                  :upload-image="uploadArticleContentImage"
                 />
               </div>
             </div>

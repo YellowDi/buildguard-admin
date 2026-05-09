@@ -6,9 +6,12 @@ import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
 
+type UploadImageHandler = (file: File) => Promise<string> | string
+
 const props = withDefaults(defineProps<{
   modelValue?: string
   placeholder?: string
+  uploadImage?: UploadImageHandler
   class?: HTMLAttributes["class"]
 }>(), {
   modelValue: "",
@@ -22,6 +25,7 @@ const emit = defineEmits<{
 const editorRef = ref<HTMLElement | null>(null)
 const imageInputRef = ref<HTMLInputElement | null>(null)
 const focused = ref(false)
+const uploadingImage = ref(false)
 const selectedBlock = ref("p")
 const blockOptions = [
   { value: "p", label: "Paragraph", icon: "ri-text" },
@@ -158,7 +162,7 @@ function triggerImageSelect() {
   imageInputRef.value?.click()
 }
 
-function handleImageChange(event: Event) {
+async function handleImageChange(event: Event) {
   const input = event.target as HTMLInputElement | null
   const file = input?.files?.[0]
   if (!file) {
@@ -172,20 +176,26 @@ function handleImageChange(event: Event) {
     return
   }
 
-  const reader = new FileReader()
-  reader.onload = () => {
-    if (typeof reader.result === "string") {
-      runCommand("insertImage", reader.result)
-    }
+  try {
+    await insertUploadedImage(file)
+  } finally {
     if (input) {
       input.value = ""
     }
   }
-  reader.readAsDataURL(file)
 }
 
-function handlePaste(event: ClipboardEvent) {
+async function handlePaste(event: ClipboardEvent) {
   event.preventDefault()
+  const imageFiles = Array.from(event.clipboardData?.files ?? []).filter(file => file.type.startsWith("image/"))
+
+  if (imageFiles.length) {
+    for (const file of imageFiles) {
+      await insertUploadedImage(file)
+    }
+    return
+  }
+
   const html = event.clipboardData?.getData("text/html") ?? ""
   const text = event.clipboardData?.getData("text/plain") ?? ""
 
@@ -206,6 +216,25 @@ function handlePaste(event: ClipboardEvent) {
 
   document.execCommand("insertText", false, text)
   syncValue()
+}
+
+async function insertUploadedImage(file: File) {
+  if (!props.uploadImage || uploadingImage.value) {
+    return
+  }
+
+  uploadingImage.value = true
+
+  try {
+    const imageUrl = await props.uploadImage(file)
+    if (imageUrl.trim()) {
+      runCommand("insertImage", imageUrl.trim())
+    }
+  } catch (error) {
+    console.error(error)
+  } finally {
+    uploadingImage.value = false
+  }
 }
 
 function insertHtml(html: string) {
@@ -267,6 +296,8 @@ function sanitizePastedElement(element: HTMLElement) {
     if (isSafeImageSrc(src)) {
       element.setAttribute("src", src)
       element.setAttribute("alt", "")
+    } else {
+      element.remove()
     }
   }
 }
@@ -287,7 +318,6 @@ function isSafeImageSrc(value: string) {
   const normalized = value.trim().toLowerCase()
   return normalized.startsWith("http://")
     || normalized.startsWith("https://")
-    || normalized.startsWith("data:image/")
 }
 </script>
 
@@ -315,9 +345,10 @@ function isSafeImageSrc(value: string) {
         class="rich-text-toolbar-button"
         title="上传图片"
         aria-label="上传图片"
+        :disabled="uploadingImage"
         @click="triggerImageSelect"
       >
-        <i class="ri-add-line text-[18px]" />
+        <i :class="[uploadingImage ? 'ri-loader-4-line animate-spin' : 'ri-add-line', 'text-[18px]']" />
       </Button>
 
       <Select
