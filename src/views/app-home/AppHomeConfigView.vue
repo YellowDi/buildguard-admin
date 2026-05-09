@@ -1493,9 +1493,9 @@ function hashText(value: string) {
     <AlertDialog v-model:open="moduleDeleteConfirmOpen">
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>删除首页模块？</AlertDialogTitle>
+          <AlertDialogTitle>移除这个首页模块？</AlertDialogTitle>
           <AlertDialogDescription>
-            删除后将无法恢复。确认后会立即提交删除请求。
+            移除后，用户将不会在 App 首页看到这个模块。相关媒体库内容不会被删除。
             <span v-if="deletingModule" class="mt-2 block font-medium text-foreground">
               {{ deletingModule.title || '未命名模块' }}
             </span>
@@ -1509,7 +1509,7 @@ function hashText(value: string) {
             @click.prevent="confirmDeleteModule"
           >
             <i :class="[submitting ? 'ri-loader-4-line animate-spin' : 'ri-delete-bin-line', 'text-sm']" />
-            <span>{{ submitting ? '删除中' : '删除模块' }}</span>
+            <span>{{ submitting ? '移除中' : '确认移除' }}</span>
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
