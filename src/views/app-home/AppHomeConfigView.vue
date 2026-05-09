@@ -11,7 +11,6 @@ import { Switch } from "@/components/ui/switch"
 import { TooltipWrap } from "@/components/ui/tooltip"
 import videoPreviewAsset from "@/assets/video.png"
 import {
-  createAppHomeMockState,
   type AppHomeArticleModule,
   type AppHomeModule,
   type AppHomeModuleType,
@@ -19,6 +18,16 @@ import {
   type AppHomeVideoModule,
   type AppHomeVideoSource,
 } from "@/lib/app-home-mock"
+import {
+  createMediaContent,
+  deleteMediaContent,
+  fetchMediaContents,
+  updateMediaContent,
+  updateMediaContentSort,
+  updateMediaContentStatus,
+  type MediaContentCategorySaveItem,
+  type MediaContentRecord,
+} from "@/lib/media-contents-api"
 import {
   fetchMediaArticles,
   type MediaArticleRecord,
@@ -64,7 +73,7 @@ type NewVideoSourceForm = {
 }
 
 const MEDIA_OPTION_PAGE_SIZE = 500
-const initialHomeState = createAppHomeMockState()
+const MEDIA_CONTENT_PAGE_SIZE = 500
 
 const mediaState = reactive<{
   videoCategories: MediaCategoryNode[]
@@ -77,9 +86,15 @@ const mediaState = reactive<{
   videoItems: [],
   articleItems: [],
 })
-const modules = ref<AppHomeModule[]>(normalizeModuleOrders(initialHomeState.modules))
+const modules = ref<AppHomeModule[]>([])
 const selectedModuleId = ref(modules.value[0]?.id ?? "")
 const sheetOpen = ref(false)
+const loading = ref(false)
+const submitting = ref(false)
+const sortingSubmitting = ref(false)
+const persistedModuleIds = ref(new Set<string>())
+const persistedCategoryIds = ref(new Set<string>())
+const articleCategoryIds = ref(new Map<string, string>())
 const activePreviewCategoryIds = reactive<Record<string, string>>({})
 const draggingId = ref("")
 const draggingTarget = ref<DragTarget | "">("")
@@ -108,9 +123,10 @@ const articleOptions = computed(() => [...mediaState.articleItems].sort(compareB
 const videoOptions = computed(() => [...mediaState.videoItems].sort(compareBySortOrder))
 const videoItemMap = computed(() => new Map(mediaState.videoItems.map(item => [item.id, item])))
 const articleItemMap = computed(() => new Map(mediaState.articleItems.map(item => [item.id, item])))
+const hasLoadedModules = computed(() => modules.value.length > 0)
 
 onMounted(() => {
-  void loadMediaOptions()
+  void loadInitialData()
 })
 
 watch(selectedVideoModule, (module) => {
@@ -124,31 +140,46 @@ watch(selectedVideoModule, (module) => {
   }
 }, { immediate: true })
 
-async function loadMediaOptions() {
+async function loadInitialData(options: { silent?: boolean } = {}) {
+  loading.value = true
   try {
     const [
       videoCategoryResult,
       articleCategoryResult,
       videoResult,
       articleResult,
+      contentResult,
     ] = await Promise.all([
       fetchMediaTypes({ Type: 1, PageNum: 1, PageSize: MEDIA_OPTION_PAGE_SIZE }),
       fetchMediaTypes({ Type: 2, PageNum: 1, PageSize: MEDIA_OPTION_PAGE_SIZE }),
       fetchMediaVideos({ PageNum: 1, PageSize: MEDIA_OPTION_PAGE_SIZE }),
       fetchMediaArticles({ PageNum: 1, PageSize: MEDIA_OPTION_PAGE_SIZE }),
+      fetchMediaContents({ PageNum: 1, PageSize: MEDIA_CONTENT_PAGE_SIZE }),
     ])
 
     mediaState.videoCategories = normalizeMediaCategoryTree(videoCategoryResult.list)
     mediaState.articleCategories = normalizeMediaCategoryTree(articleCategoryResult.list)
     mediaState.videoItems = videoResult.list.map((item, index) => normalizeMediaVideo(item, index))
     mediaState.articleItems = articleResult.list.map((item, index) => normalizeMediaArticle(item, index))
+    persistedModuleIds.value = new Set()
+    persistedCategoryIds.value = new Set()
+    articleCategoryIds.value = new Map()
+    modules.value = normalizeModuleOrders(contentResult.list.map(normalizeMediaContent).filter((item): item is AppHomeModule => item !== null))
+    selectedModuleId.value = selectedModule.value?.id ?? modules.value[0]?.id ?? ""
     syncMediaOptionDefaults()
     syncHomeMediaReferences()
+    return true
   } catch (error) {
     handleApiError(error, {
-      title: "媒体库选项加载失败",
-      fallback: "媒体库选项加载失败，请稍后重试。",
+      title: "App 首页配置加载失败",
+      fallback: "App 首页配置加载失败，请稍后重试。",
     })
+    return false
+  } finally {
+    loading.value = false
+    if (!options.silent) {
+      clearDrag()
+    }
   }
 }
 
@@ -169,7 +200,7 @@ function addModule(type: AppHomeModuleType) {
   toast.success(type === "video" ? "已添加视频模块" : "已添加文章模块")
 }
 
-function deleteModule(moduleId: string) {
+async function deleteModule(moduleId: string) {
   const module = modules.value.find(item => item.id === moduleId)
   if (!module) {
     return
@@ -179,12 +210,29 @@ function deleteModule(moduleId: string) {
     return
   }
 
-  modules.value = normalizeModuleOrders(modules.value.filter(item => item.id !== moduleId))
-  if (selectedModuleId.value === moduleId) {
-    selectedModuleId.value = modules.value[0]?.id ?? ""
-    sheetOpen.value = false
+  submitting.value = true
+  try {
+    if (persistedModuleIds.value.has(moduleId)) {
+      await deleteMediaContent({ Uuid: moduleId })
+      persistedModuleIds.value.delete(moduleId)
+    }
+
+    modules.value = normalizeModuleOrders(modules.value.filter(item => item.id !== moduleId))
+    articleCategoryIds.value.delete(moduleId)
+    if (selectedModuleId.value === moduleId) {
+      selectedModuleId.value = modules.value[0]?.id ?? ""
+      sheetOpen.value = false
+    }
+    toast.success("模块已删除")
+    void persistModuleSort()
+  } catch (error) {
+    handleApiError(error, {
+      title: "模块删除失败",
+      fallback: "模块删除失败，请稍后重试。",
+    })
+  } finally {
+    submitting.value = false
   }
-  toast.success("模块已删除")
 }
 
 function updateSelectedModuleType(type: AppHomeModuleType) {
@@ -212,6 +260,32 @@ function updateSelectedModuleType(type: AppHomeModuleType) {
       }
 
   modules.value = modules.value.map(module => module.id === current.id ? next : module)
+}
+
+async function handleSelectedModuleStatusChange(value: boolean | "indeterminate") {
+  const module = selectedModule.value
+  if (!module) {
+    return
+  }
+
+  module.enabled = value === true
+
+  if (!persistedModuleIds.value.has(module.id)) {
+    return
+  }
+
+  try {
+    await updateMediaContentStatus({
+      Status: module.enabled ? 1 : 2,
+      Uuid: module.id,
+    })
+  } catch (error) {
+    module.enabled = !module.enabled
+    handleApiError(error, {
+      title: "模块状态更新失败",
+      fallback: "模块状态更新失败，请稍后重试。",
+    })
+  }
 }
 
 function addVideoCategory(module: AppHomeVideoModule) {
@@ -262,15 +336,51 @@ function deleteSource(category: AppHomeVideoCategory, sourceId: string) {
   category.sources = category.sources.filter(source => source.id !== sourceId)
 }
 
-function saveMockConfig() {
-  toast.success("首页配置已保存在当前 mock 会话")
+async function saveConfig() {
+  if (submitting.value) {
+    return
+  }
+
+  submitting.value = true
+  try {
+    for (const module of orderedModules.value) {
+      const payload = buildMediaContentPayload(module)
+
+      if (persistedModuleIds.value.has(module.id)) {
+        await updateMediaContent({
+          Uuid: module.id,
+          ...payload,
+        })
+        continue
+      }
+
+      const created = await createMediaContent(payload)
+      const uuid = toOptionalText(created.Uuid)
+      if (uuid) {
+        replaceModuleId(module.id, uuid)
+        persistedModuleIds.value.add(uuid)
+      }
+    }
+
+    await persistModuleSort()
+    await loadInitialData({ silent: true })
+    toast.success("首页配置已保存")
+  } catch (error) {
+    handleApiError(error, {
+      title: "首页配置保存失败",
+      fallback: "首页配置保存失败，请稍后重试。",
+    })
+  } finally {
+    submitting.value = false
+  }
 }
 
-function resetMockConfig() {
-  modules.value = normalizeModuleOrders(createAppHomeMockState().modules)
-  selectedModuleId.value = modules.value[0]?.id ?? ""
+async function refreshConfig() {
   sheetOpen.value = false
-  toast.success("已恢复初始 mock 配置")
+  const loaded = await loadInitialData()
+  if (loaded) {
+    toast.success("首页配置已刷新")
+  }
 }
 
 function getModuleSummary(module: AppHomeModule) {
@@ -444,6 +554,7 @@ function handleModuleDrop(event: DragEvent, targetId: string) {
   const sourceId = draggingId.value || event.dataTransfer?.getData("text/plain") || ""
   modules.value = reorderById(modules.value, sourceId, targetId)
   clearDrag()
+  void persistModuleSort()
 }
 
 function handleCategoryDrop(event: DragEvent, module: AppHomeVideoModule, targetId: string) {
@@ -586,6 +697,206 @@ function normalizeMediaArticle(item: MediaArticleRecord, index: number): Article
   }
 }
 
+function normalizeMediaContent(item: MediaContentRecord, index: number): AppHomeModule | null {
+  const id = toOptionalText(item.Uuid) || `media-content-${item.Id ?? index + 1}`
+  const contentType = item.Type === 2 ? "article" : item.Type === 1 ? "video" : null
+
+  if (!contentType) {
+    return null
+  }
+
+  if (toOptionalText(item.Uuid)) {
+    persistedModuleIds.value.add(id)
+  }
+
+  const categoryList = Array.isArray(item.CategoryList) ? item.CategoryList : []
+  const base = {
+    id,
+    title: toOptionalText(item.Title) || (contentType === "video" ? "视频模块" : "文章卡片"),
+    enabled: item.Status !== 2,
+    sortOrder: toOptionalNumber(item.SortNum) ?? (index + 1) * 10,
+  }
+
+  if (contentType === "article") {
+    const firstCategory = categoryList[0]
+    const categoryUuid = toOptionalText(firstCategory?.Uuid)
+
+    if (categoryUuid) {
+      articleCategoryIds.value.set(id, categoryUuid)
+    }
+
+    return {
+      ...base,
+      type: "article",
+      articleId: findFirstArticleUuid(categoryList),
+    }
+  }
+
+  const categories = categoryList
+    .map((category, categoryIndex) => normalizeMediaContentVideoCategory(category, categoryIndex))
+    .filter((category): category is AppHomeVideoCategory => category !== null)
+
+  return {
+    ...base,
+    type: "video",
+    categories: categories.length ? normalizeCategoryOrders(categories) : [createVideoCategory("分类标题", 10)],
+  }
+}
+
+function normalizeMediaContentVideoCategory(category: unknown, index: number): AppHomeVideoCategory | null {
+  if (!category || typeof category !== "object" || Array.isArray(category)) {
+    return null
+  }
+
+  const record = category as Record<string, unknown>
+  const uuid = toOptionalText(record.Uuid)
+  const id = uuid || `media-content-category-${record.Id ?? index + 1}`
+
+  if (uuid) {
+    persistedCategoryIds.value.add(uuid)
+  }
+
+  return {
+    id,
+    title: toOptionalText(record.Title) || `分类 ${index + 1}`,
+    sortOrder: toOptionalNumber(record.SortNum) ?? (index + 1) * 10,
+    sources: normalizeMediaContentVideoSources(record.MediaVideo),
+  }
+}
+
+function normalizeMediaContentVideoSources(value: unknown): AppHomeVideoSource[] {
+  if (!Array.isArray(value)) {
+    return []
+  }
+
+  return value
+    .map((item) => {
+      const uuid = item && typeof item === "object" && !Array.isArray(item)
+        ? toOptionalText((item as Record<string, unknown>).Uuid)
+        : ""
+
+      return uuid
+        ? {
+            id: createId("source"),
+            kind: "video" as const,
+            videoId: uuid,
+          }
+        : null
+    })
+    .filter((item): item is Extract<AppHomeVideoSource, { kind: "video" }> => item !== null)
+}
+
+function findFirstArticleUuid(categoryList: unknown[]) {
+  for (const category of categoryList) {
+    if (!category || typeof category !== "object" || Array.isArray(category)) {
+      continue
+    }
+
+    const articles = (category as Record<string, unknown>).MediaArticle
+    if (!Array.isArray(articles)) {
+      continue
+    }
+
+    for (const article of articles) {
+      if (!article || typeof article !== "object" || Array.isArray(article)) {
+        continue
+      }
+
+      const uuid = toOptionalText((article as Record<string, unknown>).Uuid)
+      if (uuid) {
+        return uuid
+      }
+    }
+  }
+
+  return ""
+}
+
+function buildMediaContentPayload(module: AppHomeModule) {
+  return {
+    CategoryList: buildMediaContentCategoryList(module),
+    SortNum: module.sortOrder,
+    Status: module.enabled ? 1 as const : 2 as const,
+    Title: module.title.trim() || (module.type === "video" ? "视频模块" : "文章卡片"),
+    Type: module.type === "video" ? 1 as const : 2 as const,
+  }
+}
+
+function buildMediaContentCategoryList(module: AppHomeModule): MediaContentCategorySaveItem[] {
+  if (module.type === "article") {
+    return [{
+      MediaList: module.articleId
+        ? [{
+            SortNum: 10,
+            Uuid: module.articleId,
+          }]
+        : [],
+      SortNum: 10,
+      Title: module.title.trim() || "文章内容",
+      Uuid: articleCategoryIds.value.get(module.id),
+    }]
+  }
+
+  return [...module.categories].sort(compareBySortOrder).map((category, index) => ({
+    MediaList: resolveCategoryVideos(category).map((item, mediaIndex) => ({
+      SortNum: (mediaIndex + 1) * 10,
+      Uuid: item.id,
+    })),
+    SortNum: (index + 1) * 10,
+    Title: category.title.trim() || `分类 ${index + 1}`,
+    Uuid: persistedCategoryIds.value.has(category.id) ? category.id : undefined,
+  }))
+}
+
+async function persistModuleSort() {
+  const list = orderedModules.value
+    .filter(module => persistedModuleIds.value.has(module.id))
+    .map((module, index) => ({
+      SortNum: (index + 1) * 10,
+      Uuid: module.id,
+    }))
+
+  if (list.length <= 1 || sortingSubmitting.value) {
+    return
+  }
+
+  sortingSubmitting.value = true
+  try {
+    await updateMediaContentSort({ List: list })
+  } catch (error) {
+    handleApiError(error, {
+      title: "模块排序保存失败",
+      fallback: "模块排序保存失败，请稍后重试。",
+    })
+  } finally {
+    sortingSubmitting.value = false
+  }
+}
+
+function replaceModuleId(previousId: string, nextId: string) {
+  if (!previousId || !nextId || previousId === nextId) {
+    return
+  }
+
+  const activeCategoryId = activePreviewCategoryIds[previousId]
+  modules.value = modules.value.map(module => module.id === previousId ? { ...module, id: nextId } : module)
+
+  if (selectedModuleId.value === previousId) {
+    selectedModuleId.value = nextId
+  }
+
+  if (activeCategoryId) {
+    activePreviewCategoryIds[nextId] = activeCategoryId
+    delete activePreviewCategoryIds[previousId]
+  }
+
+  const articleCategoryId = articleCategoryIds.value.get(previousId)
+  if (articleCategoryId) {
+    articleCategoryIds.value.delete(previousId)
+    articleCategoryIds.value.set(nextId, articleCategoryId)
+  }
+}
+
 function flattenCategoryTree(nodes: MediaCategoryNode[]) {
   const result: MediaCategoryNode[] = []
 
@@ -688,17 +999,17 @@ function hashText(value: string) {
         <TitleBlock
           class="min-w-0 flex-1"
           title="App 首页"
-          description="维护客户端首页展示模块。当前版本使用前端 mock 数据，刷新页面会恢复初始配置。"
+          description="维护客户端首页展示模块、展示状态、排序和内容来源。"
         />
 
         <div class="flex shrink-0 flex-nowrap items-center justify-end gap-2 pb-0.5">
-          <Button variant="outline" size="sm" class="h-8 rounded-md px-3" @click="resetMockConfig">
+          <Button variant="outline" size="sm" class="h-8 rounded-md px-3" :disabled="loading || submitting" @click="refreshConfig">
             <i class="ri-refresh-line text-base" />
-            <span>重置</span>
+            <span>{{ loading ? '加载中...' : '刷新' }}</span>
           </Button>
-          <Button size="sm" class="h-8 rounded-md px-3" @click="saveMockConfig">
+          <Button size="sm" class="h-8 rounded-md px-3" :disabled="loading || submitting" @click="saveConfig">
             <i class="ri-save-line text-base" />
-            <span>保存</span>
+            <span>{{ submitting ? '保存中...' : '保存' }}</span>
           </Button>
         </div>
       </div>
@@ -765,6 +1076,14 @@ function hashText(value: string) {
               </button>
             </div>
           </article>
+        </div>
+
+        <div v-if="loading" class="rounded-md border border-dashed border-border px-3 py-8 text-center text-sm text-muted-foreground">
+          正在加载首页配置
+        </div>
+
+        <div v-else-if="!hasLoadedModules" class="rounded-md border border-dashed border-border px-3 py-8 text-center text-sm text-muted-foreground">
+          暂无首页模块
         </div>
 
         <div class="mt-3 space-y-1">
@@ -930,6 +1249,7 @@ function hashText(value: string) {
               variant="ghost"
               size="sm"
               class="right-sheet-text-button text-destructive hover:text-destructive"
+              :disabled="submitting"
               @click="deleteModule(selectedModule.id)"
             >
               <i class="ri-delete-bin-line text-sm" />
@@ -939,10 +1259,11 @@ function hashText(value: string) {
               type="button"
               size="sm"
               class="h-8 rounded-md px-2.5"
-              @click="saveMockConfig"
+              :disabled="submitting"
+              @click="saveConfig"
             >
               <i class="ri-save-line text-sm" />
-              <span>保存</span>
+              <span>{{ submitting ? '保存中...' : '保存' }}</span>
             </Button>
           </div>
         </div>
@@ -983,7 +1304,7 @@ function hashText(value: string) {
                 <span class="text-sm text-muted-foreground">
                   {{ selectedModule.enabled ? '已在客户端首页展示' : '已停用，仅保留配置' }}
                 </span>
-                <Switch v-model="selectedModule.enabled" />
+                <Switch :model-value="selectedModule.enabled" @update:model-value="handleSelectedModuleStatusChange" />
               </div>
             </div>
           </div>
