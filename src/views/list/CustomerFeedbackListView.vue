@@ -31,7 +31,6 @@ type CustomerFeedbackRecord = {
   submitterPhone: string
   submitterDisplay: string
   category: string
-  title: string
   content: string
   createdAt: string
 }
@@ -46,6 +45,64 @@ const keywordQuery = ref("")
 const sortDirection = ref<"asc" | "desc">("desc")
 let latestRequestId = 0
 let syncingRoute = false
+
+const MOCK_FEEDBACK_ROWS: CustomerFeedbackRecord[] = [
+  {
+    id: "mock-feedback-1",
+    uuid: "mock-feedback-1",
+    customerName: "上海恒基广场物业管理有限公司",
+    submitterName: "陈明",
+    submitterPhone: "138****2468",
+    submitterDisplay: "陈明 138****2468",
+    category: "功能建议",
+    content: "目前客户在 app 里只能逐页查看检测报告，领导汇报时需要统一归档。建议增加报告 PDF 导出和分享链接功能，方便发送给业主委员会和集团安全部门。",
+    createdAt: "2026-05-09 10:28:36",
+  },
+  {
+    id: "mock-feedback-2",
+    uuid: "mock-feedback-2",
+    customerName: "杭州滨江科技园",
+    submitterName: "李晓雨",
+    submitterPhone: "186****9051",
+    submitterDisplay: "李晓雨 186****9051",
+    category: "体验问题",
+    content: "园区下建筑比较多时，进入建筑列表需要等待较久。希望能增加加载提示，或者默认先展示最近巡检过的建筑。",
+    createdAt: "2026-05-08 16:42:19",
+  },
+  {
+    id: "mock-feedback-3",
+    uuid: "mock-feedback-3",
+    customerName: "苏州星海商业中心",
+    submitterName: "王磊",
+    submitterPhone: "159****7732",
+    submitterDisplay: "王磊 159****7732",
+    category: "数据疑问",
+    content: "同一个报修问题在首页提醒里显示待处理，进入工单详情后显示已完成。请帮忙确认状态同步逻辑是否有延迟。",
+    createdAt: "2026-05-07 09:15:04",
+  },
+  {
+    id: "mock-feedback-4",
+    uuid: "mock-feedback-4",
+    customerName: "南京江北智慧园区",
+    submitterName: "赵倩",
+    submitterPhone: "177****4206",
+    submitterDisplay: "赵倩 177****4206",
+    category: "问题反馈",
+    content: "上传现场照片时偶尔会失败，网络恢复后没有自动重试，需要重新选择图片。建议保留上传队列，失败后可以手动重传。",
+    createdAt: "2026-05-06 14:03:51",
+  },
+  {
+    id: "mock-feedback-5",
+    uuid: "mock-feedback-5",
+    customerName: "成都天府办公区",
+    submitterName: "刘洋",
+    submitterPhone: "135****1180",
+    submitterDisplay: "刘洋 135****1180",
+    category: "功能建议",
+    content: "客户侧希望在服务到期、巡检计划到期前 7 天收到 app 推送，避免错过安排。",
+    createdAt: "2026-05-05 18:20:12",
+  },
+]
 
 const schema: TablePageSchema<CustomerFeedbackRecord> = {
   title: "客户反馈",
@@ -224,7 +281,6 @@ function buildPageFilterText(row: CustomerFeedbackRecord) {
     row.customerName,
     row.submitterDisplay,
     row.category,
-    row.title,
     row.content,
     row.createdAt,
   ].join(" ")
@@ -248,8 +304,15 @@ async function loadFeedback() {
       return
     }
 
+    const rows = result.list.map((item, index) => normalizeFeedbackRecord(item, index))
+
+    if (import.meta.env.DEV && rows.length === 0) {
+      applyMockFeedbackRows()
+      return
+    }
+
     total.value = result.total
-    feedbackRows.value = result.list.map((item, index) => normalizeFeedbackRecord(item, index))
+    feedbackRows.value = rows
 
     const maxPage = Math.max(1, Math.ceil((result.total || 0) / pageSize.value))
 
@@ -262,17 +325,47 @@ async function loadFeedback() {
       return
     }
 
-    feedbackRows.value = []
-    total.value = 0
+    if (import.meta.env.DEV) {
+      applyMockFeedbackRows()
+      return
+    }
+
     errorMessage.value = handleApiError(error, {
       mode: "silent",
       fallback: "客户反馈列表加载失败，请稍后重试。",
     })
+    feedbackRows.value = []
+    total.value = 0
   } finally {
     if (requestId === latestRequestId) {
       loading.value = false
     }
   }
+}
+
+function applyMockFeedbackRows() {
+  const filteredRows = filterMockFeedbackRows(keywordQuery.value)
+  const maxPage = Math.max(1, Math.ceil(filteredRows.length / pageSize.value))
+
+  if (pageNum.value > maxPage) {
+    pageNum.value = maxPage
+  }
+
+  const start = (pageNum.value - 1) * pageSize.value
+
+  total.value = filteredRows.length
+  feedbackRows.value = filteredRows.slice(start, start + pageSize.value)
+  errorMessage.value = ""
+}
+
+function filterMockFeedbackRows(keyword: string) {
+  const normalizedKeyword = keyword.trim().toLowerCase()
+
+  if (!normalizedKeyword) {
+    return [...MOCK_FEEDBACK_ROWS]
+  }
+
+  return MOCK_FEEDBACK_ROWS.filter(row => buildPageFilterText(row).toLowerCase().includes(normalizedKeyword))
 }
 
 function normalizeFeedbackRecord(
@@ -294,7 +387,6 @@ function normalizeFeedbackRecord(
     submitterPhone,
     submitterDisplay: [submitterName, submitterPhone].filter(value => value && value !== "-").join(" ") || "-",
     category: getFirstText(item, ["Type", "Category", "FeedbackType"], "意见反馈"),
-    title: getFirstText(item, ["Title", "Subject"], ""),
     content,
     createdAt,
   }
@@ -421,14 +513,9 @@ function normalizeQueryValue(value: unknown) {
       @query-clear="handleQueryClear"
     >
       <template #cell-content="{ row }">
-        <div class="min-w-0 space-y-1">
-          <p v-if="row.title" class="truncate text-sm font-medium text-foreground">
-            {{ row.title }}
-          </p>
-          <p class="line-clamp-2 max-w-[36rem] text-sm leading-5 text-muted-foreground">
-            {{ row.content }}
-          </p>
-        </div>
+        <p class="max-w-[42rem] truncate whitespace-nowrap text-sm leading-5 text-muted-foreground">
+          {{ row.content }}
+        </p>
       </template>
 
       <template #footer>
