@@ -171,7 +171,7 @@ const MEDIA_TYPE_MAP: Record<MediaModuleKey, MediaTypeKind> = {
 }
 const MEDIA_LIBRARY_VIDEO_COVER_SNAPSHOT_OPTIONS = {
   width: 375,
-  height: 500,
+  height: 0,
 } as const
 const MEDIA_CATEGORY_PAGE_SIZE = 500
 const MEDIA_CATEGORY_LOAD_ERROR_MESSAGE = "媒体分类列表加载失败，请稍后重试。"
@@ -1933,7 +1933,7 @@ function escapeHtml(value: string) {
                 :class="isActiveEntity('video', item.id) ? 'ring-2 ring-foreground/18 ring-offset-2 ring-offset-background' : ''"
               >
                 <img
-                  class="absolute inset-0 h-full w-full object-cover"
+                  class="absolute inset-0 h-full w-full object-cover object-center"
                   :src="getVideoCoverSrc(item.cover)"
                   alt=""
                   aria-hidden="true"
@@ -1999,7 +1999,7 @@ function escapeHtml(value: string) {
               >
                 <div class="relative size-14 shrink-0 overflow-hidden rounded-md bg-muted/40">
                   <img
-                    class="h-full w-full object-cover transition-transform duration-200 ease-out group-hover:scale-[1.03]"
+                    class="h-full w-full object-cover object-center transition-transform duration-200 ease-out group-hover:scale-[1.03]"
                     :src="getVideoCoverSrc(item.cover)"
                     alt=""
                     aria-hidden="true"

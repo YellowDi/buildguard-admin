@@ -87,7 +87,7 @@ const MEDIA_OPTION_PAGE_SIZE = 500
 const MEDIA_CONTENT_PAGE_SIZE = 500
 const APP_HOME_VIDEO_COVER_SNAPSHOT_OPTIONS = {
   width: 144,
-  height: 192,
+  height: 0,
 } as const
 
 const mediaState = reactive<{
@@ -1184,7 +1184,7 @@ function hashText(value: string) {
                     <img
                       :src="getCoverSrc(item.cover)"
                       alt=""
-                      class="absolute inset-0 h-full w-full object-cover"
+                      class="absolute inset-0 h-full w-full object-cover object-center"
                     />
                     <div class="absolute inset-0 bg-black/5" />
                     <div class="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/85 via-black/42 to-transparent" />
