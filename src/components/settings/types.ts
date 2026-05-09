@@ -81,18 +81,14 @@ export type SettingsState = {
 
 export type AppReleasePlatform = "android" | "ios"
 
-export type AppReleasePackageType = "apk" | "app-store"
-
 export type AppReleaseDraft = {
   hasUpdate: boolean
   versionName: string
-  versionCode: number
   title: string
   description: string
   forceUpdate: boolean
   downloadUrl: string
   appStoreUrl: string
-  packageType: AppReleasePackageType
   platform: AppReleasePlatform
 }
 

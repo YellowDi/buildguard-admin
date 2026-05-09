@@ -45,13 +45,11 @@ const updateDialogOpen = ref(false)
 const releaseForm = reactive<AppReleaseDraft>({
   hasUpdate: true,
   versionName: "",
-  versionCode: 0,
   title: "",
   description: "",
   forceUpdate: false,
   downloadUrl: "",
   appStoreUrl: "",
-  packageType: "apk",
   platform: "android",
 })
 
@@ -63,6 +61,9 @@ const selectedRelease = computed(() => {
 })
 
 const currentPayload = computed(() => JSON.stringify(props.state.appRelease, null, 2))
+const distributionLabel = computed(() => {
+  return selectedRelease.value?.platform === "ios" ? "App Store 地址" : "下载地址"
+})
 const distributionHint = computed(() => {
   if (!selectedRelease.value) {
     return "-"
@@ -70,15 +71,16 @@ const distributionHint = computed(() => {
 
   return selectedRelease.value.platform === "android"
     ? selectedRelease.value.downloadUrl || "-"
-    : selectedRelease.value.appStoreUrl || selectedRelease.value.downloadUrl || "-"
+    : selectedRelease.value.appStoreUrl || "-"
 })
+const isAndroidReleaseForm = computed(() => releaseForm.platform === "android")
 
 function formatPlatform(platform: AppReleaseDraft["platform"]) {
   return platform === "ios" ? "iOS" : "Android"
 }
 
 function getReleaseId(release: AppReleaseDraft) {
-  return `${release.platform}-${release.versionName.trim()}-${release.versionCode || 0}`
+  return `${release.platform}-${release.versionName.trim()}`
 }
 
 function getNowText() {
@@ -102,19 +104,27 @@ function updateReleaseForm<K extends keyof AppReleaseDraft>(field: K, value: App
   releaseForm[field] = value
 }
 
+function updateReleasePlatform(platform: AppReleaseDraft["platform"]) {
+  releaseForm.platform = platform
+
+  if (platform === "ios") {
+    releaseForm.downloadUrl = ""
+  } else {
+    releaseForm.appStoreUrl = ""
+  }
+}
+
 function resetReleaseForm() {
   const current = selectedRelease.value ?? props.state.appRelease
 
   Object.assign(releaseForm, {
     hasUpdate: true,
     versionName: current.versionName,
-    versionCode: current.versionCode,
     title: current.title,
     description: current.description,
     forceUpdate: current.forceUpdate,
     downloadUrl: current.downloadUrl,
     appStoreUrl: current.appStoreUrl,
-    packageType: current.packageType,
     platform: current.platform,
   })
 }
@@ -140,7 +150,8 @@ function submitRelease() {
     versionName,
     title,
     description,
-    versionCode: Number(releaseForm.versionCode) || 0,
+    downloadUrl: releaseForm.platform === "android" ? releaseForm.downloadUrl.trim() : "",
+    appStoreUrl: releaseForm.platform === "ios" ? releaseForm.appStoreUrl.trim() : "",
     updatedAt: getNowText(),
   }
   const existingIndex = props.state.appReleases.findIndex(release => release.id === nextRelease.id)
@@ -211,7 +222,7 @@ function submitRelease() {
                     {{ release.versionName }}
                   </span>
                   <span class="mt-1 block truncate text-xs text-muted-foreground">
-                    {{ formatPlatform(release.platform) }} · build {{ release.versionCode || "-" }}
+                    {{ formatPlatform(release.platform) }}
                   </span>
                 </span>
 
@@ -260,24 +271,6 @@ function submitRelease() {
               </div>
 
               <dl class="grid grid-cols-2 gap-x-8 border-b py-1">
-                <div class="flex min-w-0 items-center justify-between gap-4 border-b py-3">
-                  <dt class="shrink-0 text-sm text-muted-foreground">
-                    版本号
-                  </dt>
-                  <dd class="min-w-0 truncate font-mono text-sm font-medium text-foreground">
-                    {{ selectedRelease.versionCode || "-" }}
-                  </dd>
-                </div>
-
-                <div class="flex min-w-0 items-center justify-between gap-4 border-b py-3">
-                  <dt class="shrink-0 text-sm text-muted-foreground">
-                    分发包类型
-                  </dt>
-                  <dd class="min-w-0 truncate font-mono text-sm font-medium text-foreground">
-                    {{ selectedRelease.packageType }}
-                  </dd>
-                </div>
-
                 <div class="flex min-w-0 items-center justify-between gap-4 py-3">
                   <dt class="shrink-0 text-sm text-muted-foreground">
                     更新时间
@@ -289,7 +282,7 @@ function submitRelease() {
 
                 <div class="flex min-w-0 items-center justify-between gap-4 py-3">
                   <dt class="shrink-0 text-sm text-muted-foreground">
-                    分发地址
+                    {{ distributionLabel }}
                   </dt>
                   <dd class="min-w-0 truncate text-sm font-medium text-foreground">
                     {{ distributionHint }}
@@ -335,7 +328,7 @@ function submitRelease() {
               <FieldLabel for="release-platform">平台</FieldLabel>
               <Select
                 :model-value="releaseForm.platform"
-                @update:model-value="updateReleaseForm('platform', $event === 'ios' ? 'ios' : 'android')"
+                @update:model-value="updateReleasePlatform($event === 'ios' ? 'ios' : 'android')"
               >
                 <SelectTrigger id="release-platform" class="h-9 w-full min-w-0 rounded-md bg-background text-sm">
                   <SelectValue placeholder="选择平台" />
@@ -360,37 +353,6 @@ function submitRelease() {
                 @update:model-value="updateReleaseForm('versionName', String($event))"
               />
             </Field>
-
-            <Field class="gap-2">
-              <FieldLabel for="release-version-code">构建号</FieldLabel>
-              <Input
-                id="release-version-code"
-                :model-value="String(releaseForm.versionCode || '')"
-                inputmode="numeric"
-                placeholder="103"
-                @update:model-value="updateReleaseForm('versionCode', Number($event) || 0)"
-              />
-            </Field>
-
-            <Field class="gap-2">
-              <FieldLabel for="release-package-type">分发包类型</FieldLabel>
-              <Select
-                :model-value="releaseForm.packageType"
-                @update:model-value="updateReleaseForm('packageType', $event === 'app-store' ? 'app-store' : 'apk')"
-              >
-                <SelectTrigger id="release-package-type" class="h-9 w-full min-w-0 rounded-md bg-background text-sm">
-                  <SelectValue placeholder="选择包类型" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="apk">
-                    apk
-                  </SelectItem>
-                  <SelectItem value="app-store">
-                    app-store
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </Field>
           </div>
 
           <Field class="gap-2">
@@ -414,27 +376,25 @@ function submitRelease() {
             />
           </Field>
 
-          <div class="grid gap-4 sm:grid-cols-2">
-            <Field class="gap-2">
-              <FieldLabel for="release-download-url">下载地址</FieldLabel>
-              <Input
-                id="release-download-url"
-                :model-value="releaseForm.downloadUrl"
-                placeholder="https://example.com/app.apk"
-                @update:model-value="updateReleaseForm('downloadUrl', String($event))"
-              />
-            </Field>
+          <Field v-if="isAndroidReleaseForm" class="gap-2">
+            <FieldLabel for="release-download-url">下载地址</FieldLabel>
+            <Input
+              id="release-download-url"
+              :model-value="releaseForm.downloadUrl"
+              placeholder="https://example.com/app.apk"
+              @update:model-value="updateReleaseForm('downloadUrl', String($event))"
+            />
+          </Field>
 
-            <Field class="gap-2">
-              <FieldLabel for="release-app-store-url">App Store 地址</FieldLabel>
-              <Input
-                id="release-app-store-url"
-                :model-value="releaseForm.appStoreUrl"
-                placeholder="https://apps.apple.com/app/idxxxx"
-                @update:model-value="updateReleaseForm('appStoreUrl', String($event))"
-              />
-            </Field>
-          </div>
+          <Field v-else class="gap-2">
+            <FieldLabel for="release-app-store-url">App Store 地址</FieldLabel>
+            <Input
+              id="release-app-store-url"
+              :model-value="releaseForm.appStoreUrl"
+              placeholder="https://apps.apple.com/app/idxxxx"
+              @update:model-value="updateReleaseForm('appStoreUrl', String($event))"
+            />
+          </Field>
 
           <div class="grid gap-4 sm:grid-cols-2">
             <Field class="gap-2">
