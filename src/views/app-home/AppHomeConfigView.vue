@@ -252,33 +252,6 @@ async function confirmDeleteModule() {
   }
 }
 
-function updateSelectedModuleType(type: AppHomeModuleType) {
-  const current = selectedModule.value
-  if (!current || current.type === type) {
-    return
-  }
-
-  const next = type === "video"
-    ? {
-        id: current.id,
-        type: "video" as const,
-        title: current.title || "视频模块",
-        enabled: current.enabled,
-        sortOrder: current.sortOrder,
-        categories: [createVideoCategory("分类标题", 10)],
-      }
-    : {
-        id: current.id,
-        type: "article" as const,
-        title: current.title || "文章卡片",
-        enabled: current.enabled,
-        sortOrder: current.sortOrder,
-        articleId: articleOptions.value[0]?.id ?? "",
-      }
-
-  modules.value = modules.value.map(module => module.id === current.id ? next : module)
-}
-
 async function handleSelectedModuleStatusChange(value: boolean | "indeterminate") {
   const module = selectedModule.value
   if (!module) {
@@ -1326,25 +1299,6 @@ function hashText(value: string) {
               <Input v-model="selectedModule.title" placeholder="输入客户端展示标题" />
             </span>
           </label>
-
-          <div class="article-editor-row">
-            <span class="article-editor-label">类型</span>
-            <div class="article-editor-control">
-              <Select :model-value="selectedModule.type" @update:model-value="updateSelectedModuleType($event as AppHomeModuleType)">
-                <SelectTrigger class="w-full">
-                  <SelectValue placeholder="选择类型" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="video">
-                    视频模块
-                  </SelectItem>
-                  <SelectItem value="article">
-                    文章模块
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
 
           <div class="article-editor-row">
             <span class="article-editor-label">状态</span>
