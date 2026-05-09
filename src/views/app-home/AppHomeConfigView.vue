@@ -1188,8 +1188,8 @@ function hashText(value: string) {
                     />
                     <div class="absolute inset-0 bg-black/5" />
                     <div class="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/85 via-black/42 to-transparent" />
-                    <h3 class="absolute inset-x-0 bottom-0 line-clamp-2 p-3 text-[14px] font-semibold leading-[1.35] text-white">
-                      {{ item.title }}
+                    <h3 class="absolute inset-x-0 bottom-0 p-3 text-[14px] font-semibold leading-[1.35] text-white">
+                      <span class="app-home-video-card-title">{{ item.title }}</span>
                     </h3>
                   </article>
 
@@ -1627,6 +1627,14 @@ function hashText(value: string) {
 
 .app-home-video-rail::-webkit-scrollbar {
   display: none;
+}
+
+.app-home-video-card-title {
+  display: -webkit-box;
+  overflow: hidden;
+  max-height: calc(2 * 1.35em);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .app-home-article-card {
