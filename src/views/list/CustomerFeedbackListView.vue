@@ -22,15 +22,11 @@ import {
   fetchCustomerFeedback,
   type CustomerFeedbackListItem,
 } from "@/lib/customer-feedback-api"
-import { TooltipWrap } from "@/components/ui/tooltip"
 
 type CustomerFeedbackRecord = {
   id: string
   uuid: string
   customerName: string
-  submitterName: string
-  submitterPhone: string
-  submitterDisplay: string
   category: string
   content: string
   createdAt: string
@@ -52,9 +48,6 @@ const MOCK_FEEDBACK_ROWS: CustomerFeedbackRecord[] = [
     id: "mock-feedback-1",
     uuid: "mock-feedback-1",
     customerName: "上海恒基广场物业管理有限公司",
-    submitterName: "陈明",
-    submitterPhone: "138****2468",
-    submitterDisplay: "陈明 138****2468",
     category: "功能建议",
     content: "目前客户在 app 里只能逐页查看检测报告，领导汇报时需要统一归档。建议增加报告 PDF 导出和分享链接功能，方便发送给业主委员会和集团安全部门。",
     createdAt: "2026-05-09 10:28:36",
@@ -63,9 +56,6 @@ const MOCK_FEEDBACK_ROWS: CustomerFeedbackRecord[] = [
     id: "mock-feedback-2",
     uuid: "mock-feedback-2",
     customerName: "杭州滨江科技园",
-    submitterName: "李晓雨",
-    submitterPhone: "186****9051",
-    submitterDisplay: "李晓雨 186****9051",
     category: "体验问题",
     content: "园区下建筑比较多时，进入建筑列表需要等待较久。希望能增加加载提示，或者默认先展示最近巡检过的建筑。",
     createdAt: "2026-05-08 16:42:19",
@@ -74,9 +64,6 @@ const MOCK_FEEDBACK_ROWS: CustomerFeedbackRecord[] = [
     id: "mock-feedback-3",
     uuid: "mock-feedback-3",
     customerName: "苏州星海商业中心",
-    submitterName: "王磊",
-    submitterPhone: "159****7732",
-    submitterDisplay: "王磊 159****7732",
     category: "数据疑问",
     content: "同一个报修问题在首页提醒里显示待处理，进入工单详情后显示已完成。请帮忙确认状态同步逻辑是否有延迟。",
     createdAt: "2026-05-07 09:15:04",
@@ -85,9 +72,6 @@ const MOCK_FEEDBACK_ROWS: CustomerFeedbackRecord[] = [
     id: "mock-feedback-4",
     uuid: "mock-feedback-4",
     customerName: "南京江北智慧园区",
-    submitterName: "赵倩",
-    submitterPhone: "177****4206",
-    submitterDisplay: "赵倩 177****4206",
     category: "问题反馈",
     content: "上传现场照片时偶尔会失败，网络恢复后没有自动重试，需要重新选择图片。建议保留上传队列，失败后可以手动重传。",
     createdAt: "2026-05-06 14:03:51",
@@ -96,9 +80,6 @@ const MOCK_FEEDBACK_ROWS: CustomerFeedbackRecord[] = [
     id: "mock-feedback-5",
     uuid: "mock-feedback-5",
     customerName: "成都天府办公区",
-    submitterName: "刘洋",
-    submitterPhone: "135****1180",
-    submitterDisplay: "刘洋 135****1180",
     category: "功能建议",
     content: "客户侧希望在服务到期、巡检计划到期前 7 天收到 app 推送，避免错过安排。",
     createdAt: "2026-05-05 18:20:12",
@@ -133,29 +114,9 @@ const schema: TablePageSchema<CustomerFeedbackRecord> = {
       sort: true,
     },
     {
-      key: "submitterDisplay",
-      label: "提交人",
-      cellRenderer: {
-        kind: "dual-inline",
-        primaryKey: "submitterName",
-        secondaryKey: "submitterPhone",
-      },
-      filter: {
-        type: "text",
-        label: "提交人",
-        placeholder: "输入姓名或手机号",
-        defaultVisible: true,
-      },
-      sort: {
-        label: "提交人",
-        value: row => row.submitterDisplay,
-      },
-    },
-    {
       key: "content",
       label: "反馈内容",
       filterType: "text",
-      width: "fill",
       slot: "cell-content",
       filter: {
         type: "text",
@@ -233,7 +194,7 @@ const queryBar = computed<TableQueryBarConfig>(() => ({
       queryKey: "q",
       label: "关键词",
       icon: "ri-search-line",
-      placeholder: "客户、提交人或反馈内容",
+      placeholder: "客户或反馈内容",
       value: keywordQuery.value,
       expandedWidth: 280,
       collapsedMaxWidth: 280,
@@ -280,7 +241,6 @@ function extractDatePart(value: string) {
 function buildPageFilterText(row: CustomerFeedbackRecord) {
   return [
     row.customerName,
-    row.submitterDisplay,
     row.category,
     row.content,
     row.createdAt,
@@ -375,8 +335,6 @@ function normalizeFeedbackRecord(
 ): CustomerFeedbackRecord {
   const uuid = getFirstText(item, ["Uuid", "uuid"])
   const customerName = getFirstText(item, ["CorpName", "CustomerName", "Customer", "CompanyName"], "未命名客户")
-  const submitterName = getFirstText(item, ["UserName", "Nickname", "Name", "SubmitterName"], "-")
-  const submitterPhone = getFirstText(item, ["Phone", "Mobile", "Contact", "UserPhone"], "-")
   const content = getFirstText(item, ["Content", "FeedbackContent", "Opinion", "Description"], "-")
   const createdAt = getFirstText(item, ["CreatedAt", "CreateTime", "SubmittedAt"], "-")
 
@@ -384,9 +342,6 @@ function normalizeFeedbackRecord(
     id: uuid || `${pageNum.value}-${index + 1}-${customerName}-${createdAt}`,
     uuid,
     customerName,
-    submitterName,
-    submitterPhone,
-    submitterDisplay: [submitterName, submitterPhone].filter(value => value && value !== "-").join(" ") || "-",
     category: getFirstText(item, ["Type", "Category", "FeedbackType"], "意见反馈"),
     content,
     createdAt,
@@ -430,14 +385,6 @@ function toTimestamp(value: unknown) {
 
   const timestamp = new Date(text.replace(" ", "T")).getTime()
   return Number.isFinite(timestamp) ? timestamp : null
-}
-
-function getContentText(value: unknown) {
-  return toText(value)
-}
-
-function shouldShowContentTooltip(value: unknown) {
-  return getContentText(value).length > 24
 }
 
 function handleToolbarSortToggle() {
@@ -522,16 +469,9 @@ function normalizeQueryValue(value: unknown) {
       @query-clear="handleQueryClear"
     >
       <template #cell-content="{ row }">
-        <TooltipWrap
-          :content="getContentText(row.content)"
-          :disabled="!shouldShowContentTooltip(row.content)"
-          align="start"
-          class="max-w-[min(42rem,calc(100vw-2rem))] whitespace-normal text-left leading-5"
-        >
-          <p class="max-w-[42rem] truncate whitespace-nowrap text-sm leading-5 text-muted-foreground">
-            {{ row.content }}
-          </p>
-        </TooltipWrap>
+        <p class="max-w-none whitespace-nowrap text-sm leading-5 text-muted-foreground">
+          {{ row.content }}
+        </p>
       </template>
 
       <template #footer>
