@@ -22,6 +22,7 @@ import {
   fetchCustomerFeedback,
   type CustomerFeedbackListItem,
 } from "@/lib/customer-feedback-api"
+import { TooltipWrap } from "@/components/ui/tooltip"
 
 type CustomerFeedbackRecord = {
   id: string
@@ -431,6 +432,10 @@ function toTimestamp(value: unknown) {
   return Number.isFinite(timestamp) ? timestamp : null
 }
 
+function shouldShowContentTooltip(value: string) {
+  return value.trim().length > 24
+}
+
 function handleToolbarSortToggle() {
   sortDirection.value = sortDirection.value === "asc" ? "desc" : "asc"
 }
@@ -513,9 +518,16 @@ function normalizeQueryValue(value: unknown) {
       @query-clear="handleQueryClear"
     >
       <template #cell-content="{ row }">
-        <p class="max-w-[42rem] truncate whitespace-nowrap text-sm leading-5 text-muted-foreground">
-          {{ row.content }}
-        </p>
+        <TooltipWrap
+          :content="row.content"
+          :disabled="!shouldShowContentTooltip(row.content)"
+          align="start"
+          class="max-w-[min(42rem,calc(100vw-2rem))] whitespace-normal text-left leading-5"
+        >
+          <p class="max-w-[42rem] truncate whitespace-nowrap text-sm leading-5 text-muted-foreground">
+            {{ row.content }}
+          </p>
+        </TooltipWrap>
       </template>
 
       <template #footer>
