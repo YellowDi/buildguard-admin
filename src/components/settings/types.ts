@@ -71,6 +71,7 @@ export type SettingsState = {
   twoFactorEnabled: boolean
   sessionTimeout: string
   appRelease: AppReleaseDraft
+  appReleases: AppReleaseEntry[]
   // Me page fields
   preferredName: string
   selectedAvatarKey: DefaultAvatarKey
@@ -93,6 +94,11 @@ export type AppReleaseDraft = {
   appStoreUrl: string
   packageType: AppReleasePackageType
   platform: AppReleasePlatform
+}
+
+export type AppReleaseEntry = AppReleaseDraft & {
+  id: string
+  updatedAt: string
 }
 
 export type BooleanSettingsKey = {
