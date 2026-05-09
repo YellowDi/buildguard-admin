@@ -20,6 +20,7 @@ import { ResponsiveRightSheet } from "@/components/ui/sheet"
 import { Switch } from "@/components/ui/switch"
 import { TooltipWrap } from "@/components/ui/tooltip"
 import videoPreviewAsset from "@/assets/video.png"
+import { buildCosVideoSnapshotUrl } from "@/lib/cos-video-snapshot"
 import {
   type AppHomeArticleModule,
   type AppHomeModule,
@@ -84,6 +85,10 @@ type NewVideoSourceForm = {
 
 const MEDIA_OPTION_PAGE_SIZE = 500
 const MEDIA_CONTENT_PAGE_SIZE = 500
+const APP_HOME_VIDEO_COVER_SNAPSHOT_OPTIONS = {
+  width: 144,
+  height: 192,
+} as const
 
 const mediaState = reactive<{
   videoCategories: MediaCategoryNode[]
@@ -694,12 +699,13 @@ function normalizeMediaCategory(item: MediaTypeRecord): MediaCategoryNode {
 function normalizeMediaVideo(item: MediaVideoRecord, index: number): VideoItem {
   const id = toOptionalText(item.Uuid) || `media-video-${item.Id ?? index + 1}`
   const title = toOptionalText(item.Title) || `视频 ${index + 1}`
+  const sourceUrl = toOptionalText(item.Url)
 
   return {
     id,
     categoryId: toOptionalText(item.TypeUuid),
     title,
-    cover: "",
+    cover: buildCosVideoSnapshotUrl(sourceUrl, APP_HOME_VIDEO_COVER_SNAPSHOT_OPTIONS),
     sortOrder: index + 1,
   }
 }

@@ -45,6 +45,7 @@ import {
   getApiErrorMessage,
   handleApiError,
 } from "@/lib/api-errors"
+import { buildCosVideoSnapshotUrl } from "@/lib/cos-video-snapshot"
 import {
   createMediaArticle,
   deleteMediaArticle,
@@ -97,6 +98,7 @@ type VideoItem = {
   id: string
   categoryId: string
   title: string
+  cover: string
   sourceUrl: string
   sourceFileName: string
   summary: string
@@ -167,6 +169,10 @@ const MEDIA_TYPE_MAP: Record<MediaModuleKey, MediaTypeKind> = {
   videos: 1,
   articles: 2,
 }
+const MEDIA_LIBRARY_VIDEO_COVER_SNAPSHOT_OPTIONS = {
+  width: 375,
+  height: 500,
+} as const
 const MEDIA_CATEGORY_PAGE_SIZE = 500
 const MEDIA_CATEGORY_LOAD_ERROR_MESSAGE = "媒体分类列表加载失败，请稍后重试。"
 const MEDIA_VIDEO_PAGE_SIZE = 500
@@ -1221,6 +1227,10 @@ function getArticleCoverSrc(value: string) {
   return normalizeArticleCoverSource(value) || videoPreviewAsset
 }
 
+function getVideoCoverSrc(value: string) {
+  return normalizeArticleCoverSource(value) || videoPreviewAsset
+}
+
 function parseTagText(value: string) {
   return value
     .split(",")
@@ -1411,6 +1421,7 @@ function normalizeMediaVideo(item: MediaVideoRecord, index: number): VideoItem {
     id,
     categoryId: toOptionalText(item.TypeUuid),
     title,
+    cover: buildCosVideoSnapshotUrl(sourceUrl, MEDIA_LIBRARY_VIDEO_COVER_SNAPSHOT_OPTIONS),
     sourceUrl,
     sourceFileName: getFileNameFromUrl(sourceUrl),
     summary: toOptionalText(item.Abstract),
@@ -1923,7 +1934,7 @@ function escapeHtml(value: string) {
               >
                 <img
                   class="absolute inset-0 h-full w-full object-cover"
-                  :src="videoPreviewAsset"
+                  :src="getVideoCoverSrc(item.cover)"
                   alt=""
                   aria-hidden="true"
                 />
@@ -1989,7 +2000,7 @@ function escapeHtml(value: string) {
                 <div class="relative size-14 shrink-0 overflow-hidden rounded-md bg-muted/40">
                   <img
                     class="h-full w-full object-cover transition-transform duration-200 ease-out group-hover:scale-[1.03]"
-                    :src="videoPreviewAsset"
+                    :src="getVideoCoverSrc(item.cover)"
                     alt=""
                     aria-hidden="true"
                   />
