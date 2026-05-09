@@ -366,6 +366,15 @@ const router = createRouter({
           } satisfies RouteMetaConfig,
         },
         {
+          path: "customer-feedback",
+          name: "customer-feedback",
+          component: () => import("@/views/list/CustomerFeedbackListView.vue"),
+          meta: {
+            title: "客户反馈",
+            loading: "table",
+          } satisfies RouteMetaConfig,
+        },
+        {
           path: "inspection-services/:id",
           name: "inspection-service-detail",
           component: () => import("@/views/detail/InspectionServiceDetailView.vue"),
