@@ -3,6 +3,7 @@ import { computed, reactive, ref } from "vue"
 import { toast } from "vue-sonner"
 
 import SettingsPageHeader from "@/components/settings/SettingsPageHeader.vue"
+import SettingsToolbarRow from "@/components/settings/SettingsToolbarRow.vue"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -159,51 +160,54 @@ function submitRelease() {
 </script>
 
 <template>
-  <div class="flex min-h-0 flex-1 flex-col">
+  <section class="relative flex flex-col overflow-visible bg-background">
     <SettingsPageHeader
       title="应用更新"
       description="维护移动平台用户端 app 的版本号、更新日志和分发地址。"
-    />
-
-    <div class="min-h-0 flex-1 overflow-y-auto px-3 pb-4 sm:px-4">
-      <section class="mx-auto w-full max-w-4xl">
-        <div class="mb-3 flex items-center justify-between gap-4 border-b pb-3">
-          <div class="min-w-0">
-            <h2 class="text-sm font-semibold text-foreground">
-              版本管理
-            </h2>
-            <p class="mt-1 text-sm text-muted-foreground">
-              共 {{ releases.length }} 个版本，选择左侧版本号查看详情。
-            </p>
+    >
+      <SettingsToolbarRow>
+        <template #leading>
+          <div class="min-w-0 text-xs text-muted-foreground">
+            当前共 {{ releases.length }} 个版本
           </div>
+        </template>
 
-          <Button
-            size="sm"
-            class="h-8 shrink-0 px-3"
-            @click="openUpdateDialog"
-          >
-            <i class="ri-add-line text-base" />
-            <span>更新版本</span>
-          </Button>
-        </div>
+        <Button
+          size="sm"
+          class="h-8 rounded-md px-3"
+          @click="openUpdateDialog"
+        >
+          <i class="ri-add-line text-base" />
+          <span>更新版本</span>
+        </Button>
+      </SettingsToolbarRow>
+    </SettingsPageHeader>
 
-        <div class="grid grid-cols-[240px_minmax(0,1fr)]">
-          <aside class="border-r pr-4">
-            <div class="mb-2 px-3 text-xs font-medium text-muted-foreground">
-              版本号条目
+    <div class="px-3 pb-8 sm:px-4">
+      <div class="mx-auto flex w-full max-w-4xl gap-8 overflow-visible">
+        <aside class="w-[240px] shrink-0 pt-4">
+          <div class="sticky top-[11rem] flex max-h-[calc(100svh-12rem)] flex-col overflow-hidden">
+            <div class="mb-2 px-1">
+              <p class="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                版本号条目
+              </p>
             </div>
 
-            <div class="divide-y">
+            <div class="min-h-0 flex-1 space-y-0.5 overflow-y-auto">
               <button
                 v-for="release in releases"
                 :key="release.id"
                 type="button"
-                class="flex min-h-14 w-full min-w-0 items-center justify-between gap-3 border-l-2 px-3 py-2 text-left transition-[background-color,border-color,transform] duration-180 ease-out active:scale-[0.96]"
-                :class="release.id === selectedRelease?.id ? 'border-primary bg-muted/55' : 'border-transparent hover:bg-muted/40'"
+                class="group flex w-full min-w-0 items-center gap-2 rounded-md px-1 py-0.5 text-left transition-[background-color,transform] duration-180 ease-out active:scale-[0.96]"
+                :class="release.id === selectedRelease?.id ? 'bg-accent' : 'hover:bg-accent/50'"
                 @click="selectRelease(release)"
               >
-                <span class="min-w-0">
-                  <span class="block truncate font-mono text-sm font-semibold text-foreground">
+                <span class="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors group-hover:bg-background group-hover:text-foreground">
+                  <i :class="[release.platform === 'ios' ? 'ri-apple-line' : 'ri-android-line', 'text-[15px]']" />
+                </span>
+
+                <span class="min-w-0 flex-1 py-1">
+                  <span class="block truncate font-mono text-sm font-medium text-foreground">
                     {{ release.versionName }}
                   </span>
                   <span class="mt-1 block truncate text-xs text-muted-foreground">
@@ -219,27 +223,17 @@ function submitRelease() {
                 </Badge>
               </button>
             </div>
-          </aside>
+          </div>
+        </aside>
 
-          <main class="min-w-0 pl-5">
-            <template v-if="selectedRelease">
-              <div class="border-b pb-4">
+        <main class="min-w-0 flex-1 overflow-visible pt-4">
+          <template v-if="selectedRelease">
+            <section class="space-y-5">
+              <div class="flex min-w-0 items-start justify-between gap-4 border-b pb-4">
                 <div class="min-w-0">
-                  <div class="mb-2 flex flex-wrap items-center gap-2">
-                    <Badge>{{ formatPlatform(selectedRelease.platform) }}</Badge>
-                    <Badge
-                      v-if="selectedRelease.hasUpdate"
-                      variant="outline"
-                    >
-                      有更新
-                    </Badge>
-                    <Badge
-                      v-if="selectedRelease.forceUpdate"
-                      variant="destructive"
-                    >
-                      强制更新
-                    </Badge>
-                  </div>
+                  <p class="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                    {{ formatPlatform(selectedRelease.platform) }}
+                  </p>
 
                   <h2 class="text-xl font-semibold tracking-normal text-foreground">
                     {{ selectedRelease.versionName }}
@@ -248,10 +242,25 @@ function submitRelease() {
                     {{ selectedRelease.title }}
                   </p>
                 </div>
+
+                <div class="flex shrink-0 flex-wrap justify-end gap-2">
+                  <Badge
+                    v-if="selectedRelease.hasUpdate"
+                    variant="outline"
+                  >
+                    有更新
+                  </Badge>
+                  <Badge
+                    v-if="selectedRelease.forceUpdate"
+                    variant="destructive"
+                  >
+                    强制更新
+                  </Badge>
+                </div>
               </div>
 
-              <dl class="grid border-b py-1 sm:grid-cols-2 sm:gap-x-8">
-                <div class="flex min-w-0 items-center justify-between gap-4 border-b py-3 sm:border-b-0">
+              <dl class="grid grid-cols-2 gap-x-8 border-b py-1">
+                <div class="flex min-w-0 items-center justify-between gap-4 border-b py-3">
                   <dt class="shrink-0 text-sm text-muted-foreground">
                     版本号
                   </dt>
@@ -260,7 +269,7 @@ function submitRelease() {
                   </dd>
                 </div>
 
-                <div class="flex min-w-0 items-center justify-between gap-4 border-b py-3 sm:border-b-0">
+                <div class="flex min-w-0 items-center justify-between gap-4 border-b py-3">
                   <dt class="shrink-0 text-sm text-muted-foreground">
                     分发包类型
                   </dt>
@@ -269,7 +278,7 @@ function submitRelease() {
                   </dd>
                 </div>
 
-                <div class="flex min-w-0 items-center justify-between gap-4 border-b py-3 sm:border-b-0">
+                <div class="flex min-w-0 items-center justify-between gap-4 py-3">
                   <dt class="shrink-0 text-sm text-muted-foreground">
                     更新时间
                   </dt>
@@ -288,12 +297,12 @@ function submitRelease() {
                 </div>
               </dl>
 
-              <div class="grid gap-6 py-4 lg:grid-cols-[minmax(0,1fr)_280px]">
+              <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
                 <section class="min-w-0">
                   <h3 class="mb-2 text-sm font-semibold text-foreground">
                     更新日志
                   </h3>
-                  <div class="min-h-36 whitespace-pre-wrap border-y py-3 text-sm leading-6 text-foreground">
+                  <div class="min-h-40 whitespace-pre-wrap rounded-md bg-muted/35 px-3 py-3 text-sm leading-6 text-foreground">
                     {{ selectedRelease.description }}
                   </div>
                 </section>
@@ -302,17 +311,17 @@ function submitRelease() {
                   <h3 class="mb-2 text-sm font-semibold text-foreground">
                     接口预览
                   </h3>
-                  <pre class="max-h-56 overflow-auto whitespace-pre-wrap break-all border-y bg-muted/20 py-3 text-xs leading-6 text-muted-foreground">{{ currentPayload }}</pre>
+                  <pre class="max-h-56 overflow-auto whitespace-pre-wrap break-all rounded-md bg-muted/35 px-3 py-3 text-xs leading-6 text-muted-foreground">{{ currentPayload }}</pre>
                 </section>
               </div>
-            </template>
-          </main>
-        </div>
-      </section>
+            </section>
+          </template>
+        </main>
+      </div>
     </div>
 
     <Dialog :open="updateDialogOpen" @update:open="updateDialogOpen = $event">
-      <DialogContent stack-above-sticky-header class="sm:max-w-[560px]">
+      <DialogContent stack-above-sticky-header class="max-h-[min(88vh,760px)] overflow-y-auto sm:max-w-[640px]">
         <DialogHeader>
           <DialogTitle>更新版本</DialogTitle>
           <DialogDescription>
@@ -320,7 +329,7 @@ function submitRelease() {
           </DialogDescription>
         </DialogHeader>
 
-        <form class="grid gap-4" @submit.prevent="submitRelease">
+        <form class="space-y-4" @submit.prevent="submitRelease">
           <div class="grid gap-4 sm:grid-cols-2">
             <Field class="gap-2">
               <FieldLabel for="release-platform">平台</FieldLabel>
@@ -457,10 +466,11 @@ function submitRelease() {
             取消
           </Button>
           <Button @click="submitRelease">
-            保存版本
+            <i class="ri-save-line text-sm" />
+            <span>保存版本</span>
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  </div>
+  </section>
 </template>
