@@ -60,7 +60,6 @@ const selectedRelease = computed(() => {
     ?? null
 })
 
-const currentPayload = computed(() => JSON.stringify(props.state.appRelease, null, 2))
 const distributionLabel = computed(() => {
   return selectedRelease.value?.platform === "ios" ? "App Store 地址" : "下载地址"
 })
@@ -177,12 +176,6 @@ function submitRelease() {
       description="维护移动平台用户端 app 的版本号、更新日志和分发地址。"
     >
       <SettingsToolbarRow>
-        <template #leading>
-          <div class="min-w-0 text-xs text-muted-foreground">
-            当前共 {{ releases.length }} 个版本
-          </div>
-        </template>
-
         <Button
           size="sm"
           class="h-8 rounded-md px-3"
@@ -235,36 +228,26 @@ function submitRelease() {
             <section class="space-y-5">
               <div class="flex min-w-0 items-start justify-between gap-4 border-b pb-4">
                 <div class="min-w-0">
-                  <p class="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
+                  <p class="text-sm font-medium text-muted-foreground">
                     {{ formatPlatform(selectedRelease.platform) }}
                   </p>
 
                   <h2 class="text-xl font-semibold tracking-normal text-foreground">
                     {{ selectedRelease.versionName }}
                   </h2>
-                  <p class="mt-1 text-sm text-muted-foreground">
-                    {{ selectedRelease.title }}
-                  </p>
                 </div>
 
-                <div class="flex shrink-0 flex-wrap justify-end gap-2">
-                  <Badge
-                    v-if="selectedRelease.hasUpdate"
-                    variant="outline"
-                  >
-                    有更新
-                  </Badge>
-                  <Badge
-                    v-if="selectedRelease.forceUpdate"
-                    variant="destructive"
-                  >
-                    强制更新
-                  </Badge>
-                </div>
+                <Badge
+                  v-if="selectedRelease.forceUpdate"
+                  variant="destructive"
+                  class="shrink-0"
+                >
+                  强制更新
+                </Badge>
               </div>
 
-              <dl class="grid grid-cols-2 gap-x-8 border-b py-1">
-                <div class="flex min-w-0 items-center justify-between gap-4 py-3">
+              <dl class="border-b py-1">
+                <div class="flex min-w-0 items-center justify-between gap-4 border-b py-3">
                   <dt class="shrink-0 text-sm text-muted-foreground">
                     更新时间
                   </dt>
@@ -283,23 +266,14 @@ function submitRelease() {
                 </div>
               </dl>
 
-              <div class="grid gap-6 lg:grid-cols-[minmax(0,1fr)_280px]">
-                <section class="min-w-0">
-                  <h3 class="mb-2 text-sm font-semibold text-foreground">
-                    更新日志
-                  </h3>
-                  <div class="min-h-40 whitespace-pre-wrap rounded-md bg-muted/35 px-3 py-3 text-sm leading-6 text-foreground">
-                    {{ selectedRelease.description }}
-                  </div>
-                </section>
-
-                <section class="min-w-0">
-                  <h3 class="mb-2 text-sm font-semibold text-foreground">
-                    接口预览
-                  </h3>
-                  <pre class="max-h-56 overflow-auto whitespace-pre-wrap break-all rounded-md bg-muted/35 px-3 py-3 text-xs leading-6 text-muted-foreground">{{ currentPayload }}</pre>
-                </section>
-              </div>
+              <section class="min-w-0">
+                <h3 class="mb-2 text-sm font-semibold text-foreground">
+                  更新日志
+                </h3>
+                <div class="min-h-40 whitespace-pre-wrap rounded-md bg-muted/35 px-3 py-3 text-sm leading-6 text-foreground">
+                  {{ selectedRelease.description }}
+                </div>
+              </section>
             </section>
           </template>
         </main>
