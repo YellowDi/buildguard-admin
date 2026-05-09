@@ -2832,12 +2832,22 @@ function escapeHtml(value: string) {
 
 .media-markdown :deep(p),
 .media-markdown :deep(ul),
+.media-markdown :deep(ol),
 .media-markdown :deep(blockquote) {
   margin: 0 0 0.85rem;
 }
 
-.media-markdown :deep(ul) {
+.media-markdown :deep(ul),
+.media-markdown :deep(ol) {
   padding-left: 1.15rem;
+}
+
+.media-markdown :deep(ul) {
+  list-style-type: disc;
+}
+
+.media-markdown :deep(ol) {
+  list-style-type: decimal;
 }
 
 .media-markdown :deep(li) {

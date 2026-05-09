@@ -33,6 +33,33 @@ const blockOptions = [
   { value: "h6", label: "Heading 6", icon: "ri-h-6" },
 ]
 const selectedBlockOption = computed(() => blockOptions.find((option) => option.value === selectedBlock.value) ?? blockOptions[0])
+const allowedPasteTags = new Set([
+  "A",
+  "B",
+  "BLOCKQUOTE",
+  "BR",
+  "CODE",
+  "DIV",
+  "EM",
+  "H1",
+  "H2",
+  "H3",
+  "H4",
+  "H5",
+  "H6",
+  "I",
+  "IMG",
+  "LI",
+  "OL",
+  "P",
+  "PRE",
+  "S",
+  "SPAN",
+  "STRONG",
+  "U",
+  "UL",
+])
+const removedPasteTags = new Set(["IFRAME", "LINK", "META", "OBJECT", "SCRIPT", "STYLE", "SVG"])
 
 watch(
   () => props.modelValue,
@@ -159,13 +186,102 @@ function handleImageChange(event: Event) {
 
 function handlePaste(event: ClipboardEvent) {
   event.preventDefault()
+  const html = event.clipboardData?.getData("text/html") ?? ""
   const text = event.clipboardData?.getData("text/plain") ?? ""
-  if (!text) {
+
+  if (html.trim()) {
+    insertHtml(sanitizePastedHtml(html))
+    return
+  }
+
+  if (looksLikeHtml(text)) {
+    insertHtml(sanitizePastedHtml(text))
     return
   }
 
   document.execCommand("insertText", false, text)
   syncValue()
+}
+
+function insertHtml(html: string) {
+  if (!html.trim()) {
+    return
+  }
+
+  document.execCommand("insertHTML", false, html)
+  syncValue()
+}
+
+function sanitizePastedHtml(html: string) {
+  const template = document.createElement("template")
+  template.innerHTML = html
+  sanitizePastedNode(template.content)
+  return template.innerHTML
+}
+
+function sanitizePastedNode(parent: ParentNode) {
+  for (const node of Array.from(parent.childNodes)) {
+    if (!(node instanceof HTMLElement)) {
+      continue
+    }
+
+    const tagName = node.tagName
+    if (removedPasteTags.has(tagName)) {
+      node.remove()
+      continue
+    }
+
+    if (!allowedPasteTags.has(tagName)) {
+      node.replaceWith(...Array.from(node.childNodes))
+      sanitizePastedNode(parent)
+      continue
+    }
+
+    sanitizePastedElement(node)
+    sanitizePastedNode(node)
+  }
+}
+
+function sanitizePastedElement(element: HTMLElement) {
+  for (const attribute of Array.from(element.attributes)) {
+    element.removeAttribute(attribute.name)
+  }
+
+  if (element instanceof HTMLAnchorElement) {
+    const href = element.getAttribute("href") ?? ""
+    if (isSafeUrl(href)) {
+      element.setAttribute("href", href)
+      element.setAttribute("target", "_blank")
+      element.setAttribute("rel", "noopener noreferrer")
+    }
+  }
+
+  if (element instanceof HTMLImageElement) {
+    const src = element.getAttribute("src") ?? ""
+    if (isSafeImageSrc(src)) {
+      element.setAttribute("src", src)
+      element.setAttribute("alt", "")
+    }
+  }
+}
+
+function looksLikeHtml(value: string) {
+  return /<\/?(p|h[1-6]|blockquote|ul|ol|li|strong|em|b|i|u|s|a|pre|code|div|span|br|img)\b/i.test(value)
+}
+
+function isSafeUrl(value: string) {
+  const normalized = value.trim().toLowerCase()
+  return Boolean(normalized)
+    && !normalized.startsWith("javascript:")
+    && !normalized.startsWith("data:")
+    && !normalized.startsWith("vbscript:")
+}
+
+function isSafeImageSrc(value: string) {
+  const normalized = value.trim().toLowerCase()
+  return normalized.startsWith("http://")
+    || normalized.startsWith("https://")
+    || normalized.startsWith("data:image/")
 }
 </script>
 
@@ -440,6 +556,14 @@ function handlePaste(event: ClipboardEvent) {
 .rich-text-editor-content :deep(ul),
 .rich-text-editor-content :deep(ol) {
   padding-left: 1.15rem;
+}
+
+.rich-text-editor-content :deep(ul) {
+  list-style-type: disc;
+}
+
+.rich-text-editor-content :deep(ol) {
+  list-style-type: decimal;
 }
 
 .rich-text-editor-content :deep(li) {
