@@ -26,10 +26,6 @@ export type CustomerFeedbackListItem = {
   Content?: string
   FeedbackContent?: string
   Opinion?: string
-  ReplyContent?: string
-  Reply?: string
-  ReplyAt?: string
-  ReplyTime?: string
   Status?: number
   CreatedAt?: string
   UpdatedAt?: string
@@ -45,21 +41,13 @@ export type ListCustomerFeedbackPayload = {
   [property: string]: unknown
 }
 
-export type ReplyCustomerFeedbackPayload = {
-  Uuid?: string
-  ReplyContent?: string
-  [property: string]: unknown
-}
-
 export type CustomerFeedbackListResult = {
   list: CustomerFeedbackListItem[]
   total: number
 }
 
 const CUSTOMER_FEEDBACK_LIST_API_URL = buildApiUrl(API_PATHS.customerFeedbackList)
-const CUSTOMER_FEEDBACK_REPLY_API_URL = buildApiUrl(API_PATHS.customerFeedbackReply)
 const CUSTOMER_FEEDBACK_LOAD_ERROR_MESSAGE = "客户反馈列表加载失败，请稍后重试。"
-const CUSTOMER_FEEDBACK_REPLY_ERROR_MESSAGE = "客户反馈回复保存失败，请稍后重试。"
 
 export async function fetchCustomerFeedback(
   payload: ListCustomerFeedbackPayload = {},
@@ -93,28 +81,6 @@ export async function fetchCustomerFeedback(
     list: list.map(item => normalizeFeedbackItem(item)),
     total: extractTotal(responsePayload, list.length),
   }
-}
-
-export async function replyCustomerFeedback(payload: ReplyCustomerFeedbackPayload) {
-  const normalizedPayload = {
-    Uuid: getRequiredString(payload.Uuid, "Uuid"),
-    ReplyContent: getRequiredString(payload.ReplyContent, "ReplyContent"),
-  }
-
-  const response = await fetch(CUSTOMER_FEEDBACK_REPLY_API_URL, {
-    method: "POST",
-    headers: buildApiHeaders({
-      "Content-Type": "application/json",
-    }),
-    body: JSON.stringify(normalizedPayload),
-  })
-  const responseBody = await readResponseBody(response)
-
-  if (!response.ok) {
-    throw createHttpError(response, responseBody, CUSTOMER_FEEDBACK_REPLY_ERROR_MESSAGE)
-  }
-
-  assertApiSuccess(responseBody, CUSTOMER_FEEDBACK_REPLY_ERROR_MESSAGE)
 }
 
 function extractList(payload: CustomerFeedbackListEnvelope | unknown[]) {
@@ -196,16 +162,6 @@ function getOptionalString(value: unknown) {
   }
 
   throw new ApiError("请求参数校验失败：字符串参数格式不正确。")
-}
-
-function getRequiredString(value: unknown, field: string) {
-  const normalized = getOptionalString(value)
-
-  if (normalized) {
-    return normalized
-  }
-
-  throw new ApiError(`请求参数校验失败：${field} 不能为空。`)
 }
 
 function getOptionalNumber(value: unknown, field: string) {

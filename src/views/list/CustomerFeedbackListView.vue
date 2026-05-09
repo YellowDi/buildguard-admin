@@ -1,14 +1,12 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
-import { toast } from "vue-sonner"
 
 import TablePage from "@/components/table-page/TablePage.vue"
 import { createTablePageDefinition, useTablePage } from "@/components/table-page/useTablePage"
 import type { TablePageSchema, TableQueryBarConfig } from "@/components/table-page/types"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import {
   Pagination,
   PaginationContent,
@@ -19,15 +17,11 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination"
-import { Textarea } from "@/components/ui/textarea"
 import { handleApiError } from "@/lib/api-errors"
 import {
   fetchCustomerFeedback,
-  replyCustomerFeedback,
   type CustomerFeedbackListItem,
 } from "@/lib/customer-feedback-api"
-
-type FeedbackStatusLabel = "待回复" | "已回复" | "未填写"
 
 type CustomerFeedbackRecord = {
   id: string
@@ -39,9 +33,6 @@ type CustomerFeedbackRecord = {
   category: string
   title: string
   content: string
-  statusLabel: FeedbackStatusLabel
-  replyContent: string
-  replyAt: string
   createdAt: string
 }
 
@@ -53,22 +44,12 @@ const pageSize = ref(50)
 const total = ref(0)
 const keywordQuery = ref("")
 const sortDirection = ref<"asc" | "desc">("desc")
-const replyDialogOpen = ref(false)
-const replySubmitting = ref(false)
-const activeFeedback = ref<CustomerFeedbackRecord | null>(null)
-const replyContent = ref("")
 let latestRequestId = 0
 let syncingRoute = false
 
-const feedbackStatusMap = {
-  待回复: { tone: "orange", icon: "clock" },
-  已回复: { tone: "green", icon: "check" },
-  未填写: { tone: "gray", icon: "dot" },
-} as const
-
 const schema: TablePageSchema<CustomerFeedbackRecord> = {
   title: "客户反馈",
-  description: "查看客户在 app 提交的意见反馈，并填写处理回复",
+  description: "查看客户在 app 提交的意见反馈内容",
   rowKey: "id",
   data: [],
   showIndex: true,
@@ -78,15 +59,6 @@ const schema: TablePageSchema<CustomerFeedbackRecord> = {
     description: "客户在 app 提交意见反馈后会展示在这里。",
     icon: "ri-feedback-line",
   },
-  rowActions: [
-    {
-      key: "reply",
-      label: "填写回复",
-      icon: "ri-reply-line",
-      onClick: row => openReplyDialog(row),
-    },
-  ],
-  onRowClick: row => openReplyDialog(row),
   columns: [
     {
       key: "customerName",
@@ -136,34 +108,6 @@ const schema: TablePageSchema<CustomerFeedbackRecord> = {
       sort: true,
     },
     {
-      key: "statusLabel",
-      label: "处理状态",
-      filterType: "tag",
-      cellRenderer: {
-        kind: "status",
-        map: feedbackStatusMap,
-        fallback: { tone: "gray", icon: "dot" },
-      },
-      filter: {
-        type: "tag",
-        label: "处理状态",
-        defaultVisible: true,
-      },
-      sort: true,
-    },
-    {
-      key: "replyContent",
-      label: "回复信息",
-      filterType: "text",
-      slot: "cell-replyContent",
-      filter: {
-        type: "text",
-        label: "回复信息",
-        placeholder: "输入回复内容",
-      },
-      sort: true,
-    },
-    {
       key: "createdAt",
       label: "提交时间",
       filterType: "time",
@@ -197,10 +141,7 @@ const schema: TablePageSchema<CustomerFeedbackRecord> = {
     initialDirection: "desc",
   },
   tabs: {
-    mode: "enum",
-    all: { label: "全部", value: "all" },
-    field: "statusLabel",
-    options: ["待回复", "已回复", "未填写"],
+    mode: "none",
   },
 }
 
@@ -285,9 +226,6 @@ function buildPageFilterText(row: CustomerFeedbackRecord) {
     row.category,
     row.title,
     row.content,
-    row.statusLabel,
-    row.replyContent,
-    row.replyAt,
     row.createdAt,
   ].join(" ")
 }
@@ -346,10 +284,7 @@ function normalizeFeedbackRecord(
   const submitterName = getFirstText(item, ["UserName", "Nickname", "Name", "SubmitterName"], "-")
   const submitterPhone = getFirstText(item, ["Phone", "Mobile", "Contact", "UserPhone"], "-")
   const content = getFirstText(item, ["Content", "FeedbackContent", "Opinion", "Description"], "-")
-  const replyContent = getFirstText(item, ["ReplyContent", "Reply", "Answer"], "")
-  const replyAt = getFirstText(item, ["ReplyAt", "ReplyTime", "RepliedAt"], "-")
   const createdAt = getFirstText(item, ["CreatedAt", "CreateTime", "SubmittedAt"], "-")
-  const status = getFirstNumber(item, ["Status", "status"])
 
   return {
     id: uuid || `${pageNum.value}-${index + 1}-${customerName}-${createdAt}`,
@@ -361,31 +296,8 @@ function normalizeFeedbackRecord(
     category: getFirstText(item, ["Type", "Category", "FeedbackType"], "意见反馈"),
     title: getFirstText(item, ["Title", "Subject"], ""),
     content,
-    statusLabel: formatFeedbackStatus(status, replyContent, replyAt),
-    replyContent: replyContent || "-",
-    replyAt,
     createdAt,
   }
-}
-
-function formatFeedbackStatus(
-  status: number | null,
-  replyContent: string,
-  replyAt: string,
-): FeedbackStatusLabel {
-  if (replyContent || (replyAt && replyAt !== "-")) {
-    return "已回复"
-  }
-
-  if (status === 2 || status === 3) {
-    return "已回复"
-  }
-
-  if (status === 0 || status === 1 || status === null) {
-    return "待回复"
-  }
-
-  return "未填写"
 }
 
 function getFirstText(
@@ -404,18 +316,6 @@ function getFirstText(
   return fallback
 }
 
-function getFirstNumber(record: Record<string, unknown>, keys: string[]) {
-  for (const key of keys) {
-    const value = toNumber(record[key])
-
-    if (value !== null) {
-      return value
-    }
-  }
-
-  return null
-}
-
 function toText(value: unknown, fallback = "") {
   if (typeof value === "number" && Number.isFinite(value)) {
     return String(value)
@@ -428,19 +328,6 @@ function toText(value: unknown, fallback = "") {
   return fallback
 }
 
-function toNumber(value: unknown) {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return value
-  }
-
-  if (typeof value === "string" && value.trim()) {
-    const normalized = Number(value.trim())
-    return Number.isFinite(normalized) ? normalized : null
-  }
-
-  return null
-}
-
 function toTimestamp(value: unknown) {
   const text = toText(value)
 
@@ -450,68 +337,6 @@ function toTimestamp(value: unknown) {
 
   const timestamp = new Date(text.replace(" ", "T")).getTime()
   return Number.isFinite(timestamp) ? timestamp : null
-}
-
-function openReplyDialog(row: CustomerFeedbackRecord) {
-  activeFeedback.value = row
-  replyContent.value = row.replyContent === "-" ? "" : row.replyContent
-  replyDialogOpen.value = true
-}
-
-function closeReplyDialog() {
-  if (replySubmitting.value) {
-    return
-  }
-
-  handleReplyDialogOpenChange(false)
-}
-
-function handleReplyDialogOpenChange(open: boolean) {
-  replyDialogOpen.value = open
-
-  if (open || replySubmitting.value) {
-    return
-  }
-
-  activeFeedback.value = null
-  replyContent.value = ""
-}
-
-async function submitReply() {
-  const feedback = activeFeedback.value
-
-  if (!feedback?.uuid) {
-    toast.error("当前反馈缺少 Uuid，无法保存回复")
-    return
-  }
-
-  const content = replyContent.value.trim()
-
-  if (!content) {
-    toast.error("请填写回复信息")
-    return
-  }
-
-  replySubmitting.value = true
-
-  try {
-    await replyCustomerFeedback({
-      Uuid: feedback.uuid,
-      ReplyContent: content,
-    })
-    toast.success("反馈回复已保存")
-    replyDialogOpen.value = false
-    activeFeedback.value = null
-    replyContent.value = ""
-    await loadFeedback()
-  } catch (error) {
-    handleApiError(error, {
-      title: "回复保存失败",
-      fallback: "客户反馈回复保存失败，请稍后重试。",
-    })
-  } finally {
-    replySubmitting.value = false
-  }
 }
 
 function handleToolbarSortToggle() {
@@ -606,17 +431,6 @@ function normalizeQueryValue(value: unknown) {
         </div>
       </template>
 
-      <template #cell-replyContent="{ row }">
-        <div class="min-w-0 space-y-1">
-          <p class="line-clamp-2 max-w-[24rem] text-sm leading-5" :class="row.replyContent === '-' ? 'text-muted-foreground' : 'text-foreground'">
-            {{ row.replyContent }}
-          </p>
-          <p v-if="row.replyAt && row.replyAt !== '-'" class="text-xs text-muted-foreground tabular-nums">
-            {{ row.replyAt }}
-          </p>
-        </div>
-      </template>
-
       <template #footer>
         <Pagination
           v-model:page="pageNum"
@@ -651,51 +465,5 @@ function normalizeQueryValue(value: unknown) {
         </Pagination>
       </template>
     </TablePage>
-
-    <Dialog :open="replyDialogOpen" @update:open="handleReplyDialogOpenChange">
-      <DialogContent class="sm:max-w-[560px]">
-        <DialogHeader>
-          <DialogTitle>{{ activeFeedback?.statusLabel === '已回复' ? '修改回复' : '填写回复' }}</DialogTitle>
-          <DialogDescription>
-            回复内容会用于反馈处理跟进。
-          </DialogDescription>
-        </DialogHeader>
-
-        <div v-if="activeFeedback" class="space-y-4">
-          <div class="rounded-md bg-surface-secondary px-4 py-3">
-            <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-              <span class="font-medium text-foreground">{{ activeFeedback.customerName }}</span>
-              <span class="text-muted-foreground">{{ activeFeedback.submitterDisplay }}</span>
-              <span class="text-muted-foreground tabular-nums">{{ activeFeedback.createdAt }}</span>
-            </div>
-            <p v-if="activeFeedback.title" class="mt-3 text-sm font-medium text-foreground">
-              {{ activeFeedback.title }}
-            </p>
-            <p class="mt-2 whitespace-pre-wrap text-sm leading-6 text-muted-foreground">
-              {{ activeFeedback.content }}
-            </p>
-          </div>
-
-          <div class="space-y-2">
-            <p class="text-sm font-medium text-foreground">回复信息</p>
-            <Textarea
-              v-model="replyContent"
-              :disabled="replySubmitting"
-              placeholder="填写给客户的回复信息"
-              class="min-h-32 resize-y"
-            />
-          </div>
-        </div>
-
-        <DialogFooter>
-          <Button type="button" variant="outline" :disabled="replySubmitting" @click="closeReplyDialog">
-            取消
-          </Button>
-          <Button type="button" :disabled="replySubmitting || !replyContent.trim()" @click="submitReply">
-            {{ replySubmitting ? "保存中..." : "保存回复" }}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
   </section>
 </template>

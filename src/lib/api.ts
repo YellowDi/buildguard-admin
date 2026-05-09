@@ -117,7 +117,6 @@ export const API_PATHS = {
   mediaContentSortUpdate: "/bqi/media/content/sort/update",
   mediaContentStatusUpdate: "/bqi/media/content/status/update",
   customerFeedbackList: "/bqi/customer/feedback/list",
-  customerFeedbackReply: "/bqi/customer/feedback/reply",
   dictTypeList: "/bqi/sys/dict/type/list",
   dictTypeCreate: "/bqi/sys/dict/type/new",
   dictTypeDetail: "/bqi/sys/dict/type/detail",
