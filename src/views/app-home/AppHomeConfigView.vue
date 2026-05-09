@@ -3,6 +3,16 @@ import { computed, onMounted, reactive, ref, watch } from "vue"
 import { toast } from "vue-sonner"
 
 import TitleBlock from "@/components/layout/TitleBlock.vue"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -92,6 +102,8 @@ const sheetOpen = ref(false)
 const loading = ref(false)
 const submitting = ref(false)
 const sortingSubmitting = ref(false)
+const moduleDeleteConfirmOpen = ref(false)
+const deletingModuleId = ref("")
 const persistedModuleIds = ref(new Set<string>())
 const persistedCategoryIds = ref(new Set<string>())
 const articleCategoryIds = ref(new Map<string, string>())
@@ -108,6 +120,7 @@ const newVideoSource = reactive<NewVideoSourceForm>({
 const orderedModules = computed(() => [...modules.value].sort(compareBySortOrder))
 const enabledModules = computed(() => orderedModules.value.filter(module => module.enabled))
 const selectedModule = computed(() => modules.value.find(module => module.id === selectedModuleId.value) ?? null)
+const deletingModule = computed(() => modules.value.find(module => module.id === deletingModuleId.value) ?? null)
 const selectedVideoModule = computed((): AppHomeVideoModule | null => (
   selectedModule.value?.type === "video" ? selectedModule.value : null
 ))
@@ -200,13 +213,18 @@ function addModule(type: AppHomeModuleType) {
   toast.success(type === "video" ? "已添加视频模块" : "已添加文章模块")
 }
 
-async function deleteModule(moduleId: string) {
-  const module = modules.value.find(item => item.id === moduleId)
-  if (!module) {
+function requestDeleteModule(moduleId: string) {
+  if (!modules.value.some(item => item.id === moduleId)) {
     return
   }
 
-  if (!window.confirm(`确认删除「${module.title}」模块？`)) {
+  deletingModuleId.value = moduleId
+  moduleDeleteConfirmOpen.value = true
+}
+
+async function confirmDeleteModule() {
+  const moduleId = deletingModuleId.value
+  if (!moduleId) {
     return
   }
 
@@ -225,6 +243,8 @@ async function deleteModule(moduleId: string) {
     }
     toast.success("模块已删除")
     void persistModuleSort()
+    moduleDeleteConfirmOpen.value = false
+    deletingModuleId.value = ""
   } catch (error) {
     handleApiError(error, {
       title: "模块删除失败",
@@ -1250,7 +1270,7 @@ function hashText(value: string) {
               size="sm"
               class="right-sheet-text-button text-destructive hover:text-destructive"
               :disabled="submitting"
-              @click="deleteModule(selectedModule.id)"
+              @click="requestDeleteModule(selectedModule.id)"
             >
               <i class="ri-delete-bin-line text-sm" />
               <span>删除</span>
@@ -1469,6 +1489,31 @@ function hashText(value: string) {
         </div>
       </div>
     </ResponsiveRightSheet>
+
+    <AlertDialog v-model:open="moduleDeleteConfirmOpen">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>删除首页模块？</AlertDialogTitle>
+          <AlertDialogDescription>
+            删除后将无法恢复。确认后会立即提交删除请求。
+            <span v-if="deletingModule" class="mt-2 block font-medium text-foreground">
+              {{ deletingModule.title || '未命名模块' }}
+            </span>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel :disabled="submitting">取消</AlertDialogCancel>
+          <AlertDialogAction
+            class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            :disabled="submitting"
+            @click.prevent="confirmDeleteModule"
+          >
+            <i :class="[submitting ? 'ri-loader-4-line animate-spin' : 'ri-delete-bin-line', 'text-sm']" />
+            <span>{{ submitting ? '删除中' : '删除模块' }}</span>
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   </section>
 </template>
 
