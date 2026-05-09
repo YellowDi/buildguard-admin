@@ -432,8 +432,12 @@ function toTimestamp(value: unknown) {
   return Number.isFinite(timestamp) ? timestamp : null
 }
 
-function shouldShowContentTooltip(value: string) {
-  return value.trim().length > 24
+function getContentText(value: unknown) {
+  return toText(value)
+}
+
+function shouldShowContentTooltip(value: unknown) {
+  return getContentText(value).length > 24
 }
 
 function handleToolbarSortToggle() {
@@ -519,7 +523,7 @@ function normalizeQueryValue(value: unknown) {
     >
       <template #cell-content="{ row }">
         <TooltipWrap
-          :content="row.content"
+          :content="getContentText(row.content)"
           :disabled="!shouldShowContentTooltip(row.content)"
           align="start"
           class="max-w-[min(42rem,calc(100vw-2rem))] whitespace-normal text-left leading-5"
