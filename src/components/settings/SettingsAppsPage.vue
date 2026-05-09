@@ -5,6 +5,7 @@ import { toast } from "vue-sonner"
 import TopTabSwitch from "@/components/layout/TopTabSwitch.vue"
 import SettingsPageHeader from "@/components/settings/SettingsPageHeader.vue"
 import SettingsToolbarRow from "@/components/settings/SettingsToolbarRow.vue"
+import FileUploadField from "@/components/upload/FileUploadField.vue"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -35,6 +36,8 @@ import type {
   AppReleaseEntry,
   SettingsState,
 } from "@/components/settings/types"
+import { getApiErrorMessage } from "@/lib/api-errors"
+import { uploadTencentCosFile } from "@/lib/tencent-cos-sdk"
 
 const props = defineProps<{
   state: SettingsState
@@ -43,6 +46,8 @@ const props = defineProps<{
 const selectedReleaseId = ref(props.state.appReleases[0]?.id ?? "")
 const activePlatform = ref<AppReleaseDraft["platform"]>(props.state.appReleases[0]?.platform ?? "android")
 const updateDialogOpen = ref(false)
+const uploadingApkFile = ref(false)
+const releaseApkFileName = ref("")
 
 const releaseForm = reactive<AppReleaseDraft>({
   hasUpdate: true,
@@ -80,7 +85,7 @@ const selectedRelease = computed(() => {
 })
 
 const distributionLabel = computed(() => {
-  return selectedRelease.value?.platform === "ios" ? "App Store 地址" : "下载地址"
+  return selectedRelease.value?.platform === "ios" ? "App Store 地址" : "APK 安装包"
 })
 const distributionHint = computed(() => {
   if (!selectedRelease.value) {
@@ -106,6 +111,36 @@ function getNowText() {
   const pad = (value: number) => String(value).padStart(2, "0")
 
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`
+}
+
+function sanitizeObjectKeyFileName(value: string) {
+  const normalized = value.trim().replace(/[\\/:*?"<>|\s]+/g, "-").replace(/^-+|-+$/g, "")
+
+  return normalized || "app-release.apk"
+}
+
+function getFileNameFromUrl(value: string) {
+  const normalized = value.trim()
+
+  if (!normalized) {
+    return ""
+  }
+
+  try {
+    const pathname = new URL(normalized).pathname
+    const parts = pathname.split("/").filter(Boolean)
+    const name = parts[parts.length - 1]
+
+    return name ? decodeURIComponent(name) : normalized
+  } catch {
+    const parts = normalized.split("/").filter(Boolean)
+
+    return parts[parts.length - 1] ?? normalized
+  }
+}
+
+function isApkFile(file: File) {
+  return file.name.toLowerCase().endsWith(".apk")
 }
 
 function syncCurrentRelease(release: AppReleaseEntry) {
@@ -136,6 +171,7 @@ function updateReleasePlatform(platform: AppReleaseDraft["platform"]) {
 
   if (platform === "ios") {
     releaseForm.downloadUrl = ""
+    releaseApkFileName.value = ""
   } else {
     releaseForm.appStoreUrl = ""
   }
@@ -156,6 +192,7 @@ function resetReleaseForm(platform = activePlatform.value) {
     appStoreUrl: platform === "ios" ? current?.appStoreUrl ?? "" : "",
     platform,
   })
+  releaseApkFileName.value = platform === "android" ? getFileNameFromUrl(current?.downloadUrl ?? "") : ""
 }
 
 function openUpdateDialog() {
@@ -163,13 +200,56 @@ function openUpdateDialog() {
   updateDialogOpen.value = true
 }
 
+async function handleApkFiles(files: File[]) {
+  const file = files[0]
+
+  if (!file) {
+    return
+  }
+
+  if (!isApkFile(file)) {
+    toast.error("请上传 APK 安装包")
+    return
+  }
+
+  uploadingApkFile.value = true
+
+  try {
+    const result = await uploadTencentCosFile({
+      file,
+      key: `app-releases/android/${Date.now()}-${sanitizeObjectKeyFileName(file.name)}`,
+      contentType: file.type || "application/vnd.android.package-archive",
+    })
+
+    releaseForm.downloadUrl = result.url
+    releaseApkFileName.value = file.name
+    toast.success("APK 安装包已上传")
+  } catch (error) {
+    toast.error("APK 上传失败", {
+      description: getApiErrorMessage(error, "请稍后重试。"),
+    })
+  } finally {
+    uploadingApkFile.value = false
+  }
+}
+
 function submitRelease() {
+  if (uploadingApkFile.value) {
+    toast.error("APK 正在上传，请稍后保存")
+    return
+  }
+
   const versionName = releaseForm.versionName.trim()
   const title = releaseForm.title.trim()
   const description = releaseForm.description.trim()
 
   if (!versionName || !title || !description) {
     toast.error("请填写版本号、更新标题和更新日志")
+    return
+  }
+
+  if (releaseForm.platform === "android" && !releaseForm.downloadUrl.trim()) {
+    toast.error("请上传 APK 安装包")
     return
   }
 
@@ -382,12 +462,18 @@ function submitRelease() {
           </Field>
 
           <Field v-if="isAndroidReleaseForm" class="gap-2">
-            <FieldLabel for="release-download-url">下载地址</FieldLabel>
-            <Input
-              id="release-download-url"
-              :model-value="releaseForm.downloadUrl"
-              placeholder="https://example.com/app.apk"
-              @update:model-value="updateReleaseForm('downloadUrl', String($event))"
+            <FieldLabel>APK 安装包</FieldLabel>
+            <FileUploadField
+              accept=".apk,application/vnd.android.package-archive"
+              :loading="uploadingApkFile"
+              title="上传 APK 安装包"
+              description="Android 版本必须上传 APK，上传完成后会自动写入安装包地址。"
+              :selected-label="releaseApkFileName || releaseForm.downloadUrl || '暂未上传 APK'"
+              button-label="上传 APK"
+              loading-label="上传中..."
+              icon="ri-upload-cloud-2-line"
+              compact
+              @files-selected="files => { void handleApkFiles(files) }"
             />
           </Field>
 
@@ -430,7 +516,7 @@ function submitRelease() {
           <Button variant="outline" @click="updateDialogOpen = false">
             取消
           </Button>
-          <Button @click="submitRelease">
+          <Button :disabled="uploadingApkFile" @click="submitRelease">
             <i class="ri-save-line text-sm" />
             <span>保存版本</span>
           </Button>
