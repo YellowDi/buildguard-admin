@@ -2,6 +2,7 @@
 import { computed, reactive, ref } from "vue"
 import { toast } from "vue-sonner"
 
+import TopTabSwitch from "@/components/layout/TopTabSwitch.vue"
 import SettingsPageHeader from "@/components/settings/SettingsPageHeader.vue"
 import SettingsToolbarRow from "@/components/settings/SettingsToolbarRow.vue"
 import { Badge } from "@/components/ui/badge"
@@ -40,6 +41,7 @@ const props = defineProps<{
 }>()
 
 const selectedReleaseId = ref(props.state.appReleases[0]?.id ?? "")
+const activePlatform = ref<AppReleaseDraft["platform"]>(props.state.appReleases[0]?.platform ?? "android")
 const updateDialogOpen = ref(false)
 
 const releaseForm = reactive<AppReleaseDraft>({
@@ -54,9 +56,26 @@ const releaseForm = reactive<AppReleaseDraft>({
 })
 
 const releases = computed(() => props.state.appReleases)
+const platformTabs = computed(() => [
+  {
+    id: "android",
+    label: "Android",
+    icon: "ri-android-line",
+    badge: releases.value.filter(release => release.platform === "android").length,
+  },
+  {
+    id: "ios",
+    label: "iOS",
+    icon: "ri-apple-line",
+    badge: releases.value.filter(release => release.platform === "ios").length,
+  },
+])
+const filteredReleases = computed(() => {
+  return releases.value.filter(release => release.platform === activePlatform.value)
+})
 const selectedRelease = computed(() => {
-  return releases.value.find(release => release.id === selectedReleaseId.value)
-    ?? releases.value[0]
+  return filteredReleases.value.find(release => release.id === selectedReleaseId.value)
+    ?? filteredReleases.value[0]
     ?? null
 })
 
@@ -99,6 +118,15 @@ function selectRelease(release: AppReleaseEntry) {
   syncCurrentRelease(release)
 }
 
+function selectPlatform(platform: AppReleaseDraft["platform"]) {
+  activePlatform.value = platform
+  const firstRelease = releases.value.find(release => release.platform === platform)
+
+  if (firstRelease) {
+    selectRelease(firstRelease)
+  }
+}
+
 function updateReleaseForm<K extends keyof AppReleaseDraft>(field: K, value: AppReleaseDraft[K]) {
   releaseForm[field] = value
 }
@@ -113,23 +141,25 @@ function updateReleasePlatform(platform: AppReleaseDraft["platform"]) {
   }
 }
 
-function resetReleaseForm() {
-  const current = selectedRelease.value ?? props.state.appRelease
+function resetReleaseForm(platform = activePlatform.value) {
+  const current = selectedRelease.value?.platform === platform
+    ? selectedRelease.value
+    : releases.value.find(release => release.platform === platform)
 
   Object.assign(releaseForm, {
     hasUpdate: true,
-    versionName: current.versionName,
-    title: current.title,
-    description: current.description,
-    forceUpdate: current.forceUpdate,
-    downloadUrl: current.downloadUrl,
-    appStoreUrl: current.appStoreUrl,
-    platform: current.platform,
+    versionName: current?.versionName ?? "",
+    title: current?.title ?? "",
+    description: current?.description ?? "",
+    forceUpdate: current?.forceUpdate ?? false,
+    downloadUrl: platform === "android" ? current?.downloadUrl ?? "" : "",
+    appStoreUrl: platform === "ios" ? current?.appStoreUrl ?? "" : "",
+    platform,
   })
 }
 
 function openUpdateDialog() {
-  resetReleaseForm()
+  resetReleaseForm(activePlatform.value)
   updateDialogOpen.value = true
 }
 
@@ -161,6 +191,7 @@ function submitRelease() {
     props.state.appReleases.unshift(nextRelease)
   }
 
+  activePlatform.value = nextRelease.platform
   selectedReleaseId.value = nextRelease.id
   syncCurrentRelease(nextRelease)
   updateDialogOpen.value = false
@@ -176,6 +207,19 @@ function submitRelease() {
       description="维护移动平台用户端 app 的版本号、更新日志和分发地址。"
     >
       <SettingsToolbarRow>
+        <template #leading>
+          <div class="w-fit shrink-0">
+            <TopTabSwitch
+              :tabs="platformTabs"
+              :model-value="activePlatform"
+              :collapse-inactive="false"
+              tone="default"
+              aria-label="切换应用系统"
+              @update:model-value="selectPlatform($event === 'ios' ? 'ios' : 'android')"
+            />
+          </div>
+        </template>
+
         <Button
           size="sm"
           class="h-8 rounded-md px-3"
@@ -199,7 +243,7 @@ function submitRelease() {
 
             <div class="min-h-0 flex-1 space-y-0.5 overflow-y-auto">
               <button
-                v-for="release in releases"
+                v-for="release in filteredReleases"
                 :key="release.id"
                 type="button"
                 class="group flex w-full min-w-0 items-center gap-2 rounded-md px-1 py-0.5 text-left transition-[background-color,transform] duration-180 ease-out active:scale-[0.96]"
