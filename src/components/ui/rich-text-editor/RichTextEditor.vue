@@ -189,6 +189,11 @@ function handlePaste(event: ClipboardEvent) {
   const html = event.clipboardData?.getData("text/html") ?? ""
   const text = event.clipboardData?.getData("text/plain") ?? ""
 
+  if (looksLikeHtml(text) && (!looksLikeHtml(html) || html.includes("&lt;"))) {
+    insertHtml(sanitizePastedHtml(text))
+    return
+  }
+
   if (html.trim()) {
     insertHtml(sanitizePastedHtml(html))
     return
@@ -243,12 +248,14 @@ function sanitizePastedNode(parent: ParentNode) {
 }
 
 function sanitizePastedElement(element: HTMLElement) {
+  const href = element instanceof HTMLAnchorElement ? element.getAttribute("href") ?? "" : ""
+  const src = element instanceof HTMLImageElement ? element.getAttribute("src") ?? "" : ""
+
   for (const attribute of Array.from(element.attributes)) {
     element.removeAttribute(attribute.name)
   }
 
   if (element instanceof HTMLAnchorElement) {
-    const href = element.getAttribute("href") ?? ""
     if (isSafeUrl(href)) {
       element.setAttribute("href", href)
       element.setAttribute("target", "_blank")
@@ -257,7 +264,6 @@ function sanitizePastedElement(element: HTMLElement) {
   }
 
   if (element instanceof HTMLImageElement) {
-    const src = element.getAttribute("src") ?? ""
     if (isSafeImageSrc(src)) {
       element.setAttribute("src", src)
       element.setAttribute("alt", "")
