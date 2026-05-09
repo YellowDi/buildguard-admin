@@ -235,12 +235,6 @@ function submitRelease() {
       <div class="mx-auto flex w-full max-w-4xl gap-8 overflow-visible">
         <aside class="w-[240px] shrink-0 pt-4">
           <div class="sticky top-[11rem] flex max-h-[calc(100svh-12rem)] flex-col overflow-hidden">
-            <div class="mb-2 px-1">
-              <p class="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-                版本号条目
-              </p>
-            </div>
-
             <div class="min-h-0 flex-1 space-y-0.5 overflow-y-auto">
               <button
                 v-for="release in filteredReleases"
@@ -250,7 +244,7 @@ function submitRelease() {
                 :class="release.id === selectedRelease?.id ? 'bg-accent' : 'hover:bg-accent/50'"
                 @click="selectRelease(release)"
               >
-                <span class="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors group-hover:bg-background group-hover:text-foreground">
+                <span class="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors group-hover:text-foreground">
                   <i :class="[release.platform === 'ios' ? 'ri-apple-line' : 'ri-android-line', 'text-[15px]']" />
                 </span>
 
