@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { ComponentPublicInstance } from "vue"
-import { nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue"
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue"
 
 type TopTabSwitchItem = {
   id: string
@@ -26,11 +26,32 @@ const emit = defineEmits<{
 }>()
 
 const COLLAPSED_TAB_WIDTH = 32
+const TAB_GAP = 2
 const measureRefs = ref<Array<HTMLElement | null>>([])
 const measuredWidths = ref<number[]>([])
 const hoveredTabId = ref<string | null>(null)
 const focusedTabId = ref<string | null>(null)
 let measureRafId = 0
+
+const activeTabIndex = computed(() => props.tabs.findIndex(tab => tab.id === props.modelValue))
+const activeIndicatorStyle = computed(() => {
+  if (!props.collapseInactive || activeTabIndex.value < 0) {
+    return {
+      opacity: "0",
+      transform: "translate3d(0, 0, 0)",
+      width: "0px",
+    }
+  }
+
+  const width = measuredWidths.value[activeTabIndex.value] ?? COLLAPSED_TAB_WIDTH
+  const left = activeTabIndex.value * (COLLAPSED_TAB_WIDTH + TAB_GAP)
+
+  return {
+    opacity: width > 0 ? "1" : "0",
+    transform: `translate3d(${left}px, 0, 0)`,
+    width: `${width}px`,
+  }
+})
 
 function resolveElement(target: Element | ComponentPublicInstance | null) {
   if (!target) return null
@@ -76,6 +97,14 @@ function getTabStyle(index: number) {
 
 function isEmphasized(tabId: string) {
   return props.modelValue === tabId || hoveredTabId.value === tabId || focusedTabId.value === tabId
+}
+
+function shouldShowTabBackground(tabId: string) {
+  if (!props.collapseInactive) {
+    return isEmphasized(tabId)
+  }
+
+  return props.modelValue !== tabId && (hoveredTabId.value === tabId || focusedTabId.value === tabId)
 }
 
 function getLabelClass(tabId: string) {
@@ -141,7 +170,14 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="flex w-fit items-center gap-0.5" role="tablist" :aria-label="props.ariaLabel">
+  <div class="relative flex w-fit items-center gap-0.5" role="tablist" :aria-label="props.ariaLabel">
+    <span
+      v-if="props.collapseInactive"
+      class="top-tab-switch-indicator absolute left-0 top-0 z-0 h-8 rounded-full"
+      :style="activeIndicatorStyle"
+      aria-hidden="true"
+    />
+
     <button
       v-for="(tab, index) in props.tabs"
       :key="tab.id"
@@ -151,7 +187,7 @@ onBeforeUnmount(() => {
       :aria-pressed="props.modelValue === tab.id"
       :tabindex="props.modelValue === tab.id ? 0 : -1"
       :class="[
-        'top-tab-switch-shell relative h-8 shrink-0 overflow-hidden rounded-full text-[14px] font-medium after:pointer-events-none after:absolute after:left-1/2 after:top-1/2 after:size-10 after:-translate-x-1/2 after:-translate-y-1/2 after:content-[\'\']',
+        'top-tab-switch-shell relative z-10 h-8 shrink-0 overflow-hidden rounded-full text-[14px] font-medium after:pointer-events-none after:absolute after:left-1/2 after:top-1/2 after:size-10 after:-translate-x-1/2 after:-translate-y-1/2 after:content-[\'\']',
         props.collapseInactive ? '' : 'inline-flex w-auto items-center',
       ]"
       :style="getTabStyle(index)"
@@ -163,7 +199,7 @@ onBeforeUnmount(() => {
     >
       <span
         class="top-tab-switch-bg absolute inset-0"
-        :class="isEmphasized(tab.id) ? 'opacity-100 scale-100' : 'opacity-0 scale-[0.94]'"
+        :class="shouldShowTabBackground(tab.id) ? 'opacity-100 scale-100' : 'opacity-0 scale-[0.94]'"
         aria-hidden="true"
       />
 
