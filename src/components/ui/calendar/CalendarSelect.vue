@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue"
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue"
 
 import { cn } from "@/lib/utils"
 
@@ -26,6 +26,16 @@ const emit = defineEmits<{
 const rootRef = ref<HTMLElement>()
 const contentRef = ref<HTMLElement>()
 const open = ref(false)
+const contentSide = ref<"bottom" | "top">("bottom")
+const contentMaxHeight = ref(256)
+
+const contentClasses = computed(() => {
+  return cn(
+    "absolute left-0 z-50 min-w-full overflow-y-auto overscroll-contain rounded-md bg-popover p-1 text-popover-foreground shadow-[var(--shadow-card)]",
+    contentSide.value === "top" ? "bottom-[calc(100%+6px)]" : "top-[calc(100%+6px)]",
+    props.contentClass,
+  )
+})
 
 function toggleOpen() {
   open.value = !open.value
@@ -38,6 +48,27 @@ function close() {
 function selectValue(value: number) {
   emit("update:modelValue", value)
   close()
+}
+
+function updateContentGeometry() {
+  const rootEl = rootRef.value
+
+  if (!rootEl) {
+    return
+  }
+
+  const rect = rootEl.getBoundingClientRect()
+  const viewportPadding = 12
+  const gap = 6
+  const preferredMaxHeight = 256
+  const minimumUsableHeight = 120
+  const availableBelow = window.innerHeight - rect.bottom - viewportPadding - gap
+  const availableAbove = rect.top - viewportPadding - gap
+  const shouldOpenUp = availableBelow < minimumUsableHeight && availableAbove > availableBelow
+  const availableHeight = shouldOpenUp ? availableAbove : availableBelow
+
+  contentSide.value = shouldOpenUp ? "top" : "bottom"
+  contentMaxHeight.value = Math.max(Math.min(availableHeight, preferredMaxHeight), 0)
 }
 
 function scrollSelectedOptionIntoView() {
@@ -74,10 +105,14 @@ function handleDocumentPointerDown(event: PointerEvent) {
 
 onMounted(() => {
   document.addEventListener("pointerdown", handleDocumentPointerDown)
+  window.addEventListener("resize", updateContentGeometry)
+  window.addEventListener("scroll", updateContentGeometry, true)
 })
 
 onBeforeUnmount(() => {
   document.removeEventListener("pointerdown", handleDocumentPointerDown)
+  window.removeEventListener("resize", updateContentGeometry)
+  window.removeEventListener("scroll", updateContentGeometry, true)
 })
 
 watch(open, async (isOpen) => {
@@ -85,6 +120,8 @@ watch(open, async (isOpen) => {
     return
   }
 
+  await nextTick()
+  updateContentGeometry()
   await nextTick()
   scrollSelectedOptionIntoView()
 })
@@ -111,12 +148,8 @@ watch(open, async (isOpen) => {
     <div
       v-if="open"
       ref="contentRef"
-      :class="
-        cn(
-          'absolute left-0 top-[calc(100%+6px)] z-50 min-w-full overflow-hidden rounded-md bg-popover p-1 text-popover-foreground shadow-[var(--shadow-card)]',
-          props.contentClass,
-        )
-      "
+      :class="contentClasses"
+      :style="{ maxHeight: `${contentMaxHeight}px` }"
       data-list-popover
       @click.stop
       @pointerdown.stop

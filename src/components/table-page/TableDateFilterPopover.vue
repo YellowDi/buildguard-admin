@@ -288,7 +288,7 @@ watch(
 <template>
   <div
     ref="rootRef"
-    class="w-[300px] max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl bg-popover shadow-(--shadow-card)"
+    class="w-[300px] max-w-[calc(100vw-2rem)] overflow-visible rounded-xl bg-popover shadow-(--shadow-card)"
     data-list-popover
   >
     <div class="p-2.5">
