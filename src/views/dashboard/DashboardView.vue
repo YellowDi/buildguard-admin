@@ -3,7 +3,6 @@ import { computed, onMounted, ref } from "vue"
 import { useRouter } from "vue-router"
 import { VisAxis, VisDonut, VisDonutSelectors, VisLine, VisSingleContainer, VisStackedBar, VisXYContainer } from "@unovis/vue"
 
-import TopTabSwitch from "@/components/layout/TopTabSwitch.vue"
 import type { ChartConfig } from "@/components/ui/chart"
 import {
   ChartContainer,
@@ -21,6 +20,7 @@ import {
 } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Select,
   SelectContent,
@@ -274,7 +274,7 @@ const buildingRiskTabs = [
   { id: "high-risk", label: "高危" },
   { id: "rectification", label: "整改" },
   { id: "excellent", label: "优秀" },
-]
+] satisfies Array<{ id: BuildingRiskTab, label: string }>
 
 const buildingRankedGroups = computed(() => ({
   "high-risk": buildingRankingItems.value
@@ -701,6 +701,12 @@ function formatRiskLabel(value: BuildingRiskTab) {
   return "优秀"
 }
 
+function handleBuildingRiskTabChange(value: string | number) {
+  if (value === "high-risk" || value === "rectification" || value === "excellent") {
+    activeBuildingRiskTab.value = value
+  }
+}
+
 function resolveBuildingCustomerName(item: BuildingListItem) {
   return toText(
     item.CustomerName,
@@ -1078,13 +1084,22 @@ function hashText(value: string) {
           </div>
 
           <div class="w-fit shrink-0 self-start sm:self-auto">
-            <TopTabSwitch
-              v-model="activeBuildingRiskTab"
-              :tabs="buildingRiskTabs"
+            <Tabs
+              :model-value="activeBuildingRiskTab"
               aria-label="切换建筑风险排行"
-              :collapse-inactive="false"
-              tone="default"
-            />
+              @update:model-value="handleBuildingRiskTabChange"
+            >
+              <TabsList>
+                <TabsTrigger
+                  v-for="tab in buildingRiskTabs"
+                  :key="tab.id"
+                  :value="tab.id"
+                  class="min-w-14 px-3 text-xs"
+                >
+                  {{ tab.label }}
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
           </div>
         </CardHeader>
 
