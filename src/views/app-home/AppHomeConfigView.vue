@@ -171,6 +171,19 @@ const videoOptionGroups = computed<VideoOptionGroup[]>(() => {
 })
 const videoItemMap = computed(() => new Map(mediaState.videoItems.map(item => [item.id, item])))
 const articleItemMap = computed(() => new Map(mediaState.articleItems.map(item => [item.id, item])))
+const videoSourceSelectValues = computed<Record<string, string[]>>(() => {
+  const values: Record<string, string[]> = {}
+
+  for (const category of selectedVideoCategories.value) {
+    const formVideoIds = videoSourceForms[category.id]?.videoIds ?? []
+    values[category.id] = uniqueIds([
+      ...getCategoryVideoSourceIds(category),
+      ...formVideoIds,
+    ]).filter(videoId => videoItemMap.value.has(videoId))
+  }
+
+  return values
+})
 const hasLoadedModules = computed(() => modules.value.length > 0)
 const showInitialSkeleton = computed(() => loading.value && !modules.value.length)
 
@@ -387,7 +400,14 @@ function addSourceToCategory(category: AppHomeVideoCategory) {
 }
 
 function deleteSource(category: AppHomeVideoCategory, sourceId: string) {
+  const source = category.sources.find(source => source.id === sourceId)
   category.sources = category.sources.filter(source => source.id !== sourceId)
+  if (source?.kind === "video") {
+    const form = videoSourceForms[category.id]
+    if (form) {
+      form.videoIds = form.videoIds.filter(videoId => videoId !== source.videoId)
+    }
+  }
 }
 
 async function saveConfig() {
@@ -562,19 +582,37 @@ function clearVideoSourceForms() {
   }
 }
 
-function handleVideoSourceVideoIdsChange(categoryId: string, value: unknown) {
-  const form = ensureVideoSourceForm(categoryId)
-  const nextIds = Array.isArray(value)
+function getCategoryVideoSourceIds(category: AppHomeVideoCategory) {
+  return category.sources
+    .filter((source): source is Extract<AppHomeVideoSource, { kind: "video" }> => source.kind === "video")
+    .map(source => source.videoId)
+}
+
+function uniqueIds(ids: string[]) {
+  return [...new Set(ids)]
+}
+
+function normalizeSelectedVideoIds(value: unknown) {
+  const ids = Array.isArray(value)
     ? value.map(String)
     : value == null
       ? []
       : [String(value)]
 
-  if (form.videoIds.length === nextIds.length && form.videoIds.every((id, index) => id === nextIds[index])) {
+  return uniqueIds(ids)
+}
+
+function handleVideoSourceVideoIdsChange(category: AppHomeVideoCategory, value: unknown) {
+  const form = ensureVideoSourceForm(category.id)
+  const existingVideoIds = new Set(getCategoryVideoSourceIds(category))
+  const nextFormVideoIds = normalizeSelectedVideoIds(value)
+    .filter(videoId => videoItemMap.value.has(videoId) && !existingVideoIds.has(videoId))
+
+  if (form.videoIds.length === nextFormVideoIds.length && form.videoIds.every((id, index) => id === nextFormVideoIds[index])) {
     return
   }
 
-  form.videoIds = nextIds
+  form.videoIds = nextFormVideoIds
 }
 
 function syncHomeMediaReferences() {
@@ -1512,9 +1550,9 @@ function hashText(value: string) {
 
                       <Select
                         v-else
-                        :model-value="videoSourceForms[category.id].videoIds"
+                        :model-value="videoSourceSelectValues[category.id] ?? []"
                         multiple
-                        @update:model-value="handleVideoSourceVideoIdsChange(category.id, $event)"
+                        @update:model-value="handleVideoSourceVideoIdsChange(category, $event)"
                       >
                         <SelectTrigger class="w-full">
                           <SelectValue placeholder="选择视频" />
@@ -1531,8 +1569,20 @@ function hashText(value: string) {
                               v-for="video in group.videos"
                               :key="video.id"
                               :value="video.id"
+                              :class="(videoSourceSelectValues[category.id] ?? []).includes(video.id) ? 'bg-accent text-accent-foreground font-medium' : ''"
                             >
-                              {{ video.title }}
+                              <template #indicator-icon>
+                                <span class="sr-only">已选择</span>
+                              </template>
+                              <span class="flex min-w-0 flex-1 items-center gap-2">
+                                <i
+                                  v-if="(videoSourceSelectValues[category.id] ?? []).includes(video.id)"
+                                  class="ri-check-line shrink-0 text-base leading-none"
+                                  aria-hidden="true"
+                                />
+                                <span v-else class="size-4 shrink-0" aria-hidden="true" />
+                                <span class="truncate">{{ video.title }}</span>
+                              </span>
                             </SelectItem>
                           </SelectGroup>
                           <div v-if="!videoOptionGroups.length" class="px-2 py-6 text-center text-sm text-muted-foreground">
