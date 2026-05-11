@@ -297,7 +297,7 @@ async function loadEditDetail() {
     form.serviceUuid = detailServiceUuid
   }
 
-  form.name = ""
+  form.name = normalizeText(detail.Name)
   form.duration = normalizeText(detail.Duration)
   form.workOrderDuration = normalizeText(detail.WorkOrderDuration)
   form.firstTime = toDatePickerInput(normalizeText(detail.FirstTime))
