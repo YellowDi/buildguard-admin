@@ -19,6 +19,7 @@ const delegatedProps = reactiveOmit(props, "class")
 const forwarded = useForwardProps(delegatedProps)
 const listRef = ref<HTMLElement | ComponentPublicInstance | null>(null)
 const indicatorStyle = ref({
+  borderRadius: "9999px",
   height: "0px",
   opacity: "0",
   transform: "translate3d(0, 0, 0)",
@@ -41,6 +42,7 @@ function syncIndicator() {
 
   if (!listElement || !activeTrigger) {
     indicatorStyle.value = {
+      borderRadius: "9999px",
       height: "0px",
       opacity: "0",
       transform: "translate3d(0, 0, 0)",
@@ -49,7 +51,9 @@ function syncIndicator() {
     return
   }
 
+  const activeTriggerStyle = window.getComputedStyle(activeTrigger)
   indicatorStyle.value = {
+    borderRadius: activeTriggerStyle.borderRadius,
     height: `${activeTrigger.offsetHeight}px`,
     opacity: "1",
     transform: `translate3d(${activeTrigger.offsetLeft}px, ${activeTrigger.offsetTop}px, 0)`,
@@ -119,7 +123,7 @@ onBeforeUnmount(() => {
     "
   >
     <span
-      class="tabs-active-indicator pointer-events-none absolute left-0 top-0 z-0 rounded-full"
+      class="tabs-active-indicator pointer-events-none absolute left-0 top-0 z-0"
       :style="indicatorStyle"
       aria-hidden="true"
     />

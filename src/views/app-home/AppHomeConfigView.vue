@@ -19,6 +19,7 @@ import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrig
 import { ResponsiveRightSheet } from "@/components/ui/sheet"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Switch } from "@/components/ui/switch"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { TooltipWrap } from "@/components/ui/tooltip"
 import videoPreviewAsset from "@/assets/video.png"
 import { buildCosVideoSnapshotUrl } from "@/lib/cos-video-snapshot"
@@ -1518,20 +1519,17 @@ function hashText(value: string) {
                       </div>
                     </div>
 
-                    <div v-if="videoSourceForms[category.id]" class="mt-2 grid gap-2 sm:grid-cols-[126px_minmax(0,1fr)_auto]">
-                      <Select v-model="videoSourceForms[category.id].kind">
-                        <SelectTrigger class="w-full">
-                          <SelectValue placeholder="来源类型" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="category">
+                    <div v-if="videoSourceForms[category.id]" class="mt-2 grid gap-2 sm:grid-cols-[184px_minmax(0,1fr)_auto]">
+                      <Tabs v-model="videoSourceForms[category.id].kind" class="w-full">
+                        <TabsList class="h-9 w-full rounded-md">
+                          <TabsTrigger value="category" class="h-8 flex-1 rounded-md px-2 text-xs">
                             媒体库分类
-                          </SelectItem>
-                          <SelectItem value="video">
+                          </TabsTrigger>
+                          <TabsTrigger value="video" class="h-8 flex-1 rounded-md px-2 text-xs">
                             指定视频
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
+                          </TabsTrigger>
+                        </TabsList>
+                      </Tabs>
 
                       <Select v-if="videoSourceForms[category.id].kind === 'category'" v-model="videoSourceForms[category.id].categoryId">
                         <SelectTrigger class="w-full">
