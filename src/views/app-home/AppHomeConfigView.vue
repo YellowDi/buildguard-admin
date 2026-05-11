@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ResponsiveRightSheet } from "@/components/ui/sheet"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Switch } from "@/components/ui/switch"
@@ -69,6 +69,11 @@ type VideoItem = {
   cover: string
   sortOrder: number
 }
+type VideoOptionGroup = {
+  id: string
+  label: string
+  videos: VideoItem[]
+}
 type ArticleItem = {
   id: string
   categoryId: string
@@ -81,7 +86,7 @@ type ArticleItem = {
 type NewVideoSourceForm = {
   kind: "category" | "video"
   categoryId: string
-  videoId: string
+  videoIds: string[]
 }
 
 const MEDIA_OPTION_PAGE_SIZE = 500
@@ -136,6 +141,34 @@ const selectedVideoCategories = computed(() => selectedVideoModule.value
 const videoCategoryOptions = computed(() => flattenCategoryTree(mediaState.videoCategories))
 const articleOptions = computed(() => [...mediaState.articleItems].sort(compareBySortOrder))
 const videoOptions = computed(() => [...mediaState.videoItems].sort(compareBySortOrder))
+const videoOptionGroups = computed<VideoOptionGroup[]>(() => {
+  const groups = new Map<string, VideoOptionGroup>()
+
+  for (const video of videoOptions.value) {
+    const id = video.categoryId || "__uncategorized__"
+    const label = video.categoryId
+      ? getCategoryPathLabel(mediaState.videoCategories, video.categoryId)
+      : "未分配分类"
+    const group = groups.get(id)
+
+    if (group) {
+      group.videos.push(video)
+      continue
+    }
+
+    groups.set(id, {
+      id,
+      label,
+      videos: [video],
+    })
+  }
+
+  return [...groups.values()].sort((a, b) => {
+    if (a.id === "__uncategorized__") return 1
+    if (b.id === "__uncategorized__") return -1
+    return a.label.localeCompare(b.label, "zh-Hans-CN")
+  })
+})
 const videoItemMap = computed(() => new Map(mediaState.videoItems.map(item => [item.id, item])))
 const articleItemMap = computed(() => new Map(mediaState.articleItems.map(item => [item.id, item])))
 const hasLoadedModules = computed(() => modules.value.length > 0)
@@ -153,6 +186,12 @@ watch(selectedVideoModule, (module) => {
   const firstCategoryId = [...module.categories].sort(compareBySortOrder)[0]?.id
   if (firstCategoryId && !activePreviewCategoryIds[module.id]) {
     activePreviewCategoryIds[module.id] = firstCategoryId
+  }
+}, { immediate: true })
+
+watch(selectedVideoCategories, (categories) => {
+  for (const category of categories) {
+    ensureVideoSourceForm(category.id)
   }
 }, { immediate: true })
 
@@ -308,28 +347,43 @@ function deleteVideoCategory(module: AppHomeVideoModule, categoryId: string) {
 
 function addSourceToCategory(category: AppHomeVideoCategory) {
   const form = getVideoSourceForm(category.id)
-  const nextSource: AppHomeVideoSource | null = form.kind === "category"
-    ? form.categoryId
-      ? {
-          id: createId("source"),
-          kind: "category",
-          categoryId: form.categoryId,
-        }
-      : null
-    : form.videoId
-      ? {
-          id: createId("source"),
-          kind: "video",
-          videoId: form.videoId,
-        }
-      : null
+  syncVideoSourceFormDefaults(form)
 
-  if (!nextSource) {
-    toast.error("请先选择内容来源")
+  if (form.kind === "category") {
+    if (!form.categoryId) {
+      toast.error("请先选择内容来源")
+      return
+    }
+
+    category.sources.push({
+      id: createId("source"),
+      kind: "category",
+      categoryId: form.categoryId,
+    })
     return
   }
 
-  category.sources.push(nextSource)
+  if (!form.videoIds.length) {
+    toast.error("请先选择视频")
+    return
+  }
+
+  const existingVideoIds = new Set(category.sources
+    .filter((source): source is Extract<AppHomeVideoSource, { kind: "video" }> => source.kind === "video")
+    .map(source => source.videoId))
+  const nextVideoIds = form.videoIds.filter(videoId => videoItemMap.value.has(videoId) && !existingVideoIds.has(videoId))
+
+  if (!nextVideoIds.length) {
+    toast.error("所选视频已在当前分类中")
+    return
+  }
+
+  category.sources.push(...nextVideoIds.map(videoId => ({
+    id: createId("source"),
+    kind: "video" as const,
+    videoId,
+  })))
+  form.videoIds = []
 }
 
 function deleteSource(category: AppHomeVideoCategory, sourceId: string) {
@@ -459,10 +513,6 @@ function getArticleOptionLabel(article: ArticleItem) {
   return `${article.title} · ${getCategoryPathLabel(mediaState.articleCategories, article.categoryId)}`
 }
 
-function getVideoOptionLabel(video: VideoItem) {
-  return `${video.title} · ${getCategoryPathLabel(mediaState.videoCategories, video.categoryId)}`
-}
-
 function getCoverSrc(value: string) {
   const normalized = value.trim()
   if (/^(https?:\/\/|data:image\/|blob:|\/)/i.test(normalized)) {
@@ -479,11 +529,14 @@ function syncMediaOptionDefaults() {
 }
 
 function getVideoSourceForm(categoryId: string) {
+  return ensureVideoSourceForm(categoryId)
+}
+
+function ensureVideoSourceForm(categoryId: string) {
   if (!videoSourceForms[categoryId]) {
     videoSourceForms[categoryId] = createDefaultVideoSourceForm()
   }
 
-  syncVideoSourceFormDefaults(videoSourceForms[categoryId])
   return videoSourceForms[categoryId]
 }
 
@@ -491,7 +544,7 @@ function createDefaultVideoSourceForm(): NewVideoSourceForm {
   return {
     kind: "category",
     categoryId: videoCategoryOptions.value[0]?.id ?? "",
-    videoId: videoOptions.value[0]?.id ?? "",
+    videoIds: [],
   }
 }
 
@@ -500,15 +553,28 @@ function syncVideoSourceFormDefaults(form: NewVideoSourceForm) {
     form.categoryId = videoCategoryOptions.value[0]?.id ?? ""
   }
 
-  if (!form.videoId || !videoItemMap.value.has(form.videoId)) {
-    form.videoId = videoOptions.value[0]?.id ?? ""
-  }
+  form.videoIds = form.videoIds.filter(videoId => videoItemMap.value.has(videoId))
 }
 
 function clearVideoSourceForms() {
   for (const key of Object.keys(videoSourceForms)) {
     delete videoSourceForms[key]
   }
+}
+
+function handleVideoSourceVideoIdsChange(categoryId: string, value: unknown) {
+  const form = ensureVideoSourceForm(categoryId)
+  const nextIds = Array.isArray(value)
+    ? value.map(String)
+    : value == null
+      ? []
+      : [String(value)]
+
+  if (form.videoIds.length === nextIds.length && form.videoIds.every((id, index) => id === nextIds[index])) {
+    return
+  }
+
+  form.videoIds = nextIds
 }
 
 function syncHomeMediaReferences() {
@@ -1414,8 +1480,8 @@ function hashText(value: string) {
                       </div>
                     </div>
 
-                    <div class="mt-2 grid gap-2 sm:grid-cols-[126px_minmax(0,1fr)_auto]">
-                      <Select v-model="getVideoSourceForm(category.id).kind">
+                    <div v-if="videoSourceForms[category.id]" class="mt-2 grid gap-2 sm:grid-cols-[126px_minmax(0,1fr)_auto]">
+                      <Select v-model="videoSourceForms[category.id].kind">
                         <SelectTrigger class="w-full">
                           <SelectValue placeholder="来源类型" />
                         </SelectTrigger>
@@ -1429,7 +1495,7 @@ function hashText(value: string) {
                         </SelectContent>
                       </Select>
 
-                      <Select v-if="getVideoSourceForm(category.id).kind === 'category'" v-model="getVideoSourceForm(category.id).categoryId">
+                      <Select v-if="videoSourceForms[category.id].kind === 'category'" v-model="videoSourceForms[category.id].categoryId">
                         <SelectTrigger class="w-full">
                           <SelectValue placeholder="选择媒体库分类" />
                         </SelectTrigger>
@@ -1444,18 +1510,34 @@ function hashText(value: string) {
                         </SelectContent>
                       </Select>
 
-                      <Select v-else v-model="getVideoSourceForm(category.id).videoId">
+                      <Select
+                        v-else
+                        :model-value="videoSourceForms[category.id].videoIds"
+                        multiple
+                        @update:model-value="handleVideoSourceVideoIdsChange(category.id, $event)"
+                      >
                         <SelectTrigger class="w-full">
                           <SelectValue placeholder="选择视频" />
                         </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem
-                            v-for="item in videoOptions"
-                            :key="item.id"
-                            :value="item.id"
+                        <SelectContent class="max-h-[360px]">
+                          <SelectGroup
+                            v-for="group in videoOptionGroups"
+                            :key="group.id"
                           >
-                            {{ getVideoOptionLabel(item) }}
-                          </SelectItem>
+                            <SelectLabel>
+                              {{ group.label }}
+                            </SelectLabel>
+                            <SelectItem
+                              v-for="video in group.videos"
+                              :key="video.id"
+                              :value="video.id"
+                            >
+                              {{ video.title }}
+                            </SelectItem>
+                          </SelectGroup>
+                          <div v-if="!videoOptionGroups.length" class="px-2 py-6 text-center text-sm text-muted-foreground">
+                            暂无可选视频
+                          </div>
                         </SelectContent>
                       </Select>
 
