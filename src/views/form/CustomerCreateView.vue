@@ -17,6 +17,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { createCustomer, fetchCustomerDetail, updateCustomer, updateCustomerStatus, type CustomerDetailResult } from "@/lib/customers-api"
 import { handleApiError } from "@/lib/api-errors"
 import { fetchBusinessPresetEntryOptions, type BusinessPresetEntryOption } from "@/lib/business-preset-options"
+import { uploadTencentCosFile } from "@/lib/tencent-cos-sdk"
 
 type CustomerFormState = {
   corpName: string
@@ -86,6 +87,7 @@ const form = reactive<CustomerFormState>(createEmptySnapshot().form)
 const principals = ref<PrincipalFormState[]>(createEmptySnapshot().principals)
 const mainPrincipalId = ref(createEmptySnapshot().mainPrincipalId)
 const submitting = ref(false)
+const businessLicenseUploading = ref(false)
 const loadingDetail = ref(false)
 const loadErrorMessage = ref("")
 const anchorItems = ref<QuickNavItem[]>([])
@@ -108,11 +110,15 @@ const hasValidPrincipal = computed(() =>
   principals.value.some(principal => normalizeText(principal.name) && normalizeText(principal.phone)),
 )
 const canSubmit = computed(() =>
-  Boolean(normalizeText(form.corpName) && hasValidPrincipal.value && !submitting.value && !loadingDetail.value),
+  Boolean(normalizeText(form.corpName) && hasValidPrincipal.value && !submitting.value && !businessLicenseUploading.value && !loadingDetail.value),
 )
 const primaryActionLabel = computed(() => {
   if (loadingDetail.value) {
     return "加载中..."
+  }
+
+  if (businessLicenseUploading.value) {
+    return "营业执照上传中..."
   }
 
   if (submitting.value) {
@@ -256,15 +262,33 @@ async function applyBusinessLicenseFile(file: File) {
     return
   }
 
+  businessLicenseUploading.value = true
+
   try {
-    form.usciFile = await readFileAsDataUrl(file)
+    const result = await uploadTencentCosFile({
+      file,
+      key: createBusinessLicenseObjectKey(file),
+      contentType: file.type || undefined,
+    })
+
+    form.usciFile = result.url
     businessLicenseFileName.value = file.name
-  } catch {
-    toast.error("营业执照读取失败")
+    toast.success("营业执照已上传")
+  } catch (error) {
+    handleApiError(error, {
+      title: "营业执照上传失败",
+      fallback: "营业执照上传失败，请稍后重试。",
+    })
+  } finally {
+    businessLicenseUploading.value = false
   }
 }
 
 function removeBusinessLicenseFile() {
+  if (businessLicenseUploading.value) {
+    return
+  }
+
   form.usciFile = ""
   businessLicenseFileName.value = ""
 }
@@ -311,14 +335,20 @@ async function handleSubmit() {
     return
   }
 
+  if (businessLicenseUploading.value) {
+    toast.error("营业执照正在上传，请稍后提交")
+    return
+  }
+
   submitting.value = true
 
   try {
+    const usciFile = await ensureBusinessLicenseCosUrl()
     const payload = {
       People: people,
       Business: getOptionalText(form.business),
       Usci: getOptionalText(form.usci),
-      UsciFile: getOptionalText(form.usciFile),
+      UsciFile: getOptionalText(usciFile),
       CorpName: getOptionalText(form.corpName),
       Address: getOptionalText(form.address),
       Invoice: getOptionalText(form.invoice),
@@ -332,7 +362,7 @@ async function handleSubmit() {
         People: people,
         Business: normalizeText(form.business),
         Usci: normalizeText(form.usci),
-        UsciFile: normalizeText(form.usciFile),
+        UsciFile: normalizeText(usciFile),
         CorpName: normalizeText(form.corpName),
         Address: normalizeText(form.address),
         Invoice: normalizeText(form.invoice),
@@ -431,22 +461,75 @@ function getRequiredInteger(value: unknown) {
   return 0
 }
 
-function readFileAsDataUrl(file: File) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader()
+async function ensureBusinessLicenseCosUrl() {
+  const value = normalizeText(form.usciFile)
 
-    reader.onload = () => {
-      if (typeof reader.result === "string") {
-        resolve(reader.result)
-        return
-      }
+  if (!value || !isDataUrl(value)) {
+    return value
+  }
 
-      reject(new Error("invalid_result"))
-    }
+  const file = dataImageUrlToFile(value, `business-license-${Date.now()}`)
 
-    reader.onerror = () => reject(reader.error ?? new Error("read_failed"))
-    reader.readAsDataURL(file)
-  })
+  businessLicenseUploading.value = true
+
+  try {
+    const result = await uploadTencentCosFile({
+      file,
+      key: createBusinessLicenseObjectKey(file),
+      contentType: file.type || undefined,
+    })
+
+    form.usciFile = result.url
+    businessLicenseFileName.value ||= file.name
+    toast.success("营业执照已上传")
+    return result.url
+  } finally {
+    businessLicenseUploading.value = false
+  }
+}
+
+function createBusinessLicenseObjectKey(file: File) {
+  return `customers/business-licenses/${Date.now()}-${sanitizeObjectKeyFileName(file.name)}`
+}
+
+function sanitizeObjectKeyFileName(value: string) {
+  const normalized = normalizeText(value).replace(/[\\/:*?"<>|\s]+/g, "-").replace(/^-+|-+$/g, "")
+
+  return normalized || "business-license"
+}
+
+function isDataUrl(value: string) {
+  return /^data:/i.test(value.trim())
+}
+
+function dataImageUrlToFile(value: string, fallbackName: string) {
+  const normalized = value.trim()
+  const match = normalized.match(/^data:(image\/[a-z0-9.+-]+);base64,(.+)$/i)
+
+  if (!match) {
+    throw new Error("营业执照图片数据格式不正确，无法提交。")
+  }
+
+  const contentType = match[1]
+  const extension = getImageExtension(contentType)
+  const binary = atob(match[2])
+  const bytes = new Uint8Array(binary.length)
+
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index)
+  }
+
+  return new File([bytes], `${fallbackName}${extension}`, { type: contentType })
+}
+
+function getImageExtension(contentType: string) {
+  const subtype = contentType.split("/")[1]?.toLowerCase() ?? ""
+
+  if (subtype === "jpeg") {
+    return ".jpg"
+  }
+
+  return subtype ? `.${subtype}` : ".jpg"
 }
 
 watch(editCustomerUuid, (uuid) => {
@@ -790,15 +873,18 @@ function dedupeSelectOptions(options: SelectOption[]) {
             id="section-license"
             quick-nav-label="营业执照照片"
             label="营业执照照片"
-            description="上传营业执照图片，当前会以图片内容编码字符串提交到接口。"
+            description="上传营业执照图片，文件上传完成后会自动写入文件地址。"
             align="start"
           >
             <FileUploadField
               accept="image/png,image/jpeg,image/jpg,image/webp"
               title="上传营业执照照片"
               description="支持 JPG、PNG、WEBP，可点击选择，也可以将图片拖放到此处。"
-              button-label="选择图片"
+              :selected-label="businessLicenseFileName || (form.usciFile ? '营业执照已上传' : '')"
+              :button-label="form.usciFile ? '更换图片' : '选择图片'"
+              loading-label="上传中..."
               icon="ri-image-add-line"
+              :loading="businessLicenseUploading"
               :show-supplement="Boolean(form.usciFile)"
               @files-selected="files => { void handleBusinessLicenseFiles(files); handleFocus('section-license') }"
             >
@@ -823,6 +909,7 @@ function dedupeSelectOptions(options: SelectOption[]) {
                       size="icon"
                       class="absolute right-1.5 top-1.5 size-8 bg-background/92 text-foreground opacity-0 shadow-sm transition-[opacity,background-color] duration-180 ease-out hover:bg-background group-hover:opacity-100 focus-visible:opacity-100"
                       aria-label="移除营业执照照片"
+                      :disabled="businessLicenseUploading"
                       @click.stop="removeBusinessLicenseFile"
                     >
                       <i class="ri-close-line text-base" />

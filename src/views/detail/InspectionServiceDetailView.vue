@@ -43,6 +43,7 @@ import {
   type InspectionServiceListItem,
   updateInspectionServiceContract,
 } from "@/lib/inspection-services-api"
+import { uploadTencentCosFile } from "@/lib/tencent-cos-sdk"
 
 type InspectionServiceInspectionTableRow = {
   id: string
@@ -84,6 +85,7 @@ const deleteConfirmOpen = ref(false)
 const deleteSubmitting = ref(false)
 const uploadContractDialogOpen = ref(false)
 const uploadingContract = ref(false)
+const uploadingContractFile = ref(false)
 const linkedDetailSheetOpen = ref(false)
 const inspectionItemDetailSheetOpen = ref(false)
 const uploadContractForm = ref({
@@ -107,6 +109,7 @@ const customerUuid = computed(() => {
   const queryValue = typeof route.query.customerUuid === "string" ? route.query.customerUuid.trim() : ""
   return queryValue || toText(detail.value?.CustomerUuid, "")
 })
+const contractDialogBusy = computed(() => uploadingContract.value || uploadingContractFile.value)
 
 const fieldSections = computed<DetailFieldSection[]>(() => {
   const current = detail.value
@@ -411,12 +414,25 @@ async function handleContractFiles(files: File[]) {
     return
   }
 
+  uploadingContractFile.value = true
+
   try {
-    const fileBase64 = await readFileAsDataUrl(file)
-    uploadContractForm.value.contractFile = fileBase64
+    const result = await uploadTencentCosFile({
+      file,
+      key: createContractFileObjectKey(file),
+      contentType: file.type || undefined,
+    })
+
+    uploadContractForm.value.contractFile = result.url
     uploadContractForm.value.contractFileName = file.name
-  } catch {
-    toast.error("合同文件读取失败，请重新选择文件")
+    toast.success("合同文件已上传")
+  } catch (error) {
+    handleApiError(error, {
+      title: "合同文件上传失败",
+      fallback: "合同文件上传失败，请稍后重试。",
+    })
+  } finally {
+    uploadingContractFile.value = false
   }
 }
 
@@ -428,6 +444,11 @@ async function submitUploadContract() {
 
   if (!uploadContractForm.value.contractEndTime) {
     toast.error("请填写合同到期时间")
+    return
+  }
+
+  if (uploadingContractFile.value) {
+    toast.error("合同文件正在上传，请稍后提交")
     return
   }
 
@@ -1055,21 +1076,14 @@ function getRemainingDaysHint(value: unknown) {
   return `剩余 ${diffDays} 天`
 }
 
-function readFileAsDataUrl(file: File) {
-  return new Promise<string>((resolve, reject) => {
-    const reader = new FileReader()
+function createContractFileObjectKey(file: File) {
+  return `inspection-services/contracts/${Date.now()}-${sanitizeObjectKeyFileName(file.name)}`
+}
 
-    reader.onload = () => {
-      if (typeof reader.result === "string") {
-        resolve(reader.result)
-        return
-      }
+function sanitizeObjectKeyFileName(value: string) {
+  const normalized = toText(value, "").replace(/[\\/:*?"<>|\s]+/g, "-").replace(/^-+|-+$/g, "")
 
-      reject(new Error("文件内容解析失败"))
-    }
-    reader.onerror = () => reject(reader.error ?? new Error("文件读取失败"))
-    reader.readAsDataURL(file)
-  })
+  return normalized || "contract-file"
 }
 </script>
 
@@ -1330,7 +1344,7 @@ function readFileAsDataUrl(file: File) {
             <FormDatePicker
               id="inspection-service-contract-end-time"
               v-model="uploadContractForm.contractEndTime"
-              :disabled="uploadingContract"
+              :disabled="contractDialogBusy"
               placeholder="请选择合同到期时间"
             />
         </div>
@@ -1340,12 +1354,14 @@ function readFileAsDataUrl(file: File) {
           <FileUploadField
             accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.webp"
             title="选择合同文件"
-            description="支持 PDF、Word 和常见图片格式；如无需替换文件可留空。"
+            description="支持 PDF、Word 和常见图片格式；文件上传完成后会自动写入文件地址。"
             :selected-label="uploadContractForm.contractFileName || '未选择文件'"
             button-label="选择文件"
+            loading-label="上传中..."
             icon="ri-file-upload-line"
             compact
             :disabled="uploadingContract"
+            :loading="uploadingContractFile"
             @files-selected="files => { void handleContractFiles(files) }"
           />
         </div>
@@ -1356,7 +1372,7 @@ function readFileAsDataUrl(file: File) {
           type="button"
           variant="outline"
           class=""
-          :disabled="uploadingContract"
+          :disabled="contractDialogBusy"
           @click="uploadContractDialogOpen = false"
         >
           取消
@@ -1364,7 +1380,7 @@ function readFileAsDataUrl(file: File) {
         <Button
           type="button"
           class=""
-          :disabled="uploadingContract"
+          :disabled="contractDialogBusy"
           @click="submitUploadContract"
         >
           {{ uploadingContract ? "提交中..." : "确认上传" }}

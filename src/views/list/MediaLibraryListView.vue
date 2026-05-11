@@ -258,7 +258,7 @@ const articleCoverSelectedLabel = computed(() => {
   }
 
   return isDataImageUrl(cover)
-    ? "已选择封面（保存时将上传到腾讯云 COS）"
+    ? "已选择封面（保存时将上传）"
     : cover
 })
 const articleTagValues = computed<string[]>({
@@ -950,7 +950,7 @@ async function handleArticleCoverFiles(files: File[]) {
     })
 
     formState.cover = result.url
-    toast.success("封面已上传到腾讯云 COS")
+    toast.success("封面已上传")
   } catch (error) {
     toast.error("封面上传失败", {
       description: getApiErrorMessage(error, "请稍后重试。"),
@@ -978,7 +978,7 @@ async function ensureArticleCoverUrl() {
     })
 
     formState.cover = result.url
-    toast.success("历史封面已上传到腾讯云 COS")
+    toast.success("封面已上传")
     return result.url
   } catch (error) {
     toast.error("封面上传失败", {
@@ -1003,7 +1003,7 @@ async function uploadArticleContentImage(file: File) {
       contentType: file.type || undefined,
     })
 
-    toast.success("正文图片已上传到腾讯云 COS")
+    toast.success("正文图片已上传")
     return result.url
   } catch (error) {
     toast.error("正文图片上传失败", {
@@ -1159,7 +1159,7 @@ async function uploadVideoFile(file: File) {
       formState.title = stripFileExtension(file.name)
     }
 
-    toast.success("视频已上传到腾讯云 COS")
+    toast.success("视频已上传")
   } catch (error) {
     toast.error("视频上传失败", {
       description: getApiErrorMessage(error, "请稍后重试。"),
