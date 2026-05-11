@@ -520,6 +520,26 @@
     will-change: opacity, transform;
   }
 
+  .tabs-active-indicator {
+    background: var(--background);
+    box-shadow:
+      0 1px 2px rgb(0 0 0 / 0.08),
+      0 0 0 1px rgb(0 0 0 / 0.04);
+    transition:
+      transform 260ms cubic-bezier(0.16, 1, 0.3, 1),
+      width 260ms cubic-bezier(0.16, 1, 0.3, 1),
+      height 260ms cubic-bezier(0.16, 1, 0.3, 1),
+      opacity 120ms ease-out;
+    will-change: transform, width, height;
+  }
+
+  .dark .tabs-active-indicator {
+    background: color-mix(in srgb, var(--input) 62%, var(--background));
+    box-shadow:
+      0 1px 2px rgb(0 0 0 / 0.28),
+      0 0 0 1px rgb(255 255 255 / 0.08);
+  }
+
   .top-tab-switch-icon-button {
     position: relative;
     overflow: hidden;
@@ -871,7 +891,8 @@
   .top-tab-switch-bg,
   .top-tab-switch-icon-button,
   .top-tab-switch-content,
-  .top-tab-switch-badge {
+  .top-tab-switch-badge,
+  .tabs-active-indicator {
     transition: none !important;
   }
 

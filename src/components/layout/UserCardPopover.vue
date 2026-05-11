@@ -145,12 +145,12 @@ function handleOpenSettings() {
               v-model="themeMode"
               aria-label="主题"
             >
-              <TabsList class="h-auto w-full rounded-lg bg-muted/60">
+              <TabsList class="w-full">
                 <TabsTrigger
                   v-for="opt in themeOptions"
                   :key="opt.value"
                   :value="opt.value"
-                  class="h-auto flex-1 px-2 py-1.5 text-xs data-[state=active]:shadow-xs"
+                  class="flex-1 px-2 text-xs"
                 >
                   <i :class="[opt.icon, 'text-sm']" />
                   <span>{{ opt.label }}</span>
