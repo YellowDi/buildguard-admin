@@ -113,7 +113,7 @@ onBeforeUnmount(() => {
     data-slot="tabs-list"
     :class="
       cn(
-        'relative isolate inline-flex h-8 w-fit items-center justify-center overflow-hidden rounded-full bg-muted/70 p-0.5 text-muted-foreground',
+        'relative isolate inline-flex h-8 w-fit items-center justify-center overflow-hidden rounded-full bg-[var(--tabs-track-background)] p-0.5 text-muted-foreground',
         props.class,
       )
     "

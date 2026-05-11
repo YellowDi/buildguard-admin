@@ -47,6 +47,7 @@
   --surface-hover-strong: rgb(0 0 0 / 0.05);
   --interactive-hover: rgb(0 0 0 / 0.045);
   --top-tab-switch-active-surface: var(--interactive-hover);
+  --tabs-track-background: #f1f1f2;
   --chart-1: #0075de;
   --chart-2: #2a9d99;
   --chart-3: #213183;
@@ -153,6 +154,7 @@
   --surface-hover-strong: rgb(255 255 255 / 0.08);
   --interactive-hover: rgb(255 255 255 / 0.08);
   --top-tab-switch-active-surface: var(--interactive-hover);
+  --tabs-track-background: #252525;
   --chart-1: #4da3f0;
   --chart-2: #3dbdb9;
   --chart-3: #6878c8;
