@@ -343,12 +343,11 @@ async function handleSubmit() {
   submitting.value = true
 
   try {
-    const usciFile = await ensureBusinessLicenseCosUrl()
     const payload = {
       People: people,
       Business: getOptionalText(form.business),
       Usci: getOptionalText(form.usci),
-      UsciFile: getOptionalText(usciFile),
+      UsciFile: getOptionalText(form.usciFile),
       CorpName: getOptionalText(form.corpName),
       Address: getOptionalText(form.address),
       Invoice: getOptionalText(form.invoice),
@@ -362,7 +361,7 @@ async function handleSubmit() {
         People: people,
         Business: normalizeText(form.business),
         Usci: normalizeText(form.usci),
-        UsciFile: normalizeText(usciFile),
+        UsciFile: normalizeText(form.usciFile),
         CorpName: normalizeText(form.corpName),
         Address: normalizeText(form.address),
         Invoice: normalizeText(form.invoice),
@@ -461,33 +460,6 @@ function getRequiredInteger(value: unknown) {
   return 0
 }
 
-async function ensureBusinessLicenseCosUrl() {
-  const value = normalizeText(form.usciFile)
-
-  if (!value || !isDataUrl(value)) {
-    return value
-  }
-
-  const file = dataImageUrlToFile(value, `business-license-${Date.now()}`)
-
-  businessLicenseUploading.value = true
-
-  try {
-    const result = await uploadTencentCosFile({
-      file,
-      key: createBusinessLicenseObjectKey(file),
-      contentType: file.type || undefined,
-    })
-
-    form.usciFile = result.url
-    businessLicenseFileName.value ||= file.name
-    toast.success("营业执照已上传")
-    return result.url
-  } finally {
-    businessLicenseUploading.value = false
-  }
-}
-
 function createBusinessLicenseObjectKey(file: File) {
   return `customers/business-licenses/${Date.now()}-${sanitizeObjectKeyFileName(file.name)}`
 }
@@ -496,40 +468,6 @@ function sanitizeObjectKeyFileName(value: string) {
   const normalized = normalizeText(value).replace(/[\\/:*?"<>|\s]+/g, "-").replace(/^-+|-+$/g, "")
 
   return normalized || "business-license"
-}
-
-function isDataUrl(value: string) {
-  return /^data:/i.test(value.trim())
-}
-
-function dataImageUrlToFile(value: string, fallbackName: string) {
-  const normalized = value.trim()
-  const match = normalized.match(/^data:(image\/[a-z0-9.+-]+);base64,(.+)$/i)
-
-  if (!match) {
-    throw new Error("营业执照图片数据格式不正确，无法提交。")
-  }
-
-  const contentType = match[1]
-  const extension = getImageExtension(contentType)
-  const binary = atob(match[2])
-  const bytes = new Uint8Array(binary.length)
-
-  for (let index = 0; index < binary.length; index += 1) {
-    bytes[index] = binary.charCodeAt(index)
-  }
-
-  return new File([bytes], `${fallbackName}${extension}`, { type: contentType })
-}
-
-function getImageExtension(contentType: string) {
-  const subtype = contentType.split("/")[1]?.toLowerCase() ?? ""
-
-  if (subtype === "jpeg") {
-    return ".jpg"
-  }
-
-  return subtype ? `.${subtype}` : ".jpg"
 }
 
 watch(editCustomerUuid, (uuid) => {

@@ -257,9 +257,7 @@ const articleCoverSelectedLabel = computed(() => {
     return "暂未选择封面"
   }
 
-  return isDataImageUrl(cover)
-    ? "已选择封面（保存时将上传）"
-    : cover
+  return cover
 })
 const articleTagValues = computed<string[]>({
   get: () => parseTagText(formState.tagsText),
@@ -960,36 +958,6 @@ async function handleArticleCoverFiles(files: File[]) {
   }
 }
 
-async function ensureArticleCoverUrl() {
-  const cover = formState.cover.trim()
-
-  if (!isDataImageUrl(cover)) {
-    return cover
-  }
-
-  uploadingArticleCover.value = true
-
-  try {
-    const file = dataImageUrlToFile(cover, `article-cover-${Date.now()}`)
-    const result = await uploadTencentCosFile({
-      file,
-      key: `media-library/articles/covers/${Date.now()}-${sanitizeObjectKeyFileName(file.name)}`,
-      contentType: file.type || undefined,
-    })
-
-    formState.cover = result.url
-    toast.success("封面已上传")
-    return result.url
-  } catch (error) {
-    toast.error("封面上传失败", {
-      description: getApiErrorMessage(error, "请稍后重试。"),
-    })
-    throw error
-  } finally {
-    uploadingArticleCover.value = false
-  }
-}
-
 async function uploadArticleContentImage(file: File) {
   if (!file.type.startsWith("image/")) {
     toast.error("请选择图片文件")
@@ -1089,11 +1057,10 @@ async function saveArticleForm() {
   articleCreateSubmitting.value = true
 
   try {
-    const coverUrl = await ensureArticleCoverUrl()
     const payload = {
       Title: title,
       TypeUuid: formState.categoryId,
-      CoverUrl: coverUrl,
+      CoverUrl: formState.cover.trim(),
       Content: normalizeRichTextContent(formState.content),
       Tags: parseTagText(formState.tagsText),
       Status: toMediaArticleStatus(formState.status),
@@ -1282,7 +1249,7 @@ function getStatusLabel(status: MediaStatus) {
 
 function normalizeArticleCoverSource(value: string) {
   const normalized = value.trim()
-  if (/^(https?:\/\/|data:image\/|blob:|\/)/i.test(normalized)) {
+  if (/^(https?:\/\/|blob:|\/)/i.test(normalized)) {
     return normalized
   }
 
@@ -1593,36 +1560,6 @@ function sanitizeObjectKeyFileName(value: string) {
   const normalized = value.trim().replace(/[\\/:*?"<>|\s]+/g, "-").replace(/^-+|-+$/g, "")
 
   return normalized || "media-file"
-}
-
-function isDataImageUrl(value: string) {
-  return /^data:image\/[a-z0-9.+-]+;base64,/i.test(value.trim())
-}
-
-function dataImageUrlToFile(value: string, fallbackName: string) {
-  const normalized = value.trim()
-  const match = normalized.match(/^data:(image\/[a-z0-9.+-]+);base64,(.+)$/i)
-
-  if (!match) {
-    throw new Error("图片数据格式不正确")
-  }
-
-  const contentType = match[1]
-  const extension = getImageExtension(contentType)
-  const binary = atob(match[2])
-  const bytes = new Uint8Array(binary.length)
-
-  for (let index = 0; index < binary.length; index += 1) {
-    bytes[index] = binary.charCodeAt(index)
-  }
-
-  return new File([bytes], `${fallbackName}${extension}`, { type: contentType })
-}
-
-function getImageExtension(contentType: string) {
-  const subtype = contentType.split("/")[1]?.toLowerCase().replace("jpeg", "jpg")
-
-  return subtype ? `.${subtype}` : ".png"
 }
 
 function stripFileExtension(value: string) {
