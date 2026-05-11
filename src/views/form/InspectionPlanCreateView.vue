@@ -297,7 +297,7 @@ async function loadEditDetail() {
     form.serviceUuid = detailServiceUuid
   }
 
-  form.name = normalizeText(detail.Name)
+  form.name = ""
   form.duration = normalizeText(detail.Duration)
   form.workOrderDuration = normalizeText(detail.WorkOrderDuration)
   form.firstTime = toDatePickerInput(normalizeText(detail.FirstTime))
@@ -499,7 +499,7 @@ function resetLocalStateForRoute() {
     ...createEmptyForm(),
     customerUuid: queryCustomerUuid.value,
     serviceUuid: queryServiceUuid.value,
-    name: queryName.value,
+    name: isEditMode.value ? "" : queryName.value,
     duration: queryDuration.value,
     workOrderDuration: queryWorkOrderDuration.value,
     firstTime: toDatePickerInput(queryFirstTime.value),
@@ -570,7 +570,7 @@ watch(
 watch(
   () => form.serviceUuid,
   (serviceUuid) => {
-    if (!serviceUuid || normalizeText(form.name)) {
+    if (isEditMode.value || !serviceUuid || normalizeText(form.name)) {
       return
     }
 
