@@ -1,11 +1,24 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from "vue"
+import { computed, onMounted, onUnmounted, reactive, ref, watch } from "vue"
 import { toast } from "vue-sonner"
 
 import TopTabSwitch from "@/components/layout/TopTabSwitch.vue"
 import SettingsPageHeader from "@/components/settings/SettingsPageHeader.vue"
+import SettingsToolbarRefreshSlot from "@/components/settings/SettingsToolbarRefreshSlot.vue"
 import SettingsToolbarRow from "@/components/settings/SettingsToolbarRow.vue"
+import SettingsToolbarSearchInput from "@/components/settings/SettingsToolbarSearchInput.vue"
 import FileUploadField from "@/components/upload/FileUploadField.vue"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -18,7 +31,6 @@ import {
 } from "@/components/ui/dialog"
 import {
   Field,
-  FieldDescription,
   FieldLabel,
 } from "@/components/ui/field"
 import { Input } from "@/components/ui/input"
@@ -29,14 +41,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import type {
   AppReleaseDraft,
   AppReleaseEntry,
   SettingsState,
 } from "@/components/settings/types"
-import { getApiErrorMessage } from "@/lib/api-errors"
+import { getApiErrorMessage, handleApiError } from "@/lib/api-errors"
+import {
+  createAppVersion,
+  deleteAppVersion,
+  fetchAppVersionDetail,
+  fetchAppVersions,
+  updateAppVersion,
+  type AppVersionDetail,
+} from "@/lib/app-versions-api"
 import { uploadTencentCosFile } from "@/lib/tencent-cos-sdk"
 
 const props = defineProps<{
@@ -48,6 +67,22 @@ const activePlatform = ref<AppReleaseDraft["platform"]>(props.state.appReleases[
 const updateDialogOpen = ref(false)
 const uploadingApkFile = ref(false)
 const releaseApkFileName = ref("")
+const loading = ref(false)
+const detailLoading = ref(false)
+const releaseSubmitting = ref(false)
+const deleteDialogOpen = ref(false)
+const deleting = ref(false)
+const errorMessage = ref("")
+const searchExpanded = ref(false)
+const versionQuery = ref("")
+const releaseDialogMode = ref<"create" | "edit">("create")
+const releaseTargetUuid = ref("")
+const releaseVersionCode = ref("")
+const listPageNum = ref(1)
+const listPageSize = ref(100)
+let latestListRequestId = 0
+let latestDetailRequestId = 0
+let searchTimer: ReturnType<typeof setTimeout> | null = null
 
 const releaseForm = reactive<AppReleaseDraft>({
   hasUpdate: true,
@@ -98,19 +133,79 @@ const distributionHint = computed(() => {
 })
 const isAndroidReleaseForm = computed(() => releaseForm.platform === "android")
 
+watch(versionQuery, () => {
+  if (searchTimer) {
+    clearTimeout(searchTimer)
+  }
+
+  searchTimer = setTimeout(() => {
+    listPageNum.value = 1
+    void loadReleases()
+  }, 300)
+})
+
+onMounted(() => {
+  void loadReleases()
+})
+
+onUnmounted(() => {
+  if (searchTimer) {
+    clearTimeout(searchTimer)
+  }
+})
+
 function formatPlatform(platform: AppReleaseDraft["platform"]) {
   return platform === "ios" ? "iOS" : "Android"
 }
 
-function getReleaseId(release: AppReleaseDraft) {
-  return `${release.platform}-${release.versionName.trim()}`
+function platformToType(platform: AppReleaseDraft["platform"]) {
+  return platform === "ios" ? 2 : 1
 }
 
-function getNowText() {
-  const now = new Date()
-  const pad = (value: number) => String(value).padStart(2, "0")
+function typeToPlatform(type: unknown): AppReleaseDraft["platform"] {
+  return Number(type) === 2 ? "ios" : "android"
+}
 
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`
+function mapAppVersionToRelease(item: AppVersionDetail): AppReleaseEntry {
+  const platform = typeToPlatform(item.Type)
+  const versionName = toText(item.Version, "-")
+  const url = toText(item.Url)
+  const log = toText(item.Log, "-")
+  const uuid = toText(item.Uuid)
+  const id = uuid || `${platform}-${versionName}-${toText(item.Id)}`
+
+  return {
+    id,
+    uuid,
+    versionCode: toNumber(item.VersionCode),
+    hasUpdate: false,
+    versionName,
+    title: versionName === "-" ? "应用更新" : `版本 ${versionName}`,
+    description: log,
+    forceUpdate: false,
+    downloadUrl: platform === "android" ? url : "",
+    appStoreUrl: platform === "ios" ? url : "",
+    platform,
+    updatedAt: toText(item.CreatedAt, "-"),
+  }
+}
+
+function toText(value: unknown, fallback = "") {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return String(value)
+  }
+
+  if (typeof value === "string" && value.trim()) {
+    return value.trim()
+  }
+
+  return fallback
+}
+
+function toNumber(value: unknown) {
+  const parsed = Number(value)
+
+  return Number.isFinite(parsed) ? parsed : null
 }
 
 function sanitizeObjectKeyFileName(value: string) {
@@ -151,6 +246,7 @@ function syncCurrentRelease(release: AppReleaseEntry) {
 function selectRelease(release: AppReleaseEntry) {
   selectedReleaseId.value = release.id
   syncCurrentRelease(release)
+  void loadReleaseDetail(release)
 }
 
 function selectPlatform(platform: AppReleaseDraft["platform"]) {
@@ -159,6 +255,108 @@ function selectPlatform(platform: AppReleaseDraft["platform"]) {
 
   if (firstRelease) {
     selectRelease(firstRelease)
+  }
+}
+
+function toggleSearch() {
+  searchExpanded.value = !searchExpanded.value
+
+  if (!searchExpanded.value && versionQuery.value) {
+    versionQuery.value = ""
+  }
+}
+
+async function refreshData() {
+  await loadReleases()
+}
+
+async function loadReleases() {
+  const requestId = ++latestListRequestId
+
+  loading.value = true
+  errorMessage.value = ""
+  props.state.appReleases.splice(0)
+
+  try {
+    const result = await fetchAppVersions({
+      PageNum: listPageNum.value,
+      PageSize: listPageSize.value,
+      Version: versionQuery.value || undefined,
+    })
+
+    if (requestId !== latestListRequestId) {
+      return
+    }
+
+    const nextReleases = result.list.map(item => mapAppVersionToRelease(item))
+
+    props.state.appReleases.splice(0, props.state.appReleases.length, ...nextReleases)
+
+    const selected = nextReleases.find(release => release.id === selectedReleaseId.value)
+      ?? nextReleases.find(release => release.platform === activePlatform.value)
+      ?? nextReleases[0]
+
+    if (selected) {
+      activePlatform.value = selected.platform
+      selectedReleaseId.value = selected.id
+      syncCurrentRelease(selected)
+      void loadReleaseDetail(selected)
+    } else {
+      selectedReleaseId.value = ""
+    }
+  } catch (error) {
+    if (requestId !== latestListRequestId) {
+      return
+    }
+
+    selectedReleaseId.value = ""
+    errorMessage.value = handleApiError(error, {
+      mode: "silent",
+      fallback: "应用更新列表加载失败，请稍后重试。",
+    })
+  } finally {
+    if (requestId === latestListRequestId) {
+      loading.value = false
+    }
+  }
+}
+
+async function loadReleaseDetail(release: AppReleaseEntry) {
+  if (!release.uuid) {
+    return
+  }
+
+  const requestId = ++latestDetailRequestId
+
+  detailLoading.value = true
+
+  try {
+    const detail = await fetchAppVersionDetail({ Uuid: release.uuid })
+
+    if (requestId !== latestDetailRequestId) {
+      return
+    }
+
+    const nextRelease = mapAppVersionToRelease(detail)
+    const index = props.state.appReleases.findIndex(item => item.id === release.id)
+
+    if (index >= 0) {
+      props.state.appReleases.splice(index, 1, nextRelease)
+    }
+
+    if (selectedReleaseId.value === release.id) {
+      selectedReleaseId.value = nextRelease.id
+      syncCurrentRelease(nextRelease)
+    }
+  } catch (error) {
+    handleApiError(error, {
+      title: "应用更新详情加载失败",
+      fallback: "应用更新详情加载失败，请稍后重试。",
+    })
+  } finally {
+    if (requestId === latestDetailRequestId) {
+      detailLoading.value = false
+    }
   }
 }
 
@@ -177,27 +375,49 @@ function updateReleasePlatform(platform: AppReleaseDraft["platform"]) {
   }
 }
 
-function resetReleaseForm(platform = activePlatform.value) {
-  const current = selectedRelease.value?.platform === platform
-    ? selectedRelease.value
-    : releases.value.find(release => release.platform === platform)
-
+function resetReleaseForm(platform = activePlatform.value, release?: AppReleaseEntry | null) {
   Object.assign(releaseForm, {
     hasUpdate: true,
-    versionName: current?.versionName ?? "",
-    title: current?.title ?? "",
-    description: current?.description ?? "",
-    forceUpdate: current?.forceUpdate ?? false,
-    downloadUrl: platform === "android" ? current?.downloadUrl ?? "" : "",
-    appStoreUrl: platform === "ios" ? current?.appStoreUrl ?? "" : "",
+    versionName: release?.versionName ?? "",
+    title: release?.title ?? "",
+    description: release?.description ?? "",
+    forceUpdate: release?.forceUpdate ?? false,
+    downloadUrl: platform === "android" ? release?.downloadUrl ?? "" : "",
+    appStoreUrl: platform === "ios" ? release?.appStoreUrl ?? "" : "",
     platform,
   })
-  releaseApkFileName.value = platform === "android" ? getFileNameFromUrl(current?.downloadUrl ?? "") : ""
+  releaseVersionCode.value = release?.versionCode === null || release?.versionCode === undefined
+    ? ""
+    : String(release.versionCode)
+  releaseApkFileName.value = platform === "android" ? getFileNameFromUrl(release?.downloadUrl ?? "") : ""
 }
 
-function openUpdateDialog() {
+function openCreateDialog() {
+  releaseDialogMode.value = "create"
+  releaseTargetUuid.value = ""
   resetReleaseForm(activePlatform.value)
   updateDialogOpen.value = true
+}
+
+function openEditDialog() {
+  if (!selectedRelease.value?.uuid) {
+    toast.error("当前版本缺少 Uuid，无法编辑")
+    return
+  }
+
+  releaseDialogMode.value = "edit"
+  releaseTargetUuid.value = selectedRelease.value.uuid
+  resetReleaseForm(selectedRelease.value.platform, selectedRelease.value)
+  updateDialogOpen.value = true
+}
+
+function openDeleteDialog() {
+  if (!selectedRelease.value?.uuid) {
+    toast.error("当前版本缺少 Uuid，无法删除")
+    return
+  }
+
+  deleteDialogOpen.value = true
 }
 
 async function handleApkFiles(files: File[]) {
@@ -233,50 +453,111 @@ async function handleApkFiles(files: File[]) {
   }
 }
 
-function submitRelease() {
+function parseVersionCode() {
+  const normalizedValue = releaseVersionCode.value.trim()
+
+  if (!normalizedValue) {
+    return undefined
+  }
+
+  const parsedValue = Number(normalizedValue)
+
+  return Number.isInteger(parsedValue) && parsedValue >= 0 ? parsedValue : null
+}
+
+async function submitRelease() {
   if (uploadingApkFile.value) {
     toast.error("APK 正在上传，请稍后保存")
     return
   }
 
   const versionName = releaseForm.versionName.trim()
-  const title = releaseForm.title.trim()
   const description = releaseForm.description.trim()
+  const url = releaseForm.platform === "android"
+    ? releaseForm.downloadUrl.trim()
+    : releaseForm.appStoreUrl.trim()
+  const versionCode = parseVersionCode()
 
-  if (!versionName || !title || !description) {
-    toast.error("请填写版本号、更新标题和更新日志")
+  if (!versionName || !description) {
+    toast.error("请填写版本号和更新日志")
     return
   }
 
-  if (releaseForm.platform === "android" && !releaseForm.downloadUrl.trim()) {
+  if (versionCode === null) {
+    toast.error("版本码必须是非负整数")
+    return
+  }
+
+  if (releaseForm.platform === "android" && !url) {
     toast.error("请上传 APK 安装包")
     return
   }
 
-  const nextRelease: AppReleaseEntry = {
-    ...releaseForm,
-    id: getReleaseId({ ...releaseForm, versionName }),
-    versionName,
-    title,
-    description,
-    downloadUrl: releaseForm.platform === "android" ? releaseForm.downloadUrl.trim() : "",
-    appStoreUrl: releaseForm.platform === "ios" ? releaseForm.appStoreUrl.trim() : "",
-    updatedAt: getNowText(),
+  releaseSubmitting.value = true
+
+  try {
+    const payload = {
+      Log: description,
+      Type: platformToType(releaseForm.platform),
+      Url: url || undefined,
+      Version: versionName,
+      VersionCode: versionCode,
+    }
+
+    const result = releaseDialogMode.value === "edit"
+      ? await updateAppVersion({
+          ...payload,
+          Uuid: releaseTargetUuid.value,
+        })
+      : await createAppVersion(payload)
+
+    updateDialogOpen.value = false
+    toast.success(releaseDialogMode.value === "edit" ? "版本信息已更新" : "新版本已添加")
+
+    await loadReleases()
+
+    const resultUuid = toText(result.Uuid)
+    if (resultUuid) {
+      const createdRelease = props.state.appReleases.find(release => release.uuid === resultUuid)
+      if (createdRelease) {
+        selectRelease(createdRelease)
+      }
+    }
+  } catch (error) {
+    handleApiError(error, {
+      title: releaseDialogMode.value === "edit" ? "版本编辑失败" : "版本创建失败",
+      fallback: releaseDialogMode.value === "edit"
+        ? "应用更新编辑失败，请稍后重试。"
+        : "应用更新创建失败，请稍后重试。",
+    })
+  } finally {
+    releaseSubmitting.value = false
   }
-  const existingIndex = props.state.appReleases.findIndex(release => release.id === nextRelease.id)
+}
 
-  if (existingIndex >= 0) {
-    props.state.appReleases.splice(existingIndex, 1, nextRelease)
-  } else {
-    props.state.appReleases.unshift(nextRelease)
+async function confirmDeleteRelease() {
+  const uuid = selectedRelease.value?.uuid
+
+  if (!uuid) {
+    toast.error("当前版本缺少 Uuid，无法删除")
+    return
   }
 
-  activePlatform.value = nextRelease.platform
-  selectedReleaseId.value = nextRelease.id
-  syncCurrentRelease(nextRelease)
-  updateDialogOpen.value = false
+  deleting.value = true
 
-  toast.success(existingIndex >= 0 ? "版本信息已更新" : "新版本已添加")
+  try {
+    await deleteAppVersion({ Uuid: uuid })
+    deleteDialogOpen.value = false
+    toast.success("版本已删除")
+    await loadReleases()
+  } catch (error) {
+    handleApiError(error, {
+      title: "版本删除失败",
+      fallback: "应用更新删除失败，请稍后重试。",
+    })
+  } finally {
+    deleting.value = false
+  }
 }
 </script>
 
@@ -300,18 +581,44 @@ function submitRelease() {
           </div>
         </template>
 
+        <SettingsToolbarSearchInput
+          v-model="versionQuery"
+          :expanded="searchExpanded"
+          placeholder="搜索版本号"
+          @toggle="toggleSearch"
+        />
+
+        <SettingsToolbarRefreshSlot :yield-space="searchExpanded">
+          <Button variant="ghost" size="sm" class="h-8 rounded-md px-3" :disabled="loading" @click="refreshData">
+            <i class="ri-refresh-line text-sm" />
+            <span>{{ loading ? "刷新中..." : "刷新列表" }}</span>
+          </Button>
+        </SettingsToolbarRefreshSlot>
+
         <Button
           size="sm"
           class="h-8 rounded-md px-3"
-          @click="openUpdateDialog"
+          @click="openCreateDialog"
         >
           <i class="ri-add-line text-base" />
-          <span>更新版本</span>
+          <span>新建版本</span>
         </Button>
       </SettingsToolbarRow>
     </SettingsPageHeader>
 
     <div class="px-3 pb-8 sm:px-4">
+      <Alert v-if="errorMessage" variant="destructive" class="mx-auto mb-4 max-w-4xl">
+        <i class="ri-error-warning-line" />
+        <AlertTitle>应用更新接口加载失败</AlertTitle>
+        <AlertDescription class="flex flex-wrap items-center gap-3">
+          <span>{{ errorMessage }}</span>
+          <Button size="sm" variant="outline" :disabled="loading" @click="refreshData">
+            <i class="ri-refresh-line text-sm" />
+            重试
+          </Button>
+        </AlertDescription>
+      </Alert>
+
       <div class="mx-auto flex w-full max-w-4xl gap-8 overflow-visible">
         <aside class="w-[240px] shrink-0 pt-4">
           <div class="sticky top-[11rem] flex max-h-[calc(100svh-12rem)] flex-col overflow-hidden">
@@ -337,6 +644,14 @@ function submitRelease() {
                   </span>
                 </span>
               </button>
+
+              <div v-if="loading" class="px-2 py-3 text-sm text-muted-foreground">
+                正在加载版本列表...
+              </div>
+
+              <div v-else-if="filteredReleases.length === 0" class="px-2 py-3 text-sm text-muted-foreground">
+                暂无{{ formatPlatform(activePlatform) }}版本
+              </div>
             </div>
           </div>
         </aside>
@@ -353,15 +668,30 @@ function submitRelease() {
                   <h2 class="text-xl font-semibold tracking-normal text-foreground">
                     {{ selectedRelease.versionName }}
                   </h2>
+
+                  <p v-if="selectedRelease.versionCode !== null && selectedRelease.versionCode !== undefined" class="mt-1 font-mono text-xs text-muted-foreground">
+                    VersionCode {{ selectedRelease.versionCode }}
+                  </p>
                 </div>
 
-                <Badge
-                  v-if="selectedRelease.forceUpdate"
-                  variant="destructive"
-                  class="shrink-0"
-                >
-                  强制更新
-                </Badge>
+                <div class="flex shrink-0 items-center gap-2">
+                  <Badge
+                    v-if="detailLoading"
+                    variant="outline"
+                  >
+                    加载详情
+                  </Badge>
+
+                  <Button variant="outline" size="sm" class="h-8 rounded-md px-3" @click="openEditDialog">
+                    <i class="ri-edit-line text-sm" />
+                    编辑
+                  </Button>
+
+                  <Button variant="destructive" size="sm" class="h-8 rounded-md px-3" @click="openDeleteDialog">
+                    <i class="ri-delete-bin-line text-sm" />
+                    删除
+                  </Button>
+                </div>
               </div>
 
               <dl class="border-b py-1">
@@ -371,6 +701,15 @@ function submitRelease() {
                   </dt>
                   <dd class="min-w-0 truncate font-mono text-sm font-medium text-foreground">
                     {{ selectedRelease.updatedAt }}
+                  </dd>
+                </div>
+
+                <div class="flex min-w-0 items-center justify-between gap-4 border-b py-3">
+                  <dt class="shrink-0 text-sm text-muted-foreground">
+                    版本码
+                  </dt>
+                  <dd class="min-w-0 truncate font-mono text-sm font-medium text-foreground">
+                    {{ selectedRelease.versionCode ?? "-" }}
                   </dd>
                 </div>
 
@@ -394,6 +733,10 @@ function submitRelease() {
               </section>
             </section>
           </template>
+
+          <div v-else class="py-16 text-center text-sm text-muted-foreground">
+            {{ loading ? "正在加载应用更新..." : "暂无应用更新数据" }}
+          </div>
         </main>
       </div>
     </div>
@@ -401,9 +744,9 @@ function submitRelease() {
     <Dialog :open="updateDialogOpen" @update:open="updateDialogOpen = $event">
       <DialogContent stack-above-sticky-header class="max-h-[min(88vh,760px)] overflow-y-auto sm:max-w-[640px]">
         <DialogHeader>
-          <DialogTitle>更新版本</DialogTitle>
+          <DialogTitle>{{ releaseDialogMode === "edit" ? "编辑版本" : "新建版本" }}</DialogTitle>
           <DialogDescription>
-            填写版本号、更新标题和更新日志，提交后生成新的版本条目。
+            填写版本号、版本码、更新日志和下载地址。
           </DialogDescription>
         </DialogHeader>
 
@@ -438,17 +781,17 @@ function submitRelease() {
                 @update:model-value="updateReleaseForm('versionName', String($event))"
               />
             </Field>
-          </div>
 
-          <Field class="gap-2">
-            <FieldLabel for="release-title">更新标题</FieldLabel>
-            <Input
-              id="release-title"
-              :model-value="releaseForm.title"
-              placeholder="发现新版本"
-              @update:model-value="updateReleaseForm('title', String($event))"
-            />
-          </Field>
+            <Field class="gap-2">
+              <FieldLabel for="release-version-code">版本码</FieldLabel>
+              <Input
+                id="release-version-code"
+                v-model="releaseVersionCode"
+                inputmode="numeric"
+                placeholder="100"
+              />
+            </Field>
+          </div>
 
           <Field class="gap-2">
             <FieldLabel for="release-description">更新日志</FieldLabel>
@@ -478,7 +821,7 @@ function submitRelease() {
           </Field>
 
           <Field v-else class="gap-2">
-            <FieldLabel for="release-app-store-url">App Store 地址</FieldLabel>
+            <FieldLabel for="release-app-store-url">地址</FieldLabel>
             <Input
               id="release-app-store-url"
               :model-value="releaseForm.appStoreUrl"
@@ -486,42 +829,37 @@ function submitRelease() {
               @update:model-value="updateReleaseForm('appStoreUrl', String($event))"
             />
           </Field>
-
-          <div class="grid gap-4 sm:grid-cols-2">
-            <Field class="gap-2">
-              <FieldLabel>检测到新版本</FieldLabel>
-              <FieldDescription>控制接口中的 hasUpdate。</FieldDescription>
-              <div class="flex h-9 items-center">
-                <Switch
-                  :checked="releaseForm.hasUpdate"
-                  @update:checked="updateReleaseForm('hasUpdate', Boolean($event))"
-                />
-              </div>
-            </Field>
-
-            <Field class="gap-2">
-              <FieldLabel>强制更新</FieldLabel>
-              <FieldDescription>控制接口中的 forceUpdate。</FieldDescription>
-              <div class="flex h-9 items-center">
-                <Switch
-                  :checked="releaseForm.forceUpdate"
-                  @update:checked="updateReleaseForm('forceUpdate', Boolean($event))"
-                />
-              </div>
-            </Field>
-          </div>
         </form>
 
         <DialogFooter>
-          <Button variant="outline" @click="updateDialogOpen = false">
+          <Button variant="outline" :disabled="releaseSubmitting" @click="updateDialogOpen = false">
             取消
           </Button>
-          <Button :disabled="uploadingApkFile" @click="submitRelease">
+          <Button :disabled="uploadingApkFile || releaseSubmitting" @click="submitRelease">
             <i class="ri-save-line text-sm" />
-            <span>保存版本</span>
+            <span>{{ releaseSubmitting ? "保存中..." : "保存版本" }}</span>
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
+
+    <AlertDialog :open="deleteDialogOpen" @update:open="deleteDialogOpen = $event">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>删除应用版本</AlertDialogTitle>
+          <AlertDialogDescription>
+            确认删除版本「{{ selectedRelease?.versionName ?? "-" }}」？此操作不可撤销。
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel :disabled="deleting">
+            取消
+          </AlertDialogCancel>
+          <AlertDialogAction :disabled="deleting" @click="confirmDeleteRelease">
+            {{ deleting ? "删除中..." : "确认删除" }}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   </section>
 </template>

@@ -94,6 +94,8 @@ export type AppReleaseDraft = {
 
 export type AppReleaseEntry = AppReleaseDraft & {
   id: string
+  uuid?: string
+  versionCode?: number | null
   updatedAt: string
 }
 
