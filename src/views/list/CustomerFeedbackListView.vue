@@ -27,7 +27,6 @@ type CustomerFeedbackRecord = {
   id: string
   uuid: string
   customerName: string
-  category: string
   content: string
   createdAt: string
 }
@@ -42,49 +41,6 @@ const keywordQuery = ref("")
 const sortDirection = ref<"asc" | "desc">("desc")
 let latestRequestId = 0
 let syncingRoute = false
-
-const MOCK_FEEDBACK_ROWS: CustomerFeedbackRecord[] = [
-  {
-    id: "mock-feedback-1",
-    uuid: "mock-feedback-1",
-    customerName: "上海恒基广场物业管理有限公司",
-    category: "功能建议",
-    content: "目前客户在 app 里只能逐页查看检测报告，领导汇报时需要统一归档。建议增加报告 PDF 导出和分享链接功能，方便发送给业主委员会和集团安全部门。",
-    createdAt: "2026-05-09 10:28:36",
-  },
-  {
-    id: "mock-feedback-2",
-    uuid: "mock-feedback-2",
-    customerName: "杭州滨江科技园",
-    category: "体验问题",
-    content: "园区下建筑比较多时，进入建筑列表需要等待较久。希望能增加加载提示，或者默认先展示最近巡检过的建筑。",
-    createdAt: "2026-05-08 16:42:19",
-  },
-  {
-    id: "mock-feedback-3",
-    uuid: "mock-feedback-3",
-    customerName: "苏州星海商业中心",
-    category: "数据疑问",
-    content: "同一个报修问题在首页提醒里显示待处理，进入工单详情后显示已完成。请帮忙确认状态同步逻辑是否有延迟。",
-    createdAt: "2026-05-07 09:15:04",
-  },
-  {
-    id: "mock-feedback-4",
-    uuid: "mock-feedback-4",
-    customerName: "南京江北智慧园区",
-    category: "问题反馈",
-    content: "上传现场照片时偶尔会失败，网络恢复后没有自动重试，需要重新选择图片。建议保留上传队列，失败后可以手动重传。",
-    createdAt: "2026-05-06 14:03:51",
-  },
-  {
-    id: "mock-feedback-5",
-    uuid: "mock-feedback-5",
-    customerName: "成都天府办公区",
-    category: "功能建议",
-    content: "客户侧希望在服务到期、巡检计划到期前 7 天收到 app 推送，避免错过安排。",
-    createdAt: "2026-05-05 18:20:12",
-  },
-]
 
 const schema: TablePageSchema<CustomerFeedbackRecord> = {
   title: "客户反馈",
@@ -177,12 +133,23 @@ const sortedFeedbackRows = computed(() => {
   })
 })
 
+const visibleFeedbackRows = computed(() => {
+  const normalizedKeyword = keywordQuery.value.trim().toLowerCase()
+
+  if (!normalizedKeyword) {
+    return sortedFeedbackRows.value
+  }
+
+  return sortedFeedbackRows.value.filter(row => buildPageFilterText(row).toLowerCase().includes(normalizedKeyword))
+})
+
 const page = useTablePage({
   ...createTablePageDefinition(schema),
-  rows: sortedFeedbackRows,
+  rows: visibleFeedbackRows,
 })
 const route = useRoute()
 const router = useRouter()
+const customerUuid = computed(() => normalizeQueryValue(route.query.customerUuid))
 page.showControls.value = true
 page.customSortEnabled.value = false
 
@@ -215,13 +182,19 @@ watch([pageNum, pageSize], ([nextPageNum, nextPageSize], [previousPageNum, previ
 })
 
 watch(
-  () => normalizeQueryValue(route.query.q),
-  (nextValue, previousValue) => {
-    if (syncingRoute || nextValue === previousValue) {
+  () => [normalizeQueryValue(route.query.q), customerUuid.value] as const,
+  ([nextKeyword, nextCustomerUuid], previousValue) => {
+    const [previousKeyword, previousCustomerUuid] = previousValue ?? ["", ""]
+
+    if (syncingRoute && nextKeyword !== previousKeyword && nextCustomerUuid === previousCustomerUuid) {
       return
     }
 
-    keywordQuery.value = nextValue
+    if (nextKeyword === previousKeyword && nextCustomerUuid === previousCustomerUuid) {
+      return
+    }
+
+    keywordQuery.value = nextKeyword
 
     if (pageNum.value !== 1) {
       pageNum.value = 1
@@ -241,7 +214,6 @@ function extractDatePart(value: string) {
 function buildPageFilterText(row: CustomerFeedbackRecord) {
   return [
     row.customerName,
-    row.category,
     row.content,
     row.createdAt,
   ].join(" ")
@@ -255,8 +227,7 @@ async function loadFeedback() {
 
   try {
     const result = await fetchCustomerFeedback({
-      Keyword: keywordQuery.value || undefined,
-      CustomerName: keywordQuery.value || undefined,
+      CustomerUuid: customerUuid.value || undefined,
       PageNum: pageNum.value,
       PageSize: pageSize.value,
     })
@@ -266,11 +237,6 @@ async function loadFeedback() {
     }
 
     const rows = result.list.map((item, index) => normalizeFeedbackRecord(item, index))
-
-    if (import.meta.env.DEV && rows.length === 0) {
-      applyMockFeedbackRows()
-      return
-    }
 
     total.value = result.total
     feedbackRows.value = rows
@@ -283,11 +249,6 @@ async function loadFeedback() {
     }
   } catch (error) {
     if (requestId !== latestRequestId) {
-      return
-    }
-
-    if (import.meta.env.DEV) {
-      applyMockFeedbackRows()
       return
     }
 
@@ -304,45 +265,19 @@ async function loadFeedback() {
   }
 }
 
-function applyMockFeedbackRows() {
-  const filteredRows = filterMockFeedbackRows(keywordQuery.value)
-  const maxPage = Math.max(1, Math.ceil(filteredRows.length / pageSize.value))
-
-  if (pageNum.value > maxPage) {
-    pageNum.value = maxPage
-  }
-
-  const start = (pageNum.value - 1) * pageSize.value
-
-  total.value = filteredRows.length
-  feedbackRows.value = filteredRows.slice(start, start + pageSize.value)
-  errorMessage.value = ""
-}
-
-function filterMockFeedbackRows(keyword: string) {
-  const normalizedKeyword = keyword.trim().toLowerCase()
-
-  if (!normalizedKeyword) {
-    return [...MOCK_FEEDBACK_ROWS]
-  }
-
-  return MOCK_FEEDBACK_ROWS.filter(row => buildPageFilterText(row).toLowerCase().includes(normalizedKeyword))
-}
-
 function normalizeFeedbackRecord(
   item: CustomerFeedbackListItem,
   index: number,
 ): CustomerFeedbackRecord {
   const uuid = getFirstText(item, ["Uuid", "uuid"])
-  const customerName = getFirstText(item, ["CorpName", "CustomerName", "Customer", "CompanyName"], "未命名客户")
-  const content = getFirstText(item, ["Content", "FeedbackContent", "Opinion", "Description"], "-")
-  const createdAt = getFirstText(item, ["CreatedAt", "CreateTime", "SubmittedAt"], "-")
+  const customerName = getFirstText(item, ["CorpName", "CustomerName"], "未命名客户")
+  const content = getFirstText(item, ["Content"], "-")
+  const createdAt = getFirstText(item, ["CreatedAt"], "-")
 
   return {
     id: uuid || `${pageNum.value}-${index + 1}-${customerName}-${createdAt}`,
     uuid,
     customerName,
-    category: getFirstText(item, ["Type", "Category", "FeedbackType"], "意见反馈"),
     content,
     createdAt,
   }

@@ -10,32 +10,17 @@ type CustomerFeedbackListEnvelope = {
 }
 
 export type CustomerFeedbackListItem = {
-  Id?: number
   Uuid?: string
   CustomerUuid?: string
   CorpName?: string
   CustomerName?: string
-  UserName?: string
-  Nickname?: string
-  Phone?: string
-  Mobile?: string
-  Contact?: string
-  Type?: string
-  Category?: string
-  Title?: string
   Content?: string
-  FeedbackContent?: string
-  Opinion?: string
-  Status?: number
   CreatedAt?: string
-  UpdatedAt?: string
   [property: string]: unknown
 }
 
 export type ListCustomerFeedbackPayload = {
-  Keyword?: string
-  CustomerName?: string
-  Status?: number
+  CustomerUuid?: string
   PageNum?: number
   PageSize?: number
   [property: string]: unknown
@@ -53,9 +38,7 @@ export async function fetchCustomerFeedback(
   payload: ListCustomerFeedbackPayload = {},
 ): Promise<CustomerFeedbackListResult> {
   const normalizedPayload = {
-    Keyword: getOptionalString(payload.Keyword),
-    CustomerName: getOptionalString(payload.CustomerName),
-    Status: getOptionalNumber(payload.Status, "Status"),
+    CustomerUuid: getOptionalString(payload.CustomerUuid),
     PageNum: getOptionalNumber(payload.PageNum, "PageNum") ?? 1,
     PageSize: getOptionalNumber(payload.PageSize, "PageSize") ?? 10,
   }
