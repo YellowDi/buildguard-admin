@@ -383,7 +383,7 @@ async function loadCustomers() {
 
   try {
     const result = await fetchCustomers({
-      CustomerName: customerNameQuery.value || undefined,
+      CorpName: customerNameQuery.value || undefined,
       PageNum: pageNum.value,
       PageSize: pageSize.value,
     })

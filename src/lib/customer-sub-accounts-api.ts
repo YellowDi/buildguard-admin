@@ -1,5 +1,6 @@
 import { ApiError, assertApiSuccess, createHttpError, readResponseBody } from "@/lib/api-errors"
 import { API_PATHS, buildApiHeaders, buildApiUrl } from "@/lib/api"
+import { isMd5Hash, md5 } from "@/lib/md5"
 
 type CustomerSubAccountsListEnvelope = {
   Total?: number
@@ -171,8 +172,8 @@ export type ResetCustomerSubAccountPasswordNewPayload = {
 export async function updateCustomerSubAccountPassword(payload: ResetCustomerSubAccountPasswordNewPayload): Promise<void> {
   const normalizedPayload = {
     Uuid: getRequiredString(payload.Uuid, "Uuid"),
-    OldPassword: getRequiredString(payload.OldPassword, "OldPassword"),
-    Password: getRequiredString(payload.Password, "Password"),
+    OldPassword: normalizePasswordForApi(payload.OldPassword, "OldPassword"),
+    Password: normalizePasswordForApi(payload.Password, "Password"),
   }
 
   const response = await fetch(CUSTOMER_SUB_ACCOUNT_PASSWORD_RESET_NEW_API_URL, {
@@ -340,6 +341,12 @@ function getRequiredString(value: unknown, field: string) {
   }
 
   throw new ApiError(`请求参数校验失败：${field} 不能为空。`)
+}
+
+function normalizePasswordForApi(value: unknown, field: string) {
+  const normalizedValue = getRequiredString(value, field)
+
+  return isMd5Hash(normalizedValue) ? normalizedValue.toLowerCase() : md5(normalizedValue)
 }
 
 function normalizeText(value: unknown) {
