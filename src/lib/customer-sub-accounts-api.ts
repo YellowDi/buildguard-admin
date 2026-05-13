@@ -96,7 +96,7 @@ export async function fetchCustomerSubAccounts(payload: ListCustomerSubAccountsP
 export async function createCustomerSubAccount(payload: CreateCustomerSubAccountPayload): Promise<CreateCustomerSubAccountResult> {
   const normalizedPayload = {
     Account: getRequiredString(payload.Account, "Account"),
-    Password: getRequiredString(payload.Password, "Password"),
+    Password: normalizePasswordForApi(payload.Password, "Password"),
     Phone: getRequiredString(payload.Phone, "Phone"),
     Name: getRequiredString(payload.Name, "Name"),
     CustomerUuid: getRequiredString(payload.CustomerUuid, "CustomerUuid"),
@@ -134,7 +134,7 @@ export type ResetCustomerSubAccountPasswordOldPayload = {
 export async function resetCustomerSubAccountPassword(payload: ResetCustomerSubAccountPasswordOldPayload): Promise<void> {
   const normalizedPayload = {
     Uuid: getRequiredString(payload.Uuid, "Uuid"),
-    Password: getRequiredString(payload.Password, "Password"),
+    Password: normalizePasswordForApi(payload.Password, "Password"),
   }
 
   const response = await fetch(CUSTOMER_SUB_ACCOUNT_PASSWORD_RESET_OLD_API_URL, {
