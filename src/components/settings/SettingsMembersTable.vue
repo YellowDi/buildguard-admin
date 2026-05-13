@@ -125,6 +125,7 @@ type RoleForm = {
   name: string
   remark: string
   selectedMenuUuids: string[]
+  selectedButtonUuids: string[]
 }
 
 type EditMemberForm = {
@@ -493,6 +494,7 @@ const currentErrorMessage = computed(() => (
 ))
 
 const selectedMenuSet = computed(() => new Set(roleForm.value.selectedMenuUuids))
+const selectedButtonSet = computed(() => new Set(selectedButtonUuids.value))
 
 const menuRowsByUuid = computed(() => new Map(permissionMenuRows.value.map(row => [row.uuid, row])))
 
@@ -630,9 +632,7 @@ const selectedMenuPermissionGroups = computed<SelectedPermissionMenuGroup[]>(() 
 })
 
 const selectedMenuCount = computed(() => roleForm.value.selectedMenuUuids.length)
-const selectedButtonUuids = computed(() => Array.from(new Set(
-  selectedMenuPermissionPanels.value.flatMap(panel => panel.buttons.map(button => button.uuid).filter(Boolean)),
-)))
+const selectedButtonUuids = computed(() => filterButtonUuidsForMenuUuids(roleForm.value.selectedButtonUuids, roleForm.value.selectedMenuUuids))
 const selectedButtonCount = computed(() => selectedButtonUuids.value.length)
 const menuSelectionState = computed<boolean | "indeterminate">(() => {
   if (permissionMenuRows.value.length === 0 || selectedMenuCount.value === 0) {
@@ -1001,6 +1001,43 @@ function normalizeRoleMenuUuids(value: unknown) {
   return []
 }
 
+function getRoleButtonUuids(value: unknown): string[] | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null
+  }
+
+  const record = value as Record<string, unknown>
+  const buttonKeys = ["ButtonUuids", "Buttons", "buttonUuids", "buttons"]
+  const buttonKey = buttonKeys.find(key => Object.prototype.hasOwnProperty.call(record, key))
+
+  if (!buttonKey) {
+    return null
+  }
+
+  return normalizeRoleButtonUuids(record[buttonKey])
+}
+
+function normalizeRoleButtonUuids(value: unknown) {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => {
+        if (typeof item === "string") {
+          return item.trim()
+        }
+
+        if (item && typeof item === "object") {
+          const record = item as Record<string, unknown>
+          return toText(record.Uuid, record.ButtonUuid, record.uuid, record.buttonUuid)
+        }
+
+        return ""
+      })
+      .filter(Boolean)
+  }
+
+  return []
+}
+
 function normalizeMemberRoles(value: unknown) {
   if (!Array.isArray(value)) {
     return {
@@ -1052,16 +1089,51 @@ function normalizeRoleSelectionValue(value: string) {
   return value === MEMBER_ROLE_UNASSIGNED ? "" : value
 }
 
+function getButtonUuidsForMenuUuids(menuUuids: string[]) {
+  const menuUuidSet = new Set(menuUuids)
+
+  return Array.from(new Set(permissionButtonRows.value
+    .filter(button => button.uuid && menuUuidSet.has(button.menuUuid))
+    .map(button => button.uuid)))
+}
+
+function getButtonUuidsForMenuUuid(menuUuid: string) {
+  return getButtonUuidsForMenuUuids([menuUuid])
+}
+
+function filterButtonUuidsForMenuUuids(buttonUuids: string[], menuUuids: string[]) {
+  const validButtonUuidSet = new Set(getButtonUuidsForMenuUuids(menuUuids))
+
+  return Array.from(new Set(buttonUuids.filter(uuid => validButtonUuidSet.has(uuid))))
+}
+
 function updateRoleMenuSelection(menuUuid: string, checked: boolean) {
   const nextSelectedMenus = new Set(roleForm.value.selectedMenuUuids)
+  const nextSelectedButtons = new Set(roleForm.value.selectedButtonUuids)
+  const menuButtonUuids = getButtonUuidsForMenuUuid(menuUuid)
 
   if (checked) {
     nextSelectedMenus.add(menuUuid)
+    menuButtonUuids.forEach(uuid => nextSelectedButtons.add(uuid))
   } else {
     nextSelectedMenus.delete(menuUuid)
+    menuButtonUuids.forEach(uuid => nextSelectedButtons.delete(uuid))
   }
 
   roleForm.value.selectedMenuUuids = Array.from(nextSelectedMenus)
+  roleForm.value.selectedButtonUuids = filterButtonUuidsForMenuUuids(Array.from(nextSelectedButtons), roleForm.value.selectedMenuUuids)
+}
+
+function updateRoleButtonSelection(buttonUuid: string, checked: boolean) {
+  const nextSelectedButtons = new Set(roleForm.value.selectedButtonUuids)
+
+  if (checked) {
+    nextSelectedButtons.add(buttonUuid)
+  } else {
+    nextSelectedButtons.delete(buttonUuid)
+  }
+
+  roleForm.value.selectedButtonUuids = filterButtonUuidsForMenuUuids(Array.from(nextSelectedButtons), roleForm.value.selectedMenuUuids)
 }
 
 function getPermissionGroupSelectionState(group: PermissionMenuGroup): boolean | "indeterminate" {
@@ -1084,22 +1156,31 @@ function getPermissionGroupSelectionState(group: PermissionMenuGroup): boolean |
 
 function togglePermissionGroupRows(group: PermissionMenuGroup, checked: boolean) {
   const nextSelectedMenus = new Set(roleForm.value.selectedMenuUuids)
+  const nextSelectedButtons = new Set(roleForm.value.selectedButtonUuids)
 
   group.visibleRows.forEach((row) => {
+    const menuButtonUuids = getButtonUuidsForMenuUuid(row.uuid)
+
     if (checked) {
       nextSelectedMenus.add(row.uuid)
+      menuButtonUuids.forEach(uuid => nextSelectedButtons.add(uuid))
       return
     }
 
     nextSelectedMenus.delete(row.uuid)
+    menuButtonUuids.forEach(uuid => nextSelectedButtons.delete(uuid))
   })
 
   roleForm.value.selectedMenuUuids = Array.from(nextSelectedMenus)
+  roleForm.value.selectedButtonUuids = filterButtonUuidsForMenuUuids(Array.from(nextSelectedButtons), roleForm.value.selectedMenuUuids)
 }
 
 function toggleAllMenus(checked: boolean) {
   roleForm.value.selectedMenuUuids = checked
     ? permissionMenuRows.value.map(row => row.uuid).filter(Boolean)
+    : []
+  roleForm.value.selectedButtonUuids = checked
+    ? getButtonUuidsForMenuUuids(roleForm.value.selectedMenuUuids)
     : []
 }
 
@@ -1347,6 +1428,7 @@ function createRoleForm(): RoleForm {
     name: "",
     remark: "",
     selectedMenuUuids: [],
+    selectedButtonUuids: [],
   }
 }
 
@@ -1633,6 +1715,7 @@ function applyRoleSnapshot(role: RoleRow) {
     name: role.name,
     remark: role.remark === "-" ? "" : role.remark,
     selectedMenuUuids: roleForm.value.selectedMenuUuids,
+    selectedButtonUuids: roleForm.value.selectedButtonUuids,
   }
 }
 
@@ -1658,6 +1741,8 @@ async function loadEditRoleDetail(role: RoleRow) {
     editingRoleUuid.value = role.uuid
 
     roleForm.value.selectedMenuUuids = normalizeRoleMenuUuids(detail)
+    roleForm.value.selectedButtonUuids = getRoleButtonUuids(detail)
+      ?? getButtonUuidsForMenuUuids(roleForm.value.selectedMenuUuids)
     applyRoleSnapshot(role)
   } catch (error) {
     handleApiError(error, {
@@ -2380,8 +2465,8 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
             <div class="md:relative md:flex md:min-h-0 md:flex-col md:overflow-hidden md:px-5 md:pt-4 md:pb-0">
               <div class="space-y-2 pb-3">
                 <div class="flex min-w-0 items-center gap-2 whitespace-nowrap">
-                  <h3 class="text-sm font-semibold text-foreground">已选页面的派生按钮</h3>
-                  <span class="text-xs text-muted-foreground">按钮随菜单自动授权，当前仅做预览</span>
+                  <h3 class="text-sm font-semibold text-foreground">按钮权限</h3>
+                  <span class="text-xs text-muted-foreground">勾选菜单后可逐个调整按钮</span>
                 </div>
               </div>
 
@@ -2429,7 +2514,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
                             </Tooltip>
                           </span>
                           <span class="text-[11px] text-muted-foreground">
-                            {{ menu.buttons.length }} 个按钮
+                            {{ menu.buttons.filter(button => selectedButtonSet.has(button.uuid)).length }}/{{ menu.buttons.length }} 个按钮
                           </span>
                         </label>
 
@@ -2441,7 +2526,10 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
                             :style="{ paddingLeft: `${(menu.depth + 1) * 18}px` }"
                           >
                             <i class="ri-corner-down-right-line shrink-0 text-[12px] text-muted-foreground" />
-                            <span class="w-4 shrink-0" />
+                            <Checkbox
+                              :model-value="selectedButtonSet.has(button.uuid)"
+                              @update:model-value="updateRoleButtonSelection(button.uuid, $event === true)"
+                            />
                             <span class="min-w-0 flex flex-1 items-center gap-2 overflow-hidden leading-none">
                               <Tooltip>
                                 <TooltipTrigger as-child>
