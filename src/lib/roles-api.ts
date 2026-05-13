@@ -26,6 +26,7 @@ export type RolesListResult = {
 
 export type RoleDetailPayload = {
   Uuid?: string
+  RoleUuid?: string
   [property: string]: unknown
 }
 
@@ -47,13 +48,15 @@ export type CreateRoleResult = {
 }
 
 export type UpdateRolePayload = {
-  Uuid: string
+  Uuid?: string
+  RoleUuid?: string
   Name: string
   Remark?: string
 }
 
 export type DeleteRolePayload = {
-  Uuid: string
+  Uuid?: string
+  RoleUuid?: string
 }
 
 export type BindRoleMenusPayload = {
@@ -100,8 +103,10 @@ export async function fetchRoles(): Promise<RolesListResult> {
 
 export async function getRoleDetail(payload: RoleDetailPayload): Promise<RoleDetailResult> {
   const url = buildApiRequestUrl(API_PATHS.roleDetail)
+  const roleUuid = getRoleIdentifier(payload)
 
-  url.searchParams.set("Uuid", getRequiredString(payload.Uuid, "Uuid"))
+  url.searchParams.set("Uuid", roleUuid)
+  url.searchParams.set("RoleUuid", roleUuid)
 
   const response = await fetch(url.toString(), {
     method: "GET",
@@ -143,8 +148,10 @@ export async function createRole(payload: CreateRolePayload): Promise<CreateRole
 }
 
 export async function updateRole(payload: UpdateRolePayload): Promise<CreateRoleResult> {
+  const roleUuid = getRoleIdentifier(payload)
   const normalizedPayload = {
-    Uuid: getRequiredString(payload.Uuid, "Uuid"),
+    Uuid: roleUuid,
+    RoleUuid: roleUuid,
     Name: getRequiredString(payload.Name, "Name"),
     Remark: getOptionalString(payload.Remark) ?? "",
   }
@@ -168,13 +175,16 @@ export async function updateRole(payload: UpdateRolePayload): Promise<CreateRole
 }
 
 export async function deleteRole(payload: DeleteRolePayload) {
+  const roleUuid = getRoleIdentifier(payload)
+
   const response = await fetch(ROLE_DELETE_API_URL, {
     method: "POST",
     headers: buildApiHeaders({
       "Content-Type": "application/json",
     }),
     body: JSON.stringify({
-      Uuid: getRequiredString(payload.Uuid, "Uuid"),
+      Uuid: roleUuid,
+      RoleUuid: roleUuid,
     }),
   })
   const responsePayload = await readResponseBody(response)
@@ -325,6 +335,10 @@ function extractDetailRecord(payload: unknown): RoleDetailResult {
 
 function asRecord(value: unknown): Record<string, unknown> | null {
   return value !== null && typeof value === "object" ? value as Record<string, unknown> : null
+}
+
+function getRoleIdentifier(payload: { Uuid?: unknown, RoleUuid?: unknown }) {
+  return getRequiredString(payload.RoleUuid ?? payload.Uuid, "RoleUuid")
 }
 
 function getFirstText(record: Record<string, unknown>, keys: string[]) {

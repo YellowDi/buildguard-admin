@@ -247,6 +247,7 @@ const rolePermissionResourcesErrorMessage = ref("")
 const collapsedPermissionGroupKeys = ref<string[]>([])
 const manualMemberForm = ref(createManualMemberForm())
 const roleForm = ref(createRoleForm())
+const roleFormSnapshot = ref(createRoleForm())
 const editMemberForm = ref(createEditMemberForm())
 const availableRoleOptions = computed<RoleOption[]>(() => roleRows.value
   .filter(role => role.uuid)
@@ -715,7 +716,11 @@ async function ensureRolePermissionResources(options?: { force?: boolean }) {
         PageNum: 0,
         PageSize: 0,
       }),
-      fetchSystemButtons(),
+      fetchSystemButtons({
+        Name: "",
+        PageNum: 0,
+        PageSize: 0,
+      }),
     ])
 
     let errorMessages: string[] = []
@@ -1432,6 +1437,42 @@ function createRoleForm(): RoleForm {
   }
 }
 
+function cloneRoleForm(form: RoleForm): RoleForm {
+  return {
+    name: form.name,
+    remark: form.remark,
+    selectedMenuUuids: [...form.selectedMenuUuids],
+    selectedButtonUuids: [...form.selectedButtonUuids],
+  }
+}
+
+function normalizeRoleBasicForm(form: RoleForm) {
+  return {
+    name: form.name.trim(),
+    remark: form.remark.trim(),
+  }
+}
+
+function isSameUuidSet(left: string[], right: string[]) {
+  const normalizedLeft = Array.from(new Set(left.filter(Boolean))).sort()
+  const normalizedRight = Array.from(new Set(right.filter(Boolean))).sort()
+
+  return normalizedLeft.length === normalizedRight.length
+    && normalizedLeft.every((value, index) => value === normalizedRight[index])
+}
+
+function hasRoleBasicChanges() {
+  const current = normalizeRoleBasicForm(roleForm.value)
+  const snapshot = normalizeRoleBasicForm(roleFormSnapshot.value)
+
+  return current.name !== snapshot.name || current.remark !== snapshot.remark
+}
+
+function hasRolePermissionChanges() {
+  return !isSameUuidSet(roleForm.value.selectedMenuUuids, roleFormSnapshot.value.selectedMenuUuids)
+    || !isSameUuidSet(selectedButtonUuids.value, filterButtonUuidsForMenuUuids(roleFormSnapshot.value.selectedButtonUuids, roleFormSnapshot.value.selectedMenuUuids))
+}
+
 function createEditMemberForm(): EditMemberForm {
   return {
     name: "",
@@ -1455,6 +1496,7 @@ async function openRoleDialog() {
   roleDetailLoading.value = false
   roleDeleteConfirmOpen.value = false
   roleForm.value = createRoleForm()
+  roleFormSnapshot.value = createRoleForm()
   roleDialogOpen.value = true
   await ensureRolePermissionResources({
     force: Boolean(rolePermissionResourcesErrorMessage.value),
@@ -1467,6 +1509,7 @@ async function openEditRoleDialog(role: RoleRow) {
   roleDetailLoading.value = false
   roleDeleteConfirmOpen.value = false
   roleForm.value = createRoleForm()
+  roleFormSnapshot.value = createRoleForm()
   applyRoleSnapshot(role)
   roleDialogOpen.value = true
   await ensureRolePermissionResources({
@@ -1484,6 +1527,7 @@ function closeRoleDialog() {
   editingRoleUuid.value = ""
   roleDetailLoading.value = false
   roleDeleteConfirmOpen.value = false
+  roleFormSnapshot.value = createRoleForm()
 }
 
 function openEditMemberDialog(member: MemberRow) {
@@ -1575,7 +1619,18 @@ async function submitRole() {
     return
   }
 
-  if (rolePermissionResourcesLoading.value || rolePermissionResourcesErrorMessage.value) {
+  const isEditingRole = editingRoleId.value !== null
+  const basicChanged = !isEditingRole || hasRoleBasicChanges()
+  const permissionChanged = !isEditingRole
+    ? roleForm.value.selectedMenuUuids.length > 0 || selectedButtonUuids.value.length > 0
+    : hasRolePermissionChanges()
+
+  if (isEditingRole && !basicChanged && !permissionChanged) {
+    toast("没有需要保存的修改")
+    return
+  }
+
+  if (permissionChanged && (rolePermissionResourcesLoading.value || rolePermissionResourcesErrorMessage.value)) {
     toast.error("权限资源未就绪", {
       description: "请等待页面和按钮权限加载完成，或刷新权限资源后再保存。",
     })
@@ -1589,7 +1644,7 @@ async function submitRole() {
     const editingRoleUuidValue = editingRoleUuid.value || editingRole?.uuid || ""
     let savedRoleUuid = editingRoleUuidValue
 
-    if (editingRoleId.value !== null) {
+    if (isEditingRole) {
       if (!editingRoleUuidValue) {
         toast.error("角色更新失败", {
           description: `${name} 缺少角色 Uuid，无法提交更新。`,
@@ -1597,28 +1652,36 @@ async function submitRole() {
         return
       }
 
-      const result = await requestRoleUpdate({
-        Uuid: editingRoleUuidValue,
-        Name: name,
-        Remark: roleForm.value.remark.trim() || undefined,
-      })
+      if (basicChanged) {
+        const result = await requestRoleUpdate({
+          Uuid: editingRoleUuidValue,
+          Name: name,
+          Remark: roleForm.value.remark.trim() || undefined,
+        })
 
-      if (result.Uuid) {
-        editingRoleUuid.value = result.Uuid
+        if (result.Uuid) {
+          editingRoleUuid.value = result.Uuid
+        }
+
+        savedRoleUuid = result.Uuid || editingRoleUuidValue
       }
 
-      savedRoleUuid = result.Uuid || editingRoleUuidValue
-
-      await bindRoleMenus({
-        RoleUuid: savedRoleUuid,
-        MenuUuids: roleForm.value.selectedMenuUuids,
-        ButtonUuids: selectedButtonUuids.value,
-      })
+      if (permissionChanged) {
+        await bindRoleMenus({
+          RoleUuid: savedRoleUuid,
+          MenuUuids: roleForm.value.selectedMenuUuids,
+          ButtonUuids: selectedButtonUuids.value,
+        })
+      }
 
       closeRoleDialog()
       roleForm.value = createRoleForm()
       toast.success("角色已更新", {
-        description: `${name} 的信息和菜单权限已保存。`,
+        description: basicChanged && permissionChanged
+          ? `${name} 的信息和权限已保存。`
+          : basicChanged
+            ? `${name} 的基础信息已保存。`
+            : `${name} 的菜单和按钮权限已保存。`,
       })
     } else {
       const result = await requestRoleCreate({
@@ -1639,16 +1702,20 @@ async function submitRole() {
         return
       }
 
-      await bindRoleMenus({
-        RoleUuid: savedRoleUuid,
-        MenuUuids: roleForm.value.selectedMenuUuids,
-        ButtonUuids: selectedButtonUuids.value,
-      })
+      if (permissionChanged) {
+        await bindRoleMenus({
+          RoleUuid: savedRoleUuid,
+          MenuUuids: roleForm.value.selectedMenuUuids,
+          ButtonUuids: selectedButtonUuids.value,
+        })
+      }
 
       closeRoleDialog()
       roleForm.value = createRoleForm()
       toast.success("角色已创建", {
-        description: `${name} 已创建并完成菜单权限分配。`,
+        description: permissionChanged
+          ? `${name} 已创建并完成菜单和按钮权限分配。`
+          : `${name} 已创建。`,
       })
     }
 
@@ -1717,6 +1784,7 @@ function applyRoleSnapshot(role: RoleRow) {
     selectedMenuUuids: roleForm.value.selectedMenuUuids,
     selectedButtonUuids: roleForm.value.selectedButtonUuids,
   }
+  roleFormSnapshot.value = cloneRoleForm(roleForm.value)
 }
 
 async function loadEditRoleDetail(role: RoleRow) {
@@ -2565,7 +2633,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
               <Button type="button" variant="outline" :disabled="roleDetailLoading || roleSubmitting || roleDeleteSubmitting" @click="closeRoleDialog">
                 取消
               </Button>
-              <Button type="submit" :disabled="roleDetailLoading || rolePermissionResourcesLoading || roleSubmitting || roleDeleteSubmitting || !roleForm.name.trim() || Boolean(rolePermissionResourcesErrorMessage)">
+              <Button type="submit" :disabled="roleDetailLoading || roleSubmitting || roleDeleteSubmitting || !roleForm.name.trim()">
                 {{ roleSubmitting ? "保存中..." : editingRoleId === null ? "添加权限组" : "保存" }}
               </Button>
             </div>

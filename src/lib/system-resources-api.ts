@@ -27,6 +27,15 @@ export type ListSystemApisPayload = {
   [property: string]: unknown
 }
 
+export type ListSystemButtonsPayload = {
+  Name?: string
+  Code?: string
+  MenuUuid?: string
+  PageNum?: number
+  PageSize?: number
+  [property: string]: unknown
+}
+
 const SYSTEM_BUTTONS_API_URL = buildApiUrl(API_PATHS.systemButtonsList)
 const SYSTEM_APIS_API_URL = buildApiUrl(API_PATHS.systemApisList)
 const SYSTEM_APIS_IMPORT_API_URL = buildApiUrl(API_PATHS.systemApisImport)
@@ -34,13 +43,21 @@ const BUTTONS_LOAD_ERROR_MESSAGE = "按钮列表加载失败，请稍后重试�
 const APIS_LOAD_ERROR_MESSAGE = "API 列表加载失败，请稍后重试。"
 const API_IMPORT_ERROR_MESSAGE = "API 导入失败，请稍后重试。"
 
-export async function fetchSystemButtons(): Promise<SystemResourceListResult> {
+export async function fetchSystemButtons(payload: ListSystemButtonsPayload = {}): Promise<SystemResourceListResult> {
+  const normalizedPayload = {
+    Name: typeof payload.Name === "string" ? payload.Name.trim() : "",
+    Code: typeof payload.Code === "string" ? payload.Code.trim() : "",
+    MenuUuid: typeof payload.MenuUuid === "string" ? payload.MenuUuid.trim() : "",
+    PageNum: Number.isFinite(Number(payload.PageNum)) ? Number(payload.PageNum) : 0,
+    PageSize: Number.isFinite(Number(payload.PageSize)) ? Number(payload.PageSize) : 0,
+  }
+
   const response = await fetch(SYSTEM_BUTTONS_API_URL, {
     method: "POST",
     headers: buildApiHeaders({
       "Content-Type": "application/json",
     }),
-    body: JSON.stringify({}),
+    body: JSON.stringify(normalizedPayload),
   })
   const responsePayload = await readResponseBody(response) as ResourceEnvelope | unknown[]
 
