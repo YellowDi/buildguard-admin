@@ -65,6 +65,25 @@ export type BindRoleMenusPayload = {
   ButtonUuids?: string[]
 }
 
+export type RoleMenuButtonListPayload = {
+  RoleUuid?: string
+  Uuid?: string
+}
+
+export type RoleMenuButtonNode = {
+  Children?: RoleMenuButtonNode[]
+  IsBind?: boolean
+  Name?: string
+  Path?: string
+  Type?: string
+  Uuid?: string
+  [property: string]: unknown
+}
+
+export type RoleMenuButtonListResult = {
+  Nodes: RoleMenuButtonNode[]
+}
+
 const ROLES_API_URL = buildApiUrl(API_PATHS.rolesList)
 const ROLE_CREATE_API_URL = buildApiUrl(API_PATHS.roleCreate)
 const ROLE_UPDATE_API_URL = buildApiUrl(API_PATHS.roleUpdate)
@@ -76,6 +95,7 @@ const ROLE_CREATE_ERROR_MESSAGE = "角色创建失败，请稍后重试。"
 const ROLE_UPDATE_ERROR_MESSAGE = "角色更新失败，请稍后重试。"
 const ROLE_DELETE_ERROR_MESSAGE = "角色删除失败，请稍后重试。"
 const ROLE_MENU_BIND_ERROR_MESSAGE = "角色菜单权限保存失败，请稍后重试。"
+const ROLE_MENU_BUTTON_LIST_ERROR_MESSAGE = "角色菜单按钮权限加载失败，请稍后重试。"
 
 export async function fetchRoles(): Promise<RolesListResult> {
   const response = await fetch(ROLES_API_URL, {
@@ -223,6 +243,28 @@ export async function bindRoleMenus(payload: BindRoleMenusPayload) {
   return responsePayload
 }
 
+export async function fetchRoleMenuButtonList(payload: RoleMenuButtonListPayload): Promise<RoleMenuButtonListResult> {
+  const url = buildApiRequestUrl(API_PATHS.roleMenuButtonList)
+
+  url.searchParams.set("RoleUuid", getRoleIdentifier(payload))
+
+  const response = await fetch(url.toString(), {
+    method: "GET",
+    headers: buildApiHeaders(),
+  })
+  const responsePayload = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responsePayload, ROLE_MENU_BUTTON_LIST_ERROR_MESSAGE)
+  }
+
+  assertApiSuccess(responsePayload, ROLE_MENU_BUTTON_LIST_ERROR_MESSAGE)
+
+  return {
+    Nodes: extractRoleMenuButtonNodes(responsePayload),
+  }
+}
+
 function extractList(payload: RolesListEnvelope | unknown[]) {
   if (Array.isArray(payload)) {
     return payload as RoleRecord[]
@@ -331,6 +373,26 @@ function extractDetailRecord(payload: unknown): RoleDetailResult {
   }
 
   return directRecord as RoleDetailResult
+}
+
+function extractRoleMenuButtonNodes(payload: unknown): RoleMenuButtonNode[] {
+  const directRecord = asRecord(payload)
+
+  if (!directRecord) {
+    return []
+  }
+
+  if (Array.isArray(directRecord.Nodes)) {
+    return directRecord.Nodes as RoleMenuButtonNode[]
+  }
+
+  const nestedRecord = asRecord(directRecord.data)
+
+  if (nestedRecord && Array.isArray(nestedRecord.Nodes)) {
+    return nestedRecord.Nodes as RoleMenuButtonNode[]
+  }
+
+  return []
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {

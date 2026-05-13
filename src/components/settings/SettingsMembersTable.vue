@@ -69,8 +69,10 @@ import {
   bindRoleMenus,
   createRole as requestRoleCreate,
   deleteRole as requestRoleDelete,
+  fetchRoleMenuButtonList,
   fetchRoles,
   getRoleDetail,
+  type RoleMenuButtonNode,
   updateRole as requestRoleUpdate,
 } from "@/lib/roles-api"
 import { fetchSystemButtons, type SystemResourceRecord } from "@/lib/system-resources-api"
@@ -927,6 +929,23 @@ function toText(...values: unknown[]) {
   return ""
 }
 
+function normalizeBoolean(value: unknown) {
+  if (typeof value === "boolean") {
+    return value
+  }
+
+  if (typeof value === "number") {
+    return value === 1
+  }
+
+  if (typeof value === "string") {
+    const text = value.trim().toLowerCase()
+    return text === "true" || text === "1" || text === "yes"
+  }
+
+  return false
+}
+
 function normalizeUserTypes(value: unknown): MemberUserType[] {
   const values = Array.isArray(value)
     ? value
@@ -1041,6 +1060,41 @@ function normalizeRoleButtonUuids(value: unknown) {
   }
 
   return []
+}
+
+function getBoundRolePermissionUuids(nodes: RoleMenuButtonNode[]) {
+  const menuUuids = new Set<string>()
+  const buttonUuids = new Set<string>()
+
+  function visit(node: RoleMenuButtonNode) {
+    const record = node as Record<string, unknown>
+    const uuid = toText(record.Uuid, record.uuid)
+    const type = toText(record.Type, record.type).toLowerCase()
+    const isBind = normalizeBoolean(record.IsBind ?? record.isBind)
+
+    if (uuid && isBind) {
+      if (type === "menu") {
+        menuUuids.add(uuid)
+      } else if (type === "button") {
+        buttonUuids.add(uuid)
+      }
+    }
+
+    const children = Array.isArray(record.Children)
+      ? record.Children
+      : Array.isArray(record.children)
+        ? record.children
+        : []
+
+    children.forEach(child => visit(child as RoleMenuButtonNode))
+  }
+
+  nodes.forEach(node => visit(node))
+
+  return {
+    menuUuids: Array.from(menuUuids),
+    buttonUuids: Array.from(buttonUuids),
+  }
 }
 
 function normalizeMemberRoles(value: unknown) {
@@ -1793,9 +1847,14 @@ async function loadEditRoleDetail(role: RoleRow) {
   roleDetailLoading.value = true
 
   try {
-    const detail = await getRoleDetail({
-      Uuid: role.uuid,
-    })
+    const [detail, permissionResult] = await Promise.all([
+      getRoleDetail({
+        Uuid: role.uuid,
+      }),
+      fetchRoleMenuButtonList({
+        RoleUuid: role.uuid,
+      }),
+    ])
 
     if (editingRoleId.value !== currentEditingId) {
       return
@@ -1808,9 +1867,10 @@ async function loadEditRoleDetail(role: RoleRow) {
     role.updatedAt = toText(detail.UpdatedAt, role.updatedAt) || "-"
     editingRoleUuid.value = role.uuid
 
-    roleForm.value.selectedMenuUuids = normalizeRoleMenuUuids(detail)
-    roleForm.value.selectedButtonUuids = getRoleButtonUuids(detail)
-      ?? getButtonUuidsForMenuUuids(roleForm.value.selectedMenuUuids)
+    const boundPermissions = getBoundRolePermissionUuids(permissionResult.Nodes)
+
+    roleForm.value.selectedMenuUuids = boundPermissions.menuUuids
+    roleForm.value.selectedButtonUuids = boundPermissions.buttonUuids
     applyRoleSnapshot(role)
   } catch (error) {
     handleApiError(error, {
