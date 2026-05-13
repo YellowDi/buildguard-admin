@@ -23,6 +23,7 @@ import SettingsToolbarRow from "@/components/settings/SettingsToolbarRow.vue"
 import SettingsToolbarRefreshSlot from "@/components/settings/SettingsToolbarRefreshSlot.vue"
 import SettingsToolbarSearchInput from "@/components/settings/SettingsToolbarSearchInput.vue"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import {
   Dialog,
   DialogContent,
@@ -629,7 +630,10 @@ const selectedMenuPermissionGroups = computed<SelectedPermissionMenuGroup[]>(() 
 })
 
 const selectedMenuCount = computed(() => roleForm.value.selectedMenuUuids.length)
-const selectedButtonCount = computed(() => selectedMenuPermissionPanels.value.reduce((total, panel) => total + panel.buttons.length, 0))
+const selectedButtonUuids = computed(() => Array.from(new Set(
+  selectedMenuPermissionPanels.value.flatMap(panel => panel.buttons.map(button => button.uuid).filter(Boolean)),
+)))
+const selectedButtonCount = computed(() => selectedButtonUuids.value.length)
 const menuSelectionState = computed<boolean | "indeterminate">(() => {
   if (permissionMenuRows.value.length === 0 || selectedMenuCount.value === 0) {
     return false
@@ -1489,6 +1493,13 @@ async function submitRole() {
     return
   }
 
+  if (rolePermissionResourcesLoading.value || rolePermissionResourcesErrorMessage.value) {
+    toast.error("权限资源未就绪", {
+      description: "请等待页面和按钮权限加载完成，或刷新权限资源后再保存。",
+    })
+    return
+  }
+
   roleSubmitting.value = true
 
   try {
@@ -1519,6 +1530,7 @@ async function submitRole() {
       await bindRoleMenus({
         RoleUuid: savedRoleUuid,
         MenuUuids: roleForm.value.selectedMenuUuids,
+        ButtonUuids: selectedButtonUuids.value,
       })
 
       closeRoleDialog()
@@ -1548,6 +1560,7 @@ async function submitRole() {
       await bindRoleMenus({
         RoleUuid: savedRoleUuid,
         MenuUuids: roleForm.value.selectedMenuUuids,
+        ButtonUuids: selectedButtonUuids.value,
       })
 
       closeRoleDialog()
@@ -2209,7 +2222,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
                 <div class="space-y-1">
                   <h3 class="text-sm font-semibold text-foreground">基础信息</h3>
                   <p class="text-xs leading-5 text-muted-foreground">
-                    保存时会提交权限组基础信息，并将已选菜单同步分配给当前权限组。
+                    保存时会提交权限组基础信息，并将已选菜单和派生按钮同步分配给当前权限组。
                   </p>
                 </div>
 
@@ -2255,7 +2268,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
 
                   <div class="pt-1">
                     <p class="text-xs leading-5 text-muted-foreground">
-                      只需要配置菜单权限。按钮会随菜单自动生效，不再单独勾选。
+                      只需要配置菜单权限。按钮会随菜单自动提交，不再单独勾选。
                     </p>
                   </div>
                 </div>
@@ -2464,7 +2477,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
               <Button type="button" variant="outline" :disabled="roleDetailLoading || roleSubmitting || roleDeleteSubmitting" @click="closeRoleDialog">
                 取消
               </Button>
-              <Button type="submit" :disabled="roleDetailLoading || roleSubmitting || roleDeleteSubmitting || !roleForm.name.trim()">
+              <Button type="submit" :disabled="roleDetailLoading || rolePermissionResourcesLoading || roleSubmitting || roleDeleteSubmitting || !roleForm.name.trim() || Boolean(rolePermissionResourcesErrorMessage)">
                 {{ roleSubmitting ? "保存中..." : editingRoleId === null ? "添加权限组" : "保存" }}
               </Button>
             </div>

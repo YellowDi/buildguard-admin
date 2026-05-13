@@ -59,6 +59,7 @@ export type DeleteRolePayload = {
 export type BindRoleMenusPayload = {
   RoleUuid: string
   MenuUuids?: string[]
+  ButtonUuids?: string[]
 }
 
 const ROLES_API_URL = buildApiUrl(API_PATHS.rolesList)
@@ -191,6 +192,7 @@ export async function bindRoleMenus(payload: BindRoleMenusPayload) {
   const normalizedPayload = {
     RoleUuid: getRequiredString(payload.RoleUuid, "RoleUuid"),
     MenuUuids: getStringArray(payload.MenuUuids, "MenuUuids"),
+    ButtonUuids: getStringArray(payload.ButtonUuids, "ButtonUuids"),
   }
 
   const response = await fetch(ROLE_MENU_BIND_API_URL, {
