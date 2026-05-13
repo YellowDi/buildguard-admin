@@ -560,6 +560,8 @@ const menuPermissionGroups = computed(() => {
     .sort((left, right) => left.title.localeCompare(right.title, "zh-Hans-CN"))
 })
 
+const configurablePermissionMenuRows = computed(() => menuPermissionGroups.value.flatMap(group => group.visibleRows))
+const configurablePermissionMenuUuidSet = computed(() => new Set(configurablePermissionMenuRows.value.map(row => row.uuid)))
 const allPermissionButtonRows = computed<PermissionPanelButtonRow[]>(() => permissionButtonRows.value)
 
 const selectedPermissionMenus = computed(() => permissionMenuRows.value
@@ -634,15 +636,17 @@ const selectedMenuPermissionGroups = computed<SelectedPermissionMenuGroup[]>(() 
     .sort((left, right) => left.title.localeCompare(right.title, "zh-Hans-CN"))
 })
 
-const selectedMenuCount = computed(() => roleForm.value.selectedMenuUuids.length)
-const selectedButtonUuids = computed(() => filterButtonUuidsForMenuUuids(roleForm.value.selectedButtonUuids, roleForm.value.selectedMenuUuids))
+const selectedConfigurableMenuUuids = computed(() => uniqueUuids(roleForm.value.selectedMenuUuids)
+  .filter(uuid => configurablePermissionMenuUuidSet.value.has(uuid)))
+const selectedMenuCount = computed(() => selectedConfigurableMenuUuids.value.length)
+const selectedButtonUuids = computed(() => uniqueUuids(roleForm.value.selectedButtonUuids))
 const selectedButtonCount = computed(() => selectedButtonUuids.value.length)
 const menuSelectionState = computed<boolean | "indeterminate">(() => {
-  if (permissionMenuRows.value.length === 0 || selectedMenuCount.value === 0) {
+  if (configurablePermissionMenuRows.value.length === 0 || selectedMenuCount.value === 0) {
     return false
   }
 
-  if (selectedMenuCount.value >= permissionMenuRows.value.length) {
+  if (selectedMenuCount.value >= configurablePermissionMenuRows.value.length) {
     return true
   }
 
@@ -851,15 +855,16 @@ function normalizePermissionMenu(raw: MenuRecord, index: number): PermissionMenu
 }
 
 function normalizePermissionButton(raw: SystemResourceRecord, index: number): PermissionButtonRow {
+  const record = raw as Record<string, unknown>
   const numericId = toNumber(raw.Id, index + 1)
 
   return {
-    id: toText(raw.Uuid, raw.Id, `permission-button-${numericId}`),
-    uuid: toText(raw.Uuid),
-    name: toText(raw.Name, `按钮 ${numericId}`),
-    code: toText(raw.Code, "-"),
-    menuUuid: toText(raw.MenuUuid),
-    menuName: toText(raw.MenuName, "未绑定页面"),
+    id: toText(record.Uuid, record.uuid, record.ButtonUuid, record.buttonUuid, record.Id, record.id, `permission-button-${numericId}`),
+    uuid: toText(record.Uuid, record.uuid, record.ButtonUuid, record.buttonUuid),
+    name: toText(record.Name, record.name, record.ButtonName, record.buttonName, `按钮 ${numericId}`),
+    code: toText(record.Code, record.code, "-"),
+    menuUuid: toText(record.MenuUuid, record.menuUuid),
+    menuName: toText(record.MenuName, record.menuName, "未绑定页面"),
   }
 }
 
@@ -1080,13 +1085,14 @@ function getBoundRolePermissionUuids(nodes: RoleMenuButtonNode[]) {
       }
     }
 
-    const children = Array.isArray(record.Children)
-      ? record.Children
-      : Array.isArray(record.children)
-        ? record.children
-        : []
+    const childNodes = [
+      ...(Array.isArray(record.Children) ? record.Children : []),
+      ...(Array.isArray(record.children) ? record.children : []),
+      ...(Array.isArray(record.Buttons) ? record.Buttons : []),
+      ...(Array.isArray(record.buttons) ? record.buttons : []),
+    ]
 
-    children.forEach(child => visit(child as RoleMenuButtonNode))
+    childNodes.forEach(child => visit(child as RoleMenuButtonNode))
   }
 
   nodes.forEach(node => visit(node))
@@ -1148,6 +1154,10 @@ function normalizeRoleSelectionValue(value: string) {
   return value === MEMBER_ROLE_UNASSIGNED ? "" : value
 }
 
+function uniqueUuids(value: string[]) {
+  return Array.from(new Set(value.map(uuid => uuid.trim()).filter(Boolean)))
+}
+
 function getButtonUuidsForMenuUuids(menuUuids: string[]) {
   const menuUuidSet = new Set(menuUuids)
 
@@ -1164,6 +1174,22 @@ function filterButtonUuidsForMenuUuids(buttonUuids: string[], menuUuids: string[
   const validButtonUuidSet = new Set(getButtonUuidsForMenuUuids(menuUuids))
 
   return Array.from(new Set(buttonUuids.filter(uuid => validButtonUuidSet.has(uuid))))
+}
+
+function normalizeConfigurableMenuUuids(menuUuids: string[]) {
+  const selectedUuids = new Set(uniqueUuids(menuUuids))
+  const visibleUuidSet = configurablePermissionMenuUuidSet.value
+  const normalizedUuids = new Set(Array.from(selectedUuids).filter(uuid => visibleUuidSet.has(uuid)))
+
+  menuPermissionGroups.value.forEach((group) => {
+    if (!selectedUuids.has(group.key) || group.visibleRows.length !== 1) {
+      return
+    }
+
+    normalizedUuids.add(group.visibleRows[0].uuid)
+  })
+
+  return Array.from(normalizedUuids)
 }
 
 function updateRoleMenuSelection(menuUuid: string, checked: boolean) {
@@ -1236,7 +1262,7 @@ function togglePermissionGroupRows(group: PermissionMenuGroup, checked: boolean)
 
 function toggleAllMenus(checked: boolean) {
   roleForm.value.selectedMenuUuids = checked
-    ? permissionMenuRows.value.map(row => row.uuid).filter(Boolean)
+    ? configurablePermissionMenuRows.value.map(row => row.uuid).filter(Boolean)
     : []
   roleForm.value.selectedButtonUuids = checked
     ? getButtonUuidsForMenuUuids(roleForm.value.selectedMenuUuids)
@@ -1523,7 +1549,7 @@ function hasRoleBasicChanges() {
 }
 
 function hasRolePermissionChanges() {
-  return !isSameUuidSet(roleForm.value.selectedMenuUuids, roleFormSnapshot.value.selectedMenuUuids)
+  return !isSameUuidSet(selectedConfigurableMenuUuids.value, normalizeConfigurableMenuUuids(roleFormSnapshot.value.selectedMenuUuids))
     || !isSameUuidSet(selectedButtonUuids.value, filterButtonUuidsForMenuUuids(roleFormSnapshot.value.selectedButtonUuids, roleFormSnapshot.value.selectedMenuUuids))
 }
 
@@ -1674,9 +1700,10 @@ async function submitRole() {
   }
 
   const isEditingRole = editingRoleId.value !== null
+  const selectedMenuUuidsForSave = selectedConfigurableMenuUuids.value
   const basicChanged = !isEditingRole || hasRoleBasicChanges()
   const permissionChanged = !isEditingRole
-    ? roleForm.value.selectedMenuUuids.length > 0 || selectedButtonUuids.value.length > 0
+    ? selectedMenuUuidsForSave.length > 0 || selectedButtonUuids.value.length > 0
     : hasRolePermissionChanges()
 
   if (isEditingRole && !basicChanged && !permissionChanged) {
@@ -1723,7 +1750,7 @@ async function submitRole() {
       if (permissionChanged) {
         await bindRoleMenus({
           RoleUuid: savedRoleUuid,
-          MenuUuids: roleForm.value.selectedMenuUuids,
+          MenuUuids: selectedMenuUuidsForSave,
           ButtonUuids: selectedButtonUuids.value,
         })
       }
@@ -1759,7 +1786,7 @@ async function submitRole() {
       if (permissionChanged) {
         await bindRoleMenus({
           RoleUuid: savedRoleUuid,
-          MenuUuids: roleForm.value.selectedMenuUuids,
+          MenuUuids: selectedMenuUuidsForSave,
           ButtonUuids: selectedButtonUuids.value,
         })
       }
@@ -1835,7 +1862,7 @@ function applyRoleSnapshot(role: RoleRow) {
   roleForm.value = {
     name: role.name,
     remark: role.remark === "-" ? "" : role.remark,
-    selectedMenuUuids: roleForm.value.selectedMenuUuids,
+    selectedMenuUuids: selectedConfigurableMenuUuids.value,
     selectedButtonUuids: roleForm.value.selectedButtonUuids,
   }
   roleFormSnapshot.value = cloneRoleForm(roleForm.value)
@@ -1869,7 +1896,7 @@ async function loadEditRoleDetail(role: RoleRow) {
 
     const boundPermissions = getBoundRolePermissionUuids(permissionResult.Nodes)
 
-    roleForm.value.selectedMenuUuids = boundPermissions.menuUuids
+    roleForm.value.selectedMenuUuids = normalizeConfigurableMenuUuids(boundPermissions.menuUuids)
     roleForm.value.selectedButtonUuids = boundPermissions.buttonUuids
     applyRoleSnapshot(role)
   } catch (error) {
@@ -2435,7 +2462,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
                 <div class="space-y-1">
                   <h3 class="text-sm font-semibold text-foreground">基础信息</h3>
                   <p class="text-xs leading-5 text-muted-foreground">
-                    保存时会提交权限组基础信息，并将已选菜单和派生按钮同步分配给当前权限组。
+                    保存时会提交权限组基础信息，并将已选菜单和按钮同步分配给当前权限组。
                   </p>
                 </div>
 
@@ -2464,24 +2491,24 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
                 <div class="space-y-1">
                   <h3 class="text-sm font-semibold text-foreground">权限概览</h3>
                   <p class="text-xs leading-5 text-muted-foreground">
-                    按钮权限由菜单自动派生，右侧仅展示已选菜单下可见的按钮。
+                    按钮权限按已选菜单展示，可在右侧单独勾选。
                   </p>
                 </div>
 
                 <div class="grid gap-2 text-sm">
                   <div class="flex items-center justify-between gap-3 border-b border-border/60 py-2">
                     <span class="text-muted-foreground">已选页面</span>
-                    <span class="font-medium text-foreground">{{ selectedMenuCount }} / {{ permissionMenuRows.length }}</span>
+                    <span class="font-medium text-foreground">{{ selectedMenuCount }} / {{ configurablePermissionMenuRows.length }}</span>
                   </div>
 
                   <div class="flex items-center justify-between gap-3 border-b border-border/60 py-2">
-                    <span class="text-muted-foreground">派生按钮</span>
+                    <span class="text-muted-foreground">已选按钮</span>
                     <span class="font-medium text-foreground">{{ selectedButtonCount }} / {{ permissionButtonRows.length }}</span>
                   </div>
 
                   <div class="pt-1">
                     <p class="text-xs leading-5 text-muted-foreground">
-                      只需要配置菜单权限。按钮会随菜单自动提交，不再单独勾选。
+                      修改基础信息、菜单权限和按钮权限时会分别调用对应接口保存。
                     </p>
                   </div>
                 </div>
@@ -2502,14 +2529,14 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
               <div class="space-y-2 pb-3">
                 <div class="flex min-w-0 items-center gap-2 whitespace-nowrap">
                   <h3 class="text-sm font-semibold text-foreground">待选页面</h3>
-                  <span class="text-xs text-muted-foreground">勾选后右侧会展示该菜单下自动派生的按钮</span>
+                  <span class="text-xs text-muted-foreground">勾选后右侧会展示该菜单下可配置的按钮</span>
                   <span v-if="rolePermissionResourcesLoading" class="text-xs text-muted-foreground">加载中...</span>
                 </div>
 
                 <label class="inline-flex items-center gap-2 text-sm text-foreground">
                   <Checkbox
                     :model-value="menuSelectionState"
-                    :disabled="permissionMenuRows.length === 0"
+                    :disabled="configurablePermissionMenuRows.length === 0"
                     @update:model-value="toggleAllMenus($event === true)"
                   />
                   <span>全选页面</span>

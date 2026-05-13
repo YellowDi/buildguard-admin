@@ -71,6 +71,7 @@ export type RoleMenuButtonListPayload = {
 }
 
 export type RoleMenuButtonNode = {
+  Buttons?: RoleMenuButtonNode[]
   Children?: RoleMenuButtonNode[]
   IsBind?: boolean
   Name?: string
