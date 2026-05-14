@@ -658,6 +658,11 @@ router.beforeEach(async (to, from) => {
     rememberSettingsBackTarget(from)
   }
 
+  if (isAuthRoute) {
+    beginRouteLoading(resolveRouteLoadingKind(to.meta.loading))
+    return
+  }
+
   const currentUserPermissions = useCurrentUserPermissions()
   await currentUserPermissions.loadCurrentUserPermissions()
 

@@ -1,30 +1,29 @@
 import { computed, ref } from "vue"
 
 import { useCurrentUser } from "@/composables/useCurrentUser"
-import { getApiErrorMessage } from "@/lib/api-errors"
+import { ApiError, getApiErrorMessage } from "@/lib/api-errors"
 import { fetchUserPermissionTree, type PermissionTreeNode } from "@/lib/current-user-permissions-api"
-import { fetchSystemButtons } from "@/lib/system-resources-api"
+import { fetchSystemButtons, type SystemResourceRecord } from "@/lib/system-resources-api"
 
 type PermissionSnapshot = {
   buttonCodes: Set<string>
   buttonUuids: Set<string>
   menuPaths: Set<string>
   menuUuids: Set<string>
-  nodeCount: number
 }
 
-const emptySnapshot = (): PermissionSnapshot => ({
-  buttonCodes: new Set<string>(),
-  buttonUuids: new Set<string>(),
-  menuPaths: new Set<string>(),
-  menuUuids: new Set<string>(),
-  nodeCount: 0,
-})
+type LoadPermissionsOptions = {
+  force?: boolean
+  throwOnError?: boolean
+}
 
-const permissions = ref<PermissionSnapshot>(emptySnapshot())
+const permissions = ref<PermissionSnapshot>(createEmptySnapshot())
 const isLoading = ref(false)
 const hasLoaded = ref(false)
 const error = ref<string | null>(null)
+
+const hasMenuPermissions = computed(() => permissions.value.menuPaths.size > 0)
+const hasButtonPermissions = computed(() => permissions.value.buttonCodes.size > 0)
 
 let pendingRequest: Promise<void> | null = null
 let loadedUserUuid = ""
@@ -47,7 +46,7 @@ export function useCurrentUserPermissions() {
   }
 }
 
-export async function loadCurrentUserPermissions(options: { force?: boolean; throwOnError?: boolean } = {}) {
+export async function loadCurrentUserPermissions(options: LoadPermissionsOptions = {}) {
   const { currentUser, loadCurrentUser } = useCurrentUser()
 
   if (!currentUser.uuid) {
@@ -62,7 +61,7 @@ export async function loadCurrentUserPermissions(options: { force?: boolean; thr
     clearCurrentUserPermissions()
 
     if (options.throwOnError) {
-      throw new Error("当前用户缺少 Uuid，无法加载权限。")
+      throw new ApiError("当前用户缺少 Uuid，无法加载权限。")
     }
 
     return
@@ -76,42 +75,12 @@ export async function loadCurrentUserPermissions(options: { force?: boolean; thr
     return
   }
 
-  pendingRequest = (async () => {
-    isLoading.value = true
-    error.value = null
-
-    try {
-      const [permissionTree, buttonResult] = await Promise.all([
-        fetchUserPermissionTree({
-          Uuid: userUuid,
-        }),
-        fetchSystemButtons({
-          PageNum: 0,
-          PageSize: 0,
-        }),
-      ])
-
-      permissions.value = buildPermissionSnapshot(permissionTree.Nodes, buttonResult.list)
-      loadedUserUuid = userUuid
-      hasLoaded.value = true
-    } catch (requestError) {
-      error.value = getApiErrorMessage(requestError, "用户权限加载失败，请稍后重试。")
-      clearCurrentUserPermissions()
-
-      if (options.throwOnError) {
-        throw requestError
-      }
-    } finally {
-      isLoading.value = false
-      pendingRequest = null
-    }
-  })()
-
+  pendingRequest = loadPermissionSnapshot(userUuid, options)
   return pendingRequest
 }
 
 export function clearCurrentUserPermissions() {
-  permissions.value = emptySnapshot()
+  permissions.value = createEmptySnapshot()
   hasLoaded.value = false
   error.value = null
   loadedUserUuid = ""
@@ -121,11 +90,7 @@ export function clearCurrentUserPermissions() {
 export function canMenu(path: string) {
   const normalizedPath = normalizePath(path)
 
-  if (!normalizedPath) {
-    return true
-  }
-
-  if (!hasMenuPermissions.value) {
+  if (!normalizedPath || !hasLoaded.value || !hasMenuPermissions.value) {
     return true
   }
 
@@ -135,87 +100,146 @@ export function canMenu(path: string) {
 export function canButton(code: string) {
   const normalizedCode = code.trim()
 
-  if (!normalizedCode) {
-    return true
-  }
-
-  if (!hasButtonPermissions.value) {
+  if (!normalizedCode || !hasLoaded.value || !hasButtonPermissions.value) {
     return true
   }
 
   return permissions.value.buttonCodes.has(normalizedCode)
 }
 
-function buildPermissionSnapshot(nodes: PermissionTreeNode[], buttons: Array<Record<string, unknown>>) {
-  const next = emptySnapshot()
-  const buttonCodeByUuid = new Map<string, string>()
+async function loadPermissionSnapshot(userUuid: string, options: LoadPermissionsOptions) {
+  isLoading.value = true
+  error.value = null
 
-  buttons.forEach((button) => {
-    const uuid = toText(button.Uuid, button.uuid)
-    const code = toText(button.Code, button.code)
+  try {
+    const permissionTree = await fetchUserPermissionTree({
+      Uuid: userUuid,
+    })
+    const buttons = await loadButtonCodeResources()
 
-    if (uuid && code) {
-      buttonCodeByUuid.set(uuid, code)
+    permissions.value = buildPermissionSnapshot(permissionTree.Nodes, buttons)
+    loadedUserUuid = userUuid
+    hasLoaded.value = true
+  } catch (requestError) {
+    error.value = getApiErrorMessage(requestError, "用户权限加载失败，请稍后重试。")
+    clearCurrentUserPermissions()
+
+    if (options.throwOnError) {
+      throw requestError
     }
-  })
+  } finally {
+    isLoading.value = false
+    pendingRequest = null
+  }
+}
+
+async function loadButtonCodeResources() {
+  try {
+    const result = await fetchSystemButtons({
+      PageNum: 0,
+      PageSize: 0,
+    })
+
+    return result.list
+  } catch {
+    return [] as SystemResourceRecord[]
+  }
+}
+
+function buildPermissionSnapshot(nodes: PermissionTreeNode[], buttons: SystemResourceRecord[]) {
+  const snapshot = createEmptySnapshot()
+  const buttonCodeByUuid = buildButtonCodeIndex(buttons)
 
   walkPermissionNodes(nodes, (node) => {
-    next.nodeCount += 1
-
     const record = node as Record<string, unknown>
-    const type = toText(record.Type, record.type, record.NodeType, record.nodeType).toLowerCase()
-    const uuid = toText(record.Uuid, record.uuid)
-    const path = normalizePath(toText(
-      record.Path,
-      record.path,
-      record.MenuPath,
-      record.menuPath,
-      record.RoutePath,
-      record.routePath,
-      record.Url,
-      record.url,
-    ))
-    const code = toText(record.Code, record.code)
+    const uuid = getText(record.Uuid, record.uuid)
+    const nodeType = getText(record.Type, record.type, record.NodeType, record.nodeType).toLowerCase()
+    const path = getNodePath(record)
+    const code = getText(record.Code, record.code)
+    const isButton = nodeType === "button" || Boolean(code)
+    const isMenu = nodeType === "menu" || (!isButton && Boolean(path))
 
-    if (type !== "button" && path) {
-      next.menuPaths.add(path)
-    }
-
-    if (type === "menu" || (type !== "button" && path)) {
+    if (isMenu) {
       if (uuid) {
-        next.menuUuids.add(uuid)
+        snapshot.menuUuids.add(uuid)
+      }
+
+      if (path) {
+        snapshot.menuPaths.add(path)
       }
     }
 
-    if (type === "button" || code) {
+    if (isButton) {
       if (uuid) {
-        next.buttonUuids.add(uuid)
+        snapshot.buttonUuids.add(uuid)
       }
 
       const resolvedCode = code || buttonCodeByUuid.get(uuid) || ""
 
       if (resolvedCode) {
-        next.buttonCodes.add(resolvedCode)
+        snapshot.buttonCodes.add(resolvedCode)
       }
     }
   })
 
-  return next
+  return snapshot
+}
+
+function buildButtonCodeIndex(buttons: SystemResourceRecord[]) {
+  const index = new Map<string, string>()
+
+  buttons.forEach((button) => {
+    const uuid = getText(button.Uuid, button.uuid)
+    const code = getText(button.Code, button.code)
+
+    if (uuid && code) {
+      index.set(uuid, code)
+    }
+  })
+
+  return index
 }
 
 function walkPermissionNodes(nodes: PermissionTreeNode[], visit: (node: PermissionTreeNode) => void) {
   nodes.forEach((node) => {
-    const record = node as Record<string, unknown>
-    const childNodes = [
-      ...(Array.isArray(record.Children) ? record.Children : []),
-      ...(Array.isArray(record.children) ? record.children : []),
-      ...(Array.isArray(record.Buttons) ? record.Buttons : []),
-      ...(Array.isArray(record.buttons) ? record.buttons : []),
-    ] as PermissionTreeNode[]
-
     visit(node)
-    walkPermissionNodes(childNodes, visit)
+
+    const record = node as Record<string, unknown>
+    const children = [
+      ...getNodeArray(record.Children),
+      ...getNodeArray(record.children),
+      ...getNodeArray(record.Buttons),
+      ...getNodeArray(record.buttons),
+    ]
+
+    walkPermissionNodes(children, visit)
   })
+}
+
+function getNodePath(record: Record<string, unknown>) {
+  return normalizePath(getText(
+    record.Path,
+    record.path,
+    record.MenuPath,
+    record.menuPath,
+    record.RoutePath,
+    record.routePath,
+    record.Url,
+    record.url,
+  ))
+}
+
+function getNodeArray(value: unknown) {
+  return Array.isArray(value) ? value as PermissionTreeNode[] : []
+}
+
+function createEmptySnapshot(): PermissionSnapshot {
+  return {
+    buttonCodes: new Set<string>(),
+    buttonUuids: new Set<string>(),
+    menuPaths: new Set<string>(),
+    menuUuids: new Set<string>(),
+  }
 }
 
 function normalizePath(path: string) {
@@ -228,7 +252,7 @@ function normalizePath(path: string) {
   return trimmedPath.startsWith("/") ? trimmedPath : `/${trimmedPath}`
 }
 
-function toText(...values: unknown[]) {
+function getText(...values: unknown[]) {
   for (const value of values) {
     if (typeof value === "string" && value.trim()) {
       return value.trim()
@@ -241,6 +265,3 @@ function toText(...values: unknown[]) {
 
   return ""
 }
-
-const hasMenuPermissions = computed(() => permissions.value.menuPaths.size > 0)
-const hasButtonPermissions = computed(() => permissions.value.buttonCodes.size > 0)

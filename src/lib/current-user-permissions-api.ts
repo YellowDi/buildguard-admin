@@ -1,16 +1,5 @@
-import { assertApiSuccess, createHttpError, readResponseBody } from "@/lib/api-errors"
+import { ApiError, assertApiSuccess, createHttpError, readResponseBody } from "@/lib/api-errors"
 import { API_PATHS, buildApiHeaders, buildApiRequestUrl } from "@/lib/api"
-
-type PermissionTreeEnvelope = {
-  List?: unknown
-  Nodes?: unknown
-  Data?: unknown
-  data?: unknown
-  list?: unknown
-  nodes?: unknown
-  result?: unknown
-  Result?: unknown
-}
 
 export type PermissionTreeNode = {
   Children?: PermissionTreeNode[]
@@ -31,10 +20,12 @@ export type UserPermissionTreeResult = {
 }
 
 const USER_PERMISSION_TREE_ERROR_MESSAGE = "用户权限加载失败，请稍后重试。"
+const NODE_ARRAY_KEYS = ["Nodes", "nodes", "List", "list"] as const
+const NESTED_PAYLOAD_KEYS = ["data", "Data", "result", "Result"] as const
 
 export async function fetchUserPermissionTree(payload: UserPermissionTreePayload): Promise<UserPermissionTreeResult> {
-  const url = buildApiRequestUrl(API_PATHS.userPermissionTree)
   const uuid = getRequiredString(payload.Uuid, "Uuid")
+  const url = buildApiRequestUrl(API_PATHS.userPermissionTree)
 
   url.searchParams.set("Uuid", uuid)
 
@@ -51,27 +42,13 @@ export async function fetchUserPermissionTree(payload: UserPermissionTreePayload
   assertApiSuccess(responsePayload, USER_PERMISSION_TREE_ERROR_MESSAGE)
 
   return {
-    Nodes: extractNodes(responsePayload),
+    Nodes: extractPermissionNodes(responsePayload),
   }
 }
 
-function extractNodes(payload: unknown): PermissionTreeNode[] {
-  if (Array.isArray(payload)) {
-    return payload as PermissionTreeNode[]
-  }
-
-  const directNodes = findNodeArray(payload)
-
-  if (directNodes) {
-    return directNodes
-  }
-
-  return []
-}
-
-function findNodeArray(payload: unknown, depth = 0): PermissionTreeNode[] | null {
+function extractPermissionNodes(payload: unknown, depth = 0): PermissionTreeNode[] {
   if (depth > 4) {
-    return null
+    return []
   }
 
   if (Array.isArray(payload)) {
@@ -81,24 +58,24 @@ function findNodeArray(payload: unknown, depth = 0): PermissionTreeNode[] | null
   const record = asRecord(payload)
 
   if (!record) {
-    return null
+    return []
   }
 
-  for (const key of ["Nodes", "nodes", "List", "list"] as const) {
+  for (const key of NODE_ARRAY_KEYS) {
     if (Array.isArray(record[key])) {
       return record[key] as PermissionTreeNode[]
     }
   }
 
-  for (const key of ["data", "Data", "result", "Result"] as const) {
-    const nested = findNodeArray((record as PermissionTreeEnvelope)[key], depth + 1)
+  for (const key of NESTED_PAYLOAD_KEYS) {
+    const nestedNodes = extractPermissionNodes(record[key], depth + 1)
 
-    if (nested) {
-      return nested
+    if (nestedNodes.length > 0) {
+      return nestedNodes
     }
   }
 
-  return null
+  return []
 }
 
 function getRequiredString(value: unknown, field: string) {
@@ -106,7 +83,7 @@ function getRequiredString(value: unknown, field: string) {
     return value.trim()
   }
 
-  throw new Error(`请求参数校验失败：${field} 不能为空。`)
+  throw new ApiError(`请求参数校验失败：${field} 不能为空。`)
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {
