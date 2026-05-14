@@ -2,8 +2,10 @@ import { ApiError, assertApiSuccess, createHttpError, readResponseBody } from "@
 import { API_PATHS, buildApiHeaders, buildApiRequestUrl, buildApiUrl } from "@/lib/api"
 
 export type ButtonRecord = {
+  Apis?: ButtonApiItem[]
   ApiName?: string
   ApiUuid?: string
+  ApiUuids?: string[]
   Code?: string
   CreatedAt?: string
   Id?: number
@@ -11,6 +13,14 @@ export type ButtonRecord = {
   MenuUuid?: string
   Name?: string
   UpdatedAt?: string
+  Uuid?: string
+  [property: string]: unknown
+}
+
+export type ButtonApiItem = {
+  Method?: string
+  Name?: string
+  Path?: string
   Uuid?: string
   [property: string]: unknown
 }
@@ -23,6 +33,7 @@ export type ButtonDetailPayload = {
 
 export type CreateButtonPayload = {
   ApiUuid?: string
+  ApiUuids?: string[]
   Code?: string
   MenuUuid?: string
   Name?: string
@@ -140,7 +151,7 @@ export async function deleteButton(payload: DeleteButtonPayload) {
 
 function normalizeWritePayload(payload: CreateButtonPayload | UpdateButtonPayload) {
   return {
-    ApiUuid: normalizeOptionalText(payload.ApiUuid),
+    ApiUuids: normalizeOptionalTextArray(payload.ApiUuids ?? (payload.ApiUuid ? [payload.ApiUuid] : [])),
     Code: normalizeOptionalText(payload.Code),
     MenuUuid: normalizeOptionalText(payload.MenuUuid),
     Name: normalizeOptionalText(payload.Name),
@@ -178,9 +189,12 @@ function extractDetailRecord(payload: unknown) {
 function normalizeButtonRecord(value: unknown): ButtonRecord {
   if (value && typeof value === "object" && !Array.isArray(value)) {
     const record = value as Record<string, unknown>
+    const apis = normalizeButtonApis(record)
 
     return {
       ...record,
+      Apis: apis,
+      ApiUuids: apis.map(api => api.Uuid).filter((uuid): uuid is string => Boolean(uuid)),
       ApiName: getFirstText(record, ["ApiName", "apiName"]),
       ApiUuid: getFirstText(record, ["ApiUuid", "apiUuid"]),
       Code: getFirstText(record, ["Code", "code"]),
@@ -195,6 +209,54 @@ function normalizeButtonRecord(value: unknown): ButtonRecord {
   }
 
   return {}
+}
+
+function normalizeButtonApis(record: Record<string, unknown>): ButtonApiItem[] {
+  const rawApis = Array.isArray(record.Apis)
+    ? record.Apis
+    : Array.isArray(record.apis)
+      ? record.apis
+      : []
+
+  const apis = rawApis
+    .map(normalizeButtonApiItem)
+    .filter((api): api is ButtonApiItem => Boolean(api))
+
+  if (apis.length > 0) {
+    return apis
+  }
+
+  const legacyUuid = getFirstText(record, ["ApiUuid", "apiUuid"])
+
+  if (!legacyUuid) {
+    return []
+  }
+
+  return [{
+    Uuid: legacyUuid,
+    Name: getFirstText(record, ["ApiName", "apiName"]),
+  }]
+}
+
+function normalizeButtonApiItem(value: unknown): ButtonApiItem | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null
+  }
+
+  const record = value as Record<string, unknown>
+  const uuid = getFirstText(record, ["Uuid", "uuid", "ApiUuid", "apiUuid"])
+
+  if (!uuid) {
+    return null
+  }
+
+  return {
+    ...record,
+    Method: getFirstText(record, ["Method", "method"]),
+    Name: getFirstText(record, ["Name", "name", "ApiName", "apiName"]),
+    Path: getFirstText(record, ["Path", "path"]),
+    Uuid: uuid,
+  }
 }
 
 function getOptionalNumber(value: unknown, field: string) {
@@ -241,6 +303,20 @@ function normalizeOptionalText(value: unknown) {
   }
 
   throw new ApiError("请求参数校验失败：字符串字段格式无效。")
+}
+
+function normalizeOptionalTextArray(value: unknown) {
+  if (value === undefined || value === null) {
+    return []
+  }
+
+  if (!Array.isArray(value)) {
+    throw new ApiError("请求参数校验失败：ApiUuids 必须是数组。")
+  }
+
+  return Array.from(new Set(value
+    .map(item => normalizeOptionalText(item))
+    .filter(Boolean)))
 }
 
 function getFirstText(record: Record<string, unknown>, keys: string[]) {

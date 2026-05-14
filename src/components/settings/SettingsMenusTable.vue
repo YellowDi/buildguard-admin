@@ -106,8 +106,8 @@ type ButtonRow = {
   code: string
   menuUuid: string
   menuName: string
-  apiUuid: string
   apiName: string
+  apiUuids: string[]
   createdAt: string
   updatedAt: string
 }
@@ -116,7 +116,7 @@ type ButtonForm = {
   name: string
   code: string
   menuUuid: string
-  apiUuid: string
+  apiUuids: string[]
 }
 
 type ButtonDialogMode = "create" | "edit"
@@ -131,6 +131,13 @@ type ApiRow = {
   updatedAt: string
 }
 
+type ButtonApiSummary = {
+  uuid: string
+  name: string
+  path: string
+  method: string
+}
+
 const MENUS_LOAD_ERROR_MESSAGE = "菜单列表加载失败，请稍后重试。"
 const BUTTONS_LOAD_ERROR_MESSAGE = "按钮列表加载失败，请稍后重试。"
 const APIS_LOAD_ERROR_MESSAGE = "API 列表加载失败，请稍后重试。"
@@ -142,7 +149,6 @@ const BUTTON_UPDATE_ERROR_MESSAGE = "按钮更新失败，请稍后重试。"
 const BUTTON_DELETE_ERROR_MESSAGE = "按钮删除失败，请稍后重试。"
 const ROOT_MENU_VALUE = "__root_menu__"
 const BUTTON_MENU_UNSET = "__button_menu_unset__"
-const BUTTON_API_UNSET = "__button_api_unset__"
 const MENU_STATUS_UNSET = "__menu_status_unset__"
 const menuStatusMap = {
   启用: { tone: "green", icon: "check" },
@@ -198,12 +204,15 @@ const buttonMenuOptions = computed(() => availableMenuRows.value
   })))
 
 const buttonApiOptions = computed(() => [...apiRows.value]
+  .filter(row => row.uuid)
   .sort((left, right) => left.name.localeCompare(right.name, "zh-Hans-CN") || left.path.localeCompare(right.path, "zh-Hans-CN"))
   .map(row => ({
-    uuid: row.uuid || row.id,
+    uuid: row.uuid,
     label: row.path && row.path !== "-"
       ? `${row.name} · ${row.path}`
       : row.name,
+    method: row.method,
+    path: row.path,
   })))
 
 const columns: TableColumn[] = [
@@ -788,6 +797,11 @@ function compareMenuRows(left: MenuRow, right: MenuRow) {
 function normalizeButton(item: SystemResourceRecord, index: number): ButtonRow {
   const uuid = toText(item.Uuid)
   const numericId = toOptionalNumber(item.Id) ?? null
+  const apis = normalizeButtonApis(item)
+  const apiUuids = apis.map(api => api.uuid)
+  const apiName = apis.length > 0
+    ? apis.map(formatButtonApiName).join("、")
+    : "未绑定 API"
 
   return {
     id: toText(uuid, numericId, `button-${index + 1}`),
@@ -797,11 +811,81 @@ function normalizeButton(item: SystemResourceRecord, index: number): ButtonRow {
     code: toText(item.Code, "-"),
     menuUuid: toText(item.MenuUuid),
     menuName: toText(item.MenuName, "未绑定菜单"),
-    apiUuid: toText(item.ApiUuid),
-    apiName: toText(item.ApiName, "未绑定 API"),
+    apiName,
+    apiUuids,
     createdAt: formatDateTime(item.CreatedAt),
     updatedAt: formatDateTime(item.UpdatedAt, item.CreatedAt),
   }
+}
+
+function normalizeButtonApis(item: SystemResourceRecord): ButtonApiSummary[] {
+  const rawApis = Array.isArray(item.Apis)
+    ? item.Apis
+    : Array.isArray(item.apis)
+      ? item.apis
+      : []
+
+  const apis = rawApis
+    .map(normalizeButtonApi)
+    .filter((api): api is ButtonApiSummary => Boolean(api))
+
+  if (apis.length > 0) {
+    return dedupeButtonApis(apis)
+  }
+
+  const legacyUuid = toText(item.ApiUuid, item.apiUuid)
+
+  if (!legacyUuid) {
+    return []
+  }
+
+  return [{
+    uuid: legacyUuid,
+    name: toText(item.ApiName, item.apiName, legacyUuid),
+    path: "",
+    method: "",
+  }]
+}
+
+function normalizeButtonApi(value: unknown): ButtonApiSummary | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null
+  }
+
+  const record = value as Record<string, unknown>
+  const uuid = toText(record.Uuid, record.uuid, record.ApiUuid, record.apiUuid)
+
+  if (!uuid) {
+    return null
+  }
+
+  return {
+    uuid,
+    name: toText(record.Name, record.name, record.ApiName, record.apiName, uuid),
+    path: toText(record.Path, record.path),
+    method: toText(record.Method, record.method),
+  }
+}
+
+function dedupeButtonApis(apis: ButtonApiSummary[]) {
+  const seen = new Set<string>()
+
+  return apis.filter((api) => {
+    if (seen.has(api.uuid)) {
+      return false
+    }
+
+    seen.add(api.uuid)
+    return true
+  })
+}
+
+function formatButtonApiName(api: ButtonApiSummary) {
+  if (api.name && api.path) {
+    return `${api.name} · ${api.path}`
+  }
+
+  return api.name || api.path || api.uuid
 }
 
 function normalizeApi(item: SystemResourceRecord, index: number): ApiRow {
@@ -835,7 +919,7 @@ function createButtonForm(): ButtonForm {
     name: "",
     code: "",
     menuUuid: BUTTON_MENU_UNSET,
-    apiUuid: BUTTON_API_UNSET,
+    apiUuids: [],
   }
 }
 
@@ -939,7 +1023,7 @@ async function openEditButtonDialog(row: ButtonRow) {
     name: row.name,
     code: row.code === "-" ? "" : row.code,
     menuUuid: row.menuUuid || BUTTON_MENU_UNSET,
-    apiUuid: row.apiUuid || BUTTON_API_UNSET,
+    apiUuids: [...row.apiUuids],
   }
   buttonDialogOpen.value = true
 
@@ -962,7 +1046,7 @@ async function openEditButtonDialog(row: ButtonRow) {
       name: toText(detail.Name, row.name),
       code: toText(detail.Code, row.code === "-" ? "" : row.code),
       menuUuid: toText(detail.MenuUuid) || BUTTON_MENU_UNSET,
-      apiUuid: toText(detail.ApiUuid) || BUTTON_API_UNSET,
+      apiUuids: normalizeButtonApis(detail).map(api => api.uuid),
     }
     editingButtonUpdatedAt.value = formatDateTime(detail.UpdatedAt, row.updatedAt)
   } catch (error) {
@@ -1114,7 +1198,7 @@ async function submitButton() {
       Name: buttonForm.value.name.trim(),
       Code: buttonForm.value.code.trim(),
       MenuUuid: buttonForm.value.menuUuid === BUTTON_MENU_UNSET ? "" : buttonForm.value.menuUuid.trim(),
-      ApiUuid: buttonForm.value.apiUuid === BUTTON_API_UNSET ? "" : buttonForm.value.apiUuid.trim(),
+      ApiUuids: [...new Set(buttonForm.value.apiUuids.map(uuid => uuid.trim()).filter(Boolean))],
     }
 
     if (buttonDialogMode.value === "edit") {
@@ -1507,7 +1591,7 @@ function formatDateTime(...values: unknown[]) {
               </div>
             </div>
 
-            <div class="grid gap-4 sm:grid-cols-2">
+            <div class="grid gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
               <div class="grid gap-2">
                 <label class="text-sm font-medium text-foreground" for="button-menu">所属菜单</label>
                 <Select v-model="buttonForm.menuUuid">
@@ -1531,20 +1615,32 @@ function formatDateTime(...values: unknown[]) {
 
               <div class="grid gap-2">
                 <label class="text-sm font-medium text-foreground" for="button-api">关联 API</label>
-                <Select v-model="buttonForm.apiUuid">
+                <Select v-model="buttonForm.apiUuids" multiple :disabled="buttonApiOptions.length === 0">
                   <SelectTrigger id="button-api" class="w-full">
-                    <SelectValue placeholder="选择关联 API" />
+                    <SelectValue :placeholder="buttonApiOptions.length ? '选择关联 API，可多选' : '暂无可绑定 API'" />
                   </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem :value="BUTTON_API_UNSET">
-                      不绑定 API
-                    </SelectItem>
+                  <SelectContent class="max-h-[360px]">
                     <SelectItem
                       v-for="option in buttonApiOptions"
                       :key="option.uuid"
                       :value="option.uuid"
+                      :class="buttonForm.apiUuids.includes(option.uuid) ? 'bg-accent text-accent-foreground font-medium' : ''"
                     >
-                      {{ option.label }}
+                      <template #indicator-icon>
+                        <span class="sr-only">已选择</span>
+                      </template>
+                      <span class="flex min-w-0 flex-1 items-center gap-2">
+                        <i
+                          v-if="buttonForm.apiUuids.includes(option.uuid)"
+                          class="ri-check-line shrink-0 text-base leading-none"
+                          aria-hidden="true"
+                        />
+                        <span v-else class="size-4 shrink-0" aria-hidden="true" />
+                        <span class="min-w-0 flex-1">
+                          <span class="block truncate">{{ option.label }}</span>
+                          <span class="block truncate text-xs font-normal text-muted-foreground">{{ option.method || "-" }}</span>
+                        </span>
+                      </span>
                     </SelectItem>
                   </SelectContent>
                 </Select>
