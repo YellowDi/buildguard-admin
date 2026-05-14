@@ -1192,6 +1192,28 @@ function normalizeConfigurableMenuUuids(menuUuids: string[]) {
   return Array.from(normalizedUuids)
 }
 
+function getMenuUuidsWithAncestors(menuUuids: string[]) {
+  const normalizedUuids = uniqueUuids(menuUuids)
+  const uuidsForSave = new Set(normalizedUuids)
+
+  normalizedUuids.forEach((uuid) => {
+    let current = menuRowsByUuid.value.get(uuid)
+    let guard = 0
+
+    while (current?.parentUuid && menuRowsByUuid.value.has(current.parentUuid) && guard < 16) {
+      current = menuRowsByUuid.value.get(current.parentUuid)
+
+      if (current?.uuid) {
+        uuidsForSave.add(current.uuid)
+      }
+
+      guard += 1
+    }
+  })
+
+  return Array.from(uuidsForSave)
+}
+
 function updateRoleMenuSelection(menuUuid: string, checked: boolean) {
   const nextSelectedMenus = new Set(roleForm.value.selectedMenuUuids)
   const nextSelectedButtons = new Set(roleForm.value.selectedButtonUuids)
@@ -1700,7 +1722,7 @@ async function submitRole() {
   }
 
   const isEditingRole = editingRoleId.value !== null
-  const selectedMenuUuidsForSave = selectedConfigurableMenuUuids.value
+  const selectedMenuUuidsForSave = getMenuUuidsWithAncestors(selectedConfigurableMenuUuids.value)
   const basicChanged = !isEditingRole || hasRoleBasicChanges()
   const permissionChanged = !isEditingRole
     ? selectedMenuUuidsForSave.length > 0 || selectedButtonUuids.value.length > 0
