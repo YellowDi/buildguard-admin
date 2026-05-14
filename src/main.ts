@@ -7,6 +7,7 @@ import "@/composables/useThemeColor"
 import { clearAuthToken, onAuthExpired } from "./lib/auth"
 import { ApiConfigurationError, ensureApiEnvironmentSecurity } from "./lib/api"
 import { clearCurrentUser } from "./composables/useCurrentUser"
+import { clearCurrentUserPermissions } from "./composables/useCurrentUserPermissions"
 import "./styles/global.css"
 import "./styles/detail-layout.css"
 import "remixicon/fonts/remixicon.css"
@@ -32,6 +33,7 @@ if (startupError) {
     handlingAuthExpired = true
     clearAuthToken()
     clearCurrentUser()
+    clearCurrentUserPermissions()
 
     const { fullPath, name } = router.currentRoute.value
 

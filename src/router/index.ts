@@ -1,6 +1,7 @@
-import { createRouter, createWebHistory } from "vue-router"
+import { createRouter, createWebHistory, type RouteLocationNormalized } from "vue-router"
 
 import { DEFAULT_SETTINGS_CATEGORY_KEY, isSettingsCategoryKey } from "@/components/settings/types"
+import { useCurrentUserPermissions } from "@/composables/useCurrentUserPermissions"
 import { beginRouteLoading, endRouteLoading, type RouteLoadingKind } from "@/composables/useRouteLoadingState"
 import { rememberSettingsBackTarget } from "@/composables/useSettingsNavigation"
 import { setCurrentUser } from "@/composables/useCurrentUser"
@@ -17,6 +18,7 @@ type RouteMetaConfig = {
   title: string
   loading: RouteLoadingKind
   breadcrumb?: BreadcrumbMetaItem[]
+  permissionPath?: string
   useDetailBreadcrumbTitle?: boolean
   navActivePath?: string
 }
@@ -558,6 +560,18 @@ const router = createRouter({
           } satisfies RouteMetaConfig,
         },
         {
+          path: "forbidden",
+          name: "forbidden",
+          component: () => import("@/views/ForbiddenView.vue"),
+          meta: {
+            title: "无权限访问",
+            loading: "dashboard",
+            breadcrumb: [
+              { title: "无权限访问" },
+            ] satisfies BreadcrumbMetaItem[],
+          } satisfies RouteMetaConfig,
+        },
+        {
           path: ":pathMatch(.*)*",
           name: "not-found",
           component: () => import("@/views/NotFoundView.vue"),
@@ -644,6 +658,24 @@ router.beforeEach(async (to, from) => {
     rememberSettingsBackTarget(from)
   }
 
+  const currentUserPermissions = useCurrentUserPermissions()
+  await currentUserPermissions.loadCurrentUserPermissions()
+
+  const requiredPermissionPath = resolveRoutePermissionPath(to)
+
+  if (
+    requiredPermissionPath
+    && currentUserPermissions.hasLoaded.value
+    && !currentUserPermissions.canMenu(requiredPermissionPath)
+  ) {
+    return {
+      name: "forbidden",
+      query: {
+        redirect: to.fullPath,
+      },
+    }
+  }
+
   beginRouteLoading(resolveRouteLoadingKind(to.meta.loading))
 })
 
@@ -707,4 +739,70 @@ function isAuthError(error: unknown) {
   }
 
   return false
+}
+
+function resolveRoutePermissionPath(route: RouteLocationNormalized) {
+  if (route.name === "login" || route.name === "signup" || route.name === "otp") {
+    return ""
+  }
+
+  if (route.name === "dashboard" || route.name === "forbidden" || route.name === "not-found") {
+    return ""
+  }
+
+  if (route.name === "settings") {
+    const category = typeof route.params.category === "string" && route.params.category.trim()
+      ? route.params.category.trim()
+      : DEFAULT_SETTINGS_CATEGORY_KEY
+
+    return `/settings/${category}`
+  }
+
+  if (typeof route.meta.permissionPath === "string" && route.meta.permissionPath.trim()) {
+    return normalizePermissionPath(route.meta.permissionPath)
+  }
+
+  if (typeof route.meta.navActivePath === "string" && route.meta.navActivePath.trim()) {
+    return normalizePermissionPath(route.meta.navActivePath)
+  }
+
+  switch (route.name) {
+    case "customer-work-order-create":
+      return "/work-orders/inspection"
+    default:
+      break
+  }
+
+  return inferPermissionPath(route.path)
+}
+
+function inferPermissionPath(path: string) {
+  const normalizedPath = normalizePermissionPath(path)
+  const knownPermissionPaths = [
+    "/work-orders/inspection",
+    "/work-orders/repair",
+    "/inspection-services",
+    "/inspection-plans",
+    "/media-library",
+    "/app-home",
+    "/customer-feedback",
+    "/customers",
+    "/parks",
+    "/buildings",
+    "/monitoring",
+  ]
+
+  return knownPermissionPaths.find(permissionPath => (
+    normalizedPath === permissionPath || normalizedPath.startsWith(`${permissionPath}/`)
+  )) ?? ""
+}
+
+function normalizePermissionPath(path: string) {
+  const trimmedPath = path.trim().split(/[?#]/)[0]?.replace(/\/+$/, "") ?? ""
+
+  if (!trimmedPath) {
+    return ""
+  }
+
+  return trimmedPath.startsWith("/") ? trimmedPath : `/${trimmedPath}`
 }

@@ -20,6 +20,7 @@ import UserCardPopover from "@/components/layout/UserCardPopover.vue"
 import SettingsSidebar from "@/components/settings/SettingsSidebar.vue"
 import { useSettings } from "@/composables/useSettings"
 import { useSettingsNavigation } from "@/composables/useSettingsNavigation"
+import { useCurrentUserPermissions } from "@/composables/useCurrentUserPermissions"
 import { DEFAULT_SETTINGS_CATEGORY_KEY, isSettingsCategoryKey, type SettingsCategoryKey } from "@/components/settings/types"
 import conversationsData from "@/mocks/ai-conversations.json"
 import inboxData from "@/mocks/inbox.json"
@@ -41,6 +42,7 @@ const route = useRoute()
 const router = useRouter()
 const { categories } = useSettings()
 const { settingsBackTarget } = useSettingsNavigation()
+const { canMenu, hasLoaded: permissionsLoaded } = useCurrentUserPermissions()
 
 const topTabs: Array<{ id: AppSidebarTopTabId, label: string, icon: string }> = [
   {
@@ -153,8 +155,44 @@ const activePath = computed(() => {
 
   return navActivePath || route.path
 })
+
+const visibleBusinessItems = computed(() => {
+  if (!permissionsLoaded.value) {
+    return businessItems
+  }
+
+  return businessItems
+    .map((item) => {
+      if (!item.children?.length) {
+        return item
+      }
+
+      return {
+        ...item,
+        children: item.children.filter(child => isNavItemAllowed(child)),
+      }
+    })
+    .filter(item => isNavItemAllowed(item))
+})
+
+const visibleSettingsCategories = computed(() => {
+  if (!permissionsLoaded.value) {
+    return categories.value
+  }
+
+  return categories.value.filter(category => canMenu(`/settings/${category.key}`))
+})
+
 function toggleItem(item: AppSidebarNavItem) {
   if (!item.children?.length) {
+    return
+  }
+
+  const sourceItem = findBusinessItem(businessItems, item)
+
+  if (sourceItem) {
+    sourceItem.open = !sourceItem.open
+    item.open = sourceItem.open
     return
   }
 
@@ -188,6 +226,33 @@ function isBusinessRoute(path: string) {
   return ["/", "/customers", "/parks", "/buildings", "/monitoring", "/inspection-services", "/inspection-plans", "/media-library", "/app-home", "/customer-feedback", "/work-orders"].some(
     prefix => path === prefix || path.startsWith(`${prefix}/`),
   )
+}
+
+function isNavItemAllowed(item: AppSidebarNavItem): boolean {
+  if (item.children?.length) {
+    return item.children.some(child => isNavItemAllowed(child))
+  }
+
+  return !item.path || canMenu(item.path)
+}
+
+function findBusinessItem(items: AppSidebarNavItem[], target: AppSidebarNavItem): AppSidebarNavItem | null {
+  for (const item of items) {
+    if (
+      (target.path && item.path === target.path)
+      || (!target.path && item.label === target.label)
+    ) {
+      return item
+    }
+
+    const child = item.children ? findBusinessItem(item.children, target) : null
+
+    if (child) {
+      return child
+    }
+  }
+
+  return null
 }
 
 function handleSearch() {
@@ -245,7 +310,7 @@ watch(isSettingsRoute, (nextValue, previousValue) => {
     <Transition :name="sidebarModeTransitionName" mode="out-in">
       <div v-if="isSettingsRoute" key="mobile-settings" class="sidebar-mode-panel flex min-h-0 flex-1 flex-col">
         <SettingsSidebar
-          :categories="categories"
+          :categories="visibleSettingsCategories"
           :active-key="settingsActiveKey"
           class="min-h-0 flex-1 border-r-0"
           @update:active-key="handleSettingsCategoryChange"
@@ -273,7 +338,7 @@ watch(isSettingsRoute, (nextValue, previousValue) => {
         <div class="min-h-0 flex-1 overflow-x-visible px-2 pb-2">
           <AppSidebarHomeNav
             v-if="selectedTopTab === 'home'"
-            :items="businessItems"
+            :items="visibleBusinessItems"
             :active-path="activePath"
             @toggle-item="toggleItem"
           />
@@ -301,7 +366,7 @@ watch(isSettingsRoute, (nextValue, previousValue) => {
     <Transition :name="sidebarModeTransitionName" mode="out-in">
       <div v-if="isSettingsRoute" key="desktop-settings" class="sidebar-mode-panel flex min-h-0 flex-1 flex-col">
         <SettingsSidebar
-          :categories="categories"
+          :categories="visibleSettingsCategories"
           :active-key="settingsActiveKey"
           class="min-h-0 flex-1 border-r-0"
           @update:active-key="handleSettingsCategoryChange"
@@ -331,7 +396,7 @@ watch(isSettingsRoute, (nextValue, previousValue) => {
         <SidebarContent class="min-h-0 overflow-x-visible">
           <AppSidebarHomeNav
             v-if="selectedTopTab === 'home'"
-            :items="businessItems"
+            :items="visibleBusinessItems"
             :active-path="activePath"
             class="p-2"
             @toggle-item="toggleItem"
