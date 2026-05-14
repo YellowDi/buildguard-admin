@@ -29,6 +29,8 @@ const REQUEST_ID_HEADER_KEYS = [
   "x-amzn-trace-id",
 ] as const
 const AUTH_EXPIRED_MESSAGE_PATTERN = /(鉴权|身份信息|未登录|登录失效|token|请先登录|请先登陆)/i
+const PERMISSION_DENIED_CODE = "1010"
+const PERMISSION_DENIED_MESSAGE = "暂无权限执行此操作。"
 
 export class ApiError extends Error {
   status?: number
@@ -46,7 +48,8 @@ export class ApiError extends Error {
 
 export function getApiErrorMessage(error: unknown, fallback = "操作失败，请稍后重试。") {
   if (error instanceof ApiError) {
-    const baseMessage = normalizeMessage(error.message) ?? fallback
+    const baseMessage = normalizeMessage(error.message)
+      ?? (isPermissionDeniedError(error) ? PERMISSION_DENIED_MESSAGE : fallback)
     const requestId = normalizeMessage(error.requestId)
     return requestId && !baseMessage.includes(requestId)
       ? `${baseMessage}（requestId: ${requestId}）`
@@ -65,12 +68,16 @@ export function handleApiError(error: unknown, options: HandleApiErrorOptions = 
   const message = getApiErrorMessage(error, options.fallback)
 
   if (options.mode !== "silent") {
-    toast.error(options.title ?? "操作失败", {
+    toast.error(options.title ?? (isPermissionDeniedError(error) ? "无权限操作" : "操作失败"), {
       description: options.description ?? message,
     })
   }
 
   return message
+}
+
+export function isPermissionDeniedError(error: unknown) {
+  return error instanceof ApiError && error.code === PERMISSION_DENIED_CODE
 }
 
 export function createHttpError(
@@ -146,11 +153,16 @@ export async function readResponseBody(response: Response) {
   const contentType = response.headers.get("content-type") ?? ""
 
   if (contentType.includes("application/json")) {
+    let payload: unknown
+
     try {
-      return await response.json()
+      payload = await response.json()
     } catch {
       return null
     }
+
+    throwPermissionDeniedErrorIfNeeded(payload)
+    return payload
   }
 
   const text = await response.text()
@@ -160,11 +172,16 @@ export async function readResponseBody(response: Response) {
     return null
   }
 
+  let parsedPayload: unknown
+
   try {
-    return JSON.parse(normalizedText) as unknown
+    parsedPayload = JSON.parse(normalizedText) as unknown
   } catch {
     return normalizedText
   }
+
+  throwPermissionDeniedErrorIfNeeded(parsedPayload)
+  return parsedPayload
 }
 
 export function extractResponseCode(headers: Pick<Headers, "get">) {
@@ -218,6 +235,19 @@ function extractMessage(value: unknown, depth = 0): string | null {
   return null
 }
 
+function throwPermissionDeniedErrorIfNeeded(payload: unknown) {
+  const code = extractScalar(payload, CODE_KEYS)
+
+  if (code !== PERMISSION_DENIED_CODE) {
+    return
+  }
+
+  throw new ApiError(extractMessage(payload) ?? PERMISSION_DENIED_MESSAGE, {
+    code,
+    requestId: extractScalar(payload, REQUEST_ID_KEYS) ?? undefined,
+  })
+}
+
 function extractScalar(
   value: unknown,
   keys: readonly string[],
@@ -228,7 +258,10 @@ function extractScalar(
   }
 
   for (const key of keys) {
-    const normalized = normalizeMessage(record[key])
+    const value = record[key]
+    const normalized = typeof value === "number" && Number.isFinite(value)
+      ? String(value)
+      : normalizeMessage(value)
     if (normalized) {
       return normalized
     }
