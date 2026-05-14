@@ -15,6 +15,7 @@ import {
   createCustomerSubAccount,
 } from "@/lib/customer-sub-accounts-api"
 import { fetchCustomerDetail } from "@/lib/customers-api"
+import { PERMISSION_CODES } from "@/lib/permission-codes"
 
 type QuickNavItem = {
   id: string
@@ -299,7 +300,7 @@ watch(
   <section class="mx-auto flex w-full max-w-4xl min-w-0 flex-col gap-6 pb-8">
     <FormHeader
       title="添加子账号"
-      :primary-action="{ label: submitButtonLabel, icon: 'ri-user-add-line', disabled: !canSubmit }"
+      :primary-action="{ label: submitButtonLabel, icon: 'ri-user-add-line', disabled: !canSubmit, permissionCode: PERMISSION_CODES.customerSubAccountAdd }"
       :secondary-actions="[{ key: 'reset', label: '重置表单' }]"
       :reset-dialog="{ description: '当前已填写的子账号信息都会被清空，此操作不可撤销。' }"
       @back="goBack"

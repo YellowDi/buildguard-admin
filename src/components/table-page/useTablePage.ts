@@ -43,6 +43,7 @@ export type TablePageDefinition<Row> = {
   onQuickAction?: (row: Row, index: number) => void
   summary?: string
   primaryActionLabel?: string
+  primaryActionPermissionCode?: string
   showIndex?: boolean
   stickyHeader?: boolean
   wrapperClass?: string
@@ -131,6 +132,7 @@ export function createTablePageDefinition<Row>(schema: TablePageSchema<Row>): Ta
     onQuickAction: schema.onQuickAction,
     summary: schema.summary,
     primaryActionLabel: schema.primaryActionLabel,
+    primaryActionPermissionCode: schema.primaryActionPermissionCode,
     showIndex: schema.showIndex,
     stickyHeader: schema.stickyHeader,
     wrapperClass: schema.wrapperClass,
@@ -509,6 +511,7 @@ export function useTablePage<Row>(input: TablePageSchema<Row> | TablePageDefinit
     onQuickAction: definition.onQuickAction,
     rowKey: definition.rowKey,
     primaryActionLabel: definition.primaryActionLabel,
+    primaryActionPermissionCode: definition.primaryActionPermissionCode,
     showIndex: definition.showIndex,
     stickyHeader: definition.stickyHeader,
     wrapperClass: definition.wrapperClass,

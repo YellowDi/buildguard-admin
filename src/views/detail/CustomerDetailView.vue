@@ -60,6 +60,7 @@ import {
 } from "@/components/table-page/export-utils"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger, TooltipWrap } from "@/components/ui/tooltip"
+import { useCurrentUserPermissions } from "@/composables/useCurrentUserPermissions"
 import { detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
 import { useDetailRouteTab } from "@/composables/useDetailRouteTab"
 import DetailLayout from "@/layouts/DetailLayout.vue"
@@ -73,6 +74,7 @@ import {
   REPAIR_WORK_ORDER_STATUS_OPTIONS,
   WORK_ORDER_STATUS_OPTIONS,
 } from "@/lib/work-order-status"
+import { PERMISSION_CODES } from "@/lib/permission-codes"
 import { fetchBuildings, type BuildingListItem } from "@/lib/buildings-api"
 import {
   appendCustomerSubAccountLocalRecord,
@@ -243,6 +245,7 @@ type CustomerDetailTabActions = {
 
 const route = useRoute()
 const router = useRouter()
+const { canButton } = useCurrentUserPermissions()
 const customerDetailTabIds = ["basic-info", "building-assets", "work-orders", "monitoring", "sub-accounts"] as const
 const DETAIL_TABLE_PAGE_SIZE = 10
 
@@ -473,15 +476,29 @@ const activeDetailTabActions = computed<CustomerDetailTabActions>(() => {
   const actions = detailTabActionsByTab[activeTab.value]
 
   if (activeTab.value !== "work-orders") {
-    return actions
+    return filterCustomerDetailTabActions(actions)
   }
 
-  return {
+  return filterCustomerDetailTabActions({
     ...actions,
     addWorkOrder: activeWorkOrderTableTab.value === "inspection",
     addRepairWorkOrder: activeWorkOrderTableTab.value === "repair",
-  }
+  })
 })
+
+function filterCustomerDetailTabActions(actions: CustomerDetailTabActions): CustomerDetailTabActions {
+  return {
+    deleteCustomer: actions.deleteCustomer && canButton(PERMISSION_CODES.customerDelete),
+    addPark: actions.addPark && canButton(PERMISSION_CODES.customerParkAdd),
+    addBuilding: actions.addBuilding && canButton(PERMISSION_CODES.customerBuildingAdd),
+    addWorkOrder: actions.addWorkOrder && canButton(PERMISSION_CODES.customerInspectionWorkOrderAdd),
+    addRepairWorkOrder: actions.addRepairWorkOrder && canButton(PERMISSION_CODES.customerRepairWorkOrderAdd),
+    addMonitoring: actions.addMonitoring,
+    addSubAccount: actions.addSubAccount && canButton(PERMISSION_CODES.customerSubAccountAdd),
+    editCustomer: actions.editCustomer && canButton(PERMISSION_CODES.customerEdit),
+    back: actions.back,
+  }
+}
 const activeDetailMobileActionItems = computed(() => {
   const items: Array<{
     key: string
@@ -1586,11 +1603,13 @@ const subAccountsSchema: TablePageSchema<SubAccountRow> = {
     {
       key: "reset-password",
       label: "重置密码",
+      permissionCode: PERMISSION_CODES.customerSubAccountPasswordReset,
       onClick: row => handleOpenSubAccountPasswordResetDialog("passwdReset", row as SubAccountRow),
     },
     {
       key: "update-password",
       label: "更新密码",
+      permissionCode: PERMISSION_CODES.customerSubAccountPasswordReset,
       onClick: row => handleOpenSubAccountPasswordResetDialog("pwdUpdate", row as SubAccountRow),
     },
   ],

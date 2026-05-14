@@ -22,6 +22,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { handleApiError } from "@/lib/api-errors"
 import { hasValidLatLng } from "@/lib/map-coordinates"
 import { fetchCustomers } from "@/lib/customers-api"
+import { PERMISSION_CODES } from "@/lib/permission-codes"
 import { createPark, fetchParkDetail, updatePark } from "@/lib/parks-api"
 
 type QuickNavItem = {
@@ -409,7 +410,7 @@ watch(
   <section class="mx-auto flex w-full max-w-4xl min-w-0 flex-col gap-6 pb-8">
     <FormHeader
       :title="pageTitle"
-      :primary-action="{ label: submitButtonLabel, icon: isEditMode ? 'ri-save-line' : 'ri-add-line', disabled: !canSubmit }"
+      :primary-action="{ label: submitButtonLabel, icon: isEditMode ? 'ri-save-line' : 'ri-add-line', disabled: !canSubmit, permissionCode: isEditMode ? PERMISSION_CODES.parkEdit : PERMISSION_CODES.parkAdd }"
       :secondary-actions="[{ key: 'reset', label: '重置表单' }]"
       :reset-dialog="{ description: resetDialogDescription }"
       @back="goBack"

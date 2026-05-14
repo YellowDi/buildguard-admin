@@ -47,6 +47,7 @@ import type {
   AppReleaseEntry,
   SettingsState,
 } from "@/components/settings/types"
+import { useCurrentUserPermissions } from "@/composables/useCurrentUserPermissions"
 import { getApiErrorMessage, handleApiError } from "@/lib/api-errors"
 import {
   createAppVersion,
@@ -56,11 +57,14 @@ import {
   updateAppVersion,
   type AppVersionDetail,
 } from "@/lib/app-versions-api"
+import { PERMISSION_CODES } from "@/lib/permission-codes"
 import { uploadTencentCosFile } from "@/lib/tencent-cos-sdk"
 
 const props = defineProps<{
   state: SettingsState
 }>()
+
+const { canButton } = useCurrentUserPermissions()
 
 const selectedReleaseId = ref(props.state.appReleases[0]?.id ?? "")
 const activePlatform = ref<AppReleaseDraft["platform"]>(props.state.appReleases[0]?.platform ?? "android")
@@ -80,6 +84,10 @@ const releaseTargetUuid = ref("")
 const releaseVersionCode = ref("")
 const listPageNum = ref(1)
 const listPageSize = ref(100)
+const canCreateAppVersion = computed(() => canButton(PERMISSION_CODES.appVersionAdd))
+const canEditAppVersion = computed(() => canButton(PERMISSION_CODES.appVersionEdit))
+const canDeleteAppVersion = computed(() => canButton(PERMISSION_CODES.appVersionDelete))
+const canUploadAppVersionApk = computed(() => canButton(PERMISSION_CODES.appVersionApkUpload))
 let latestListRequestId = 0
 let latestDetailRequestId = 0
 let searchTimer: ReturnType<typeof setTimeout> | null = null
@@ -393,6 +401,10 @@ function resetReleaseForm(platform = activePlatform.value, release?: AppReleaseE
 }
 
 function openCreateDialog() {
+  if (!canCreateAppVersion.value) {
+    return
+  }
+
   releaseDialogMode.value = "create"
   releaseTargetUuid.value = ""
   resetReleaseForm(activePlatform.value)
@@ -400,6 +412,10 @@ function openCreateDialog() {
 }
 
 function openEditDialog() {
+  if (!canEditAppVersion.value) {
+    return
+  }
+
   if (!selectedRelease.value?.uuid) {
     toast.error("当前版本缺少 Uuid，无法编辑")
     return
@@ -412,6 +428,10 @@ function openEditDialog() {
 }
 
 function openDeleteDialog() {
+  if (!canDeleteAppVersion.value) {
+    return
+  }
+
   if (!selectedRelease.value?.uuid) {
     toast.error("当前版本缺少 Uuid，无法删除")
     return
@@ -421,6 +441,11 @@ function openDeleteDialog() {
 }
 
 async function handleApkFiles(files: File[]) {
+  if (!canUploadAppVersionApk.value) {
+    toast.error("无权上传 APK")
+    return
+  }
+
   const file = files[0]
 
   if (!file) {
@@ -466,6 +491,16 @@ function parseVersionCode() {
 }
 
 async function submitRelease() {
+  if (releaseDialogMode.value === "edit" && !canEditAppVersion.value) {
+    toast.error("无权编辑应用版本")
+    return
+  }
+
+  if (releaseDialogMode.value === "create" && !canCreateAppVersion.value) {
+    toast.error("无权新建应用版本")
+    return
+  }
+
   if (uploadingApkFile.value) {
     toast.error("APK 正在上传，请稍后保存")
     return
@@ -536,6 +571,11 @@ async function submitRelease() {
 }
 
 async function confirmDeleteRelease() {
+  if (!canDeleteAppVersion.value) {
+    toast.error("无权删除应用版本")
+    return
+  }
+
   const uuid = selectedRelease.value?.uuid
 
   if (!uuid) {
@@ -596,6 +636,7 @@ async function confirmDeleteRelease() {
         </SettingsToolbarRefreshSlot>
 
         <Button
+          v-if="canCreateAppVersion"
           size="sm"
           class="h-8 rounded-md px-3"
           @click="openCreateDialog"
@@ -682,12 +723,12 @@ async function confirmDeleteRelease() {
                     加载详情
                   </Badge>
 
-                  <Button variant="outline" size="sm" class="h-8 rounded-md px-3" @click="openEditDialog">
+                  <Button v-if="canEditAppVersion" variant="outline" size="sm" class="h-8 rounded-md px-3" @click="openEditDialog">
                     <i class="ri-edit-line text-sm" />
                     编辑
                   </Button>
 
-                  <Button variant="destructive" size="sm" class="h-8 rounded-md px-3" @click="openDeleteDialog">
+                  <Button v-if="canDeleteAppVersion" variant="destructive" size="sm" class="h-8 rounded-md px-3" @click="openDeleteDialog">
                     <i class="ri-delete-bin-line text-sm" />
                     删除
                   </Button>
@@ -804,7 +845,7 @@ async function confirmDeleteRelease() {
             />
           </Field>
 
-          <Field v-if="isAndroidReleaseForm" class="gap-2">
+          <Field v-if="isAndroidReleaseForm && canUploadAppVersionApk" class="gap-2">
             <FieldLabel>APK 安装包</FieldLabel>
             <FileUploadField
               accept=".apk,application/vnd.android.package-archive"

@@ -53,6 +53,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { useCurrentUserPermissions } from "@/composables/useCurrentUserPermissions"
 import { handleApiError } from "@/lib/api-errors"
 import { fetchMenus, type MenuRecord } from "@/lib/menus-api"
 import {
@@ -75,6 +76,7 @@ import {
   type RoleMenuButtonNode,
   updateRole as requestRoleUpdate,
 } from "@/lib/roles-api"
+import { PERMISSION_CODES } from "@/lib/permission-codes"
 import { fetchSystemButtons, type SystemResourceRecord } from "@/lib/system-resources-api"
 import { SETTINGS_TABLE_PAGE_CLASS } from "@/components/settings/settingsTablePageClass"
 import TablePageTable from "@/components/table-page/TablePageTable.vue"
@@ -84,6 +86,8 @@ const props = defineProps<{
   pageTitle: string
   pageDescription?: string | null
 }>()
+
+const { canButton } = useCurrentUserPermissions()
 
 type MemberViewKey = "members" | "roles"
 type MemberUserType = 1 | 2 | 3
@@ -251,6 +255,16 @@ const manualMemberForm = ref(createManualMemberForm())
 const roleForm = ref(createRoleForm())
 const roleFormSnapshot = ref(createRoleForm())
 const editMemberForm = ref(createEditMemberForm())
+const canCreateMember = computed(() => canButton(PERMISSION_CODES.memberAdd))
+const canEditMember = computed(() => canButton(PERMISSION_CODES.memberEdit))
+const canDeleteMember = computed(() => canButton(PERMISSION_CODES.memberDelete))
+const canBindMemberRole = computed(() => canButton(PERMISSION_CODES.memberRoleBind))
+const canUpdateMemberType = computed(() => canButton(PERMISSION_CODES.memberTypeUpdate))
+const canUpdateMemberStatus = computed(() => canButton(PERMISSION_CODES.memberStatusUpdate))
+const canCreateRole = computed(() => canButton(PERMISSION_CODES.roleAdd))
+const canEditRole = computed(() => canButton(PERMISSION_CODES.roleEdit))
+const canDeleteRole = computed(() => canButton(PERMISSION_CODES.roleDelete))
+const canBindRolePermission = computed(() => canButton(PERMISSION_CODES.rolePermissionBind))
 const availableRoleOptions = computed<RoleOption[]>(() => roleRows.value
   .filter(role => role.uuid)
   .map(role => ({
@@ -1340,6 +1354,10 @@ function isMemberPermissionUpdating(memberId: number) {
 }
 
 async function updateMemberRole(memberId: number, nextRoleUuidValue: string) {
+  if (!canBindMemberRole.value) {
+    return
+  }
+
   const member = rows.value.find(row => row.id === memberId)
   const nextRoleUuid = normalizeRoleSelectionValue(nextRoleUuidValue)
 
@@ -1385,6 +1403,10 @@ function isMemberUserTypeUpdating(memberId: number) {
 }
 
 async function updateMemberUserTypesInline(memberId: number, nextUserTypeValues: string[]) {
+  if (!canUpdateMemberType.value) {
+    return
+  }
+
   const member = rows.value.find(row => row.id === memberId)
   const nextUserTypes = getUserTypeValues(nextUserTypeValues)
 
@@ -1434,6 +1456,10 @@ function isMemberStatusUpdating(memberId: number) {
 }
 
 async function updateMemberStatus(member: MemberRow, nextStatus: number) {
+  if (!canUpdateMemberStatus.value) {
+    return
+  }
+
   if (isMemberStatusUpdating(member.id) || toStatusValue(member.status) === nextStatus) {
     return
   }
@@ -1469,6 +1495,10 @@ async function updateMemberStatus(member: MemberRow, nextStatus: number) {
 
 function handleMemberAction(actionKey: MemberActionKey, member?: MemberRow) {
   if (actionKey === "manual") {
+    if (!canCreateMember.value) {
+      return
+    }
+
     openManualMemberDialog()
     return
   }
@@ -1488,6 +1518,10 @@ function handleMemberAction(actionKey: MemberActionKey, member?: MemberRow) {
   }
 
   if (actionKey === "create-role") {
+    if (!canCreateRole.value) {
+      return
+    }
+
     void openRoleDialog()
     return
   }
@@ -1651,6 +1685,11 @@ function closeEditDialog() {
 }
 
 async function submitManualMember() {
+  if (!canCreateMember.value) {
+    toast.error("无权添加成员")
+    return
+  }
+
   const name = manualMemberForm.value.name.trim()
 
   if (!name) {
@@ -1714,6 +1753,11 @@ async function submitManualMember() {
 }
 
 async function submitRole() {
+  if (editingRoleId.value === null && !canCreateRole.value) {
+    toast.error("无权添加权限组")
+    return
+  }
+
   const name = roleForm.value.name.trim()
 
   if (!name) {
@@ -1737,6 +1781,16 @@ async function submitRole() {
     toast.error("权限资源未就绪", {
       description: "请等待页面和按钮权限加载完成，或刷新权限资源后再保存。",
     })
+    return
+  }
+
+  if (basicChanged && isEditingRole && !canEditRole.value) {
+    toast.error("无权编辑权限组基础信息")
+    return
+  }
+
+  if (permissionChanged && !canBindRolePermission.value) {
+    toast.error("无权绑定权限组菜单和按钮")
     return
   }
 
@@ -1834,7 +1888,7 @@ async function submitRole() {
 }
 
 function promptDeleteEditingRole() {
-  if (editingRoleId.value === null || roleSubmitting.value || roleDeleteSubmitting.value) {
+  if (editingRoleId.value === null || roleSubmitting.value || roleDeleteSubmitting.value || !canDeleteRole.value) {
     return
   }
 
@@ -1934,6 +1988,11 @@ async function loadEditRoleDetail(role: RoleRow) {
 }
 
 async function submitEditMember() {
+  if (!canEditMember.value) {
+    toast.error("无权编辑成员")
+    return
+  }
+
   const memberId = editingMemberId.value
   const member = rows.value.find(row => row.id === memberId)
 
@@ -2078,7 +2137,7 @@ async function loadEditMemberDetail(member: MemberRow) {
 }
 
 function promptDeleteEditingMember() {
-  if (editSubmitting.value || deleteSubmitting.value) {
+  if (editSubmitting.value || deleteSubmitting.value || !canDeleteMember.value) {
     return
   }
 
@@ -2137,11 +2196,19 @@ function asRoleRow(row: Record<string, unknown>) {
 
 function handleCurrentRowClick(row: Record<string, unknown>) {
   if (activeView.value === "members") {
+    if (!canEditMember.value) {
+      return
+    }
+
     void openEditMemberDialog(asMemberRow(row))
     return
   }
 
   if (activeView.value === "roles") {
+    if (!canEditRole.value && !canBindRolePermission.value) {
+      return
+    }
+
     void openEditRoleDialog(asRoleRow(row))
   }
 }
@@ -2181,7 +2248,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
             </Button>
           </SettingsToolbarRefreshSlot>
 
-          <div v-if="activeView === 'members'" class="inline-flex items-center">
+          <div v-if="activeView === 'members' && canCreateMember" class="inline-flex items-center">
             <Button class="h-8 gap-1 rounded-r-none pr-2.5 pl-3 text-[14px]" @click="handleMemberAction('manual')">
               <i class="ri-user-add-line text-base" />
               <span>添加成员</span>
@@ -2219,7 +2286,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
           </div>
 
           <Button
-            v-else
+            v-else-if="canCreateRole"
             class="h-8 gap-1 rounded-md px-3 text-[14px]"
             @click="handlePrimaryAction"
           >
@@ -2258,7 +2325,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
       :empty-state="tableEmptyState"
     >
       <template #cell-role="{ row: rawRow }">
-        <DropdownMenu v-if="activeView === 'members'">
+        <DropdownMenu v-if="activeView === 'members' && canBindMemberRole">
           <DropdownMenuTrigger as-child>
             <button
               type="button"
@@ -2293,6 +2360,9 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
             </DropdownMenuRadioGroup>
           </DropdownMenuContent>
         </DropdownMenu>
+        <span v-else-if="activeView === 'members'" class="inline-flex h-7 max-w-36 items-center px-1.5 text-[12px] font-medium text-foreground">
+          <span class="truncate">{{ getRoleSummary(asMemberRow(rawRow)) }}</span>
+        </span>
       </template>
 
       <template #cell-user-type="{ row: rawRow }">
@@ -2300,7 +2370,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
           v-if="activeView === 'members'"
           multiple
           :model-value="asMemberRow(rawRow).userTypes.map(value => String(value))"
-          :disabled="isMemberUserTypeUpdating(asMemberRow(rawRow).id)"
+          :disabled="!canUpdateMemberType || isMemberUserTypeUpdating(asMemberRow(rawRow).id)"
           @update:model-value="updateMemberUserTypesInline(asMemberRow(rawRow).id, ($event as string[]) ?? [])"
         >
           <SelectTrigger
@@ -2325,7 +2395,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
       </template>
 
       <template #cell-status="{ row: rawRow }">
-        <DropdownMenu v-if="activeView === 'members'">
+        <DropdownMenu v-if="activeView === 'members' && canUpdateMemberStatus">
           <DropdownMenuTrigger as-child>
             <button
               type="button"
@@ -2357,11 +2427,14 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
             </DropdownMenuRadioGroup>
           </DropdownMenuContent>
         </DropdownMenu>
+        <span v-else-if="activeView === 'members'" class="inline-flex h-7 max-w-24 items-center px-1.5 text-[12px] font-medium text-foreground">
+          <span class="truncate">{{ asMemberRow(rawRow).status }}</span>
+        </span>
       </template>
 
       <template #cell-actions="{ row: rawRow }">
         <Button
-          v-if="activeView === 'members'"
+          v-if="activeView === 'members' && canEditMember"
           variant="outline"
           size="sm"
           class="ml-auto h-7 gap-1.5 rounded-md px-2.5 text-[13px]"
@@ -2371,7 +2444,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
           <span>编辑</span>
         </Button>
         <Button
-          v-else-if="activeView === 'roles'"
+          v-else-if="activeView === 'roles' && (canEditRole || canBindRolePermission)"
           variant="outline"
           size="sm"
           class="ml-auto h-7 gap-1.5 rounded-md px-2.5 text-[13px]"
@@ -2491,7 +2564,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
                 <div class="grid gap-3">
                   <div class="grid gap-2">
                     <label class="text-sm font-medium text-foreground" for="role-name">权限组名称</label>
-                    <Input id="role-name" v-model="roleForm.name" :disabled="roleDetailLoading" placeholder="请输入权限组名称" />
+                    <Input id="role-name" v-model="roleForm.name" :disabled="roleDetailLoading || (editingRoleId !== null && !canEditRole)" placeholder="请输入权限组名称" />
                   </div>
 
                   <div class="grid gap-2">
@@ -2499,7 +2572,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
                     <Textarea
                       id="role-remark"
                       v-model="roleForm.remark"
-                      :disabled="roleDetailLoading"
+                      :disabled="roleDetailLoading || (editingRoleId !== null && !canEditRole)"
                       rows="5"
                       placeholder="请输入权限组备注，例如：可查看巡检与工单，但不包含删除操作。"
                     />
@@ -2558,7 +2631,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
                 <label class="inline-flex items-center gap-2 text-sm text-foreground">
                   <Checkbox
                     :model-value="menuSelectionState"
-                    :disabled="configurablePermissionMenuRows.length === 0"
+                    :disabled="configurablePermissionMenuRows.length === 0 || !canBindRolePermission"
                     @update:model-value="toggleAllMenus($event === true)"
                   />
                   <span>全选页面</span>
@@ -2585,6 +2658,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
                     <div class="mb-1 flex items-center gap-2">
                       <Checkbox
                         :model-value="getPermissionGroupSelectionState(group)"
+                        :disabled="!canBindRolePermission"
                         @update:model-value="togglePermissionGroupRows(group, $event === true)"
                       />
                       <button
@@ -2620,6 +2694,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
                         <span v-else class="w-3 shrink-0" />
                         <Checkbox
                           :model-value="selectedMenuSet.has(row.uuid)"
+                          :disabled="!canBindRolePermission"
                           @update:model-value="updateRoleMenuSelection(row.uuid, $event === true)"
                         />
                         <span class="min-w-0 flex flex-1 items-center gap-2 overflow-hidden leading-none">
@@ -2705,6 +2780,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
                             <i class="ri-corner-down-right-line shrink-0 text-[12px] text-muted-foreground" />
                             <Checkbox
                               :model-value="selectedButtonSet.has(button.uuid)"
+                              :disabled="!canBindRolePermission"
                               @update:model-value="updateRoleButtonSelection(button.uuid, $event === true)"
                             />
                             <span class="min-w-0 flex flex-1 items-center gap-2 overflow-hidden leading-none">
@@ -2729,7 +2805,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
 
           <DialogFooter :class="editingRoleId === null ? 'p-4 justify-end' : 'p-4 sm:justify-between'">
             <Button
-              v-if="editingRoleId !== null"
+              v-if="editingRoleId !== null && canDeleteRole"
               type="button"
               variant="outline"
               class="font-medium text-destructive hover:bg-destructive/5 hover:text-destructive"
@@ -2791,7 +2867,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
           <div class="grid gap-4 sm:grid-cols-2">
             <div class="grid gap-2">
               <label class="text-sm font-medium text-foreground" for="edit-member-status">成员状态</label>
-              <Select v-model="editMemberForm.status" :disabled="editDetailLoading">
+              <Select v-model="editMemberForm.status" :disabled="editDetailLoading || !canUpdateMemberStatus">
                 <SelectTrigger id="edit-member-status" class="w-full">
                   <SelectValue placeholder="选择成员状态" />
                 </SelectTrigger>
@@ -2813,7 +2889,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
           <div class="grid gap-4 sm:grid-cols-2">
             <div class="grid gap-2">
               <label class="text-sm font-medium text-foreground">用户类型</label>
-              <Select v-model="editMemberForm.userTypes" multiple :disabled="editDetailLoading">
+              <Select v-model="editMemberForm.userTypes" multiple :disabled="editDetailLoading || !canUpdateMemberType">
                 <SelectTrigger class="w-full">
                   <SelectValue placeholder="选择用户类型" />
                 </SelectTrigger>
@@ -2831,7 +2907,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
 
             <div class="grid gap-2">
               <label class="text-sm font-medium text-foreground" for="edit-member-role-uuid">权限组</label>
-              <Select v-model="editMemberForm.roleUuid" :disabled="editDetailLoading">
+              <Select v-model="editMemberForm.roleUuid" :disabled="editDetailLoading || !canBindMemberRole">
                 <SelectTrigger id="edit-member-role-uuid" class="w-full">
                   <SelectValue placeholder="选择权限组" />
                 </SelectTrigger>
@@ -2853,6 +2929,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
 
           <DialogFooter class="pt-2 sm:justify-between">
             <Button
+              v-if="canDeleteMember"
               type="button"
               variant="outline"
               class="font-medium text-destructive hover:bg-destructive/5 hover:text-destructive"
@@ -2865,7 +2942,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
               <Button type="button" variant="outline" :disabled="editDetailLoading || editSubmitting || deleteSubmitting" @click="closeEditDialog">
                 取消
               </Button>
-              <Button type="submit" :disabled="editDetailLoading || editSubmitting || deleteSubmitting">
+              <Button v-if="canEditMember" type="submit" :disabled="editDetailLoading || editSubmitting || deleteSubmitting">
                 {{ editSubmitting ? "保存中..." : "保存" }}
               </Button>
             </div>

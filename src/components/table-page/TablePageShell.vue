@@ -39,6 +39,7 @@ const props = withDefaults(defineProps<{
   sortRules: SortRule[]
   sortFieldOptions?: SortFieldOption[]
   primaryActionLabel?: string
+  primaryActionPermissionCode?: string
   selectedRowsCount?: number
   textFilters: Record<string, TextFilterState>
   numberFilters: Record<string, NumberFilterState>
@@ -203,6 +204,7 @@ async function handleExportConfirm(payload: { scope: TableExportScope; format: T
           :sort-rules="props.sortRules"
           :sort-field-options="props.sortFieldOptions"
           :primary-action-label="props.primaryActionLabel"
+          :primary-action-permission-code="props.primaryActionPermissionCode"
           :selected-rows-count="props.selectedRowsCount"
           :text-filters="props.textFilters"
           :number-filters="props.numberFilters"

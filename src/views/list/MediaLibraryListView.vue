@@ -46,6 +46,7 @@ import {
   getApiErrorMessage,
   handleApiError,
 } from "@/lib/api-errors"
+import { useCurrentUserPermissions } from "@/composables/useCurrentUserPermissions"
 import { buildCosVideoSnapshotUrl } from "@/lib/cos-video-snapshot"
 import {
   createMediaArticle,
@@ -74,6 +75,7 @@ import {
   type MediaVideoRecord,
   updateMediaVideo,
 } from "@/lib/media-videos-api"
+import { PERMISSION_CODES } from "@/lib/permission-codes"
 import { uploadTencentCosFile } from "@/lib/tencent-cos-sdk"
 
 type SheetMode = "preview" | "edit" | "create"
@@ -181,6 +183,8 @@ const MEDIA_VIDEO_LOAD_ERROR_MESSAGE = "媒体视频列表加载失败，请稍�
 const MEDIA_ARTICLE_PAGE_SIZE = 500
 const MEDIA_ARTICLE_LOAD_ERROR_MESSAGE = "媒体文章列表加载失败，请稍后重试。"
 const ROOT_CATEGORY_PARENT_VALUE = "__root__"
+
+const { canButton } = useCurrentUserPermissions()
 const MEDIA_STATUS_OPTIONS: Array<{ value: MediaStatus; label: string }> = [
   { value: "published", label: "已发布" },
   { value: "scheduled", label: "待上线" },
@@ -339,6 +343,16 @@ const visibleCurrentCategoryRows = computed(() => (
 ))
 const categoryCreateParentOptions = computed(() => flattenCategoryTree(getModuleCategories(categoryCreateModule.value)))
 const categoryCreateParentModel = computed(() => categoryCreateForm.parentUuid || ROOT_CATEGORY_PARENT_VALUE)
+const canAddMediaContent = computed(() => canButton(PERMISSION_CODES.mediaLibraryContentAdd))
+const canEditMediaContent = computed(() => canButton(PERMISSION_CODES.mediaLibraryContentEdit))
+const canDeleteMediaContent = computed(() => canButton(PERMISSION_CODES.mediaLibraryContentDelete))
+const canAddMediaCategory = computed(() => canButton(PERMISSION_CODES.mediaLibraryCategoryAdd))
+const canAddMediaChildCategory = computed(() => canButton(PERMISSION_CODES.mediaLibraryCategoryChildAdd))
+const canEditMediaCategory = computed(() => canButton(PERMISSION_CODES.mediaLibraryCategoryEdit))
+const canDeleteMediaCategory = computed(() => canButton(PERMISSION_CODES.mediaLibraryCategoryDelete))
+const canUploadMediaVideo = computed(() => canButton(PERMISSION_CODES.mediaLibraryVideoUpload))
+const canUploadMediaCover = computed(() => canButton(PERMISSION_CODES.mediaLibraryCoverUpload))
+const canUploadMediaContentImage = computed(() => canButton(PERMISSION_CODES.mediaLibraryContentImageUpload))
 
 const filteredVideoItems = computed(() => {
   const query = normalizedSearch.value
@@ -603,6 +617,10 @@ function openCreateChildCategoryDialog(module: MediaModuleKey, parentUuid: strin
 }
 
 function openCreateCategoryDialog(module: MediaModuleKey, parentUuid: string) {
+  if (parentUuid ? !canAddMediaChildCategory.value : !canAddMediaCategory.value) {
+    return
+  }
+
   categoryCreateModule.value = module
   Object.assign(categoryCreateForm, createEmptyCategoryForm({
     parentUuid,
@@ -619,6 +637,11 @@ function updateCreateCategoryParent(value: unknown) {
 }
 
 async function submitCreateCategory() {
+  if (categoryCreateForm.parentUuid ? !canAddMediaChildCategory.value : !canAddMediaCategory.value) {
+    toast.error("无权添加媒体分类")
+    return
+  }
+
   const name = categoryCreateForm.name.trim()
 
   if (!name) {
@@ -658,6 +681,10 @@ async function submitCreateCategory() {
 }
 
 async function openEditCategoryDialog(module: MediaModuleKey, id: string) {
+  if (!canEditMediaCategory.value) {
+    return
+  }
+
   const row = findCategoryById(getModuleCategories(module), id)
 
   if (!row) {
@@ -705,6 +732,11 @@ function closeEditCategoryDialog() {
 }
 
 async function submitEditCategory() {
+  if (!canEditMediaCategory.value) {
+    toast.error("无权编辑媒体分类")
+    return
+  }
+
   const name = categoryEditForm.name.trim()
 
   if (!editingCategoryId.value || !name) {
@@ -738,6 +770,10 @@ async function submitEditCategory() {
 }
 
 function promptDeleteCategory(module: MediaModuleKey, id: string) {
+  if (!canDeleteMediaCategory.value) {
+    return
+  }
+
   const row = findCategoryById(getModuleCategories(module), id)
 
   if (!row || row.isDefault) {
@@ -762,6 +798,11 @@ function openCreateChildForEditingCategory() {
 }
 
 async function confirmDeleteCategory() {
+  if (!canDeleteMediaCategory.value) {
+    toast.error("无权删除媒体分类")
+    return
+  }
+
   const target = deletingCategory.value
 
   if (!target || categoryDeleteSubmitting.value) {
@@ -793,6 +834,10 @@ async function confirmDeleteCategory() {
 }
 
 function openCreate(kind: SheetEntityKind, defaults: Partial<MediaEditorForm> = {}) {
+  if (!canAddMediaContent.value) {
+    return
+  }
+
   sheetMode.value = "create"
   sheetEntityKind.value = kind
   activeEntityId.value = ""
@@ -827,6 +872,10 @@ function openPreview(kind: SheetEntityKind, id: string) {
 }
 
 function openEdit(kind: SheetEntityKind, id: string) {
+  if (!canEditMediaContent.value) {
+    return
+  }
+
   sheetMode.value = "edit"
   sheetEntityKind.value = kind
   activeEntityId.value = id
@@ -927,6 +976,11 @@ function closeSheet() {
 }
 
 async function handleArticleCoverFiles(files: File[]) {
+  if (!canUploadMediaCover.value) {
+    toast.error("无权上传封面")
+    return
+  }
+
   const file = files[0]
 
   if (!file) {
@@ -959,6 +1013,11 @@ async function handleArticleCoverFiles(files: File[]) {
 }
 
 async function uploadArticleContentImage(file: File) {
+  if (!canUploadMediaContentImage.value) {
+    toast.error("无权上传正文图片")
+    return ""
+  }
+
   if (!file.type.startsWith("image/")) {
     toast.error("请选择图片文件")
     return ""
@@ -986,6 +1045,16 @@ function removeArticleCover() {
 }
 
 async function saveCurrentForm() {
+  if (sheetMode.value === "create" && !canAddMediaContent.value) {
+    toast.error("无权添加媒体内容")
+    return
+  }
+
+  if (sheetMode.value === "edit" && !canEditMediaContent.value) {
+    toast.error("无权编辑媒体内容")
+    return
+  }
+
   if (!formState.title.trim()) {
     toast.error("请先填写标题")
     return
@@ -1100,6 +1169,11 @@ async function saveArticleForm() {
 }
 
 async function handleVideoFiles(files: File[]) {
+  if (!canUploadMediaVideo.value) {
+    toast.error("无权上传视频")
+    return
+  }
+
   const file = files[0]
 
   if (!file) {
@@ -1137,6 +1211,10 @@ async function uploadVideoFile(file: File) {
 }
 
 function promptDeleteActiveVideo() {
+  if (!canDeleteMediaContent.value) {
+    return
+  }
+
   if (!activeVideo.value) {
     return
   }
@@ -1145,6 +1223,10 @@ function promptDeleteActiveVideo() {
 }
 
 function promptDeleteActiveArticle() {
+  if (!canDeleteMediaContent.value) {
+    return
+  }
+
   if (!activeArticle.value) {
     return
   }
@@ -1153,6 +1235,11 @@ function promptDeleteActiveArticle() {
 }
 
 async function confirmDeleteActiveVideo() {
+  if (!canDeleteMediaContent.value) {
+    toast.error("无权删除媒体内容")
+    return
+  }
+
   const target = activeVideo.value
 
   if (!target || videoDeleteSubmitting.value) {
@@ -1180,6 +1267,11 @@ async function confirmDeleteActiveVideo() {
 }
 
 async function confirmDeleteActiveArticle() {
+  if (!canDeleteMediaContent.value) {
+    toast.error("无权删除媒体内容")
+    return
+  }
+
   const target = activeArticle.value
 
   if (!target || articleDeleteSubmitting.value) {
@@ -1817,7 +1909,7 @@ function escapeHtml(value: string) {
             @toggle="toggleSearch"
           />
 
-          <Button size="sm" class="h-8 rounded-md px-3" @click="openCreate(activeModule === 'videos' ? 'video' : 'article')">
+          <Button v-if="canAddMediaContent" size="sm" class="h-8 rounded-md px-3" @click="openCreate(activeModule === 'videos' ? 'video' : 'article')">
             <i class="ri-add-line text-base" />
             <span>添加</span>
           </Button>
@@ -1834,6 +1926,7 @@ function escapeHtml(value: string) {
               分类
             </p>
             <Button
+              v-if="canAddMediaChildCategory"
               variant="ghost"
               size="icon-sm"
               class="size-7 rounded-md text-muted-foreground"
@@ -1899,6 +1992,7 @@ function escapeHtml(value: string) {
                 </span>
 
                 <button
+                  v-if="canEditMediaCategory"
                   type="button"
                   class="min-w-0 flex-1 rounded-md px-1.5 py-1 text-left text-sm transition-colors"
                   :class="currentSelectedCategoryId === row.id ? 'bg-accent text-foreground' : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground'"
@@ -1924,6 +2018,7 @@ function escapeHtml(value: string) {
             </div>
 
             <Button
+              v-if="canAddMediaCategory"
               variant="ghost"
               size="sm"
               class="mt-3 h-8 w-full justify-start rounded-md px-2 text-muted-foreground"
@@ -1947,6 +2042,7 @@ function escapeHtml(value: string) {
           >
             <p>{{ videoListErrorMessage }}</p>
             <Button
+              v-if="canDeleteMediaCategory"
               variant="ghost"
               size="sm"
               class="mt-2 rounded-md text-destructive hover:text-destructive"
@@ -2244,7 +2340,7 @@ function escapeHtml(value: string) {
 
           <div class="right-sheet-actions__secondary">
             <Button
-              v-if="sheetMode === 'preview' && sheetEntityKind === 'video' && activeVideo"
+              v-if="sheetMode === 'preview' && sheetEntityKind === 'video' && activeVideo && canDeleteMediaContent"
               variant="ghost"
               size="sm"
               class="right-sheet-text-button text-destructive hover:text-destructive"
@@ -2256,7 +2352,7 @@ function escapeHtml(value: string) {
             </Button>
 
             <Button
-              v-if="sheetMode === 'preview' && sheetEntityKind === 'article' && activeArticle"
+              v-if="sheetMode === 'preview' && sheetEntityKind === 'article' && activeArticle && canDeleteMediaContent"
               variant="ghost"
               size="sm"
               class="right-sheet-text-button text-destructive hover:text-destructive"
@@ -2268,7 +2364,7 @@ function escapeHtml(value: string) {
             </Button>
 
             <Button
-              v-if="sheetMode === 'preview'"
+              v-if="sheetMode === 'preview' && canEditMediaContent"
               variant="ghost"
               size="sm"
               class="right-sheet-text-button"
@@ -2279,7 +2375,7 @@ function escapeHtml(value: string) {
             </Button>
 
             <Button
-              v-else
+              v-if="sheetMode !== 'preview'"
               size="sm"
               class="h-8 rounded-md px-2.5"
               :disabled="isMediaFormSubmitting"
@@ -2412,6 +2508,7 @@ function escapeHtml(value: string) {
               <span class="article-editor-label">封面</span>
               <div class="article-editor-control">
                 <FileUploadField
+                  v-if="canUploadMediaCover"
                   accept="image/png,image/jpeg,image/jpg,image/webp"
                   :loading="uploadingArticleCover"
                   title="上传封面"
@@ -2505,7 +2602,7 @@ function escapeHtml(value: string) {
                 <RichTextEditor
                   v-model="formState.content"
                   placeholder="输入正文内容"
-                  :upload-image="uploadArticleContentImage"
+                  :upload-image="canUploadMediaContentImage ? uploadArticleContentImage : undefined"
                 />
               </div>
             </div>
@@ -2516,6 +2613,7 @@ function escapeHtml(value: string) {
               <span class="article-editor-label">视频文件</span>
               <div class="article-editor-control">
                 <FileUploadField
+                  v-if="canUploadMediaVideo"
                   accept="video/*"
                   :loading="uploadingVideoFile"
                   title="上传视频文件"
@@ -2725,7 +2823,7 @@ function escapeHtml(value: string) {
             <Button variant="outline" :disabled="categoryEditSubmitting" @click="closeEditCategoryDialog">
               取消
             </Button>
-            <Button :disabled="categoryDetailLoading || categoryEditSubmitting || !categoryEditForm.name.trim()" @click="submitEditCategory">
+            <Button v-if="canEditMediaCategory" :disabled="categoryDetailLoading || categoryEditSubmitting || !categoryEditForm.name.trim()" @click="submitEditCategory">
               <i :class="[categoryEditSubmitting ? 'ri-loader-4-line animate-spin' : 'ri-save-line', 'text-sm']" />
               <span>{{ categoryEditSubmitting ? "保存中" : "保存修改" }}</span>
             </Button>

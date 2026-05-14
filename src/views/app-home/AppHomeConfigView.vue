@@ -54,6 +54,8 @@ import {
   type MediaVideoRecord,
 } from "@/lib/media-videos-api"
 import { handleApiError } from "@/lib/api-errors"
+import { useCurrentUserPermissions } from "@/composables/useCurrentUserPermissions"
+import { PERMISSION_CODES } from "@/lib/permission-codes"
 import { cn } from "@/lib/utils"
 
 type DragTarget = "module" | "category"
@@ -97,6 +99,8 @@ const APP_HOME_VIDEO_COVER_SNAPSHOT_OPTIONS = {
   height: 0,
 } as const
 
+const { canButton } = useCurrentUserPermissions()
+
 const mediaState = reactive<{
   videoCategories: MediaCategoryNode[]
   articleCategories: MediaCategoryNode[]
@@ -129,6 +133,15 @@ const orderedModules = computed(() => [...modules.value].sort(compareBySortOrder
 const enabledModules = computed(() => orderedModules.value.filter(module => module.enabled))
 const selectedModule = computed(() => modules.value.find(module => module.id === selectedModuleId.value) ?? null)
 const deletingModule = computed(() => modules.value.find(module => module.id === deletingModuleId.value) ?? null)
+const canSaveAppHomeConfig = computed(() => canButton(PERMISSION_CODES.appHomeConfigSave))
+const canSaveAppHomeModule = computed(() => canButton(PERMISSION_CODES.appHomeModuleSave))
+const canAddAppHomeVideoModule = computed(() => canButton(PERMISSION_CODES.appHomeVideoModuleAdd))
+const canAddAppHomeArticleModule = computed(() => canButton(PERMISSION_CODES.appHomeArticleModuleAdd))
+const canDeleteAppHomeModule = computed(() => canButton(PERMISSION_CODES.appHomeModuleDelete))
+const canAddAppHomeCategory = computed(() => canButton(PERMISSION_CODES.appHomeCategoryAdd))
+const canDeleteAppHomeCategory = computed(() => canButton(PERMISSION_CODES.appHomeCategoryDelete))
+const canAddAppHomeSource = computed(() => canButton(PERMISSION_CODES.appHomeSourceAdd))
+const canRemoveAppHomeSource = computed(() => canButton(PERMISSION_CODES.appHomeSourceRemove))
 const selectedVideoModule = computed((): AppHomeVideoModule | null => (
   selectedModule.value?.type === "video" ? selectedModule.value : null
 ))
@@ -259,6 +272,14 @@ function openModule(moduleId: string) {
 }
 
 function addModule(type: AppHomeModuleType) {
+  if (type === "video" && !canAddAppHomeVideoModule.value) {
+    return
+  }
+
+  if (type === "article" && !canAddAppHomeArticleModule.value) {
+    return
+  }
+
   const nextSortOrder = getNextSortOrder(modules.value)
   const nextModule = type === "video"
     ? createVideoModule(nextSortOrder)
@@ -271,6 +292,10 @@ function addModule(type: AppHomeModuleType) {
 }
 
 function requestDeleteModule(moduleId: string) {
+  if (!canDeleteAppHomeModule.value) {
+    return
+  }
+
   if (!modules.value.some(item => item.id === moduleId)) {
     return
   }
@@ -280,6 +305,11 @@ function requestDeleteModule(moduleId: string) {
 }
 
 async function confirmDeleteModule() {
+  if (!canDeleteAppHomeModule.value) {
+    toast.error("无权删除首页模块")
+    return
+  }
+
   const moduleId = deletingModuleId.value
   if (!moduleId) {
     return
@@ -313,6 +343,10 @@ async function confirmDeleteModule() {
 }
 
 async function handleSelectedModuleStatusChange(value: boolean | "indeterminate") {
+  if (!canSaveAppHomeModule.value) {
+    return
+  }
+
   const module = selectedModule.value
   if (!module) {
     return
@@ -339,6 +373,10 @@ async function handleSelectedModuleStatusChange(value: boolean | "indeterminate"
 }
 
 function addVideoCategory(module: AppHomeVideoModule) {
+  if (!canAddAppHomeCategory.value) {
+    return
+  }
+
   const nextCategory = createVideoCategory(`分类标题 ${module.categories.length + 1}`, getNextSortOrder(module.categories))
   module.categories.push(nextCategory)
   normalizeCategoryOrders(module.categories)
@@ -347,6 +385,10 @@ function addVideoCategory(module: AppHomeVideoModule) {
 }
 
 function deleteVideoCategory(module: AppHomeVideoModule, categoryId: string) {
+  if (!canDeleteAppHomeCategory.value) {
+    return
+  }
+
   if (module.categories.length <= 1) {
     toast.error("视频模块至少保留一个分类")
     return
@@ -360,6 +402,10 @@ function deleteVideoCategory(module: AppHomeVideoModule, categoryId: string) {
 }
 
 function addSourceToCategory(category: AppHomeVideoCategory) {
+  if (!canAddAppHomeSource.value) {
+    return
+  }
+
   const form = getVideoSourceForm(category.id)
   syncVideoSourceFormDefaults(form)
 
@@ -401,6 +447,10 @@ function addSourceToCategory(category: AppHomeVideoCategory) {
 }
 
 function deleteSource(category: AppHomeVideoCategory, sourceId: string) {
+  if (!canRemoveAppHomeSource.value) {
+    return
+  }
+
   const source = category.sources.find(source => source.id === sourceId)
   category.sources = category.sources.filter(source => source.id !== sourceId)
   if (source?.kind === "video") {
@@ -412,6 +462,11 @@ function deleteSource(category: AppHomeVideoCategory, sourceId: string) {
 }
 
 async function saveConfig() {
+  if (!canSaveAppHomeConfig.value && !canSaveAppHomeModule.value) {
+    toast.error("无权保存 App 首页配置")
+    return
+  }
+
   if (submitting.value) {
     return
   }
@@ -680,7 +735,7 @@ function handleDragOver(event: DragEvent, target: DragTarget, id: string) {
 
 function handleModuleDrop(event: DragEvent, targetId: string) {
   event.preventDefault()
-  if (draggingTarget.value !== "module") {
+  if (draggingTarget.value !== "module" || !canSaveAppHomeModule.value) {
     clearDrag()
     return
   }
@@ -693,7 +748,7 @@ function handleModuleDrop(event: DragEvent, targetId: string) {
 
 function handleCategoryDrop(event: DragEvent, module: AppHomeVideoModule, targetId: string) {
   event.preventDefault()
-  if (draggingTarget.value !== "category") {
+  if (draggingTarget.value !== "category" || !canSaveAppHomeModule.value) {
     clearDrag()
     return
   }
@@ -984,6 +1039,10 @@ function buildMediaContentCategoryList(module: AppHomeModule): MediaContentCateg
 }
 
 async function persistModuleSort() {
+  if (!canSaveAppHomeModule.value) {
+    return
+  }
+
   const list = orderedModules.value
     .filter(module => persistedModuleIds.value.has(module.id))
     .map((module, index) => ({
@@ -1142,7 +1201,7 @@ function hashText(value: string) {
             <i class="ri-refresh-line text-base" />
             <span>{{ loading ? '加载中...' : '刷新' }}</span>
           </Button>
-          <Button size="sm" class="h-8 rounded-md px-3" :disabled="loading || submitting" @click="saveConfig">
+          <Button v-if="canSaveAppHomeConfig || canSaveAppHomeModule" size="sm" class="h-8 rounded-md px-3" :disabled="loading || submitting" @click="saveConfig">
             <i class="ri-save-line text-base" />
             <span>{{ submitting ? '保存中...' : '保存' }}</span>
           </Button>
@@ -1238,6 +1297,7 @@ function hashText(value: string) {
 
         <div class="mt-3 space-y-1">
           <Button
+            v-if="canAddAppHomeVideoModule"
             variant="ghost"
             size="sm"
             class="h-8 w-full justify-start rounded-md px-2 text-muted-foreground"
@@ -1247,6 +1307,7 @@ function hashText(value: string) {
             <span>添加视频模块</span>
           </Button>
           <Button
+            v-if="canAddAppHomeArticleModule"
             variant="ghost"
             size="sm"
             class="h-8 w-full justify-start rounded-md px-2 text-muted-foreground"
@@ -1408,6 +1469,7 @@ function hashText(value: string) {
         <div class="right-sheet-actions">
           <div class="right-sheet-actions__primary">
             <Button
+              v-if="canDeleteAppHomeModule"
               type="button"
               variant="ghost"
               size="icon-sm"
@@ -1421,6 +1483,7 @@ function hashText(value: string) {
 
           <div v-if="selectedModule" class="right-sheet-actions__secondary">
             <Button
+              v-if="canSaveAppHomeConfig || canSaveAppHomeModule"
               type="button"
               variant="ghost"
               size="sm"
@@ -1461,7 +1524,7 @@ function hashText(value: string) {
                 <span class="text-sm text-muted-foreground">
                   {{ selectedModule.enabled ? '已在客户端首页展示' : '已停用，仅保留配置' }}
                 </span>
-                <Switch :model-value="selectedModule.enabled" @update:model-value="handleSelectedModuleStatusChange" />
+                <Switch :model-value="selectedModule.enabled" :disabled="!canSaveAppHomeModule" @update:model-value="handleSelectedModuleStatusChange" />
               </div>
             </div>
           </div>
@@ -1494,7 +1557,7 @@ function hashText(value: string) {
                         <i class="ri-draggable text-[17px]" />
                       </button>
                       <Input v-model="category.title" class="min-w-0 flex-1" placeholder="客户端分类名称" />
-                      <Button variant="ghost" size="icon-sm" class="h-9 w-9 rounded-md text-muted-foreground" @click="deleteVideoCategory(selectedVideoModule, category.id)">
+                      <Button v-if="canDeleteAppHomeCategory" variant="ghost" size="icon-sm" class="h-9 w-9 rounded-md text-muted-foreground" @click="deleteVideoCategory(selectedVideoModule, category.id)">
                         <i class="ri-delete-bin-line text-base" />
                         <span class="sr-only">删除分类</span>
                       </Button>
@@ -1508,7 +1571,7 @@ function hashText(value: string) {
                       >
                         <i :class="[source.kind === 'category' ? 'ri-folder-video-line' : 'ri-movie-line', 'text-base text-muted-foreground']" />
                         <span class="min-w-0 flex-1 truncate">{{ getSourceLabel(source) }}</span>
-                        <Button variant="ghost" size="icon-sm" class="h-8 w-8 rounded-md text-muted-foreground" @click="deleteSource(category, source.id)">
+                        <Button v-if="canRemoveAppHomeSource" variant="ghost" size="icon-sm" class="h-8 w-8 rounded-md text-muted-foreground" @click="deleteSource(category, source.id)">
                           <i class="ri-close-line text-base" />
                           <span class="sr-only">移除来源</span>
                         </Button>
@@ -1519,7 +1582,7 @@ function hashText(value: string) {
                       </div>
                     </div>
 
-                    <div v-if="videoSourceForms[category.id]" class="mt-2 grid gap-2 sm:grid-cols-[184px_minmax(0,1fr)_auto]">
+                    <div v-if="videoSourceForms[category.id] && canAddAppHomeSource" class="mt-2 grid gap-2 sm:grid-cols-[184px_minmax(0,1fr)_auto]">
                       <Tabs v-model="videoSourceForms[category.id].kind" class="w-full">
                         <TabsList class="h-9 w-full rounded-md">
                           <TabsTrigger value="category" class="h-8 flex-1 rounded-md px-2 text-xs">
@@ -1595,7 +1658,7 @@ function hashText(value: string) {
                     </div>
                   </article>
 
-                  <Button variant="ghost" size="sm" class="h-8 w-full justify-start rounded-md px-2 text-muted-foreground" @click="addVideoCategory(selectedVideoModule)">
+                  <Button v-if="canAddAppHomeCategory" variant="ghost" size="sm" class="h-8 w-full justify-start rounded-md px-2 text-muted-foreground" @click="addVideoCategory(selectedVideoModule)">
                     <i class="ri-add-line text-[15px]" />
                     <span>添加分类</span>
                   </Button>

@@ -23,6 +23,7 @@ import { handleApiError } from "@/lib/api-errors"
 import { hasValidLatLng } from "@/lib/map-coordinates"
 import { createBuilding, fetchBuildings, updateBuilding } from "@/lib/buildings-api"
 import { fetchCustomers } from "@/lib/customers-api"
+import { PERMISSION_CODES } from "@/lib/permission-codes"
 import { resolveParkCustomerMap } from "@/lib/park-customer-cache"
 import { fetchParks, type ParkListItem } from "@/lib/parks-api"
 
@@ -557,7 +558,7 @@ watch(
   <section class="mx-auto flex w-full max-w-4xl min-w-0 flex-col gap-6 pb-8">
     <FormHeader
       :title="pageTitle"
-      :primary-action="{ label: submitButtonLabel, icon: isEditMode ? 'ri-save-line' : 'ri-add-line', disabled: !canSubmit }"
+      :primary-action="{ label: submitButtonLabel, icon: isEditMode ? 'ri-save-line' : 'ri-add-line', disabled: !canSubmit, permissionCode: isEditMode ? PERMISSION_CODES.buildingEdit : PERMISSION_CODES.buildingAdd }"
       :secondary-actions="[{ key: 'reset', label: '重置表单' }]"
       :reset-dialog="{ description: isEditMode ? '当前已修改的建筑信息将恢复为最近一次加载的内容，此操作不可撤销。' : '当前已填写的建筑信息都会被清空，此操作不可撤销。' }"
       @back="goBack"

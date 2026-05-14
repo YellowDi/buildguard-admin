@@ -7,6 +7,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { Badge } from "@/components/ui/badge"
 import DetailRelationModule from "@/components/detail/DetailRelationModule.vue"
 import DetailFieldSections from "@/components/detail/DetailFieldSections.vue"
+import PermissionGate from "@/components/permissions/PermissionGate.vue"
 import InspectionCategoryScoreLimitInline from "@/components/inspection/InspectionCategoryScoreLimitInline.vue"
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible"
 import LinkedEntityDetailSheet from "@/components/detail/LinkedEntityDetailSheet.vue"
@@ -32,11 +33,13 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { ResponsiveRightSheet } from "@/components/ui/sheet"
 import { TooltipWrap } from "@/components/ui/tooltip"
 import { detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
+import { useCurrentUserPermissions } from "@/composables/useCurrentUserPermissions"
 import DetailLayout from "@/layouts/DetailLayout.vue"
 import { buildApiRequestUrl } from "@/lib/api"
 import { handleApiError } from "@/lib/api-errors"
 import { fetchInspectionCategories } from "@/lib/inspection-categories-api"
 import { getInspectionItemDetail, type InspectionItemRecord } from "@/lib/inspection-items-api"
+import { PERMISSION_CODES } from "@/lib/permission-codes"
 import {
   deleteInspectionService,
   fetchInspectionServiceDetail,
@@ -77,6 +80,7 @@ type ActiveInspectionItemDetail = {
 
 const route = useRoute()
 const router = useRouter()
+const { canButton } = useCurrentUserPermissions()
 
 const detail = ref<InspectionServiceListItem | null>(null)
 const loading = ref(false)
@@ -110,6 +114,7 @@ const customerUuid = computed(() => {
   return queryValue || toText(detail.value?.CustomerUuid, "")
 })
 const contractDialogBusy = computed(() => uploadingContract.value || uploadingContractFile.value)
+const canUploadContract = computed(() => canButton(PERMISSION_CODES.inspectionServiceContractUpload))
 
 const fieldSections = computed<DetailFieldSection[]>(() => {
   const current = detail.value
@@ -151,7 +156,9 @@ const fieldSections = computed<DetailFieldSection[]>(() => {
           value: "",
           action: resolveFileUrl(current.ContractFile)
             ? { label: "下载合同", onClick: () => downloadContractFile(current.ContractFile) }
-            : { label: "上传合同", onClick: openUploadContractDialog },
+            : canUploadContract.value
+              ? { label: "上传合同", onClick: openUploadContractDialog }
+              : undefined,
         },
         { key: "created-at", label: "创建时间", value: toText(current.CreatedAt, "-") },
         { key: "updated-at", label: "更新时间", value: toText(current.UpdatedAt, "-") },
@@ -394,6 +401,10 @@ async function downloadContractFile(file: unknown) {
 }
 
 function openUploadContractDialog() {
+  if (!canUploadContract.value) {
+    return
+  }
+
   if (!inspectionServiceUuid.value) {
     toast.error("当前检测服务缺少 Uuid，无法上传合同")
     return
@@ -408,6 +419,11 @@ function openUploadContractDialog() {
 }
 
 async function handleContractFiles(files: File[]) {
+  if (!canUploadContract.value) {
+    toast.error("无权上传合同")
+    return
+  }
+
   const file = files[0]
 
   if (!file) {
@@ -437,6 +453,11 @@ async function handleContractFiles(files: File[]) {
 }
 
 async function submitUploadContract() {
+  if (!canUploadContract.value) {
+    toast.error("无权上传合同")
+    return
+  }
+
   if (!inspectionServiceUuid.value) {
     toast.error("当前检测服务缺少 Uuid，无法上传合同")
     return
@@ -1097,47 +1118,51 @@ function sanitizeObjectKeyFileName(value: string) {
   >
     <template #headerActions>
       <div class="flex items-center gap-1">
-        <AlertDialog :open="deleteConfirmOpen" @update:open="deleteConfirmOpen = $event">
+        <PermissionGate :code="PERMISSION_CODES.inspectionServiceDelete">
+          <AlertDialog :open="deleteConfirmOpen" @update:open="deleteConfirmOpen = $event">
+            <Button
+              variant="outline"
+              size="sm"
+              class="h-8 gap-1 px-3 text-[14px] font-medium text-destructive hover:bg-destructive/10 hover:text-destructive"
+              @click="deleteConfirmOpen = true"
+            >
+              <i class="ri-delete-bin-line text-base" />
+              删除
+            </Button>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>确认删除当前检测服务？</AlertDialogTitle>
+                <AlertDialogDescription>
+                  删除后将无法恢复，该操作会移除当前检测服务及其关联配置。
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel :disabled="deleteSubmitting" class="">
+                  取消
+                </AlertDialogCancel>
+                <AlertDialogAction
+                  :disabled="deleteSubmitting"
+                  class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  @click="confirmDelete"
+                >
+                  {{ deleteSubmitting ? "删除中..." : "确认删除" }}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </PermissionGate>
+
+        <PermissionGate :code="PERMISSION_CODES.inspectionServiceEdit">
           <Button
             variant="outline"
             size="sm"
-            class="h-8 gap-1 px-3 text-[14px] font-medium text-destructive hover:bg-destructive/10 hover:text-destructive"
-            @click="deleteConfirmOpen = true"
+            class="h-8 gap-1 px-3 text-[14px] font-medium"
+            @click="goToEdit"
           >
-            <i class="ri-delete-bin-line text-base" />
-            删除
+            <i class="ri-edit-line text-base" />
+            编辑
           </Button>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>确认删除当前检测服务？</AlertDialogTitle>
-              <AlertDialogDescription>
-                删除后将无法恢复，该操作会移除当前检测服务及其关联配置。
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel :disabled="deleteSubmitting" class="">
-                取消
-              </AlertDialogCancel>
-              <AlertDialogAction
-                :disabled="deleteSubmitting"
-                class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                @click="confirmDelete"
-              >
-                {{ deleteSubmitting ? "删除中..." : "确认删除" }}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-
-        <Button
-          variant="outline"
-          size="sm"
-          class="h-8 gap-1 px-3 text-[14px] font-medium"
-          @click="goToEdit"
-        >
-          <i class="ri-edit-line text-base" />
-          编辑
-        </Button>
+        </PermissionGate>
       </div>
     </template>
 

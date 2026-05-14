@@ -14,6 +14,7 @@ import type { TablePageSchema, TableQueryBarConfig } from "@/components/table-pa
 import { handleApiError } from "@/lib/api-errors"
 import { fetchCustomers } from "@/lib/customers-api"
 import { fetchInspectionServices, type InspectionServiceListItem } from "@/lib/inspection-services-api"
+import { PERMISSION_CODES } from "@/lib/permission-codes"
 import {
   Tooltip,
   TooltipContent,
@@ -79,6 +80,7 @@ const schema: TablePageSchema<InspectionServiceRecord> = {
   title: "检测服务",
   description: "为客户配置检测服务内容，管理检测范围和周期",
   primaryActionLabel: "添加检测服务",
+  primaryActionPermissionCode: PERMISSION_CODES.inspectionServiceAdd,
   rowKey: "uuid",
   data: [],
   showIndex: true,

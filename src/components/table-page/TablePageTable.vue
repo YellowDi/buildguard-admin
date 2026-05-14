@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Skeleton } from "@/components/ui/skeleton"
 import { TooltipWrap } from "@/components/ui/tooltip"
+import { useCurrentUserPermissions } from "@/composables/useCurrentUserPermissions"
 import StatusChip from "@/components/table-page/TableStatusChip.vue"
 import {
   getColumnCellClass,
@@ -80,6 +81,7 @@ const ROW_CLICK_IGNORE_SELECTOR = [
 ].join(",")
 const selectionCheckboxClass = "border-border bg-background data-[state=checked]:border-primary data-[state=checked]:bg-primary data-[state=indeterminate]:border-primary data-[state=indeterminate]:bg-primary focus-visible:ring-primary/20"
 const INLINE_PREVIEW_ACTION_LABELS = new Set(["查看详情", "查看", "查看归档"])
+const { canButton } = useCurrentUserPermissions()
 
 const props = withDefaults(defineProps<{
   columns: TableColumn[]
@@ -146,7 +148,10 @@ const scrollViewportClassName = computed(() => cn(
   !props.listLevelTable ? "max-w-none" : "",
 ))
 const tableClassName = computed(() => getTableClass(props.tableClass))
-const hasRowActions = computed(() => (props.rowActions?.length ?? 0) > 0)
+const visibleRowActions = computed(() => (
+  (props.rowActions ?? []).filter(action => !action.permissionCode || canButton(action.permissionCode))
+))
+const hasRowActions = computed(() => visibleRowActions.value.length > 0)
 const tableOuterRef = ref<HTMLElement | null>(null)
 const tableWrapperRef = ref<HTMLElement | null>(null)
 const horizontalScrollbarTrackRef = ref<HTMLElement | null>(null)
@@ -186,7 +191,7 @@ const inlineQuickActionEnabled = computed(() => (
   horizontalOverflow.value && typeof props.onQuickAction === "function"
 ))
 const inlineSecondaryActions = computed(() => (
-  (props.rowActions ?? []).filter(action => !isInlinePreviewAction(action))
+  visibleRowActions.value.filter(action => !isInlinePreviewAction(action))
 ))
 /**
  * 布局层只允许最后一个非操作列吃剩余宽度。
@@ -2014,7 +2019,7 @@ onBeforeUnmount(() => {
                   <div :class="tableTheme.actionCellContent" :style="getActionContentStyle()">
                     <div :class="tableTheme.actionCellButtons" data-table-action-buttons>
                       <Button
-                        v-for="action in rowActions"
+                        v-for="action in visibleRowActions"
                         :key="`${getRowKey(row, index)}-${action.key}`"
                         variant="outline"
                         size="sm"

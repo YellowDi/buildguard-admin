@@ -42,6 +42,7 @@ import { SETTINGS_TABLE_PAGE_CLASS } from "@/components/settings/settingsTablePa
 import TablePageTable from "@/components/table-page/TablePageTable.vue"
 import type { TableColumn, TablePageEmptyState } from "@/components/table-page/types"
 import { Textarea } from "@/components/ui/textarea"
+import { useCurrentUserPermissions } from "@/composables/useCurrentUserPermissions"
 import { handleApiError } from "@/lib/api-errors"
 import { fetchInspectionCategories } from "@/lib/inspection-categories-api"
 import {
@@ -52,6 +53,7 @@ import {
   updateInspectionItem,
   type InspectionItemRecord,
 } from "@/lib/inspection-items-api"
+import { PERMISSION_CODES } from "@/lib/permission-codes"
 
 const props = withDefaults(defineProps<{
   hideCreateButton?: boolean
@@ -66,6 +68,8 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{
   countChange: [count: number]
 }>()
+
+const { canButton } = useCurrentUserPermissions()
 
 type InspectionItemRow = {
   id: number
@@ -122,6 +126,9 @@ const editMeta = ref({
   createdAt: "",
   updatedAt: "",
 })
+const canCreateInspectionItem = computed(() => canButton(PERMISSION_CODES.inspectionItemAdd))
+const canEditInspectionItem = computed(() => canButton(PERMISSION_CODES.inspectionItemEdit))
+const canDeleteInspectionItem = computed(() => canButton(PERMISSION_CODES.inspectionItemDelete))
 
 const columns: TableColumn[] = [
   {
@@ -300,6 +307,10 @@ async function refreshInspectionItemsPage() {
 }
 
 function openCreateDialog() {
+  if (!canCreateInspectionItem.value) {
+    return
+  }
+
   createForm.value = createInspectionItemForm()
   createSubmitArmed.value = false
   createDialogOpen.value = true
@@ -318,6 +329,11 @@ function closeEditDialog() {
 }
 
 async function submitCreate() {
+  if (!canCreateInspectionItem.value) {
+    toast.error("无权创建检测项")
+    return
+  }
+
   if (!createSubmitArmed.value) {
     return
   }
@@ -359,6 +375,10 @@ async function submitCreate() {
 }
 
 async function openEditDialog(row: InspectionItemRow) {
+  if (!canEditInspectionItem.value) {
+    return
+  }
+
   editingItemId.value = row.id
   editDialogOpen.value = true
   editDetailLoading.value = true
@@ -398,6 +418,11 @@ async function openEditDialog(row: InspectionItemRow) {
 }
 
 async function submitEdit() {
+  if (!canEditInspectionItem.value) {
+    toast.error("无权编辑检测项")
+    return
+  }
+
   if (!editSubmitArmed.value) {
     return
   }
@@ -463,10 +488,19 @@ function requestEditSubmit() {
 }
 
 function promptDeleteEditingItem() {
+  if (!canDeleteInspectionItem.value) {
+    return
+  }
+
   deleteConfirmOpen.value = true
 }
 
 async function confirmDeleteEditingItem() {
+  if (!canDeleteInspectionItem.value) {
+    toast.error("无权删除检测项")
+    return
+  }
+
   const itemId = editingItemId.value
   const currentRow = rows.value.find(row => row.id === itemId)
 
@@ -659,6 +693,10 @@ function asInspectionItemRow(row: Record<string, unknown>) {
 }
 
 function handleRowClick(row: Record<string, unknown>) {
+  if (!canEditInspectionItem.value) {
+    return
+  }
+
   void openEditDialog(asInspectionItemRow(row))
 }
 
@@ -686,7 +724,7 @@ defineExpose({
           </Button>
         </SettingsToolbarRefreshSlot>
 
-        <Button v-if="!props.hideCreateButton" class="h-8 gap-1 rounded-md px-3 text-[14px]" @click="openCreateDialog">
+        <Button v-if="!props.hideCreateButton && canCreateInspectionItem" class="h-8 gap-1 rounded-md px-3 text-[14px]" @click="openCreateDialog">
           <i class="ri-add-line text-base" />
           <span>添加检测项</span>
         </Button>
@@ -743,6 +781,7 @@ defineExpose({
       </template>
       <template #cell-actions="{ row: rawRow }">
         <Button
+          v-if="canEditInspectionItem"
           variant="outline"
           size="sm"
           class="ml-auto h-7 gap-1.5 rounded-md px-2.5 text-[13px]"
@@ -899,6 +938,7 @@ defineExpose({
 
           <DialogFooter class="pt-2 sm:justify-between">
             <Button
+              v-if="canDeleteInspectionItem"
               type="button"
               variant="outline"
               class="font-medium text-destructive hover:bg-destructive/5 hover:text-destructive"

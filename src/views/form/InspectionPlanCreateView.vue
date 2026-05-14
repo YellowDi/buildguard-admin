@@ -21,6 +21,7 @@ import { handleApiError } from "@/lib/api-errors"
 import { fetchCustomers, type CustomerListItem } from "@/lib/customers-api"
 import { createInspectionPlan, fetchInspectionPlanDetail, updateInspectionPlan } from "@/lib/inspection-plans-api"
 import { fetchInspectionServices, type InspectionServiceListItem } from "@/lib/inspection-services-api"
+import { PERMISSION_CODES } from "@/lib/permission-codes"
 
 type QuickNavItem = {
   id: string
@@ -607,7 +608,7 @@ watch(
   <section class="mx-auto flex w-full max-w-4xl min-w-0 flex-col gap-6 pb-8">
     <FormHeader
       :title="formHeaderTitle"
-      :primary-action="{ label: submitButtonLabel, icon: isEditMode ? 'ri-save-line' : 'ri-add-line', disabled: !canSubmit }"
+      :primary-action="{ label: submitButtonLabel, icon: isEditMode ? 'ri-save-line' : 'ri-add-line', disabled: !canSubmit, permissionCode: isEditMode ? PERMISSION_CODES.inspectionPlanEdit : PERMISSION_CODES.inspectionPlanAdd }"
       :secondary-actions="[{ key: 'reset', label: '重置表单' }]"
       :reset-dialog="{ description: '当前已填写的检测计划信息都会被清空，此操作不可撤销。' }"
       @back="goBack"

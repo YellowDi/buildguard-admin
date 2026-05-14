@@ -10,6 +10,8 @@ import SettingsToolbarRow from "@/components/settings/SettingsToolbarRow.vue"
 import SettingsToolbarRefreshSlot from "@/components/settings/SettingsToolbarRefreshSlot.vue"
 import SettingsToolbarSearchInput from "@/components/settings/SettingsToolbarSearchInput.vue"
 import { Button } from "@/components/ui/button"
+import { useCurrentUserPermissions } from "@/composables/useCurrentUserPermissions"
+import { PERMISSION_CODES } from "@/lib/permission-codes"
 
 type InspectionHubTabKey = "items" | "categories" | "templates"
 
@@ -22,6 +24,8 @@ const props = defineProps<{
   pageTitle: string
   pageDescription?: string | null
 }>()
+
+const { canButton } = useCurrentUserPermissions()
 
 const activeTab = ref<InspectionHubTabKey>("items")
 const itemsCount = ref(0)
@@ -74,7 +78,17 @@ const actionLabel = computed(() => {
   return "添加模板"
 })
 
-const showPrimaryAction = computed(() => true)
+const showPrimaryAction = computed(() => {
+  if (activeTab.value === "items") {
+    return canButton(PERMISSION_CODES.inspectionItemAdd)
+  }
+
+  if (activeTab.value === "categories") {
+    return canButton(PERMISSION_CODES.inspectionCategoryAdd)
+  }
+
+  return canButton(PERMISSION_CODES.inspectionTemplateAdd)
+})
 const refreshDisabled = computed(() => false)
 
 function toggleSearch() {

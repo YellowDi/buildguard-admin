@@ -29,6 +29,7 @@ import {
 import { handleApiError } from "@/lib/api-errors"
 import { fetchCustomers } from "@/lib/customers-api"
 import { fetchInspectionPlans, type InspectionPlanListItem } from "@/lib/inspection-plans-api"
+import { PERMISSION_CODES } from "@/lib/permission-codes"
 
 type InspectionPlanRecord = {
   id: string
@@ -76,6 +77,7 @@ const schema: TablePageSchema<InspectionPlanRecord> = {
   title: "检测计划",
   description: "基于服务配置生成周期性检测安排，自动驱动工单生成与执行节奏",
   primaryActionLabel: "添加检测计划",
+  primaryActionPermissionCode: PERMISSION_CODES.inspectionPlanAdd,
   rowKey: "id",
   data: [],
   showIndex: true,

@@ -34,6 +34,7 @@ import SettingsToolbarSearchInput from "@/components/settings/SettingsToolbarSea
 import { SETTINGS_TABLE_PAGE_CLASS } from "@/components/settings/settingsTablePageClass"
 import TablePageTable from "@/components/table-page/TablePageTable.vue"
 import type { TableColumn, TablePageEmptyState } from "@/components/table-page/types"
+import { useCurrentUserPermissions } from "@/composables/useCurrentUserPermissions"
 import { handleApiError } from "@/lib/api-errors"
 import {
   createInspectionServiceTemplate,
@@ -44,6 +45,7 @@ import {
   type InspectionServiceTemplateRecord,
 } from "@/lib/inspection-service-templates-api"
 import { fetchAllInspectionItemOptions, type InspectionItemOption } from "@/lib/inspection-item-options"
+import { PERMISSION_CODES } from "@/lib/permission-codes"
 
 const props = withDefaults(defineProps<{
   hideCreateButton?: boolean
@@ -58,6 +60,8 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{
   countChange: [count: number]
 }>()
+
+const { canButton } = useCurrentUserPermissions()
 
 type TemplateRow = {
   id: number
@@ -84,6 +88,9 @@ const createErrorMessage = ref("")
 const createTemplateName = ref("")
 const createSelectedInspectionUuids = ref<string[]>([])
 const inspectionItemOptions = ref<InspectionItemOption[]>([])
+const canCreateInspectionTemplate = computed(() => canButton(PERMISSION_CODES.inspectionTemplateAdd))
+const canEditInspectionTemplate = computed(() => canButton(PERMISSION_CODES.inspectionTemplateEdit))
+const canDeleteInspectionTemplate = computed(() => canButton(PERMISSION_CODES.inspectionTemplateDelete))
 
 const columns: TableColumn[] = [
   {
@@ -237,6 +244,10 @@ async function refreshData() {
 }
 
 async function openCreateDialog() {
+  if (!canCreateInspectionTemplate.value) {
+    return
+  }
+
   closeDialog()
   createDialogOpen.value = true
 
@@ -246,6 +257,10 @@ async function openCreateDialog() {
 }
 
 async function openEditDialog(row: TemplateRow) {
+  if (!canEditInspectionTemplate.value) {
+    return
+  }
+
   closeDialog()
   editingTemplateUuid.value = row.uuid
   createDialogOpen.value = true
@@ -276,6 +291,10 @@ async function openEditDialog(row: TemplateRow) {
 }
 
 function handleRowClick(row: Record<string, unknown>) {
+  if (!canEditInspectionTemplate.value) {
+    return
+  }
+
   void openEditDialog(row as TemplateRow)
 }
 
@@ -294,6 +313,16 @@ function closeDialog() {
 }
 
 async function submitCreate() {
+  if (editingTemplateUuid.value && !canEditInspectionTemplate.value) {
+    toast.error("无权编辑检测模板")
+    return
+  }
+
+  if (!editingTemplateUuid.value && !canCreateInspectionTemplate.value) {
+    toast.error("无权创建检测模板")
+    return
+  }
+
   const name = createTemplateName.value.trim()
   const isEditing = Boolean(editingTemplateUuid.value)
 
@@ -339,10 +368,19 @@ async function submitCreate() {
 }
 
 function promptDelete() {
+  if (!canDeleteInspectionTemplate.value) {
+    return
+  }
+
   deleteConfirmOpen.value = true
 }
 
 async function confirmDelete() {
+  if (!canDeleteInspectionTemplate.value) {
+    toast.error("无权删除检测模板")
+    return
+  }
+
   if (!editingTemplateUuid.value || deleteSubmitting.value) {
     return
   }
@@ -443,7 +481,7 @@ defineExpose({
           </Button>
         </SettingsToolbarRefreshSlot>
 
-        <Button v-if="!props.hideCreateButton" class="h-8 gap-1 rounded-md px-3 text-[14px]" @click="openCreateDialog">
+        <Button v-if="!props.hideCreateButton && canCreateInspectionTemplate" class="h-8 gap-1 rounded-md px-3 text-[14px]" @click="openCreateDialog">
           <i class="ri-add-line text-base" />
           <span>添加模板</span>
         </Button>
@@ -478,6 +516,7 @@ defineExpose({
     >
       <template #cell-actions="{ row }">
         <Button
+          v-if="canEditInspectionTemplate"
           variant="outline"
           size="sm"
           class="ml-auto h-7 gap-1.5 rounded-md px-2.5 text-[13px]"
@@ -536,7 +575,7 @@ defineExpose({
           :class="editingTemplateUuid ? 'sm:justify-between' : 'sm:justify-end'"
         >
           <Button
-            v-if="editingTemplateUuid"
+            v-if="editingTemplateUuid && canDeleteInspectionTemplate"
             type="button"
             variant="outline"
             class="font-medium text-destructive hover:bg-destructive/5 hover:text-destructive"

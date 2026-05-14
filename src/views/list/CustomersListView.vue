@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button"
 import { handleApiError } from "@/lib/api-errors"
 import { fetchBusinessPresetEntryOptions } from "@/lib/business-preset-options"
 import { fetchCustomers, type CustomerListItem } from "@/lib/customers-api"
+import { PERMISSION_CODES } from "@/lib/permission-codes"
 
 type CustomerRecord = {
   id: string
@@ -296,6 +297,7 @@ const sortedCustomers = computed(() => {
 const page = useTablePage({
   ...createTablePageDefinition(schema),
   primaryActionLabel: "添加客户",
+  primaryActionPermissionCode: PERMISSION_CODES.customerAdd,
   rows: sortedCustomers,
 })
 const route = useRoute()

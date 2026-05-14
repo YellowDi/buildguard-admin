@@ -41,6 +41,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import TablePageTable from "@/components/table-page/TablePageTable.vue"
+import { useCurrentUserPermissions } from "@/composables/useCurrentUserPermissions"
 import type { TableColumn, TablePageEmptyState } from "@/components/table-page/types"
 import { handleApiError } from "@/lib/api-errors"
 import {
@@ -63,11 +64,13 @@ import {
   importSystemApi,
   type SystemResourceRecord,
 } from "@/lib/system-resources-api"
+import { PERMISSION_CODES } from "@/lib/permission-codes"
 
 const props = defineProps<{
   pageTitle: string
   pageDescription?: string | null
 }>()
+const { canButton } = useCurrentUserPermissions()
 
 type MenuRow = {
   id: number
@@ -1375,7 +1378,7 @@ function formatDateTime(...values: unknown[]) {
           </SettingsToolbarRefreshSlot>
 
           <Button
-            v-if="activeView === 'apis'"
+            v-if="activeView === 'apis' && canButton(PERMISSION_CODES.developerApiImport)"
             variant="outline"
             class="h-8 gap-1 rounded-md px-3 text-[14px]"
             :disabled="importSubmitting"
@@ -1386,7 +1389,7 @@ function formatDateTime(...values: unknown[]) {
           </Button>
 
           <Button
-            v-if="activeView === 'menus' || activeView === 'buttons'"
+            v-if="(activeView === 'menus' && canButton(PERMISSION_CODES.developerMenuAdd)) || (activeView === 'buttons' && canButton(PERMISSION_CODES.developerButtonAdd))"
             class="h-8 gap-1 rounded-md px-3 text-[14px]"
             @click="handlePrimaryAction"
           >
@@ -1424,7 +1427,7 @@ function formatDateTime(...values: unknown[]) {
     >
       <template #cell-actions="{ row: rawRow }">
         <Button
-          v-if="activeView === 'menus'"
+          v-if="activeView === 'menus' && canButton(PERMISSION_CODES.developerMenuEdit)"
           variant="outline"
           size="sm"
           class="ml-auto h-7 gap-1.5 rounded-md px-2.5 text-[13px]"
@@ -1434,7 +1437,7 @@ function formatDateTime(...values: unknown[]) {
           <span>编辑</span>
         </Button>
         <Button
-          v-else-if="activeView === 'buttons'"
+          v-else-if="activeView === 'buttons' && canButton(PERMISSION_CODES.developerButtonEdit)"
           variant="outline"
           size="sm"
           class="ml-auto h-7 gap-1.5 rounded-md px-2.5 text-[13px]"
@@ -1541,7 +1544,7 @@ function formatDateTime(...values: unknown[]) {
             ]"
           >
             <Button
-              v-if="menuDialogMode === 'edit'"
+              v-if="menuDialogMode === 'edit' && canButton(PERMISSION_CODES.developerMenuDelete)"
               type="button"
               variant="outline"
               class="w-full font-medium text-destructive hover:bg-destructive/5 hover:text-destructive sm:w-auto"
@@ -1655,7 +1658,7 @@ function formatDateTime(...values: unknown[]) {
             ]"
           >
             <Button
-              v-if="buttonDialogMode === 'edit'"
+              v-if="buttonDialogMode === 'edit' && canButton(PERMISSION_CODES.developerButtonDelete)"
               type="button"
               variant="outline"
               class="w-full font-medium text-destructive hover:bg-destructive/5 hover:text-destructive sm:w-auto"

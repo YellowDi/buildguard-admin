@@ -39,6 +39,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { SETTINGS_TABLE_PAGE_CLASS } from "@/components/settings/settingsTablePageClass"
 import TablePageTable from "@/components/table-page/TablePageTable.vue"
 import type { TableColumn, TablePageEmptyState } from "@/components/table-page/types"
+import { useCurrentUserPermissions } from "@/composables/useCurrentUserPermissions"
 import {
   createDictEntry,
   createDictType,
@@ -53,6 +54,7 @@ import {
   updateDictEntry,
   updateDictType,
 } from "@/lib/business-presets-api"
+import { PERMISSION_CODES } from "@/lib/permission-codes"
 
 type DictEntryDisplayRow = {
   id: number
@@ -73,6 +75,8 @@ const props = defineProps<{
   pageTitle: string
   pageDescription?: string | null
 }>()
+
+const { canButton } = useCurrentUserPermissions()
 
 const searchExpanded = ref(false)
 const searchQuery = ref("")
@@ -115,7 +119,13 @@ const activeType = computed(() => (
   dictTypes.value.find(type => type.Code === activeTabCode.value) ?? null
 ))
 
-const canCreateItem = computed(() => Boolean(activeType.value?.Uuid))
+const canCreateItem = computed(() => Boolean(activeType.value?.Uuid) && canButton(PERMISSION_CODES.businessPresetItemAdd))
+const canCreateType = computed(() => canButton(PERMISSION_CODES.businessPresetTypeAdd))
+const canEditType = computed(() => canButton(PERMISSION_CODES.businessPresetTypeEdit))
+const canDeleteType = computed(() => canButton(PERMISSION_CODES.businessPresetTypeDelete))
+const canEditItem = computed(() => canButton(PERMISSION_CODES.businessPresetItemEdit))
+const canDeleteItem = computed(() => canButton(PERMISSION_CODES.businessPresetItemDelete))
+const hasTypeActions = computed(() => canCreateType.value || canEditType.value || canDeleteType.value)
 
 const tableColumns: TableColumn[] = [
   {
@@ -226,6 +236,10 @@ function toggleSearch() {
 }
 
 function openCreateTypeDialog() {
+  if (!canCreateType.value) {
+    return
+  }
+
   typeForm.value = {
     code: "",
     name: "",
@@ -235,6 +249,10 @@ function openCreateTypeDialog() {
 }
 
 async function openEditTypeDialog() {
+  if (!canEditType.value) {
+    return
+  }
+
   const currentType = activeType.value
 
   if (!currentType?.Uuid) {
@@ -259,6 +277,10 @@ async function openEditTypeDialog() {
 }
 
 function openCreateItemDialog() {
+  if (!canCreateItem.value) {
+    return
+  }
+
   const uuid = activeType.value?.Uuid?.trim() ?? ""
   if (!uuid) {
     toast.error("请先添加并选择字典类型")
@@ -274,6 +296,10 @@ function openCreateItemDialog() {
 }
 
 async function openEditItemDialog(row: DictEntryDisplayRow) {
+  if (!canEditItem.value) {
+    return
+  }
+
   try {
     const detail = await fetchDictEntryDetail({
       Uuid: row.uuid,
@@ -292,6 +318,10 @@ async function openEditItemDialog(row: DictEntryDisplayRow) {
 }
 
 function handleItemRowClick(row: Record<string, unknown>) {
+  if (!canEditItem.value) {
+    return
+  }
+
   void openEditItemDialog(row as DictEntryDisplayRow)
 }
 
@@ -301,6 +331,10 @@ function closeEditItemDialog() {
 }
 
 function promptDeleteEditingItem() {
+  if (!canDeleteItem.value) {
+    return
+  }
+
   if (!editingItemUuid.value) {
     toast.error("当前条目缺少标识，无法删除")
     return
@@ -321,6 +355,11 @@ async function refreshData() {
 }
 
 async function submitCreateType() {
+  if (!canCreateType.value) {
+    toast.error("无权添加字典类型")
+    return
+  }
+
   const code = typeForm.value.code.trim()
   const name = typeForm.value.name.trim()
   const remark = typeForm.value.remark.trim()
@@ -345,6 +384,11 @@ async function submitCreateType() {
 }
 
 async function submitEditType() {
+  if (!canEditType.value) {
+    toast.error("无权编辑字典类型")
+    return
+  }
+
   const currentType = activeType.value
   const code = typeForm.value.code.trim()
   const name = typeForm.value.name.trim()
@@ -376,6 +420,11 @@ async function submitEditType() {
 }
 
 async function submitCreateItem() {
+  if (!canCreateItem.value) {
+    toast.error("无权添加字典条目")
+    return
+  }
+
   const name = itemForm.value.name.trim()
   const remark = itemForm.value.remark.trim()
   const sort = toOptionalNumber(itemForm.value.sort)
@@ -402,6 +451,11 @@ async function submitCreateItem() {
 }
 
 async function submitEditItem() {
+  if (!canEditItem.value) {
+    toast.error("无权编辑字典条目")
+    return
+  }
+
   const dictTypeUuid = activeType.value?.Uuid?.trim() ?? ""
   const name = itemForm.value.name.trim()
   const remark = itemForm.value.remark.trim()
@@ -429,6 +483,11 @@ async function submitEditItem() {
 }
 
 async function confirmDeleteItem() {
+  if (!canDeleteItem.value) {
+    toast.error("无权删除字典条目")
+    return
+  }
+
   if (!deletingItem.value?.uuid) {
     toast.error("当前条目缺少标识，无法删除")
     return
@@ -449,6 +508,11 @@ async function confirmDeleteItem() {
 }
 
 async function confirmDeleteType() {
+  if (!canDeleteType.value) {
+    toast.error("无权删除字典类型")
+    return
+  }
+
   const currentType = activeType.value
 
   if (!currentType?.Uuid) {
@@ -652,16 +716,18 @@ defineExpose<ExposedActions>({
             </Button>
           </SettingsToolbarRefreshSlot>
 
-          <div class="inline-flex items-center">
+          <div v-if="canCreateItem || hasTypeActions" class="inline-flex items-center">
             <Button
-              class="h-8 gap-1 rounded-r-none pr-2.5 pl-3 text-[14px]"
+              v-if="canCreateItem"
+              class="h-8 gap-1 pr-2.5 pl-3 text-[14px]"
+              :class="hasTypeActions ? 'rounded-r-none' : 'rounded-md'"
               :disabled="!canCreateItem"
               @click="openCreateItemDialog"
             >
               <i class="ri-add-line text-base" />
               <span>添加条目</span>
             </Button>
-            <DropdownMenu>
+            <DropdownMenu v-if="hasTypeActions">
               <DropdownMenuTrigger as-child>
                 <Button
                   class="h-8 w-8 rounded-l-none border-l border-border/60 px-0 text-[14px]"
@@ -675,10 +741,11 @@ defineExpose<ExposedActions>({
                 <DropdownMenuLabel class="px-2 pb-1 text-xs font-medium text-muted-foreground">
                   类型操作
                 </DropdownMenuLabel>
-                <DropdownMenuItem class="rounded-lg px-2.5 py-2" @select="openCreateTypeDialog">
+                <DropdownMenuItem v-if="canCreateType" class="rounded-lg px-2.5 py-2" @select="openCreateTypeDialog">
                   新增类型
                 </DropdownMenuItem>
                 <DropdownMenuItem
+                  v-if="canEditType"
                   class="rounded-lg px-2.5 py-2"
                   :disabled="!activeType"
                   @select="openEditTypeDialog"
@@ -686,9 +753,10 @@ defineExpose<ExposedActions>({
                   编辑当前类型
                 </DropdownMenuItem>
                 <DropdownMenuItem
+                  v-if="canDeleteType"
                   class="rounded-lg px-2.5 py-2 text-destructive focus:text-destructive"
                   :disabled="!activeType"
-                  @select="deleteTypeOpen = true"
+                  @select="deleteTypeOpen = canDeleteType"
                 >
                   删除当前类型
                 </DropdownMenuItem>
@@ -723,6 +791,7 @@ defineExpose<ExposedActions>({
         <template #cell-actions="{ row: rawRow }">
           <div class="flex justify-end">
             <Button
+              v-if="canEditItem"
               variant="outline"
               size="sm"
               class="h-7 gap-1.5 rounded-md px-2.5 text-[13px]"
@@ -935,6 +1004,7 @@ defineExpose<ExposedActions>({
 
         <DialogFooter class="flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
           <Button
+            v-if="canDeleteItem"
             type="button"
             variant="outline"
             class="w-full font-medium text-destructive hover:bg-destructive/5 hover:text-destructive sm:w-auto"

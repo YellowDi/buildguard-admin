@@ -23,12 +23,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { TooltipWrap } from "@/components/ui/tooltip"
+import { useCurrentUserPermissions } from "@/composables/useCurrentUserPermissions"
 import { remixIconForActionLabel } from "@/lib/actionIcons"
 import { cn } from "@/lib/utils"
 
 type HeaderAction = {
   key: string
   label: string
+  permissionCode?: string
   variant?: ButtonVariants["variant"]
   icon?: string
 }
@@ -37,6 +39,7 @@ type PrimaryAction = {
   label: string
   icon?: string
   disabled?: boolean
+  permissionCode?: string
 }
 
 type ResetDialog = {
@@ -61,16 +64,22 @@ const emit = defineEmits<{
 }>()
 
 const slots = useSlots()
+const { canButton } = useCurrentUserPermissions()
 const mobileResetDialogOpen = ref(false)
 
 const regularActions = computed(() =>
-  (props.secondaryActions ?? []).filter(action => action.key !== "reset"),
+  (props.secondaryActions ?? []).filter(action => action.key !== "reset" && isActionAllowed(action.permissionCode)),
 )
 const resetAction = computed(() =>
-  (props.secondaryActions ?? []).find(action => action.key === "reset"),
+  (props.secondaryActions ?? []).find(action => action.key === "reset" && isActionAllowed(action.permissionCode)),
+)
+const visiblePrimaryAction = computed(() =>
+  props.primaryAction && isActionAllowed(props.primaryAction.permissionCode)
+    ? props.primaryAction
+    : null,
 )
 const hasActions = computed(() =>
-  regularActions.value.length > 0 || Boolean(resetAction.value || props.primaryAction || slots.actions),
+  regularActions.value.length > 0 || Boolean(resetAction.value || visiblePrimaryAction.value || slots.actions),
 )
 const hasMobileOverflowActions = computed(() =>
   regularActions.value.length > 0 || Boolean(resetAction.value && props.resetDialog),
@@ -82,6 +91,10 @@ function emitSecondaryAction(key: string) {
 
 function emitSubmit() {
   emit("submit")
+}
+
+function isActionAllowed(permissionCode?: string) {
+  return !permissionCode || canButton(permissionCode)
 }
 
 function emitReset() {
@@ -128,29 +141,29 @@ const primaryActionText = "确认"
             <slot name="actions" />
 
           <Button
-            v-if="primaryAction && !hasMobileOverflowActions"
-            :disabled="primaryAction.disabled"
+            v-if="visiblePrimaryAction && !hasMobileOverflowActions"
+            :disabled="visiblePrimaryAction.disabled"
             size="sm"
             class="h-8 shrink-0 gap-1 px-3 text-[14px]"
             @click="emitSubmit"
           >
             <i
-              v-if="primaryAction.icon"
-              :class="cn(primaryAction.icon, 'text-base')"
+              v-if="visiblePrimaryAction.icon"
+              :class="cn(visiblePrimaryAction.icon, 'text-base')"
             />
             {{ primaryActionText }}
           </Button>
 
-          <ButtonGroup v-else-if="primaryAction" aria-label="移动端表单操作">
+          <ButtonGroup v-else-if="visiblePrimaryAction" aria-label="移动端表单操作">
             <Button
-              :disabled="primaryAction.disabled"
+              :disabled="visiblePrimaryAction.disabled"
               size="sm"
               class="h-8 shrink-0 gap-1 px-3 text-[14px]"
               @click="emitSubmit"
             >
               <i
-                v-if="primaryAction.icon"
-                :class="cn(primaryAction.icon, 'text-base')"
+                v-if="visiblePrimaryAction.icon"
+                :class="cn(visiblePrimaryAction.icon, 'text-base')"
               />
               {{ primaryActionText }}
             </Button>
@@ -309,15 +322,15 @@ const primaryActionText = "确认"
           <slot name="actions" />
 
           <Button
-            v-if="primaryAction"
-            :disabled="primaryAction.disabled"
+            v-if="visiblePrimaryAction"
+            :disabled="visiblePrimaryAction.disabled"
             size="sm"
             class="shrink-0"
             @click="emitSubmit"
           >
             <i
-              v-if="primaryAction.icon"
-              :class="cn(primaryAction.icon, 'mr-2 text-base')"
+              v-if="visiblePrimaryAction.icon"
+              :class="cn(visiblePrimaryAction.icon, 'mr-2 text-base')"
             />
             {{ primaryActionText }}
           </Button>

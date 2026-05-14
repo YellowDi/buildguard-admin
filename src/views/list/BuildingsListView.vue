@@ -24,6 +24,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { handleApiError } from "@/lib/api-errors"
 import { fetchBuildings, type BuildingListItem } from "@/lib/buildings-api"
 import { fetchCustomers } from "@/lib/customers-api"
+import { PERMISSION_CODES } from "@/lib/permission-codes"
 import { primeParkCustomerCache, resolveParkCustomerMap } from "@/lib/park-customer-cache"
 import { fetchParks } from "@/lib/parks-api"
 
@@ -149,6 +150,7 @@ const schema: TablePageSchema<BuildingRecord> = {
   rowKey: "uuid",
   data: [],
   primaryActionLabel: "添加建筑",
+  primaryActionPermissionCode: PERMISSION_CODES.buildingAdd,
   showIndex: true,
   stickyHeader: true,
   emptyState: {

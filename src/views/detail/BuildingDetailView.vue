@@ -3,6 +3,7 @@ import { computed, defineAsyncComponent, onUnmounted, ref, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
 
 import { buildBuildingDetailSections, toText } from "@/components/detail/buildingDetailFields"
+import PermissionGate from "@/components/permissions/PermissionGate.vue"
 import CustomerInspectionCategoryRadarPlaceholder from "@/components/detail/CustomerInspectionCategoryRadarPlaceholder.vue"
 import DetailFieldsSkeleton from "@/components/loading/DetailFieldsSkeleton.vue"
 import DetailRelationSkeleton from "@/components/loading/DetailRelationSkeleton.vue"
@@ -18,6 +19,7 @@ import DetailLayout from "@/layouts/DetailLayout.vue"
 import { handleApiError } from "@/lib/api-errors"
 import { fetchBuildings, type BuildingListItem } from "@/lib/buildings-api"
 import { fetchInspectionCategories, type InspectionCategoryRecord } from "@/lib/inspection-categories-api"
+import { PERMISSION_CODES } from "@/lib/permission-codes"
 import { resolveParkCustomerMap } from "@/lib/park-customer-cache"
 import { fetchRepairWorkOrders, fetchWorkOrders } from "@/lib/work-orders-api"
 
@@ -608,16 +610,18 @@ async function loadInspectionCategoriesList() {
     @back="goBack"
   >
     <template #headerActions>
-      <Button
-        v-if="building"
-        variant="outline"
-        size="sm"
-        class="h-8 gap-1 px-3 text-[14px] font-medium"
-        @click="goToEdit"
-      >
-        <i class="ri-edit-line text-base" />
-        编辑
-      </Button>
+      <PermissionGate :code="PERMISSION_CODES.buildingEdit">
+        <Button
+          v-if="building"
+          variant="outline"
+          size="sm"
+          class="h-8 gap-1 px-3 text-[14px] font-medium"
+          @click="goToEdit"
+        >
+          <i class="ri-edit-line text-base" />
+          编辑
+        </Button>
+      </PermissionGate>
     </template>
 
     <template #primary>

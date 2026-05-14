@@ -17,6 +17,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { createCustomer, fetchCustomerDetail, updateCustomer, updateCustomerStatus, type CustomerDetailResult } from "@/lib/customers-api"
 import { handleApiError } from "@/lib/api-errors"
 import { fetchBusinessPresetEntryOptions, type BusinessPresetEntryOption } from "@/lib/business-preset-options"
+import { PERMISSION_CODES } from "@/lib/permission-codes"
 import { uploadTencentCosFile } from "@/lib/tencent-cos-sdk"
 
 type CustomerFormState = {
@@ -693,7 +694,7 @@ function dedupeSelectOptions(options: SelectOption[]) {
   <section class="mx-auto flex w-full max-w-4xl min-w-0 flex-col gap-6 pb-8">
     <FormHeader
       :title="pageTitle"
-      :primary-action="{ label: primaryActionLabel, icon: isEditMode ? 'ri-save-line' : 'ri-add-line', disabled: !canSubmit }"
+      :primary-action="{ label: primaryActionLabel, icon: isEditMode ? 'ri-save-line' : 'ri-add-line', disabled: !canSubmit, permissionCode: isEditMode ? PERMISSION_CODES.customerEdit : PERMISSION_CODES.customerAdd }"
       :secondary-actions="[{ key: 'reset', label: '重置表单' }]"
       :reset-dialog="{ description: resetDialogDescription }"
       @back="goBack"

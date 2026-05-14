@@ -75,6 +75,7 @@ const slots = useSlots()
     :sort-rules="page.sortRules.value"
     :sort-field-options="page.sortFieldOptions.value"
     :primary-action-label="page.primaryActionLabel"
+    :primary-action-permission-code="page.primaryActionPermissionCode"
     :text-filters="page.textFilters.value"
     :number-filters="page.numberFilters.value"
     :tag-filters="page.tagFilters.value"

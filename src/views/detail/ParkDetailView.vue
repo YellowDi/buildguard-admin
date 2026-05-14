@@ -3,6 +3,7 @@ import { computed, onUnmounted, ref, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
 
 import BuildingDetailSheet from "@/components/detail/BuildingDetailSheet.vue"
+import PermissionGate from "@/components/permissions/PermissionGate.vue"
 import DetailFieldsSkeleton from "@/components/loading/DetailFieldsSkeleton.vue"
 import DetailRelationSkeleton from "@/components/loading/DetailRelationSkeleton.vue"
 import MapLocationDialog from "@/components/map/MapLocationDialog.vue"
@@ -17,6 +18,7 @@ import DetailLayout from "@/layouts/DetailLayout.vue"
 import { handleApiError } from "@/lib/api-errors"
 import { hasValidLatLng } from "@/lib/map-coordinates"
 import { fetchBuildings, type BuildingListItem } from "@/lib/buildings-api"
+import { PERMISSION_CODES } from "@/lib/permission-codes"
 import { fetchParkDetail, type ParkDetailResult } from "@/lib/parks-api"
 
 type BuildingRow = {
@@ -286,16 +288,18 @@ function buildContactValue(name: string | null, phone?: string | null): DetailCo
     @back="goBack"
   >
     <template #headerActions>
-      <Button
-        v-if="park"
-        variant="outline"
-        size="sm"
-        class="h-8 gap-1 px-3 text-[14px] font-medium"
-        @click="goToEdit"
-      >
-        <i class="ri-edit-line text-base" />
-        编辑
-      </Button>
+      <PermissionGate :code="PERMISSION_CODES.parkEdit">
+        <Button
+          v-if="park"
+          variant="outline"
+          size="sm"
+          class="h-8 gap-1 px-3 text-[14px] font-medium"
+          @click="goToEdit"
+        >
+          <i class="ri-edit-line text-base" />
+          编辑
+        </Button>
+      </PermissionGate>
     </template>
 
     <template #primary>

@@ -21,6 +21,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { handleApiError } from "@/lib/api-errors"
 import { fetchCustomers } from "@/lib/customers-api"
+import { PERMISSION_CODES } from "@/lib/permission-codes"
 import { fetchParks } from "@/lib/parks-api"
 
 type ParkRecord = {
@@ -68,6 +69,7 @@ const schema: TablePageSchema<ParkRecord> = {
   rowKey: "uuid",
   data: [],
   primaryActionLabel: "添加园区",
+  primaryActionPermissionCode: PERMISSION_CODES.parkAdd,
   showIndex: true,
   stickyHeader: true,
   emptyState: {

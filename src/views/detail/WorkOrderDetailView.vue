@@ -6,6 +6,7 @@ import { toast } from "vue-sonner"
 import InspectionBuildingCards from "@/components/detail/InspectionBuildingCards.vue"
 import InspectionItemHistorySheet from "@/components/detail/InspectionItemHistorySheet.vue"
 import LinkedEntityDetailSheet from "@/components/detail/LinkedEntityDetailSheet.vue"
+import PermissionGate from "@/components/permissions/PermissionGate.vue"
 import RepairWorkOrderContentCard from "@/components/detail/RepairWorkOrderContentCard.vue"
 import DetailFieldsSkeleton from "@/components/loading/DetailFieldsSkeleton.vue"
 import DetailRelationSkeleton from "@/components/loading/DetailRelationSkeleton.vue"
@@ -36,6 +37,7 @@ import { fetchInspectionPlanDetail, type InspectionPlanListItem } from "@/lib/in
 import { fetchMembers } from "@/lib/members-api"
 import { fetchRepairWorkOrderDictionaries, formatRepairDictionaryLabel, type RepairDictionaryOption } from "@/lib/repair-work-order-dictionaries"
 import { fetchInspectionServiceDetail, type InspectionServiceListItem } from "@/lib/inspection-services-api"
+import { PERMISSION_CODES } from "@/lib/permission-codes"
 import {
   deleteRepairWorkOrder,
   dispatchRepairWorkOrder,
@@ -300,6 +302,9 @@ const hasWorkOrder = computed(() => (
 const showAssignAction = computed(() => !loading.value && hasWorkOrder.value && Boolean(workOrderUuid.value))
 const showRepairDeleteAction = computed(() => props.kind === "repair" && !loading.value && hasWorkOrder.value && Boolean(workOrderUuid.value))
 const showRepairEditAction = computed(() => props.kind === "repair" && !loading.value && hasWorkOrder.value && Boolean(workOrderUuid.value))
+const assignPermissionCode = computed(() => props.kind === "repair"
+  ? PERMISSION_CODES.repairWorkOrderAssign
+  : PERMISSION_CODES.inspectionWorkOrderAssign)
 
 watch([inspectionWorkOrder, repairWorkOrder], () => {
   if (props.kind === "repair") {
@@ -1214,61 +1219,67 @@ async function submitAssign() {
     @back="goBack"
   >
     <template #actions>
-      <AlertDialog :open="deleteConfirmOpen" @update:open="deleteConfirmOpen = $event">
+      <PermissionGate :code="PERMISSION_CODES.repairWorkOrderDelete">
+        <AlertDialog :open="deleteConfirmOpen" @update:open="deleteConfirmOpen = $event">
+          <Button
+            v-if="showRepairDeleteAction"
+            type="button"
+            variant="outline"
+            size="sm"
+            class="h-8 gap-1 px-3 text-[14px] font-medium text-destructive hover:bg-destructive/10 hover:text-destructive"
+            @click="deleteConfirmOpen = true"
+          >
+            <i class="ri-delete-bin-line text-base" />
+            删除
+          </Button>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>确认删除当前报修工单？</AlertDialogTitle>
+              <AlertDialogDescription>
+                删除后将无法恢复，该操作会移除当前报修工单。
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel :disabled="deleteSubmitting">
+                取消
+              </AlertDialogCancel>
+              <AlertDialogAction
+                :disabled="deleteSubmitting"
+                class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                @click="confirmDeleteRepairWorkOrder"
+              >
+                {{ deleteSubmitting ? "删除中..." : "确认删除" }}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </PermissionGate>
+      <PermissionGate :code="assignPermissionCode">
         <Button
-          v-if="showRepairDeleteAction"
+          v-if="showAssignAction"
           type="button"
           variant="outline"
           size="sm"
-          class="h-8 gap-1 px-3 text-[14px] font-medium text-destructive hover:bg-destructive/10 hover:text-destructive"
-          @click="deleteConfirmOpen = true"
+          class="h-8 gap-1 px-3 text-[14px] font-medium"
+          @click="openAssignDialog"
         >
-          <i class="ri-delete-bin-line text-base" />
-          删除
+          <i class="ri-user-shared-line text-base" />
+          指派
         </Button>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>确认删除当前报修工单？</AlertDialogTitle>
-            <AlertDialogDescription>
-              删除后将无法恢复，该操作会移除当前报修工单。
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel :disabled="deleteSubmitting">
-              取消
-            </AlertDialogCancel>
-            <AlertDialogAction
-              :disabled="deleteSubmitting"
-              class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              @click="confirmDeleteRepairWorkOrder"
-            >
-              {{ deleteSubmitting ? "删除中..." : "确认删除" }}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-      <Button
-        v-if="showAssignAction"
-        type="button"
-        variant="outline"
-        size="sm"
-        class="h-8 gap-1 px-3 text-[14px] font-medium"
-        @click="openAssignDialog"
-      >
-        <i class="ri-user-shared-line text-base" />
-        指派
-      </Button>
-      <Button
-        v-if="showRepairEditAction"
-        type="button"
-        variant="outline"
-        size="sm"
-        class="h-8 gap-1 px-3 text-[14px] font-medium"
-        @click="openRepairEditPage"
-      >
-        <i class="ri-edit-line text-base" />
-        编辑
-      </Button>
+      </PermissionGate>
+      <PermissionGate :code="PERMISSION_CODES.repairWorkOrderEdit">
+        <Button
+          v-if="showRepairEditAction"
+          type="button"
+          variant="outline"
+          size="sm"
+          class="h-8 gap-1 px-3 text-[14px] font-medium"
+          @click="openRepairEditPage"
+        >
+          <i class="ri-edit-line text-base" />
+          编辑
+        </Button>
+      </PermissionGate>
     </template>
 
     <template #primary>

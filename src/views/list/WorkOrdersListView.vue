@@ -17,6 +17,7 @@ import { handleApiError } from "@/lib/api-errors"
 import { fetchCustomers } from "@/lib/customers-api"
 import { fetchInspectionPlans } from "@/lib/inspection-plans-api"
 import { fetchMembers } from "@/lib/members-api"
+import { PERMISSION_CODES } from "@/lib/permission-codes"
 import { fetchRepairWorkOrderDictionaries, formatRepairDictionaryLabel, type RepairDictionaryOption } from "@/lib/repair-work-order-dictionaries"
 import {
   getRepairWorkOrderStatusLabel,
@@ -159,6 +160,9 @@ const schema: TablePageSchema<WorkOrderRecord> = {
   rowKey: "uuid",
   data: [],
   primaryActionLabel,
+  primaryActionPermissionCode: props.kind === "inspection"
+    ? PERMISSION_CODES.inspectionWorkOrderAdd
+    : PERMISSION_CODES.repairWorkOrderAdd,
   showIndex: true,
   stickyHeader: true,
   emptyState: {
@@ -171,6 +175,7 @@ const schema: TablePageSchema<WorkOrderRecord> = {
         {
           key: "assign",
           label: "指派",
+          permissionCode: PERMISSION_CODES.inspectionWorkOrderAssign,
           onClick: row => handleAssign(row as WorkOrderRecord),
         },
         {
@@ -183,6 +188,7 @@ const schema: TablePageSchema<WorkOrderRecord> = {
         {
           key: "assign",
           label: "指派",
+          permissionCode: PERMISSION_CODES.repairWorkOrderAssign,
           onClick: row => handleAssign(row as WorkOrderRecord),
         },
         {

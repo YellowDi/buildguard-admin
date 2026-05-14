@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { TooltipWrap } from "@/components/ui/tooltip"
+import { useCurrentUserPermissions } from "@/composables/useCurrentUserPermissions"
 import type { SortFieldOption, SortRule } from "@/components/table-page/sort.types"
 import type {
   DateFilterState,
@@ -62,6 +63,7 @@ const props = withDefaults(defineProps<{
   dateFilters?: Record<string, DateFilterState>
   dateFilterFields?: string[]
   primaryActionLabel?: string
+  primaryActionPermissionCode?: string
   selectedRowsCount?: number
   showToolbarActions?: boolean
   listLevelTable?: boolean
@@ -106,6 +108,7 @@ const emit = defineEmits<{
   "query-clear": []
 }>()
 
+const { canButton } = useCurrentUserPermissions()
 const openPopover = ref<string | null>(null)
 const sortPopoverSource = ref<"toolbar" | "chip">("toolbar")
 const ghostIconButtonClass =
@@ -144,8 +147,10 @@ const hasHeading = computed(() => Boolean(props.title || props.description))
 const hasSelectedRows = computed(() => (props.selectedRowsCount ?? 0) > 0)
 const hasControlsRow = computed(() => props.showControls || hasSelectedRows.value || Boolean(props.queryBar?.controls.length))
 const hasTopSurface = computed(() => hasHeading.value || hasTabs.value || props.showToolbarActions)
+const primaryActionAllowed = computed(() => !props.primaryActionPermissionCode || canButton(props.primaryActionPermissionCode))
+const visiblePrimaryActionLabel = computed(() => primaryActionAllowed.value ? props.primaryActionLabel : "")
 const activeTabLabel = computed(() => props.tabs.find(tab => tab.active)?.label ?? props.tabs[0]?.label ?? "")
-const mobilePrimaryActionLabel = computed(() => toMobileActionLabel(props.primaryActionLabel))
+const mobilePrimaryActionLabel = computed(() => toMobileActionLabel(visiblePrimaryActionLabel.value))
 const mobileToolbarItems = computed<Array<{
   key: MobileToolbarActionKey
   label: string
@@ -176,10 +181,10 @@ const mobileToolbarItems = computed<Array<{
     },
   ]
 
-  if (props.primaryActionLabel) {
+  if (visiblePrimaryActionLabel.value) {
     items.push({
       key: "primary",
-      label: props.primaryActionLabel,
+      label: visiblePrimaryActionLabel.value,
       iconClass: "ri-add-line",
     })
   }
@@ -711,14 +716,14 @@ watch(
                 导出
               </Button>
               <Button
-                v-if="primaryActionLabel"
+                v-if="visiblePrimaryActionLabel"
                 variant="default"
                 static
                 class="h-8 gap-1 px-3 text-[14px]"
                 @click="emit('primary-action')"
               >
                 <i class="ri-add-line text-base" />
-                {{ primaryActionLabel }}
+                {{ visiblePrimaryActionLabel }}
               </Button>
             </div>
           </div>
@@ -951,14 +956,14 @@ watch(
                 导出
               </Button>
               <Button
-                v-if="primaryActionLabel"
+                v-if="visiblePrimaryActionLabel"
                 variant="default"
                 static
                 class="h-8 gap-1 px-3 text-[14px]"
                 @click="emit('primary-action')"
               >
                 <i class="ri-add-line text-base" />
-                {{ primaryActionLabel }}
+                {{ visiblePrimaryActionLabel }}
               </Button>
             </div>
           </div>

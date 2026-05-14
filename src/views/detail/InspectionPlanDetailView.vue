@@ -6,6 +6,7 @@ import { toast } from "vue-sonner"
 import DetailRelationModule from "@/components/detail/DetailRelationModule.vue"
 import LinkedEntityDetailSheet from "@/components/detail/LinkedEntityDetailSheet.vue"
 import WorkOrderPreviewSheet from "@/components/detail/WorkOrderPreviewSheet.vue"
+import PermissionGate from "@/components/permissions/PermissionGate.vue"
 import type { DetailFieldSection, DetailRelationModuleSchema } from "@/components/detail/types"
 import DetailFieldSections from "@/components/detail/DetailFieldSections.vue"
 import DetailFieldsSkeleton from "@/components/loading/DetailFieldsSkeleton.vue"
@@ -30,6 +31,7 @@ import DetailLayout from "@/layouts/DetailLayout.vue"
 import { handleApiError } from "@/lib/api-errors"
 import { getWorkOrderStatusLabel } from "@/lib/work-order-status"
 import { deleteInspectionPlan, fetchInspectionPlanDetail, type InspectionPlanListItem } from "@/lib/inspection-plans-api"
+import { PERMISSION_CODES } from "@/lib/permission-codes"
 import { fetchWorkOrders, type WorkOrderListItem } from "@/lib/work-orders-api"
 
 type InspectionPlanWorkOrderRow = {
@@ -633,16 +635,17 @@ function getRemainingDaysHint(value: unknown) {
   >
     <template #headerActions>
       <div class="flex items-center gap-1">
-        <AlertDialog :open="deleteConfirmOpen" @update:open="deleteConfirmOpen = $event">
-          <Button
-            variant="outline"
-            size="sm"
-            class="h-8 gap-1 px-3 text-[14px] font-medium text-destructive hover:bg-destructive/10 hover:text-destructive"
-            @click="deleteConfirmOpen = true"
-          >
-            <i class="ri-delete-bin-line text-base" />
-            删除
-          </Button>
+        <PermissionGate :code="PERMISSION_CODES.inspectionPlanDelete">
+          <AlertDialog :open="deleteConfirmOpen" @update:open="deleteConfirmOpen = $event">
+            <Button
+              variant="outline"
+              size="sm"
+              class="h-8 gap-1 px-3 text-[14px] font-medium text-destructive hover:bg-destructive/10 hover:text-destructive"
+              @click="deleteConfirmOpen = true"
+            >
+              <i class="ri-delete-bin-line text-base" />
+              删除
+            </Button>
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>确认删除当前检测计划？</AlertDialogTitle>
@@ -662,18 +665,21 @@ function getRemainingDaysHint(value: unknown) {
                 {{ deleteSubmitting ? "删除中..." : "确认删除" }}
               </AlertDialogAction>
             </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+            </AlertDialogContent>
+          </AlertDialog>
+        </PermissionGate>
 
-        <Button
-          variant="outline"
-          size="sm"
-          class="h-8 gap-1 px-3 text-[14px] font-medium"
-          @click="goToEdit"
-        >
-          <i class="ri-edit-line text-base" />
-          编辑
-        </Button>
+        <PermissionGate :code="PERMISSION_CODES.inspectionPlanEdit">
+          <Button
+            variant="outline"
+            size="sm"
+            class="h-8 gap-1 px-3 text-[14px] font-medium"
+            @click="goToEdit"
+          >
+            <i class="ri-edit-line text-base" />
+            编辑
+          </Button>
+        </PermissionGate>
       </div>
     </template>
 

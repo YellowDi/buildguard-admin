@@ -35,6 +35,7 @@ import { Slider } from "@/components/ui/slider"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
 import { TooltipWrap } from "@/components/ui/tooltip"
+import { useCurrentUserPermissions } from "@/composables/useCurrentUserPermissions"
 import { handleApiError } from "@/lib/api-errors"
 import { fetchBuildings, type BuildingListItem } from "@/lib/buildings-api"
 import { fetchCustomers, type CustomerListItem } from "@/lib/customers-api"
@@ -51,6 +52,7 @@ import {
 import { fetchBusinessPresetEntryOptions, type BusinessPresetEntryOption } from "@/lib/business-preset-options"
 import { fetchAllInspectionItemOptions, type InspectionItemOption } from "@/lib/inspection-item-options"
 import { fetchParks, type ParkListItem } from "@/lib/parks-api"
+import { PERMISSION_CODES } from "@/lib/permission-codes"
 import { cn } from "@/lib/utils"
 
 type InspectionServiceBaseForm = {
@@ -171,6 +173,7 @@ function createCategoryScoreLimitForm(scoreLimit: InspectionCategoryScoreLimit):
 }
 
 const router = useRouter()
+const { canButton } = useCurrentUserPermissions()
 const route = useRoute()
 const form = reactive<InspectionServiceBaseForm>(createEmptyBaseForm())
 
@@ -391,6 +394,10 @@ const categoryScoreLimitFeatureDisabledReason = computed(() => {
 
   return ""
 })
+const canSaveBuildingConfig = computed(() => canButton(PERMISSION_CODES.inspectionServiceBuildingConfigSave))
+const canEditItemConfig = computed(() => canButton(PERMISSION_CODES.inspectionServiceItemConfigEdit))
+const canSaveCategoryWeight = computed(() => canButton(PERMISSION_CODES.inspectionServiceCategoryWeightSave))
+const canEditCategoryWeight = computed(() => canButton(PERMISSION_CODES.inspectionServiceCategoryWeightEdit))
 
 type InspectionCategoryDraftOption = {
   uuid: string
@@ -493,6 +500,10 @@ function goBack() {
 }
 
 async function handleUseBuildingTemplate() {
+  if (!canEditItemConfig.value) {
+    return
+  }
+
   templateLibraryOpen.value = true
 
   if (!templateOptions.value.length && !templateLibraryLoading.value) {
@@ -501,6 +512,10 @@ async function handleUseBuildingTemplate() {
 }
 
 function applyTemplate(template: TemplateOption) {
+  if (!canEditItemConfig.value) {
+    return
+  }
+
   const nextInspectionUuids = dedupeText(template.inspections.map(item => item.inspectionUuid))
   const nextCategoryScoreLimits = buildTemplateCategoryScoreLimitMap(template)
 
@@ -530,6 +545,10 @@ function isBuildSelected(buildUuid: string) {
 }
 
 function updateBuildChecked(build: BuildOption, checked: boolean | "indeterminate") {
+  if (!canSaveBuildingConfig.value) {
+    return
+  }
+
   if (checked === "indeterminate") {
     return
   }
@@ -576,12 +595,21 @@ function removeBuildingConfig(buildUuid: string) {
 }
 
 function openBuildingEditor(config: InspectionServiceBuildingConfig) {
+  if (!canEditItemConfig.value) {
+    return
+  }
+
   activeBuildingEditorUuid.value = config.buildUuid
   buildingEditorDraftUuids.value = [...config.inspectionUuids]
   buildingEditorOpen.value = true
 }
 
 function saveBuildingEditor() {
+  if (!canEditItemConfig.value) {
+    toast.error("无权编辑检测项配置")
+    return
+  }
+
   const current = currentBuildingEditor.value
 
   if (!current) {
@@ -613,6 +641,10 @@ function closeBuildingEditor() {
 }
 
 function handleScoreLimitPopoverOpenChange(buildUuid: string, open: boolean) {
+  if (open && !canEditCategoryWeight.value) {
+    return
+  }
+
   if (open) {
     const target = buildingConfigs.value.find(config => config.buildUuid === buildUuid)
 
@@ -675,6 +707,11 @@ function resetScoreLimitDraft() {
 }
 
 function saveScoreLimitDraft(buildUuid: string) {
+  if (!canSaveCategoryWeight.value) {
+    toast.error("无权保存分类权重")
+    return
+  }
+
   const target = buildingConfigs.value.find(config => config.buildUuid === buildUuid)
 
   if (!target) {
@@ -716,6 +753,10 @@ function saveScoreLimitDraft(buildUuid: string) {
 }
 
 function clearScoreLimitOverrides(buildUuid: string) {
+  if (!canSaveCategoryWeight.value) {
+    return
+  }
+
   const target = buildingConfigs.value.find(config => config.buildUuid === buildUuid)
 
   if (!target) {
@@ -1755,7 +1796,7 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
   <section class="mx-auto flex w-full max-w-[1021px] min-w-0 flex-col gap-6 pb-8">
     <FormHeader
       :title="pageTitle"
-      :primary-action="{ label: submitButtonLabel, icon: isEditMode ? 'ri-save-line' : 'ri-add-line', disabled: !canSubmit }"
+      :primary-action="{ label: submitButtonLabel, icon: isEditMode ? 'ri-save-line' : 'ri-add-line', disabled: !canSubmit, permissionCode: isEditMode ? PERMISSION_CODES.inspectionServiceEdit : PERMISSION_CODES.inspectionServiceAdd }"
       :secondary-actions="[{ key: 'reset', label: '重置表单' }]"
       :reset-dialog="{ description: isEditMode ? '当前已修改的检测服务信息将恢复为最近一次加载的内容，此操作不可撤销。' : '当前已填写的检测服务信息都会被清空，此操作不可撤销。' }"
       @back="goBack"
@@ -1948,6 +1989,7 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
                       <Checkbox
                         :model-value="isBuildSelected(build.uuid)"
                         class="mt-0.5"
+                        :disabled="!canSaveBuildingConfig"
                         @update:model-value="updateBuildChecked(build, $event)"
                       />
                       <div class="min-w-0 flex-1">
@@ -1994,6 +2036,7 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
             </h3>
 
             <Button
+              v-if="canEditItemConfig"
               size="sm"
               variant="outline"
               type="button"
@@ -2051,6 +2094,7 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
                       </div>
                       <div class="flex shrink-0 items-center gap-1">
                         <Button
+                          v-if="canEditItemConfig"
                           size="sm"
                           variant="outline"
                           type="button"
@@ -2065,6 +2109,7 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
                           <TooltipTrigger as-child>
                             <span class="inline-flex">
                               <Button
+                                v-if="canEditCategoryWeight"
                                 size="sm"
                                 variant="outline"
                                 type="button"
@@ -2167,6 +2212,7 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
             size="sm"
             variant="outline"
             type="button"
+            :disabled="!canSaveCategoryWeight"
             @click="clearScoreLimitOverrides(currentScoreLimitConfig.buildUuid)"
           >
             清空自定义
@@ -2175,6 +2221,7 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
             v-if="currentScoreLimitConfig"
             size="sm"
             type="button"
+            :disabled="!canSaveCategoryWeight"
             @click="saveScoreLimitDraft(currentScoreLimitConfig.buildUuid)"
           >
             保存权重
@@ -2319,7 +2366,7 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
             </TooltipWrap>
           </div>
           <div class="right-sheet-actions__secondary">
-            <Button size="sm" type="button" class="h-8 rounded-md px-2.5" @click="saveBuildingEditor">
+            <Button v-if="canEditItemConfig" size="sm" type="button" class="h-8 rounded-md px-2.5" @click="saveBuildingEditor">
               保存当前建筑配置
             </Button>
           </div>

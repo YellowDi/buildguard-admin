@@ -28,6 +28,7 @@ import type { InspectionItemOption } from "@/lib/inspection-item-options"
 import { fetchInspectionPlans, type InspectionPlanListItem } from "@/lib/inspection-plans-api"
 import { fetchInspectionServices, type InspectionServiceListItem } from "@/lib/inspection-services-api"
 import { fetchParks, type ParkListItem } from "@/lib/parks-api"
+import { PERMISSION_CODES } from "@/lib/permission-codes"
 import { fetchRepairWorkOrderDictionaries, type RepairDictionaryOption } from "@/lib/repair-work-order-dictionaries"
 import { uploadTencentCosFile } from "@/lib/tencent-cos-sdk"
 import { cn } from "@/lib/utils"
@@ -218,6 +219,17 @@ const queryParkUuid = computed(() => typeof route.query.parkUuid === "string" ? 
 const queryParkName = computed(() => typeof route.query.parkName === "string" ? route.query.parkName.trim() : "")
 const queryReportType = computed(() => typeof route.query.reportType === "string" ? route.query.reportType.trim() : "")
 const queryImportant = computed(() => typeof route.query.important === "string" ? route.query.important.trim() : "")
+const primaryActionPermissionCode = computed(() => {
+  if (isRepairKind.value) {
+    return isEditMode.value
+      ? PERMISSION_CODES.repairWorkOrderEdit
+      : (queryCustomerUuid.value ? PERMISSION_CODES.customerRepairWorkOrderAdd : PERMISSION_CODES.repairWorkOrderAdd)
+  }
+
+  return isEditMode.value
+    ? PERMISSION_CODES.inspectionWorkOrderEdit
+    : (routeCustomerUuid.value ? PERMISSION_CODES.customerInspectionWorkOrderAdd : PERMISSION_CODES.inspectionWorkOrderAdd)
+})
 const queryContent = computed(() => typeof route.query.content === "string" ? route.query.content : "")
 const queryReturnTo = computed(() => typeof route.query.returnTo === "string" ? route.query.returnTo.trim() : "")
 const pageTitle = computed(() => {
@@ -1990,7 +2002,7 @@ watch(
   >
     <FormHeader
       :title="pageTitle"
-      :primary-action="{ label: submitButtonLabel, icon: 'ri-file-add-line', disabled: !canSubmit }"
+      :primary-action="{ label: submitButtonLabel, icon: 'ri-file-add-line', disabled: !canSubmit, permissionCode: primaryActionPermissionCode }"
       :secondary-actions="[{ key: 'reset', label: '重置表单' }]"
       :reset-dialog="{ description: resetDialogDescription }"
       @back="goBack"
