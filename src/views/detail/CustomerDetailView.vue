@@ -4714,6 +4714,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
         <CustomerDetailContentLoading v-if="loading" variant="basic-info-primary" />
         <template v-else-if="customer">
           <DetailFieldSections :sections="fieldSections" use-title-block />
+          <div class="h-px bg-border/80" />
           <section class="min-w-0">
             <TitleBlock
               variant="section"
@@ -4733,7 +4734,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
               <article
                 v-for="service in inspectionServiceCards"
                 :key="service.key"
-                class="rounded-md border border-border bg-card p-3 text-card-foreground shadow-sm transition-colors hover:bg-surface-hover-strong"
+                class="rounded-lg border border-border bg-card p-3 text-card-foreground"
               >
                 <div class="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                   <div class="min-w-0">
