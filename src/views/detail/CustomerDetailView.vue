@@ -9,6 +9,7 @@ import DetailAccordionModule from "@/components/detail/DetailAccordionModule.vue
 import DetailTabActionsGroup from "@/components/detail/DetailTabActionsGroup.vue"
 import DetailFieldSections from "@/components/detail/DetailFieldSections.vue"
 import DetailRelationModule from "@/components/detail/DetailRelationModule.vue"
+import TitleBlock from "@/components/layout/TitleBlock.vue"
 import {
   buildRepairWorkOrderPrimarySections,
   buildRepairWorkOrderSecondarySections,
@@ -230,6 +231,21 @@ type CustomerPackageMockRecord = {
   inspectionCycle: string
 }
 
+type CustomerInspectionServiceMockSeed = {
+  name: string
+  remainingDays: number
+  balance: number
+  inspectionTimes: number
+  inspectionCycle: string
+  contractLabel?: string
+}
+
+type CustomerInspectionServiceMockRecord = CustomerInspectionServiceMockSeed & {
+  key: string
+  expireAt: string
+  contractLabel: string
+}
+
 type CustomerDetailTab = "basic-info" | "building-assets" | "work-orders" | "monitoring" | "sub-accounts"
 type CustomerDetailTabActions = {
   deleteCustomer: boolean
@@ -248,6 +264,72 @@ const router = useRouter()
 const { canButton } = useCurrentUserPermissions()
 const customerDetailTabIds = ["basic-info", "building-assets", "work-orders", "monitoring", "sub-accounts"] as const
 const DETAIL_TABLE_PAGE_SIZE = 10
+const EXTRA_CUSTOMER_INSPECTION_SERVICE_MOCKS: Record<string, CustomerInspectionServiceMockSeed[]> = {
+  上海临港产业园运营集团: [
+    {
+      name: "高风险楼栋复核检测服务",
+      remainingDays: 156,
+      balance: 42,
+      inspectionTimes: 8,
+      inspectionCycle: "每月 1 次，高风险楼栋加检",
+      contractLabel: "专项复核合同",
+    },
+    {
+      name: "节假日前专项巡检服务",
+      remainingDays: 64,
+      balance: 18,
+      inspectionTimes: 4,
+      inspectionCycle: "节假日前 1 次",
+      contractLabel: "节前巡检合同",
+    },
+  ],
+  苏州高新区城建发展有限公司: [
+    {
+      name: "城市更新结构安全检测服务",
+      remainingDays: 218,
+      balance: 35,
+      inspectionTimes: 6,
+      inspectionCycle: "每季度 1 次",
+      contractLabel: "结构安全合同",
+    },
+  ],
+  杭州钱江智慧园区管理有限公司: [
+    {
+      name: "智慧园区设备联动检测服务",
+      remainingDays: 188,
+      balance: 52,
+      inspectionTimes: 10,
+      inspectionCycle: "每月 1 次，设备异常加检",
+      contractLabel: "设备联动合同",
+    },
+    {
+      name: "地下空间专项检测服务",
+      remainingDays: 93,
+      balance: 24,
+      inspectionTimes: 3,
+      inspectionCycle: "每季度 1 次",
+      contractLabel: "地下空间合同",
+    },
+  ],
+}
+const DEFAULT_INSPECTION_SERVICE_MOCKS: CustomerInspectionServiceMockSeed[] = [
+  {
+    name: "建筑安全标准检测服务",
+    remainingDays: 126,
+    balance: 32,
+    inspectionTimes: 6,
+    inspectionCycle: "每月 1 次",
+    contractLabel: "标准检测合同",
+  },
+  {
+    name: "重点区域专项检测服务",
+    remainingDays: 58,
+    balance: 14,
+    inspectionTimes: 3,
+    inspectionCycle: "每季度 1 次，异常加检",
+    contractLabel: "专项检测合同",
+  },
+]
 
 const customer = ref<CustomerDetailResult | null>(null)
 const loading = ref(false)
@@ -827,12 +909,13 @@ const fieldSections = computed<DetailFieldSection[]>(() => {
       title: "客户联系人",
       rows: buildContactFieldRows(current.People),
     },
-    {
-      key: "package-info",
-      title: "检测服务信息",
-      rows: buildPackageFieldRows(current),
-    },
   ]
+})
+
+const inspectionServiceCards = computed<CustomerInspectionServiceMockRecord[]>(() => {
+  const current = customer.value
+
+  return current ? buildCustomerInspectionServiceCards(current) : []
 })
 
 const parkBuildingAccordion = computed(() => ({
@@ -3386,18 +3469,6 @@ function buildContactValue(name: string, phone?: string): DetailContactValue {
   }
 }
 
-function buildPackageFieldRows(detail: CustomerDetailResult) {
-  const packageRecord = getCustomerPackageMockRecord(detail)
-
-  return [
-    { key: "balance", label: "资金余额", value: formatFunds(packageRecord?.remainingFunds ?? null) },
-    { key: "current-package", label: "当前购买检测服务信息", value: formatPackageInfo(packageRecord?.packageName ?? "-", packageRecord?.packageCode ?? "") },
-    { key: "expire-at", label: "到期时间", value: formatExpireDate(packageRecord?.remainingDays ?? null) },
-    { key: "contract-download", label: "合同下载", value: null, action: { label: "下载合同", onClick: handleContractDownload } },
-    { key: "remaining-service", label: "剩余服务", value: formatRemainingService(packageRecord), truncate: false, valueClass: "leading-6" },
-  ]
-}
-
 function getCustomerPackageMockRecord(detail: CustomerDetailResult): CustomerPackageMockRecord | null {
   const customerName = typeof detail.CorpName === "string" ? detail.CorpName.trim() : ""
 
@@ -3409,12 +3480,42 @@ function getCustomerPackageMockRecord(detail: CustomerDetailResult): CustomerPac
   return record ?? null
 }
 
-function formatPackageInfo(packageName: string, packageCode: string) {
-  if (!packageName || packageName === "-") {
-    return "—"
-  }
+function buildCustomerInspectionServiceCards(detail: CustomerDetailResult): CustomerInspectionServiceMockRecord[] {
+  const customerName = toDisplayText(detail.CorpName, "")
+  const packageRecord = getCustomerPackageMockRecord(detail)
+  const serviceSeeds = [
+    ...(packageRecord ? [buildPrimaryInspectionServiceSeed(packageRecord)] : []),
+    ...(EXTRA_CUSTOMER_INSPECTION_SERVICE_MOCKS[customerName] ?? []),
+  ]
+  const resolvedSeeds = serviceSeeds.length ? serviceSeeds : DEFAULT_INSPECTION_SERVICE_MOCKS
 
-  return packageCode ? `${packageName} (${packageCode})` : packageName
+  return resolvedSeeds.map((seed, index) => ({
+    ...seed,
+    key: `${customerName || "customer"}-${index + 1}-${seed.name}`,
+    expireAt: formatExpireDate(seed.remainingDays),
+    contractLabel: seed.contractLabel ?? "服务合同",
+  }))
+}
+
+function buildPrimaryInspectionServiceSeed(record: CustomerPackageMockRecord): CustomerInspectionServiceMockSeed {
+  return {
+    name: normalizeInspectionServiceName(record.packageName),
+    remainingDays: record.remainingDays,
+    balance: record.remainingFunds,
+    inspectionTimes: record.inspectionTimes,
+    inspectionCycle: record.inspectionCycle,
+    contractLabel: record.packageCode ? `主合同 ${record.packageCode}` : "主服务合同",
+  }
+}
+
+function normalizeInspectionServiceName(name: string) {
+  const normalized = name.trim() || "未命名检测服务"
+
+  return normalized.includes("检测服务") ? normalized : `${normalized}检测服务`
+}
+
+function formatInspectionServiceTitle(service: CustomerInspectionServiceMockRecord) {
+  return `${normalizeInspectionServiceName(service.name)}剩余 ${service.remainingDays} 天`
 }
 
 function formatFunds(value: number | null) {
@@ -3445,12 +3546,8 @@ function formatExpireDate(remainingDays: number | null) {
   return `${year}-${month}-${day}`
 }
 
-function formatRemainingService(record: CustomerPackageMockRecord | null) {
-  if (!record) {
-    return "—"
-  }
-
-  return `${record.inspectionTimes} 次巡检，${record.inspectionCycle}`
+function formatInspectionQuota(service: CustomerInspectionServiceMockRecord) {
+  return `${service.inspectionTimes} 次巡检，${service.inspectionCycle}`
 }
 
 function buildMaintenanceGroups(records: MaintenanceRecordRow[]) {
@@ -4617,6 +4714,72 @@ function toDisplayText(value: unknown, fallback = "未填写") {
         <CustomerDetailContentLoading v-if="loading" variant="basic-info-primary" />
         <template v-else-if="customer">
           <DetailFieldSections :sections="fieldSections" use-title-block />
+          <section class="min-w-0">
+            <TitleBlock
+              variant="section"
+              title="检测服务信息"
+              :sticky="true"
+              sticky-top="var(--detail-layout-sticky-offset, 0px)"
+              class="detail-section-inset pt-4 pb-1"
+            >
+              <template #append>
+                <span class="inline-flex min-w-6 items-center justify-center rounded-md bg-secondary px-1.5 py-0.5 text-[12px] font-medium leading-none text-secondary-foreground">
+                  {{ inspectionServiceCards.length }}
+                </span>
+              </template>
+            </TitleBlock>
+
+            <div v-if="inspectionServiceCards.length" class="detail-section-inset space-y-3 pt-2">
+              <article
+                v-for="service in inspectionServiceCards"
+                :key="service.key"
+                class="rounded-md border border-border bg-card p-3 text-card-foreground shadow-sm transition-colors hover:bg-surface-hover-strong"
+              >
+                <div class="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                  <div class="min-w-0">
+                    <h3 class="break-words text-[14px] font-semibold leading-5 text-foreground">
+                      {{ formatInspectionServiceTitle(service) }}
+                    </h3>
+                    <p class="mt-1 truncate text-xs text-muted-foreground">
+                      {{ service.contractLabel }}
+                    </p>
+                  </div>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    type="button"
+                    class="h-7 shrink-0 self-start rounded-md px-2.5 text-xs leading-5"
+                    @click="handleContractDownload"
+                  >
+                    <i class="ri-download-line text-sm" />
+                    下载合同
+                  </Button>
+                </div>
+
+                <div class="mt-3 grid gap-2 text-[13px] leading-5 sm:grid-cols-2">
+                  <div class="min-w-0 rounded-md bg-muted/45 px-2.5 py-2">
+                    <div class="text-xs text-muted-foreground">到期时间</div>
+                    <div class="mt-0.5 truncate font-medium text-foreground">{{ service.expireAt }}</div>
+                  </div>
+                  <div class="min-w-0 rounded-md bg-muted/45 px-2.5 py-2">
+                    <div class="text-xs text-muted-foreground">资金余额</div>
+                    <div class="mt-0.5 truncate font-medium text-foreground">{{ formatFunds(service.balance) }}</div>
+                  </div>
+                  <div class="min-w-0 rounded-md bg-muted/45 px-2.5 py-2 sm:col-span-2">
+                    <div class="text-xs text-muted-foreground">剩余服务</div>
+                    <div class="mt-0.5 break-words font-medium text-foreground">{{ formatInspectionQuota(service) }}</div>
+                  </div>
+                </div>
+              </article>
+            </div>
+
+            <div v-else class="detail-section-inset pt-2">
+              <div class="flex min-h-24 items-center justify-center rounded-md border border-dashed border-border bg-muted/30 px-4 text-sm text-muted-foreground">
+                暂无检测服务
+              </div>
+            </div>
+          </section>
         </template>
       </div>
     </template>
