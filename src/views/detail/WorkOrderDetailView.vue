@@ -8,6 +8,7 @@ import InspectionItemHistorySheet from "@/components/detail/InspectionItemHistor
 import LinkedEntityDetailSheet from "@/components/detail/LinkedEntityDetailSheet.vue"
 import PermissionGate from "@/components/permissions/PermissionGate.vue"
 import RepairWorkOrderContentCard from "@/components/detail/RepairWorkOrderContentCard.vue"
+import FormDatePicker from "@/components/form/FormDatePicker.vue"
 import DetailFieldsSkeleton from "@/components/loading/DetailFieldsSkeleton.vue"
 import DetailRelationSkeleton from "@/components/loading/DetailRelationSkeleton.vue"
 import DetailFieldSections from "@/components/detail/DetailFieldSections.vue"
@@ -140,8 +141,6 @@ const generatedReportUrl = ref("")
 const reportForm = ref({
   title: "",
   reportDate: "",
-  issuerName: "",
-  issuerContact: "",
   accessPassword: "",
   remark: "",
 })
@@ -336,7 +335,6 @@ const canSubmitReport = computed(() => (
   !reportSubmitting.value
   && Boolean(reportForm.value.title.trim())
   && Boolean(reportForm.value.reportDate.trim())
-  && Boolean(reportForm.value.issuerName.trim())
   && /^\d{4}$/.test(reportForm.value.accessPassword)
 ))
 
@@ -1129,12 +1127,9 @@ function openReportDialog() {
     return
   }
 
-  const template = loadReportTemplateConfig()
   reportForm.value = {
     title: `${toText(currentWorkOrder.ServiceName, "检测工单")}检测报告`,
     reportDate: getTodayDate(),
-    issuerName: template.issuerName,
-    issuerContact: template.issuerContact,
     accessPassword: "",
     remark: toText(currentWorkOrder.Remark, ""),
   }
@@ -1164,18 +1159,19 @@ function submitReportGeneration() {
   }
 
   if (!canSubmitReport.value) {
-    toast.error("请填写报告标题、日期、签发单位和 4 位数字密码")
+    toast.error("请填写报告标题、报告日期和 4 位数字密码")
     return
   }
 
   reportSubmitting.value = true
 
   try {
+    const template = loadReportTemplateConfig()
     const record = createInspectionReportMock({
       title: reportForm.value.title,
       reportDate: reportForm.value.reportDate,
-      issuerName: reportForm.value.issuerName,
-      issuerContact: reportForm.value.issuerContact,
+      issuerName: template.issuerName,
+      issuerContact: template.issuerContact,
       accessPassword: reportForm.value.accessPassword,
       remark: reportForm.value.remark,
       workOrder: currentWorkOrder,
@@ -1520,10 +1516,10 @@ async function submitAssign() {
 
           <label class="space-y-1.5">
             <span class="text-sm font-medium text-foreground">报告日期</span>
-            <Input
+            <FormDatePicker
               v-model="reportForm.reportDate"
-              type="date"
               :disabled="reportSubmitting"
+              placeholder="请选择报告日期"
             />
           </label>
 
@@ -1538,24 +1534,6 @@ async function submitAssign() {
               :disabled="reportSubmitting"
               class="tracking-[0.24em]"
               @update:model-value="updateReportPassword"
-            />
-          </label>
-
-          <label class="space-y-1.5">
-            <span class="text-sm font-medium text-foreground">签发单位</span>
-            <Input
-              v-model="reportForm.issuerName"
-              :disabled="reportSubmitting"
-              placeholder="输入签发单位"
-            />
-          </label>
-
-          <label class="space-y-1.5">
-            <span class="text-sm font-medium text-foreground">联系人</span>
-            <Input
-              v-model="reportForm.issuerContact"
-              :disabled="reportSubmitting"
-              placeholder="输入联系人或电话"
             />
           </label>
 
