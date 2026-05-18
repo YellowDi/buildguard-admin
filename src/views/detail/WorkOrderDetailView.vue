@@ -1527,8 +1527,9 @@ async function submitAssign() {
             <span class="text-sm font-medium text-foreground">访问密码</span>
             <Input
               :model-value="reportForm.accessPassword"
-              type="password"
+              type="text"
               inputmode="numeric"
+              autocomplete="off"
               maxlength="4"
               placeholder="4 位数字"
               :disabled="reportSubmitting"

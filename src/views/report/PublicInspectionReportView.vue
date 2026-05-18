@@ -145,8 +145,9 @@ function displayItemValue(value: string) {
           <span class="text-sm font-medium text-foreground">访问密码</span>
           <Input
             :model-value="password"
-            type="password"
+            type="text"
             inputmode="numeric"
+            autocomplete="off"
             maxlength="4"
             placeholder="4 位数字"
             class="h-11 text-center text-xl tracking-[0.36em]"
