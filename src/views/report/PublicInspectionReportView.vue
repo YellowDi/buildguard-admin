@@ -4,7 +4,7 @@ import { useRoute } from "vue-router"
 import { toast } from "vue-sonner"
 
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp"
 import {
   buildInspectionReportUrl,
   getInspectionReportMock,
@@ -143,16 +143,24 @@ function displayItemValue(value: string) {
 
         <label class="space-y-2">
           <span class="text-sm font-medium text-foreground">访问密码</span>
-          <Input
+          <InputOTP
             :model-value="password"
-            type="text"
-            inputmode="numeric"
             autocomplete="off"
-            maxlength="4"
-            placeholder="4 位数字"
-            class="h-11 text-center text-xl tracking-[0.36em]"
+            class="justify-center"
+            :max-length="4"
+            aria-label="报告访问密码"
+            inputmode="numeric"
+            @complete="unlockReport"
             @update:model-value="updatePassword"
-          />
+          >
+            <InputOTPGroup>
+              <InputOTPSlot
+                v-for="slotIndex in 4"
+                :key="slotIndex"
+                :index="slotIndex - 1"
+              />
+            </InputOTPGroup>
+          </InputOTP>
         </label>
 
         <p v-if="passwordError" class="mt-2 text-sm text-destructive">{{ passwordError }}</p>
