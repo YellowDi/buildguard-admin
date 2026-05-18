@@ -180,7 +180,7 @@ const visibleSettingsCategories = computed(() => {
     return categories.value
   }
 
-  return categories.value.filter(category => canMenu(`/settings/${category.key}`))
+  return categories.value.filter(category => category.key === "report-template" || canMenu(`/settings/${category.key}`))
 })
 
 function toggleItem(item: AppSidebarNavItem) {

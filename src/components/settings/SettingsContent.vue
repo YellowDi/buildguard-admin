@@ -43,6 +43,7 @@ const SettingsBusinessPresetsHub = defineAsyncComponent(() => import("@/componen
 const SettingsInspectionHub = defineAsyncComponent(() => import("@/components/settings/SettingsInspectionHub.vue"))
 const SettingsMenusTable = defineAsyncComponent(() => import("@/components/settings/SettingsMenusTable.vue"))
 const SettingsMembersTable = defineAsyncComponent(() => import("@/components/settings/SettingsMembersTable.vue"))
+const SettingsReportTemplatePage = defineAsyncComponent(() => import("@/components/settings/SettingsReportTemplatePage.vue"))
 
 const props = defineProps<{
   category: SettingsCategory
@@ -112,6 +113,11 @@ function getBooleanValue(key: keyof SettingsState) {
   />
   <SettingsInspectionHub
     v-else-if="props.category.key === 'inspection-items'"
+    :page-title="props.category.pageTitle ?? props.category.label"
+    :page-description="props.category.pageDescription ?? props.category.description"
+  />
+  <SettingsReportTemplatePage
+    v-else-if="props.category.key === 'report-template'"
     :page-title="props.category.pageTitle ?? props.category.label"
     :page-description="props.category.pageDescription ?? props.category.description"
   />

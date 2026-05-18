@@ -27,11 +27,20 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
 import { detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
 import DetailLayout from "@/layouts/DetailLayout.vue"
 import { handleApiError } from "@/lib/api-errors"
 import { fetchCustomerDetail, type CustomerDetailResult } from "@/lib/customers-api"
+import {
+  buildInspectionReportUrl,
+  createInspectionReportMock,
+  createReportQrPlaceholderDataUrl,
+  loadReportTemplateConfig,
+  type InspectionReportRecord,
+} from "@/lib/inspection-report-mock"
 import { getInspectionItemDetail, type InspectionItemRecord } from "@/lib/inspection-items-api"
 import { fetchInspectionPlanDetail, type InspectionPlanListItem } from "@/lib/inspection-plans-api"
 import { fetchMembers } from "@/lib/members-api"
@@ -124,6 +133,18 @@ const linkedDetailSheetKind = ref<LinkedDetailSheetKind | null>(null)
 const linkedDetailSheetUuid = ref("")
 const inspectionHistorySheetOpen = ref(false)
 const selectedInspectionHistoryModel = ref<InspectionItemHistoryModel | null>(null)
+const reportDialogOpen = ref(false)
+const reportSubmitting = ref(false)
+const generatedReport = ref<InspectionReportRecord | null>(null)
+const generatedReportUrl = ref("")
+const reportForm = ref({
+  title: "",
+  reportDate: "",
+  issuerName: "",
+  issuerContact: "",
+  accessPassword: "",
+  remark: "",
+})
 
 const workOrderUuid = computed(() => typeof route.params.id === "string" ? route.params.id.trim() : "")
 const customerUuid = computed(() => {
@@ -300,11 +321,24 @@ const hasWorkOrder = computed(() => (
 ))
 
 const showAssignAction = computed(() => !loading.value && hasWorkOrder.value && Boolean(workOrderUuid.value))
+const showGenerateReportAction = computed(() => (
+  props.kind === "inspection"
+  && !loading.value
+  && hasWorkOrder.value
+  && Boolean(workOrderUuid.value)
+))
 const showRepairDeleteAction = computed(() => props.kind === "repair" && !loading.value && hasWorkOrder.value && Boolean(workOrderUuid.value))
 const showRepairEditAction = computed(() => props.kind === "repair" && !loading.value && hasWorkOrder.value && Boolean(workOrderUuid.value))
 const assignPermissionCode = computed(() => props.kind === "repair"
   ? PERMISSION_CODES.repairWorkOrderAssign
   : PERMISSION_CODES.inspectionWorkOrderAssign)
+const canSubmitReport = computed(() => (
+  !reportSubmitting.value
+  && Boolean(reportForm.value.title.trim())
+  && Boolean(reportForm.value.reportDate.trim())
+  && Boolean(reportForm.value.issuerName.trim())
+  && /^\d{4}$/.test(reportForm.value.accessPassword)
+))
 
 watch([inspectionWorkOrder, repairWorkOrder], () => {
   if (props.kind === "repair") {
@@ -320,6 +354,9 @@ watch([inspectionWorkOrder, repairWorkOrder], () => {
 watch(workOrderUuid, (uuid) => {
   assignableUsersLoaded.value = false
   assignableUsers.value = []
+  generatedReport.value = null
+  generatedReportUrl.value = ""
+  reportDialogOpen.value = false
   resetInspectionHistorySheet()
   void loadWorkOrderDetail(uuid)
 }, { immediate: true })
@@ -1084,6 +1121,133 @@ function toNumber(value: unknown) {
   return null
 }
 
+function openReportDialog() {
+  const currentWorkOrder = resolvedInspectionWorkOrder.value
+
+  if (!currentWorkOrder) {
+    toast.error("当前检测工单缺少详情数据，无法生成报告")
+    return
+  }
+
+  const template = loadReportTemplateConfig()
+  reportForm.value = {
+    title: `${toText(currentWorkOrder.ServiceName, "检测工单")}检测报告`,
+    reportDate: getTodayDate(),
+    issuerName: template.issuerName,
+    issuerContact: template.issuerContact,
+    accessPassword: "",
+    remark: toText(currentWorkOrder.Remark, ""),
+  }
+  generatedReport.value = null
+  generatedReportUrl.value = ""
+  reportDialogOpen.value = true
+}
+
+function closeReportDialog() {
+  if (reportSubmitting.value) {
+    return
+  }
+
+  reportDialogOpen.value = false
+}
+
+function updateReportPassword(value: string | number) {
+  reportForm.value.accessPassword = String(value).replace(/\D/g, "").slice(0, 4)
+}
+
+function submitReportGeneration() {
+  const currentWorkOrder = resolvedInspectionWorkOrder.value
+
+  if (!currentWorkOrder) {
+    toast.error("当前检测工单缺少详情数据，无法生成报告")
+    return
+  }
+
+  if (!canSubmitReport.value) {
+    toast.error("请填写报告标题、日期、签发单位和 4 位数字密码")
+    return
+  }
+
+  reportSubmitting.value = true
+
+  try {
+    const record = createInspectionReportMock({
+      title: reportForm.value.title,
+      reportDate: reportForm.value.reportDate,
+      issuerName: reportForm.value.issuerName,
+      issuerContact: reportForm.value.issuerContact,
+      accessPassword: reportForm.value.accessPassword,
+      remark: reportForm.value.remark,
+      workOrder: currentWorkOrder,
+      customer: customer.value,
+    })
+
+    generatedReport.value = record
+    generatedReportUrl.value = buildInspectionReportUrl(record.id)
+    toast.success("报告已生成", {
+      description: "可打开 HTML 报告，也可在报告页打印为 PDF。",
+    })
+  } catch {
+    toast.error("报告生成失败，请稍后重试")
+  } finally {
+    reportSubmitting.value = false
+  }
+}
+
+async function copyGeneratedReportUrl() {
+  if (!generatedReportUrl.value) {
+    return
+  }
+
+  try {
+    await navigator.clipboard.writeText(generatedReportUrl.value)
+    toast.success("报告链接已复制")
+  } catch {
+    toast.error("复制失败，请手动复制链接")
+  }
+}
+
+function openGeneratedReport(print = false) {
+  if (!generatedReportUrl.value) {
+    return
+  }
+
+  const url = print
+    ? `${generatedReportUrl.value}${generatedReportUrl.value.includes("?") ? "&" : "?"}print=1`
+    : generatedReportUrl.value
+
+  window.open(url, "_blank", "noopener,noreferrer")
+}
+
+function downloadGeneratedReportQr() {
+  if (!generatedReportUrl.value) {
+    return
+  }
+
+  const dataUrl = createReportQrPlaceholderDataUrl(generatedReportUrl.value, "报告访问占位二维码")
+
+  if (!dataUrl) {
+    toast.error("二维码生成失败")
+    return
+  }
+
+  const link = document.createElement("a")
+  link.href = dataUrl
+  link.download = `${generatedReport.value?.id ?? "inspection-report"}-qr-placeholder.png`
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+}
+
+function getTodayDate() {
+  const date = new Date()
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  const day = String(date.getDate()).padStart(2, "0")
+
+  return `${year}-${month}-${day}`
+}
+
 async function openAssignDialog() {
   try {
     await loadAssignableUsers()
@@ -1254,6 +1418,17 @@ async function submitAssign() {
           </AlertDialogContent>
         </AlertDialog>
       </PermissionGate>
+      <Button
+        v-if="showGenerateReportAction"
+        type="button"
+        variant="outline"
+        size="sm"
+        class="h-8 gap-1 px-3 text-[14px] font-medium"
+        @click="openReportDialog"
+      >
+        <i class="ri-file-chart-line text-base" />
+        生成报告
+      </Button>
       <PermissionGate :code="assignPermissionCode">
         <Button
           v-if="showAssignAction"
@@ -1322,6 +1497,123 @@ async function submitAssign() {
       </template>
     </template>
   </DetailLayout>
+
+  <Dialog v-model:open="reportDialogOpen">
+    <DialogContent class="max-w-[min(96vw,40rem)] gap-0 overflow-hidden p-0">
+      <DialogHeader class="px-4 pt-4 pb-0">
+        <DialogTitle>生成检测报告</DialogTitle>
+        <DialogDescription>
+          填写报告展示信息和 4 位访问密码，生成可访问的 HTML 报告页面。
+        </DialogDescription>
+      </DialogHeader>
+
+      <div class="space-y-4 p-4">
+        <div class="grid gap-4 sm:grid-cols-2">
+          <label class="space-y-1.5 sm:col-span-2">
+            <span class="text-sm font-medium text-foreground">报告标题</span>
+            <Input
+              v-model="reportForm.title"
+              :disabled="reportSubmitting"
+              placeholder="输入报告标题"
+            />
+          </label>
+
+          <label class="space-y-1.5">
+            <span class="text-sm font-medium text-foreground">报告日期</span>
+            <Input
+              v-model="reportForm.reportDate"
+              type="date"
+              :disabled="reportSubmitting"
+            />
+          </label>
+
+          <label class="space-y-1.5">
+            <span class="text-sm font-medium text-foreground">访问密码</span>
+            <Input
+              :model-value="reportForm.accessPassword"
+              type="password"
+              inputmode="numeric"
+              maxlength="4"
+              placeholder="4 位数字"
+              :disabled="reportSubmitting"
+              class="tracking-[0.24em]"
+              @update:model-value="updateReportPassword"
+            />
+          </label>
+
+          <label class="space-y-1.5">
+            <span class="text-sm font-medium text-foreground">签发单位</span>
+            <Input
+              v-model="reportForm.issuerName"
+              :disabled="reportSubmitting"
+              placeholder="输入签发单位"
+            />
+          </label>
+
+          <label class="space-y-1.5">
+            <span class="text-sm font-medium text-foreground">联系人</span>
+            <Input
+              v-model="reportForm.issuerContact"
+              :disabled="reportSubmitting"
+              placeholder="输入联系人或电话"
+            />
+          </label>
+
+          <label class="space-y-1.5 sm:col-span-2">
+            <span class="text-sm font-medium text-foreground">备注</span>
+            <Textarea
+              v-model="reportForm.remark"
+              :disabled="reportSubmitting"
+              class="min-h-20 resize-none bg-background"
+              placeholder="填写报告备注，可留空"
+            />
+          </label>
+        </div>
+
+        <section
+          v-if="generatedReport && generatedReportUrl"
+          class="rounded-lg bg-brand-surface p-3 shadow-[inset_0_0_0_1px_rgb(0_117_222_/_0.12)]"
+        >
+          <div class="flex min-w-0 items-start gap-3">
+            <div class="inline-flex size-9 shrink-0 items-center justify-center rounded-md bg-background text-link shadow-(--shadow-border)">
+              <i class="ri-checkbox-circle-line text-lg" />
+            </div>
+            <div class="min-w-0 flex-1">
+              <p class="text-sm font-semibold text-foreground">报告已生成</p>
+              <p class="mt-1 break-all text-xs leading-5 text-muted-foreground">{{ generatedReportUrl }}</p>
+              <div class="mt-3 flex flex-wrap gap-2">
+                <Button type="button" variant="outline" class="h-8 gap-1 px-3" @click="copyGeneratedReportUrl">
+                  <i class="ri-file-copy-line text-base" />
+                  复制链接
+                </Button>
+                <Button type="button" variant="outline" class="h-8 gap-1 px-3" @click="openGeneratedReport(false)">
+                  <i class="ri-external-link-line text-base" />
+                  打开 HTML
+                </Button>
+                <Button type="button" variant="outline" class="h-8 gap-1 px-3" @click="downloadGeneratedReportQr">
+                  <i class="ri-qr-code-line text-base" />
+                  下载二维码
+                </Button>
+                <Button type="button" class="h-8 gap-1 px-3" @click="openGeneratedReport(true)">
+                  <i class="ri-printer-line text-base" />
+                  打印 PDF
+                </Button>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <DialogFooter class="gap-2 border-t border-border/70 px-4 py-3">
+        <Button type="button" variant="outline" :disabled="reportSubmitting" @click="closeReportDialog">
+          取消
+        </Button>
+        <Button type="button" :disabled="!canSubmitReport" @click="submitReportGeneration">
+          {{ reportSubmitting ? "生成中..." : generatedReport ? "重新生成" : "生成报告" }}
+        </Button>
+      </DialogFooter>
+    </DialogContent>
+  </Dialog>
 
   <Dialog v-model:open="assignDialogOpen">
     <DialogContent class="sm:max-w-[420px]">

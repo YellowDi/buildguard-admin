@@ -21,6 +21,7 @@ type RouteMetaConfig = {
   permissionPath?: string
   useDetailBreadcrumbTitle?: boolean
   navActivePath?: string
+  public?: boolean
 }
 
 const router = createRouter({
@@ -51,6 +52,16 @@ const router = createRouter({
       meta: {
         title: "验证码登录",
         loading: "auth",
+      } satisfies RouteMetaConfig,
+    },
+    {
+      path: "/reports/inspection/:reportId",
+      name: "public-inspection-report",
+      component: () => import("@/views/report/PublicInspectionReportView.vue"),
+      meta: {
+        title: "检测报告",
+        loading: "dashboard",
+        public: true,
       } satisfies RouteMetaConfig,
     },
     {
@@ -599,9 +610,15 @@ let pendingSessionValidation: Promise<"valid" | "invalid" | "unknown"> | null = 
 
 router.beforeEach(async (to, from) => {
   const isAuthRoute = to.name === "login" || to.name === "signup" || to.name === "otp"
+  const isPublicRoute = to.matched.some(record => record.meta.public === true)
   const authState = getAuthState()
   const token = getAuthToken()
   const authenticated = authState === "authenticated" && Boolean(token)
+
+  if (isPublicRoute) {
+    beginRouteLoading(resolveRouteLoadingKind(to.meta.loading))
+    return
+  }
 
   if (authState === "expired") {
     validatedAuthToken = ""
@@ -759,6 +776,10 @@ function resolveRoutePermissionPath(route: RouteLocationNormalized) {
     const category = typeof route.params.category === "string" && route.params.category.trim()
       ? route.params.category.trim()
       : DEFAULT_SETTINGS_CATEGORY_KEY
+
+    if (category === "report-template") {
+      return ""
+    }
 
     return `/settings/${category}`
   }

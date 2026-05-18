@@ -12,6 +12,7 @@ export const SETTINGS_CATEGORY_KEYS = [
   "developer",
   "business-presets",
   "inspection-items",
+  "report-template",
   "notifications",
   "security",
 ] as const
