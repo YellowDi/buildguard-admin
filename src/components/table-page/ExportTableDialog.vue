@@ -260,7 +260,7 @@ function handleConfirm() {
         </section>
       </div>
 
-      <DialogFooter class="border-t border-border/70 p-4 sm:justify-end">
+      <DialogFooter class="p-4 sm:justify-end">
         <Button
           variant="outline"
           class="h-9 px-4"

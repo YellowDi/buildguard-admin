@@ -1582,7 +1582,7 @@ async function submitAssign() {
         </section>
       </div>
 
-      <DialogFooter class="gap-2 border-t border-border/70 px-4 py-3">
+      <DialogFooter class="gap-2 px-4 py-3">
         <Button type="button" variant="outline" :disabled="reportSubmitting" @click="closeReportDialog">
           取消
         </Button>
