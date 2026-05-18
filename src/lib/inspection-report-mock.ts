@@ -91,6 +91,24 @@ export type InspectionReportRecord = {
 
 const REPORT_STORAGE_KEY = "buildguard:inspection-reports"
 const TEMPLATE_STORAGE_KEY = "buildguard:report-template"
+const DEFAULT_REPORT_MODULE_ORDER: ReportTemplateModuleKey[] = [
+  "cover",
+  "summary",
+  "score",
+  "risks",
+  "buildings",
+  "attachments",
+  "footer",
+]
+const LEGACY_DEFAULT_REPORT_MODULE_ORDER: ReportTemplateModuleKey[] = [
+  "cover",
+  "summary",
+  "score",
+  "buildings",
+  "risks",
+  "attachments",
+  "footer",
+]
 
 export const DEFAULT_REPORT_TEMPLATE_CONFIG: ReportTemplateConfig = {
   templateName: "检测报告标准模板",
@@ -107,7 +125,7 @@ export const DEFAULT_REPORT_TEMPLATE_CONFIG: ReportTemplateConfig = {
     {
       key: "summary",
       title: "工单摘要",
-      description: "展示工单编号、检测服务、计划、状态、截止时间等基础信息。",
+      description: "展示检测服务、计划、状态、截止时间等基础信息。",
       enabled: true,
     },
     {
@@ -117,15 +135,15 @@ export const DEFAULT_REPORT_TEMPLATE_CONFIG: ReportTemplateConfig = {
       enabled: true,
     },
     {
-      key: "buildings",
-      title: "建筑与检测项",
-      description: "按建筑列出检测项、分类、结果和执行人。",
-      enabled: true,
-    },
-    {
       key: "risks",
       title: "风险问题",
       description: "聚合异常或待整改检测项，便于客户优先处理。",
+      enabled: true,
+    },
+    {
+      key: "buildings",
+      title: "建筑与检测项",
+      description: "按建筑列出检测项、分类、结果和执行人。",
       enabled: true,
     },
     {
@@ -196,6 +214,18 @@ export function buildInspectionReportUrl(reportId: string) {
   }
 
   return `${window.location.origin}${path}`
+}
+
+export function normalizeReportTemplateModuleOrder(modules: ReportTemplateModule[]): ReportTemplateModule[] {
+  if (!matchesModuleOrder(modules.map(module => module.key), LEGACY_DEFAULT_REPORT_MODULE_ORDER)) {
+    return modules
+  }
+
+  const moduleByKey = new Map(modules.map(module => [module.key, module]))
+
+  return DEFAULT_REPORT_MODULE_ORDER
+    .map(key => moduleByKey.get(key))
+    .filter((module): module is ReportTemplateModule => Boolean(module))
 }
 
 export function createReportQrPlaceholderDataUrl(value: string, title = "报告二维码") {
@@ -348,12 +378,12 @@ function normalizeTemplateConfig(value: Partial<ReportTemplateConfig> | null): R
   const orderedKeys = storedModules
     .map(module => module.key)
     .filter((key): key is ReportTemplateModuleKey => defaultModules.some(defaultModule => defaultModule.key === key))
-  const orderedModules = [
+  const orderedModules = normalizeReportTemplateModuleOrder([
     ...orderedKeys
       .map(key => mergedModules.find(module => module.key === key))
       .filter((module): module is ReportTemplateModule => Boolean(module)),
     ...mergedModules.filter(module => !orderedKeys.includes(module.key)),
-  ]
+  ])
 
   return {
     templateName: toText(value?.templateName, DEFAULT_REPORT_TEMPLATE_CONFIG.templateName),
@@ -362,6 +392,10 @@ function normalizeTemplateConfig(value: Partial<ReportTemplateConfig> | null): R
     modules: orderedModules,
     updatedAt: toText(value?.updatedAt, DEFAULT_REPORT_TEMPLATE_CONFIG.updatedAt),
   }
+}
+
+function matchesModuleOrder(keys: ReportTemplateModuleKey[], order: ReportTemplateModuleKey[]) {
+  return keys.length === order.length && keys.every((key, index) => key === order[index])
 }
 
 function readStoredValue<T>(key: string): T | null {

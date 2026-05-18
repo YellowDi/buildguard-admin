@@ -8,6 +8,7 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp
 import {
   buildInspectionReportUrl,
   getInspectionReportMock,
+  normalizeReportTemplateModuleOrder,
   verifyInspectionReportPassword,
   type InspectionReportRecord,
   type ReportTemplateModule,
@@ -22,7 +23,9 @@ const passwordError = ref("")
 const unlocked = ref(false)
 
 const reportUrl = computed(() => reportId.value ? buildInspectionReportUrl(reportId.value) : "")
-const enabledModules = computed(() => report.value?.template.modules.filter(module => module.enabled) ?? [])
+const enabledModules = computed(() => report.value
+  ? normalizeReportTemplateModuleOrder(report.value.template.modules).filter(module => module.enabled)
+  : [])
 const completionText = computed(() => {
   const snapshot = report.value?.snapshot
 
@@ -241,10 +244,6 @@ function displayItemValue(value: string) {
                 </div>
 
                 <dl class="grid gap-x-6 gap-y-4 text-sm sm:grid-cols-2 lg:grid-cols-3">
-                  <div>
-                    <dt class="text-muted-foreground">工单编号</dt>
-                    <dd class="mt-1 font-medium text-foreground">{{ report.snapshot.orderNo }}</dd>
-                  </div>
                   <div>
                     <dt class="text-muted-foreground">检测服务</dt>
                     <dd class="mt-1 font-medium text-foreground">{{ report.snapshot.serviceName }}</dd>
