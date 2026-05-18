@@ -39,7 +39,6 @@ import {
   buildInspectionReportUrl,
   createInspectionReportMock,
   createReportQrPlaceholderDataUrl,
-  loadReportTemplateConfig,
   type InspectionReportRecord,
 } from "@/lib/inspection-report-mock"
 import { getInspectionItemDetail, type InspectionItemRecord } from "@/lib/inspection-items-api"
@@ -1166,12 +1165,9 @@ function submitReportGeneration() {
   reportSubmitting.value = true
 
   try {
-    const template = loadReportTemplateConfig()
     const record = createInspectionReportMock({
       title: reportForm.value.title,
       reportDate: reportForm.value.reportDate,
-      issuerName: template.issuerName,
-      issuerContact: template.issuerContact,
       accessPassword: reportForm.value.accessPassword,
       remark: reportForm.value.remark,
       workOrder: currentWorkOrder,

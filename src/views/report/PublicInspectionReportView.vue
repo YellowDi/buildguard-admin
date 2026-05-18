@@ -220,12 +220,8 @@ function displayItemValue(value: string) {
                       <dd class="mt-1 font-medium text-foreground">{{ report.snapshot.reportDate }}</dd>
                     </div>
                     <div>
-                      <dt class="text-muted-foreground">签发单位</dt>
-                      <dd class="mt-1 font-medium text-foreground">{{ report.snapshot.issuerName }}</dd>
-                    </div>
-                    <div>
-                      <dt class="text-muted-foreground">联系人</dt>
-                      <dd class="mt-1 font-medium text-foreground">{{ report.snapshot.issuerContact }}</dd>
+                      <dt class="text-muted-foreground">工单编号</dt>
+                      <dd class="mt-1 font-medium text-foreground">{{ report.snapshot.orderNo }}</dd>
                     </div>
                   </dl>
                 </div>

@@ -20,8 +20,6 @@ export type ReportTemplateModule = {
 
 export type ReportTemplateConfig = {
   templateName: string
-  issuerName: string
-  issuerContact: string
   footerText: string
   watermarkText: string
   modules: ReportTemplateModule[]
@@ -31,8 +29,6 @@ export type ReportTemplateConfig = {
 export type InspectionReportCreateInput = {
   title: string
   reportDate: string
-  issuerName: string
-  issuerContact: string
   accessPassword: string
   remark: string
   workOrder: WorkOrderDetailResult
@@ -42,8 +38,6 @@ export type InspectionReportCreateInput = {
 export type InspectionReportSnapshot = {
   title: string
   reportDate: string
-  issuerName: string
-  issuerContact: string
   remark: string
   orderNo: string
   serviceName: string
@@ -100,8 +94,6 @@ const TEMPLATE_STORAGE_KEY = "buildguard:report-template"
 
 export const DEFAULT_REPORT_TEMPLATE_CONFIG: ReportTemplateConfig = {
   templateName: "检测报告标准模板",
-  issuerName: "BuildGuard 运维中心",
-  issuerContact: "400-800-2026",
   footerText: "本报告基于现场检测工单数据自动生成，仅用于客户安全管理和整改跟踪。",
   watermarkText: "BuildGuard",
   updatedAt: "2026-05-18 00:00",
@@ -109,7 +101,7 @@ export const DEFAULT_REPORT_TEMPLATE_CONFIG: ReportTemplateConfig = {
     {
       key: "cover",
       title: "报告封面",
-      description: "展示报告标题、客户、园区、签发单位和报告日期。",
+      description: "展示报告标题、客户、园区和报告日期。",
       enabled: true,
     },
     {
@@ -272,8 +264,6 @@ function buildInspectionReportSnapshot(input: InspectionReportCreateInput): Insp
   return {
     title: input.title.trim(),
     reportDate: input.reportDate.trim(),
-    issuerName: input.issuerName.trim(),
-    issuerContact: input.issuerContact.trim(),
     remark: input.remark.trim(),
     orderNo: toText(input.workOrder.OrderNo, "-"),
     serviceName: toText(input.workOrder.ServiceName, toText(input.workOrder.PackageName, "-")),
@@ -367,8 +357,6 @@ function normalizeTemplateConfig(value: Partial<ReportTemplateConfig> | null): R
 
   return {
     templateName: toText(value?.templateName, DEFAULT_REPORT_TEMPLATE_CONFIG.templateName),
-    issuerName: toText(value?.issuerName, DEFAULT_REPORT_TEMPLATE_CONFIG.issuerName),
-    issuerContact: toText(value?.issuerContact, DEFAULT_REPORT_TEMPLATE_CONFIG.issuerContact),
     footerText: toText(value?.footerText, DEFAULT_REPORT_TEMPLATE_CONFIG.footerText),
     watermarkText: toText(value?.watermarkText, DEFAULT_REPORT_TEMPLATE_CONFIG.watermarkText),
     modules: orderedModules,

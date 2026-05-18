@@ -97,16 +97,6 @@ function cloneTemplateConfig(value: ReportTemplateConfig): ReportTemplateConfig 
           </label>
 
           <label class="space-y-1.5">
-            <span class="text-sm font-medium text-foreground">默认签发单位</span>
-            <Input v-model="config.issuerName" placeholder="输入签发单位" />
-          </label>
-
-          <label class="space-y-1.5">
-            <span class="text-sm font-medium text-foreground">默认联系人</span>
-            <Input v-model="config.issuerContact" placeholder="输入联系人或电话" />
-          </label>
-
-          <label class="space-y-1.5">
             <span class="text-sm font-medium text-foreground">水印文案</span>
             <Input v-model="config.watermarkText" placeholder="输入水印文案" />
           </label>
