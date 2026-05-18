@@ -325,34 +325,27 @@ function displayItemValue(value: string) {
                     </div>
 
                     <div class="overflow-x-auto rounded-md bg-background shadow-[inset_0_0_0_1px_rgb(0_0_0_/_0.06)]">
-                      <table class="w-full min-w-[820px] table-fixed text-left text-sm">
-                        <colgroup>
-                          <col class="w-[26%]">
-                          <col class="w-[17%]">
-                          <col class="w-[29%]">
-                          <col class="w-[13%]">
-                          <col class="w-[15%]">
-                        </colgroup>
+                      <table class="w-full min-w-[820px] table-auto text-left text-sm">
                         <thead class="bg-muted/70 text-xs text-muted-foreground">
                           <tr>
-                            <th class="whitespace-nowrap px-3 py-2 font-medium">检测项</th>
-                            <th class="whitespace-nowrap px-3 py-2 font-medium">分类</th>
-                            <th class="px-3 py-2 font-medium">检测内容</th>
-                            <th class="whitespace-nowrap px-3 py-2 font-medium">结果</th>
-                            <th class="whitespace-nowrap px-3 py-2 font-medium">执行人</th>
+                            <th class="w-px whitespace-nowrap px-3 py-2 font-medium">检测项</th>
+                            <th class="w-px whitespace-nowrap px-3 py-2 font-medium">分类</th>
+                            <th class="w-px whitespace-nowrap px-3 py-2 font-medium">结果</th>
+                            <th class="w-px whitespace-nowrap px-3 py-2 font-medium">执行人</th>
+                            <th class="w-full min-w-72 px-3 py-2 font-medium">检测内容</th>
                           </tr>
                         </thead>
                         <tbody class="divide-y divide-border/60">
                           <tr v-for="item in building.items" :key="item.key" class="align-top">
                             <td class="whitespace-nowrap px-3 py-2 font-medium text-foreground">{{ item.name }}</td>
                             <td class="whitespace-nowrap px-3 py-2 text-muted-foreground">{{ item.categoryName }}</td>
-                            <td class="px-3 py-2 leading-6 text-muted-foreground">{{ displayItemValue(item.content) }}</td>
                             <td class="whitespace-nowrap px-3 py-2">
                               <span class="whitespace-nowrap rounded px-2 py-0.5 text-xs font-medium" :class="getResultClass(item.resultLabel)">
                                 {{ item.resultLabel }}
                               </span>
                             </td>
                             <td class="whitespace-nowrap px-3 py-2 text-muted-foreground">{{ item.executorName }}</td>
+                            <td class="w-full min-w-72 px-3 py-2 leading-6 text-muted-foreground">{{ displayItemValue(item.content) }}</td>
                           </tr>
                         </tbody>
                       </table>
