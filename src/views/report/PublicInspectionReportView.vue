@@ -141,33 +141,27 @@ function displayItemValue(value: string) {
           </p>
         </div>
 
-        <label class="space-y-2">
-          <span class="text-sm font-medium text-foreground">访问密码</span>
-          <InputOTP
-            :model-value="password"
-            autocomplete="off"
-            class="justify-center"
-            :max-length="4"
-            aria-label="报告访问密码"
-            inputmode="numeric"
-            @complete="unlockReport"
-            @update:model-value="updatePassword"
-          >
-            <InputOTPGroup>
-              <InputOTPSlot
-                v-for="slotIndex in 4"
-                :key="slotIndex"
-                :index="slotIndex - 1"
-              />
-            </InputOTPGroup>
-          </InputOTP>
-        </label>
+        <InputOTP
+          :model-value="password"
+          autocomplete="off"
+          class="mt-5 w-full"
+          :max-length="4"
+          aria-label="报告访问密码"
+          inputmode="numeric"
+          @complete="unlockReport"
+          @update:model-value="updatePassword"
+        >
+          <InputOTPGroup class="grid w-full grid-cols-4">
+            <InputOTPSlot
+              v-for="slotIndex in 4"
+              :key="slotIndex"
+              class="h-16 w-full text-2xl sm:h-[72px] sm:text-3xl"
+              :index="slotIndex - 1"
+            />
+          </InputOTPGroup>
+        </InputOTP>
 
-        <p v-if="passwordError" class="mt-2 text-sm text-destructive">{{ passwordError }}</p>
-
-        <Button type="submit" class="mt-5 h-10 w-full">
-          查看报告
-        </Button>
+        <p v-if="passwordError" class="mt-3 text-center text-sm text-destructive">{{ passwordError }}</p>
       </form>
     </section>
 

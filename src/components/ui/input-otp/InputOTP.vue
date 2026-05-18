@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { HTMLAttributes } from "vue"
-import { computed, provide, ref, watch } from "vue"
+import { computed, provide, ref, useAttrs, watch } from "vue"
 
 import { cn } from "@/lib/utils"
 import { INPUT_OTP_CONTEXT_KEY } from "./context"
@@ -31,10 +31,12 @@ const emit = defineEmits<{
   "update:modelValue": [value: string]
 }>()
 
+const attrs = useAttrs()
 const inputRef = ref<HTMLInputElement | null>(null)
 const activeIndex = ref(-1)
 const resolvedMaxLength = computed(() => Math.max(1, props.maxLength))
 const resolvedDisabled = computed(() => Boolean(props.disabled))
+const inputAriaLabel = computed(() => typeof attrs["aria-label"] === "string" ? attrs["aria-label"] : "一次性访问码")
 const value = ref(normalizeValue(props.modelValue))
 
 watch(() => props.modelValue, (nextValue) => {
@@ -115,7 +117,7 @@ function normalizeValue(nextValue: unknown) {
       :maxlength="resolvedMaxLength"
       :name="props.name"
       :value="value"
-      aria-label="一次性访问码"
+      :aria-label="inputAriaLabel"
       class="absolute inset-0 z-10 h-full w-full cursor-text bg-transparent text-transparent opacity-0 outline-none caret-transparent disabled:cursor-not-allowed"
       type="text"
       @blur="handleBlur"
