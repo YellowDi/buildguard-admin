@@ -3,6 +3,7 @@ import { computed, ref, watch } from "vue"
 
 import TitleBlock from "@/components/layout/TitleBlock.vue"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import { Progress } from "@/components/ui/progress"
@@ -336,24 +337,37 @@ function handleExpandAfterLeave(element: Element) {
             >
               <div class="flex min-w-0 items-start gap-3">
                 <div class="min-w-0 flex-1">
-                  <div class="flex min-w-0 items-center gap-2.5">
-                    <div
-                      :class="[
-                        'flex h-7 w-7 shrink-0 items-center justify-center rounded-[10px] transition-colors duration-180',
-                        resolveStatusIconWrapClass(building.status),
-                      ]"
-                    >
-                      <i
+                  <div class="flex min-w-0 items-start justify-between gap-3">
+                    <div class="flex min-w-0 items-center gap-2.5">
+                      <div
                         :class="[
-                          resolveStatusIcon(building.status),
-                          building.status === 'processing' ? 'animate-spin' : '',
-                          'text-[15px]',
+                          'flex h-7 w-7 shrink-0 items-center justify-center rounded-[10px] transition-colors duration-180',
+                          resolveStatusIconWrapClass(building.status),
                         ]"
-                      />
+                      >
+                        <i
+                          :class="[
+                            resolveStatusIcon(building.status),
+                            building.status === 'processing' ? 'animate-spin' : '',
+                            'text-[15px]',
+                          ]"
+                        />
+                      </div>
+                      <div class="truncate whitespace-nowrap text-[18px] font-semibold text-foreground">
+                        {{ building.buildName }}
+                      </div>
                     </div>
-                    <div class="truncate whitespace-nowrap text-[18px] font-semibold text-foreground">
-                      {{ building.buildName }}
-                    </div>
+                    <Button
+                      v-if="props.showReportAction"
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      class="shrink-0 gap-1.5"
+                      @click.stop="handleGenerateReport(building.key)"
+                    >
+                      <i class="ri-file-chart-line text-[15px]" />
+                      生成报告
+                    </Button>
                   </div>
 
                   <Progress
@@ -499,15 +513,6 @@ function handleExpandAfterLeave(element: Element) {
               </button>
 
               <div class="flex shrink-0 items-center gap-2">
-                <button
-                  v-if="props.showReportAction"
-                  type="button"
-                  class="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-background px-3 text-[12px] font-medium text-foreground shadow-(--shadow-border) transition-colors duration-180 hover:bg-interactive-hover"
-                  @click="handleGenerateReport(building.key)"
-                >
-                  <i class="ri-file-chart-line text-[15px]" />
-                  生成报告
-                </button>
                 <div class="text-right tabular-nums">
                   <div
                     :class="[
