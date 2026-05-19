@@ -32,6 +32,7 @@ export type InspectionReportCreateInput = {
   accessPassword: string
   remark: string
   workOrder: WorkOrderDetailResult
+  building: WorkOrderBuildInfo
   customer: CustomerDetailResult | null
 }
 
@@ -143,7 +144,7 @@ export const DEFAULT_REPORT_TEMPLATE_CONFIG: ReportTemplateConfig = {
     {
       key: "buildings",
       title: "建筑与检测项",
-      description: "按建筑列出检测项、分类、结果和执行人。",
+      description: "展示当前建筑的检测项、分类、结果和执行人。",
       enabled: true,
     },
     {
@@ -281,7 +282,7 @@ export function createReportQrPlaceholderDataUrl(value: string, title = "报告�
 }
 
 function buildInspectionReportSnapshot(input: InspectionReportCreateInput): InspectionReportSnapshot {
-  const buildings = normalizeReportBuildings(input.workOrder.Builds)
+  const buildings = normalizeReportBuildings([input.building])
   const totalItems = buildings.reduce((sum, building) => sum + building.totalCount, 0)
   const completedItems = buildings.reduce((sum, building) => sum + building.completedCount, 0)
   const risks = buildings.flatMap(building => building.items
@@ -303,8 +304,8 @@ function buildInspectionReportSnapshot(input: InspectionReportCreateInput): Insp
     address: toText(input.customer?.Address, "-"),
     deadline: formatDateOnly(toText(input.workOrder.Deadline, "-")),
     statusLabel: getWorkOrderStatusLabel(toNumber(input.workOrder.Status), "-"),
-    resultLabel: formatResultLabel(input.workOrder.Result),
-    scoreText: formatScore(input.workOrder.Score),
+    resultLabel: buildings[0]?.resultLabel ?? formatResultLabel(input.workOrder.Result),
+    scoreText: buildings[0]?.scoreText ?? formatScore(input.workOrder.Score),
     totalBuildings: buildings.length,
     totalItems,
     completedItems,

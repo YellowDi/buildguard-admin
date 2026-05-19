@@ -137,6 +137,7 @@ const reportDialogOpen = ref(false)
 const reportSubmitting = ref(false)
 const generatedReport = ref<InspectionReportRecord | null>(null)
 const generatedReportUrl = ref("")
+const reportBuilding = ref<WorkOrderBuildInfo | null>(null)
 const reportForm = ref({
   title: "",
   reportDate: "",
@@ -319,17 +320,12 @@ const hasWorkOrder = computed(() => (
 ))
 
 const showAssignAction = computed(() => !loading.value && hasWorkOrder.value && Boolean(workOrderUuid.value))
-const showGenerateReportAction = computed(() => (
-  props.kind === "inspection"
-  && !loading.value
-  && hasWorkOrder.value
-  && Boolean(workOrderUuid.value)
-))
 const showRepairDeleteAction = computed(() => props.kind === "repair" && !loading.value && hasWorkOrder.value && Boolean(workOrderUuid.value))
 const showRepairEditAction = computed(() => props.kind === "repair" && !loading.value && hasWorkOrder.value && Boolean(workOrderUuid.value))
 const assignPermissionCode = computed(() => props.kind === "repair"
   ? PERMISSION_CODES.repairWorkOrderAssign
   : PERMISSION_CODES.inspectionWorkOrderAssign)
+const selectedReportBuildingName = computed(() => toText(reportBuilding.value?.BuildName, "当前建筑"))
 const canSubmitReport = computed(() => (
   !reportSubmitting.value
   && Boolean(reportForm.value.title.trim())
@@ -353,6 +349,7 @@ watch(workOrderUuid, (uuid) => {
   assignableUsers.value = []
   generatedReport.value = null
   generatedReportUrl.value = ""
+  reportBuilding.value = null
   reportDialogOpen.value = false
   resetInspectionHistorySheet()
   void loadWorkOrderDetail(uuid)
@@ -1118,7 +1115,7 @@ function toNumber(value: unknown) {
   return null
 }
 
-function openReportDialog() {
+function openReportDialog(buildingKey: string) {
   const currentWorkOrder = resolvedInspectionWorkOrder.value
 
   if (!currentWorkOrder) {
@@ -1126,15 +1123,37 @@ function openReportDialog() {
     return
   }
 
+  const currentBuilding = findInspectionReportBuild(buildingKey)
+
+  if (!currentBuilding) {
+    toast.error("当前建筑缺少详情数据，无法生成报告")
+    return
+  }
+
+  const buildingName = toText(currentBuilding.BuildName, "当前建筑")
+
   reportForm.value = {
-    title: `${toText(currentWorkOrder.ServiceName, "检测工单")}检测报告`,
+    title: `${buildingName}检测报告`,
     reportDate: getTodayDate(),
     accessPassword: "",
     remark: toText(currentWorkOrder.Remark, ""),
   }
+  reportBuilding.value = currentBuilding
   generatedReport.value = null
   generatedReportUrl.value = ""
   reportDialogOpen.value = true
+}
+
+function findInspectionReportBuild(buildingKey: string) {
+  const builds = resolvedInspectionWorkOrder.value?.Builds
+
+  if (!Array.isArray(builds) || !buildingKey) {
+    return null
+  }
+
+  return builds.find((build, buildIndex) => (
+    toText(build.BuildUuid, `work-order-build-${buildIndex + 1}`) === buildingKey
+  )) ?? null
 }
 
 function closeReportDialog() {
@@ -1151,9 +1170,15 @@ function updateReportPassword(value: string | number) {
 
 function submitReportGeneration() {
   const currentWorkOrder = resolvedInspectionWorkOrder.value
+  const currentBuilding = reportBuilding.value
 
   if (!currentWorkOrder) {
     toast.error("当前检测工单缺少详情数据，无法生成报告")
+    return
+  }
+
+  if (!currentBuilding) {
+    toast.error("当前建筑缺少详情数据，无法生成报告")
     return
   }
 
@@ -1171,6 +1196,7 @@ function submitReportGeneration() {
       accessPassword: reportForm.value.accessPassword,
       remark: reportForm.value.remark,
       workOrder: currentWorkOrder,
+      building: currentBuilding,
       customer: customer.value,
     })
 
@@ -1410,17 +1436,6 @@ async function submitAssign() {
           </AlertDialogContent>
         </AlertDialog>
       </PermissionGate>
-      <Button
-        v-if="showGenerateReportAction"
-        type="button"
-        variant="outline"
-        size="sm"
-        class="h-8 gap-1 px-3 text-[14px] font-medium"
-        @click="openReportDialog"
-      >
-        <i class="ri-file-chart-line text-base" />
-        生成报告
-      </Button>
       <PermissionGate :code="assignPermissionCode">
         <Button
           v-if="showAssignAction"
@@ -1484,6 +1499,8 @@ async function submitAssign() {
             title="建筑与检测项"
             empty-title="暂无建筑检测项"
             empty-description="当前工单还没有返回建筑与检测项数据。"
+            show-report-action
+            @generate-report="openReportDialog"
           />
         </div>
       </template>
@@ -1495,7 +1512,7 @@ async function submitAssign() {
       <DialogHeader class="px-4 pt-4 pb-0">
         <DialogTitle>生成检测报告</DialogTitle>
         <DialogDescription>
-          填写报告展示信息和 4 位访问密码，生成可访问的 HTML 报告页面。
+          为「{{ selectedReportBuildingName }}」填写报告展示信息和 4 位访问密码，生成可访问的 HTML 报告页面。
         </DialogDescription>
       </DialogHeader>
 

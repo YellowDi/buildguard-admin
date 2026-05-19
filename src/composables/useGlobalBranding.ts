@@ -1,6 +1,6 @@
 import { computed, ref } from "vue"
 
-import defaultLogo from "@/assets/logo.svg"
+import defaultLogo from "@/assets/baojing-yunwei-logo.png"
 
 const DEFAULT_SITE_NAME = "宝京云维"
 
@@ -20,6 +20,7 @@ function applyToDocument() {
     link.rel = "icon"
     document.head.appendChild(link)
   }
+  link.type = "image/png"
   link.href = faviconHref.value
 }
 

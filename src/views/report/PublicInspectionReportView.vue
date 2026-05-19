@@ -26,6 +26,7 @@ const reportUrl = computed(() => reportId.value ? buildInspectionReportUrl(repor
 const enabledModules = computed(() => report.value
   ? normalizeReportTemplateModuleOrder(report.value.template.modules).filter(module => module.enabled)
   : [])
+const reportBuildingName = computed(() => report.value?.snapshot.buildings[0]?.name ?? "-")
 const completionText = computed(() => {
   const snapshot = report.value?.snapshot
 
@@ -221,6 +222,10 @@ function displayItemValue(value: string) {
 
                   <dl class="grid gap-3 rounded-lg bg-muted/60 p-4 text-sm">
                     <div>
+                      <dt class="text-muted-foreground">检测建筑</dt>
+                      <dd class="mt-1 font-medium text-foreground">{{ reportBuildingName }}</dd>
+                    </div>
+                    <div>
                       <dt class="text-muted-foreground">报告日期</dt>
                       <dd class="mt-1 font-medium text-foreground">{{ report.snapshot.reportDate }}</dd>
                     </div>
@@ -244,6 +249,10 @@ function displayItemValue(value: string) {
                 </div>
 
                 <dl class="grid gap-x-6 gap-y-4 text-sm sm:grid-cols-2 lg:grid-cols-3">
+                  <div>
+                    <dt class="text-muted-foreground">检测建筑</dt>
+                    <dd class="mt-1 font-medium text-foreground">{{ reportBuildingName }}</dd>
+                  </div>
                   <div>
                     <dt class="text-muted-foreground">检测服务</dt>
                     <dd class="mt-1 font-medium text-foreground">{{ report.snapshot.serviceName }}</dd>
@@ -301,7 +310,7 @@ function displayItemValue(value: string) {
                 <div class="mb-5">
                   <h2 class="text-xl font-semibold text-foreground">{{ module.title }}</h2>
                   <p class="mt-1 text-sm text-muted-foreground">
-                    共 {{ report.snapshot.totalBuildings }} 栋建筑，{{ report.snapshot.totalItems }} 个检测项
+                    当前建筑：{{ reportBuildingName }}，{{ report.snapshot.totalItems }} 个检测项
                   </p>
                 </div>
 

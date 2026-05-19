@@ -54,6 +54,7 @@ const props = withDefaults(defineProps<{
   selectedItemKeys?: string[]
   selectableDisabledItemKeys?: string[]
   showHeader?: boolean
+  showReportAction?: boolean
 }>(), {
   title: "建筑与检测项",
   count: undefined,
@@ -66,11 +67,13 @@ const props = withDefaults(defineProps<{
   selectedItemKeys: () => [],
   selectableDisabledItemKeys: () => [],
   showHeader: true,
+  showReportAction: false,
 })
 
 const emit = defineEmits<{
   "update:selectedItemKeys": [value: string[]]
   "item-toggle": [item: InspectionBuildingCardV2Item, checked: boolean]
+  "generate-report": [buildingKey: string]
 }>()
 
 const expandedBuildingKeys = ref<string[]>([])
@@ -162,6 +165,10 @@ function updateItemSelected(item: InspectionBuildingCardV2Item, checked: boolean
 
   emit("update:selectedItemKeys", nextSelectedKeys)
   emit("item-toggle", item, checked)
+}
+
+function handleGenerateReport(buildingKey: string) {
+  emit("generate-report", buildingKey)
 }
 
 function resolveStatusIcon(status: InspectionBuildingStatus) {
@@ -491,14 +498,25 @@ function handleExpandAfterLeave(element: Element) {
                 <i :class="isExpanded(building.key) ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line'" class="text-[15px]" />
               </button>
 
-              <div class="shrink-0 text-right tabular-nums">
-                <div
-                  :class="[
-                    'whitespace-nowrap text-[17px] font-semibold tracking-[-0.02em]',
-                    resolveScoreTone(null),
-                  ]"
+              <div class="flex shrink-0 items-center gap-2">
+                <button
+                  v-if="props.showReportAction"
+                  type="button"
+                  class="inline-flex h-8 items-center gap-1.5 rounded-md border border-border bg-background px-3 text-[12px] font-medium text-foreground shadow-(--shadow-border) transition-colors duration-180 hover:bg-interactive-hover"
+                  @click="handleGenerateReport(building.key)"
                 >
-                  {{ building.scoreText }}
+                  <i class="ri-file-chart-line text-[15px]" />
+                  生成报告
+                </button>
+                <div class="text-right tabular-nums">
+                  <div
+                    :class="[
+                      'whitespace-nowrap text-[17px] font-semibold tracking-[-0.02em]',
+                      resolveScoreTone(null),
+                    ]"
+                  >
+                    {{ building.scoreText }}
+                  </div>
                 </div>
               </div>
             </div>
