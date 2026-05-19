@@ -6,6 +6,7 @@ export type ReportTemplateModuleKey =
   | "cover"
   | "summary"
   | "score"
+  | "aiSummary"
   | "buildings"
   | "risks"
   | "attachments"
@@ -54,8 +55,15 @@ export type InspectionReportSnapshot = {
   totalItems: number
   completedItems: number
   issueItems: number
+  aiSummary: InspectionReportAiSummary
   buildings: InspectionReportBuilding[]
   risks: InspectionReportRiskItem[]
+}
+
+export type InspectionReportAiSummary = {
+  conclusion: string
+  highlights: string[]
+  suggestions: string[]
 }
 
 export type InspectionReportBuilding = {
@@ -100,6 +108,16 @@ const DEFAULT_REPORT_MODULE_ORDER: ReportTemplateModuleKey[] = [
   "cover",
   "summary",
   "score",
+  "aiSummary",
+  "risks",
+  "buildings",
+  "attachments",
+  "footer",
+]
+const PRE_AI_REPORT_MODULE_ORDER: ReportTemplateModuleKey[] = [
+  "cover",
+  "summary",
+  "score",
   "risks",
   "buildings",
   "attachments",
@@ -137,6 +155,12 @@ export const DEFAULT_REPORT_TEMPLATE_CONFIG: ReportTemplateConfig = {
       key: "score",
       title: "评分结果",
       description: "汇总得分、检测项完成度、异常数量和整体结论。",
+      enabled: true,
+    },
+    {
+      key: "aiSummary",
+      title: "AI 总结",
+      description: "基于当前建筑检测结果生成结论、关键发现和处理建议。",
       enabled: true,
     },
     {
@@ -222,7 +246,13 @@ export function buildInspectionReportUrl(reportId: string) {
 }
 
 export function normalizeReportTemplateModuleOrder(modules: ReportTemplateModule[]): ReportTemplateModule[] {
-  if (!matchesModuleOrder(modules.map(module => module.key), LEGACY_DEFAULT_REPORT_MODULE_ORDER)) {
+  const moduleKeys = modules.map(module => module.key)
+  const comparableKeys = moduleKeys.filter(key => key !== "aiSummary")
+
+  if (
+    !matchesModuleOrder(comparableKeys, PRE_AI_REPORT_MODULE_ORDER)
+    && !matchesModuleOrder(comparableKeys, LEGACY_DEFAULT_REPORT_MODULE_ORDER)
+  ) {
     return modules
   }
 
@@ -295,6 +325,8 @@ function buildInspectionReportSnapshot(input: InspectionReportCreateInput): Insp
       ...item,
       buildingName: building.name,
     })))
+  const resultLabel = buildings[0]?.resultLabel ?? formatResultLabel(input.workOrder.Result)
+  const scoreText = buildings[0]?.scoreText ?? formatScore(input.workOrder.Score)
 
   return {
     title: input.title.trim(),
@@ -308,12 +340,21 @@ function buildInspectionReportSnapshot(input: InspectionReportCreateInput): Insp
     address: toText(input.customer?.Address, "-"),
     deadline: formatDateOnly(toText(input.workOrder.Deadline, "-")),
     statusLabel: getWorkOrderStatusLabel(toNumber(input.workOrder.Status), "-"),
-    resultLabel: buildings[0]?.resultLabel ?? formatResultLabel(input.workOrder.Result),
-    scoreText: buildings[0]?.scoreText ?? formatScore(input.workOrder.Score),
+    resultLabel,
+    scoreText,
     totalBuildings: buildings.length,
     totalItems,
     completedItems,
     issueItems: risks.length,
+    aiSummary: buildInspectionReportAiSummary({
+      buildingName: buildings[0]?.name ?? "-",
+      resultLabel,
+      scoreText,
+      totalItems,
+      completedItems,
+      risks,
+      items: buildings.flatMap(building => building.items),
+    }),
     buildings,
     risks,
   }
@@ -370,11 +411,18 @@ function loadInspectionReportRecords(): InspectionReportRecord[] {
     : []
 }
 
-function normalizeTemplateConfig(value: Partial<ReportTemplateConfig> | null): ReportTemplateConfig {
+function normalizeTemplateConfig(
+  value: Partial<ReportTemplateConfig> | null | undefined,
+  options: { includeMissingModules?: boolean } = {},
+): ReportTemplateConfig {
+  const includeMissingModules = options.includeMissingModules ?? true
   const defaultModules = DEFAULT_REPORT_TEMPLATE_CONFIG.modules
   const storedModules = Array.isArray(value?.modules) ? value.modules : []
   const moduleByKey = new Map(storedModules.map(module => [module.key, module]))
-  const mergedModules = defaultModules.map((defaultModule) => {
+  const sourceModules = includeMissingModules
+    ? defaultModules
+    : defaultModules.filter(defaultModule => moduleByKey.has(defaultModule.key))
+  const mergedModules = sourceModules.map((defaultModule) => {
     const storedModule = moduleByKey.get(defaultModule.key)
 
     return {
@@ -404,10 +452,122 @@ function normalizeTemplateConfig(value: Partial<ReportTemplateConfig> | null): R
 }
 
 function normalizeInspectionReportRecord(record: InspectionReportRecord): InspectionReportRecord {
+  const hasTemplateSnapshot = Array.isArray(record.template?.modules)
+
   return {
     ...record,
-    template: normalizeTemplateConfig(record.template),
+    template: normalizeTemplateConfig(record.template, { includeMissingModules: !hasTemplateSnapshot }),
+    snapshot: normalizeInspectionReportSnapshot(record.snapshot),
   }
+}
+
+function normalizeInspectionReportSnapshot(snapshot: InspectionReportSnapshot): InspectionReportSnapshot {
+  return {
+    ...snapshot,
+    aiSummary: normalizeInspectionReportAiSummary(snapshot),
+  }
+}
+
+function normalizeInspectionReportAiSummary(snapshot: InspectionReportSnapshot): InspectionReportAiSummary {
+  const summary = snapshot.aiSummary
+
+  if (
+    summary
+    && typeof summary.conclusion === "string"
+    && Array.isArray(summary.highlights)
+    && Array.isArray(summary.suggestions)
+  ) {
+    return {
+      conclusion: summary.conclusion,
+      highlights: summary.highlights.map(item => toText(item, "")).filter(Boolean),
+      suggestions: summary.suggestions.map(item => toText(item, "")).filter(Boolean),
+    }
+  }
+
+  return buildInspectionReportAiSummary({
+    buildingName: snapshot.buildings[0]?.name ?? "-",
+    resultLabel: snapshot.resultLabel,
+    scoreText: snapshot.scoreText,
+    totalItems: snapshot.totalItems,
+    completedItems: snapshot.completedItems,
+    risks: snapshot.risks,
+    items: snapshot.buildings.flatMap(building => building.items),
+  })
+}
+
+function buildInspectionReportAiSummary(input: {
+  buildingName: string
+  resultLabel: string
+  scoreText: string
+  totalItems: number
+  completedItems: number
+  risks: InspectionReportRiskItem[]
+  items: InspectionReportItem[]
+}): InspectionReportAiSummary {
+  const completionRate = input.totalItems > 0
+    ? `${Math.round((input.completedItems / input.totalItems) * 100)}%`
+    : "0%"
+  const dominantResult = getDominantResultLabel(input.items)
+  const riskCategories = getTopRiskCategories(input.risks)
+  const riskText = input.risks.length > 0
+    ? `发现 ${input.risks.length} 项需关注问题，建议优先处理 ${riskCategories || "风险检测项"}。`
+    : "当前未发现异常或隐患检测项，建议按计划持续复检。"
+  const pendingCount = input.items.filter(item => item.resultLabel === "未反馈").length
+
+  return {
+    conclusion: `本次检测对象为 ${input.buildingName}，共覆盖 ${input.totalItems} 个检测项，完成率 ${completionRate}，综合结果为 ${input.resultLabel}，评分 ${input.scoreText}。${riskText}`,
+    highlights: [
+      `检测项完成率 ${completionRate}，已完成 ${input.completedItems}/${input.totalItems} 项。`,
+      input.risks.length > 0
+        ? `风险问题主要集中在 ${riskCategories || "当前检测项"}。`
+        : "风险问题数量为 0，当前建筑整体状态稳定。",
+      dominantResult ? `检测结果以「${dominantResult}」为主。` : "暂无可用于统计的检测结果。",
+    ],
+    suggestions: [
+      input.risks.length > 0
+        ? "优先安排责任人复核风险项，并在整改后补充处理记录和现场照片。"
+        : "保持现有巡检频次，重点关注后续运行状态变化。",
+      pendingCount > 0
+        ? `仍有 ${pendingCount} 项未反馈，建议补齐执行结果后再归档报告。`
+        : "当前检测项均已有结果，可作为阶段性归档材料。",
+      "后续接入正式 AI 接口后，可基于历史数据、整改记录和附件图片进一步优化总结内容。",
+    ],
+  }
+}
+
+function getDominantResultLabel(items: InspectionReportItem[]) {
+  const counts = new Map<string, number>()
+
+  items.forEach((item) => {
+    const label = item.resultLabel.trim()
+    if (!label) {
+      return
+    }
+
+    counts.set(label, (counts.get(label) ?? 0) + 1)
+  })
+
+  return Array.from(counts.entries())
+    .sort((current, next) => next[1] - current[1])[0]?.[0] ?? ""
+}
+
+function getTopRiskCategories(risks: InspectionReportRiskItem[]) {
+  const counts = new Map<string, number>()
+
+  risks.forEach((risk) => {
+    const categoryName = risk.categoryName.trim()
+    if (!categoryName || categoryName === "-") {
+      return
+    }
+
+    counts.set(categoryName, (counts.get(categoryName) ?? 0) + 1)
+  })
+
+  return Array.from(counts.entries())
+    .sort((current, next) => next[1] - current[1])
+    .slice(0, 2)
+    .map(([categoryName]) => categoryName)
+    .join("、")
 }
 
 function normalizeReportBrandText(value: unknown, fallback: string) {

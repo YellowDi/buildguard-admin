@@ -333,6 +333,60 @@ function displayItemValue(value: string) {
                 </div>
               </template>
 
+              <template v-else-if="moduleIs(module, 'aiSummary')">
+                <div class="mb-5 flex min-w-0 flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h2 class="text-xl font-semibold text-foreground">{{ module.title }}</h2>
+                    <p class="mt-1 text-sm text-muted-foreground">根据当前建筑检测结果生成的模拟总结</p>
+                  </div>
+                  <span class="inline-flex h-7 items-center rounded-md bg-brand-surface px-2.5 text-xs font-medium text-link">
+                    Mock AI
+                  </span>
+                </div>
+
+                <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
+                  <article class="rounded-lg bg-brand-surface/65 p-4 shadow-[inset_0_0_0_1px_hsl(var(--border)/0.45)]">
+                    <div class="mb-3 inline-flex size-9 items-center justify-center rounded-md bg-background text-link shadow-(--shadow-border)">
+                      <i class="ri-sparkling-line text-lg" />
+                    </div>
+                    <h3 class="text-sm font-semibold text-foreground">综合结论</h3>
+                    <p class="mt-2 text-sm leading-6 text-muted-foreground">
+                      {{ report.snapshot.aiSummary.conclusion }}
+                    </p>
+                  </article>
+
+                  <div class="grid gap-3">
+                    <article class="rounded-lg bg-muted/55 p-4">
+                      <h3 class="text-sm font-semibold text-foreground">关键发现</h3>
+                      <ul class="mt-3 space-y-2 text-sm leading-6 text-muted-foreground">
+                        <li
+                          v-for="highlight in report.snapshot.aiSummary.highlights"
+                          :key="highlight"
+                          class="flex gap-2"
+                        >
+                          <i class="ri-checkbox-circle-line mt-1 text-sm text-link" />
+                          <span>{{ highlight }}</span>
+                        </li>
+                      </ul>
+                    </article>
+
+                    <article class="rounded-lg bg-muted/55 p-4">
+                      <h3 class="text-sm font-semibold text-foreground">处理建议</h3>
+                      <ul class="mt-3 space-y-2 text-sm leading-6 text-muted-foreground">
+                        <li
+                          v-for="suggestion in report.snapshot.aiSummary.suggestions"
+                          :key="suggestion"
+                          class="flex gap-2"
+                        >
+                          <i class="ri-arrow-right-circle-line mt-1 text-sm text-link" />
+                          <span>{{ suggestion }}</span>
+                        </li>
+                      </ul>
+                    </article>
+                  </div>
+                </div>
+              </template>
+
               <template v-else-if="moduleIs(module, 'buildings')">
                 <div class="mb-5">
                   <h2 class="text-xl font-semibold text-foreground">{{ module.title }}</h2>
