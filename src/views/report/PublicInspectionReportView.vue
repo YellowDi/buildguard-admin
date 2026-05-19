@@ -33,6 +33,7 @@ const reportUrl = computed(() => reportId.value ? buildInspectionReportUrl(repor
 const enabledModules = computed(() => report.value
   ? normalizeReportTemplateModuleOrder(report.value.template.modules).filter(module => module.enabled)
   : [])
+const reportBodyModules = computed(() => enabledModules.value.filter(module => !moduleIs(module, "cover")))
 const reportBuildingName = computed(() => report.value?.snapshot.buildings[0]?.name ?? "-")
 const reportItemResultGroups = computed<ReportItemResultGroup[]>(() => {
   const items = report.value?.snapshot.buildings.flatMap(building => building.items) ?? []
@@ -221,62 +222,53 @@ function displayItemValue(value: string) {
 
       <article class="mx-auto w-full max-w-5xl px-4 py-8">
         <div class="relative overflow-hidden rounded-xl bg-background shadow-(--shadow-card)">
-          <div
-            v-if="report.template.watermarkText"
-            class="pointer-events-none absolute inset-x-0 top-32 text-center text-[80px] font-semibold uppercase leading-none text-foreground/[0.035]"
-          >
-            {{ report.template.watermarkText }}
-          </div>
+          <div class="relative z-10 grid gap-6 px-5 py-7 sm:px-8 md:grid-cols-[minmax(0,1fr)_360px] md:items-start md:gap-8">
+            <div class="min-w-0 space-y-5">
+              <div class="flex items-center gap-3">
+                <img
+                  :src="reportLogoUrl"
+                  alt="宝京云维 logo"
+                  class="size-12 shrink-0 object-contain"
+                >
+                <div class="min-w-0">
+                  <p class="text-sm font-semibold text-foreground">宝京云维</p>
+                  <p class="mt-0.5 text-xs text-muted-foreground">{{ report.template.templateName }}</p>
+                </div>
+              </div>
 
-          <div class="relative z-10 flex items-center gap-3 px-5 pt-6 sm:px-8">
-            <img
-              :src="reportLogoUrl"
-              alt="宝京云维 logo"
-              class="size-10 shrink-0 object-contain"
-            >
-            <span class="text-sm font-semibold text-foreground">宝京云维</span>
+              <div class="max-w-3xl space-y-3">
+                <h1 class="text-3xl font-semibold leading-tight text-foreground sm:text-4xl">
+                  {{ report.snapshot.title }}
+                </h1>
+                <p class="text-base leading-7 text-muted-foreground">
+                  {{ report.snapshot.customerName }} · {{ report.snapshot.parkName }}
+                </p>
+              </div>
+            </div>
+
+            <dl class="grid gap-4 rounded-lg bg-muted/60 p-4 text-sm shadow-[inset_0_0_0_1px_hsl(var(--border)/0.45)]">
+              <div>
+                <dt class="text-muted-foreground">检测建筑</dt>
+                <dd class="mt-1 font-medium text-foreground">{{ reportBuildingName }}</dd>
+              </div>
+              <div>
+                <dt class="text-muted-foreground">报告日期</dt>
+                <dd class="mt-1 font-medium tabular-nums text-foreground">{{ report.snapshot.reportDate }}</dd>
+              </div>
+              <div>
+                <dt class="text-muted-foreground">工单编号</dt>
+                <dd class="mt-1 font-medium tabular-nums text-foreground">{{ report.snapshot.orderNo }}</dd>
+              </div>
+            </dl>
           </div>
 
           <div class="relative divide-y divide-border/70">
             <section
-              v-for="module in enabledModules"
+              v-for="module in reportBodyModules"
               :key="module.key"
               class="px-5 py-7 sm:px-8"
             >
-              <template v-if="moduleIs(module, 'cover')">
-                <div class="grid gap-8 md:grid-cols-[minmax(0,1fr)_220px] md:items-end">
-                  <div class="space-y-5">
-                    <div class="inline-flex h-8 items-center rounded-md bg-brand-surface px-3 text-sm font-medium text-link">
-                      {{ report.template.templateName }}
-                    </div>
-                    <div class="space-y-3">
-                      <h1 class="max-w-3xl text-3xl font-semibold leading-tight text-foreground sm:text-4xl">
-                        {{ report.snapshot.title }}
-                      </h1>
-                      <p class="text-base leading-7 text-muted-foreground">
-                        {{ report.snapshot.customerName }} · {{ report.snapshot.parkName }}
-                      </p>
-                    </div>
-                  </div>
-
-                  <dl class="grid gap-3 rounded-lg bg-muted/60 p-4 text-sm">
-                    <div>
-                      <dt class="text-muted-foreground">检测建筑</dt>
-                      <dd class="mt-1 font-medium text-foreground">{{ reportBuildingName }}</dd>
-                    </div>
-                    <div>
-                      <dt class="text-muted-foreground">报告日期</dt>
-                      <dd class="mt-1 font-medium text-foreground">{{ report.snapshot.reportDate }}</dd>
-                    </div>
-                    <div>
-                      <dt class="text-muted-foreground">工单编号</dt>
-                      <dd class="mt-1 font-medium text-foreground">{{ report.snapshot.orderNo }}</dd>
-                    </div>
-                  </dl>
-                </div>
-              </template>
-
-              <template v-else-if="moduleIs(module, 'summary')">
+              <template v-if="moduleIs(module, 'summary')">
                 <div class="mb-5 flex items-start justify-between gap-4">
                   <div>
                     <h2 class="text-xl font-semibold text-foreground">{{ module.title }}</h2>
