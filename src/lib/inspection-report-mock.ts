@@ -94,6 +94,8 @@ const REPORT_STORAGE_KEY = "buildguard:inspection-reports"
 const TEMPLATE_STORAGE_KEY = "buildguard:report-template"
 const REPORT_BRAND_TEXT = "宝京云维"
 const LEGACY_REPORT_BRAND_TEXT = "BuildGuard"
+const LEGACY_REPORT_ITEMS_MODULE_TITLE = "建筑与检测项"
+const LEGACY_REPORT_ITEMS_MODULE_DESCRIPTION = "展示当前建筑的检测项、分类、结果和执行人。"
 const DEFAULT_REPORT_MODULE_ORDER: ReportTemplateModuleKey[] = [
   "cover",
   "summary",
@@ -145,8 +147,8 @@ export const DEFAULT_REPORT_TEMPLATE_CONFIG: ReportTemplateConfig = {
     },
     {
       key: "buildings",
-      title: "建筑与检测项",
-      description: "展示当前建筑的检测项、分类、结果和执行人。",
+      title: "检测项",
+      description: "按检测结果分组展示当前建筑的检测项、分类、执行人和检测内容。",
       enabled: true,
     },
     {
@@ -378,8 +380,8 @@ function normalizeTemplateConfig(value: Partial<ReportTemplateConfig> | null): R
     return {
       ...defaultModule,
       enabled: typeof storedModule?.enabled === "boolean" ? storedModule.enabled : defaultModule.enabled,
-      title: toText(storedModule?.title, defaultModule.title),
-      description: toText(storedModule?.description, defaultModule.description),
+      title: normalizeReportModuleTitle(defaultModule.key, storedModule?.title, defaultModule.title),
+      description: normalizeReportModuleDescription(defaultModule.key, storedModule?.description, defaultModule.description),
     }
   })
   const orderedKeys = storedModules
@@ -411,6 +413,16 @@ function normalizeInspectionReportRecord(record: InspectionReportRecord): Inspec
 function normalizeReportBrandText(value: unknown, fallback: string) {
   const text = toText(value, fallback)
   return text === LEGACY_REPORT_BRAND_TEXT ? REPORT_BRAND_TEXT : text
+}
+
+function normalizeReportModuleTitle(key: ReportTemplateModuleKey, value: unknown, fallback: string) {
+  const title = toText(value, fallback)
+  return key === "buildings" && title === LEGACY_REPORT_ITEMS_MODULE_TITLE ? fallback : title
+}
+
+function normalizeReportModuleDescription(key: ReportTemplateModuleKey, value: unknown, fallback: string) {
+  const description = toText(value, fallback)
+  return key === "buildings" && description === LEGACY_REPORT_ITEMS_MODULE_DESCRIPTION ? fallback : description
 }
 
 function matchesModuleOrder(keys: ReportTemplateModuleKey[], order: ReportTemplateModuleKey[]) {

@@ -12,8 +12,14 @@ import {
   normalizeReportTemplateModuleOrder,
   verifyInspectionReportPassword,
   type InspectionReportRecord,
+  type InspectionReportItem,
   type ReportTemplateModule,
 } from "@/lib/inspection-report-mock"
+
+type ReportItemResultGroup = {
+  resultLabel: string
+  items: InspectionReportItem[]
+}
 
 const route = useRoute()
 
@@ -28,6 +34,29 @@ const enabledModules = computed(() => report.value
   ? normalizeReportTemplateModuleOrder(report.value.template.modules).filter(module => module.enabled)
   : [])
 const reportBuildingName = computed(() => report.value?.snapshot.buildings[0]?.name ?? "-")
+const reportItemResultGroups = computed<ReportItemResultGroup[]>(() => {
+  const items = report.value?.snapshot.buildings.flatMap(building => building.items) ?? []
+  const groupMap = new Map<string, InspectionReportItem[]>()
+  const resultOrder = ["存在隐患", "异常", "已驳回", "轻微风险", "正常", "未反馈"]
+
+  items.forEach((item) => {
+    const resultLabel = item.resultLabel.trim() || "未反馈"
+    groupMap.set(resultLabel, [...(groupMap.get(resultLabel) ?? []), item])
+  })
+
+  return Array.from(groupMap.entries())
+    .map(([resultLabel, groupItems]) => ({
+      resultLabel,
+      items: groupItems,
+    }))
+    .sort((current, next) => {
+      const currentIndex = resultOrder.indexOf(current.resultLabel)
+      const nextIndex = resultOrder.indexOf(next.resultLabel)
+
+      return (currentIndex === -1 ? resultOrder.length : currentIndex)
+        - (nextIndex === -1 ? resultOrder.length : nextIndex)
+    })
+})
 const completionText = computed(() => {
   const snapshot = report.value?.snapshot
 
@@ -320,43 +349,28 @@ function displayItemValue(value: string) {
                   </p>
                 </div>
 
-                <div class="space-y-4">
-                  <section
-                    v-for="building in report.snapshot.buildings"
-                    :key="building.key"
-                  >
+                <div v-if="reportItemResultGroups.length" class="space-y-6">
+                  <section v-for="group in reportItemResultGroups" :key="group.resultLabel">
                     <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
-                      <div>
-                        <h3 class="font-semibold text-foreground">{{ building.name }}</h3>
-                        <p class="mt-1 text-sm text-muted-foreground">
-                          {{ building.completedCount }}/{{ building.totalCount }} 项完成 · 分数 {{ building.scoreText }}
-                        </p>
-                      </div>
-                      <span class="rounded-md px-2.5 py-1 text-xs font-medium" :class="getResultClass(building.resultLabel)">
-                        {{ building.resultLabel }}
+                      <h3 class="font-semibold text-foreground">{{ group.resultLabel }}</h3>
+                      <span class="rounded-md px-2.5 py-1 text-xs font-medium" :class="getResultClass(group.resultLabel)">
+                        {{ group.items.length }} 项
                       </span>
                     </div>
-
                     <div class="overflow-x-auto">
-                      <table class="w-full min-w-[820px] table-auto text-left text-sm">
+                      <table class="w-full min-w-[720px] table-auto text-left text-sm">
                         <thead class="bg-muted/70 text-xs text-muted-foreground">
                           <tr>
                             <th class="w-px whitespace-nowrap px-3 py-2 font-medium">检测项</th>
                             <th class="w-px whitespace-nowrap px-3 py-2 font-medium">分类</th>
-                            <th class="w-px whitespace-nowrap px-3 py-2 font-medium">结果</th>
                             <th class="w-px whitespace-nowrap px-3 py-2 font-medium">执行人</th>
                             <th class="w-full min-w-72 px-3 py-2 font-medium">检测内容</th>
                           </tr>
                         </thead>
                         <tbody class="divide-y divide-border/60">
-                          <tr v-for="item in building.items" :key="item.key" class="align-top">
+                          <tr v-for="item in group.items" :key="item.key" class="align-top">
                             <td class="whitespace-nowrap px-3 py-2 font-medium text-foreground">{{ item.name }}</td>
                             <td class="whitespace-nowrap px-3 py-2 text-muted-foreground">{{ item.categoryName }}</td>
-                            <td class="whitespace-nowrap px-3 py-2">
-                              <span class="whitespace-nowrap rounded px-2 py-0.5 text-xs font-medium" :class="getResultClass(item.resultLabel)">
-                                {{ item.resultLabel }}
-                              </span>
-                            </td>
                             <td class="whitespace-nowrap px-3 py-2 text-muted-foreground">{{ item.executorName }}</td>
                             <td class="w-full min-w-72 px-3 py-2 leading-6 text-muted-foreground">{{ displayItemValue(item.content) }}</td>
                           </tr>
@@ -364,6 +378,9 @@ function displayItemValue(value: string) {
                       </table>
                     </div>
                   </section>
+                </div>
+                <div v-else class="rounded-lg bg-muted/55 p-4 text-sm text-muted-foreground">
+                  当前建筑暂无检测项数据。
                 </div>
               </template>
 
