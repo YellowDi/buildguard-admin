@@ -92,6 +92,8 @@ export type InspectionReportRecord = {
 
 const REPORT_STORAGE_KEY = "buildguard:inspection-reports"
 const TEMPLATE_STORAGE_KEY = "buildguard:report-template"
+const REPORT_BRAND_TEXT = "宝京云维"
+const LEGACY_REPORT_BRAND_TEXT = "BuildGuard"
 const DEFAULT_REPORT_MODULE_ORDER: ReportTemplateModuleKey[] = [
   "cover",
   "summary",
@@ -114,7 +116,7 @@ const LEGACY_DEFAULT_REPORT_MODULE_ORDER: ReportTemplateModuleKey[] = [
 export const DEFAULT_REPORT_TEMPLATE_CONFIG: ReportTemplateConfig = {
   templateName: "检测报告标准模板",
   footerText: "本报告基于现场检测工单数据自动生成，仅用于客户安全管理和整改跟踪。",
-  watermarkText: "BuildGuard",
+  watermarkText: REPORT_BRAND_TEXT,
   updatedAt: "2026-05-18 00:00",
   modules: [
     {
@@ -359,7 +361,11 @@ function normalizeReportItems(value: WorkOrderBuildInspectionItem[] | undefined,
 
 function loadInspectionReportRecords(): InspectionReportRecord[] {
   const records = readStoredValue<InspectionReportRecord[]>(REPORT_STORAGE_KEY)
-  return Array.isArray(records) ? records.filter(isInspectionReportRecord) : []
+  return Array.isArray(records)
+    ? records
+      .filter(isInspectionReportRecord)
+      .map(normalizeInspectionReportRecord)
+    : []
 }
 
 function normalizeTemplateConfig(value: Partial<ReportTemplateConfig> | null): ReportTemplateConfig {
@@ -389,10 +395,22 @@ function normalizeTemplateConfig(value: Partial<ReportTemplateConfig> | null): R
   return {
     templateName: toText(value?.templateName, DEFAULT_REPORT_TEMPLATE_CONFIG.templateName),
     footerText: toText(value?.footerText, DEFAULT_REPORT_TEMPLATE_CONFIG.footerText),
-    watermarkText: toText(value?.watermarkText, DEFAULT_REPORT_TEMPLATE_CONFIG.watermarkText),
+    watermarkText: normalizeReportBrandText(value?.watermarkText, DEFAULT_REPORT_TEMPLATE_CONFIG.watermarkText),
     modules: orderedModules,
     updatedAt: toText(value?.updatedAt, DEFAULT_REPORT_TEMPLATE_CONFIG.updatedAt),
   }
+}
+
+function normalizeInspectionReportRecord(record: InspectionReportRecord): InspectionReportRecord {
+  return {
+    ...record,
+    template: normalizeTemplateConfig(record.template),
+  }
+}
+
+function normalizeReportBrandText(value: unknown, fallback: string) {
+  const text = toText(value, fallback)
+  return text === LEGACY_REPORT_BRAND_TEXT ? REPORT_BRAND_TEXT : text
 }
 
 function matchesModuleOrder(keys: ReportTemplateModuleKey[], order: ReportTemplateModuleKey[]) {

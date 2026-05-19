@@ -17,7 +17,7 @@ const { currentUser } = useCurrentUser()
 const state = reactive<SettingsState>({
   accountName: currentUser.name,
   accountEmail: currentUser.email,
-  displayName: "BuildGuard Admin",
+  displayName: "宝京云维",
   supportEmail: "ops@buildguard.cn",
   startupView: "dashboard",
   enterKeyStartsNewLine: true,
@@ -476,7 +476,7 @@ const categories = computed<SettingsCategory[]>(() => [
     description: "配置检测报告导出模板、模块顺序和默认展示信息。",
     icon: "ri-file-chart-line",
     pageTitle: "报告模板",
-    pageDescription: "调整检测报告 HTML 与 PDF 打印版本的模块、顺序、签发信息和页脚说明。",
+    pageDescription: "调整检测报告 HTML 与 PDF 打印版本的模块、顺序、水印和页脚说明。",
     sections: [],
   },
   {

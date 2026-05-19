@@ -3,6 +3,7 @@ import { computed, nextTick, ref, watch } from "vue"
 import { useRoute } from "vue-router"
 import { toast } from "vue-sonner"
 
+import reportLogoUrl from "@/assets/baojing-yunwei-logo.png"
 import { Button } from "@/components/ui/button"
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp"
 import {
@@ -198,6 +199,15 @@ function displayItemValue(value: string) {
             {{ report.template.watermarkText }}
           </div>
 
+          <div class="relative z-10 flex items-center gap-3 px-5 pt-6 sm:px-8">
+            <img
+              :src="reportLogoUrl"
+              alt="宝京云维 logo"
+              class="size-10 shrink-0 object-contain"
+            >
+            <span class="text-sm font-semibold text-foreground">宝京云维</span>
+          </div>
+
           <div class="relative divide-y divide-border/70">
             <section
               v-for="module in enabledModules"
@@ -250,10 +260,6 @@ function displayItemValue(value: string) {
 
                 <dl class="grid gap-x-6 gap-y-4 text-sm sm:grid-cols-2 lg:grid-cols-3">
                   <div>
-                    <dt class="text-muted-foreground">检测建筑</dt>
-                    <dd class="mt-1 font-medium text-foreground">{{ reportBuildingName }}</dd>
-                  </div>
-                  <div>
                     <dt class="text-muted-foreground">检测服务</dt>
                     <dd class="mt-1 font-medium text-foreground">{{ report.snapshot.serviceName }}</dd>
                   </div>
@@ -273,7 +279,7 @@ function displayItemValue(value: string) {
                     <dt class="text-muted-foreground">截止时间</dt>
                     <dd class="mt-1 font-medium text-foreground">{{ report.snapshot.deadline }}</dd>
                   </div>
-                  <div class="sm:col-span-2 lg:col-span-3">
+                  <div>
                     <dt class="text-muted-foreground">地址</dt>
                     <dd class="mt-1 font-medium text-foreground">{{ report.snapshot.address }}</dd>
                   </div>
@@ -318,7 +324,6 @@ function displayItemValue(value: string) {
                   <section
                     v-for="building in report.snapshot.buildings"
                     :key="building.key"
-                    class="rounded-lg bg-muted/45 p-4"
                   >
                     <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
                       <div>
@@ -332,7 +337,7 @@ function displayItemValue(value: string) {
                       </span>
                     </div>
 
-                    <div class="overflow-x-auto rounded-md bg-background shadow-[inset_0_0_0_1px_rgb(0_0_0_/_0.06)]">
+                    <div class="overflow-x-auto">
                       <table class="w-full min-w-[820px] table-auto text-left text-sm">
                         <thead class="bg-muted/70 text-xs text-muted-foreground">
                           <tr>
