@@ -8,7 +8,7 @@ function isSettingsRoute(route: Pick<RouteLocationNormalizedLoaded, "name">) {
 }
 
 export function rememberSettingsBackTarget(route: Pick<RouteLocationNormalizedLoaded, "name" | "fullPath">) {
-  if (isSettingsRoute(route) || route.name === "login" || route.name === "signup" || route.name === "otp") {
+  if (isSettingsRoute(route) || route.name === "login") {
     return
   }
 

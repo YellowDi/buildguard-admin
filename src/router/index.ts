@@ -37,24 +37,6 @@ const router = createRouter({
       } satisfies RouteMetaConfig,
     },
     {
-      path: "/signup",
-      name: "signup",
-      component: () => import("@/views/auth/SignupView.vue"),
-      meta: {
-        title: "注册",
-        loading: "auth",
-      } satisfies RouteMetaConfig,
-    },
-    {
-      path: "/otp",
-      name: "otp",
-      component: () => import("@/views/auth/OtpView.vue"),
-      meta: {
-        title: "验证码登录",
-        loading: "auth",
-      } satisfies RouteMetaConfig,
-    },
-    {
       path: "/reports/inspection/:reportId",
       name: "public-inspection-report",
       component: () => import("@/views/report/PublicInspectionReportView.vue"),
@@ -609,7 +591,7 @@ let validatedAuthToken = ""
 let pendingSessionValidation: Promise<"valid" | "invalid" | "unknown"> | null = null
 
 router.beforeEach(async (to, from) => {
-  const isAuthRoute = to.name === "login" || to.name === "signup" || to.name === "otp"
+  const isAuthRoute = to.name === "login"
   const isPublicRoute = to.matched.some(record => record.meta.public === true)
   const authState = getAuthState()
   const token = getAuthToken()
@@ -764,7 +746,7 @@ function isAuthError(error: unknown) {
 }
 
 function resolveRoutePermissionPath(route: RouteLocationNormalized) {
-  if (route.name === "login" || route.name === "signup" || route.name === "otp") {
+  if (route.name === "login") {
     return ""
   }
 

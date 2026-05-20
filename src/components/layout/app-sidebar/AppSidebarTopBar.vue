@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import BrandLogo from "@/components/layout/BrandLogo.vue"
 import TopTabSwitch from "@/components/layout/TopTabSwitch.vue"
 import { TooltipWrap } from "@/components/ui/tooltip"
+import sidebarLogoUrl from "@/assets/Logo-Apptext.png"
 
 type TopBarTab = {
   id: string
@@ -25,10 +25,14 @@ const emit = defineEmits<{
   <div class="p-2">
     <RouterLink
       to="/"
-      class="flex items-center gap-3 rounded-lg px-2 py-1.5 transition-[background-color,color,box-shadow,transform] duration-180 ease-out hover:bg-interactive-hover hover:text-sidebar-accent-foreground hover:shadow-(--shadow-border) active:scale-[0.98] motion-reduce:active:scale-100"
+      class="inline-flex items-center px-2 py-1.5"
+      aria-label="返回首页"
     >
-      <BrandLogo />
-      <i class="ri-arrow-down-s-line text-base" />
+      <img
+        :src="sidebarLogoUrl"
+        alt="宝京云维"
+        class="h-8 w-auto max-w-[148px] shrink-0 object-contain object-left"
+      >
     </RouterLink>
   </div>
 
