@@ -204,7 +204,7 @@ export const DEFAULT_REPORT_TEMPLATE_CONFIG: ReportTemplateConfig = {
     {
       key: "buildings",
       title: "检测项",
-      description: "按风险等级和分类展示当前建筑的检测项、执行人和检测内容。",
+      description: "按风险等级和分类展示当前建筑的检测项、扣分数和检测内容。",
       enabled: true,
     },
     {
@@ -953,12 +953,12 @@ function formatDeductionScore(value: unknown) {
   }
 
   if (score <= 0) {
-    return "0"
+    return "0 分"
   }
 
   return Number.isInteger(score)
-    ? `-${score}`
-    : `-${score.toFixed(1).replace(/\.0$/, "")}`
+    ? `${score} 分`
+    : `${score.toFixed(1).replace(/\.0$/, "")} 分`
 }
 
 function formatDateOnly(value: string) {

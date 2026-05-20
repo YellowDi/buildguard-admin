@@ -192,6 +192,10 @@ function displayItemValue(value: unknown, fallback = "-") {
 
   return fallback
 }
+
+function shouldShowItemSuggestion(item: InspectionReportItem) {
+  return item.resultLabel !== "正常" && displayItemValue(item.suggestContent, "") !== ""
+}
 </script>
 
 <template>
@@ -515,8 +519,8 @@ function displayItemValue(value: unknown, fallback = "-") {
                                   <h5 class="mt-1 text-sm font-semibold leading-6 text-foreground">{{ item.name }}</h5>
                                 </div>
                                 <div class="min-w-0">
-                                  <p class="report-item-field-label text-xs font-medium text-muted-foreground">执行人</p>
-                                  <p class="mt-1 text-sm font-medium leading-6 text-foreground">{{ displayItemValue(item.executorName) }}</p>
+                                  <p class="report-item-field-label text-xs font-medium text-muted-foreground">扣分数</p>
+                                  <p class="mt-1 text-sm font-medium leading-6 text-foreground">{{ displayItemValue(item.scoreText) }}</p>
                                 </div>
                               </div>
                               <div class="report-item-content-panel min-w-0 rounded-md bg-muted/55 px-3.5 py-3">
@@ -524,19 +528,17 @@ function displayItemValue(value: unknown, fallback = "-") {
                                 <p class="report-item-content mt-1 text-sm leading-6 text-muted-foreground">
                                   {{ displayItemValue(item.content) }}
                                 </p>
-                                <div class="mt-3 grid gap-3 sm:grid-cols-2">
-                                  <div class="min-w-0">
-                                    <p class="report-item-field-label text-xs font-medium text-muted-foreground">测量内容</p>
-                                    <p class="report-item-content mt-1 text-sm leading-6 text-muted-foreground">
-                                      {{ displayItemValue(item.measureContent, "暂无") }}
-                                    </p>
-                                  </div>
-                                  <div class="min-w-0">
-                                    <p class="report-item-field-label text-xs font-medium text-muted-foreground">AI 建议</p>
-                                    <p class="report-item-content mt-1 text-sm leading-6 text-muted-foreground">
-                                      {{ displayItemValue(item.suggestContent, "暂无") }}
-                                    </p>
-                                  </div>
+                                <div class="mt-3 min-w-0">
+                                  <p class="report-item-field-label text-xs font-medium text-muted-foreground">测量内容</p>
+                                  <p class="report-item-content mt-1 text-sm leading-6 text-muted-foreground">
+                                    {{ displayItemValue(item.measureContent, "暂无") }}
+                                  </p>
+                                </div>
+                                <div v-if="shouldShowItemSuggestion(item)" class="mt-3 min-w-0">
+                                  <p class="report-item-field-label text-xs font-medium text-muted-foreground">AI 建议</p>
+                                  <p class="report-item-content mt-1 text-sm leading-6 text-muted-foreground">
+                                    {{ displayItemValue(item.suggestContent, "暂无") }}
+                                  </p>
                                 </div>
                               </div>
                             </div>
@@ -604,8 +606,8 @@ function displayItemValue(value: unknown, fallback = "-") {
                                   <h5 class="mt-1 text-sm font-semibold leading-6 text-foreground">{{ item.name }}</h5>
                                 </div>
                                 <div class="min-w-0">
-                                  <p class="report-item-field-label text-xs font-medium text-muted-foreground">执行人</p>
-                                  <p class="mt-1 text-sm font-medium leading-6 text-foreground">{{ displayItemValue(item.executorName) }}</p>
+                                  <p class="report-item-field-label text-xs font-medium text-muted-foreground">扣分数</p>
+                                  <p class="mt-1 text-sm font-medium leading-6 text-foreground">{{ displayItemValue(item.scoreText) }}</p>
                                 </div>
                               </div>
                               <div class="report-item-content-panel min-w-0 rounded-md bg-muted/55 px-3.5 py-3">
@@ -613,19 +615,17 @@ function displayItemValue(value: unknown, fallback = "-") {
                                 <p class="report-item-content mt-1 text-sm leading-6 text-muted-foreground">
                                   {{ displayItemValue(item.content) }}
                                 </p>
-                                <div class="mt-3 grid gap-3 sm:grid-cols-2">
-                                  <div class="min-w-0">
-                                    <p class="report-item-field-label text-xs font-medium text-muted-foreground">测量内容</p>
-                                    <p class="report-item-content mt-1 text-sm leading-6 text-muted-foreground">
-                                      {{ displayItemValue(item.measureContent, "暂无") }}
-                                    </p>
-                                  </div>
-                                  <div class="min-w-0">
-                                    <p class="report-item-field-label text-xs font-medium text-muted-foreground">AI 建议</p>
-                                    <p class="report-item-content mt-1 text-sm leading-6 text-muted-foreground">
-                                      {{ displayItemValue(item.suggestContent, "暂无") }}
-                                    </p>
-                                  </div>
+                                <div class="mt-3 min-w-0">
+                                  <p class="report-item-field-label text-xs font-medium text-muted-foreground">测量内容</p>
+                                  <p class="report-item-content mt-1 text-sm leading-6 text-muted-foreground">
+                                    {{ displayItemValue(item.measureContent, "暂无") }}
+                                  </p>
+                                </div>
+                                <div v-if="shouldShowItemSuggestion(item)" class="mt-3 min-w-0">
+                                  <p class="report-item-field-label text-xs font-medium text-muted-foreground">AI 建议</p>
+                                  <p class="report-item-content mt-1 text-sm leading-6 text-muted-foreground">
+                                    {{ displayItemValue(item.suggestContent, "暂无") }}
+                                  </p>
                                 </div>
                               </div>
                             </div>
