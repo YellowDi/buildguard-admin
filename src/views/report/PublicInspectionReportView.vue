@@ -446,9 +446,6 @@ function displayItemValue(value: string) {
               <template v-else-if="moduleIs(module, 'buildings')">
                 <div class="mb-5">
                   <h2 class="text-xl font-semibold text-foreground">{{ module.title }}</h2>
-                  <p class="mt-1 text-sm text-muted-foreground">
-                    当前建筑：{{ reportBuildingName }}，{{ report.snapshot.totalItems }} 个检测项
-                  </p>
                 </div>
 
                 <div v-if="reportItemRiskLevelGroups.length" class="report-risk-level-list space-y-5">
@@ -465,9 +462,6 @@ function displayItemValue(value: string) {
                           </span>
                           <span class="text-xs text-muted-foreground">{{ group.categories.length }} 个分类</span>
                         </div>
-                        <p class="mt-1 text-sm leading-6 text-muted-foreground">
-                          同等级检测项按分类归并展示。
-                        </p>
                       </div>
                       <span class="rounded-md bg-background/80 px-2.5 py-1 text-sm font-semibold tabular-nums text-foreground shadow-(--shadow-border)">
                         {{ group.totalItems }} 项
@@ -545,9 +539,6 @@ function displayItemValue(value: string) {
                           </span>
                           <span class="text-xs text-muted-foreground">{{ group.categories.length }} 个分类</span>
                         </div>
-                        <p class="mt-1 text-sm leading-6 text-muted-foreground">
-                          需关注检测项按分类归并展示。
-                        </p>
                       </div>
                       <span class="rounded-md bg-background/80 px-2.5 py-1 text-sm font-semibold tabular-nums text-foreground shadow-(--shadow-border)">
                         {{ group.totalItems }} 项
