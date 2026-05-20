@@ -125,7 +125,6 @@ const DEFAULT_REPORT_MODULE_ORDER: ReportTemplateModuleKey[] = [
   "score",
   "aiSummary",
   "expertAdvice",
-  "risks",
   "buildings",
   "attachments",
   "footer",
@@ -196,15 +195,9 @@ export const DEFAULT_REPORT_TEMPLATE_CONFIG: ReportTemplateConfig = {
       enabled: true,
     },
     {
-      key: "risks",
-      title: "风险问题",
-      description: "按风险等级和分类聚合异常或待整改检测项，便于客户优先处理。",
-      enabled: true,
-    },
-    {
       key: "buildings",
       title: "检测项",
-      description: "按风险等级和分类展示当前建筑的检测项、扣分数和检测内容。",
+      description: "按风险等级和分类展示当前建筑的检测项、扣分数和影响评估。",
       enabled: true,
     },
     {
