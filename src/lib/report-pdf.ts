@@ -11,6 +11,8 @@ const SAFE_MUTED_COLOR = "#615d59"
 const SAFE_TEXT_COLOR = "#111827"
 const SAFE_SURFACE_COLOR = "#f6f5f4"
 const SAFE_WHITE = "#ffffff"
+const PDF_PAGE_BREAK_SAFE_GAP_PX = 8
+const PDF_PAGE_TOP_TOLERANCE_PX = 2
 
 export type GenerateReportPdfOptions = {
   fileName?: string
@@ -31,6 +33,7 @@ export async function generateReportPdfBlob(
     windowWidth: element.scrollWidth,
     onclone: (_clonedDocument, clonedElement) => {
       sanitizePdfCloneForHtml2Canvas(clonedElement)
+      insertPdfPageSpacers(clonedElement)
     },
   })
   const pdf = new jsPDF({
@@ -171,6 +174,137 @@ function sanitizePdfCloneForHtml2Canvas(root: HTMLElement) {
   applyRiskTone(root, ".inspection-risk-level--warning", "#d97706", "rgba(217, 119, 6, 0.12)", "rgba(217, 119, 6, 0.2)")
   applyRiskTone(root, ".inspection-risk-level--success", "#16a34a", "rgba(22, 163, 74, 0.12)", "rgba(22, 163, 74, 0.2)")
   applyRiskTone(root, ".inspection-risk-level--neutral", "#64748b", "rgba(100, 116, 139, 0.12)", "rgba(100, 116, 139, 0.2)")
+}
+
+function insertPdfPageSpacers(root: HTMLElement) {
+  const pageHeight = getPdfPageHeightPx(root)
+
+  if (pageHeight <= 0) {
+    return
+  }
+
+  const anchors = getPdfPaginationAnchors(root)
+
+  anchors.forEach((anchor) => {
+    moveBlockToNextPageIfNeeded(root, anchor.element, anchor.keepTogetherElements, pageHeight)
+  })
+}
+
+function getPdfPageHeightPx(root: HTMLElement) {
+  const rootWidth = root.getBoundingClientRect().width || root.scrollWidth
+
+  return (rootWidth * A4_HEIGHT_MM) / A4_WIDTH_MM
+}
+
+function getPdfPaginationAnchors(root: HTMLElement) {
+  const anchors: Array<{
+    element: HTMLElement
+    keepTogetherElements: HTMLElement[]
+  }> = []
+
+  root.querySelectorAll<HTMLElement>(".risk-level-header").forEach((header) => {
+    const riskLevel = header.closest<HTMLElement>(".inspection-risk-level")
+
+    anchors.push({
+      element: header,
+      keepTogetherElements: compactElements([
+        header,
+        riskLevel?.querySelector<HTMLElement>(".inspection-category-header"),
+        riskLevel?.querySelector<HTMLElement>(".inspection-report-item"),
+      ]),
+    })
+  })
+
+  root.querySelectorAll<HTMLElement>(".inspection-category-header").forEach((header) => {
+    const category = header.closest<HTMLElement>(".inspection-category-block")
+
+    anchors.push({
+      element: header,
+      keepTogetherElements: compactElements([
+        header,
+        category?.querySelector<HTMLElement>(".inspection-report-item"),
+      ]),
+    })
+  })
+
+  root.querySelectorAll<HTMLElement>(".inspection-report-item").forEach((item) => {
+    anchors.push({
+      element: item,
+      keepTogetherElements: [item],
+    })
+  })
+
+  return anchors.sort((current, next) => {
+    if (current.element === next.element) {
+      return 0
+    }
+
+    return current.element.compareDocumentPosition(next.element) & Node.DOCUMENT_POSITION_PRECEDING ? 1 : -1
+  })
+}
+
+function compactElements(elements: Array<HTMLElement | null | undefined>) {
+  return elements.filter((element): element is HTMLElement => Boolean(element))
+}
+
+function moveBlockToNextPageIfNeeded(
+  root: HTMLElement,
+  element: HTMLElement,
+  keepTogetherElements: HTMLElement[],
+  pageHeight: number,
+) {
+  if (!element.parentElement || keepTogetherElements.length === 0) {
+    return
+  }
+
+  const rootTop = root.getBoundingClientRect().top
+  const blockTop = getElementTop(element, rootTop)
+  const blockBottom = Math.max(...keepTogetherElements.map(item => getElementBottom(item, rootTop)))
+  const blockHeight = blockBottom - blockTop
+
+  if (blockHeight <= 0) {
+    return
+  }
+
+  const currentPageTop = Math.floor((blockTop + PDF_PAGE_TOP_TOLERANCE_PX) / pageHeight) * pageHeight
+  const currentPageBottom = currentPageTop + pageHeight
+  const distanceFromPageTop = blockTop - currentPageTop
+  const wouldCrossPage = blockBottom > currentPageBottom - PDF_PAGE_BREAK_SAFE_GAP_PX
+
+  if (!wouldCrossPage) {
+    return
+  }
+
+  if (distanceFromPageTop <= PDF_PAGE_TOP_TOLERANCE_PX) {
+    return
+  }
+
+  insertSpacerBefore(element, Math.ceil(currentPageBottom - blockTop) + 1)
+}
+
+function getElementTop(element: HTMLElement, rootTop: number) {
+  return element.getBoundingClientRect().top - rootTop
+}
+
+function getElementBottom(element: HTMLElement, rootTop: number) {
+  return element.getBoundingClientRect().bottom - rootTop
+}
+
+function insertSpacerBefore(element: HTMLElement, height: number) {
+  const spacer = element.ownerDocument.createElement("div")
+
+  spacer.setAttribute("data-pdf-page-spacer", "true")
+  spacer.style.setProperty("background", SAFE_WHITE, "important")
+  spacer.style.setProperty("border", "0", "important")
+  spacer.style.setProperty("box-shadow", "none", "important")
+  spacer.style.setProperty("display", "block", "important")
+  spacer.style.setProperty("height", `${Math.max(1, height)}px`, "important")
+  spacer.style.setProperty("margin", "0", "important")
+  spacer.style.setProperty("min-height", `${Math.max(1, height)}px`, "important")
+  spacer.style.setProperty("padding", "0", "important")
+  spacer.style.setProperty("width", "100%", "important")
+
+  element.parentElement?.insertBefore(spacer, element)
 }
 
 function applyRiskTone(root: HTMLElement, selector: string, color: string, surface: string, border: string) {
