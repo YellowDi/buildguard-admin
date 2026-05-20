@@ -29,6 +29,14 @@ type ReportItemRiskLevelGroup<TItem extends InspectionReportItem = InspectionRep
 }
 
 const resultOrder = ["存在隐患", "异常", "已驳回", "轻微风险", "正常", "未反馈"]
+const categoryAccentColors = [
+  "14 116 144",
+  "37 99 235",
+  "124 58 237",
+  "217 119 6",
+  "220 38 38",
+  "5 150 105",
+]
 
 const route = useRoute()
 
@@ -140,6 +148,44 @@ function getResultClass(label: string) {
   }
 
   return "bg-muted text-muted-foreground"
+}
+
+function getRiskLevelToneClass(label: string) {
+  if (label === "正常") {
+    return "inspection-risk-level--success"
+  }
+
+  if (label === "轻微风险") {
+    return "inspection-risk-level--warning"
+  }
+
+  if (label === "存在隐患" || label === "异常" || label === "已驳回") {
+    return "inspection-risk-level--danger"
+  }
+
+  return "inspection-risk-level--neutral"
+}
+
+function getRiskLevelIcon(label: string) {
+  if (label === "正常") {
+    return "ri-checkbox-circle-line"
+  }
+
+  if (label === "轻微风险") {
+    return "ri-alert-line"
+  }
+
+  if (label === "存在隐患" || label === "异常" || label === "已驳回") {
+    return "ri-error-warning-line"
+  }
+
+  return "ri-question-line"
+}
+
+function getCategoryAccentStyle(index: number): Record<string, string> {
+  return {
+    "--category-accent": categoryAccentColors[index % categoryAccentColors.length],
+  }
 }
 
 function groupReportItemsByRiskLevel<TItem extends InspectionReportItem>(items: TItem[]): ReportItemRiskLevelGroup<TItem>[] {
@@ -471,70 +517,100 @@ function shouldShowItemSuggestion(item: InspectionReportItem) {
                     v-for="group in reportItemRiskLevelGroups"
                     :key="group.riskLevel"
                     class="inspection-risk-level"
+                    :class="getRiskLevelToneClass(group.riskLevel)"
                   >
-                    <header class="risk-level-header flex flex-wrap items-start gap-3">
-                      <div class="min-w-0">
-                        <div class="flex flex-wrap items-center gap-2">
-                          <span class="rounded-md px-2.5 py-1 text-sm font-medium" :class="getResultClass(group.riskLevel)">
-                            {{ group.riskLevel }}
-                          </span>
-                          <span class="text-xs text-muted-foreground">{{ group.categories.length }} 个分类</span>
-                          <span class="text-xs text-muted-foreground" aria-hidden="true">·</span>
-                          <span class="text-xs text-muted-foreground">{{ group.totalItems }} 项</span>
+                    <header class="risk-level-header">
+                      <div class="flex min-w-0 items-center gap-3">
+                        <span class="risk-level-icon" aria-hidden="true">
+                          <i :class="getRiskLevelIcon(group.riskLevel)" />
+                        </span>
+                        <div class="min-w-0">
+                          <p class="risk-level-eyebrow">风险等级</p>
+                          <h3 class="truncate text-base font-semibold leading-6 text-foreground">{{ group.riskLevel }}</h3>
                         </div>
                       </div>
+                      <dl class="risk-level-stats">
+                        <div>
+                          <dt>分类</dt>
+                          <dd>{{ group.categories.length }}</dd>
+                        </div>
+                        <div>
+                          <dt>检测项</dt>
+                          <dd>{{ group.totalItems }}</dd>
+                        </div>
+                      </dl>
                     </header>
 
                     <div class="mt-5 space-y-4">
                       <section
-                        v-for="category in group.categories"
+                        v-for="(category, categoryIndex) in group.categories"
                         :key="`${group.riskLevel}-${category.categoryName}`"
-                        class="inspection-category-block overflow-hidden rounded-lg border border-border/70 bg-background shadow-[0_0_0_1px_rgb(15_23_42_/_0.02),0_8px_18px_-16px_rgb(15_23_42_/_0.28)]"
+                        class="inspection-category-block"
+                        :style="getCategoryAccentStyle(categoryIndex)"
                       >
-                        <header class="inspection-category-header flex flex-wrap items-center gap-2 border-b border-border/65 bg-muted/45 px-4 py-3">
-                          <div class="flex min-w-0 items-center gap-2">
-                            <span class="category-accent h-5 w-1 rounded-full bg-link/70" aria-hidden="true" />
-                            <h4 class="min-w-0 text-base font-semibold leading-6 text-foreground">{{ category.categoryName }}</h4>
-                            <span class="text-xs text-muted-foreground" aria-hidden="true">·</span>
-                            <span class="shrink-0 text-xs font-medium text-muted-foreground">{{ category.items.length }} 项</span>
+                        <header class="inspection-category-header">
+                          <div class="category-title-wrap">
+                            <span class="category-accent" aria-hidden="true" />
+                            <div class="min-w-0">
+                              <p class="category-eyebrow">检测分类</p>
+                              <h4 class="truncate text-base font-semibold leading-6 text-foreground">{{ category.categoryName }}</h4>
+                            </div>
                           </div>
+                          <span class="category-count-pill">{{ category.items.length }} 项</span>
                         </header>
 
-                        <div class="inspection-category-items grid gap-4 px-4 py-4">
+                        <div class="inspection-category-items">
                           <article
                             v-for="item in category.items"
                             :key="`${group.riskLevel}-${category.categoryName}-${item.key}`"
-                            class="inspection-report-item border-b border-border/60 py-4 last:border-b-0"
+                            class="inspection-report-item inspection-item-card"
+                            :class="{ 'inspection-item-card--with-ai': shouldShowItemSuggestion(item) }"
                           >
-                            <div class="inspection-report-item-layout">
-                              <div class="grid content-start gap-3">
-                                <div class="min-w-0">
-                                  <p class="report-item-field-label text-xs font-medium text-muted-foreground">检测项</p>
-                                  <h5 class="mt-1 text-sm font-semibold leading-6 text-foreground">{{ item.name }}</h5>
-                                </div>
-                                <div class="min-w-0">
-                                  <p class="report-item-field-label text-xs font-medium text-muted-foreground">扣分数</p>
-                                  <p class="mt-1 text-sm font-medium leading-6 text-foreground">{{ displayItemValue(item.scoreText) }}</p>
-                                </div>
+                            <header class="inspection-item-card__header">
+                              <div class="flex min-w-0 flex-wrap items-center gap-2">
+                                <span class="inspection-item-risk-chip">
+                                  <i :class="getRiskLevelIcon(item.resultLabel)" />
+                                  {{ displayItemValue(item.resultLabel, group.riskLevel) }}
+                                </span>
+                                <span class="inspection-item-category-chip">{{ category.categoryName }}</span>
                               </div>
-                              <div class="report-item-content-panel min-w-0 rounded-md bg-muted/55 px-3.5 py-3">
-                                <p class="report-item-field-label text-xs font-medium text-muted-foreground">检测内容</p>
-                                <p class="report-item-content mt-1 text-sm leading-6 text-muted-foreground">
-                                  {{ displayItemValue(item.content) }}
-                                </p>
-                                <div class="mt-3 min-w-0">
-                                  <p class="report-item-field-label text-xs font-medium text-muted-foreground">测量内容</p>
-                                  <p class="report-item-content mt-1 text-sm leading-6 text-muted-foreground">
-                                    {{ displayItemValue(item.measureContent, "暂无") }}
-                                  </p>
+                              <div class="inspection-item-score">
+                                <span>扣分数</span>
+                                <strong>{{ displayItemValue(item.scoreText) }}</strong>
+                              </div>
+                            </header>
+
+                            <div
+                              class="inspection-item-card__body"
+                              :class="{ 'inspection-item-card__body--with-ai': shouldShowItemSuggestion(item) }"
+                            >
+                              <section class="inspection-item-main">
+                                <p class="report-item-field-label">检测项</p>
+                                <h5 class="mt-1 text-base font-semibold leading-6 text-foreground">{{ item.name }}</h5>
+
+                                <div class="inspection-item-field-grid">
+                                  <div class="inspection-item-field">
+                                    <span>检测内容</span>
+                                    <p class="report-item-content">{{ displayItemValue(item.content) }}</p>
+                                  </div>
+                                  <div class="inspection-item-field">
+                                    <span>测量内容</span>
+                                    <p class="report-item-content">{{ displayItemValue(item.measureContent, "暂无") }}</p>
+                                  </div>
                                 </div>
-                                <div v-if="shouldShowItemSuggestion(item)" class="mt-3 min-w-0">
-                                  <p class="report-item-field-label text-xs font-medium text-muted-foreground">AI 建议</p>
-                                  <p class="report-item-content mt-1 text-sm leading-6 text-muted-foreground">
+                              </section>
+
+                              <aside v-if="shouldShowItemSuggestion(item)" class="inspection-item-ai">
+                                <div class="inspection-item-ai__icon" aria-hidden="true">
+                                  <i class="ri-sparkling-line" />
+                                </div>
+                                <div class="min-w-0">
+                                  <p class="inspection-item-ai__title">AI 建议</p>
+                                  <p class="inspection-item-ai__content">
                                     {{ displayItemValue(item.suggestContent, "暂无") }}
                                   </p>
                                 </div>
-                              </div>
+                              </aside>
                             </div>
                           </article>
                         </div>
@@ -558,70 +634,100 @@ function shouldShowItemSuggestion(item: InspectionReportItem) {
                     v-for="group in reportRiskIssueGroups"
                     :key="group.riskLevel"
                     class="inspection-risk-level"
+                    :class="getRiskLevelToneClass(group.riskLevel)"
                   >
-                    <header class="risk-level-header flex flex-wrap items-start gap-3">
-                      <div class="min-w-0">
-                        <div class="flex flex-wrap items-center gap-2">
-                          <span class="rounded-md px-2.5 py-1 text-sm font-medium" :class="getResultClass(group.riskLevel)">
-                            {{ group.riskLevel }}
-                          </span>
-                          <span class="text-xs text-muted-foreground">{{ group.categories.length }} 个分类</span>
-                          <span class="text-xs text-muted-foreground" aria-hidden="true">·</span>
-                          <span class="text-xs text-muted-foreground">{{ group.totalItems }} 项</span>
+                    <header class="risk-level-header">
+                      <div class="flex min-w-0 items-center gap-3">
+                        <span class="risk-level-icon" aria-hidden="true">
+                          <i :class="getRiskLevelIcon(group.riskLevel)" />
+                        </span>
+                        <div class="min-w-0">
+                          <p class="risk-level-eyebrow">风险等级</p>
+                          <h3 class="truncate text-base font-semibold leading-6 text-foreground">{{ group.riskLevel }}</h3>
                         </div>
                       </div>
+                      <dl class="risk-level-stats">
+                        <div>
+                          <dt>分类</dt>
+                          <dd>{{ group.categories.length }}</dd>
+                        </div>
+                        <div>
+                          <dt>检测项</dt>
+                          <dd>{{ group.totalItems }}</dd>
+                        </div>
+                      </dl>
                     </header>
 
                     <div class="mt-5 space-y-4">
                       <section
-                        v-for="category in group.categories"
+                        v-for="(category, categoryIndex) in group.categories"
                         :key="`${group.riskLevel}-${category.categoryName}`"
-                        class="inspection-category-block overflow-hidden rounded-lg border border-border/70 bg-background shadow-[0_0_0_1px_rgb(15_23_42_/_0.02),0_8px_18px_-16px_rgb(15_23_42_/_0.28)]"
+                        class="inspection-category-block"
+                        :style="getCategoryAccentStyle(categoryIndex)"
                       >
-                        <header class="inspection-category-header flex flex-wrap items-center gap-2 border-b border-border/65 bg-muted/45 px-4 py-3">
-                          <div class="flex min-w-0 items-center gap-2">
-                            <span class="category-accent h-5 w-1 rounded-full bg-link/70" aria-hidden="true" />
-                            <h4 class="min-w-0 text-base font-semibold leading-6 text-foreground">{{ category.categoryName }}</h4>
-                            <span class="text-xs text-muted-foreground" aria-hidden="true">·</span>
-                            <span class="shrink-0 text-xs font-medium text-muted-foreground">{{ category.items.length }} 项</span>
+                        <header class="inspection-category-header">
+                          <div class="category-title-wrap">
+                            <span class="category-accent" aria-hidden="true" />
+                            <div class="min-w-0">
+                              <p class="category-eyebrow">检测分类</p>
+                              <h4 class="truncate text-base font-semibold leading-6 text-foreground">{{ category.categoryName }}</h4>
+                            </div>
                           </div>
+                          <span class="category-count-pill">{{ category.items.length }} 项</span>
                         </header>
 
-                        <div class="inspection-category-items grid gap-4 px-4 py-4">
+                        <div class="inspection-category-items">
                           <article
                             v-for="item in category.items"
                             :key="`${group.riskLevel}-${category.categoryName}-${item.key}`"
-                            class="inspection-report-item border-b border-border/60 py-4 last:border-b-0"
+                            class="inspection-report-item inspection-item-card"
+                            :class="{ 'inspection-item-card--with-ai': shouldShowItemSuggestion(item) }"
                           >
-                            <div class="inspection-report-item-layout">
-                              <div class="grid content-start gap-3">
-                                <div class="min-w-0">
-                                  <p class="report-item-field-label text-xs font-medium text-muted-foreground">检测项</p>
-                                  <h5 class="mt-1 text-sm font-semibold leading-6 text-foreground">{{ item.name }}</h5>
-                                </div>
-                                <div class="min-w-0">
-                                  <p class="report-item-field-label text-xs font-medium text-muted-foreground">扣分数</p>
-                                  <p class="mt-1 text-sm font-medium leading-6 text-foreground">{{ displayItemValue(item.scoreText) }}</p>
-                                </div>
+                            <header class="inspection-item-card__header">
+                              <div class="flex min-w-0 flex-wrap items-center gap-2">
+                                <span class="inspection-item-risk-chip">
+                                  <i :class="getRiskLevelIcon(item.resultLabel)" />
+                                  {{ displayItemValue(item.resultLabel, group.riskLevel) }}
+                                </span>
+                                <span class="inspection-item-category-chip">{{ category.categoryName }}</span>
                               </div>
-                              <div class="report-item-content-panel min-w-0 rounded-md bg-muted/55 px-3.5 py-3">
-                                <p class="report-item-field-label text-xs font-medium text-muted-foreground">检测内容</p>
-                                <p class="report-item-content mt-1 text-sm leading-6 text-muted-foreground">
-                                  {{ displayItemValue(item.content) }}
-                                </p>
-                                <div class="mt-3 min-w-0">
-                                  <p class="report-item-field-label text-xs font-medium text-muted-foreground">测量内容</p>
-                                  <p class="report-item-content mt-1 text-sm leading-6 text-muted-foreground">
-                                    {{ displayItemValue(item.measureContent, "暂无") }}
-                                  </p>
+                              <div class="inspection-item-score">
+                                <span>扣分数</span>
+                                <strong>{{ displayItemValue(item.scoreText) }}</strong>
+                              </div>
+                            </header>
+
+                            <div
+                              class="inspection-item-card__body"
+                              :class="{ 'inspection-item-card__body--with-ai': shouldShowItemSuggestion(item) }"
+                            >
+                              <section class="inspection-item-main">
+                                <p class="report-item-field-label">检测项</p>
+                                <h5 class="mt-1 text-base font-semibold leading-6 text-foreground">{{ item.name }}</h5>
+
+                                <div class="inspection-item-field-grid">
+                                  <div class="inspection-item-field">
+                                    <span>检测内容</span>
+                                    <p class="report-item-content">{{ displayItemValue(item.content) }}</p>
+                                  </div>
+                                  <div class="inspection-item-field">
+                                    <span>测量内容</span>
+                                    <p class="report-item-content">{{ displayItemValue(item.measureContent, "暂无") }}</p>
+                                  </div>
                                 </div>
-                                <div v-if="shouldShowItemSuggestion(item)" class="mt-3 min-w-0">
-                                  <p class="report-item-field-label text-xs font-medium text-muted-foreground">AI 建议</p>
-                                  <p class="report-item-content mt-1 text-sm leading-6 text-muted-foreground">
+                              </section>
+
+                              <aside v-if="shouldShowItemSuggestion(item)" class="inspection-item-ai">
+                                <div class="inspection-item-ai__icon" aria-hidden="true">
+                                  <i class="ri-sparkling-line" />
+                                </div>
+                                <div class="min-w-0">
+                                  <p class="inspection-item-ai__title">AI 建议</p>
+                                  <p class="inspection-item-ai__content">
                                     {{ displayItemValue(item.suggestContent, "暂无") }}
                                   </p>
                                 </div>
-                              </div>
+                              </aside>
                             </div>
                           </article>
                         </div>
@@ -647,6 +753,27 @@ function shouldShowItemSuggestion(item: InspectionReportItem) {
   min-height: 100svh;
 }
 
+.inspection-risk-level {
+  --risk-rgb: 100 116 139;
+  --category-accent: 37 99 235;
+}
+
+.inspection-risk-level--danger {
+  --risk-rgb: 220 38 38;
+}
+
+.inspection-risk-level--warning {
+  --risk-rgb: 217 119 6;
+}
+
+.inspection-risk-level--success {
+  --risk-rgb: 22 163 74;
+}
+
+.inspection-risk-level--neutral {
+  --risk-rgb: 100 116 139;
+}
+
 .risk-level-header,
 .inspection-category-header,
 .inspection-report-item {
@@ -664,19 +791,316 @@ function shouldShowItemSuggestion(item: InspectionReportItem) {
   overflow-wrap: anywhere;
 }
 
-.inspection-report-item-layout {
-  display: grid;
+.risk-level-header {
+  align-items: center;
+  background:
+    linear-gradient(135deg, rgb(var(--risk-rgb) / 0.1), hsl(var(--background))),
+    hsl(var(--background));
+  border: 1px solid rgb(var(--risk-rgb) / 0.2);
+  border-radius: 8px;
+  display: flex;
   gap: 1rem;
-  grid-template-columns: minmax(150px, 220px) minmax(0, 1fr);
+  justify-content: space-between;
+  padding: 0.875rem 1rem;
+}
+
+.risk-level-icon {
+  align-items: center;
+  background: rgb(var(--risk-rgb) / 0.13);
+  border: 1px solid rgb(var(--risk-rgb) / 0.16);
+  border-radius: 8px;
+  color: rgb(var(--risk-rgb));
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 1.25rem;
+  height: 2.25rem;
+  justify-content: center;
+  width: 2.25rem;
+}
+
+.risk-level-eyebrow,
+.category-eyebrow,
+.report-item-field-label {
+  color: hsl(var(--muted-foreground));
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1rem;
+}
+
+.risk-level-stats {
+  display: grid;
+  gap: 0.5rem;
+  grid-template-columns: repeat(2, minmax(4.5rem, auto));
+}
+
+.risk-level-stats div {
+  background: hsl(var(--background) / 0.72);
+  border: 1px solid rgb(var(--risk-rgb) / 0.14);
+  border-radius: 6px;
+  min-width: 4.5rem;
+  padding: 0.375rem 0.625rem;
+}
+
+.risk-level-stats dt {
+  color: hsl(var(--muted-foreground));
+  font-size: 0.6875rem;
+  line-height: 1rem;
+}
+
+.risk-level-stats dd {
+  color: hsl(var(--foreground));
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 650;
+  line-height: 1.25rem;
+  margin-top: 0.125rem;
+}
+
+.inspection-category-block {
+  background: hsl(var(--background));
+  border: 1px solid hsl(var(--border) / 0.72);
+  border-radius: 8px;
+  box-shadow: 0 0 0 1px rgb(15 23 42 / 0.02), 0 10px 22px -18px rgb(15 23 42 / 0.34);
+  overflow: hidden;
+}
+
+.inspection-category-header {
+  align-items: center;
+  background:
+    linear-gradient(90deg, rgb(var(--category-accent) / 0.09), hsl(var(--muted) / 0.34)),
+    hsl(var(--background));
+  border-bottom: 1px solid hsl(var(--border) / 0.68);
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  padding: 0.875rem 1rem;
+}
+
+.category-title-wrap {
+  align-items: center;
+  display: flex;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.category-accent {
+  background: rgb(var(--category-accent) / 0.88);
+  border-radius: 999px;
+  box-shadow: 0 0 0 4px rgb(var(--category-accent) / 0.1);
+  flex: 0 0 auto;
+  height: 2rem;
+  width: 0.25rem;
+}
+
+.category-count-pill {
+  background: rgb(var(--category-accent) / 0.1);
+  border: 1px solid rgb(var(--category-accent) / 0.14);
+  border-radius: 6px;
+  color: rgb(var(--category-accent));
+  flex: 0 0 auto;
+  font-size: 0.75rem;
+  font-weight: 650;
+  line-height: 1rem;
+  padding: 0.25rem 0.5rem;
+}
+
+.inspection-category-items {
+  background: linear-gradient(180deg, hsl(var(--background)), hsl(var(--muted) / 0.18));
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem;
+}
+
+.inspection-item-card {
+  background: hsl(var(--background));
+  border: 1px solid hsl(var(--border) / 0.72);
+  border-left: 4px solid rgb(var(--risk-rgb) / 0.75);
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.04);
+  overflow: hidden;
+}
+
+.inspection-item-card--with-ai {
+  border-color: rgb(var(--risk-rgb) / 0.22);
+}
+
+.inspection-item-card__header {
+  align-items: center;
+  background: linear-gradient(90deg, rgb(var(--risk-rgb) / 0.07), hsl(var(--background)));
+  border-bottom: 1px solid hsl(var(--border) / 0.62);
+  display: flex;
+  gap: 0.875rem;
+  justify-content: space-between;
+  padding: 0.75rem 0.875rem;
+}
+
+.inspection-item-risk-chip,
+.inspection-item-category-chip {
+  align-items: center;
+  border-radius: 6px;
+  display: inline-flex;
+  font-size: 0.75rem;
+  font-weight: 650;
+  gap: 0.25rem;
+  line-height: 1rem;
+  max-width: 100%;
+  padding: 0.25rem 0.5rem;
+}
+
+.inspection-item-risk-chip {
+  background: rgb(var(--risk-rgb) / 0.12);
+  border: 1px solid rgb(var(--risk-rgb) / 0.16);
+  color: rgb(var(--risk-rgb));
+}
+
+.inspection-item-category-chip {
+  background: rgb(var(--category-accent) / 0.1);
+  border: 1px solid rgb(var(--category-accent) / 0.12);
+  color: rgb(var(--category-accent));
+}
+
+.inspection-item-score {
+  align-items: baseline;
+  background: hsl(var(--muted) / 0.52);
+  border: 1px solid hsl(var(--border) / 0.58);
+  border-radius: 6px;
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: 0.375rem;
+  padding: 0.3125rem 0.5rem;
+  white-space: nowrap;
+}
+
+.inspection-item-score span {
+  color: hsl(var(--muted-foreground));
+  font-size: 0.6875rem;
+  line-height: 1rem;
+}
+
+.inspection-item-score strong {
+  color: hsl(var(--foreground));
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  line-height: 1rem;
+}
+
+.inspection-item-card__body {
+  display: grid;
+  gap: 0.875rem;
+  padding: 0.875rem;
+}
+
+.inspection-item-card__body--with-ai {
+  align-items: stretch;
+  grid-template-columns: minmax(0, 1fr) minmax(260px, 320px);
+}
+
+.inspection-item-main {
+  min-width: 0;
+}
+
+.inspection-item-field-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 0.875rem;
+}
+
+.inspection-item-field {
+  background: hsl(var(--muted) / 0.34);
+  border: 1px solid hsl(var(--border) / 0.58);
+  border-radius: 6px;
+  min-width: 0;
+  padding: 0.75rem;
+}
+
+.inspection-item-field span {
+  color: hsl(var(--muted-foreground));
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1rem;
 }
 
 .report-item-content {
+  color: hsl(var(--muted-foreground));
+  font-size: 0.875rem;
+  line-height: 1.65;
+  margin-top: 0.375rem;
   text-wrap: pretty;
+  white-space: pre-line;
+}
+
+.inspection-item-ai {
+  background:
+    linear-gradient(135deg, rgb(var(--risk-rgb) / 0.13), rgb(37 99 235 / 0.06)),
+    hsl(var(--background));
+  border: 1px solid rgb(var(--risk-rgb) / 0.22);
+  border-left: 3px solid rgb(var(--risk-rgb) / 0.78);
+  border-radius: 8px;
+  display: flex;
+  gap: 0.75rem;
+  min-width: 0;
+  padding: 0.875rem;
+}
+
+.inspection-item-ai__icon {
+  align-items: center;
+  background: hsl(var(--background) / 0.8);
+  border: 1px solid rgb(var(--risk-rgb) / 0.18);
+  border-radius: 6px;
+  color: rgb(var(--risk-rgb));
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 1rem;
+  height: 1.875rem;
+  justify-content: center;
+  width: 1.875rem;
+}
+
+.inspection-item-ai__title {
+  color: rgb(var(--risk-rgb));
+  font-size: 0.8125rem;
+  font-weight: 700;
+  line-height: 1.125rem;
+}
+
+.inspection-item-ai__content {
+  color: hsl(var(--foreground));
+  font-size: 0.875rem;
+  line-height: 1.7;
+  margin-top: 0.375rem;
+  text-wrap: pretty;
+  white-space: pre-line;
+}
+
+@media (max-width: 900px) {
+  .inspection-item-card__body--with-ai,
+  .inspection-item-field-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 @media (max-width: 640px) {
-  .inspection-report-item-layout {
-    grid-template-columns: minmax(0, 1fr);
+  .risk-level-header,
+  .inspection-category-header,
+  .inspection-item-card__header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .risk-level-stats,
+  .inspection-item-score {
+    width: 100%;
+  }
+
+  .risk-level-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .inspection-item-score {
+    justify-content: space-between;
   }
 }
 
@@ -693,12 +1117,12 @@ function shouldShowItemSuggestion(item: InspectionReportItem) {
     background: #ffffff !important;
   }
 
-  .inspection-report-page article {
+  .inspection-report-page > article {
     max-width: none !important;
     padding: 0 !important;
   }
 
-  .inspection-report-page article > div {
+  .inspection-report-page > article > div {
     border-radius: 0 !important;
     box-shadow: none !important;
   }
@@ -732,9 +1156,10 @@ function shouldShowItemSuggestion(item: InspectionReportItem) {
     page-break-inside: auto;
   }
 
-  .inspection-report-item-layout {
-    gap: 14px !important;
-    grid-template-columns: minmax(150px, 210px) minmax(0, 1fr) !important;
+  .risk-level-header {
+    background: #ffffff !important;
+    border-color: rgb(0 0 0 / 0.16) !important;
+    padding: 12px 14px !important;
   }
 
   .inspection-category-block {
@@ -751,18 +1176,6 @@ function shouldShowItemSuggestion(item: InspectionReportItem) {
     padding: 12px 14px !important;
   }
 
-  .category-accent {
-    display: none !important;
-  }
-
-  .expert-advice-icon {
-    background: transparent !important;
-    border-radius: 0 !important;
-    box-shadow: none !important;
-    height: auto !important;
-    width: auto !important;
-  }
-
   .inspection-category-items {
     display: block !important;
     padding: 14px 16px !important;
@@ -770,28 +1183,34 @@ function shouldShowItemSuggestion(item: InspectionReportItem) {
 
   .inspection-report-item {
     background: #ffffff !important;
-    border-bottom: 0 !important;
+    border: 1px solid rgb(0 0 0 / 0.12) !important;
+    border-left: 3px solid rgb(0 0 0 / 0.2) !important;
+    border-radius: 0 !important;
     box-shadow: none !important;
-    padding: 16px 0 !important;
   }
 
   .inspection-report-item + .inspection-report-item {
-    border-top: 1px solid rgb(0 0 0 / 0.12) !important;
-    margin-top: 18px !important;
-    padding-top: 18px !important;
+    margin-top: 14px !important;
   }
 
-  .report-item-content-panel {
+  .inspection-item-card__header,
+  .inspection-item-field,
+  .inspection-item-ai {
     background: #f6f5f4 !important;
     border: 1px solid rgb(0 0 0 / 0.1) !important;
-    padding: 10px 12px !important;
+  }
+
+  .inspection-item-card__body--with-ai,
+  .inspection-item-field-grid {
+    grid-template-columns: minmax(0, 1fr) !important;
   }
 
   .report-item-field-label {
     color: rgb(0 0 0 / 0.52) !important;
   }
 
-  .report-item-content {
+  .report-item-content,
+  .inspection-item-ai__content {
     color: rgb(0 0 0 / 0.7) !important;
   }
 }
