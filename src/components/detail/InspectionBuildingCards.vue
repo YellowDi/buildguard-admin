@@ -333,16 +333,6 @@ function handleExpandAfterLeave(element: Element) {
             class="overflow-hidden rounded-[20px] border border-border/60 bg-surface-secondary text-foreground"
           >
             <div
-              v-if="props.showExpertAdvice"
-              class="flex min-w-0 items-start gap-2 px-4 py-2.5 text-[12px] leading-5"
-            >
-              <span class="shrink-0 font-medium text-foreground">专家建议</span>
-              <span class="line-clamp-2 min-w-0 whitespace-pre-line text-muted-foreground">
-                {{ expertAdviceText }}
-              </span>
-            </div>
-
-            <div
               role="button"
               tabindex="0"
               class="block w-full rounded-[16px] bg-card px-4 py-3.5 text-left shadow-(--shadow-border) transition-colors duration-180"
@@ -418,6 +408,23 @@ function handleExpandAfterLeave(element: Element) {
                 v-if="isExpanded(building.key)"
                 class="bg-transparent pb-0 pt-3"
               >
+                <div
+                  v-if="props.showExpertAdvice"
+                  class="mx-4 mb-3 rounded-[14px] bg-brand-surface px-3 py-2.5 shadow-[inset_0_0_0_1px_rgb(0_117_222_/_0.12)]"
+                >
+                  <div class="flex min-w-0 items-start gap-2.5">
+                    <div class="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-[9px] bg-background text-link shadow-(--shadow-border)">
+                      <i class="ri-lightbulb-line text-[15px]" />
+                    </div>
+                    <div class="min-w-0 flex-1">
+                      <div class="text-[13px] font-semibold leading-5 text-foreground">专家建议</div>
+                      <div class="mt-0.5 whitespace-pre-line break-words text-[13px] leading-5 text-muted-foreground">
+                        {{ expertAdviceText }}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 <div
                   v-if="building.groups.length === 0"
                   class="px-4 py-1 text-sm text-muted-foreground"
