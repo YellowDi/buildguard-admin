@@ -197,7 +197,7 @@ function handleConfirm() {
                   :key="option.value"
                   :value="option.value"
                   :disabled="option.disabled"
-                  class="h-7 min-w-[104px] gap-1.5 px-3 text-[13px] font-medium data-[state=active]:shadow-sm"
+                  class="h-7 min-w-[104px] gap-1.5 rounded-[calc(var(--radius)_-_6px)] px-3 text-[13px] font-medium data-[state=active]:shadow-sm"
                 >
                   <span>{{ option.title }}</span>
                   <span class="text-[11px] font-normal text-muted-foreground">{{ option.count }}</span>
@@ -220,7 +220,7 @@ function handleConfirm() {
                   :key="format.value"
                   :value="format.value"
                   :disabled="format.disabled"
-                  class="h-7 min-w-[96px] gap-1.5 px-3 text-[13px] font-medium data-[state=active]:shadow-sm"
+                  class="h-7 min-w-[96px] gap-1.5 rounded-[calc(var(--radius)_-_6px)] px-3 text-[13px] font-medium data-[state=active]:shadow-sm"
                 >
                   <span>{{ format.label }}</span>
                   <span
