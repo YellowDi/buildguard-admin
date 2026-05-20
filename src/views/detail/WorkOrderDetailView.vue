@@ -1371,19 +1371,6 @@ function getReportGenerationErrorFallback(stage: ReportGenerationStage) {
   return "报告生成失败，请稍后重试。"
 }
 
-async function copyGeneratedReportUrl() {
-  if (!generatedReportUrl.value) {
-    return
-  }
-
-  try {
-    await navigator.clipboard.writeText(generatedReportUrl.value)
-    toast.success("HTML 报告链接已复制")
-  } catch {
-    toast.error("复制失败，请手动复制链接")
-  }
-}
-
 async function copyGeneratedReportPdfUrl() {
   if (!generatedReportPdfUrl.value) {
     return
@@ -1739,7 +1726,7 @@ async function submitAssign() {
       <DialogHeader class="px-4 pt-4 pb-0">
         <DialogTitle>生成检测报告</DialogTitle>
         <DialogDescription>
-          为「{{ selectedReportBuildingName }}」填写版本号、访问密码和专家建议，生成 HTML 报告并自动上传 PDF 文件。
+          为「{{ selectedReportBuildingName }}」填写版本号、访问密码和专家建议，生成在线报告并自动上传 PDF 文件。
         </DialogDescription>
       </DialogHeader>
 
@@ -1788,49 +1775,37 @@ async function submitAssign() {
           v-if="generatedReport && generatedReportUrl"
           class="rounded-lg bg-brand-surface p-3 shadow-[inset_0_0_0_1px_rgb(0_117_222_/_0.12)]"
         >
-          <div class="flex min-w-0 items-start gap-3">
-            <div class="inline-flex size-9 shrink-0 items-center justify-center rounded-md bg-background text-link shadow-(--shadow-border)">
-              <i class="ri-checkbox-circle-line text-lg" />
-            </div>
-            <div class="min-w-0 flex-1">
+          <div class="space-y-3">
+            <div class="flex min-w-0 items-center gap-3">
+              <div class="inline-flex size-9 shrink-0 items-center justify-center rounded-md bg-background text-link shadow-(--shadow-border)">
+                <i class="ri-checkbox-circle-line text-lg" />
+              </div>
               <p class="text-sm font-semibold text-foreground">报告已生成</p>
-              <div class="mt-2 space-y-1.5 text-xs leading-5 text-muted-foreground">
-                <p class="break-all">
-                  <span class="font-medium text-foreground">HTML：</span>{{ generatedReportUrl }}
-                </p>
-                <p v-if="generatedReportPdfUrl" class="break-all">
-                  <span class="font-medium text-foreground">PDF：</span>{{ generatedReportPdfUrl }}
-                </p>
-              </div>
-              <div class="mt-3 flex flex-wrap gap-2">
-                <Button type="button" variant="outline" class="h-8 gap-1 px-3" @click="copyGeneratedReportUrl">
-                  <i class="ri-file-copy-line text-base" />
-                  复制 HTML 链接
-                </Button>
-                <Button type="button" variant="outline" class="h-8 gap-1 px-3" @click="openGeneratedReport">
-                  <i class="ri-external-link-line text-base" />
-                  打开 HTML
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  class="h-8 gap-1 px-3"
-                  :disabled="!generatedReportPdfUrl"
-                  @click="copyGeneratedReportPdfUrl"
-                >
-                  <i class="ri-file-copy-line text-base" />
-                  复制 PDF 链接
-                </Button>
-                <Button
-                  type="button"
-                  class="h-8 gap-1 px-3"
-                  :disabled="!generatedReportPdfUrl"
-                  @click="openGeneratedReportPdf"
-                >
-                  <i class="ri-download-2-line text-base" />
-                  下载 PDF
-                </Button>
-              </div>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <Button type="button" variant="outline" class="h-8 gap-1 px-3" @click="openGeneratedReport">
+                <i class="ri-external-link-line text-base" />
+                打开在线报告
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                class="h-8 gap-1 px-3"
+                :disabled="!generatedReportPdfUrl"
+                @click="copyGeneratedReportPdfUrl"
+              >
+                <i class="ri-file-copy-line text-base" />
+                复制 PDF 链接
+              </Button>
+              <Button
+                type="button"
+                class="h-8 gap-1 px-3"
+                :disabled="!generatedReportPdfUrl"
+                @click="openGeneratedReportPdf"
+              >
+                <i class="ri-download-2-line text-base" />
+                下载 PDF
+              </Button>
             </div>
           </div>
         </section>
