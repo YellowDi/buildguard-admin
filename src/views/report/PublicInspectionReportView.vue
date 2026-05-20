@@ -43,7 +43,10 @@ const enabledModules = computed(() => report.value
   ? normalizeReportTemplateModuleOrder(report.value.template.modules).filter(module => module.enabled)
   : [])
 const reportBodyModules = computed(() => enabledModules.value.filter(module =>
-  !moduleIs(module, "cover") && !moduleIs(module, "attachments") && !moduleIs(module, "footer"),
+  !moduleIs(module, "cover")
+  && !moduleIs(module, "attachments")
+  && !moduleIs(module, "footer")
+  && !moduleIs(module, "expertAdvice"),
 ))
 const reportBuildingName = computed(() => report.value?.snapshot.buildings[0]?.name ?? "-")
 const reportItemRiskLevelGroups = computed<ReportItemRiskLevelGroup[]>(() => {
@@ -415,19 +418,31 @@ function shouldShowItemSuggestion(item: InspectionReportItem) {
                       </p>
                     </article>
 
-                    <article class="rounded-lg bg-muted/55 p-4">
-                      <h3 class="text-sm font-semibold text-foreground">关键发现</h3>
-                      <ul class="mt-3 space-y-2 text-sm leading-6 text-muted-foreground">
-                        <li
-                          v-for="highlight in report.snapshot.aiSummary.highlights"
-                          :key="highlight"
-                          class="flex gap-2"
-                        >
-                          <i class="ri-checkbox-circle-line mt-1 text-sm text-link" />
-                          <span>{{ highlight }}</span>
-                        </li>
-                      </ul>
-                    </article>
+                    <div class="grid gap-3">
+                      <article class="rounded-lg bg-muted/55 p-4">
+                        <div class="mb-3 inline-flex size-9 items-center justify-center rounded-md bg-background text-link shadow-(--shadow-border)">
+                          <i class="ri-user-star-line text-lg" />
+                        </div>
+                        <h3 class="text-sm font-semibold text-foreground">专家建议</h3>
+                        <p class="mt-2 whitespace-pre-line text-sm leading-6 text-muted-foreground">
+                          {{ report.snapshot.remark || "暂无专家建议。" }}
+                        </p>
+                      </article>
+
+                      <article class="rounded-lg bg-muted/55 p-4">
+                        <h3 class="text-sm font-semibold text-foreground">关键发现</h3>
+                        <ul class="mt-3 space-y-2 text-sm leading-6 text-muted-foreground">
+                          <li
+                            v-for="highlight in report.snapshot.aiSummary.highlights"
+                            :key="highlight"
+                            class="flex gap-2"
+                          >
+                            <i class="ri-checkbox-circle-line mt-1 text-sm text-link" />
+                            <span>{{ highlight }}</span>
+                          </li>
+                        </ul>
+                      </article>
+                    </div>
                   </div>
 
                   <article class="rounded-lg bg-muted/55 p-4">
@@ -444,27 +459,6 @@ function shouldShowItemSuggestion(item: InspectionReportItem) {
                     </ul>
                   </article>
                 </div>
-              </template>
-
-              <template v-else-if="moduleIs(module, 'expertAdvice')">
-                <div class="mb-5">
-                  <h2 class="text-xl font-semibold text-foreground">{{ module.title }}</h2>
-                  <p class="mt-1 text-sm text-muted-foreground">生成报告时填写的专家处理建议</p>
-                </div>
-
-                <article class="rounded-lg bg-muted/55 p-4 shadow-[inset_0_0_0_1px_hsl(var(--border)/0.45)]">
-                  <div class="flex gap-3">
-                    <div class="expert-advice-icon inline-flex size-9 shrink-0 items-center justify-center rounded-md bg-background text-link shadow-(--shadow-border)">
-                      <i class="ri-user-star-line text-lg" />
-                    </div>
-                    <div class="min-w-0 flex-1">
-                      <h3 class="text-sm font-semibold text-foreground">专家建议</h3>
-                      <p class="mt-2 whitespace-pre-line text-sm leading-6 text-muted-foreground">
-                        {{ report.snapshot.remark || "暂无专家建议。" }}
-                      </p>
-                    </div>
-                  </div>
-                </article>
               </template>
 
               <template v-else-if="moduleIs(module, 'buildings')">
