@@ -1897,7 +1897,7 @@ async function submitAssign() {
 
 .report-pdf-render-surface {
   background: #ffffff;
-  color: hsl(var(--foreground));
+  color: #111827;
   width: 794px;
 }
 </style>

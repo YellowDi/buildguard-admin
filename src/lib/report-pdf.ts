@@ -5,6 +5,12 @@ const A4_WIDTH_MM = 210
 const A4_HEIGHT_MM = 297
 const DEFAULT_SCALE = 2
 const PDF_IMAGE_QUALITY = 0.92
+const SAFE_BORDER_COLOR = "rgba(0, 0, 0, 0.12)"
+const SAFE_LINK_COLOR = "#0075de"
+const SAFE_MUTED_COLOR = "#615d59"
+const SAFE_TEXT_COLOR = "#111827"
+const SAFE_SURFACE_COLOR = "#f6f5f4"
+const SAFE_WHITE = "#ffffff"
 
 export type GenerateReportPdfOptions = {
   fileName?: string
@@ -23,6 +29,9 @@ export async function generateReportPdfBlob(
     useCORS: true,
     windowHeight: element.scrollHeight,
     windowWidth: element.scrollWidth,
+    onclone: (_clonedDocument, clonedElement) => {
+      sanitizePdfCloneForHtml2Canvas(clonedElement)
+    },
   })
   const pdf = new jsPDF({
     compress: true,
@@ -110,4 +119,79 @@ async function waitForImages(element: HTMLElement) {
       image.addEventListener("error", handleDone, { once: true })
     })
   }))
+}
+
+function sanitizePdfCloneForHtml2Canvas(root: HTMLElement) {
+  const elements = [root, ...Array.from(root.querySelectorAll<HTMLElement>("*"))]
+
+  elements.forEach((element) => {
+    setImportantStyle(element, {
+      "background-color": "transparent",
+      "background-image": "none",
+      "border-color": SAFE_BORDER_COLOR,
+      "box-shadow": "none",
+      color: SAFE_TEXT_COLOR,
+      "outline-color": "transparent",
+      "text-decoration-color": "currentColor",
+      "text-shadow": "none",
+    })
+  })
+
+  setImportantStyle(root, {
+    "background-color": SAFE_WHITE,
+    color: SAFE_TEXT_COLOR,
+  })
+
+  setStylesForSelector(root, ".report-document-shell, .report-cover-grid, .report-module-section, .inspection-risk-level, .inspection-category-block, .inspection-category-items, .inspection-item-card", {
+    "background-color": SAFE_WHITE,
+  })
+  setStylesForSelector(root, ".report-cover-meta, .inspection-item-card__header, .inspection-item-field, .inspection-item-ai, .rounded-lg", {
+    "background-color": SAFE_SURFACE_COLOR,
+  })
+  setStylesForSelector(root, ".report-item-content, .inspection-item-ai__content, .text-muted-foreground, dt, .risk-level-eyebrow, .category-eyebrow", {
+    color: SAFE_MUTED_COLOR,
+  })
+  setStylesForSelector(root, ".text-link, .inspection-item-ai__icon, .inspection-item-ai__title", {
+    color: SAFE_LINK_COLOR,
+  })
+  setStylesForSelector(root, ".inspection-item-ai", {
+    "background-color": "#f2f9ff",
+    "border-left-color": SAFE_LINK_COLOR,
+  })
+  setStylesForSelector(root, ".inspection-item-ai__icon", {
+    "background-color": SAFE_WHITE,
+    "border-color": "rgba(0, 117, 222, 0.16)",
+  })
+  setStylesForSelector(root, ".category-accent", {
+    "background-color": "#2563eb",
+    "border-color": "#2563eb",
+  })
+
+  applyRiskTone(root, ".inspection-risk-level--danger", "#dc2626", "rgba(220, 38, 38, 0.12)", "rgba(220, 38, 38, 0.2)")
+  applyRiskTone(root, ".inspection-risk-level--warning", "#d97706", "rgba(217, 119, 6, 0.12)", "rgba(217, 119, 6, 0.2)")
+  applyRiskTone(root, ".inspection-risk-level--success", "#16a34a", "rgba(22, 163, 74, 0.12)", "rgba(22, 163, 74, 0.2)")
+  applyRiskTone(root, ".inspection-risk-level--neutral", "#64748b", "rgba(100, 116, 139, 0.12)", "rgba(100, 116, 139, 0.2)")
+}
+
+function applyRiskTone(root: HTMLElement, selector: string, color: string, surface: string, border: string) {
+  setStylesForSelector(root, `${selector} .risk-level-icon, ${selector} .inspection-item-risk-chip`, {
+    "background-color": surface,
+    "border-color": border,
+    color,
+  })
+  setStylesForSelector(root, `${selector} .inspection-report-item`, {
+    "border-left-color": color,
+  })
+}
+
+function setStylesForSelector(root: HTMLElement, selector: string, styles: Record<string, string>) {
+  root.querySelectorAll<HTMLElement>(selector).forEach((element) => {
+    setImportantStyle(element, styles)
+  })
+}
+
+function setImportantStyle(element: HTMLElement, styles: Record<string, string>) {
+  Object.entries(styles).forEach(([property, value]) => {
+    element.style.setProperty(property, value, "important")
+  })
 }

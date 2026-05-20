@@ -552,7 +552,7 @@ function shouldShowItemSuggestion(item: InspectionReportItem) {
 }
 
 .risk-level-stats div {
-  background: color-mix(in srgb, var(--background) 72%, transparent);
+  background: rgb(255 255 255 / 0.72);
   border: 1px solid rgb(var(--risk-rgb) / 0.14);
   border-radius: 6px;
   min-width: 4.5rem;
@@ -603,7 +603,7 @@ function shouldShowItemSuggestion(item: InspectionReportItem) {
 }
 
 .category-count-pill {
-  background: color-mix(in srgb, var(--muted) 55%, transparent);
+  background: rgb(246 245 244 / 0.55);
   border: 1px solid var(--border);
   border-radius: 6px;
   color: var(--muted-foreground);
@@ -666,7 +666,7 @@ function shouldShowItemSuggestion(item: InspectionReportItem) {
 
 .inspection-item-score {
   align-items: baseline;
-  background: color-mix(in srgb, var(--muted) 52%, transparent);
+  background: rgb(246 245 244 / 0.52);
   border: 1px solid var(--border);
   border-radius: 6px;
   display: inline-flex;
@@ -703,7 +703,7 @@ function shouldShowItemSuggestion(item: InspectionReportItem) {
 }
 
 .inspection-item-field {
-  background: color-mix(in srgb, var(--muted) 28%, transparent);
+  background: rgb(246 245 244 / 0.28);
   border: 1px solid var(--border);
   border-radius: 6px;
   min-width: 0;
@@ -728,11 +728,9 @@ function shouldShowItemSuggestion(item: InspectionReportItem) {
 }
 
 .inspection-item-ai {
-  background:
-    linear-gradient(135deg, color-mix(in srgb, var(--brand-surface) 70%, transparent), rgb(37 99 235 / 0.06)),
-    var(--background);
-  border: 1px solid color-mix(in srgb, var(--link) 18%, transparent);
-  border-left: 3px solid color-mix(in srgb, var(--link) 72%, transparent);
+  background: #f2f9ff;
+  border: 1px solid rgb(0 117 222 / 0.18);
+  border-left: 3px solid rgb(0 117 222 / 0.72);
   border-radius: 8px;
   display: flex;
   gap: 0.75rem;
@@ -742,8 +740,8 @@ function shouldShowItemSuggestion(item: InspectionReportItem) {
 
 .inspection-item-ai__icon {
   align-items: center;
-  background: color-mix(in srgb, var(--background) 80%, transparent);
-  border: 1px solid color-mix(in srgb, var(--link) 16%, transparent);
+  background: rgb(255 255 255 / 0.8);
+  border: 1px solid rgb(0 117 222 / 0.16);
   border-radius: 6px;
   color: var(--link);
   display: inline-flex;
@@ -805,11 +803,24 @@ function shouldShowItemSuggestion(item: InspectionReportItem) {
 
 .inspection-report-document--pdf {
   background: #ffffff !important;
+  color: #111827 !important;
   max-width: none !important;
   padding: 0 !important;
 }
 
+.inspection-report-document--pdf,
+.inspection-report-document--pdf * {
+  background-image: none !important;
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+
+.inspection-report-document--pdf * {
+  border-color: rgb(0 0 0 / 0.12) !important;
+}
+
 .inspection-report-document--pdf .report-document-shell {
+  background: #ffffff !important;
   border-radius: 0 !important;
   box-shadow: none !important;
 }
@@ -892,6 +903,12 @@ function shouldShowItemSuggestion(item: InspectionReportItem) {
 .inspection-report-document--pdf .report-item-content,
 .inspection-report-document--pdf .inspection-item-ai__content {
   color: rgb(0 0 0 / 0.7) !important;
+}
+
+.inspection-report-document--pdf .text-link,
+.inspection-report-document--pdf .inspection-item-ai__icon,
+.inspection-report-document--pdf .inspection-item-ai__title {
+  color: #0075de !important;
 }
 
 @media print {
