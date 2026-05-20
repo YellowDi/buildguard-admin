@@ -42,7 +42,9 @@ const reportUrl = computed(() => reportId.value ? buildInspectionReportUrl(repor
 const enabledModules = computed(() => report.value
   ? normalizeReportTemplateModuleOrder(report.value.template.modules).filter(module => module.enabled)
   : [])
-const reportBodyModules = computed(() => enabledModules.value.filter(module => !moduleIs(module, "cover")))
+const reportBodyModules = computed(() => enabledModules.value.filter(module =>
+  !moduleIs(module, "cover") && !moduleIs(module, "attachments") && !moduleIs(module, "footer"),
+))
 const reportBuildingName = computed(() => report.value?.snapshot.buildings[0]?.name ?? "-")
 const reportItemRiskLevelGroups = computed<ReportItemRiskLevelGroup[]>(() => {
   const items = report.value?.snapshot.buildings.flatMap(building => building.items) ?? []
@@ -130,22 +132,6 @@ function getResultClass(label: string) {
   }
 
   return "bg-muted text-muted-foreground"
-}
-
-function getRiskLevelSectionClass(label: string) {
-  if (label === "正常") {
-    return "border-success/25 bg-success-surface/45"
-  }
-
-  if (label === "轻微风险") {
-    return "border-warning/25 bg-warning-surface/45"
-  }
-
-  if (label === "存在隐患" || label === "异常" || label === "已驳回") {
-    return "border-destructive/25 bg-destructive-surface/55"
-  }
-
-  return "border-border bg-muted/35"
 }
 
 function groupReportItemsByRiskLevel<TItem extends InspectionReportItem>(items: TItem[]): ReportItemRiskLevelGroup<TItem>[] {
@@ -270,7 +256,7 @@ function displayItemValue(value: string) {
 
       <article class="mx-auto w-full max-w-5xl px-4 py-8">
         <div class="relative overflow-hidden rounded-xl bg-background shadow-(--shadow-card)">
-          <div class="relative z-10 grid gap-6 px-5 py-7 sm:px-8 md:grid-cols-[minmax(0,1fr)_360px] md:items-start md:gap-8">
+          <div class="report-cover-grid relative z-10 grid gap-6 px-5 py-7 sm:px-8 md:grid-cols-[minmax(0,1fr)_360px] md:items-start md:gap-8">
             <div class="min-w-0 space-y-5">
               <div class="flex items-center gap-3">
                 <img
@@ -294,7 +280,7 @@ function displayItemValue(value: string) {
               </div>
             </div>
 
-            <dl class="grid gap-4 rounded-lg bg-muted/60 p-4 text-sm shadow-[inset_0_0_0_1px_hsl(var(--border)/0.45)]">
+            <dl class="report-cover-meta grid gap-4 rounded-lg bg-muted/60 p-4 text-sm shadow-[inset_0_0_0_1px_hsl(var(--border)/0.45)]">
               <div>
                 <dt class="text-muted-foreground">检测建筑</dt>
                 <dd class="mt-1 font-medium text-foreground">{{ reportBuildingName }}</dd>
@@ -469,8 +455,7 @@ function displayItemValue(value: string) {
                   <section
                     v-for="group in reportItemRiskLevelGroups"
                     :key="group.riskLevel"
-                    class="inspection-risk-level rounded-lg border p-5"
-                    :class="getRiskLevelSectionClass(group.riskLevel)"
+                    class="inspection-risk-level"
                   >
                     <header class="risk-level-header flex flex-wrap items-start justify-between gap-3">
                       <div class="min-w-0">
@@ -497,7 +482,7 @@ function displayItemValue(value: string) {
                       >
                         <header class="inspection-category-header flex flex-wrap items-center justify-between gap-3 border-b border-border/65 bg-muted/45 px-4 py-3">
                           <div class="flex min-w-0 items-center gap-2">
-                            <span class="h-5 w-1 rounded-full bg-link/70" aria-hidden="true" />
+                            <span class="category-accent h-5 w-1 rounded-full bg-link/70" aria-hidden="true" />
                             <h4 class="min-w-0 text-base font-semibold leading-6 text-foreground">{{ category.categoryName }}</h4>
                           </div>
                           <span class="rounded-md bg-background px-2.5 py-1 text-xs font-medium text-muted-foreground shadow-(--shadow-border)">
@@ -505,26 +490,29 @@ function displayItemValue(value: string) {
                           </span>
                         </header>
 
-                        <div class="inspection-category-items grid gap-3 p-4">
+                        <div class="inspection-category-items grid gap-4 px-4 py-4">
                           <article
                             v-for="item in category.items"
                             :key="`${group.riskLevel}-${category.categoryName}-${item.key}`"
-                            class="inspection-report-item rounded-lg border border-border/60 bg-background p-4"
+                            class="inspection-report-item border-b border-border/60 py-4 last:border-b-0"
                           >
-                            <div class="flex flex-wrap items-start justify-between gap-x-5 gap-y-2">
-                              <div class="min-w-0">
-                                <p class="report-item-field-label text-xs font-medium text-muted-foreground">检测项</p>
-                                <h5 class="mt-1 text-sm font-semibold leading-6 text-foreground">{{ item.name }}</h5>
+                            <div class="inspection-report-item-layout">
+                              <div class="grid content-start gap-3">
+                                <div class="min-w-0">
+                                  <p class="report-item-field-label text-xs font-medium text-muted-foreground">检测项</p>
+                                  <h5 class="mt-1 text-sm font-semibold leading-6 text-foreground">{{ item.name }}</h5>
+                                </div>
+                                <div class="min-w-0">
+                                  <p class="report-item-field-label text-xs font-medium text-muted-foreground">执行人</p>
+                                  <p class="mt-1 text-sm font-medium leading-6 text-foreground">{{ displayItemValue(item.executorName) }}</p>
+                                </div>
                               </div>
-                              <p class="min-w-0 text-sm leading-6 text-muted-foreground sm:shrink-0 sm:text-right">
-                                执行人：<span class="font-medium text-foreground">{{ displayItemValue(item.executorName) }}</span>
-                              </p>
-                            </div>
-                            <div class="report-item-content-panel mt-3 rounded-md bg-muted/55 px-3.5 py-3">
-                              <p class="report-item-field-label text-xs font-medium text-muted-foreground">检测内容</p>
-                              <p class="report-item-content mt-1 text-sm leading-6 text-muted-foreground">
-                                {{ displayItemValue(item.content) }}
-                              </p>
+                              <div class="report-item-content-panel min-w-0 rounded-md bg-muted/55 px-3.5 py-3">
+                                <p class="report-item-field-label text-xs font-medium text-muted-foreground">检测内容</p>
+                                <p class="report-item-content mt-1 text-sm leading-6 text-muted-foreground">
+                                  {{ displayItemValue(item.content) }}
+                                </p>
+                              </div>
                             </div>
                           </article>
                         </div>
@@ -547,8 +535,7 @@ function displayItemValue(value: string) {
                   <section
                     v-for="group in reportRiskIssueGroups"
                     :key="group.riskLevel"
-                    class="inspection-risk-level rounded-lg border p-5"
-                    :class="getRiskLevelSectionClass(group.riskLevel)"
+                    class="inspection-risk-level"
                   >
                     <header class="risk-level-header flex flex-wrap items-start justify-between gap-3">
                       <div class="min-w-0">
@@ -575,7 +562,7 @@ function displayItemValue(value: string) {
                       >
                         <header class="inspection-category-header flex flex-wrap items-center justify-between gap-3 border-b border-border/65 bg-muted/45 px-4 py-3">
                           <div class="flex min-w-0 items-center gap-2">
-                            <span class="h-5 w-1 rounded-full bg-link/70" aria-hidden="true" />
+                            <span class="category-accent h-5 w-1 rounded-full bg-link/70" aria-hidden="true" />
                             <h4 class="min-w-0 text-base font-semibold leading-6 text-foreground">{{ category.categoryName }}</h4>
                           </div>
                           <span class="rounded-md bg-background px-2.5 py-1 text-xs font-medium text-muted-foreground shadow-(--shadow-border)">
@@ -583,26 +570,29 @@ function displayItemValue(value: string) {
                           </span>
                         </header>
 
-                        <div class="inspection-category-items grid gap-3 p-4">
+                        <div class="inspection-category-items grid gap-4 px-4 py-4">
                           <article
                             v-for="item in category.items"
                             :key="`${group.riskLevel}-${category.categoryName}-${item.key}`"
-                            class="inspection-report-item rounded-lg border border-border/60 bg-background p-4"
+                            class="inspection-report-item border-b border-border/60 py-4 last:border-b-0"
                           >
-                            <div class="flex flex-wrap items-start justify-between gap-x-5 gap-y-2">
-                              <div class="min-w-0">
-                                <p class="report-item-field-label text-xs font-medium text-muted-foreground">检测项</p>
-                                <h5 class="mt-1 text-sm font-semibold leading-6 text-foreground">{{ item.name }}</h5>
+                            <div class="inspection-report-item-layout">
+                              <div class="grid content-start gap-3">
+                                <div class="min-w-0">
+                                  <p class="report-item-field-label text-xs font-medium text-muted-foreground">检测项</p>
+                                  <h5 class="mt-1 text-sm font-semibold leading-6 text-foreground">{{ item.name }}</h5>
+                                </div>
+                                <div class="min-w-0">
+                                  <p class="report-item-field-label text-xs font-medium text-muted-foreground">执行人</p>
+                                  <p class="mt-1 text-sm font-medium leading-6 text-foreground">{{ displayItemValue(item.executorName) }}</p>
+                                </div>
                               </div>
-                              <p class="min-w-0 text-sm leading-6 text-muted-foreground sm:shrink-0 sm:text-right">
-                                执行人：<span class="font-medium text-foreground">{{ displayItemValue(item.executorName) }}</span>
-                              </p>
-                            </div>
-                            <div class="report-item-content-panel mt-3 rounded-md bg-muted/55 px-3.5 py-3">
-                              <p class="report-item-field-label text-xs font-medium text-muted-foreground">检测内容</p>
-                              <p class="report-item-content mt-1 text-sm leading-6 text-muted-foreground">
-                                {{ displayItemValue(item.content) }}
-                              </p>
+                              <div class="report-item-content-panel min-w-0 rounded-md bg-muted/55 px-3.5 py-3">
+                                <p class="report-item-field-label text-xs font-medium text-muted-foreground">检测内容</p>
+                                <p class="report-item-content mt-1 text-sm leading-6 text-muted-foreground">
+                                  {{ displayItemValue(item.content) }}
+                                </p>
+                              </div>
                             </div>
                           </article>
                         </div>
@@ -615,37 +605,6 @@ function displayItemValue(value: string) {
                 </div>
               </template>
 
-              <template v-else-if="moduleIs(module, 'attachments')">
-                <div class="mb-5">
-                  <h2 class="text-xl font-semibold text-foreground">{{ module.title }}</h2>
-                  <p class="mt-1 text-sm text-muted-foreground">现场照片、测量记录与附件占位</p>
-                </div>
-
-                <div class="grid gap-3 sm:grid-cols-3">
-                  <div class="rounded-lg bg-muted/55 p-4">
-                    <i class="ri-image-line text-xl text-muted-foreground" />
-                    <p class="mt-3 text-sm font-medium text-foreground">现场照片</p>
-                    <p class="mt-1 text-sm leading-5 text-muted-foreground">待接口接入后展示。</p>
-                  </div>
-                  <div class="rounded-lg bg-muted/55 p-4">
-                    <i class="ri-ruler-line text-xl text-muted-foreground" />
-                    <p class="mt-3 text-sm font-medium text-foreground">测量记录</p>
-                    <p class="mt-1 text-sm leading-5 text-muted-foreground">待接口接入后展示。</p>
-                  </div>
-                  <div class="rounded-lg bg-muted/55 p-4">
-                    <i class="ri-attachment-2 text-xl text-muted-foreground" />
-                    <p class="mt-3 text-sm font-medium text-foreground">报告附件</p>
-                    <p class="mt-1 text-sm leading-5 text-muted-foreground">待接口接入后展示。</p>
-                  </div>
-                </div>
-              </template>
-
-              <template v-else-if="moduleIs(module, 'footer')">
-                <div class="space-y-3 text-sm leading-6 text-muted-foreground">
-                  <p>{{ report.template.footerText }}</p>
-                  <p>生成时间：{{ report.createdAt }}</p>
-                </div>
-              </template>
             </section>
           </div>
         </div>
@@ -676,8 +635,20 @@ function displayItemValue(value: string) {
   overflow-wrap: anywhere;
 }
 
+.inspection-report-item-layout {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(150px, 220px) minmax(0, 1fr);
+}
+
 .report-item-content {
   text-wrap: pretty;
+}
+
+@media (max-width: 640px) {
+  .inspection-report-item-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 @media print {
@@ -703,6 +674,20 @@ function displayItemValue(value: string) {
     box-shadow: none !important;
   }
 
+  .report-cover-grid {
+    align-items: start !important;
+    display: grid !important;
+    gap: 28px !important;
+    grid-template-columns: minmax(0, 1fr) 260px !important;
+  }
+
+  .report-cover-meta {
+    background: #f6f5f4 !important;
+    border: 1px solid rgb(0 0 0 / 0.12) !important;
+    box-shadow: none !important;
+    padding: 14px !important;
+  }
+
   .report-module-section {
     break-inside: avoid;
     page-break-inside: avoid;
@@ -714,12 +699,13 @@ function displayItemValue(value: string) {
   }
 
   .inspection-risk-level {
-    background: #ffffff !important;
-    border-color: rgb(0 0 0 / 0.12) !important;
-    box-shadow: none !important;
     break-inside: auto;
     page-break-inside: auto;
-    padding: 16px !important;
+  }
+
+  .inspection-report-item-layout {
+    gap: 14px !important;
+    grid-template-columns: minmax(150px, 210px) minmax(0, 1fr) !important;
   }
 
   .inspection-category-block {
@@ -736,16 +722,26 @@ function displayItemValue(value: string) {
     padding: 12px 14px !important;
   }
 
+  .category-accent {
+    display: none !important;
+  }
+
   .inspection-category-items {
-    gap: 12px !important;
-    padding: 16px !important;
+    display: block !important;
+    padding: 14px 16px !important;
   }
 
   .inspection-report-item {
     background: #ffffff !important;
-    border-color: rgb(0 0 0 / 0.12) !important;
+    border-bottom: 0 !important;
     box-shadow: none !important;
-    padding: 14px 16px !important;
+    padding: 16px 0 !important;
+  }
+
+  .inspection-report-item + .inspection-report-item {
+    border-top: 1px solid rgb(0 0 0 / 0.12) !important;
+    margin-top: 18px !important;
+    padding-top: 18px !important;
   }
 
   .report-item-content-panel {
