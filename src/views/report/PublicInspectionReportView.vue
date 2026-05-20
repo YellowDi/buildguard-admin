@@ -118,6 +118,11 @@ function printReport() {
   window.print()
 }
 
+function downloadPdf() {
+  toast.info("请在打印预览中选择保存为 PDF")
+  printReport()
+}
+
 function getResultClass(label: string) {
   if (label === "正常") {
     return "bg-success-surface text-success"
@@ -246,9 +251,19 @@ function displayItemValue(value: string) {
               <i class="ri-file-copy-line text-base" />
               复制链接
             </Button>
-            <Button type="button" class="h-8 gap-1 px-3" @click="printReport">
+            <Button type="button" variant="outline" class="h-8 gap-1 px-3" @click="printReport">
               <i class="ri-printer-line text-base" />
               打印 PDF
+            </Button>
+            <Button
+              type="button"
+              aria-label="下载 PDF，打开打印预览后保存为 PDF"
+              class="h-8 gap-1 px-3"
+              title="打开打印预览后保存为 PDF"
+              @click="downloadPdf"
+            >
+              <i class="ri-download-2-line text-base" />
+              下载 PDF
             </Button>
           </div>
         </div>
@@ -430,7 +445,7 @@ function displayItemValue(value: string) {
 
                 <article class="rounded-lg bg-muted/55 p-4 shadow-[inset_0_0_0_1px_hsl(var(--border)/0.45)]">
                   <div class="flex gap-3">
-                    <div class="inline-flex size-9 shrink-0 items-center justify-center rounded-md bg-background text-link shadow-(--shadow-border)">
+                    <div class="expert-advice-icon inline-flex size-9 shrink-0 items-center justify-center rounded-md bg-background text-link shadow-(--shadow-border)">
                       <i class="ri-user-star-line text-lg" />
                     </div>
                     <div class="min-w-0 flex-1">
@@ -454,18 +469,17 @@ function displayItemValue(value: string) {
                     :key="group.riskLevel"
                     class="inspection-risk-level"
                   >
-                    <header class="risk-level-header flex flex-wrap items-start justify-between gap-3">
+                    <header class="risk-level-header flex flex-wrap items-start gap-3">
                       <div class="min-w-0">
                         <div class="flex flex-wrap items-center gap-2">
                           <span class="rounded-md px-2.5 py-1 text-sm font-medium" :class="getResultClass(group.riskLevel)">
                             {{ group.riskLevel }}
                           </span>
                           <span class="text-xs text-muted-foreground">{{ group.categories.length }} 个分类</span>
+                          <span class="text-xs text-muted-foreground" aria-hidden="true">·</span>
+                          <span class="text-xs text-muted-foreground">{{ group.totalItems }} 项</span>
                         </div>
                       </div>
-                      <span class="rounded-md bg-background/80 px-2.5 py-1 text-sm font-semibold tabular-nums text-foreground shadow-(--shadow-border)">
-                        {{ group.totalItems }} 项
-                      </span>
                     </header>
 
                     <div class="mt-5 space-y-4">
@@ -474,14 +488,13 @@ function displayItemValue(value: string) {
                         :key="`${group.riskLevel}-${category.categoryName}`"
                         class="inspection-category-block overflow-hidden rounded-lg border border-border/70 bg-background shadow-[0_0_0_1px_rgb(15_23_42_/_0.02),0_8px_18px_-16px_rgb(15_23_42_/_0.28)]"
                       >
-                        <header class="inspection-category-header flex flex-wrap items-center justify-between gap-3 border-b border-border/65 bg-muted/45 px-4 py-3">
+                        <header class="inspection-category-header flex flex-wrap items-center gap-2 border-b border-border/65 bg-muted/45 px-4 py-3">
                           <div class="flex min-w-0 items-center gap-2">
                             <span class="category-accent h-5 w-1 rounded-full bg-link/70" aria-hidden="true" />
                             <h4 class="min-w-0 text-base font-semibold leading-6 text-foreground">{{ category.categoryName }}</h4>
+                            <span class="text-xs text-muted-foreground" aria-hidden="true">·</span>
+                            <span class="shrink-0 text-xs font-medium text-muted-foreground">{{ category.items.length }} 项</span>
                           </div>
-                          <span class="rounded-md bg-background px-2.5 py-1 text-xs font-medium text-muted-foreground shadow-(--shadow-border)">
-                            {{ category.items.length }} 项
-                          </span>
                         </header>
 
                         <div class="inspection-category-items grid gap-4 px-4 py-4">
@@ -531,18 +544,17 @@ function displayItemValue(value: string) {
                     :key="group.riskLevel"
                     class="inspection-risk-level"
                   >
-                    <header class="risk-level-header flex flex-wrap items-start justify-between gap-3">
+                    <header class="risk-level-header flex flex-wrap items-start gap-3">
                       <div class="min-w-0">
                         <div class="flex flex-wrap items-center gap-2">
                           <span class="rounded-md px-2.5 py-1 text-sm font-medium" :class="getResultClass(group.riskLevel)">
                             {{ group.riskLevel }}
                           </span>
                           <span class="text-xs text-muted-foreground">{{ group.categories.length }} 个分类</span>
+                          <span class="text-xs text-muted-foreground" aria-hidden="true">·</span>
+                          <span class="text-xs text-muted-foreground">{{ group.totalItems }} 项</span>
                         </div>
                       </div>
-                      <span class="rounded-md bg-background/80 px-2.5 py-1 text-sm font-semibold tabular-nums text-foreground shadow-(--shadow-border)">
-                        {{ group.totalItems }} 项
-                      </span>
                     </header>
 
                     <div class="mt-5 space-y-4">
@@ -551,14 +563,13 @@ function displayItemValue(value: string) {
                         :key="`${group.riskLevel}-${category.categoryName}`"
                         class="inspection-category-block overflow-hidden rounded-lg border border-border/70 bg-background shadow-[0_0_0_1px_rgb(15_23_42_/_0.02),0_8px_18px_-16px_rgb(15_23_42_/_0.28)]"
                       >
-                        <header class="inspection-category-header flex flex-wrap items-center justify-between gap-3 border-b border-border/65 bg-muted/45 px-4 py-3">
+                        <header class="inspection-category-header flex flex-wrap items-center gap-2 border-b border-border/65 bg-muted/45 px-4 py-3">
                           <div class="flex min-w-0 items-center gap-2">
                             <span class="category-accent h-5 w-1 rounded-full bg-link/70" aria-hidden="true" />
                             <h4 class="min-w-0 text-base font-semibold leading-6 text-foreground">{{ category.categoryName }}</h4>
+                            <span class="text-xs text-muted-foreground" aria-hidden="true">·</span>
+                            <span class="shrink-0 text-xs font-medium text-muted-foreground">{{ category.items.length }} 项</span>
                           </div>
-                          <span class="rounded-md bg-background px-2.5 py-1 text-xs font-medium text-muted-foreground shadow-(--shadow-border)">
-                            {{ category.items.length }} 项
-                          </span>
                         </header>
 
                         <div class="inspection-category-items grid gap-4 px-4 py-4">
@@ -715,6 +726,14 @@ function displayItemValue(value: string) {
 
   .category-accent {
     display: none !important;
+  }
+
+  .expert-advice-icon {
+    background: transparent !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    height: auto !important;
+    width: auto !important;
   }
 
   .inspection-category-items {
