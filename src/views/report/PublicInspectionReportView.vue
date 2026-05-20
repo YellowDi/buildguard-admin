@@ -387,6 +387,27 @@ function displayItemValue(value: string) {
                 </div>
               </template>
 
+              <template v-else-if="moduleIs(module, 'expertAdvice')">
+                <div class="mb-5">
+                  <h2 class="text-xl font-semibold text-foreground">{{ module.title }}</h2>
+                  <p class="mt-1 text-sm text-muted-foreground">生成报告时填写的专家处理建议</p>
+                </div>
+
+                <article class="rounded-lg bg-muted/55 p-4 shadow-[inset_0_0_0_1px_hsl(var(--border)/0.45)]">
+                  <div class="flex gap-3">
+                    <div class="inline-flex size-9 shrink-0 items-center justify-center rounded-md bg-background text-link shadow-(--shadow-border)">
+                      <i class="ri-user-star-line text-lg" />
+                    </div>
+                    <div class="min-w-0 flex-1">
+                      <h3 class="text-sm font-semibold text-foreground">专家建议</h3>
+                      <p class="mt-2 whitespace-pre-line text-sm leading-6 text-muted-foreground">
+                        {{ report.snapshot.remark || "暂无专家建议。" }}
+                      </p>
+                    </div>
+                  </div>
+                </article>
+              </template>
+
               <template v-else-if="moduleIs(module, 'buildings')">
                 <div class="mb-5">
                   <h2 class="text-xl font-semibold text-foreground">{{ module.title }}</h2>
@@ -486,9 +507,6 @@ function displayItemValue(value: string) {
               <template v-else-if="moduleIs(module, 'footer')">
                 <div class="space-y-3 text-sm leading-6 text-muted-foreground">
                   <p>{{ report.template.footerText }}</p>
-                  <p v-if="report.snapshot.remark">
-                    <span class="font-medium text-foreground">备注：</span>{{ report.snapshot.remark }}
-                  </p>
                   <p>生成时间：{{ report.createdAt }}</p>
                 </div>
               </template>

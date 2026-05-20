@@ -7,6 +7,7 @@ export type ReportTemplateModuleKey =
   | "summary"
   | "score"
   | "aiSummary"
+  | "expertAdvice"
   | "buildings"
   | "risks"
   | "attachments"
@@ -109,6 +110,7 @@ const DEFAULT_REPORT_MODULE_ORDER: ReportTemplateModuleKey[] = [
   "summary",
   "score",
   "aiSummary",
+  "expertAdvice",
   "risks",
   "buildings",
   "attachments",
@@ -118,6 +120,16 @@ const PRE_AI_REPORT_MODULE_ORDER: ReportTemplateModuleKey[] = [
   "cover",
   "summary",
   "score",
+  "risks",
+  "buildings",
+  "attachments",
+  "footer",
+]
+const PRE_EXPERT_ADVICE_REPORT_MODULE_ORDER: ReportTemplateModuleKey[] = [
+  "cover",
+  "summary",
+  "score",
+  "aiSummary",
   "risks",
   "buildings",
   "attachments",
@@ -161,6 +173,12 @@ export const DEFAULT_REPORT_TEMPLATE_CONFIG: ReportTemplateConfig = {
       key: "aiSummary",
       title: "AI 总结",
       description: "基于当前建筑检测结果生成结论、关键发现和处理建议。",
+      enabled: true,
+    },
+    {
+      key: "expertAdvice",
+      title: "专家建议",
+      description: "展示生成报告时填写的专家处理建议。",
       enabled: true,
     },
     {
@@ -247,12 +265,8 @@ export function buildInspectionReportUrl(reportId: string) {
 
 export function normalizeReportTemplateModuleOrder(modules: ReportTemplateModule[]): ReportTemplateModule[] {
   const moduleKeys = modules.map(module => module.key)
-  const comparableKeys = moduleKeys.filter(key => key !== "aiSummary")
 
-  if (
-    !matchesModuleOrder(comparableKeys, PRE_AI_REPORT_MODULE_ORDER)
-    && !matchesModuleOrder(comparableKeys, LEGACY_DEFAULT_REPORT_MODULE_ORDER)
-  ) {
+  if (!shouldNormalizeReportModuleOrder(moduleKeys)) {
     return modules
   }
 
@@ -261,6 +275,22 @@ export function normalizeReportTemplateModuleOrder(modules: ReportTemplateModule
   return DEFAULT_REPORT_MODULE_ORDER
     .map(key => moduleByKey.get(key))
     .filter((module): module is ReportTemplateModule => Boolean(module))
+}
+
+function shouldNormalizeReportModuleOrder(keys: ReportTemplateModuleKey[]) {
+  const knownPreviousOrders = [
+    PRE_EXPERT_ADVICE_REPORT_MODULE_ORDER,
+    PRE_AI_REPORT_MODULE_ORDER,
+    LEGACY_DEFAULT_REPORT_MODULE_ORDER,
+  ]
+
+  return knownPreviousOrders.some((order) => {
+    const baseKeys = keys.slice(0, order.length)
+    const appendedKeys = keys.slice(order.length)
+
+    return matchesModuleOrder(baseKeys, order)
+      && appendedKeys.every(key => key === "aiSummary" || key === "expertAdvice")
+  })
 }
 
 export function createReportQrPlaceholderDataUrl(value: string, title = "报告二维码") {

@@ -1552,12 +1552,12 @@ async function submitAssign() {
           </label>
 
           <label class="space-y-1.5 sm:col-span-2">
-            <span class="text-sm font-medium text-foreground">备注</span>
+            <span class="text-sm font-medium text-foreground">专家建议</span>
             <Textarea
               v-model="reportForm.remark"
               :disabled="reportSubmitting"
               class="min-h-20 resize-none bg-background"
-              placeholder="填写报告备注，可留空"
+              placeholder="填写专家处理建议，可留空"
             />
           </label>
         </div>
