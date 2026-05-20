@@ -214,6 +214,7 @@ const inspectionBuildingCards = computed(() => (
     resolvedInspectionWorkOrder.value?.Deadline,
   )
 ))
+const inspectionExpertAdvice = computed(() => toText(resolvedInspectionWorkOrder.value?.Remark, ""))
 
 function openRepairCustomerDetail() {
   const targetCustomerUuid = toRepairWorkOrderText(repairWorkOrder.value?.CustomerUuid) || customerUuid.value
@@ -1496,9 +1497,11 @@ async function submitAssign() {
         <div v-else-if="!loading && hasWorkOrder" class="pb-5">
           <InspectionBuildingCards
             :buildings="inspectionBuildingCards"
+            :expert-advice="inspectionExpertAdvice"
             title="建筑与检测项"
             empty-title="暂无建筑检测项"
             empty-description="当前工单还没有返回建筑与检测项数据。"
+            show-expert-advice
             show-report-action
             @generate-report="openReportDialog"
           />

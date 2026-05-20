@@ -56,6 +56,8 @@ const props = withDefaults(defineProps<{
   selectableDisabledItemKeys?: string[]
   showHeader?: boolean
   showReportAction?: boolean
+  showExpertAdvice?: boolean
+  expertAdvice?: string
 }>(), {
   title: "建筑与检测项",
   count: undefined,
@@ -69,6 +71,8 @@ const props = withDefaults(defineProps<{
   selectableDisabledItemKeys: () => [],
   showHeader: true,
   showReportAction: false,
+  showExpertAdvice: false,
+  expertAdvice: "",
 })
 
 const emit = defineEmits<{
@@ -80,6 +84,7 @@ const emit = defineEmits<{
 const expandedBuildingKeys = ref<string[]>([])
 
 const displayCount = computed(() => props.count ?? props.buildings.length)
+const expertAdviceText = computed(() => props.expertAdvice?.trim() || "暂无专家建议")
 
 watch(() => props.buildings, (buildings) => {
   if (!buildings.length) {
@@ -327,6 +332,16 @@ function handleExpandAfterLeave(element: Element) {
             :key="building.key"
             class="overflow-hidden rounded-[20px] border border-border/60 bg-surface-secondary text-foreground"
           >
+            <div
+              v-if="props.showExpertAdvice"
+              class="flex min-w-0 items-start gap-2 px-4 py-2.5 text-[12px] leading-5"
+            >
+              <span class="shrink-0 font-medium text-foreground">专家建议</span>
+              <span class="line-clamp-2 min-w-0 whitespace-pre-line text-muted-foreground">
+                {{ expertAdviceText }}
+              </span>
+            </div>
+
             <div
               role="button"
               tabindex="0"
