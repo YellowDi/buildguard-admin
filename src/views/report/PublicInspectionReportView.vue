@@ -181,8 +181,16 @@ function moduleIs(module: ReportTemplateModule, key: ReportTemplateModule["key"]
   return module.key === key
 }
 
-function displayItemValue(value: string) {
-  return value.trim() || "-"
+function displayItemValue(value: unknown, fallback = "-") {
+  if (typeof value === "string") {
+    return value.trim() || fallback
+  }
+
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return String(value)
+  }
+
+  return fallback
 }
 </script>
 
@@ -195,7 +203,7 @@ function displayItemValue(value: string) {
         </div>
         <h1 class="text-lg font-semibold text-foreground">报告不存在</h1>
         <p class="mt-2 text-sm leading-6 text-muted-foreground">
-          当前报告可能尚未生成，或本地 mock 数据已被清理。
+          当前报告可能尚未生成，或本地报告数据已被清理。
         </p>
       </div>
     </section>
@@ -384,14 +392,11 @@ function displayItemValue(value: string) {
               </template>
 
               <template v-else-if="moduleIs(module, 'aiSummary')">
-                <div class="mb-5 flex min-w-0 flex-wrap items-start justify-between gap-3">
+                <div class="mb-5">
                   <div>
                     <h2 class="text-xl font-semibold text-foreground">{{ module.title }}</h2>
-                    <p class="mt-1 text-sm text-muted-foreground">根据当前建筑检测结果生成的模拟总结</p>
+                    <p class="mt-1 text-sm text-muted-foreground">根据当前建筑检测结果生成的智能总结</p>
                   </div>
-                  <span class="inline-flex h-7 items-center rounded-md bg-brand-surface px-2.5 text-xs font-medium text-link">
-                    Mock AI
-                  </span>
                 </div>
 
                 <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
@@ -519,6 +524,20 @@ function displayItemValue(value: string) {
                                 <p class="report-item-content mt-1 text-sm leading-6 text-muted-foreground">
                                   {{ displayItemValue(item.content) }}
                                 </p>
+                                <div class="mt-3 grid gap-3 sm:grid-cols-2">
+                                  <div class="min-w-0">
+                                    <p class="report-item-field-label text-xs font-medium text-muted-foreground">测量内容</p>
+                                    <p class="report-item-content mt-1 text-sm leading-6 text-muted-foreground">
+                                      {{ displayItemValue(item.measureContent, "暂无") }}
+                                    </p>
+                                  </div>
+                                  <div class="min-w-0">
+                                    <p class="report-item-field-label text-xs font-medium text-muted-foreground">AI 建议</p>
+                                    <p class="report-item-content mt-1 text-sm leading-6 text-muted-foreground">
+                                      {{ displayItemValue(item.suggestContent, "暂无") }}
+                                    </p>
+                                  </div>
+                                </div>
                               </div>
                             </div>
                           </article>
@@ -594,6 +613,20 @@ function displayItemValue(value: string) {
                                 <p class="report-item-content mt-1 text-sm leading-6 text-muted-foreground">
                                   {{ displayItemValue(item.content) }}
                                 </p>
+                                <div class="mt-3 grid gap-3 sm:grid-cols-2">
+                                  <div class="min-w-0">
+                                    <p class="report-item-field-label text-xs font-medium text-muted-foreground">测量内容</p>
+                                    <p class="report-item-content mt-1 text-sm leading-6 text-muted-foreground">
+                                      {{ displayItemValue(item.measureContent, "暂无") }}
+                                    </p>
+                                  </div>
+                                  <div class="min-w-0">
+                                    <p class="report-item-field-label text-xs font-medium text-muted-foreground">AI 建议</p>
+                                    <p class="report-item-content mt-1 text-sm leading-6 text-muted-foreground">
+                                      {{ displayItemValue(item.suggestContent, "暂无") }}
+                                    </p>
+                                  </div>
+                                </div>
                               </div>
                             </div>
                           </article>

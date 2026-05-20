@@ -129,6 +129,14 @@ export type WorkOrderInspectionHistoryDetailPayload = {
   Uuid: string
 }
 
+export type GenerateWorkOrderGnReportPayload = {
+  BuildUuid?: string
+  Expert?: string
+  Version?: number
+  WorkOrderUuid?: string
+  [property: string]: unknown
+}
+
 export type WorkOrderDetailResult = WorkOrderListItem
 
 export type WorkOrderInspectionHistoryDetailItem = {
@@ -139,6 +147,35 @@ export type WorkOrderInspectionHistoryDetailItem = {
   PhotoFile?: WorkOrderFile[]
   Result?: number
   IsReplay?: number
+  [property: string]: unknown
+}
+
+export type WorkOrderGnReportItem = {
+  CategoryName?: string
+  Content?: string
+  InspectionName?: string
+  MeasureContent?: string
+  Score?: number
+  SuggestContent?: string
+  [property: string]: unknown
+}
+
+export type WorkOrderGnReportResult = {
+  BuildName?: string
+  BuildSuggestContent?: string
+  BuildUuid?: string
+  CustomerAddress?: string
+  CustomerName?: string
+  Deadline?: string
+  Expert?: string
+  Items?: WorkOrderGnReportItem[]
+  OrderNo?: string
+  ParkName?: string
+  PlanName?: string
+  Result?: number
+  RiskNum?: number
+  Score?: number
+  ServiceName?: string
   [property: string]: unknown
 }
 
@@ -225,6 +262,7 @@ const WORK_ORDER_INSPECTION_HISTORY_DETAIL_API_URL = API_PATHS.workOrderInspecti
 const WORK_ORDER_UPDATE_API_URL = buildApiUrl(API_PATHS.workOrderUpdate)
 const WORK_ORDER_DISPATCH_API_URL = buildApiUrl(API_PATHS.workOrderDispatch)
 const WORK_ORDER_REPAIR_DISPATCH_API_URL = buildApiUrl(API_PATHS.workOrderRepairDispatch)
+const WORK_ORDER_GN_REPORT_API_URL = buildApiUrl(API_PATHS.workOrderGnReport)
 const WORK_ORDERS_LOAD_ERROR_MESSAGE = "工单列表加载失败，请稍后重试。"
 const WORK_ORDER_CREATE_ERROR_MESSAGE = "工单创建失败，请稍后重试。"
 const REPAIR_WORK_ORDER_CREATE_ERROR_MESSAGE = "报修工单创建失败，请稍后重试。"
@@ -234,6 +272,7 @@ const WORK_ORDER_DETAIL_ERROR_MESSAGE = "工单详情加载失败，请稍后重
 const WORK_ORDER_INSPECTION_HISTORY_DETAIL_ERROR_MESSAGE = "检测结果历史加载失败，请稍后重试。"
 const WORK_ORDER_UPDATE_ERROR_MESSAGE = "工单更新失败，请稍后重试。"
 const WORK_ORDER_DISPATCH_ERROR_MESSAGE = "工单指派失败，请稍后重试。"
+const WORK_ORDER_GN_REPORT_ERROR_MESSAGE = "检测报告生成失败，请稍后重试。"
 
 export async function fetchWorkOrders(payload: ListWorkOrdersPayload = {}): Promise<WorkOrdersListResult> {
   const normalizedPayload = {
@@ -440,6 +479,34 @@ export async function fetchWorkOrderInspectionHistoryDetail(
   assertApiSuccess(responseBody, WORK_ORDER_INSPECTION_HISTORY_DETAIL_ERROR_MESSAGE)
 
   return extractInspectionHistoryList(responseBody).map(item => normalizeWorkOrderInspectionHistoryDetailItem(item))
+}
+
+export async function generateWorkOrderGnReport(
+  payload: GenerateWorkOrderGnReportPayload,
+): Promise<WorkOrderGnReportResult> {
+  const normalizedPayload = {
+    BuildUuid: getRequiredString(payload.BuildUuid, "BuildUuid"),
+    Expert: getOptionalString(payload.Expert) ?? "",
+    Version: getRequiredPositiveInteger(payload.Version, "Version"),
+    WorkOrderUuid: getRequiredString(payload.WorkOrderUuid, "WorkOrderUuid"),
+  }
+
+  const response = await fetch(WORK_ORDER_GN_REPORT_API_URL, {
+    method: "POST",
+    headers: buildApiHeaders({
+      "Content-Type": "application/json",
+    }),
+    body: JSON.stringify(normalizedPayload),
+  })
+  const responseBody = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responseBody, WORK_ORDER_GN_REPORT_ERROR_MESSAGE)
+  }
+
+  assertApiSuccess(responseBody, WORK_ORDER_GN_REPORT_ERROR_MESSAGE)
+
+  return normalizeWorkOrderGnReportResult(extractWorkOrderGnReportRecord(responseBody))
 }
 
 export async function updateWorkOrder(payload: UpdateWorkOrderPayload): Promise<CreateWorkOrderResult> {
@@ -735,6 +802,55 @@ function normalizeWorkOrderInspectionHistoryDetailItem(value: unknown): WorkOrde
   }
 }
 
+function normalizeWorkOrderGnReportResult(value: unknown): WorkOrderGnReportResult {
+  if (!value || typeof value !== "object") {
+    return {}
+  }
+
+  const record = value as Record<string, unknown>
+
+  return {
+    ...record,
+    BuildName: getFirstText(record, ["BuildName", "buildName", "BuildingName", "buildingName"]),
+    BuildSuggestContent: getFirstText(record, ["BuildSuggestContent", "buildSuggestContent"]),
+    BuildUuid: getFirstText(record, ["BuildUuid", "buildUuid"]),
+    CustomerAddress: getFirstText(record, ["CustomerAddress", "customerAddress", "Address", "address"]),
+    CustomerName: getFirstText(record, ["CustomerName", "customerName", "CorpName", "corpName"]),
+    Deadline: getFirstText(record, ["Deadline", "deadline", "ExpireAt", "expireAt", "DueAt", "dueAt"]),
+    Expert: getFirstText(record, ["Expert", "expert"]),
+    Items: normalizeWorkOrderGnReportItems(getFirstArray(record, ["Items", "items", "List", "list"])),
+    OrderNo: getFirstText(record, ["OrderNo", "orderNo", "WorkOrderNo", "workOrderNo", "No", "no"]),
+    ParkName: getFirstText(record, ["ParkName", "parkName"]),
+    PlanName: getFirstText(record, ["PlanName", "planName", "InspectionPlanName", "inspectionPlanName"]),
+    Result: getFirstNumber(record, ["Result", "result"]),
+    RiskNum: getFirstNumber(record, ["RiskNum", "riskNum", "RiskNumber", "riskNumber"]),
+    Score: getFirstNumber(record, ["Score", "score", "TotalScore", "totalScore"]),
+    ServiceName: getFirstText(record, ["ServiceName", "serviceName", "PackageName", "packageName"]),
+  }
+}
+
+function normalizeWorkOrderGnReportItems(value: unknown): WorkOrderGnReportItem[] {
+  if (!Array.isArray(value)) {
+    return []
+  }
+
+  return value
+    .filter(item => item && typeof item === "object")
+    .map((item) => {
+      const record = item as Record<string, unknown>
+
+      return {
+        ...record,
+        CategoryName: getFirstText(record, ["CategoryName", "categoryName"]),
+        Content: getFirstText(record, ["Content", "content"]),
+        InspectionName: getFirstText(record, ["InspectionName", "inspectionName", "InspectionItemName", "inspectionItemName", "Name", "name"]),
+        MeasureContent: getFirstText(record, ["MeasureContent", "measureContent"]),
+        Score: getFirstNumber(record, ["Score", "score"]),
+        SuggestContent: getFirstText(record, ["SuggestContent", "suggestContent"]),
+      }
+    })
+}
+
 function extractCreateResult(payload: unknown): CreateWorkOrderResult {
   const record = asRecord(payload)
 
@@ -825,6 +941,89 @@ function extractDetailRecord(payload: unknown): WorkOrderDetailResult {
   }
 
   return record as WorkOrderDetailResult
+}
+
+function extractWorkOrderGnReportRecord(payload: unknown): WorkOrderGnReportResult {
+  const record = unwrapWorkOrderGnReportRecord(payload)
+
+  if (!record || Array.isArray(record)) {
+    return {}
+  }
+
+  return record as WorkOrderGnReportResult
+}
+
+function unwrapWorkOrderGnReportRecord(value: unknown): Record<string, unknown> | unknown[] | null {
+  if (Array.isArray(value)) {
+    if (value.length === 1) {
+      return unwrapWorkOrderGnReportRecord(value[0])
+    }
+
+    return value
+  }
+
+  const record = asRecord(value)
+
+  if (!record) {
+    return null
+  }
+
+  const nestedCandidates = [
+    record.data,
+    record.Data,
+    record.detail,
+    record.Detail,
+    record.record,
+    record.Record,
+    record.item,
+    record.Item,
+  ]
+
+  for (const candidate of nestedCandidates) {
+    const nestedRecord = unwrapWorkOrderGnReportRecord(candidate)
+
+    if (nestedRecord) {
+      return nestedRecord
+    }
+  }
+
+  const listCandidates = [
+    record.List,
+    record.list,
+    record.rows,
+  ]
+
+  for (const candidate of listCandidates) {
+    if (!Array.isArray(candidate) || candidate.length !== 1) {
+      continue
+    }
+
+    const nestedRecord = unwrapWorkOrderGnReportRecord(candidate[0])
+
+    if (nestedRecord && !Array.isArray(nestedRecord)) {
+      return nestedRecord
+    }
+  }
+
+  if (!hasDirectWorkOrderGnReportFields(record)) {
+    const nestedObjectEntries = Object.entries(record)
+      .filter(([key]) => !DETAIL_META_KEYS.has(key))
+      .map(([, candidate]) => candidate)
+      .filter(candidate => (
+        (candidate !== null && typeof candidate === "object" && !Array.isArray(candidate))
+        || (Array.isArray(candidate) && candidate.length === 1)
+      ))
+
+    if (nestedObjectEntries.length === 1) {
+      const nestedRecord = unwrapWorkOrderGnReportRecord(nestedObjectEntries[0])
+
+      if (nestedRecord) {
+        return nestedRecord
+      }
+    }
+  }
+
+  return record
 }
 
 function unwrapWorkOrderDetailRecord(value: unknown): Record<string, unknown> | unknown[] | null {
@@ -930,6 +1129,31 @@ function hasDirectWorkOrderFields(record: Record<string, unknown>) {
   ].some(key => key in record)
 }
 
+function hasDirectWorkOrderGnReportFields(record: Record<string, unknown>) {
+  return [
+    "BuildName",
+    "buildName",
+    "BuildSuggestContent",
+    "buildSuggestContent",
+    "BuildUuid",
+    "buildUuid",
+    "CustomerAddress",
+    "customerAddress",
+    "CustomerName",
+    "customerName",
+    "Expert",
+    "expert",
+    "Items",
+    "items",
+    "OrderNo",
+    "orderNo",
+    "RiskNum",
+    "riskNum",
+    "ServiceName",
+    "serviceName",
+  ].some(key => key in record)
+}
+
 function asRecord(value: unknown): Record<string, unknown> | null {
   return value !== null && typeof value === "object" ? value as Record<string, unknown> : null
 }
@@ -947,6 +1171,18 @@ function getRequiredString(value: unknown, fieldName: string) {
 function getRequiredNumber(value: unknown, fieldName: string) {
   if (typeof value !== "number" || !Number.isFinite(value)) {
     throw new ApiError(`请求参数校验失败：${fieldName} 必须是有效数字。`)
+  }
+
+  return value
+}
+
+function getRequiredPositiveInteger(value: unknown, fieldName: string) {
+  if (
+    typeof value !== "number"
+    || !Number.isInteger(value)
+    || value <= 0
+  ) {
+    throw new ApiError(`请求参数校验失败：${fieldName} 必须是正整数。`)
   }
 
   return value
@@ -1043,6 +1279,18 @@ function getFirstTextArray(record: Record<string, unknown>, keys: string[]) {
 
     if (normalized.length) {
       return normalized
+    }
+  }
+
+  return undefined
+}
+
+function getFirstArray(record: Record<string, unknown>, keys: string[]) {
+  for (const key of keys) {
+    const value = record[key]
+
+    if (Array.isArray(value)) {
+      return value
     }
   }
 

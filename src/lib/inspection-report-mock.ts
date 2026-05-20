@@ -1,6 +1,11 @@
 import type { CustomerDetailResult } from "@/lib/customers-api"
 import { getWorkOrderStatusLabel } from "@/lib/work-order-status"
-import type { WorkOrderBuildInfo, WorkOrderBuildInspectionItem, WorkOrderDetailResult } from "@/lib/work-orders-api"
+import type {
+  WorkOrderBuildInfo,
+  WorkOrderBuildInspectionItem,
+  WorkOrderDetailResult,
+  WorkOrderGnReportResult,
+} from "@/lib/work-orders-api"
 
 export type ReportTemplateModuleKey =
   | "cover"
@@ -36,6 +41,13 @@ export type InspectionReportCreateInput = {
   workOrder: WorkOrderDetailResult
   building: WorkOrderBuildInfo
   customer: CustomerDetailResult | null
+}
+
+export type InspectionReportGnCreateInput = {
+  title: string
+  reportDate: string
+  accessPassword: string
+  report: WorkOrderGnReportResult
 }
 
 export type InspectionReportSnapshot = {
@@ -82,6 +94,8 @@ export type InspectionReportItem = {
   name: string
   categoryName: string
   content: string
+  measureContent?: string
+  suggestContent?: string
   resultLabel: string
   scoreText: string
   executorName: string
@@ -228,6 +242,23 @@ export function createInspectionReportMock(input: InspectionReportCreateInput): 
     accessPassword: input.accessPassword,
     template,
     snapshot: buildInspectionReportSnapshot(input),
+  }
+  const records = loadInspectionReportRecords()
+
+  records.unshift(record)
+  writeStoredValue(REPORT_STORAGE_KEY, records.slice(0, 50))
+
+  return record
+}
+
+export function createInspectionReportFromGnReport(input: InspectionReportGnCreateInput): InspectionReportRecord {
+  const template = loadReportTemplateConfig()
+  const record: InspectionReportRecord = {
+    id: createReportId(),
+    createdAt: formatDateTime(new Date()),
+    accessPassword: input.accessPassword,
+    template,
+    snapshot: buildInspectionReportSnapshotFromGnReport(input),
   }
   const records = loadInspectionReportRecords()
 
@@ -390,6 +421,84 @@ function buildInspectionReportSnapshot(input: InspectionReportCreateInput): Insp
   }
 }
 
+function buildInspectionReportSnapshotFromGnReport(input: InspectionReportGnCreateInput): InspectionReportSnapshot {
+  const report = input.report
+  const resultLabel = formatGnReportResultLabel(report.Result)
+  const building = normalizeGnReportBuilding(report, resultLabel)
+  const buildings = [building]
+  const risks = building.items
+    .filter(item => isGnReportRiskItem(item))
+    .map(item => ({
+      ...item,
+      buildingName: building.name,
+    }))
+  const riskNum = toNumber(report.RiskNum) ?? risks.length
+
+  return {
+    title: input.title.trim(),
+    reportDate: input.reportDate.trim(),
+    remark: toText(report.Expert, ""),
+    orderNo: toText(report.OrderNo, "-"),
+    serviceName: toText(report.ServiceName, "-"),
+    planName: toText(report.PlanName, "-"),
+    customerName: toText(report.CustomerName, "-"),
+    parkName: toText(report.ParkName, "-"),
+    address: toText(report.CustomerAddress, "-"),
+    deadline: formatDateOnly(toText(report.Deadline, "-")),
+    statusLabel: resultLabel,
+    resultLabel,
+    scoreText: formatScore(report.Score),
+    totalBuildings: buildings.length,
+    totalItems: building.totalCount,
+    completedItems: building.completedCount,
+    issueItems: riskNum,
+    aiSummary: buildGnReportAiSummary({
+      report,
+      resultLabel,
+      scoreText: formatScore(report.Score),
+      totalItems: building.totalCount,
+      risks,
+    }),
+    buildings,
+    risks,
+  }
+}
+
+function normalizeGnReportBuilding(report: WorkOrderGnReportResult, resultLabel: string): InspectionReportBuilding {
+  const items = normalizeGnReportItems(report)
+
+  return {
+    key: toText(report.BuildUuid, "gn-report-building"),
+    name: toText(report.BuildName, "当前建筑"),
+    scoreText: formatScore(report.Score),
+    resultLabel,
+    completedCount: items.length,
+    totalCount: items.length,
+    items,
+  }
+}
+
+function normalizeGnReportItems(report: WorkOrderGnReportResult): InspectionReportItem[] {
+  const items = Array.isArray(report.Items) ? report.Items : []
+  const reportResultLabel = formatGnReportResultLabel(report.Result)
+
+  return items.map((item, index) => {
+    const score = toNumber(item.Score)
+
+    return {
+      key: `${toText(report.BuildUuid, "gn-report-building")}-item-${index + 1}`,
+      name: toText(item.InspectionName, `检测项 ${index + 1}`),
+      categoryName: toText(item.CategoryName, "未分类"),
+      content: toText(item.Content, "-"),
+      measureContent: toText(item.MeasureContent, ""),
+      suggestContent: toText(item.SuggestContent, ""),
+      resultLabel: formatGnReportItemResult(score, reportResultLabel),
+      scoreText: formatDeductionScore(score),
+      executorName: "-",
+    }
+  })
+}
+
 function normalizeReportBuildings(value: WorkOrderBuildInfo[] | undefined): InspectionReportBuilding[] {
   if (!Array.isArray(value)) {
     return []
@@ -426,6 +535,8 @@ function normalizeReportItems(value: WorkOrderBuildInspectionItem[] | undefined,
     name: toText(item.InspectionItemName, `检测项 ${itemIndex + 1}`),
     categoryName: toText(item.CategoryName, "未分类"),
     content: toText(item.CategoryContent, "-"),
+    measureContent: "",
+    suggestContent: "",
     resultLabel: formatInspectionItemResult(item.Result),
     scoreText: formatScore(item.Score ?? item.CategoryScore),
     executorName: toText(item.ExecutorName, toText(item.UserName, "-")),
@@ -492,9 +603,84 @@ function normalizeInspectionReportRecord(record: InspectionReportRecord): Inspec
 }
 
 function normalizeInspectionReportSnapshot(snapshot: InspectionReportSnapshot): InspectionReportSnapshot {
+  const buildings = normalizeStoredReportBuildings(snapshot.buildings)
+  const risks = normalizeStoredReportRisks(snapshot.risks)
+
   return {
     ...snapshot,
-    aiSummary: normalizeInspectionReportAiSummary(snapshot),
+    buildings,
+    risks,
+    aiSummary: normalizeInspectionReportAiSummary({
+      ...snapshot,
+      buildings,
+      risks,
+    }),
+  }
+}
+
+function normalizeStoredReportBuildings(value: unknown): InspectionReportBuilding[] {
+  if (!Array.isArray(value)) {
+    return []
+  }
+
+  return value
+    .filter(item => item && typeof item === "object")
+    .map((item, index) => {
+      const building = item as InspectionReportBuilding
+      const items = normalizeStoredReportItems(building.items)
+
+      return {
+        ...building,
+        key: toText(building.key, `building-${index + 1}`),
+        name: toText(building.name, `建筑 ${index + 1}`),
+        scoreText: toText(building.scoreText, "-"),
+        resultLabel: toText(building.resultLabel, "未反馈"),
+        completedCount: toNumber(building.completedCount) ?? items.length,
+        totalCount: toNumber(building.totalCount) ?? items.length,
+        items,
+      }
+    })
+}
+
+function normalizeStoredReportRisks(value: unknown): InspectionReportRiskItem[] {
+  if (!Array.isArray(value)) {
+    return []
+  }
+
+  return value
+    .filter(item => item && typeof item === "object")
+    .map((item, index) => {
+      const risk = item as InspectionReportRiskItem
+
+      return {
+        ...normalizeStoredReportItem(risk, index),
+        buildingName: toText(risk.buildingName, "-"),
+      }
+    })
+}
+
+function normalizeStoredReportItems(value: unknown): InspectionReportItem[] {
+  if (!Array.isArray(value)) {
+    return []
+  }
+
+  return value
+    .filter(item => item && typeof item === "object")
+    .map((item, index) => normalizeStoredReportItem(item as InspectionReportItem, index))
+}
+
+function normalizeStoredReportItem(item: InspectionReportItem, index: number): InspectionReportItem {
+  return {
+    ...item,
+    key: toText(item.key, `report-item-${index + 1}`),
+    name: toText(item.name, `检测项 ${index + 1}`),
+    categoryName: toText(item.categoryName, "未分类"),
+    content: toText(item.content, "-"),
+    measureContent: toText(item.measureContent, ""),
+    suggestContent: toText(item.suggestContent, ""),
+    resultLabel: toText(item.resultLabel, "未反馈"),
+    scoreText: toText(item.scoreText, "-"),
+    executorName: toText(item.executorName, "-"),
   }
 }
 
@@ -560,8 +746,47 @@ function buildInspectionReportAiSummary(input: {
       pendingCount > 0
         ? `仍有 ${pendingCount} 项未反馈，建议补齐执行结果后再归档报告。`
         : "当前检测项均已有结果，可作为阶段性归档材料。",
-      "后续接入正式 AI 接口后，可基于历史数据、整改记录和附件图片进一步优化总结内容。",
+      "建议结合历史检测记录和现场附件持续跟踪建筑状态变化。",
     ],
+  }
+}
+
+function buildGnReportAiSummary(input: {
+  report: WorkOrderGnReportResult
+  resultLabel: string
+  scoreText: string
+  totalItems: number
+  risks: InspectionReportRiskItem[]
+}): InspectionReportAiSummary {
+  const conclusion = toText(
+    input.report.BuildSuggestContent,
+    `本次检测共覆盖 ${input.totalItems} 个检测项，综合结果为 ${input.resultLabel}，评分 ${input.scoreText}。`,
+  )
+  const riskCategories = getTopRiskCategories(input.risks)
+  const itemSuggestions = Array.from(new Set(
+    (Array.isArray(input.report.Items) ? input.report.Items : [])
+      .map(item => toText(item.SuggestContent, ""))
+      .filter(Boolean),
+  )).slice(0, 3)
+
+  return {
+    conclusion,
+    highlights: [
+      `综合结果为「${input.resultLabel}」，建筑评分 ${input.scoreText}。`,
+      input.risks.length > 0
+        ? `发现 ${input.risks.length} 项需关注问题，主要集中在 ${riskCategories || "当前检测项"}。`
+        : "当前未发现风险检测项。",
+      input.totalItems > 0
+        ? `本次报告覆盖 ${input.totalItems} 个检测项。`
+        : "当前报告暂无检测项明细。",
+    ],
+    suggestions: itemSuggestions.length
+      ? itemSuggestions
+      : [
+          input.risks.length > 0
+            ? "建议优先复核风险检测项，并在处理后补充整改记录。"
+            : "建议保持现有巡检频次，持续关注建筑运行状态。",
+        ],
   }
 }
 
@@ -690,9 +915,50 @@ function formatInspectionItemResult(value: unknown) {
   return `结果 ${result}`
 }
 
+function formatGnReportResultLabel(value: unknown) {
+  const result = toNumber(value)
+
+  if (result === 1) return "正常"
+  if (result === 2) return "轻微风险"
+  if (result === 3) return "存在隐患"
+  if (result === null || result === 0) return "未反馈"
+
+  return `结果 ${result}`
+}
+
+function formatGnReportItemResult(score: number | null, reportResultLabel: string) {
+  if (score !== null && score > 0) {
+    return reportResultLabel !== "正常" && reportResultLabel !== "未反馈"
+      ? reportResultLabel
+      : "存在隐患"
+  }
+
+  return "正常"
+}
+
+function isGnReportRiskItem(item: InspectionReportItem) {
+  return item.resultLabel !== "正常" && item.resultLabel !== "未反馈"
+}
+
 function formatScore(value: unknown) {
   const score = toNumber(value)
   return score === null ? "-" : String(score)
+}
+
+function formatDeductionScore(value: unknown) {
+  const score = toNumber(value)
+
+  if (score === null) {
+    return "-"
+  }
+
+  if (score <= 0) {
+    return "0"
+  }
+
+  return Number.isInteger(score)
+    ? `-${score}`
+    : `-${score.toFixed(1).replace(/\.0$/, "")}`
 }
 
 function formatDateOnly(value: string) {

@@ -8,7 +8,6 @@ import InspectionItemHistorySheet from "@/components/detail/InspectionItemHistor
 import LinkedEntityDetailSheet from "@/components/detail/LinkedEntityDetailSheet.vue"
 import PermissionGate from "@/components/permissions/PermissionGate.vue"
 import RepairWorkOrderContentCard from "@/components/detail/RepairWorkOrderContentCard.vue"
-import FormDatePicker from "@/components/form/FormDatePicker.vue"
 import DetailFieldsSkeleton from "@/components/loading/DetailFieldsSkeleton.vue"
 import DetailRelationSkeleton from "@/components/loading/DetailRelationSkeleton.vue"
 import DetailFieldSections from "@/components/detail/DetailFieldSections.vue"
@@ -37,7 +36,7 @@ import { handleApiError } from "@/lib/api-errors"
 import { fetchCustomerDetail, type CustomerDetailResult } from "@/lib/customers-api"
 import {
   buildInspectionReportUrl,
-  createInspectionReportMock,
+  createInspectionReportFromGnReport,
   createReportQrPlaceholderDataUrl,
   type InspectionReportRecord,
 } from "@/lib/inspection-report-mock"
@@ -54,6 +53,7 @@ import {
   fetchRepairWorkOrderDetail,
   fetchWorkOrderInspectionHistoryDetail,
   fetchWorkOrderDetail,
+  generateWorkOrderGnReport,
   type WorkOrderInspectionHistoryDetailItem,
   type WorkOrderBuildInspectionItem,
   type RepairWorkOrderDetailResult,
@@ -139,9 +139,8 @@ const generatedReport = ref<InspectionReportRecord | null>(null)
 const generatedReportUrl = ref("")
 const reportBuilding = ref<WorkOrderBuildInfo | null>(null)
 const reportForm = ref({
-  title: "",
-  reportDate: "",
   accessPassword: "",
+  version: "1",
   remark: "",
 })
 
@@ -329,9 +328,8 @@ const assignPermissionCode = computed(() => props.kind === "repair"
 const selectedReportBuildingName = computed(() => toText(reportBuilding.value?.BuildName, "当前建筑"))
 const canSubmitReport = computed(() => (
   !reportSubmitting.value
-  && Boolean(reportForm.value.title.trim())
-  && Boolean(reportForm.value.reportDate.trim())
   && /^\d{4}$/.test(reportForm.value.accessPassword)
+  && parseReportVersion() !== null
 ))
 
 watch([inspectionWorkOrder, repairWorkOrder], () => {
@@ -1131,12 +1129,9 @@ function openReportDialog(buildingKey: string) {
     return
   }
 
-  const buildingName = toText(currentBuilding.BuildName, "当前建筑")
-
   reportForm.value = {
-    title: `${buildingName}检测报告`,
-    reportDate: getTodayDate(),
     accessPassword: "",
+    version: "1",
     remark: toText(currentWorkOrder.Remark, ""),
   }
   reportBuilding.value = currentBuilding
@@ -1169,7 +1164,17 @@ function updateReportPassword(value: string | number) {
   reportForm.value.accessPassword = String(value).replace(/\D/g, "").slice(0, 4)
 }
 
-function submitReportGeneration() {
+function updateReportVersion(value: string | number) {
+  reportForm.value.version = String(value).replace(/\D/g, "").slice(0, 6)
+}
+
+function parseReportVersion() {
+  const version = Number(reportForm.value.version)
+
+  return Number.isInteger(version) && version > 0 ? version : null
+}
+
+async function submitReportGeneration() {
   const currentWorkOrder = resolvedInspectionWorkOrder.value
   const currentBuilding = reportBuilding.value
 
@@ -1183,22 +1188,49 @@ function submitReportGeneration() {
     return
   }
 
+  const buildUuid = toText(currentBuilding.BuildUuid, "")
+  const targetWorkOrderUuid = toText(currentWorkOrder.Uuid, workOrderUuid.value)
+  const version = parseReportVersion()
+
+  if (!buildUuid) {
+    toast.error("当前建筑缺少 Uuid，无法生成报告")
+    return
+  }
+
+  if (!targetWorkOrderUuid) {
+    toast.error("当前检测工单缺少 Uuid，无法生成报告")
+    return
+  }
+
   if (!canSubmitReport.value) {
-    toast.error("请填写报告标题、报告日期和 4 位数字密码")
+    toast.error("请填写 4 位数字密码和有效版本号")
     return
   }
 
   reportSubmitting.value = true
 
   try {
-    const record = createInspectionReportMock({
-      title: reportForm.value.title,
-      reportDate: reportForm.value.reportDate,
+    if (version === null) {
+      toast.error("报告版本号必须是正整数")
+      return
+    }
+
+    const reportResult = await generateWorkOrderGnReport({
+      BuildUuid: buildUuid,
+      WorkOrderUuid: targetWorkOrderUuid,
+      Expert: reportForm.value.remark,
+      Version: version,
+    })
+    const record = createInspectionReportFromGnReport({
+      title: `${toText(reportResult.BuildName, toText(currentBuilding.BuildName, "当前建筑"))}检测报告`,
+      reportDate: getTodayDate(),
       accessPassword: reportForm.value.accessPassword,
-      remark: reportForm.value.remark,
-      workOrder: currentWorkOrder,
-      building: currentBuilding,
-      customer: customer.value,
+      report: {
+        ...reportResult,
+        BuildName: toText(reportResult.BuildName, toText(currentBuilding.BuildName, "当前建筑")),
+        BuildUuid: toText(reportResult.BuildUuid, buildUuid),
+        Expert: toText(reportResult.Expert, reportForm.value.remark),
+      },
     })
 
     generatedReport.value = record
@@ -1206,8 +1238,11 @@ function submitReportGeneration() {
     toast.success("报告已生成", {
       description: "可打开 HTML 报告，也可在报告页打印为 PDF。",
     })
-  } catch {
-    toast.error("报告生成失败，请稍后重试")
+  } catch (error) {
+    toast.error(handleApiError(error, {
+      mode: "silent",
+      fallback: "报告生成失败，请稍后重试。",
+    }))
   } finally {
     reportSubmitting.value = false
   }
@@ -1515,27 +1550,22 @@ async function submitAssign() {
       <DialogHeader class="px-4 pt-4 pb-0">
         <DialogTitle>生成检测报告</DialogTitle>
         <DialogDescription>
-          为「{{ selectedReportBuildingName }}」填写报告展示信息和 4 位访问密码，生成可访问的 HTML 报告页面。
+          为「{{ selectedReportBuildingName }}」填写版本号、访问密码和专家建议，生成可访问的 HTML 报告页面。
         </DialogDescription>
       </DialogHeader>
 
       <div class="space-y-4 px-4 pt-4 pb-0">
         <div class="grid gap-4 sm:grid-cols-2">
-          <label class="space-y-1.5 sm:col-span-2">
-            <span class="text-sm font-medium text-foreground">报告标题</span>
-            <Input
-              v-model="reportForm.title"
-              :disabled="reportSubmitting"
-              placeholder="输入报告标题"
-            />
-          </label>
-
           <label class="space-y-1.5">
-            <span class="text-sm font-medium text-foreground">报告日期</span>
-            <FormDatePicker
-              v-model="reportForm.reportDate"
+            <span class="text-sm font-medium text-foreground">版本号</span>
+            <Input
+              :model-value="reportForm.version"
+              type="text"
+              inputmode="numeric"
+              autocomplete="off"
+              placeholder="请输入版本号"
               :disabled="reportSubmitting"
-              placeholder="请选择报告日期"
+              @update:model-value="updateReportVersion"
             />
           </label>
 
