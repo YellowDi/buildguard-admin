@@ -184,13 +184,13 @@ export const DEFAULT_REPORT_TEMPLATE_CONFIG: ReportTemplateConfig = {
     {
       key: "risks",
       title: "风险问题",
-      description: "聚合异常或待整改检测项，便于客户优先处理。",
+      description: "按风险等级和分类聚合异常或待整改检测项，便于客户优先处理。",
       enabled: true,
     },
     {
       key: "buildings",
       title: "检测项",
-      description: "按检测结果分组展示当前建筑的检测项、分类、执行人和检测内容。",
+      description: "按风险等级和分类展示当前建筑的检测项、执行人和检测内容。",
       enabled: true,
     },
     {

@@ -13,13 +13,22 @@ import {
   verifyInspectionReportPassword,
   type InspectionReportRecord,
   type InspectionReportItem,
+  type InspectionReportRiskItem,
   type ReportTemplateModule,
 } from "@/lib/inspection-report-mock"
 
-type ReportItemResultGroup = {
-  resultLabel: string
-  items: InspectionReportItem[]
+type ReportItemCategoryGroup<TItem extends InspectionReportItem = InspectionReportItem> = {
+  categoryName: string
+  items: TItem[]
 }
+
+type ReportItemRiskLevelGroup<TItem extends InspectionReportItem = InspectionReportItem> = {
+  riskLevel: string
+  totalItems: number
+  categories: ReportItemCategoryGroup<TItem>[]
+}
+
+const resultOrder = ["存在隐患", "异常", "已驳回", "轻微风险", "正常", "未反馈"]
 
 const route = useRoute()
 
@@ -35,28 +44,13 @@ const enabledModules = computed(() => report.value
   : [])
 const reportBodyModules = computed(() => enabledModules.value.filter(module => !moduleIs(module, "cover")))
 const reportBuildingName = computed(() => report.value?.snapshot.buildings[0]?.name ?? "-")
-const reportItemResultGroups = computed<ReportItemResultGroup[]>(() => {
+const reportItemRiskLevelGroups = computed<ReportItemRiskLevelGroup[]>(() => {
   const items = report.value?.snapshot.buildings.flatMap(building => building.items) ?? []
-  const groupMap = new Map<string, InspectionReportItem[]>()
-  const resultOrder = ["存在隐患", "异常", "已驳回", "轻微风险", "正常", "未反馈"]
 
-  items.forEach((item) => {
-    const resultLabel = item.resultLabel.trim() || "未反馈"
-    groupMap.set(resultLabel, [...(groupMap.get(resultLabel) ?? []), item])
-  })
-
-  return Array.from(groupMap.entries())
-    .map(([resultLabel, groupItems]) => ({
-      resultLabel,
-      items: groupItems,
-    }))
-    .sort((current, next) => {
-      const currentIndex = resultOrder.indexOf(current.resultLabel)
-      const nextIndex = resultOrder.indexOf(next.resultLabel)
-
-      return (currentIndex === -1 ? resultOrder.length : currentIndex)
-        - (nextIndex === -1 ? resultOrder.length : nextIndex)
-    })
+  return groupReportItemsByRiskLevel(items)
+})
+const reportRiskIssueGroups = computed<ReportItemRiskLevelGroup<InspectionReportRiskItem>[]>(() => {
+  return groupReportItemsByRiskLevel(report.value?.snapshot.risks ?? [])
 })
 const completionText = computed(() => {
   const snapshot = report.value?.snapshot
@@ -136,6 +130,60 @@ function getResultClass(label: string) {
   }
 
   return "bg-muted text-muted-foreground"
+}
+
+function getRiskLevelSectionClass(label: string) {
+  if (label === "正常") {
+    return "border-success/25 bg-success-surface/45"
+  }
+
+  if (label === "轻微风险") {
+    return "border-warning/25 bg-warning-surface/45"
+  }
+
+  if (label === "存在隐患" || label === "异常" || label === "已驳回") {
+    return "border-destructive/25 bg-destructive-surface/55"
+  }
+
+  return "border-border bg-muted/35"
+}
+
+function groupReportItemsByRiskLevel<TItem extends InspectionReportItem>(items: TItem[]): ReportItemRiskLevelGroup<TItem>[] {
+  const riskLevelMap = new Map<string, Map<string, TItem[]>>()
+
+  items.forEach((item) => {
+    const riskLevel = item.resultLabel.trim() || "未反馈"
+    const categoryName = item.categoryName.trim() || "未分类"
+    let categoryMap = riskLevelMap.get(riskLevel)
+
+    if (!categoryMap) {
+      categoryMap = new Map<string, TItem[]>()
+      riskLevelMap.set(riskLevel, categoryMap)
+    }
+
+    categoryMap.set(categoryName, [...(categoryMap.get(categoryName) ?? []), item])
+  })
+
+  return Array.from(riskLevelMap.entries())
+    .map(([riskLevel, categoryMap]) => {
+      const categories = Array.from(categoryMap.entries()).map(([categoryName, categoryItems]) => ({
+        categoryName,
+        items: categoryItems,
+      }))
+
+      return {
+        riskLevel,
+        categories,
+        totalItems: categories.reduce((sum, category) => sum + category.items.length, 0),
+      }
+    })
+    .sort((current, next) => getRiskLevelOrder(current.riskLevel) - getRiskLevelOrder(next.riskLevel))
+}
+
+function getRiskLevelOrder(label: string) {
+  const orderIndex = resultOrder.indexOf(label)
+
+  return orderIndex === -1 ? resultOrder.length : orderIndex
 }
 
 function moduleIs(module: ReportTemplateModule, key: ReportTemplateModule["key"]) {
@@ -266,7 +314,8 @@ function displayItemValue(value: string) {
             <section
               v-for="module in reportBodyModules"
               :key="module.key"
-              class="px-5 py-7 sm:px-8"
+              class="report-module-section px-5 py-7 sm:px-8"
+              :class="{ 'report-items-module-section': moduleIs(module, 'buildings') || moduleIs(module, 'risks') }"
             >
               <template v-if="moduleIs(module, 'summary')">
                 <div class="mb-5 flex items-start justify-between gap-4">
@@ -416,33 +465,62 @@ function displayItemValue(value: string) {
                   </p>
                 </div>
 
-                <div v-if="reportItemResultGroups.length" class="space-y-6">
-                  <section v-for="group in reportItemResultGroups" :key="group.resultLabel">
-                    <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
-                      <h3 class="font-semibold text-foreground">{{ group.resultLabel }}</h3>
-                      <span class="rounded-md px-2.5 py-1 text-xs font-medium" :class="getResultClass(group.resultLabel)">
-                        {{ group.items.length }} 项
+                <div v-if="reportItemRiskLevelGroups.length" class="report-risk-level-list space-y-5">
+                  <section
+                    v-for="group in reportItemRiskLevelGroups"
+                    :key="group.riskLevel"
+                    class="inspection-risk-level rounded-lg border p-4"
+                    :class="getRiskLevelSectionClass(group.riskLevel)"
+                  >
+                    <header class="risk-level-header flex flex-wrap items-start justify-between gap-3">
+                      <div class="min-w-0">
+                        <div class="flex flex-wrap items-center gap-2">
+                          <span class="rounded-md px-2.5 py-1 text-sm font-medium" :class="getResultClass(group.riskLevel)">
+                            {{ group.riskLevel }}
+                          </span>
+                          <span class="text-xs text-muted-foreground">{{ group.categories.length }} 个分类</span>
+                        </div>
+                        <p class="mt-1 text-sm leading-6 text-muted-foreground">
+                          同等级检测项按分类归并展示。
+                        </p>
+                      </div>
+                      <span class="rounded-md bg-background/80 px-2.5 py-1 text-sm font-semibold tabular-nums text-foreground shadow-(--shadow-border)">
+                        {{ group.totalItems }} 项
                       </span>
-                    </div>
-                    <div class="overflow-x-auto">
-                      <table class="w-full min-w-[720px] table-auto text-left text-sm">
-                        <thead class="bg-muted/70 text-xs text-muted-foreground">
-                          <tr>
-                            <th class="w-px whitespace-nowrap px-3 py-2 font-medium">检测项</th>
-                            <th class="w-px whitespace-nowrap px-3 py-2 font-medium">分类</th>
-                            <th class="w-px whitespace-nowrap px-3 py-2 font-medium">执行人</th>
-                            <th class="w-full min-w-72 px-3 py-2 font-medium">检测内容</th>
-                          </tr>
-                        </thead>
-                        <tbody class="divide-y divide-border/60">
-                          <tr v-for="item in group.items" :key="item.key" class="align-top">
-                            <td class="whitespace-nowrap px-3 py-2 font-medium text-foreground">{{ item.name }}</td>
-                            <td class="whitespace-nowrap px-3 py-2 text-muted-foreground">{{ item.categoryName }}</td>
-                            <td class="whitespace-nowrap px-3 py-2 text-muted-foreground">{{ item.executorName }}</td>
-                            <td class="w-full min-w-72 px-3 py-2 leading-6 text-muted-foreground">{{ displayItemValue(item.content) }}</td>
-                          </tr>
-                        </tbody>
-                      </table>
+                    </header>
+
+                    <div class="mt-4 divide-y divide-border/65">
+                      <section
+                        v-for="category in group.categories"
+                        :key="`${group.riskLevel}-${category.categoryName}`"
+                        class="inspection-category-block py-4 first:pt-0 last:pb-0"
+                      >
+                        <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+                          <h4 class="text-sm font-semibold text-foreground">{{ category.categoryName }}</h4>
+                          <span class="rounded bg-background/75 px-2 py-0.5 text-xs text-muted-foreground">
+                            {{ category.items.length }} 项
+                          </span>
+                        </div>
+
+                        <div class="grid gap-2">
+                          <article
+                            v-for="item in category.items"
+                            :key="`${group.riskLevel}-${category.categoryName}-${item.key}`"
+                            class="inspection-report-item rounded-md border border-border/60 bg-background p-3"
+                          >
+                            <div class="flex flex-wrap items-start justify-between gap-3">
+                              <h5 class="min-w-0 flex-1 text-sm font-semibold leading-6 text-foreground">{{ item.name }}</h5>
+                              <span class="inline-flex shrink-0 items-center gap-1 rounded-md bg-muted px-2 py-1 text-xs text-muted-foreground">
+                                <i class="ri-user-line text-sm" />
+                                {{ displayItemValue(item.executorName) }}
+                              </span>
+                            </div>
+                            <p class="mt-2 text-sm leading-6 text-muted-foreground">
+                              {{ displayItemValue(item.content) }}
+                            </p>
+                          </article>
+                        </div>
+                      </section>
                     </div>
                   </section>
                 </div>
@@ -457,22 +535,64 @@ function displayItemValue(value: string) {
                   <p class="mt-1 text-sm text-muted-foreground">异常、轻微风险和隐患检测项汇总</p>
                 </div>
 
-                <div v-if="report.snapshot.risks.length" class="space-y-2">
-                  <article
-                    v-for="risk in report.snapshot.risks"
-                    :key="`${risk.buildingName}-${risk.key}`"
-                    class="rounded-lg bg-destructive-surface/70 p-4"
+                <div v-if="reportRiskIssueGroups.length" class="report-risk-level-list space-y-5">
+                  <section
+                    v-for="group in reportRiskIssueGroups"
+                    :key="group.riskLevel"
+                    class="inspection-risk-level rounded-lg border p-4"
+                    :class="getRiskLevelSectionClass(group.riskLevel)"
                   >
-                    <div class="flex flex-wrap items-center justify-between gap-2">
-                      <h3 class="font-semibold text-foreground">{{ risk.name }}</h3>
-                      <span class="rounded px-2 py-0.5 text-xs font-medium" :class="getResultClass(risk.resultLabel)">
-                        {{ risk.resultLabel }}
+                    <header class="risk-level-header flex flex-wrap items-start justify-between gap-3">
+                      <div class="min-w-0">
+                        <div class="flex flex-wrap items-center gap-2">
+                          <span class="rounded-md px-2.5 py-1 text-sm font-medium" :class="getResultClass(group.riskLevel)">
+                            {{ group.riskLevel }}
+                          </span>
+                          <span class="text-xs text-muted-foreground">{{ group.categories.length }} 个分类</span>
+                        </div>
+                        <p class="mt-1 text-sm leading-6 text-muted-foreground">
+                          需关注检测项按分类归并展示。
+                        </p>
+                      </div>
+                      <span class="rounded-md bg-background/80 px-2.5 py-1 text-sm font-semibold tabular-nums text-foreground shadow-(--shadow-border)">
+                        {{ group.totalItems }} 项
                       </span>
+                    </header>
+
+                    <div class="mt-4 divide-y divide-border/65">
+                      <section
+                        v-for="category in group.categories"
+                        :key="`${group.riskLevel}-${category.categoryName}`"
+                        class="inspection-category-block py-4 first:pt-0 last:pb-0"
+                      >
+                        <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
+                          <h4 class="text-sm font-semibold text-foreground">{{ category.categoryName }}</h4>
+                          <span class="rounded bg-background/75 px-2 py-0.5 text-xs text-muted-foreground">
+                            {{ category.items.length }} 项
+                          </span>
+                        </div>
+
+                        <div class="grid gap-2">
+                          <article
+                            v-for="item in category.items"
+                            :key="`${group.riskLevel}-${category.categoryName}-${item.key}`"
+                            class="inspection-report-item rounded-md border border-border/60 bg-background p-3"
+                          >
+                            <div class="flex flex-wrap items-start justify-between gap-3">
+                              <h5 class="min-w-0 flex-1 text-sm font-semibold leading-6 text-foreground">{{ item.name }}</h5>
+                              <span class="inline-flex shrink-0 items-center gap-1 rounded-md bg-muted px-2 py-1 text-xs text-muted-foreground">
+                                <i class="ri-user-line text-sm" />
+                                {{ displayItemValue(item.executorName) }}
+                              </span>
+                            </div>
+                            <p class="mt-2 text-sm leading-6 text-muted-foreground">
+                              {{ displayItemValue(item.content) }}
+                            </p>
+                          </article>
+                        </div>
+                      </section>
                     </div>
-                    <p class="mt-2 text-sm leading-6 text-muted-foreground">
-                      {{ risk.buildingName }} · {{ risk.categoryName }} · {{ displayItemValue(risk.content) }}
-                    </p>
-                  </article>
+                  </section>
                 </div>
                 <div v-else class="rounded-lg bg-success-surface p-4 text-sm leading-6 text-success">
                   当前报告未发现异常或隐患检测项。
@@ -523,6 +643,18 @@ function displayItemValue(value: string) {
   min-height: 100svh;
 }
 
+.inspection-risk-level,
+.risk-level-header,
+.inspection-category-block,
+.inspection-report-item {
+  break-inside: avoid;
+  page-break-inside: avoid;
+}
+
+.inspection-report-item {
+  overflow-wrap: anywhere;
+}
+
 @media print {
   @page {
     margin: 14mm;
@@ -546,8 +678,33 @@ function displayItemValue(value: string) {
     box-shadow: none !important;
   }
 
-  .inspection-report-page section {
+  .report-module-section {
     break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .report-items-module-section {
+    break-inside: auto;
+    page-break-inside: auto;
+  }
+
+  .inspection-risk-level {
+    background: #ffffff !important;
+    border-color: rgb(0 0 0 / 0.12) !important;
+    box-shadow: none !important;
+    padding: 12px !important;
+  }
+
+  .inspection-category-block {
+    padding-top: 10px !important;
+    padding-bottom: 10px !important;
+  }
+
+  .inspection-report-item {
+    background: #ffffff !important;
+    border-color: rgb(0 0 0 / 0.12) !important;
+    box-shadow: none !important;
+    padding: 8px 10px !important;
   }
 }
 </style>
