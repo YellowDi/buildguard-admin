@@ -403,18 +403,18 @@ function shouldShowItemSuggestion(item: InspectionReportItem) {
                   </div>
                 </div>
 
-                <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
-                  <article class="rounded-lg bg-brand-surface/65 p-4 shadow-[inset_0_0_0_1px_hsl(var(--border)/0.45)]">
-                    <div class="mb-3 inline-flex size-9 items-center justify-center rounded-md bg-background text-link shadow-(--shadow-border)">
-                      <i class="ri-sparkling-line text-lg" />
-                    </div>
-                    <h3 class="text-sm font-semibold text-foreground">综合结论</h3>
-                    <p class="mt-2 text-sm leading-6 text-muted-foreground">
-                      {{ report.snapshot.aiSummary.conclusion }}
-                    </p>
-                  </article>
+                <div class="space-y-4">
+                  <div class="grid gap-4 lg:grid-cols-2">
+                    <article class="rounded-lg bg-brand-surface/65 p-4 shadow-[inset_0_0_0_1px_hsl(var(--border)/0.45)]">
+                      <div class="mb-3 inline-flex size-9 items-center justify-center rounded-md bg-background text-link shadow-(--shadow-border)">
+                        <i class="ri-sparkling-line text-lg" />
+                      </div>
+                      <h3 class="text-sm font-semibold text-foreground">综合结论</h3>
+                      <p class="mt-2 text-sm leading-6 text-muted-foreground">
+                        {{ report.snapshot.aiSummary.conclusion }}
+                      </p>
+                    </article>
 
-                  <div class="grid gap-3">
                     <article class="rounded-lg bg-muted/55 p-4">
                       <h3 class="text-sm font-semibold text-foreground">关键发现</h3>
                       <ul class="mt-3 space-y-2 text-sm leading-6 text-muted-foreground">
@@ -428,21 +428,21 @@ function shouldShowItemSuggestion(item: InspectionReportItem) {
                         </li>
                       </ul>
                     </article>
-
-                    <article class="rounded-lg bg-muted/55 p-4">
-                      <h3 class="text-sm font-semibold text-foreground">处理建议</h3>
-                      <ul class="mt-3 space-y-2 text-sm leading-6 text-muted-foreground">
-                        <li
-                          v-for="suggestion in report.snapshot.aiSummary.suggestions"
-                          :key="suggestion"
-                          class="flex gap-2"
-                        >
-                          <i class="ri-arrow-right-circle-line mt-1 text-sm text-link" />
-                          <span>{{ suggestion }}</span>
-                        </li>
-                      </ul>
-                    </article>
                   </div>
+
+                  <article class="rounded-lg bg-muted/55 p-4">
+                    <h3 class="text-sm font-semibold text-foreground">处理建议</h3>
+                    <ul class="mt-3 space-y-2 text-sm leading-6 text-muted-foreground">
+                      <li
+                        v-for="suggestion in report.snapshot.aiSummary.suggestions"
+                        :key="suggestion"
+                        class="flex gap-2"
+                      >
+                        <i class="ri-arrow-right-circle-line mt-1 text-sm text-link" />
+                        <span>{{ suggestion }}</span>
+                      </li>
+                    </ul>
+                  </article>
                 </div>
               </template>
 
