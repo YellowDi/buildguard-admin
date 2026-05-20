@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { computed, onUnmounted, ref, watch } from "vue"
+import { computed, nextTick, onUnmounted, ref, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { toast } from "vue-sonner"
 
 import InspectionBuildingCards from "@/components/detail/InspectionBuildingCards.vue"
 import InspectionItemHistorySheet from "@/components/detail/InspectionItemHistorySheet.vue"
+import InspectionReportDocument from "@/components/report/InspectionReportDocument.vue"
 import LinkedEntityDetailSheet from "@/components/detail/LinkedEntityDetailSheet.vue"
 import PermissionGate from "@/components/permissions/PermissionGate.vue"
 import RepairWorkOrderContentCard from "@/components/detail/RepairWorkOrderContentCard.vue"
@@ -38,6 +39,7 @@ import {
   buildInspectionReportUrl,
   createInspectionReportFromGnReport,
   createReportQrPlaceholderDataUrl,
+  updateInspectionReportFileUrl,
   type InspectionReportRecord,
 } from "@/lib/inspection-report-mock"
 import { getInspectionItemDetail, type InspectionItemRecord } from "@/lib/inspection-items-api"
@@ -46,6 +48,7 @@ import { fetchMembers } from "@/lib/members-api"
 import { fetchRepairWorkOrderDictionaries, formatRepairDictionaryLabel, type RepairDictionaryOption } from "@/lib/repair-work-order-dictionaries"
 import { fetchInspectionServiceDetail, type InspectionServiceListItem } from "@/lib/inspection-services-api"
 import { PERMISSION_CODES } from "@/lib/permission-codes"
+import { uploadTencentCosFile } from "@/lib/tencent-cos-sdk"
 import {
   deleteRepairWorkOrder,
   dispatchRepairWorkOrder,
@@ -54,6 +57,7 @@ import {
   fetchWorkOrderInspectionHistoryDetail,
   fetchWorkOrderDetail,
   generateWorkOrderGnReport,
+  uploadWorkOrderReport,
   type WorkOrderInspectionHistoryDetailItem,
   type WorkOrderBuildInspectionItem,
   type RepairWorkOrderDetailResult,
@@ -63,6 +67,7 @@ import {
 
 type WorkOrderDetailKind = "inspection" | "repair"
 type LinkedDetailSheetKind = "customer" | "service" | "plan" | "park"
+type ReportGenerationStage = "生成报告" | "生成 PDF" | "上传 PDF" | "保存地址"
 type InspectionBuildingCardV2Status = "pending" | "processing" | "completed"
 type InspectionBuildingCardV2Row = {
   key: string
@@ -135,10 +140,15 @@ const inspectionHistorySheetOpen = ref(false)
 const selectedInspectionHistoryModel = ref<InspectionItemHistoryModel | null>(null)
 const reportDialogOpen = ref(false)
 const reportSubmitting = ref(false)
+const reportGenerationStage = ref<ReportGenerationStage | "">("")
 const generatedReport = ref<InspectionReportRecord | null>(null)
 const generatedReportUrl = ref("")
+const generatedReportPdfUrl = ref("")
+const reportPdfElement = ref<HTMLElement | null>(null)
 const reportBuilding = ref<WorkOrderBuildInfo | null>(null)
 const reportForm = ref({
+  title: "",
+  reportDate: "",
   accessPassword: "",
   version: "1",
   remark: "",
@@ -331,6 +341,13 @@ const canSubmitReport = computed(() => (
   && /^\d{4}$/.test(reportForm.value.accessPassword)
   && parseReportVersion() !== null
 ))
+const reportSubmitButtonText = computed(() => {
+  if (reportSubmitting.value) {
+    return reportGenerationStage.value ? `${reportGenerationStage.value}中...` : "生成中..."
+  }
+
+  return generatedReport.value ? "重新生成" : "生成报告"
+})
 
 watch([inspectionWorkOrder, repairWorkOrder], () => {
   if (props.kind === "repair") {
@@ -348,6 +365,7 @@ watch(workOrderUuid, (uuid) => {
   assignableUsers.value = []
   generatedReport.value = null
   generatedReportUrl.value = ""
+  generatedReportPdfUrl.value = ""
   reportBuilding.value = null
   reportDialogOpen.value = false
   resetInspectionHistorySheet()
@@ -1130,6 +1148,8 @@ function openReportDialog(buildingKey: string) {
   }
 
   reportForm.value = {
+    title: `${toText(currentBuilding.BuildName, "当前建筑")}检测报告`,
+    reportDate: getTodayDate(),
     accessPassword: "",
     version: "1",
     remark: toText(currentWorkOrder.Remark, ""),
@@ -1137,6 +1157,7 @@ function openReportDialog(buildingKey: string) {
   reportBuilding.value = currentBuilding
   generatedReport.value = null
   generatedReportUrl.value = ""
+  generatedReportPdfUrl.value = ""
   reportDialogOpen.value = true
 }
 
@@ -1208,6 +1229,11 @@ async function submitReportGeneration() {
   }
 
   reportSubmitting.value = true
+  reportGenerationStage.value = "生成报告"
+  generatedReport.value = null
+  generatedReportUrl.value = ""
+  generatedReportPdfUrl.value = ""
+  let failedStage: ReportGenerationStage = "生成报告"
 
   try {
     if (version === null) {
@@ -1233,19 +1259,97 @@ async function submitReportGeneration() {
       },
     })
 
+    failedStage = "生成 PDF"
     generatedReport.value = record
     generatedReportUrl.value = buildInspectionReportUrl(record.id)
+    reportGenerationStage.value = "生成 PDF"
+    await nextTick()
+
+    if (!reportPdfElement.value) {
+      throw new Error("PDF 渲染节点未就绪")
+    }
+
+    const { generateReportPdfBlob } = await import("@/lib/report-pdf")
+    const pdfBlob = await generateReportPdfBlob(reportPdfElement.value)
+    const fileName = createReportPdfFileName(record, version)
+    const pdfFile = new File([pdfBlob], fileName, { type: "application/pdf" })
+    const objectKey = createReportPdfObjectKey({
+      buildUuid,
+      fileName,
+      version,
+      workOrderUuid: targetWorkOrderUuid,
+    })
+
+    failedStage = "上传 PDF"
+    reportGenerationStage.value = "上传 PDF"
+    const uploadResult = await uploadTencentCosFile({
+      file: pdfFile,
+      key: objectKey,
+      contentType: "application/pdf",
+    })
+
+    failedStage = "保存地址"
+    reportGenerationStage.value = "保存地址"
+    await uploadWorkOrderReport({
+      BuildUuid: buildUuid,
+      FileUrl: uploadResult.url,
+      Version: version,
+      WorkOrderUuid: targetWorkOrderUuid,
+    })
+
+    const updatedRecord = updateInspectionReportFileUrl(record.id, uploadResult.url) ?? {
+      ...record,
+      fileUrl: uploadResult.url,
+    }
+
+    generatedReport.value = updatedRecord
+    generatedReportPdfUrl.value = uploadResult.url
     toast.success("报告已生成", {
-      description: "可打开 HTML 报告，也可在报告页打印为 PDF。",
+      description: "PDF 已上传并保存文件地址。",
     })
   } catch (error) {
-    toast.error(handleApiError(error, {
-      mode: "silent",
-      fallback: "报告生成失败，请稍后重试。",
-    }))
+    toast.error(getReportGenerationErrorTitle(failedStage), {
+      description: handleApiError(error, {
+        mode: "silent",
+        fallback: getReportGenerationErrorFallback(failedStage),
+      }),
+    })
   } finally {
+    reportGenerationStage.value = ""
     reportSubmitting.value = false
   }
+}
+
+function getReportGenerationErrorTitle(stage: ReportGenerationStage) {
+  if (stage === "上传 PDF") {
+    return "PDF 上传失败"
+  }
+
+  if (stage === "保存地址") {
+    return "PDF 地址保存失败"
+  }
+
+  if (stage === "生成 PDF") {
+    return "PDF 生成失败"
+  }
+
+  return "报告生成失败"
+}
+
+function getReportGenerationErrorFallback(stage: ReportGenerationStage) {
+  if (stage === "上传 PDF") {
+    return "PDF 上传失败，请稍后重试。"
+  }
+
+  if (stage === "保存地址") {
+    return "PDF 地址保存失败，请稍后重试。"
+  }
+
+  if (stage === "生成 PDF") {
+    return "PDF 生成失败，请稍后重试。"
+  }
+
+  return "报告生成失败，请稍后重试。"
 }
 
 async function copyGeneratedReportUrl() {
@@ -1255,22 +1359,40 @@ async function copyGeneratedReportUrl() {
 
   try {
     await navigator.clipboard.writeText(generatedReportUrl.value)
-    toast.success("报告链接已复制")
+    toast.success("HTML 报告链接已复制")
   } catch {
     toast.error("复制失败，请手动复制链接")
   }
 }
 
-function openGeneratedReport(print = false) {
+async function copyGeneratedReportPdfUrl() {
+  if (!generatedReportPdfUrl.value) {
+    return
+  }
+
+  try {
+    await navigator.clipboard.writeText(generatedReportPdfUrl.value)
+    toast.success("PDF 链接已复制")
+  } catch {
+    toast.error("复制失败，请手动复制链接")
+  }
+}
+
+function openGeneratedReport() {
   if (!generatedReportUrl.value) {
     return
   }
 
-  const url = print
-    ? `${generatedReportUrl.value}${generatedReportUrl.value.includes("?") ? "&" : "?"}print=1`
-    : generatedReportUrl.value
+  window.open(generatedReportUrl.value, "_blank", "noopener,noreferrer")
+}
 
-  window.open(url, "_blank", "noopener,noreferrer")
+function openGeneratedReportPdf() {
+  if (!generatedReportPdfUrl.value) {
+    toast.error("PDF 文件尚未生成")
+    return
+  }
+
+  window.open(generatedReportPdfUrl.value, "_blank", "noopener,noreferrer")
 }
 
 function downloadGeneratedReportQr() {
@@ -1291,6 +1413,54 @@ function downloadGeneratedReportQr() {
   document.body.appendChild(link)
   link.click()
   link.remove()
+}
+
+function createReportPdfFileName(report: InspectionReportRecord, version: number) {
+  const timestamp = formatReportPdfTimestamp(new Date())
+  const orderNo = sanitizeObjectKeyFileName(report.snapshot.orderNo || "工单")
+  const buildingName = sanitizeObjectKeyFileName(report.snapshot.buildings[0]?.name || "建筑")
+
+  return `检测报告-${orderNo}-${buildingName}-v${version}-${timestamp}.pdf`
+}
+
+function createReportPdfObjectKey(payload: {
+  buildUuid: string
+  fileName: string
+  version: number
+  workOrderUuid: string
+}) {
+  return [
+    "inspection-reports",
+    sanitizeObjectKeySegment(payload.workOrderUuid),
+    sanitizeObjectKeySegment(payload.buildUuid),
+    `v${payload.version}`,
+    payload.fileName,
+  ].join("/")
+}
+
+function sanitizeObjectKeyFileName(value: string) {
+  const normalized = toText(value, "")
+    .replace(/[\\/?%*:|"<>]+/g, "-")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "")
+
+  return normalized || "report"
+}
+
+function sanitizeObjectKeySegment(value: string) {
+  return sanitizeObjectKeyFileName(value).replace(/\.+/g, "-") || "unknown"
+}
+
+function formatReportPdfTimestamp(date: Date) {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  const day = String(date.getDate()).padStart(2, "0")
+  const hours = String(date.getHours()).padStart(2, "0")
+  const minutes = String(date.getMinutes()).padStart(2, "0")
+  const seconds = String(date.getSeconds()).padStart(2, "0")
+
+  return `${year}${month}${day}${hours}${minutes}${seconds}`
 }
 
 function getTodayDate() {
@@ -1550,7 +1720,7 @@ async function submitAssign() {
       <DialogHeader class="px-4 pt-4 pb-0">
         <DialogTitle>生成检测报告</DialogTitle>
         <DialogDescription>
-          为「{{ selectedReportBuildingName }}」填写版本号、访问密码和专家建议，生成可访问的 HTML 报告页面。
+          为「{{ selectedReportBuildingName }}」填写版本号、访问密码和专家建议，生成 HTML 报告并自动上传 PDF 文件。
         </DialogDescription>
       </DialogHeader>
 
@@ -1605,28 +1775,47 @@ async function submitAssign() {
             </div>
             <div class="min-w-0 flex-1">
               <p class="text-sm font-semibold text-foreground">报告已生成</p>
-              <p class="mt-1 break-all text-xs leading-5 text-muted-foreground">{{ generatedReportUrl }}</p>
+              <div class="mt-2 space-y-1.5 text-xs leading-5 text-muted-foreground">
+                <p class="break-all">
+                  <span class="font-medium text-foreground">HTML：</span>{{ generatedReportUrl }}
+                </p>
+                <p v-if="generatedReportPdfUrl" class="break-all">
+                  <span class="font-medium text-foreground">PDF：</span>{{ generatedReportPdfUrl }}
+                </p>
+              </div>
               <div class="mt-3 flex flex-wrap gap-2">
                 <Button type="button" variant="outline" class="h-8 gap-1 px-3" @click="copyGeneratedReportUrl">
                   <i class="ri-file-copy-line text-base" />
-                  复制链接
+                  复制 HTML 链接
                 </Button>
-                <Button type="button" variant="outline" class="h-8 gap-1 px-3" @click="openGeneratedReport(false)">
+                <Button type="button" variant="outline" class="h-8 gap-1 px-3" @click="openGeneratedReport">
                   <i class="ri-external-link-line text-base" />
                   打开 HTML
                 </Button>
-                <Button type="button" variant="outline" class="h-8 gap-1 px-3" @click="downloadGeneratedReportQr">
-                  <i class="ri-qr-code-line text-base" />
-                  下载二维码
+                <Button
+                  type="button"
+                  variant="outline"
+                  class="h-8 gap-1 px-3"
+                  :disabled="!generatedReportPdfUrl"
+                  @click="copyGeneratedReportPdfUrl"
+                >
+                  <i class="ri-file-copy-line text-base" />
+                  复制 PDF 链接
                 </Button>
-                <Button type="button" class="h-8 gap-1 px-3" @click="openGeneratedReport(true)">
-                  <i class="ri-printer-line text-base" />
-                  打印 PDF
+                <Button
+                  type="button"
+                  class="h-8 gap-1 px-3"
+                  :disabled="!generatedReportPdfUrl"
+                  @click="openGeneratedReportPdf"
+                >
+                  <i class="ri-download-2-line text-base" />
+                  下载 PDF
                 </Button>
               </div>
             </div>
           </div>
         </section>
+
       </div>
 
       <DialogFooter class="gap-2 px-4 py-3">
@@ -1634,11 +1823,17 @@ async function submitAssign() {
           取消
         </Button>
         <Button type="button" :disabled="!canSubmitReport" @click="submitReportGeneration">
-          {{ reportSubmitting ? "生成中..." : generatedReport ? "重新生成" : "生成报告" }}
+          {{ reportSubmitButtonText }}
         </Button>
       </DialogFooter>
     </DialogContent>
   </Dialog>
+
+  <div v-if="generatedReport" class="report-pdf-render-host" aria-hidden="true">
+    <div ref="reportPdfElement" class="report-pdf-render-surface">
+      <InspectionReportDocument :report="generatedReport" variant="pdf" />
+    </div>
+  </div>
 
   <Dialog v-model:open="assignDialogOpen">
     <DialogContent class="sm:max-w-[420px]">
@@ -1689,3 +1884,20 @@ async function submitAssign() {
   />
 
 </template>
+
+<style scoped>
+.report-pdf-render-host {
+  background: #ffffff;
+  left: -10000px;
+  pointer-events: none;
+  position: fixed;
+  top: 0;
+  width: 794px;
+}
+
+.report-pdf-render-surface {
+  background: #ffffff;
+  color: hsl(var(--foreground));
+  width: 794px;
+}
+</style>

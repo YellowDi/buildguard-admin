@@ -109,6 +109,7 @@ export type InspectionReportRecord = {
   id: string
   createdAt: string
   accessPassword: string
+  fileUrl?: string
   template: ReportTemplateConfig
   snapshot: InspectionReportSnapshot
 }
@@ -269,6 +270,32 @@ export function getInspectionReportMock(reportId: string): InspectionReportRecor
   }
 
   return loadInspectionReportRecords().find(record => record.id === id) ?? null
+}
+
+export function updateInspectionReportFileUrl(reportId: string, fileUrl: string): InspectionReportRecord | null {
+  const id = reportId.trim()
+  const normalizedFileUrl = fileUrl.trim()
+
+  if (!id || !normalizedFileUrl) {
+    return null
+  }
+
+  const records = loadInspectionReportRecords()
+  const recordIndex = records.findIndex(record => record.id === id)
+
+  if (recordIndex === -1) {
+    return null
+  }
+
+  const updatedRecord = {
+    ...records[recordIndex],
+    fileUrl: normalizedFileUrl,
+  }
+
+  records.splice(recordIndex, 1, updatedRecord)
+  writeStoredValue(REPORT_STORAGE_KEY, records)
+
+  return updatedRecord
 }
 
 export function verifyInspectionReportPassword(reportId: string, password: string) {
@@ -590,6 +617,7 @@ function normalizeInspectionReportRecord(record: InspectionReportRecord): Inspec
 
   return {
     ...record,
+    fileUrl: toText(record.fileUrl, toText((record as Record<string, unknown>).FileUrl, toText((record as Record<string, unknown>).pdfUrl, ""))),
     template: normalizeTemplateConfig(record.template, { includeMissingModules: !hasTemplateSnapshot }),
     snapshot: normalizeInspectionReportSnapshot(record.snapshot),
   }

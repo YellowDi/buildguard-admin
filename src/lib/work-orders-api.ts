@@ -137,6 +137,14 @@ export type GenerateWorkOrderGnReportPayload = {
   [property: string]: unknown
 }
 
+export type UploadWorkOrderReportPayload = {
+  BuildUuid?: string
+  FileUrl?: string
+  Version?: number
+  WorkOrderUuid?: string
+  [property: string]: unknown
+}
+
 export type WorkOrderDetailResult = WorkOrderListItem
 
 export type WorkOrderInspectionHistoryDetailItem = {
@@ -263,6 +271,7 @@ const WORK_ORDER_UPDATE_API_URL = buildApiUrl(API_PATHS.workOrderUpdate)
 const WORK_ORDER_DISPATCH_API_URL = buildApiUrl(API_PATHS.workOrderDispatch)
 const WORK_ORDER_REPAIR_DISPATCH_API_URL = buildApiUrl(API_PATHS.workOrderRepairDispatch)
 const WORK_ORDER_GN_REPORT_API_URL = buildApiUrl(API_PATHS.workOrderGnReport)
+const WORK_ORDER_REPORT_UPLOAD_API_URL = buildApiUrl(API_PATHS.workOrderReportUpload)
 const WORK_ORDERS_LOAD_ERROR_MESSAGE = "工单列表加载失败，请稍后重试。"
 const WORK_ORDER_CREATE_ERROR_MESSAGE = "工单创建失败，请稍后重试。"
 const REPAIR_WORK_ORDER_CREATE_ERROR_MESSAGE = "报修工单创建失败，请稍后重试。"
@@ -273,6 +282,7 @@ const WORK_ORDER_INSPECTION_HISTORY_DETAIL_ERROR_MESSAGE = "检测结果历史�
 const WORK_ORDER_UPDATE_ERROR_MESSAGE = "工单更新失败，请稍后重试。"
 const WORK_ORDER_DISPATCH_ERROR_MESSAGE = "工单指派失败，请稍后重试。"
 const WORK_ORDER_GN_REPORT_ERROR_MESSAGE = "检测报告生成失败，请稍后重试。"
+const WORK_ORDER_REPORT_UPLOAD_ERROR_MESSAGE = "报告文件地址保存失败，请稍后重试。"
 
 export async function fetchWorkOrders(payload: ListWorkOrdersPayload = {}): Promise<WorkOrdersListResult> {
   const normalizedPayload = {
@@ -507,6 +517,32 @@ export async function generateWorkOrderGnReport(
   assertApiSuccess(responseBody, WORK_ORDER_GN_REPORT_ERROR_MESSAGE)
 
   return normalizeWorkOrderGnReportResult(extractWorkOrderGnReportRecord(responseBody))
+}
+
+export async function uploadWorkOrderReport(payload: UploadWorkOrderReportPayload): Promise<CreateWorkOrderResult> {
+  const normalizedPayload = {
+    BuildUuid: getRequiredString(payload.BuildUuid, "BuildUuid"),
+    FileUrl: getRequiredString(payload.FileUrl, "FileUrl"),
+    Version: getRequiredPositiveInteger(payload.Version, "Version"),
+    WorkOrderUuid: getRequiredString(payload.WorkOrderUuid, "WorkOrderUuid"),
+  }
+
+  const response = await fetch(WORK_ORDER_REPORT_UPLOAD_API_URL, {
+    method: "POST",
+    headers: buildApiHeaders({
+      "Content-Type": "application/json",
+    }),
+    body: JSON.stringify(normalizedPayload),
+  })
+  const responseBody = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responseBody, WORK_ORDER_REPORT_UPLOAD_ERROR_MESSAGE)
+  }
+
+  assertApiSuccess(responseBody, WORK_ORDER_REPORT_UPLOAD_ERROR_MESSAGE)
+
+  return extractCreateResult(responseBody)
 }
 
 export async function updateWorkOrder(payload: UpdateWorkOrderPayload): Promise<CreateWorkOrderResult> {
