@@ -47,7 +47,11 @@ export type InspectionReportGnCreateInput = {
   title: string
   reportDate: string
   accessPassword: string
+  buildUuid?: string
+  persist?: boolean
   report: WorkOrderGnReportResult
+  version?: number
+  workOrderUuid?: string
 }
 
 export type InspectionReportSnapshot = {
@@ -109,8 +113,11 @@ export type InspectionReportRecord = {
   id: string
   createdAt: string
   accessPassword: string
+  buildUuid?: string
   fileUrl?: string
   template: ReportTemplateConfig
+  version?: number
+  workOrderUuid?: string
   snapshot: InspectionReportSnapshot
 }
 
@@ -234,6 +241,8 @@ export function createInspectionReportMock(input: InspectionReportCreateInput): 
     id: createReportId(),
     createdAt: formatDateTime(new Date()),
     accessPassword: input.accessPassword,
+    buildUuid: toText(input.building.BuildUuid, ""),
+    workOrderUuid: toText(input.workOrder.Uuid, ""),
     template,
     snapshot: buildInspectionReportSnapshot(input),
   }
@@ -251,15 +260,28 @@ export function createInspectionReportFromGnReport(input: InspectionReportGnCrea
     id: createReportId(),
     createdAt: formatDateTime(new Date()),
     accessPassword: input.accessPassword,
+    buildUuid: toText(input.buildUuid, toText(input.report.BuildUuid, "")),
     template,
+    version: typeof input.version === "number" && Number.isFinite(input.version) ? input.version : undefined,
+    workOrderUuid: toText(input.workOrderUuid, ""),
     snapshot: buildInspectionReportSnapshotFromGnReport(input),
   }
-  const records = loadInspectionReportRecords()
 
-  records.unshift(record)
-  writeStoredValue(REPORT_STORAGE_KEY, records.slice(0, 50))
+  if (input.persist !== false) {
+    saveInspectionReportRecord(record)
+  }
 
   return record
+}
+
+export function saveInspectionReportRecord(record: InspectionReportRecord): InspectionReportRecord {
+  const normalizedRecord = normalizeInspectionReportRecord(record)
+  const records = loadInspectionReportRecords().filter(item => item.id !== normalizedRecord.id)
+
+  records.unshift(normalizedRecord)
+  writeStoredValue(REPORT_STORAGE_KEY, records.slice(0, 50))
+
+  return normalizedRecord
 }
 
 export function getInspectionReportMock(reportId: string): InspectionReportRecord | null {
@@ -270,6 +292,24 @@ export function getInspectionReportMock(reportId: string): InspectionReportRecor
   }
 
   return loadInspectionReportRecords().find(record => record.id === id) ?? null
+}
+
+export function getLatestInspectionReportRecord(criteria: {
+  buildUuid?: string
+  orderNo?: string
+  workOrderUuid?: string
+}): InspectionReportRecord | null {
+  const buildUuid = criteria.buildUuid?.trim() ?? ""
+  const orderNo = criteria.orderNo?.trim() ?? ""
+  const workOrderUuid = criteria.workOrderUuid?.trim() ?? ""
+
+  if (!buildUuid && !orderNo && !workOrderUuid) {
+    return null
+  }
+
+  return loadInspectionReportRecords().find(record => (
+    matchesInspectionReportLookup(record, { buildUuid, orderNo, workOrderUuid })
+  )) ?? null
 }
 
 export function updateInspectionReportFileUrl(reportId: string, fileUrl: string): InspectionReportRecord | null {
@@ -614,13 +654,40 @@ function normalizeTemplateConfig(
 
 function normalizeInspectionReportRecord(record: InspectionReportRecord): InspectionReportRecord {
   const hasTemplateSnapshot = Array.isArray(record.template?.modules)
+  const recordLike = record as Record<string, unknown>
 
   return {
     ...record,
+    buildUuid: toText(record.buildUuid, toText(recordLike.BuildUuid, record.snapshot?.buildings?.[0]?.key ?? "")),
     fileUrl: toText(record.fileUrl, toText((record as Record<string, unknown>).FileUrl, toText((record as Record<string, unknown>).pdfUrl, ""))),
     template: normalizeTemplateConfig(record.template, { includeMissingModules: !hasTemplateSnapshot }),
+    version: toNumber(record.version) ?? toNumber(recordLike.Version) ?? undefined,
+    workOrderUuid: toText(record.workOrderUuid, toText(recordLike.WorkOrderUuid, "")),
     snapshot: normalizeInspectionReportSnapshot(record.snapshot),
   }
+}
+
+function matchesInspectionReportLookup(
+  record: InspectionReportRecord,
+  criteria: { buildUuid: string, orderNo: string, workOrderUuid: string },
+) {
+  const recordBuildUuid = toText(record.buildUuid, record.snapshot.buildings[0]?.key ?? "")
+  const recordOrderNo = toText(record.snapshot.orderNo, "")
+  const recordWorkOrderUuid = toText(record.workOrderUuid, "")
+
+  if (criteria.buildUuid && recordBuildUuid !== criteria.buildUuid) {
+    return false
+  }
+
+  if (criteria.workOrderUuid && recordWorkOrderUuid) {
+    return recordWorkOrderUuid === criteria.workOrderUuid
+  }
+
+  if (criteria.orderNo && recordOrderNo) {
+    return recordOrderNo === criteria.orderNo
+  }
+
+  return !criteria.workOrderUuid && !criteria.orderNo
 }
 
 function normalizeInspectionReportSnapshot(snapshot: InspectionReportSnapshot): InspectionReportSnapshot {

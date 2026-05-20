@@ -39,7 +39,8 @@ import {
   buildInspectionReportUrl,
   createInspectionReportFromGnReport,
   createReportQrPlaceholderDataUrl,
-  updateInspectionReportFileUrl,
+  getLatestInspectionReportRecord,
+  saveInspectionReportRecord,
   type InspectionReportRecord,
 } from "@/lib/inspection-report-mock"
 import { getInspectionItemDetail, type InspectionItemRecord } from "@/lib/inspection-items-api"
@@ -144,6 +145,7 @@ const reportGenerationStage = ref<ReportGenerationStage | "">("")
 const generatedReport = ref<InspectionReportRecord | null>(null)
 const generatedReportUrl = ref("")
 const generatedReportPdfUrl = ref("")
+const pdfRenderReport = ref<InspectionReportRecord | null>(null)
 const reportPdfElement = ref<HTMLElement | null>(null)
 const reportBuilding = ref<WorkOrderBuildInfo | null>(null)
 const reportForm = ref({
@@ -1155,10 +1157,26 @@ function openReportDialog(buildingKey: string) {
     remark: toText(currentWorkOrder.Remark, ""),
   }
   reportBuilding.value = currentBuilding
-  generatedReport.value = null
-  generatedReportUrl.value = ""
-  generatedReportPdfUrl.value = ""
+  setGeneratedReportState(findLatestGeneratedInspectionReport(currentWorkOrder, currentBuilding))
+  pdfRenderReport.value = null
   reportDialogOpen.value = true
+}
+
+function findLatestGeneratedInspectionReport(
+  workOrder: WorkOrderDetailResult,
+  building: WorkOrderBuildInfo,
+) {
+  return getLatestInspectionReportRecord({
+    buildUuid: toText(building.BuildUuid, ""),
+    orderNo: toText(workOrder.OrderNo, ""),
+    workOrderUuid: toText(workOrder.Uuid, workOrderUuid.value),
+  })
+}
+
+function setGeneratedReportState(report: InspectionReportRecord | null) {
+  generatedReport.value = report
+  generatedReportUrl.value = report ? buildInspectionReportUrl(report.id) : ""
+  generatedReportPdfUrl.value = report?.fileUrl?.trim() ?? ""
 }
 
 function findInspectionReportBuild(buildingKey: string) {
@@ -1230,9 +1248,7 @@ async function submitReportGeneration() {
 
   reportSubmitting.value = true
   reportGenerationStage.value = "生成报告"
-  generatedReport.value = null
-  generatedReportUrl.value = ""
-  generatedReportPdfUrl.value = ""
+  pdfRenderReport.value = null
   let failedStage: ReportGenerationStage = "生成报告"
 
   try {
@@ -1251,17 +1267,20 @@ async function submitReportGeneration() {
       title: `${toText(reportResult.BuildName, toText(currentBuilding.BuildName, "当前建筑"))}检测报告`,
       reportDate: getTodayDate(),
       accessPassword: reportForm.value.accessPassword,
+      buildUuid,
+      persist: false,
       report: {
         ...reportResult,
         BuildName: toText(reportResult.BuildName, toText(currentBuilding.BuildName, "当前建筑")),
         BuildUuid: toText(reportResult.BuildUuid, buildUuid),
         Expert: toText(reportResult.Expert, reportForm.value.remark),
       },
+      version,
+      workOrderUuid: targetWorkOrderUuid,
     })
 
     failedStage = "生成 PDF"
-    generatedReport.value = record
-    generatedReportUrl.value = buildInspectionReportUrl(record.id)
+    pdfRenderReport.value = record
     reportGenerationStage.value = "生成 PDF"
     await nextTick()
 
@@ -1297,13 +1316,12 @@ async function submitReportGeneration() {
       WorkOrderUuid: targetWorkOrderUuid,
     })
 
-    const updatedRecord = updateInspectionReportFileUrl(record.id, uploadResult.url) ?? {
+    const updatedRecord = saveInspectionReportRecord({
       ...record,
       fileUrl: uploadResult.url,
-    }
+    })
 
-    generatedReport.value = updatedRecord
-    generatedReportPdfUrl.value = uploadResult.url
+    setGeneratedReportState(updatedRecord)
     toast.success("报告已生成", {
       description: "PDF 已上传并保存文件地址。",
     })
@@ -1315,6 +1333,7 @@ async function submitReportGeneration() {
       }),
     })
   } finally {
+    pdfRenderReport.value = null
     reportGenerationStage.value = ""
     reportSubmitting.value = false
   }
@@ -1829,9 +1848,9 @@ async function submitAssign() {
     </DialogContent>
   </Dialog>
 
-  <div v-if="generatedReport" class="report-pdf-render-host" aria-hidden="true">
+  <div v-if="pdfRenderReport" class="report-pdf-render-host" aria-hidden="true">
     <div ref="reportPdfElement" class="report-pdf-render-surface">
-      <InspectionReportDocument :report="generatedReport" variant="pdf" />
+      <InspectionReportDocument :report="pdfRenderReport" variant="pdf" />
     </div>
   </div>
 
