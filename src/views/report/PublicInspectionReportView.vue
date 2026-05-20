@@ -469,7 +469,7 @@ function displayItemValue(value: string) {
                   <section
                     v-for="group in reportItemRiskLevelGroups"
                     :key="group.riskLevel"
-                    class="inspection-risk-level rounded-lg border p-4"
+                    class="inspection-risk-level rounded-lg border p-5"
                     :class="getRiskLevelSectionClass(group.riskLevel)"
                   >
                     <header class="risk-level-header flex flex-wrap items-start justify-between gap-3">
@@ -489,35 +489,43 @@ function displayItemValue(value: string) {
                       </span>
                     </header>
 
-                    <div class="mt-4 divide-y divide-border/65">
+                    <div class="mt-5 space-y-4">
                       <section
                         v-for="category in group.categories"
                         :key="`${group.riskLevel}-${category.categoryName}`"
-                        class="inspection-category-block py-4 first:pt-0 last:pb-0"
+                        class="inspection-category-block overflow-hidden rounded-lg border border-border/70 bg-background shadow-[0_0_0_1px_rgb(15_23_42_/_0.02),0_8px_18px_-16px_rgb(15_23_42_/_0.28)]"
                       >
-                        <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
-                          <h4 class="text-sm font-semibold text-foreground">{{ category.categoryName }}</h4>
-                          <span class="rounded bg-background/75 px-2 py-0.5 text-xs text-muted-foreground">
+                        <header class="inspection-category-header flex flex-wrap items-center justify-between gap-3 border-b border-border/65 bg-muted/45 px-4 py-3">
+                          <div class="flex min-w-0 items-center gap-2">
+                            <span class="h-5 w-1 rounded-full bg-link/70" aria-hidden="true" />
+                            <h4 class="min-w-0 text-base font-semibold leading-6 text-foreground">{{ category.categoryName }}</h4>
+                          </div>
+                          <span class="rounded-md bg-background px-2.5 py-1 text-xs font-medium text-muted-foreground shadow-(--shadow-border)">
                             {{ category.items.length }} 项
                           </span>
-                        </div>
+                        </header>
 
-                        <div class="grid gap-2">
+                        <div class="inspection-category-items grid gap-3 p-4">
                           <article
                             v-for="item in category.items"
                             :key="`${group.riskLevel}-${category.categoryName}-${item.key}`"
-                            class="inspection-report-item rounded-md border border-border/60 bg-background p-3"
+                            class="inspection-report-item rounded-lg border border-border/60 bg-background p-4"
                           >
-                            <div class="flex flex-wrap items-start justify-between gap-3">
-                              <h5 class="min-w-0 flex-1 text-sm font-semibold leading-6 text-foreground">{{ item.name }}</h5>
-                              <span class="inline-flex shrink-0 items-center gap-1 rounded-md bg-muted px-2 py-1 text-xs text-muted-foreground">
-                                <i class="ri-user-line text-sm" />
-                                {{ displayItemValue(item.executorName) }}
-                              </span>
+                            <div class="flex flex-wrap items-start justify-between gap-x-5 gap-y-2">
+                              <div class="min-w-0">
+                                <p class="report-item-field-label text-xs font-medium text-muted-foreground">检测项</p>
+                                <h5 class="mt-1 text-sm font-semibold leading-6 text-foreground">{{ item.name }}</h5>
+                              </div>
+                              <p class="min-w-0 text-sm leading-6 text-muted-foreground sm:shrink-0 sm:text-right">
+                                执行人：<span class="font-medium text-foreground">{{ displayItemValue(item.executorName) }}</span>
+                              </p>
                             </div>
-                            <p class="mt-2 text-sm leading-6 text-muted-foreground">
-                              {{ displayItemValue(item.content) }}
-                            </p>
+                            <div class="report-item-content-panel mt-3 rounded-md bg-muted/55 px-3.5 py-3">
+                              <p class="report-item-field-label text-xs font-medium text-muted-foreground">检测内容</p>
+                              <p class="report-item-content mt-1 text-sm leading-6 text-muted-foreground">
+                                {{ displayItemValue(item.content) }}
+                              </p>
+                            </div>
                           </article>
                         </div>
                       </section>
@@ -539,7 +547,7 @@ function displayItemValue(value: string) {
                   <section
                     v-for="group in reportRiskIssueGroups"
                     :key="group.riskLevel"
-                    class="inspection-risk-level rounded-lg border p-4"
+                    class="inspection-risk-level rounded-lg border p-5"
                     :class="getRiskLevelSectionClass(group.riskLevel)"
                   >
                     <header class="risk-level-header flex flex-wrap items-start justify-between gap-3">
@@ -559,35 +567,43 @@ function displayItemValue(value: string) {
                       </span>
                     </header>
 
-                    <div class="mt-4 divide-y divide-border/65">
+                    <div class="mt-5 space-y-4">
                       <section
                         v-for="category in group.categories"
                         :key="`${group.riskLevel}-${category.categoryName}`"
-                        class="inspection-category-block py-4 first:pt-0 last:pb-0"
+                        class="inspection-category-block overflow-hidden rounded-lg border border-border/70 bg-background shadow-[0_0_0_1px_rgb(15_23_42_/_0.02),0_8px_18px_-16px_rgb(15_23_42_/_0.28)]"
                       >
-                        <div class="mb-3 flex flex-wrap items-center justify-between gap-2">
-                          <h4 class="text-sm font-semibold text-foreground">{{ category.categoryName }}</h4>
-                          <span class="rounded bg-background/75 px-2 py-0.5 text-xs text-muted-foreground">
+                        <header class="inspection-category-header flex flex-wrap items-center justify-between gap-3 border-b border-border/65 bg-muted/45 px-4 py-3">
+                          <div class="flex min-w-0 items-center gap-2">
+                            <span class="h-5 w-1 rounded-full bg-link/70" aria-hidden="true" />
+                            <h4 class="min-w-0 text-base font-semibold leading-6 text-foreground">{{ category.categoryName }}</h4>
+                          </div>
+                          <span class="rounded-md bg-background px-2.5 py-1 text-xs font-medium text-muted-foreground shadow-(--shadow-border)">
                             {{ category.items.length }} 项
                           </span>
-                        </div>
+                        </header>
 
-                        <div class="grid gap-2">
+                        <div class="inspection-category-items grid gap-3 p-4">
                           <article
                             v-for="item in category.items"
                             :key="`${group.riskLevel}-${category.categoryName}-${item.key}`"
-                            class="inspection-report-item rounded-md border border-border/60 bg-background p-3"
+                            class="inspection-report-item rounded-lg border border-border/60 bg-background p-4"
                           >
-                            <div class="flex flex-wrap items-start justify-between gap-3">
-                              <h5 class="min-w-0 flex-1 text-sm font-semibold leading-6 text-foreground">{{ item.name }}</h5>
-                              <span class="inline-flex shrink-0 items-center gap-1 rounded-md bg-muted px-2 py-1 text-xs text-muted-foreground">
-                                <i class="ri-user-line text-sm" />
-                                {{ displayItemValue(item.executorName) }}
-                              </span>
+                            <div class="flex flex-wrap items-start justify-between gap-x-5 gap-y-2">
+                              <div class="min-w-0">
+                                <p class="report-item-field-label text-xs font-medium text-muted-foreground">检测项</p>
+                                <h5 class="mt-1 text-sm font-semibold leading-6 text-foreground">{{ item.name }}</h5>
+                              </div>
+                              <p class="min-w-0 text-sm leading-6 text-muted-foreground sm:shrink-0 sm:text-right">
+                                执行人：<span class="font-medium text-foreground">{{ displayItemValue(item.executorName) }}</span>
+                              </p>
                             </div>
-                            <p class="mt-2 text-sm leading-6 text-muted-foreground">
-                              {{ displayItemValue(item.content) }}
-                            </p>
+                            <div class="report-item-content-panel mt-3 rounded-md bg-muted/55 px-3.5 py-3">
+                              <p class="report-item-field-label text-xs font-medium text-muted-foreground">检测内容</p>
+                              <p class="report-item-content mt-1 text-sm leading-6 text-muted-foreground">
+                                {{ displayItemValue(item.content) }}
+                              </p>
+                            </div>
                           </article>
                         </div>
                       </section>
@@ -643,16 +659,25 @@ function displayItemValue(value: string) {
   min-height: 100svh;
 }
 
-.inspection-risk-level,
 .risk-level-header,
-.inspection-category-block,
+.inspection-category-header,
 .inspection-report-item {
   break-inside: avoid;
   page-break-inside: avoid;
 }
 
+.risk-level-header,
+.inspection-category-header {
+  break-after: avoid;
+  page-break-after: avoid;
+}
+
 .inspection-report-item {
   overflow-wrap: anywhere;
+}
+
+.report-item-content {
+  text-wrap: pretty;
 }
 
 @media print {
@@ -692,19 +717,49 @@ function displayItemValue(value: string) {
     background: #ffffff !important;
     border-color: rgb(0 0 0 / 0.12) !important;
     box-shadow: none !important;
-    padding: 12px !important;
+    break-inside: auto;
+    page-break-inside: auto;
+    padding: 16px !important;
   }
 
   .inspection-category-block {
-    padding-top: 10px !important;
-    padding-bottom: 10px !important;
+    background: #ffffff !important;
+    border-color: rgb(0 0 0 / 0.14) !important;
+    box-shadow: none !important;
+    break-inside: auto;
+    page-break-inside: auto;
+  }
+
+  .inspection-category-header {
+    background: #f6f5f4 !important;
+    border-color: rgb(0 0 0 / 0.12) !important;
+    padding: 12px 14px !important;
+  }
+
+  .inspection-category-items {
+    gap: 12px !important;
+    padding: 16px !important;
   }
 
   .inspection-report-item {
     background: #ffffff !important;
     border-color: rgb(0 0 0 / 0.12) !important;
     box-shadow: none !important;
-    padding: 8px 10px !important;
+    padding: 14px 16px !important;
+  }
+
+  .report-item-content-panel {
+    background: #f6f5f4 !important;
+    border: 1px solid rgb(0 0 0 / 0.1) !important;
+    padding: 10px 12px !important;
+  }
+
+  .report-item-field-label {
+    color: rgb(0 0 0 / 0.52) !important;
+  }
+
+  .report-item-content {
+    color: rgb(0 0 0 / 0.7) !important;
   }
 }
 </style>
