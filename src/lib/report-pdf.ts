@@ -173,6 +173,45 @@ function sanitizePdfCloneForHtml2Canvas(root: HTMLElement) {
     "background-color": "#2563eb",
     "border-color": "#2563eb",
   })
+  setStylesForSelector(root, ".report-cover-meta", {
+    gap: "10px 16px",
+    padding: "9px 14px 12px",
+  })
+  setStylesForSelector(root, ".report-cover-meta > div", {
+    display: "grid",
+    gap: "3px",
+  })
+  setStylesForSelector(root, ".report-cover-meta dt, .report-cover-meta dd", {
+    display: "block",
+    "line-height": "16px",
+    margin: "0",
+    transform: "translateY(-2px)",
+  })
+  setStylesForSelector(root, ".report-score-card", {
+    "background-color": SAFE_SURFACE_COLOR,
+    border: "0",
+    display: "flex",
+    "flex-direction": "column",
+    "justify-content": "center",
+    "min-height": "72px",
+    padding: "0 14px",
+  })
+  setStylesForSelector(root, ".report-score-card p", {
+    "line-height": "18px",
+    margin: "0",
+    transform: "translateY(-2px)",
+  })
+  setStylesForSelector(root, ".report-score-card p + p", {
+    "line-height": "1.05",
+    "margin-top": "9px",
+  })
+  setStylesForSelector(root, ".risk-level-header", {
+    "align-items": "center",
+    display: "flex",
+  })
+  setStylesForSelector(root, ".risk-level-eyebrow, .risk-level-header h3, .risk-level-header .text-xs", {
+    transform: "translateY(-2px)",
+  })
   setStylesForSelector(root, ".inspection-category-header", {
     "align-items": "center",
     "background-color": SAFE_WHITE,
@@ -186,7 +225,7 @@ function sanitizePdfCloneForHtml2Canvas(root: HTMLElement) {
     gap: "8px",
   })
   setStylesForSelector(root, ".inspection-item-card__header", {
-    "align-items": "flex-start",
+    "align-items": "center",
     "background-color": SAFE_WHITE,
     display: "flex",
     "justify-content": "space-between",
@@ -203,20 +242,44 @@ function sanitizePdfCloneForHtml2Canvas(root: HTMLElement) {
     display: "inline-flex",
     "font-size": "11px",
     "font-weight": "650",
-    "line-height": "16px",
-    padding: "3px 8px",
+    height: "24px",
+    "line-height": "1",
+    "min-height": "24px",
+    padding: "0 8px",
+    "vertical-align": "middle",
     "white-space": "nowrap",
   })
+  setStylesForSelector(root, ".inspection-item-risk-chip__text", {
+    display: "block",
+    "line-height": "1",
+    transform: "translateY(-2px)",
+  })
   setStylesForSelector(root, ".inspection-item-score", {
-    "align-items": "baseline",
+    "align-items": "center",
     "background-color": SAFE_WHITE,
     border: `1px solid ${SAFE_BORDER_COLOR}`,
     display: "inline-flex",
     gap: "6px",
+    height: "28px",
     "justify-content": "space-between",
+    "min-height": "28px",
     "min-width": "72px",
-    padding: "4px 8px",
+    padding: "0 8px",
     "white-space": "nowrap",
+  })
+  setStylesForSelector(root, ".inspection-item-score span", {
+    color: SAFE_MUTED_COLOR,
+    display: "block",
+    "font-size": "10px",
+    "line-height": "14px",
+    transform: "translateY(-2px)",
+  })
+  setStylesForSelector(root, ".inspection-item-score strong", {
+    color: SAFE_TEXT_COLOR,
+    display: "block",
+    "font-size": "12px",
+    "line-height": "16px",
+    transform: "translateY(-2px)",
   })
   setStylesForSelector(root, ".inspection-item-field-grid", {
     display: "grid",
@@ -226,7 +289,7 @@ function sanitizePdfCloneForHtml2Canvas(root: HTMLElement) {
   setStylesForSelector(root, ".inspection-item-field", {
     "background-color": "#fbfaf8",
     border: `1px solid ${SAFE_BORDER_COLOR}`,
-    padding: "10px 12px",
+    padding: "4px 12px 10px",
   })
   setStylesForSelector(root, ".inspection-item-field span", {
     color: SAFE_MUTED_COLOR,
@@ -234,12 +297,17 @@ function sanitizePdfCloneForHtml2Canvas(root: HTMLElement) {
     "font-size": "10px",
     "line-height": "14px",
     "margin-bottom": "4px",
+    transform: "translateY(-2px)",
   })
   setStylesForSelector(root, ".report-item-content, .inspection-item-ai__content", {
     color: "#374151",
     "font-size": "12px",
     "line-height": "1.55",
     margin: "0",
+    transform: "translateY(-2px)",
+  })
+  setStylesForSelector(root, ".inspection-item-ai__title", {
+    transform: "translateY(-2px)",
   })
 
   applyRiskTone(root, ".inspection-risk-level--danger", "#dc2626", "rgba(220, 38, 38, 0.12)", "rgba(220, 38, 38, 0.2)")
@@ -408,9 +476,12 @@ function insertSpacerBefore(element: HTMLElement, height: number) {
 }
 
 function applyRiskTone(root: HTMLElement, selector: string, color: string, surface: string, border: string) {
-  setStylesForSelector(root, `${selector} .risk-level-icon, ${selector} .inspection-item-risk-chip`, {
+  setStylesForSelector(root, `${selector} .inspection-item-risk-chip`, {
     "background-color": surface,
     "border-color": border,
+    color,
+  })
+  setStylesForSelector(root, `${selector} .inspection-item-risk-chip *`, {
     color,
   })
   setStylesForSelector(root, `${selector} .inspection-report-item`, {

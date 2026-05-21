@@ -283,19 +283,19 @@ function shouldShowItemSuggestion(item: InspectionReportItem) {
             </div>
 
             <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              <div class="rounded-lg bg-muted/60 p-4">
+              <div class="report-score-card rounded-lg bg-muted/60 p-4">
                 <p class="text-sm text-muted-foreground">综合分数</p>
                 <p class="mt-3 text-3xl font-semibold tabular-nums text-foreground">{{ report.snapshot.scoreText }}</p>
               </div>
-              <div class="rounded-lg bg-muted/60 p-4">
+              <div class="report-score-card rounded-lg bg-muted/60 p-4">
                 <p class="text-sm text-muted-foreground">检测结果</p>
                 <p class="mt-3 text-xl font-semibold text-foreground">{{ report.snapshot.resultLabel }}</p>
               </div>
-              <div class="rounded-lg bg-muted/60 p-4">
+              <div class="report-score-card rounded-lg bg-muted/60 p-4">
                 <p class="text-sm text-muted-foreground">完成度</p>
                 <p class="mt-3 text-3xl font-semibold tabular-nums text-foreground">{{ completionText }}</p>
               </div>
-              <div class="rounded-lg bg-muted/60 p-4">
+              <div class="report-score-card rounded-lg bg-muted/60 p-4">
                 <p class="text-sm text-muted-foreground">风险问题</p>
                 <p class="mt-3 text-3xl font-semibold tabular-nums text-foreground">{{ report.snapshot.issueItems }}</p>
               </div>
@@ -313,7 +313,7 @@ function shouldShowItemSuggestion(item: InspectionReportItem) {
             <div class="space-y-4">
               <div class="grid gap-4 lg:grid-cols-2">
                 <article class="rounded-lg bg-brand-surface/65 p-4 shadow-[inset_0_0_0_1px_var(--border)]">
-                  <div class="mb-3 inline-flex size-9 items-center justify-center rounded-md bg-background text-link shadow-(--shadow-border)">
+                  <div v-if="variant !== 'pdf'" class="mb-3 inline-flex size-9 items-center justify-center rounded-md bg-background text-link shadow-(--shadow-border)">
                     <i class="ri-sparkling-line text-lg" />
                   </div>
                   <h3 class="text-sm font-semibold text-foreground">综合结论</h3>
@@ -324,7 +324,7 @@ function shouldShowItemSuggestion(item: InspectionReportItem) {
 
                 <div class="grid gap-3">
                   <article class="rounded-lg bg-muted/55 p-4">
-                    <div class="mb-3 inline-flex size-9 items-center justify-center rounded-md bg-background text-link shadow-(--shadow-border)">
+                    <div v-if="variant !== 'pdf'" class="mb-3 inline-flex size-9 items-center justify-center rounded-md bg-background text-link shadow-(--shadow-border)">
                       <i class="ri-user-star-line text-lg" />
                     </div>
                     <h3 class="text-sm font-semibold text-foreground">专家建议</h3>
@@ -341,7 +341,7 @@ function shouldShowItemSuggestion(item: InspectionReportItem) {
                         :key="highlight"
                         class="flex gap-2"
                       >
-                        <i class="ri-checkbox-circle-line mt-1 text-sm text-link" />
+                        <i v-if="variant !== 'pdf'" class="ri-checkbox-circle-line mt-1 text-sm text-link" />
                         <span>{{ highlight }}</span>
                       </li>
                     </ul>
@@ -357,7 +357,7 @@ function shouldShowItemSuggestion(item: InspectionReportItem) {
                     :key="suggestion"
                     class="flex gap-2"
                   >
-                    <i class="ri-arrow-right-circle-line mt-1 text-sm text-link" />
+                    <i v-if="variant !== 'pdf'" class="ri-arrow-right-circle-line mt-1 text-sm text-link" />
                     <span>{{ suggestion }}</span>
                   </li>
                 </ul>
@@ -379,7 +379,7 @@ function shouldShowItemSuggestion(item: InspectionReportItem) {
               >
                 <header class="risk-level-header">
                   <div class="flex min-w-0 items-center gap-3">
-                    <span class="risk-level-icon" aria-hidden="true">
+                    <span v-if="variant !== 'pdf'" class="risk-level-icon" aria-hidden="true">
                       <i :class="getRiskLevelIcon(group.riskLevel)" />
                     </span>
                     <div class="min-w-0">
@@ -424,8 +424,8 @@ function shouldShowItemSuggestion(item: InspectionReportItem) {
                         <header class="inspection-item-card__header">
                           <div class="inspection-item-title-wrap">
                             <span class="inspection-item-risk-chip">
-                              <i :class="getRiskLevelIcon(item.resultLabel)" />
-                              {{ displayItemValue(item.resultLabel, group.riskLevel) }}
+                              <i v-if="variant !== 'pdf'" :class="getRiskLevelIcon(item.resultLabel)" />
+                              <span class="inspection-item-risk-chip__text">{{ displayItemValue(item.resultLabel, group.riskLevel) }}</span>
                             </span>
                             <h5 class="min-w-0 text-base font-semibold leading-6 text-foreground">{{ item.name }}</h5>
                           </div>
@@ -448,7 +448,7 @@ function shouldShowItemSuggestion(item: InspectionReportItem) {
                           </div>
 
                           <section v-if="shouldShowItemSuggestion(item)" class="inspection-item-ai">
-                            <div class="inspection-item-ai__icon" aria-hidden="true">
+                            <div v-if="variant !== 'pdf'" class="inspection-item-ai__icon" aria-hidden="true">
                               <i class="ri-sparkling-line" />
                             </div>
                             <div class="min-w-0">
@@ -844,7 +844,44 @@ function shouldShowItemSuggestion(item: InspectionReportItem) {
   background: #f6f5f4 !important;
   border: 1px solid rgb(0 0 0 / 0.12) !important;
   box-shadow: none !important;
-  padding: 14px !important;
+  gap: 10px 16px !important;
+  padding: 9px 14px 12px !important;
+}
+
+.inspection-report-document--pdf .report-cover-meta > div {
+  display: grid !important;
+  gap: 3px !important;
+}
+
+.inspection-report-document--pdf .report-cover-meta dt,
+.inspection-report-document--pdf .report-cover-meta dd {
+  display: block !important;
+  line-height: 16px !important;
+  margin: 0 !important;
+  transform: translateY(-2px) !important;
+}
+
+.inspection-report-document--pdf .report-score-card {
+  background: #f6f5f4 !important;
+  border: 0 !important;
+  border-radius: 6px !important;
+  box-shadow: none !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  min-height: 72px !important;
+  padding: 0 14px !important;
+}
+
+.inspection-report-document--pdf .report-score-card p {
+  line-height: 18px !important;
+  margin: 0 !important;
+  transform: translateY(-2px) !important;
+}
+
+.inspection-report-document--pdf .report-score-card p + p {
+  line-height: 1.05 !important;
+  margin-top: 9px !important;
 }
 
 .inspection-report-document--pdf .report-module-section--ai-summary,
@@ -868,9 +905,17 @@ function shouldShowItemSuggestion(item: InspectionReportItem) {
 }
 
 .inspection-report-document--pdf .risk-level-header {
+  align-items: center !important;
   background: #ffffff !important;
   border-color: rgb(0 0 0 / 0.16) !important;
+  display: flex !important;
   padding: 12px 14px !important;
+}
+
+.inspection-report-document--pdf .risk-level-eyebrow,
+.inspection-report-document--pdf .risk-level-header h3,
+.inspection-report-document--pdf .risk-level-header .text-xs {
+  transform: translateY(-2px) !important;
 }
 
 .inspection-report-document--pdf .inspection-category-block {
@@ -938,7 +983,7 @@ function shouldShowItemSuggestion(item: InspectionReportItem) {
 }
 
 .inspection-report-document--pdf .inspection-item-card__header {
-  align-items: flex-start !important;
+  align-items: center !important;
   background: #ffffff !important;
   border-bottom: 1px solid rgb(0 0 0 / 0.1) !important;
   display: flex !important;
@@ -960,34 +1005,38 @@ function shouldShowItemSuggestion(item: InspectionReportItem) {
   display: inline-flex !important;
   font-size: 11px !important;
   font-weight: 650 !important;
-  gap: 4px !important;
-  line-height: 16px !important;
-  padding: 3px 8px !important;
+  height: 24px !important;
+  line-height: 1 !important;
+  min-height: 24px !important;
+  padding: 0 8px !important;
+  vertical-align: middle !important;
   white-space: nowrap !important;
 }
 
-.inspection-report-document--pdf .inspection-risk-level--danger .risk-level-icon,
+.inspection-report-document--pdf .inspection-item-risk-chip__text {
+  display: block !important;
+  line-height: 1 !important;
+  transform: translateY(-2px) !important;
+}
+
 .inspection-report-document--pdf .inspection-risk-level--danger .inspection-item-risk-chip {
   background: rgb(220 38 38 / 0.12) !important;
   border-color: rgb(220 38 38 / 0.2) !important;
   color: #dc2626 !important;
 }
 
-.inspection-report-document--pdf .inspection-risk-level--warning .risk-level-icon,
 .inspection-report-document--pdf .inspection-risk-level--warning .inspection-item-risk-chip {
   background: rgb(217 119 6 / 0.12) !important;
   border-color: rgb(217 119 6 / 0.2) !important;
   color: #d97706 !important;
 }
 
-.inspection-report-document--pdf .inspection-risk-level--success .risk-level-icon,
 .inspection-report-document--pdf .inspection-risk-level--success .inspection-item-risk-chip {
   background: rgb(22 163 74 / 0.12) !important;
   border-color: rgb(22 163 74 / 0.2) !important;
   color: #16a34a !important;
 }
 
-.inspection-report-document--pdf .inspection-risk-level--neutral .risk-level-icon,
 .inspection-report-document--pdf .inspection-risk-level--neutral .inspection-item-risk-chip {
   background: rgb(100 116 139 / 0.12) !important;
   border-color: rgb(100 116 139 / 0.2) !important;
@@ -1011,28 +1060,34 @@ function shouldShowItemSuggestion(item: InspectionReportItem) {
 }
 
 .inspection-report-document--pdf .inspection-item-score {
-  align-items: baseline !important;
+  align-items: center !important;
   background: #ffffff !important;
   border: 1px solid rgb(0 0 0 / 0.1) !important;
   border-radius: 4px !important;
   display: inline-flex !important;
   gap: 6px !important;
+  height: 28px !important;
   justify-content: space-between !important;
+  min-height: 28px !important;
   min-width: 72px !important;
-  padding: 4px 8px !important;
+  padding: 0 8px !important;
   white-space: nowrap !important;
 }
 
 .inspection-report-document--pdf .inspection-item-score span {
   color: rgb(0 0 0 / 0.52) !important;
+  display: block !important;
   font-size: 10px !important;
   line-height: 14px !important;
+  transform: translateY(-2px) !important;
 }
 
 .inspection-report-document--pdf .inspection-item-score strong {
   color: #111827 !important;
+  display: block !important;
   font-size: 12px !important;
   line-height: 16px !important;
+  transform: translateY(-2px) !important;
 }
 
 .inspection-report-document--pdf .inspection-item-card__body {
@@ -1051,7 +1106,7 @@ function shouldShowItemSuggestion(item: InspectionReportItem) {
   border: 1px solid rgb(0 0 0 / 0.1) !important;
   border-radius: 5px !important;
   min-width: 0 !important;
-  padding: 10px 12px !important;
+  padding: 4px 12px 10px !important;
 }
 
 .inspection-report-document--pdf .inspection-item-field span {
@@ -1060,6 +1115,7 @@ function shouldShowItemSuggestion(item: InspectionReportItem) {
   font-size: 10px !important;
   line-height: 14px !important;
   margin-bottom: 4px !important;
+  transform: translateY(-2px) !important;
 }
 
 .inspection-report-document--pdf .inspection-item-ai {
@@ -1071,12 +1127,17 @@ function shouldShowItemSuggestion(item: InspectionReportItem) {
   padding: 10px 12px !important;
 }
 
+.inspection-report-document--pdf .inspection-item-ai__title {
+  transform: translateY(-2px) !important;
+}
+
 .inspection-report-document--pdf .report-item-content,
 .inspection-report-document--pdf .inspection-item-ai__content {
   color: #374151 !important;
   font-size: 12px !important;
   line-height: 1.55 !important;
   margin: 0 !important;
+  transform: translateY(-2px) !important;
 }
 
 .inspection-report-document--pdf .text-link,
