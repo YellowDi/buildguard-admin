@@ -142,7 +142,7 @@ const state = reactive<SettingsState>({
   ],
   preferredName: currentUser.name,
   selectedAvatarKey: currentUser.avatarKey,
-  userId: "cdfac05d-1fde-4501-a2c5-66ab2d360bb2",
+  userId: currentUser.uuid,
   supportAccessEnabled: false,
 })
 
@@ -161,6 +161,10 @@ watch(
   },
   { immediate: true },
 )
+
+watch(() => currentUser.uuid, (value) => {
+  state.userId = value
+}, { immediate: true })
 
 watch(() => currentUser.avatarKey, (value) => {
   if (state.selectedAvatarKey !== value) {
@@ -641,6 +645,7 @@ async function ensureSettingsLoaded() {
   try {
     const snapshot = await loadSettingsSnapshot()
     Object.assign(state, snapshot)
+    state.userId = currentUser.uuid
   } catch {
     settingsLoaded.value = false
   }
