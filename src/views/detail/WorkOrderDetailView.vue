@@ -28,7 +28,9 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Progress } from "@/components/ui/progress"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Spinner } from "@/components/ui/spinner"
 import { Textarea } from "@/components/ui/textarea"
 import { detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
 import DetailLayout from "@/layouts/DetailLayout.vue"
@@ -67,6 +69,37 @@ import {
 type WorkOrderDetailKind = "inspection" | "repair"
 type LinkedDetailSheetKind = "customer" | "service" | "plan" | "park"
 type ReportGenerationStage = "生成报告" | "生成 PDF" | "上传 PDF" | "保存地址"
+const REPORT_GENERATION_STEPS: Array<{
+  stage: ReportGenerationStage
+  label: string
+  progress: number
+  description: string
+}> = [
+  {
+    stage: "生成报告",
+    label: "生成",
+    progress: 18,
+    description: "正在汇总检测数据和专家建议。",
+  },
+  {
+    stage: "生成 PDF",
+    label: "成稿",
+    progress: 45,
+    description: "正在渲染报告版式并生成 PDF 文件。",
+  },
+  {
+    stage: "上传 PDF",
+    label: "上传",
+    progress: 72,
+    description: "正在上传 PDF 文件。",
+  },
+  {
+    stage: "保存地址",
+    label: "保存",
+    progress: 92,
+    description: "正在保存报告文件地址。",
+  },
+]
 type InspectionBuildingCardV2Status = "pending" | "processing" | "completed"
 type InspectionBuildingCardV2Row = {
   key: string
@@ -334,6 +367,25 @@ const assignPermissionCode = computed(() => props.kind === "repair"
 const selectedReportBuildingName = computed(() => toText(reportBuilding.value?.BuildName, "当前建筑"))
 const canSubmitReport = computed(() => (
   !reportSubmitting.value
+))
+const currentReportGenerationStepIndex = computed(() => {
+  if (!reportGenerationStage.value) {
+    return -1
+  }
+
+  return REPORT_GENERATION_STEPS.findIndex(step => step.stage === reportGenerationStage.value)
+})
+const currentReportGenerationStep = computed(() => REPORT_GENERATION_STEPS[currentReportGenerationStepIndex.value] ?? null)
+const reportGenerationProgress = computed(() => (
+  reportSubmitting.value ? currentReportGenerationStep.value?.progress ?? 8 : 0
+))
+const reportGenerationStatusTitle = computed(() => (
+  currentReportGenerationStep.value?.stage
+    ? `${currentReportGenerationStep.value.stage}中`
+    : "报告生成中"
+))
+const reportGenerationStatusDescription = computed(() => (
+  currentReportGenerationStep.value?.description ?? "正在处理报告。"
 ))
 const reportSubmitButtonText = computed(() => {
   if (reportSubmitting.value) {
@@ -1181,10 +1233,28 @@ function findInspectionReportBuild(buildingKey: string) {
 
 function closeReportDialog() {
   if (reportSubmitting.value) {
+    toast.warning("报告生成中，请保持浮窗打开，完成后再关闭")
     return
   }
 
   reportDialogOpen.value = false
+}
+
+function handleReportDialogOpenChange(open: boolean) {
+  if (open) {
+    reportDialogOpen.value = true
+    return
+  }
+
+  closeReportDialog()
+}
+
+function preventReportDialogDismiss(event: Event) {
+  if (!reportSubmitting.value) {
+    return
+  }
+
+  event.preventDefault()
 }
 
 async function submitReportGeneration() {
@@ -1688,74 +1758,133 @@ async function submitAssign() {
     </template>
   </DetailLayout>
 
-  <Dialog v-model:open="reportDialogOpen">
-    <DialogContent class="max-w-[min(96vw,40rem)] gap-0 overflow-hidden p-0">
-      <DialogHeader class="px-4 pt-4 pb-0">
-        <DialogTitle>生成检测报告</DialogTitle>
+  <Dialog :open="reportDialogOpen" @update:open="handleReportDialogOpenChange">
+    <DialogContent
+      class="max-w-[min(96vw,44rem)] gap-0 overflow-hidden p-0"
+      :show-close-button="!reportSubmitting"
+      @escape-key-down="preventReportDialogDismiss"
+      @pointer-down-outside="preventReportDialogDismiss"
+      @interact-outside="preventReportDialogDismiss"
+    >
+      <DialogHeader class="px-5 pt-5 pb-0">
+        <DialogTitle class="pr-8">生成检测报告</DialogTitle>
         <DialogDescription>
           为「{{ selectedReportBuildingName }}」填写专家建议，生成在线报告并自动上传 PDF 文件。
         </DialogDescription>
       </DialogHeader>
 
-      <div class="space-y-4 px-4 pt-4 pb-0">
-        <div class="grid gap-4">
-          <label class="space-y-1.5">
-            <span class="text-sm font-medium text-foreground">专家建议</span>
-            <Textarea
-              v-model="reportForm.remark"
-              :disabled="reportSubmitting"
-              class="min-h-20 resize-none bg-background"
-              placeholder="填写专家处理建议，可留空"
-            />
-          </label>
-        </div>
+      <div class="space-y-4 px-5 pt-4 pb-0">
+        <Alert
+          v-if="reportSubmitting"
+          class="border-link/15 bg-brand-surface text-foreground shadow-[inset_0_0_0_1px_rgb(0_117_222_/_0.08)]"
+        >
+          <Spinner class="mt-0.5 size-4 text-link" label="报告生成中" />
+          <div class="min-w-0 space-y-3">
+            <div class="space-y-1">
+              <AlertTitle class="text-sm font-semibold leading-none">{{ reportGenerationStatusTitle }}</AlertTitle>
+              <AlertDescription class="text-[13px] leading-5 text-muted-foreground">
+                {{ reportGenerationStatusDescription }} 请不要关闭这个浮窗，完成后会自动显示报告操作。
+              </AlertDescription>
+            </div>
+            <div class="space-y-2">
+              <Progress
+                :model-value="reportGenerationProgress"
+                class="h-1.5 bg-link/15 **:data-[slot=progress-indicator]:bg-link"
+              />
+              <div class="grid grid-cols-4 gap-1.5">
+                <div
+                  v-for="(step, index) in REPORT_GENERATION_STEPS"
+                  :key="step.stage"
+                  class="h-1.5 rounded-full transition-colors duration-300"
+                  :class="index <= currentReportGenerationStepIndex ? 'bg-link' : 'bg-link/15'"
+                  :title="step.stage"
+                />
+              </div>
+            </div>
+          </div>
+        </Alert>
 
         <section
           v-if="generatedReport && generatedReportUrl"
-          class="rounded-lg bg-brand-surface p-3 shadow-[inset_0_0_0_1px_rgb(0_117_222_/_0.12)]"
+          class="overflow-hidden rounded-lg bg-muted/35 shadow-[inset_0_0_0_1px_rgb(15_23_42_/_0.06)] dark:shadow-[inset_0_0_0_1px_rgb(255_255_255_/_0.08)]"
         >
-          <div class="space-y-3">
-            <div class="flex min-w-0 items-center gap-3">
-              <div class="inline-flex size-9 shrink-0 items-center justify-center rounded-md bg-background text-link shadow-(--shadow-border)">
-                <i class="ri-checkbox-circle-line text-lg" />
+          <div class="flex min-w-0 flex-col gap-3 p-3 sm:flex-row sm:items-start sm:justify-between">
+            <div class="flex min-w-0 items-start gap-3">
+              <div class="inline-flex size-9 shrink-0 items-center justify-center rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                <i class="ri-checkbox-circle-fill text-lg" />
               </div>
-              <p class="text-sm font-semibold text-foreground">报告已生成</p>
+              <div class="min-w-0">
+                <p class="text-sm font-semibold text-foreground">报告已生成</p>
+                <p class="mt-0.5 truncate text-[13px] leading-5 text-muted-foreground" :title="selectedReportBuildingName">
+                  {{ selectedReportBuildingName }} · 在线报告已就绪
+                </p>
+              </div>
             </div>
-            <div class="flex flex-wrap gap-2">
-              <Button type="button" variant="outline" class="h-8 gap-1 px-3" @click="openGeneratedReport">
-                <i class="ri-external-link-line text-base" />
-                打开在线报告
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                class="h-8 gap-1 px-3"
-                :disabled="!generatedReportPdfUrl"
-                @click="copyGeneratedReportPdfUrl"
-              >
-                <i class="ri-file-copy-line text-base" />
-                复制 PDF 链接
-              </Button>
-              <Button
-                type="button"
-                class="h-8 gap-1 px-3"
-                :disabled="!generatedReportPdfUrl"
-                @click="openGeneratedReportPdf"
-              >
-                <i class="ri-download-2-line text-base" />
-                下载 PDF
-              </Button>
-            </div>
+            <span
+              class="inline-flex h-7 w-fit shrink-0 items-center rounded-md bg-background px-2.5 text-xs font-medium shadow-(--shadow-border)"
+              :class="generatedReportPdfUrl ? 'text-emerald-700 dark:text-emerald-300' : 'text-muted-foreground'"
+            >
+              {{ generatedReportPdfUrl ? "PDF 已保存" : "PDF 未生成" }}
+            </span>
           </div>
+          <div class="grid gap-2 px-3 pb-3 sm:grid-cols-3">
+            <Button
+              type="button"
+              variant="outline"
+              class="h-9 justify-center gap-1.5 px-3"
+              :disabled="reportSubmitting"
+              @click="openGeneratedReport"
+            >
+              <i class="ri-external-link-line text-base" />
+              打开在线报告
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              class="h-9 justify-center gap-1.5 px-3"
+              :disabled="reportSubmitting || !generatedReportPdfUrl"
+              @click="copyGeneratedReportPdfUrl"
+            >
+              <i class="ri-file-copy-line text-base" />
+              复制 PDF 链接
+            </Button>
+            <Button
+              type="button"
+              class="h-9 justify-center gap-1.5 px-3"
+              :disabled="reportSubmitting || !generatedReportPdfUrl"
+              @click="openGeneratedReportPdf"
+            >
+              <i class="ri-download-2-line text-base" />
+              下载 PDF
+            </Button>
+          </div>
+        </section>
+
+        <section class="space-y-2">
+          <label class="block space-y-2">
+            <span class="flex items-center justify-between gap-3">
+              <span class="text-sm font-medium text-foreground">专家建议</span>
+              <span class="min-w-0 truncate text-xs text-muted-foreground" :title="selectedReportBuildingName">
+                当前建筑：{{ selectedReportBuildingName }}
+              </span>
+            </span>
+            <Textarea
+              v-model="reportForm.remark"
+              :disabled="reportSubmitting"
+              class="min-h-24 resize-none bg-background leading-6"
+              placeholder="填写专家处理建议，可留空"
+            />
+          </label>
         </section>
 
       </div>
 
-      <DialogFooter class="gap-2 px-4 py-3">
+      <DialogFooter class="gap-2 bg-muted/20 px-5 py-3">
         <Button type="button" variant="outline" :disabled="reportSubmitting" @click="closeReportDialog">
-          取消
+          关闭
         </Button>
         <Button type="button" :disabled="!canSubmitReport" @click="submitReportGeneration">
+          <Spinner v-if="reportSubmitting" class="size-4" label="报告生成中" />
           {{ reportSubmitButtonText }}
         </Button>
       </DialogFooter>
