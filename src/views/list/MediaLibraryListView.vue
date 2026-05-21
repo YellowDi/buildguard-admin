@@ -1863,7 +1863,7 @@ function escapeHtml(value: string) {
 </script>
 
 <template>
-  <section class="relative flex flex-col overflow-visible bg-background">
+  <section class="relative flex min-h-full flex-1 flex-col overflow-visible bg-background">
     <SettingsPageHeader
       title="媒体库"
       description="维护客户 app 首页的视频教程与图文内容。"
@@ -1917,8 +1917,8 @@ function escapeHtml(value: string) {
       </SettingsToolbarRow>
     </SettingsPageHeader>
 
-    <div class="px-3 pb-8 sm:px-4">
-      <div class="media-library-layout mx-auto flex w-full max-w-4xl gap-8 overflow-visible">
+    <div class="min-h-0 flex-1 px-3 pb-8 sm:px-4">
+      <div class="media-library-layout mx-auto flex min-h-full w-full max-w-4xl gap-8 overflow-visible">
         <aside class="media-library-sidebar w-[240px] shrink-0 pt-4">
         <div class="media-library-sidebar-panel sticky top-[11rem] flex max-h-[calc(100svh-12rem)] flex-col overflow-hidden">
           <div class="mb-2 flex shrink-0 items-center justify-between gap-2 px-1">
