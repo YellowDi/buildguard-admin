@@ -11,8 +11,10 @@ const SAFE_MUTED_COLOR = "#615d59"
 const SAFE_TEXT_COLOR = "#111827"
 const SAFE_SURFACE_COLOR = "#f6f5f4"
 const SAFE_WHITE = "#ffffff"
-const PDF_PAGE_BREAK_SAFE_GAP_PX = 8
+const PDF_PAGE_BREAK_SAFE_GAP_PX = 18
+const PDF_PAGE_BREAK_SPACER_EXTRA_PX = 6
 const PDF_PAGE_TOP_TOLERANCE_PX = 2
+const PDF_PAGINATION_MAX_PASSES = 4
 const PDF_FORCE_NEW_PAGE_SELECTORS = [
   ".report-module-section--ai-summary",
   ".report-module-section--buildings",
@@ -29,15 +31,16 @@ export async function generateReportPdfBlob(
 ): Promise<Blob> {
   await waitForReportAssets(element)
 
+  const scale = options.scale ?? DEFAULT_SCALE
   const canvas = await html2canvas(element, {
     backgroundColor: "#ffffff",
-    scale: options.scale ?? DEFAULT_SCALE,
+    scale,
     useCORS: true,
     windowHeight: element.scrollHeight,
     windowWidth: element.scrollWidth,
     onclone: (_clonedDocument, clonedElement) => {
       sanitizePdfCloneForHtml2Canvas(clonedElement)
-      insertPdfPageSpacers(clonedElement)
+      insertPdfPageSpacers(clonedElement, scale)
     },
   })
   const pdf = new jsPDF({
@@ -458,8 +461,8 @@ function sanitizePdfCloneForHtml2Canvas(root: HTMLElement) {
   applyRiskTone(root, ".inspection-risk-level--neutral", "#64748b", "rgba(100, 116, 139, 0.12)", "rgba(100, 116, 139, 0.2)")
 }
 
-function insertPdfPageSpacers(root: HTMLElement) {
-  const pageHeight = getPdfPageHeightPx(root)
+function insertPdfPageSpacers(root: HTMLElement, scale: number) {
+  const pageHeight = getPdfPageHeightPx(root, scale)
 
   if (pageHeight <= 0) {
     return
@@ -467,17 +470,26 @@ function insertPdfPageSpacers(root: HTMLElement) {
 
   forcePdfModulePageBreaks(root, pageHeight)
 
-  const anchors = getPdfPaginationAnchors(root)
+  for (let passIndex = 0; passIndex < PDF_PAGINATION_MAX_PASSES; passIndex += 1) {
+    let movedElement = false
 
-  anchors.forEach((anchor) => {
-    moveBlockToNextPageIfNeeded(root, anchor.element, anchor.keepTogetherElements, pageHeight)
-  })
+    getPdfPaginationAnchors(root).forEach((anchor) => {
+      movedElement = moveBlockToNextPageIfNeeded(root, anchor.element, anchor.keepTogetherElements, pageHeight) || movedElement
+    })
+
+    if (!movedElement) {
+      break
+    }
+  }
 }
 
-function getPdfPageHeightPx(root: HTMLElement) {
+function getPdfPageHeightPx(root: HTMLElement, scale: number) {
   const rootWidth = root.getBoundingClientRect().width || root.scrollWidth
+  const normalizedScale = Number.isFinite(scale) && scale > 0 ? scale : DEFAULT_SCALE
+  const canvasWidth = Math.floor(Math.ceil(rootWidth) * normalizedScale)
+  const pageCanvasHeight = Math.floor((A4_HEIGHT_MM * canvasWidth) / A4_WIDTH_MM)
 
-  return (rootWidth * A4_HEIGHT_MM) / A4_WIDTH_MM
+  return pageCanvasHeight / normalizedScale
 }
 
 function getPdfPaginationAnchors(root: HTMLElement) {
@@ -541,19 +553,20 @@ function compactElements(elements: Array<HTMLElement | null | undefined>) {
 
 function moveElementToNextPage(root: HTMLElement, element: HTMLElement, pageHeight: number) {
   if (!element.parentElement) {
-    return
+    return false
   }
 
   const rootTop = root.getBoundingClientRect().top
   const blockTop = getElementTop(element, rootTop)
-  const currentPageTop = Math.floor((blockTop + PDF_PAGE_TOP_TOLERANCE_PX) / pageHeight) * pageHeight
+  const currentPageTop = getPdfCurrentPageTop(blockTop, pageHeight)
   const distanceFromPageTop = blockTop - currentPageTop
 
-  if (distanceFromPageTop <= PDF_PAGE_TOP_TOLERANCE_PX) {
-    return
+  if (isAtPdfPageTop(distanceFromPageTop)) {
+    return false
   }
 
-  insertSpacerBefore(element, Math.ceil(currentPageTop + pageHeight - blockTop) + 1)
+  insertSpacerBefore(element, Math.ceil(currentPageTop + pageHeight - blockTop) + PDF_PAGE_BREAK_SPACER_EXTRA_PX)
+  return true
 }
 
 function moveBlockToNextPageIfNeeded(
@@ -563,7 +576,7 @@ function moveBlockToNextPageIfNeeded(
   pageHeight: number,
 ) {
   if (!element.parentElement || keepTogetherElements.length === 0) {
-    return
+    return false
   }
 
   const rootTop = root.getBoundingClientRect().top
@@ -572,23 +585,36 @@ function moveBlockToNextPageIfNeeded(
   const blockHeight = blockBottom - blockTop
 
   if (blockHeight <= 0) {
-    return
+    return false
   }
 
-  const currentPageTop = Math.floor((blockTop + PDF_PAGE_TOP_TOLERANCE_PX) / pageHeight) * pageHeight
+  if (blockHeight >= pageHeight - PDF_PAGE_BREAK_SAFE_GAP_PX) {
+    return false
+  }
+
+  const currentPageTop = getPdfCurrentPageTop(blockTop, pageHeight)
   const currentPageBottom = currentPageTop + pageHeight
   const distanceFromPageTop = blockTop - currentPageTop
   const wouldCrossPage = blockBottom > currentPageBottom - PDF_PAGE_BREAK_SAFE_GAP_PX
 
   if (!wouldCrossPage) {
-    return
+    return false
   }
 
-  if (distanceFromPageTop <= PDF_PAGE_TOP_TOLERANCE_PX) {
-    return
+  if (isAtPdfPageTop(distanceFromPageTop)) {
+    return false
   }
 
-  insertSpacerBefore(element, Math.ceil(currentPageBottom - blockTop) + 1)
+  insertSpacerBefore(element, Math.ceil(currentPageBottom - blockTop) + PDF_PAGE_BREAK_SPACER_EXTRA_PX)
+  return true
+}
+
+function getPdfCurrentPageTop(blockTop: number, pageHeight: number) {
+  return Math.floor(Math.max(0, blockTop) / pageHeight) * pageHeight
+}
+
+function isAtPdfPageTop(distanceFromPageTop: number) {
+  return distanceFromPageTop >= 0 && distanceFromPageTop <= PDF_PAGE_TOP_TOLERANCE_PX + PDF_PAGE_BREAK_SPACER_EXTRA_PX
 }
 
 function getElementTop(element: HTMLElement, rootTop: number) {
