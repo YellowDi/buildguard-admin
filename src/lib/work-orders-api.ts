@@ -132,7 +132,6 @@ export type WorkOrderInspectionHistoryDetailPayload = {
 export type GenerateWorkOrderGnReportPayload = {
   BuildUuid?: string
   Expert?: string
-  Version?: number
   WorkOrderUuid?: string
   [property: string]: unknown
 }
@@ -498,7 +497,6 @@ export async function generateWorkOrderGnReport(
   const normalizedPayload: GenerateWorkOrderGnReportPayload = {
     BuildUuid: getRequiredString(payload.BuildUuid, "BuildUuid"),
     Expert: getOptionalString(payload.Expert) ?? "",
-    Version: getRequiredPositiveInteger(payload.Version, "Version"),
     WorkOrderUuid: getRequiredString(payload.WorkOrderUuid, "WorkOrderUuid"),
   }
 
@@ -521,11 +519,15 @@ export async function generateWorkOrderGnReport(
 }
 
 export async function uploadWorkOrderReport(payload: UploadWorkOrderReportPayload): Promise<CreateWorkOrderResult> {
-  const normalizedPayload = {
+  const normalizedPayload: UploadWorkOrderReportPayload = {
     BuildUuid: getRequiredString(payload.BuildUuid, "BuildUuid"),
     FileUrl: getRequiredString(payload.FileUrl, "FileUrl"),
-    Version: getRequiredPositiveInteger(payload.Version, "Version"),
     WorkOrderUuid: getRequiredString(payload.WorkOrderUuid, "WorkOrderUuid"),
+  }
+  const version = getOptionalPositiveInteger(payload.Version, "Version")
+
+  if (version !== undefined) {
+    normalizedPayload.Version = version
   }
 
   const response = await fetch(WORK_ORDER_REPORT_UPLOAD_API_URL, {
@@ -1226,6 +1228,14 @@ function getRequiredPositiveInteger(value: unknown, fieldName: string) {
   }
 
   return value
+}
+
+function getOptionalPositiveInteger(value: unknown, fieldName: string) {
+  if (value === undefined || value === null || value === "") {
+    return undefined
+  }
+
+  return getRequiredPositiveInteger(value, fieldName)
 }
 
 function getOptionalNumber(value: unknown, fieldName: string) {

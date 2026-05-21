@@ -1225,14 +1225,12 @@ async function submitReportGeneration() {
   let failedStage: ReportGenerationStage = "生成报告"
 
   try {
-    const requestVersion = resolveReportRequestVersion(generatedReport.value)
     const reportResult = await generateWorkOrderGnReport({
       BuildUuid: buildUuid,
       WorkOrderUuid: targetWorkOrderUuid,
       Expert: reportForm.value.remark,
-      Version: requestVersion,
     })
-    const version = resolveGeneratedReportVersion(reportResult, requestVersion)
+    const version = resolveGeneratedReportVersion(reportResult, generatedReport.value)
     const record = createInspectionReportFromGnReport({
       title: `${toText(reportResult.BuildName, toText(currentBuilding.BuildName, "当前建筑"))}检测报告`,
       reportDate: getTodayDate(),
@@ -1281,7 +1279,6 @@ async function submitReportGeneration() {
     await uploadWorkOrderReport({
       BuildUuid: buildUuid,
       FileUrl: uploadResult.url,
-      Version: version,
       WorkOrderUuid: targetWorkOrderUuid,
     })
 
@@ -1372,7 +1369,7 @@ function openGeneratedReportPdf() {
 
 function resolveGeneratedReportVersion(
   report: { Version?: unknown },
-  requestVersion: number,
+  previousReport: InspectionReportRecord | null,
 ) {
   const apiVersion = toPositiveInteger(report.Version)
 
@@ -1380,10 +1377,6 @@ function resolveGeneratedReportVersion(
     return apiVersion
   }
 
-  return requestVersion
-}
-
-function resolveReportRequestVersion(previousReport: InspectionReportRecord | null) {
   const previousVersion = toPositiveInteger(previousReport?.version)
 
   return previousVersion ?? 1
