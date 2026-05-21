@@ -190,27 +190,46 @@ function sanitizePdfCloneForHtml2Canvas(root: HTMLElement) {
   setStylesForSelector(root, ".report-score-card", {
     "background-color": SAFE_SURFACE_COLOR,
     border: "0",
+    "box-sizing": "border-box",
     display: "flex",
     "flex-direction": "column",
+    gap: "8px",
+    height: "88px",
     "justify-content": "center",
-    "min-height": "76px",
-    padding: "10px 14px 12px",
+    "min-height": "88px",
+    padding: "0 14px",
   })
   setStylesForSelector(root, ".report-score-card__label", {
+    "align-items": "center",
     color: SAFE_MUTED_COLOR,
+    display: "flex",
     "font-size": "12px",
-    "line-height": "16px",
+    height: "16px",
+    "line-height": "1",
     margin: "0",
     transform: "none",
   })
   setStylesForSelector(root, ".report-score-card__value", {
+    "align-items": "center",
     color: SAFE_TEXT_COLOR,
+    display: "flex",
     "font-size": "24px",
     "font-variant-numeric": "tabular-nums",
     "font-weight": "700",
-    "line-height": "28px",
-    margin: "6px 0 0",
+    height: "30px",
+    "line-height": "1",
+    margin: "0",
     transform: "none",
+  })
+  setStylesForSelector(root, ".report-score-card__label > span, .report-score-card__value > span", {
+    display: "block",
+    "line-height": "1",
+  })
+  setStylesForSelector(root, ".report-score-card__label > span", {
+    transform: "translateY(-1px)",
+  })
+  setStylesForSelector(root, ".report-score-card__value > span", {
+    transform: "translateY(-4px)",
   })
   setStylesForSelector(root, ".report-module-section--ai-summary article p, .report-module-section--ai-summary article li, .report-module-section--ai-summary article li span", {
     color: SAFE_MUTED_COLOR,
@@ -221,21 +240,61 @@ function sanitizePdfCloneForHtml2Canvas(root: HTMLElement) {
   })
   setStylesForSelector(root, ".risk-level-header", {
     "align-items": "center",
+    "box-sizing": "border-box",
     display: "flex",
+    "min-height": "64px",
+    padding: "0 14px",
+  })
+  setStylesForSelector(root, ".risk-level-header__content", {
+    "align-items": "center",
+    display: "flex",
+    "min-height": "64px",
+  })
+  setStylesForSelector(root, ".risk-level-header__body", {
+    display: "flex",
+    "flex-direction": "column",
+    gap: "4px",
+    "justify-content": "center",
+    "min-height": "44px",
   })
   setStylesForSelector(root, ".risk-level-eyebrow", {
-    "line-height": "14px",
+    "align-items": "center",
+    display: "flex",
+    height: "14px",
+    "line-height": "1",
+    margin: "0",
     transform: "none",
   })
+  setStylesForSelector(root, ".risk-level-eyebrow > span", {
+    display: "block",
+    "line-height": "1",
+    transform: "translateY(-1px)",
+  })
+  setStylesForSelector(root, ".risk-level-title-row", {
+    "align-items": "center",
+    "min-height": "24px",
+  })
   setStylesForSelector(root, ".risk-level-header h3", {
-    "line-height": "24px",
+    "align-items": "center",
+    display: "flex",
+    height: "24px",
+    "line-height": "1",
+    margin: "0",
     overflow: "visible",
     "text-overflow": "clip",
     transform: "none",
     "white-space": "normal",
   })
+  setStylesForSelector(root, ".risk-level-header h3 > span", {
+    display: "block",
+    "line-height": "1",
+    transform: "translateY(-1px)",
+  })
   setStylesForSelector(root, ".risk-level-header .text-xs", {
-    "line-height": "16px",
+    "align-items": "center",
+    display: "inline-flex",
+    height: "16px",
+    "line-height": "1",
     transform: "none",
   })
   setStylesForSelector(root, ".inspection-category-header", {
@@ -243,6 +302,7 @@ function sanitizePdfCloneForHtml2Canvas(root: HTMLElement) {
     "background-color": SAFE_WHITE,
     border: "0",
     display: "flex",
+    "min-height": "44px",
     padding: "0 0 10px",
   })
   setStylesForSelector(root, ".category-title-wrap", {
@@ -250,66 +310,118 @@ function sanitizePdfCloneForHtml2Canvas(root: HTMLElement) {
     display: "flex",
     gap: "8px",
   })
+  setStylesForSelector(root, ".category-eyebrow", {
+    "align-items": "center",
+    color: SAFE_MUTED_COLOR,
+    display: "flex",
+    "font-size": "10px",
+    height: "14px",
+    "line-height": "1",
+    margin: "0",
+  })
+  setStylesForSelector(root, ".category-eyebrow > span", {
+    display: "block",
+    "line-height": "1",
+    transform: "translateY(-1px)",
+  })
+  setStylesForSelector(root, ".inspection-category-header h4", {
+    "align-items": "center",
+    color: SAFE_TEXT_COLOR,
+    display: "flex",
+    "font-size": "14px",
+    height: "20px",
+    "line-height": "1",
+    margin: "0",
+    overflow: "visible",
+    "text-overflow": "clip",
+    "white-space": "normal",
+  })
+  setStylesForSelector(root, ".inspection-category-header h4 > span", {
+    display: "block",
+    "line-height": "1",
+    transform: "translateY(-1px)",
+  })
   setStylesForSelector(root, ".inspection-item-card__header", {
     "align-items": "center",
     "background-color": SAFE_WHITE,
+    "box-sizing": "border-box",
     display: "flex",
     "justify-content": "space-between",
-    padding: "12px 14px",
+    "min-height": "64px",
+    padding: "0 14px",
   })
   setStylesForSelector(root, ".inspection-item-title-wrap", {
     "align-items": "center",
     display: "flex",
     "flex-wrap": "wrap",
     gap: "8px",
+    "min-height": "32px",
   })
   setStylesForSelector(root, ".inspection-item-risk-chip", {
     "align-items": "center",
+    "box-sizing": "border-box",
     display: "inline-flex",
     "font-size": "11px",
     "font-weight": "650",
-    height: "24px",
-    "line-height": "24px",
-    "min-height": "24px",
-    padding: "0 8px",
+    height: "28px",
+    "line-height": "1",
+    "min-height": "28px",
+    padding: "0 9px",
     "vertical-align": "middle",
     "white-space": "nowrap",
   })
   setStylesForSelector(root, ".inspection-item-risk-chip__text", {
     display: "block",
-    "line-height": "24px",
-    transform: "none",
+    "line-height": "1",
+    transform: "translateY(-3px)",
   })
   setStylesForSelector(root, ".inspection-item-title-wrap h5", {
-    "line-height": "24px",
+    "align-items": "center",
+    display: "flex",
+    "line-height": "1.15",
+    margin: "0",
+    "min-height": "32px",
     transform: "none",
+  })
+  setStylesForSelector(root, ".inspection-item-title-wrap h5 > span", {
+    display: "block",
+    "line-height": "1.15",
+    transform: "translateY(-3px)",
   })
   setStylesForSelector(root, ".inspection-item-score", {
     "align-items": "center",
     "background-color": SAFE_WHITE,
     border: `1px solid ${SAFE_BORDER_COLOR}`,
+    "box-sizing": "border-box",
     display: "inline-flex",
     gap: "6px",
-    height: "28px",
+    height: "32px",
     "justify-content": "space-between",
-    "min-height": "28px",
+    "min-height": "32px",
     "min-width": "72px",
-    padding: "0 8px",
+    padding: "0 10px",
     "white-space": "nowrap",
   })
   setStylesForSelector(root, ".inspection-item-score span", {
+    "align-items": "center",
     color: SAFE_MUTED_COLOR,
-    display: "block",
+    display: "inline-flex",
     "font-size": "10px",
-    "line-height": "14px",
+    "line-height": "1",
     transform: "none",
   })
   setStylesForSelector(root, ".inspection-item-score strong", {
+    "align-items": "center",
     color: SAFE_TEXT_COLOR,
-    display: "block",
+    display: "inline-flex",
     "font-size": "12px",
-    "line-height": "16px",
+    "line-height": "1",
     transform: "none",
+  })
+  setStylesForSelector(root, ".inspection-item-score span > span, .inspection-item-score strong > span", {
+    display: "block",
+    "line-height": "1",
+    transform: "translateY(-3px)",
   })
   setStylesForSelector(root, ".inspection-item-field-grid", {
     display: "grid",
