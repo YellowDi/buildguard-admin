@@ -1919,8 +1919,8 @@ function escapeHtml(value: string) {
 
     <div class="min-h-0 flex-1 px-3 pb-8 sm:px-4">
       <div class="media-library-layout mx-auto flex min-h-full w-full max-w-4xl gap-8 overflow-visible">
-        <aside class="media-library-sidebar w-[240px] shrink-0 pt-4">
-        <div class="media-library-sidebar-panel sticky top-[11rem] flex max-h-[calc(100svh-12rem)] flex-col overflow-hidden">
+        <aside class="media-library-sidebar w-[240px] shrink-0 pt-2">
+        <div class="media-library-sidebar-panel sticky top-[10.5rem] flex max-h-[calc(100svh-11.5rem)] flex-col overflow-hidden">
           <div class="mb-2 flex shrink-0 items-center justify-between gap-2 px-1">
             <p class="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
               分类
