@@ -284,20 +284,20 @@ function shouldShowItemSuggestion(item: InspectionReportItem) {
 
             <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <div class="report-score-card rounded-lg bg-muted/60 p-4">
-                <p class="text-sm text-muted-foreground">综合分数</p>
-                <p class="mt-3 text-3xl font-semibold tabular-nums text-foreground">{{ report.snapshot.scoreText }}</p>
+                <p class="report-score-card__label text-sm text-muted-foreground">综合分数</p>
+                <p class="report-score-card__value mt-3 text-3xl font-semibold tabular-nums text-foreground">{{ report.snapshot.scoreText }}</p>
               </div>
               <div class="report-score-card rounded-lg bg-muted/60 p-4">
-                <p class="text-sm text-muted-foreground">检测结果</p>
-                <p class="mt-3 text-xl font-semibold text-foreground">{{ report.snapshot.resultLabel }}</p>
+                <p class="report-score-card__label text-sm text-muted-foreground">检测结果</p>
+                <p class="report-score-card__value mt-3 text-xl font-semibold text-foreground">{{ report.snapshot.resultLabel }}</p>
               </div>
               <div class="report-score-card rounded-lg bg-muted/60 p-4">
-                <p class="text-sm text-muted-foreground">完成度</p>
-                <p class="mt-3 text-3xl font-semibold tabular-nums text-foreground">{{ completionText }}</p>
+                <p class="report-score-card__label text-sm text-muted-foreground">完成度</p>
+                <p class="report-score-card__value mt-3 text-3xl font-semibold tabular-nums text-foreground">{{ completionText }}</p>
               </div>
               <div class="report-score-card rounded-lg bg-muted/60 p-4">
-                <p class="text-sm text-muted-foreground">风险问题</p>
-                <p class="mt-3 text-3xl font-semibold tabular-nums text-foreground">{{ report.snapshot.issueItems }}</p>
+                <p class="report-score-card__label text-sm text-muted-foreground">风险问题</p>
+                <p class="report-score-card__value mt-3 text-3xl font-semibold tabular-nums text-foreground">{{ report.snapshot.issueItems }}</p>
               </div>
             </div>
           </template>
@@ -869,24 +869,42 @@ function shouldShowItemSuggestion(item: InspectionReportItem) {
   display: flex !important;
   flex-direction: column !important;
   justify-content: center !important;
-  min-height: 72px !important;
-  padding: 0 14px !important;
+  min-height: 76px !important;
+  padding: 10px 14px 12px !important;
 }
 
-.inspection-report-document--pdf .report-score-card p {
-  line-height: 18px !important;
+.inspection-report-document--pdf .report-score-card__label {
+  color: #615d59 !important;
+  font-size: 12px !important;
+  line-height: 16px !important;
   margin: 0 !important;
-  transform: translateY(-2px) !important;
+  transform: none !important;
 }
 
-.inspection-report-document--pdf .report-score-card p + p {
-  line-height: 1.05 !important;
-  margin-top: 9px !important;
+.inspection-report-document--pdf .report-score-card__value {
+  color: #111827 !important;
+  font-size: 24px !important;
+  font-variant-numeric: tabular-nums !important;
+  font-weight: 700 !important;
+  line-height: 28px !important;
+  margin: 6px 0 0 !important;
+  transform: none !important;
 }
 
 .inspection-report-document--pdf .report-module-section--ai-summary,
 .inspection-report-document--pdf .report-module-section--buildings {
   border-top: 0 !important;
+}
+
+.inspection-report-document--pdf .report-module-section--ai-summary article p,
+.inspection-report-document--pdf .report-module-section--ai-summary article li,
+.inspection-report-document--pdf .report-module-section--ai-summary article li span {
+  color: #615d59 !important;
+  font-weight: 400 !important;
+}
+
+.inspection-report-document--pdf .report-module-section--ai-summary article h3 {
+  color: #111827 !important;
 }
 
 .inspection-report-document--pdf .report-module-section {
@@ -912,10 +930,22 @@ function shouldShowItemSuggestion(item: InspectionReportItem) {
   padding: 12px 14px !important;
 }
 
-.inspection-report-document--pdf .risk-level-eyebrow,
-.inspection-report-document--pdf .risk-level-header h3,
+.inspection-report-document--pdf .risk-level-eyebrow {
+  line-height: 14px !important;
+  transform: none !important;
+}
+
+.inspection-report-document--pdf .risk-level-header h3 {
+  line-height: 24px !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  transform: none !important;
+  white-space: normal !important;
+}
+
 .inspection-report-document--pdf .risk-level-header .text-xs {
-  transform: translateY(-2px) !important;
+  line-height: 16px !important;
+  transform: none !important;
 }
 
 .inspection-report-document--pdf .inspection-category-block {
@@ -1006,7 +1036,7 @@ function shouldShowItemSuggestion(item: InspectionReportItem) {
   font-size: 11px !important;
   font-weight: 650 !important;
   height: 24px !important;
-  line-height: 1 !important;
+  line-height: 24px !important;
   min-height: 24px !important;
   padding: 0 8px !important;
   vertical-align: middle !important;
@@ -1015,8 +1045,13 @@ function shouldShowItemSuggestion(item: InspectionReportItem) {
 
 .inspection-report-document--pdf .inspection-item-risk-chip__text {
   display: block !important;
-  line-height: 1 !important;
-  transform: translateY(-2px) !important;
+  line-height: 24px !important;
+  transform: none !important;
+}
+
+.inspection-report-document--pdf .inspection-item-title-wrap h5 {
+  line-height: 24px !important;
+  transform: none !important;
 }
 
 .inspection-report-document--pdf .inspection-risk-level--danger .inspection-item-risk-chip {
@@ -1079,7 +1114,7 @@ function shouldShowItemSuggestion(item: InspectionReportItem) {
   display: block !important;
   font-size: 10px !important;
   line-height: 14px !important;
-  transform: translateY(-2px) !important;
+  transform: none !important;
 }
 
 .inspection-report-document--pdf .inspection-item-score strong {
@@ -1087,7 +1122,7 @@ function shouldShowItemSuggestion(item: InspectionReportItem) {
   display: block !important;
   font-size: 12px !important;
   line-height: 16px !important;
-  transform: translateY(-2px) !important;
+  transform: none !important;
 }
 
 .inspection-report-document--pdf .inspection-item-card__body {

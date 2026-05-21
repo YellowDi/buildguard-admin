@@ -193,24 +193,50 @@ function sanitizePdfCloneForHtml2Canvas(root: HTMLElement) {
     display: "flex",
     "flex-direction": "column",
     "justify-content": "center",
-    "min-height": "72px",
-    padding: "0 14px",
+    "min-height": "76px",
+    padding: "10px 14px 12px",
   })
-  setStylesForSelector(root, ".report-score-card p", {
-    "line-height": "18px",
+  setStylesForSelector(root, ".report-score-card__label", {
+    color: SAFE_MUTED_COLOR,
+    "font-size": "12px",
+    "line-height": "16px",
     margin: "0",
-    transform: "translateY(-2px)",
+    transform: "none",
   })
-  setStylesForSelector(root, ".report-score-card p + p", {
-    "line-height": "1.05",
-    "margin-top": "9px",
+  setStylesForSelector(root, ".report-score-card__value", {
+    color: SAFE_TEXT_COLOR,
+    "font-size": "24px",
+    "font-variant-numeric": "tabular-nums",
+    "font-weight": "700",
+    "line-height": "28px",
+    margin: "6px 0 0",
+    transform: "none",
+  })
+  setStylesForSelector(root, ".report-module-section--ai-summary article p, .report-module-section--ai-summary article li, .report-module-section--ai-summary article li span", {
+    color: SAFE_MUTED_COLOR,
+    "font-weight": "400",
+  })
+  setStylesForSelector(root, ".report-module-section--ai-summary article h3", {
+    color: SAFE_TEXT_COLOR,
   })
   setStylesForSelector(root, ".risk-level-header", {
     "align-items": "center",
     display: "flex",
   })
-  setStylesForSelector(root, ".risk-level-eyebrow, .risk-level-header h3, .risk-level-header .text-xs", {
-    transform: "translateY(-2px)",
+  setStylesForSelector(root, ".risk-level-eyebrow", {
+    "line-height": "14px",
+    transform: "none",
+  })
+  setStylesForSelector(root, ".risk-level-header h3", {
+    "line-height": "24px",
+    overflow: "visible",
+    "text-overflow": "clip",
+    transform: "none",
+    "white-space": "normal",
+  })
+  setStylesForSelector(root, ".risk-level-header .text-xs", {
+    "line-height": "16px",
+    transform: "none",
   })
   setStylesForSelector(root, ".inspection-category-header", {
     "align-items": "center",
@@ -243,7 +269,7 @@ function sanitizePdfCloneForHtml2Canvas(root: HTMLElement) {
     "font-size": "11px",
     "font-weight": "650",
     height: "24px",
-    "line-height": "1",
+    "line-height": "24px",
     "min-height": "24px",
     padding: "0 8px",
     "vertical-align": "middle",
@@ -251,8 +277,12 @@ function sanitizePdfCloneForHtml2Canvas(root: HTMLElement) {
   })
   setStylesForSelector(root, ".inspection-item-risk-chip__text", {
     display: "block",
-    "line-height": "1",
-    transform: "translateY(-2px)",
+    "line-height": "24px",
+    transform: "none",
+  })
+  setStylesForSelector(root, ".inspection-item-title-wrap h5", {
+    "line-height": "24px",
+    transform: "none",
   })
   setStylesForSelector(root, ".inspection-item-score", {
     "align-items": "center",
@@ -272,14 +302,14 @@ function sanitizePdfCloneForHtml2Canvas(root: HTMLElement) {
     display: "block",
     "font-size": "10px",
     "line-height": "14px",
-    transform: "translateY(-2px)",
+    transform: "none",
   })
   setStylesForSelector(root, ".inspection-item-score strong", {
     color: SAFE_TEXT_COLOR,
     display: "block",
     "font-size": "12px",
     "line-height": "16px",
-    transform: "translateY(-2px)",
+    transform: "none",
   })
   setStylesForSelector(root, ".inspection-item-field-grid", {
     display: "grid",
