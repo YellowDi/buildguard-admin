@@ -24,6 +24,14 @@ export default defineConfig({
             return "vendor-amap"
           }
 
+          if (id.includes("html2canvas")) {
+            return "vendor-html2canvas"
+          }
+
+          if (id.includes("jspdf")) {
+            return "vendor-jspdf"
+          }
+
           if (id.includes("reka-ui") || id.includes("@vueuse")) {
             return "vendor-ui"
           }
