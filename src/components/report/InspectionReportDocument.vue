@@ -159,6 +159,14 @@ function moduleIs(module: ReportTemplateModule, key: ReportTemplateModule["key"]
   return module.key === key
 }
 
+function getReportModuleClass(module: ReportTemplateModule) {
+  return {
+    "report-items-module-section": moduleIs(module, "buildings"),
+    "report-module-section--ai-summary": moduleIs(module, "aiSummary"),
+    "report-module-section--buildings": moduleIs(module, "buildings"),
+  }
+}
+
 function displayItemValue(value: unknown, fallback = "-") {
   if (typeof value === "string") {
     return value.trim() || fallback
@@ -227,7 +235,7 @@ function shouldShowItemSuggestion(item: InspectionReportItem) {
           v-for="module in reportBodyModules"
           :key="module.key"
           class="report-module-section px-5 py-7 sm:px-8"
-          :class="{ 'report-items-module-section': moduleIs(module, 'buildings') }"
+          :class="getReportModuleClass(module)"
         >
           <template v-if="moduleIs(module, 'summary')">
             <div class="mb-5 flex items-start justify-between gap-4">
@@ -839,6 +847,11 @@ function shouldShowItemSuggestion(item: InspectionReportItem) {
   padding: 14px !important;
 }
 
+.inspection-report-document--pdf .report-module-section--ai-summary,
+.inspection-report-document--pdf .report-module-section--buildings {
+  border-top: 0 !important;
+}
+
 .inspection-report-document--pdf .report-module-section {
   break-inside: avoid;
   page-break-inside: avoid;
@@ -868,8 +881,42 @@ function shouldShowItemSuggestion(item: InspectionReportItem) {
 }
 
 .inspection-report-document--pdf .inspection-category-header {
+  align-items: center !important;
   background: transparent !important;
+  border: 0 !important;
+  display: flex !important;
+  gap: 10px !important;
   padding: 0 0 10px !important;
+}
+
+.inspection-report-document--pdf .category-title-wrap {
+  align-items: center !important;
+  display: flex !important;
+  gap: 8px !important;
+}
+
+.inspection-report-document--pdf .category-accent {
+  background: #2563eb !important;
+  border: 0 !important;
+  border-radius: 999px !important;
+  box-shadow: none !important;
+  height: 16px !important;
+  width: 4px !important;
+}
+
+.inspection-report-document--pdf .category-eyebrow {
+  color: rgb(0 0 0 / 0.52) !important;
+  font-size: 10px !important;
+  line-height: 14px !important;
+}
+
+.inspection-report-document--pdf .inspection-category-header h4 {
+  color: #111827 !important;
+  font-size: 14px !important;
+  line-height: 20px !important;
+  overflow: visible !important;
+  text-overflow: clip !important;
+  white-space: normal !important;
 }
 
 .inspection-report-document--pdf .inspection-category-items {
@@ -881,28 +928,155 @@ function shouldShowItemSuggestion(item: InspectionReportItem) {
   background: #ffffff !important;
   border: 1px solid rgb(0 0 0 / 0.12) !important;
   border-left: 3px solid rgb(0 0 0 / 0.2) !important;
-  border-radius: 0 !important;
+  border-radius: 6px !important;
   box-shadow: none !important;
+  overflow: hidden !important;
 }
 
 .inspection-report-document--pdf .inspection-report-item + .inspection-report-item {
   margin-top: 14px !important;
 }
 
-.inspection-report-document--pdf .inspection-item-card__header,
-.inspection-report-document--pdf .inspection-item-field,
-.inspection-report-document--pdf .inspection-item-ai {
-  background: #f6f5f4 !important;
+.inspection-report-document--pdf .inspection-item-card__header {
+  align-items: flex-start !important;
+  background: #ffffff !important;
+  border-bottom: 1px solid rgb(0 0 0 / 0.1) !important;
+  display: flex !important;
+  gap: 10px !important;
+  justify-content: space-between !important;
+  padding: 12px 14px !important;
+}
+
+.inspection-report-document--pdf .inspection-item-title-wrap {
+  align-items: center !important;
+  display: flex !important;
+  flex-wrap: wrap !important;
+  gap: 8px !important;
+}
+
+.inspection-report-document--pdf .inspection-item-risk-chip {
+  align-items: center !important;
+  border-radius: 4px !important;
+  display: inline-flex !important;
+  font-size: 11px !important;
+  font-weight: 650 !important;
+  gap: 4px !important;
+  line-height: 16px !important;
+  padding: 3px 8px !important;
+  white-space: nowrap !important;
+}
+
+.inspection-report-document--pdf .inspection-risk-level--danger .risk-level-icon,
+.inspection-report-document--pdf .inspection-risk-level--danger .inspection-item-risk-chip {
+  background: rgb(220 38 38 / 0.12) !important;
+  border-color: rgb(220 38 38 / 0.2) !important;
+  color: #dc2626 !important;
+}
+
+.inspection-report-document--pdf .inspection-risk-level--warning .risk-level-icon,
+.inspection-report-document--pdf .inspection-risk-level--warning .inspection-item-risk-chip {
+  background: rgb(217 119 6 / 0.12) !important;
+  border-color: rgb(217 119 6 / 0.2) !important;
+  color: #d97706 !important;
+}
+
+.inspection-report-document--pdf .inspection-risk-level--success .risk-level-icon,
+.inspection-report-document--pdf .inspection-risk-level--success .inspection-item-risk-chip {
+  background: rgb(22 163 74 / 0.12) !important;
+  border-color: rgb(22 163 74 / 0.2) !important;
+  color: #16a34a !important;
+}
+
+.inspection-report-document--pdf .inspection-risk-level--neutral .risk-level-icon,
+.inspection-report-document--pdf .inspection-risk-level--neutral .inspection-item-risk-chip {
+  background: rgb(100 116 139 / 0.12) !important;
+  border-color: rgb(100 116 139 / 0.2) !important;
+  color: #64748b !important;
+}
+
+.inspection-report-document--pdf .inspection-risk-level--danger .inspection-report-item {
+  border-left-color: #dc2626 !important;
+}
+
+.inspection-report-document--pdf .inspection-risk-level--warning .inspection-report-item {
+  border-left-color: #d97706 !important;
+}
+
+.inspection-report-document--pdf .inspection-risk-level--success .inspection-report-item {
+  border-left-color: #16a34a !important;
+}
+
+.inspection-report-document--pdf .inspection-risk-level--neutral .inspection-report-item {
+  border-left-color: #64748b !important;
+}
+
+.inspection-report-document--pdf .inspection-item-score {
+  align-items: baseline !important;
+  background: #ffffff !important;
   border: 1px solid rgb(0 0 0 / 0.1) !important;
+  border-radius: 4px !important;
+  display: inline-flex !important;
+  gap: 6px !important;
+  justify-content: space-between !important;
+  min-width: 72px !important;
+  padding: 4px 8px !important;
+  white-space: nowrap !important;
+}
+
+.inspection-report-document--pdf .inspection-item-score span {
+  color: rgb(0 0 0 / 0.52) !important;
+  font-size: 10px !important;
+  line-height: 14px !important;
+}
+
+.inspection-report-document--pdf .inspection-item-score strong {
+  color: #111827 !important;
+  font-size: 12px !important;
+  line-height: 16px !important;
+}
+
+.inspection-report-document--pdf .inspection-item-card__body {
+  gap: 10px !important;
+  padding: 12px 14px !important;
 }
 
 .inspection-report-document--pdf .inspection-item-field-grid {
-  grid-template-columns: minmax(0, 1fr) !important;
+  display: grid !important;
+  gap: 10px !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+}
+
+.inspection-report-document--pdf .inspection-item-field {
+  background: #fbfaf8 !important;
+  border: 1px solid rgb(0 0 0 / 0.1) !important;
+  border-radius: 5px !important;
+  min-width: 0 !important;
+  padding: 10px 12px !important;
+}
+
+.inspection-report-document--pdf .inspection-item-field span {
+  color: rgb(0 0 0 / 0.52) !important;
+  display: block !important;
+  font-size: 10px !important;
+  line-height: 14px !important;
+  margin-bottom: 4px !important;
+}
+
+.inspection-report-document--pdf .inspection-item-ai {
+  background: #f2f9ff !important;
+  border: 1px solid rgb(0 117 222 / 0.18) !important;
+  border-left: 3px solid #0075de !important;
+  border-radius: 6px !important;
+  gap: 10px !important;
+  padding: 10px 12px !important;
 }
 
 .inspection-report-document--pdf .report-item-content,
 .inspection-report-document--pdf .inspection-item-ai__content {
-  color: rgb(0 0 0 / 0.7) !important;
+  color: #374151 !important;
+  font-size: 12px !important;
+  line-height: 1.55 !important;
+  margin: 0 !important;
 }
 
 .inspection-report-document--pdf .text-link,

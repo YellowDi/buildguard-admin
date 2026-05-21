@@ -36,7 +36,7 @@ export type ReportTemplateConfig = {
 export type InspectionReportCreateInput = {
   title: string
   reportDate: string
-  accessPassword: string
+  accessPassword?: string
   remark: string
   workOrder: WorkOrderDetailResult
   building: WorkOrderBuildInfo
@@ -46,7 +46,6 @@ export type InspectionReportCreateInput = {
 export type InspectionReportGnCreateInput = {
   title: string
   reportDate: string
-  accessPassword: string
   buildUuid?: string
   persist?: boolean
   report: WorkOrderGnReportResult
@@ -112,7 +111,7 @@ export type InspectionReportRiskItem = InspectionReportItem & {
 export type InspectionReportRecord = {
   id: string
   createdAt: string
-  accessPassword: string
+  accessPassword?: string
   buildUuid?: string
   fileUrl?: string
   template: ReportTemplateConfig
@@ -240,7 +239,7 @@ export function createInspectionReportMock(input: InspectionReportCreateInput): 
   const record: InspectionReportRecord = {
     id: createReportId(),
     createdAt: formatDateTime(new Date()),
-    accessPassword: input.accessPassword,
+    ...(input.accessPassword ? { accessPassword: input.accessPassword } : {}),
     buildUuid: toText(input.building.BuildUuid, ""),
     workOrderUuid: toText(input.workOrder.Uuid, ""),
     template,
@@ -259,7 +258,6 @@ export function createInspectionReportFromGnReport(input: InspectionReportGnCrea
   const record: InspectionReportRecord = {
     id: createReportId(),
     createdAt: formatDateTime(new Date()),
-    accessPassword: input.accessPassword,
     buildUuid: toText(input.buildUuid, toText(input.report.BuildUuid, "")),
     template,
     version: typeof input.version === "number" && Number.isFinite(input.version) ? input.version : undefined,
@@ -336,11 +334,6 @@ export function updateInspectionReportFileUrl(reportId: string, fileUrl: string)
   writeStoredValue(REPORT_STORAGE_KEY, records)
 
   return updatedRecord
-}
-
-export function verifyInspectionReportPassword(reportId: string, password: string) {
-  const record = getInspectionReportMock(reportId)
-  return Boolean(record && record.accessPassword === password.trim())
 }
 
 export function buildInspectionReportUrl(reportId: string) {
@@ -958,7 +951,6 @@ function isInspectionReportRecord(value: unknown): value is InspectionReportReco
     value
     && typeof value === "object"
     && typeof (value as InspectionReportRecord).id === "string"
-    && typeof (value as InspectionReportRecord).accessPassword === "string"
     && typeof (value as InspectionReportRecord).snapshot === "object",
   )
 }

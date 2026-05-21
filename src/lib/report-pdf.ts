@@ -13,6 +13,10 @@ const SAFE_SURFACE_COLOR = "#f6f5f4"
 const SAFE_WHITE = "#ffffff"
 const PDF_PAGE_BREAK_SAFE_GAP_PX = 8
 const PDF_PAGE_TOP_TOLERANCE_PX = 2
+const PDF_FORCE_NEW_PAGE_SELECTORS = [
+  ".report-module-section--ai-summary",
+  ".report-module-section--buildings",
+]
 
 export type GenerateReportPdfOptions = {
   fileName?: string
@@ -169,6 +173,74 @@ function sanitizePdfCloneForHtml2Canvas(root: HTMLElement) {
     "background-color": "#2563eb",
     "border-color": "#2563eb",
   })
+  setStylesForSelector(root, ".inspection-category-header", {
+    "align-items": "center",
+    "background-color": SAFE_WHITE,
+    border: "0",
+    display: "flex",
+    padding: "0 0 10px",
+  })
+  setStylesForSelector(root, ".category-title-wrap", {
+    "align-items": "center",
+    display: "flex",
+    gap: "8px",
+  })
+  setStylesForSelector(root, ".inspection-item-card__header", {
+    "align-items": "flex-start",
+    "background-color": SAFE_WHITE,
+    display: "flex",
+    "justify-content": "space-between",
+    padding: "12px 14px",
+  })
+  setStylesForSelector(root, ".inspection-item-title-wrap", {
+    "align-items": "center",
+    display: "flex",
+    "flex-wrap": "wrap",
+    gap: "8px",
+  })
+  setStylesForSelector(root, ".inspection-item-risk-chip", {
+    "align-items": "center",
+    display: "inline-flex",
+    "font-size": "11px",
+    "font-weight": "650",
+    "line-height": "16px",
+    padding: "3px 8px",
+    "white-space": "nowrap",
+  })
+  setStylesForSelector(root, ".inspection-item-score", {
+    "align-items": "baseline",
+    "background-color": SAFE_WHITE,
+    border: `1px solid ${SAFE_BORDER_COLOR}`,
+    display: "inline-flex",
+    gap: "6px",
+    "justify-content": "space-between",
+    "min-width": "72px",
+    padding: "4px 8px",
+    "white-space": "nowrap",
+  })
+  setStylesForSelector(root, ".inspection-item-field-grid", {
+    display: "grid",
+    gap: "10px",
+    "grid-template-columns": "repeat(2, minmax(0, 1fr))",
+  })
+  setStylesForSelector(root, ".inspection-item-field", {
+    "background-color": "#fbfaf8",
+    border: `1px solid ${SAFE_BORDER_COLOR}`,
+    padding: "10px 12px",
+  })
+  setStylesForSelector(root, ".inspection-item-field span", {
+    color: SAFE_MUTED_COLOR,
+    display: "block",
+    "font-size": "10px",
+    "line-height": "14px",
+    "margin-bottom": "4px",
+  })
+  setStylesForSelector(root, ".report-item-content, .inspection-item-ai__content", {
+    color: "#374151",
+    "font-size": "12px",
+    "line-height": "1.55",
+    margin: "0",
+  })
 
   applyRiskTone(root, ".inspection-risk-level--danger", "#dc2626", "rgba(220, 38, 38, 0.12)", "rgba(220, 38, 38, 0.2)")
   applyRiskTone(root, ".inspection-risk-level--warning", "#d97706", "rgba(217, 119, 6, 0.12)", "rgba(217, 119, 6, 0.2)")
@@ -182,6 +254,8 @@ function insertPdfPageSpacers(root: HTMLElement) {
   if (pageHeight <= 0) {
     return
   }
+
+  forcePdfModulePageBreaks(root, pageHeight)
 
   const anchors = getPdfPaginationAnchors(root)
 
@@ -243,8 +317,33 @@ function getPdfPaginationAnchors(root: HTMLElement) {
   })
 }
 
+function forcePdfModulePageBreaks(root: HTMLElement, pageHeight: number) {
+  root
+    .querySelectorAll<HTMLElement>(PDF_FORCE_NEW_PAGE_SELECTORS.join(","))
+    .forEach((element) => {
+      moveElementToNextPage(root, element, pageHeight)
+    })
+}
+
 function compactElements(elements: Array<HTMLElement | null | undefined>) {
   return elements.filter((element): element is HTMLElement => Boolean(element))
+}
+
+function moveElementToNextPage(root: HTMLElement, element: HTMLElement, pageHeight: number) {
+  if (!element.parentElement) {
+    return
+  }
+
+  const rootTop = root.getBoundingClientRect().top
+  const blockTop = getElementTop(element, rootTop)
+  const currentPageTop = Math.floor((blockTop + PDF_PAGE_TOP_TOLERANCE_PX) / pageHeight) * pageHeight
+  const distanceFromPageTop = blockTop - currentPageTop
+
+  if (distanceFromPageTop <= PDF_PAGE_TOP_TOLERANCE_PX) {
+    return
+  }
+
+  insertSpacerBefore(element, Math.ceil(currentPageTop + pageHeight - blockTop) + 1)
 }
 
 function moveBlockToNextPageIfNeeded(
@@ -293,6 +392,7 @@ function getElementBottom(element: HTMLElement, rootTop: number) {
 function insertSpacerBefore(element: HTMLElement, height: number) {
   const spacer = element.ownerDocument.createElement("div")
 
+  element.style.setProperty("margin-top", "0", "important")
   spacer.setAttribute("data-pdf-page-spacer", "true")
   spacer.style.setProperty("background", SAFE_WHITE, "important")
   spacer.style.setProperty("border", "0", "important")

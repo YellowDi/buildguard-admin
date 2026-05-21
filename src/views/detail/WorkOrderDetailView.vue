@@ -28,7 +28,6 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
@@ -38,7 +37,6 @@ import { fetchCustomerDetail, type CustomerDetailResult } from "@/lib/customers-
 import {
   buildInspectionReportUrl,
   createInspectionReportFromGnReport,
-  createReportQrPlaceholderDataUrl,
   getLatestInspectionReportRecord,
   saveInspectionReportRecord,
   type InspectionReportRecord,
@@ -149,10 +147,6 @@ const pdfRenderReport = ref<InspectionReportRecord | null>(null)
 const reportPdfElement = ref<HTMLElement | null>(null)
 const reportBuilding = ref<WorkOrderBuildInfo | null>(null)
 const reportForm = ref({
-  title: "",
-  reportDate: "",
-  accessPassword: "",
-  version: "1",
   remark: "",
 })
 
@@ -340,8 +334,6 @@ const assignPermissionCode = computed(() => props.kind === "repair"
 const selectedReportBuildingName = computed(() => toText(reportBuilding.value?.BuildName, "当前建筑"))
 const canSubmitReport = computed(() => (
   !reportSubmitting.value
-  && /^\d{4}$/.test(reportForm.value.accessPassword)
-  && parseReportVersion() !== null
 ))
 const reportSubmitButtonText = computed(() => {
   if (reportSubmitting.value) {
@@ -1150,10 +1142,6 @@ function openReportDialog(buildingKey: string) {
   }
 
   reportForm.value = {
-    title: `${toText(currentBuilding.BuildName, "当前建筑")}检测报告`,
-    reportDate: getTodayDate(),
-    accessPassword: "",
-    version: "1",
     remark: toText(currentWorkOrder.Remark, ""),
   }
   reportBuilding.value = currentBuilding
@@ -1199,20 +1187,6 @@ function closeReportDialog() {
   reportDialogOpen.value = false
 }
 
-function updateReportPassword(value: string | number) {
-  reportForm.value.accessPassword = String(value).replace(/\D/g, "").slice(0, 4)
-}
-
-function updateReportVersion(value: string | number) {
-  reportForm.value.version = String(value).replace(/\D/g, "").slice(0, 6)
-}
-
-function parseReportVersion() {
-  const version = Number(reportForm.value.version)
-
-  return Number.isInteger(version) && version > 0 ? version : null
-}
-
 async function submitReportGeneration() {
   const currentWorkOrder = resolvedInspectionWorkOrder.value
   const currentBuilding = reportBuilding.value
@@ -1229,7 +1203,6 @@ async function submitReportGeneration() {
 
   const buildUuid = toText(currentBuilding.BuildUuid, "")
   const targetWorkOrderUuid = toText(currentWorkOrder.Uuid, workOrderUuid.value)
-  const version = parseReportVersion()
 
   if (!buildUuid) {
     toast.error("当前建筑缺少 Uuid，无法生成报告")
@@ -1242,7 +1215,7 @@ async function submitReportGeneration() {
   }
 
   if (!canSubmitReport.value) {
-    toast.error("请填写 4 位数字密码和有效版本号")
+    toast.error("报告正在生成中，请稍后")
     return
   }
 
@@ -1252,21 +1225,17 @@ async function submitReportGeneration() {
   let failedStage: ReportGenerationStage = "生成报告"
 
   try {
-    if (version === null) {
-      toast.error("报告版本号必须是正整数")
-      return
-    }
-
+    const requestVersion = resolveReportRequestVersion(generatedReport.value)
     const reportResult = await generateWorkOrderGnReport({
       BuildUuid: buildUuid,
       WorkOrderUuid: targetWorkOrderUuid,
       Expert: reportForm.value.remark,
-      Version: version,
+      Version: requestVersion,
     })
+    const version = resolveGeneratedReportVersion(reportResult, requestVersion)
     const record = createInspectionReportFromGnReport({
       title: `${toText(reportResult.BuildName, toText(currentBuilding.BuildName, "当前建筑"))}检测报告`,
       reportDate: getTodayDate(),
-      accessPassword: reportForm.value.accessPassword,
       buildUuid,
       persist: false,
       report: {
@@ -1401,24 +1370,29 @@ function openGeneratedReportPdf() {
   window.open(generatedReportPdfUrl.value, "_blank", "noopener,noreferrer")
 }
 
-function downloadGeneratedReportQr() {
-  if (!generatedReportUrl.value) {
-    return
+function resolveGeneratedReportVersion(
+  report: { Version?: unknown },
+  requestVersion: number,
+) {
+  const apiVersion = toPositiveInteger(report.Version)
+
+  if (apiVersion !== null) {
+    return apiVersion
   }
 
-  const dataUrl = createReportQrPlaceholderDataUrl(generatedReportUrl.value, "报告访问占位二维码")
+  return requestVersion
+}
 
-  if (!dataUrl) {
-    toast.error("二维码生成失败")
-    return
-  }
+function resolveReportRequestVersion(previousReport: InspectionReportRecord | null) {
+  const previousVersion = toPositiveInteger(previousReport?.version)
 
-  const link = document.createElement("a")
-  link.href = dataUrl
-  link.download = `${generatedReport.value?.id ?? "inspection-report"}-qr-placeholder.png`
-  document.body.appendChild(link)
-  link.click()
-  link.remove()
+  return previousVersion ?? 1
+}
+
+function toPositiveInteger(value: unknown) {
+  const numberValue = toNumber(value)
+
+  return numberValue !== null && Number.isInteger(numberValue) && numberValue > 0 ? numberValue : null
 }
 
 function createReportPdfFileName(report: InspectionReportRecord, version: number) {
@@ -1726,41 +1700,13 @@ async function submitAssign() {
       <DialogHeader class="px-4 pt-4 pb-0">
         <DialogTitle>生成检测报告</DialogTitle>
         <DialogDescription>
-          为「{{ selectedReportBuildingName }}」填写版本号、访问密码和专家建议，生成在线报告并自动上传 PDF 文件。
+          为「{{ selectedReportBuildingName }}」填写专家建议，生成在线报告并自动上传 PDF 文件。
         </DialogDescription>
       </DialogHeader>
 
       <div class="space-y-4 px-4 pt-4 pb-0">
-        <div class="grid gap-4 sm:grid-cols-2">
+        <div class="grid gap-4">
           <label class="space-y-1.5">
-            <span class="text-sm font-medium text-foreground">版本号</span>
-            <Input
-              :model-value="reportForm.version"
-              type="text"
-              inputmode="numeric"
-              autocomplete="off"
-              placeholder="请输入版本号"
-              :disabled="reportSubmitting"
-              @update:model-value="updateReportVersion"
-            />
-          </label>
-
-          <label class="space-y-1.5">
-            <span class="text-sm font-medium text-foreground">访问密码</span>
-            <Input
-              :model-value="reportForm.accessPassword"
-              type="text"
-              inputmode="numeric"
-              autocomplete="off"
-              maxlength="4"
-              placeholder="4 位数字"
-              :disabled="reportSubmitting"
-              class="tracking-[0.24em]"
-              @update:model-value="updateReportPassword"
-            />
-          </label>
-
-          <label class="space-y-1.5 sm:col-span-2">
             <span class="text-sm font-medium text-foreground">专家建议</span>
             <Textarea
               v-model="reportForm.remark"

@@ -184,6 +184,7 @@ export type WorkOrderGnReportResult = {
   RiskNum?: number
   Score?: number
   ServiceName?: string
+  Version?: number
   [property: string]: unknown
 }
 
@@ -494,7 +495,7 @@ export async function fetchWorkOrderInspectionHistoryDetail(
 export async function generateWorkOrderGnReport(
   payload: GenerateWorkOrderGnReportPayload,
 ): Promise<WorkOrderGnReportResult> {
-  const normalizedPayload = {
+  const normalizedPayload: GenerateWorkOrderGnReportPayload = {
     BuildUuid: getRequiredString(payload.BuildUuid, "BuildUuid"),
     Expert: getOptionalString(payload.Expert) ?? "",
     Version: getRequiredPositiveInteger(payload.Version, "Version"),
@@ -862,6 +863,7 @@ function normalizeWorkOrderGnReportResult(value: unknown): WorkOrderGnReportResu
     RiskNum: getFirstNumber(record, ["RiskNum", "riskNum", "RiskNumber", "riskNumber"]),
     Score: getFirstNumber(record, ["Score", "score", "TotalScore", "totalScore"]),
     ServiceName: getFirstText(record, ["ServiceName", "serviceName", "PackageName", "packageName"]),
+    Version: getFirstNumber(record, ["Version", "version", "ReportVersion", "reportVersion"]),
   }
 }
 
@@ -1187,6 +1189,8 @@ function hasDirectWorkOrderGnReportFields(record: Record<string, unknown>) {
     "riskNum",
     "ServiceName",
     "serviceName",
+    "Version",
+    "version",
   ].some(key => key in record)
 }
 
