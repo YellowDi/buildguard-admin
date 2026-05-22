@@ -166,7 +166,7 @@
   --chart-grid: rgb(255 255 255 / 0.14);
   --chart-axis: #6b6763;
   --chart-point: #a8a5a0;
-  --sidebar-background: #202020;
+  --sidebar-background: var(--color-taupe-950);
   --sidebar-foreground: #d4d3d1;
   --sidebar-primary: #202020;
   --sidebar-primary-foreground: #f7f7f7;
@@ -218,28 +218,28 @@
 }
 
 :root[data-sidebar-color="mauve"] {
-  --sidebar-background: var(--color-mauve-50);
+  --sidebar-background: var(--color-mauve-100);
   --dashboard-card-background: var(--color-mauve-50);
   --dashboard-card-shell-hover-background: var(--color-mauve-50);
   --dashboard-card-hover-background: var(--card);
 }
 
 :root[data-sidebar-color="olive"] {
-  --sidebar-background: var(--color-olive-50);
+  --sidebar-background: var(--color-olive-100);
   --dashboard-card-background: var(--color-olive-50);
   --dashboard-card-shell-hover-background: var(--color-olive-50);
   --dashboard-card-hover-background: var(--card);
 }
 
 :root[data-sidebar-color="mist"] {
-  --sidebar-background: var(--color-mist-50);
+  --sidebar-background: var(--color-mist-100);
   --dashboard-card-background: var(--color-mist-50);
   --dashboard-card-shell-hover-background: var(--color-mist-50);
   --dashboard-card-hover-background: var(--card);
 }
 
 :root[data-sidebar-color="taupe"] {
-  --sidebar-background: var(--color-taupe-50);
+  --sidebar-background: var(--color-taupe-100);
   --dashboard-card-background: var(--color-taupe-50);
   --dashboard-card-shell-hover-background: var(--color-taupe-50);
   --dashboard-card-hover-background: var(--card);
