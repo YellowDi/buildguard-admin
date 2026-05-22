@@ -275,6 +275,8 @@ const dashboardTrendShellClass = `group flex min-w-0 w-full flex-col gap-2 round
 const dashboardTrendCardClass = `flex min-w-0 w-full flex-col gap-0 overflow-hidden border-border/60 ${dashboardCardBackgroundClass} py-0 shadow-none transition-[background-color,border-color,box-shadow] group-hover:border-transparent ${dashboardGroupHoverCardBackgroundClass} group-hover:shadow-(--shadow-card)`
 const dashboardTrendContentClass = "flex min-w-0 flex-col p-2 sm:p-4"
 const dashboardSummaryCardClass = `rounded-lg border border-border/60 ${dashboardCardBackgroundClass} px-3 py-2 transition-colors ${dashboardCardHoverBackgroundClass}`
+const buildingRankingPanelClass = "h-[520px] overflow-hidden"
+const buildingRankingRowClass = "h-[52px]"
 const buildingRiskTabs = [
   { id: "high-risk", label: "高危" },
   { id: "rectification", label: "整改" },
@@ -1111,8 +1113,8 @@ function hashText(value: string) {
         <div>
           <Card :class="`${chartCardClass} w-full`">
             <CardContent class="flex flex-col p-0">
-              <div class="flex flex-col">
-                <div v-if="buildingRankingError" class="flex min-h-[220px] flex-col items-center justify-center gap-3 text-center">
+              <div :class="`flex flex-col ${buildingRankingPanelClass}`">
+                <div v-if="buildingRankingError" class="flex h-full flex-col items-center justify-center gap-3 text-center">
                   <div class="text-sm text-destructive">
                     {{ buildingRankingError }}
                   </div>
@@ -1122,11 +1124,11 @@ function hashText(value: string) {
                   </Button>
                 </div>
 
-                <div v-else-if="buildingRankingLoading" class="flex min-h-[220px] flex-col gap-0 p-0">
+                <div v-else-if="buildingRankingLoading" class="flex h-full flex-col gap-0 p-0">
                   <div
-                    v-for="rank in 5"
+                    v-for="rank in 10"
                     :key="`building-rank-skeleton-${rank}`"
-                    class="flex w-full items-center gap-2.5 border-b border-dashed border-border/70 py-2 pl-1 pr-3 last:border-b-0"
+                    :class="`${buildingRankingRowClass} flex w-full items-center gap-2.5 border-b border-dashed border-border/70 pl-1 pr-3 last:border-b-0`"
                   >
                     <Skeleton class="size-6 shrink-0 rounded-full" />
                     <div class="min-w-0 flex-1 space-y-1.5">
@@ -1143,12 +1145,12 @@ function hashText(value: string) {
                   </div>
                 </div>
 
-                <div v-else-if="activeBuildingList.length">
+                <div v-else-if="activeBuildingList.length" class="h-full">
                   <button
                     v-for="(building, index) in activeBuildingList"
                     :key="building.id"
                     type="button"
-                    class="dashboard-card-hover-surface group flex w-full items-center gap-2.5 border-b border-dashed border-border/70 pl-1 pr-3 py-2 text-left transition-[background-color,border-color] duration-150 last:border-b-0"
+                    :class="`${buildingRankingRowClass} dashboard-card-hover-surface group flex w-full items-center gap-2.5 border-b border-dashed border-border/70 pl-1 pr-3 text-left transition-[background-color,border-color] duration-150 last:border-b-0`"
                     @click="goToBuildingDetail(building)"
                   >
                     <div class="dashboard-card-surface flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold text-foreground transition-colors">
@@ -1182,7 +1184,7 @@ function hashText(value: string) {
                   </button>
                 </div>
 
-                <div v-else class="flex min-h-[220px] items-center justify-center text-sm text-muted-foreground">
+                <div v-else class="flex h-full items-center justify-center text-sm text-muted-foreground">
                   当前暂无可展示的建筑
                 </div>
               </div>
