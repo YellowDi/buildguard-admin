@@ -2,7 +2,7 @@ import { computed, watch } from "vue"
 import { usePreferredDark, useStorage } from "@vueuse/core"
 
 export type ThemeMode = "system" | "light" | "dark"
-export type SidebarColor = "default" | "mauve" | "olive" | "mist" | "taupe"
+export type SidebarColor = "mauve" | "olive" | "mist" | "taupe"
 
 export const THEME_OPTIONS: Array<{ value: ThemeMode, label: string, icon: string }> = [
   { value: "system", label: "系统", icon: "ri-computer-line" },
@@ -11,7 +11,6 @@ export const THEME_OPTIONS: Array<{ value: ThemeMode, label: string, icon: strin
 ]
 
 export const SIDEBAR_COLOR_OPTIONS: Array<{ value: SidebarColor, label: string }> = [
-  { value: "default", label: "默认" },
   { value: "mauve", label: "Mauve" },
   { value: "olive", label: "Olive" },
   { value: "mist", label: "Mist" },
@@ -23,8 +22,7 @@ const LEGACY_THEME_STORAGE_KEY = "app-dark-mode"
 const SIDEBAR_COLOR_STORAGE_KEY = "app-sidebar-color"
 
 function isSidebarColor(value: string | null): value is SidebarColor {
-  return value === "default"
-    || value === "mauve"
+  return value === "mauve"
     || value === "olive"
     || value === "mist"
     || value === "taupe"
@@ -55,10 +53,10 @@ function resolveInitialTheme(): ThemeMode {
 }
 
 function resolveInitialSidebarColor(): SidebarColor {
-  if (typeof window === "undefined") return "default"
+  if (typeof window === "undefined") return "taupe"
 
   const stored = window.localStorage.getItem(SIDEBAR_COLOR_STORAGE_KEY)
-  return isSidebarColor(stored) ? stored : "default"
+  return isSidebarColor(stored) ? stored : "taupe"
 }
 
 function applyThemeClass(dark: boolean) {
@@ -68,11 +66,6 @@ function applyThemeClass(dark: boolean) {
 
 function applySidebarColor(color: SidebarColor) {
   if (typeof document === "undefined") return
-
-  if (color === "default") {
-    delete document.documentElement.dataset.sidebarColor
-    return
-  }
 
   document.documentElement.dataset.sidebarColor = color
 }
@@ -87,7 +80,7 @@ const isDark = computed(() =>
 watch(isDark, value => applyThemeClass(value), { immediate: true })
 watch(sidebarColor, (value) => {
   if (!isSidebarColor(value)) {
-    sidebarColor.value = "default"
+    sidebarColor.value = "taupe"
     return
   }
 
