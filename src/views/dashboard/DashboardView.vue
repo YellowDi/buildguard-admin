@@ -257,19 +257,23 @@ const statsCards = computed(() => [
   },
 ])
 
-const chartShellClass = "group flex h-full min-w-0 w-full flex-col gap-2 rounded-xl p-0 transition-colors hover:bg-surface-tertiary sm:p-2"
-const chartCardClass = "flex h-full min-w-0 w-full flex-col gap-0 overflow-hidden border-border/60 bg-surface-tertiary py-0 shadow-none transition-[background-color,border-color,box-shadow] group-hover:border-transparent group-hover:bg-card group-hover:shadow-(--shadow-card)"
-const statsShellClass = "group flex min-w-0 w-full flex-col gap-2 rounded-xl p-0 transition-colors hover:bg-surface-tertiary sm:p-2"
-const statsCardClass = "flex min-w-0 w-full flex-col overflow-hidden border-border/60 bg-surface-tertiary py-0 shadow-none transition-[background-color,border-color,box-shadow] group-hover:border-transparent group-hover:bg-card group-hover:shadow-(--shadow-card)"
+const dashboardCardBackgroundClass = "dashboard-card-surface"
+const dashboardCardHoverBackgroundClass = "dashboard-card-hover-surface"
+const dashboardGroupHoverCardBackgroundClass = "dashboard-card-group-hover-surface"
+const chartShellClass = `group flex h-full min-w-0 w-full flex-col gap-2 rounded-xl p-0 transition-colors ${dashboardCardHoverBackgroundClass} sm:p-2`
+const chartCardClass = `flex h-full min-w-0 w-full flex-col gap-0 overflow-hidden border-border/60 ${dashboardCardBackgroundClass} py-0 shadow-none transition-[background-color,border-color,box-shadow] group-hover:border-transparent ${dashboardGroupHoverCardBackgroundClass} group-hover:shadow-(--shadow-card)`
+const statsShellClass = `group flex min-w-0 w-full flex-col gap-2 rounded-xl p-0 transition-colors ${dashboardCardHoverBackgroundClass} sm:p-2`
+const statsCardClass = `flex min-w-0 w-full flex-col overflow-hidden border-border/60 ${dashboardCardBackgroundClass} py-0 shadow-none transition-[background-color,border-color,box-shadow] group-hover:border-transparent ${dashboardGroupHoverCardBackgroundClass} group-hover:shadow-(--shadow-card)`
 const chartHeaderClass = "flex items-center px-0 sm:min-h-8 sm:pl-2 sm:pr-0"
 const chartTitleClass = "text-sm font-semibold tracking-tight text-foreground"
 const chartContentClass = "flex min-w-0 flex-1 flex-col p-2 sm:p-4"
 const chartContainerClass = "aspect-auto min-w-0 w-full justify-start"
 const chartBodyClass = "h-[260px] min-w-0 w-full sm:h-[300px]"
 const chartMainBodyClass = "h-[220px] min-w-0 w-full sm:h-[250px]"
-const dashboardTrendShellClass = "group flex min-w-0 w-full flex-col gap-2 rounded-xl p-0 transition-colors hover:bg-surface-tertiary sm:p-2"
-const dashboardTrendCardClass = "flex min-w-0 w-full flex-col gap-0 overflow-hidden border-border/60 bg-surface-tertiary py-0 shadow-none transition-[background-color,border-color,box-shadow] group-hover:border-transparent group-hover:bg-card group-hover:shadow-(--shadow-card)"
+const dashboardTrendShellClass = `group flex min-w-0 w-full flex-col gap-2 rounded-xl p-0 transition-colors ${dashboardCardHoverBackgroundClass} sm:p-2`
+const dashboardTrendCardClass = `flex min-w-0 w-full flex-col gap-0 overflow-hidden border-border/60 ${dashboardCardBackgroundClass} py-0 shadow-none transition-[background-color,border-color,box-shadow] group-hover:border-transparent ${dashboardGroupHoverCardBackgroundClass} group-hover:shadow-(--shadow-card)`
 const dashboardTrendContentClass = "flex min-w-0 flex-col p-2 sm:p-4"
+const dashboardSummaryCardClass = `rounded-lg border border-border/60 ${dashboardCardBackgroundClass} px-3 py-2 transition-colors ${dashboardCardHoverBackgroundClass}`
 const buildingRiskTabs = [
   { id: "high-risk", label: "高危" },
   { id: "rectification", label: "整改" },
@@ -867,7 +871,7 @@ function hashText(value: string) {
                 :cursor="false"
               >
                 <div class="mb-3 grid gap-2 sm:grid-cols-5">
-                  <div class="rounded-lg border border-border/60 bg-card px-3 py-2 transition-colors hover:bg-muted/60">
+                  <div :class="dashboardSummaryCardClass">
                     <div class="text-[11px] text-muted-foreground">
                       历史工单总数
                     </div>
@@ -875,7 +879,7 @@ function hashText(value: string) {
                       {{ numberFormatter.format(workOrderSummary.total) }}
                     </div>
                   </div>
-                  <div class="rounded-lg border border-border/60 bg-card px-3 py-2 transition-colors hover:bg-muted/60">
+                  <div :class="dashboardSummaryCardClass">
                     <div class="text-[11px] text-muted-foreground">
                       待指派
                     </div>
@@ -883,7 +887,7 @@ function hashText(value: string) {
                       {{ numberFormatter.format(workOrderSummary.pendingAssign) }}
                     </div>
                   </div>
-                  <div class="rounded-lg border border-border/60 bg-card px-3 py-2 transition-colors hover:bg-muted/60">
+                  <div :class="dashboardSummaryCardClass">
                     <div class="text-[11px] text-muted-foreground">
                       待执行
                     </div>
@@ -891,7 +895,7 @@ function hashText(value: string) {
                       {{ numberFormatter.format(workOrderSummary.pendingExecute) }}
                     </div>
                   </div>
-                  <div class="rounded-lg border border-border/60 bg-card px-3 py-2 transition-colors hover:bg-muted/60">
+                  <div :class="dashboardSummaryCardClass">
                     <div class="text-[11px] text-muted-foreground">
                       执行中
                     </div>
@@ -899,7 +903,7 @@ function hashText(value: string) {
                       {{ numberFormatter.format(workOrderSummary.executing) }}
                     </div>
                   </div>
-                  <div class="rounded-lg border border-border/60 bg-card px-3 py-2 transition-colors hover:bg-muted/60">
+                  <div :class="dashboardSummaryCardClass">
                     <div class="text-[11px] text-muted-foreground">
                       已完成
                     </div>
@@ -1072,7 +1076,7 @@ function hashText(value: string) {
         </div>
       </div>
 
-      <div class="group flex min-w-0 w-full self-start flex-col gap-2 rounded-xl p-0 transition-colors hover:bg-surface-tertiary sm:p-2 xl:col-span-3">
+      <div :class="`${dashboardTrendShellClass} self-start xl:col-span-3`">
         <CardHeader class="flex flex-col gap-3 px-0 sm:min-h-8 sm:flex-row sm:items-center sm:justify-between sm:pl-2 sm:pr-0">
           <div class="flex items-center gap-3">
             <CardTitle :class="chartTitleClass">
@@ -1143,10 +1147,10 @@ function hashText(value: string) {
                     v-for="(building, index) in activeBuildingList"
                     :key="building.id"
                     type="button"
-                    class="group flex w-full items-center gap-2.5 border-b border-dashed border-border/70 pl-1 pr-3 py-2 text-left transition-[background-color,border-color] duration-150 last:border-b-0 hover:bg-muted/60"
+                    class="dashboard-card-hover-surface group flex w-full items-center gap-2.5 border-b border-dashed border-border/70 pl-1 pr-3 py-2 text-left transition-[background-color,border-color] duration-150 last:border-b-0"
                     @click="goToBuildingDetail(building)"
                   >
-                    <div class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-foreground transition-colors group-hover:bg-background">
+                    <div class="dashboard-card-surface flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold text-foreground transition-colors">
                       {{ index + 1 }}
                     </div>
 

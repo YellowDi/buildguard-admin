@@ -64,6 +64,8 @@
   --sidebar-accent-foreground: #31302e;
   --sidebar-border: rgb(0 0 0 / 0.08);
   --sidebar-ring: #097fe8;
+  --dashboard-card-background: var(--surface-tertiary);
+  --dashboard-card-hover-background: var(--card);
   --interactive-active-surface: #ffffff;
   --border-whisper: rgb(0 0 0 / 0.1);
   --shadow-soft:
@@ -171,6 +173,8 @@
   --sidebar-accent-foreground: #e8e8e8;
   --sidebar-border: rgb(255 255 255 / 0.1);
   --sidebar-ring: #5aacf5;
+  --dashboard-card-background: var(--surface-tertiary);
+  --dashboard-card-hover-background: var(--card);
   --interactive-active-surface: rgb(255 255 255 / 0.08);
   --border-whisper: rgb(255 255 255 / 0.1);
   --shadow-soft:
@@ -213,34 +217,50 @@
 
 :root[data-sidebar-color="mauve"] {
   --sidebar-background: var(--color-mauve-50);
+  --dashboard-card-background: var(--color-mauve-50);
+  --dashboard-card-hover-background: var(--color-mauve-50);
 }
 
 :root[data-sidebar-color="olive"] {
   --sidebar-background: var(--color-olive-50);
+  --dashboard-card-background: var(--color-olive-50);
+  --dashboard-card-hover-background: var(--color-olive-50);
 }
 
 :root[data-sidebar-color="mist"] {
   --sidebar-background: var(--color-mist-50);
+  --dashboard-card-background: var(--color-mist-50);
+  --dashboard-card-hover-background: var(--color-mist-50);
 }
 
 :root[data-sidebar-color="taupe"] {
   --sidebar-background: var(--color-taupe-50);
+  --dashboard-card-background: var(--color-taupe-50);
+  --dashboard-card-hover-background: var(--color-taupe-50);
 }
 
 :root.dark[data-sidebar-color="mauve"] {
   --sidebar-background: var(--color-mauve-950);
+  --dashboard-card-background: var(--color-mauve-950);
+  --dashboard-card-hover-background: var(--color-mauve-950);
 }
 
 :root.dark[data-sidebar-color="olive"] {
   --sidebar-background: var(--color-olive-950);
+  --dashboard-card-background: var(--color-olive-950);
+  --dashboard-card-hover-background: var(--color-olive-950);
 }
 
 :root.dark[data-sidebar-color="mist"] {
   --sidebar-background: var(--color-mist-950);
+  --dashboard-card-background: var(--color-mist-950);
+  --dashboard-card-hover-background: var(--color-mist-950);
 }
 
 :root.dark[data-sidebar-color="taupe"] {
   --sidebar-background: var(--color-taupe-950);
+  --dashboard-card-background: var(--color-taupe-950);
+  --dashboard-card-hover-background: var(--color-taupe-950);
 }
 
 @theme inline {
@@ -369,6 +389,18 @@
 }
 
 @layer components {
+  .dashboard-card-surface {
+    background: var(--dashboard-card-background);
+  }
+
+  .dashboard-card-hover-surface:hover {
+    background: var(--dashboard-card-hover-background);
+  }
+
+  .group:hover .dashboard-card-group-hover-surface {
+    background: var(--dashboard-card-hover-background);
+  }
+
   .dialog-panel-float {
     transform-origin: center center;
     will-change: transform, opacity;
