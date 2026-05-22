@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import TopTabSwitch from "@/components/layout/TopTabSwitch.vue"
 import { TooltipWrap } from "@/components/ui/tooltip"
-import sidebarLogoUrl from "@/assets/Logo-Apptext.png"
+import sidebarLogoDarkUrl from "@/assets/Logo-Apptext-dark.png"
+import sidebarLogoLightUrl from "@/assets/Logo-Apptext.png"
 
 type TopBarTab = {
   id: string
@@ -29,9 +30,14 @@ const emit = defineEmits<{
       aria-label="返回首页"
     >
       <img
-        :src="sidebarLogoUrl"
+        :src="sidebarLogoLightUrl"
         alt="宝京云维"
-        class="h-8 w-auto max-w-[148px] shrink-0 object-contain object-left"
+        class="h-8 w-auto max-w-[148px] shrink-0 object-contain object-left dark:hidden"
+      >
+      <img
+        :src="sidebarLogoDarkUrl"
+        alt="宝京云维"
+        class="hidden h-8 w-auto max-w-[148px] shrink-0 object-contain object-left dark:block"
       >
     </RouterLink>
   </div>
