@@ -32,6 +32,7 @@ import type {
   BooleanSettingsKey,
   SettingsActionKey,
   SettingsCategory,
+  SettingsColorItem,
   SettingsInputItem,
   SettingsSelectItem,
   SettingsState,
@@ -66,7 +67,7 @@ function updateToggleItem(item: SettingsToggleItem, value: boolean) {
   updateBoolean(item.modelKey, value)
 }
 
-function updateTextItem(item: SettingsInputItem | SettingsSelectItem, value: string) {
+function updateTextItem(item: SettingsInputItem | SettingsSelectItem | SettingsColorItem, value: string) {
   updateString(item.modelKey, value as SettingsState[typeof item.modelKey])
 }
 
@@ -181,7 +182,10 @@ function getBooleanValue(key: keyof SettingsState) {
                 </Field>
 
                 <div
-                  class="flex w-[196px] shrink-0 items-center justify-end xl:w-[220px]"
+                  :class="cn(
+                    'flex shrink-0 items-center justify-end',
+                    item.type === 'color' ? 'w-[196px] xl:w-[236px]' : 'w-[196px] xl:w-[220px]',
+                  )"
                 >
                   <Switch
                     v-if="item.type === 'toggle'"
@@ -216,8 +220,38 @@ function getBooleanValue(key: keyof SettingsState) {
                     </SelectContent>
                   </Select>
 
+                  <div
+                    v-else-if="item.type === 'color'"
+                    class="flex max-w-full flex-wrap items-center justify-end gap-1.5"
+                    role="radiogroup"
+                    :aria-label="item.label"
+                  >
+                    <button
+                      v-for="option in item.options"
+                      :key="option.value"
+                      type="button"
+                      role="radio"
+                      :aria-checked="getStringValue(item.modelKey) === option.value"
+                      :aria-label="option.label"
+                      :title="option.label"
+                      :class="cn(
+                        'relative flex size-10 shrink-0 items-center justify-center rounded-md outline-none transition-[transform,box-shadow] duration-180 ease-out active:scale-[0.96] focus-visible:ring-2 focus-visible:ring-ring/45 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+                        getStringValue(item.modelKey) === option.value
+                          ? 'shadow-[0_0_0_2px_var(--ring),0_1px_2px_rgb(0_0_0_/_0.08)]'
+                          : 'shadow-[0_0_0_1px_var(--border)]',
+                      )"
+                      @click="updateTextItem(item, option.value)"
+                    >
+                      <span
+                        class="size-7 rounded-sm shadow-[inset_0_0_0_1px_rgb(0_0_0_/_0.08)] dark:shadow-[inset_0_0_0_1px_rgb(255_255_255_/_0.12)]"
+                        :class="option.swatchClass"
+                        aria-hidden="true"
+                      />
+                    </button>
+                  </div>
+
                   <Button
-                    v-else
+                    v-else-if="item.type === 'button'"
                     :variant="item.variant === 'destructive' ? 'outline' : (item.variant ?? 'default')"
                     :class="cn(
                       'h-8 shrink-0 rounded-md px-3.5',

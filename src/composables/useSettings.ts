@@ -11,7 +11,7 @@ import {
   type SettingsState,
 } from "@/components/settings/types"
 
-const { themeMode } = useAppTheme()
+const { sidebarColor, sidebarColorOptions, themeMode } = useAppTheme()
 const { currentUser } = useCurrentUser()
 
 const state = reactive<SettingsState>({
@@ -29,6 +29,7 @@ const state = reactive<SettingsState>({
   autoTimezoneByLocation: true,
   timezone: "asia-shanghai",
   themeMode: themeMode.value,
+  sidebarColor: sidebarColor.value,
   compactTables: false,
   reducedMotion: true,
   showCommandHints: true,
@@ -190,6 +191,18 @@ watch(() => state.themeMode, (value) => {
   }
 })
 
+watch(sidebarColor, (value) => {
+  if (state.sidebarColor !== value) {
+    state.sidebarColor = value
+  }
+}, { immediate: true })
+
+watch(() => state.sidebarColor, (value) => {
+  if (sidebarColor.value !== value) {
+    sidebarColor.value = value
+  }
+})
+
 const categories = computed<SettingsCategory[]>(() => [
   {
     key: "me",
@@ -240,6 +253,14 @@ const categories = computed<SettingsCategory[]>(() => [
               { label: "浅色", value: "light" },
               { label: "深色", value: "dark" },
             ],
+          },
+          {
+            key: "sidebarColor",
+            type: "color",
+            modelKey: "sidebarColor",
+            label: "颜色",
+            description: "调整侧边栏背景颜色。",
+            options: sidebarColorOptions,
           },
         ],
       },

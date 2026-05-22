@@ -1,4 +1,4 @@
-import type { ThemeMode } from "@/composables/useAppTheme"
+import type { SidebarColor, ThemeMode } from "@/composables/useAppTheme"
 import type { DefaultAvatarKey } from "@/lib/default-avatars"
 
 export type SettingsCategoryGroupKey = "account" | "workspace" | "feature" | "admin"
@@ -56,6 +56,7 @@ export type SettingsState = {
   autoTimezoneByLocation: boolean
   timezone: string
   themeMode: ThemeMode
+  sidebarColor: SidebarColor
   compactTables: boolean
   reducedMotion: boolean
   showCommandHints: boolean
@@ -131,6 +132,12 @@ export type SettingsSelectItem = BaseSettingsItem & {
   options: Array<{ label: string, value: string }>
 }
 
+export type SettingsColorItem = BaseSettingsItem & {
+  type: "color"
+  modelKey: StringSettingsKey
+  options: Array<{ label: string, value: string, swatchClass: string }>
+}
+
 export type SettingsButtonItem = BaseSettingsItem & {
   type: "button"
   actionKey: SettingsActionKey
@@ -142,6 +149,7 @@ export type SettingsItem =
   | SettingsToggleItem
   | SettingsInputItem
   | SettingsSelectItem
+  | SettingsColorItem
   | SettingsButtonItem
 
 export type SettingsSection = {
