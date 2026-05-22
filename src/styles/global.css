@@ -399,30 +399,6 @@
 }
 
 @layer components {
-  .dashboard-card-surface {
-    background-color: var(--dashboard-card-background);
-  }
-
-  [data-slot="card"].dashboard-card-surface {
-    background-color: var(--dashboard-card-background);
-  }
-
-  .dashboard-card-shell-hover-surface:hover {
-    background-color: var(--dashboard-card-shell-hover-background);
-  }
-
-  .dashboard-card-hover-surface:hover {
-    background-color: var(--dashboard-card-hover-background);
-  }
-
-  .group:hover .dashboard-card-group-hover-surface {
-    background-color: var(--dashboard-card-hover-background);
-  }
-
-  .group:hover [data-slot="card"].dashboard-card-group-hover-surface {
-    background-color: var(--dashboard-card-hover-background);
-  }
-
   .dialog-panel-float {
     transform-origin: center center;
     will-change: transform, opacity;
@@ -770,6 +746,30 @@
 }
 
 @layer utilities {
+  .dashboard-card-surface {
+    background-color: var(--dashboard-card-background);
+  }
+
+  [data-slot="card"].dashboard-card-surface {
+    background-color: var(--dashboard-card-background);
+  }
+
+  .dashboard-card-shell-hover-surface:hover {
+    background-color: var(--dashboard-card-shell-hover-background);
+  }
+
+  .dashboard-card-hover-surface:hover {
+    background-color: var(--dashboard-card-hover-background);
+  }
+
+  .group:hover .dashboard-card-group-hover-surface {
+    background-color: var(--dashboard-card-hover-background);
+  }
+
+  .group:hover [data-slot="card"].dashboard-card-group-hover-surface {
+    background-color: var(--dashboard-card-hover-background);
+  }
+
   .border-overlay {
     outline: 1px solid rgba(0, 0, 0, 0.1);
     outline-offset: -1px;
