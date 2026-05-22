@@ -202,6 +202,8 @@ const dashboardTrendCardClass = `flex min-w-0 w-full flex-col gap-0 overflow-hid
 const dashboardTrendContentClass = "flex min-w-0 flex-col p-2 sm:p-4"
 const dashboardPlaceholderCardClass = `flex h-full min-h-[160px] min-w-0 w-full flex-col overflow-hidden border-border/60 ${dashboardCardBackgroundClass} py-0 shadow-none transition-[background-color,border-color,box-shadow] group-hover:border-transparent ${dashboardGroupHoverCardBackgroundClass} group-hover:shadow-(--shadow-card)`
 const dashboardSummaryCardClass = `rounded-lg border border-border/60 ${dashboardCardBackgroundClass} px-3 py-1.5 transition-colors ${dashboardCardHoverBackgroundClass}`
+const dashboardTabsListClass = "rounded-[8px] bg-[var(--dashboard-card-background)] p-0.5"
+const dashboardTabsTriggerClass = "rounded-[6px]"
 const buildingRankingPanelClass = "h-[520px] overflow-hidden"
 const buildingRankingRowClass = "h-[52px]"
 const workOrderTimeRangeTabs = [
@@ -846,12 +848,12 @@ function hashText(value: string) {
                 aria-label="工单概览时间范围"
                 @update:model-value="handleWorkOrderOverviewTimeRangeChange"
               >
-                <TabsList>
+                <TabsList :class="dashboardTabsListClass">
                   <TabsTrigger
                     v-for="range in workOrderTimeRangeTabs"
                     :key="range.id"
                     :value="range.id"
-                    class="min-w-16 px-3 text-xs"
+                    :class="`${dashboardTabsTriggerClass} min-w-16 px-3 text-xs`"
                   >
                     {{ range.label }}
                   </TabsTrigger>
@@ -1010,12 +1012,12 @@ function hashText(value: string) {
                 aria-label="切换建筑风险排行"
                 @update:model-value="handleBuildingRiskTabChange"
               >
-                <TabsList>
+                <TabsList :class="dashboardTabsListClass">
                   <TabsTrigger
                     v-for="tab in buildingRiskTabs"
                     :key="tab.id"
                     :value="tab.id"
-                    class="min-w-14 px-3 text-xs"
+                    :class="`${dashboardTabsTriggerClass} min-w-14 px-3 text-xs`"
                   >
                     {{ tab.label }}
                   </TabsTrigger>
