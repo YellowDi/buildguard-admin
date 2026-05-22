@@ -814,8 +814,8 @@ function hashText(value: string) {
       </div>
     </div>
 
-    <div class="grid items-stretch gap-4 xl:min-h-0 xl:flex-1 xl:grid-cols-10">
-      <div class="flex min-w-0 flex-col gap-4 xl:col-span-7 xl:min-h-0">
+    <div class="grid items-stretch gap-4 xl:flex-1 xl:grid-cols-10">
+      <div class="flex min-w-0 flex-col gap-4 xl:col-span-7">
         <div :class="dashboardTrendShellClass">
           <CardHeader class="flex flex-col gap-2 px-0 sm:min-h-8 sm:flex-row sm:items-center sm:justify-between sm:pl-2 sm:pr-0">
             <div class="flex flex-wrap items-center gap-3">
@@ -985,7 +985,7 @@ function hashText(value: string) {
           </Card>
         </div>
 
-        <div class="grid min-h-[160px] grid-cols-2 gap-4 xl:min-h-0 xl:flex-1">
+        <div class="grid min-h-[160px] grid-cols-2 gap-4 xl:flex-1">
           <div
             v-for="placeholder in 2"
             :key="`dashboard-placeholder-${placeholder}`"
@@ -999,7 +999,7 @@ function hashText(value: string) {
         </div>
       </div>
 
-      <div class="flex min-w-0 flex-col gap-4 xl:col-span-3 xl:min-h-0">
+      <div class="flex min-w-0 flex-col gap-4 xl:col-span-3">
         <div :class="dashboardTrendShellClass">
           <CardHeader class="flex flex-col gap-3 px-0 sm:min-h-8 sm:flex-row sm:items-center sm:justify-between sm:pl-2 sm:pr-0">
             <div class="flex items-center gap-3">
@@ -1114,7 +1114,7 @@ function hashText(value: string) {
           </div>
         </div>
 
-        <div :class="`${dashboardTrendShellClass} min-h-[160px] xl:min-h-0 xl:flex-1`" aria-hidden="true">
+        <div :class="`${dashboardTrendShellClass} min-h-[160px] xl:flex-1`" aria-hidden="true">
           <Card :class="dashboardPlaceholderCardClass">
             <CardContent class="min-h-0 flex-1 p-0" />
           </Card>
