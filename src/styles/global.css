@@ -56,7 +56,7 @@
   --chart-grid: #e8e2db;
   --chart-axis: #a39e98;
   --chart-point: #615d59;
-  --sidebar-background: var(--color-stone-50);
+  --sidebar-background: var(--color-neutral-50);
   --sidebar-foreground: #31302e;
   --sidebar-primary: #31302e;
   --sidebar-primary-foreground: #ffffff;
@@ -116,7 +116,7 @@
 
 .dark {
   color-scheme: dark;
-  --background: var(--color-stone-950);
+  --background: var(--color-neutral-950);
   --foreground: rgb(255 255 255 / 0.92);
   --card: #191919;
   --card-foreground: rgb(255 255 255 / 0.92);
@@ -166,7 +166,7 @@
   --chart-grid: rgb(255 255 255 / 0.14);
   --chart-axis: #6b6763;
   --chart-point: #a8a5a0;
-  --sidebar-background: var(--color-stone-900);
+  --sidebar-background: var(--color-neutral-900);
   --sidebar-foreground: #d4d3d1;
   --sidebar-primary: #202020;
   --sidebar-primary-foreground: #f7f7f7;
@@ -217,7 +217,15 @@
   --destructive-surface: #332523;
 }
 
+:root[data-sidebar-color="neutral"],
 :root[data-sidebar-color="default"] {
+  --sidebar-background: var(--color-neutral-50);
+  --dashboard-card-background: var(--color-neutral-50);
+  --dashboard-card-shell-hover-background: var(--color-neutral-50);
+  --dashboard-card-hover-background: var(--card);
+}
+
+:root[data-sidebar-color="stone"] {
   --sidebar-background: var(--color-stone-50);
   --dashboard-card-background: var(--color-stone-50);
   --dashboard-card-shell-hover-background: var(--color-stone-50);
@@ -252,7 +260,16 @@
   --dashboard-card-hover-background: var(--card);
 }
 
+:root.dark[data-sidebar-color="neutral"],
 :root.dark[data-sidebar-color="default"] {
+  --background: var(--color-neutral-950);
+  --sidebar-background: var(--color-neutral-900);
+  --dashboard-card-background: var(--color-neutral-950);
+  --dashboard-card-shell-hover-background: var(--color-neutral-950);
+  --dashboard-card-hover-background: var(--card);
+}
+
+:root.dark[data-sidebar-color="stone"] {
   --background: var(--color-stone-950);
   --sidebar-background: var(--color-stone-900);
   --dashboard-card-background: var(--color-stone-950);

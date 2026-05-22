@@ -2,7 +2,7 @@ import { computed, watch } from "vue"
 import { usePreferredDark, useStorage } from "@vueuse/core"
 
 export type ThemeMode = "system" | "light" | "dark"
-export type SidebarColor = "default" | "mauve" | "olive" | "mist" | "taupe"
+export type SidebarColor = "neutral" | "stone" | "mauve" | "olive" | "mist" | "taupe"
 
 export const THEME_OPTIONS: Array<{ value: ThemeMode, label: string, icon: string }> = [
   { value: "system", label: "系统", icon: "ri-computer-line" },
@@ -11,7 +11,8 @@ export const THEME_OPTIONS: Array<{ value: ThemeMode, label: string, icon: strin
 ]
 
 export const SIDEBAR_COLOR_OPTIONS: Array<{ value: SidebarColor, label: string }> = [
-  { value: "default", label: "默认" },
+  { value: "neutral", label: "Neutral" },
+  { value: "stone", label: "Stone" },
   { value: "mauve", label: "Mauve" },
   { value: "olive", label: "Olive" },
   { value: "mist", label: "Mist" },
@@ -22,11 +23,12 @@ const THEME_STORAGE_KEY = "app-theme"
 const LEGACY_THEME_STORAGE_KEY = "app-dark-mode"
 const SIDEBAR_COLOR_STORAGE_KEY = "app-sidebar-color"
 const SIDEBAR_COLOR_STORAGE_VERSION_KEY = "app-sidebar-color-version"
-const SIDEBAR_COLOR_STORAGE_VERSION = "2"
-const DEFAULT_SIDEBAR_COLOR: SidebarColor = "default"
+const SIDEBAR_COLOR_STORAGE_VERSION = "3"
+const DEFAULT_SIDEBAR_COLOR: SidebarColor = "neutral"
 
 function isSidebarColor(value: string | null): value is SidebarColor {
-  return value === "default"
+  return value === "neutral"
+    || value === "stone"
     || value === "mauve"
     || value === "olive"
     || value === "mist"
@@ -64,9 +66,11 @@ function resolveInitialSidebarColor(): SidebarColor {
   const storageVersion = window.localStorage.getItem(SIDEBAR_COLOR_STORAGE_VERSION_KEY)
 
   if (storageVersion !== SIDEBAR_COLOR_STORAGE_VERSION) {
-    const migratedColor = stored === "mauve" || stored === "olive" || stored === "mist"
-      ? stored
-      : DEFAULT_SIDEBAR_COLOR
+    const migratedColor = stored === "default"
+      ? DEFAULT_SIDEBAR_COLOR
+      : isSidebarColor(stored)
+        ? stored
+        : DEFAULT_SIDEBAR_COLOR
 
     window.localStorage.setItem(SIDEBAR_COLOR_STORAGE_KEY, migratedColor)
     window.localStorage.setItem(SIDEBAR_COLOR_STORAGE_VERSION_KEY, SIDEBAR_COLOR_STORAGE_VERSION)
