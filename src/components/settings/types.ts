@@ -132,12 +132,6 @@ export type SettingsSelectItem = BaseSettingsItem & {
   options: Array<{ label: string, value: string }>
 }
 
-export type SettingsColorItem = BaseSettingsItem & {
-  type: "color"
-  modelKey: StringSettingsKey
-  options: Array<{ label: string, value: string, swatchClass: string }>
-}
-
 export type SettingsButtonItem = BaseSettingsItem & {
   type: "button"
   actionKey: SettingsActionKey
@@ -149,7 +143,6 @@ export type SettingsItem =
   | SettingsToggleItem
   | SettingsInputItem
   | SettingsSelectItem
-  | SettingsColorItem
   | SettingsButtonItem
 
 export type SettingsSection = {

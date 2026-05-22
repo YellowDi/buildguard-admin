@@ -10,12 +10,12 @@ export const THEME_OPTIONS: Array<{ value: ThemeMode, label: string, icon: strin
   { value: "dark", label: "深色", icon: "ri-moon-line" },
 ]
 
-export const SIDEBAR_COLOR_OPTIONS: Array<{ value: SidebarColor, label: string, swatchClass: string }> = [
-  { value: "default", label: "默认", swatchClass: "bg-[#fbfaf9] dark:bg-[#202020]" },
-  { value: "mauve", label: "Mauve", swatchClass: "bg-mauve-50 dark:bg-mauve-950" },
-  { value: "olive", label: "Olive", swatchClass: "bg-olive-50 dark:bg-olive-950" },
-  { value: "mist", label: "Mist", swatchClass: "bg-mist-50 dark:bg-mist-950" },
-  { value: "taupe", label: "Taupe", swatchClass: "bg-taupe-50 dark:bg-taupe-950" },
+export const SIDEBAR_COLOR_OPTIONS: Array<{ value: SidebarColor, label: string }> = [
+  { value: "default", label: "默认" },
+  { value: "mauve", label: "Mauve" },
+  { value: "olive", label: "Olive" },
+  { value: "mist", label: "Mist" },
+  { value: "taupe", label: "Taupe" },
 ]
 
 const THEME_STORAGE_KEY = "app-theme"

@@ -256,7 +256,7 @@ const categories = computed<SettingsCategory[]>(() => [
           },
           {
             key: "sidebarColor",
-            type: "color",
+            type: "select",
             modelKey: "sidebarColor",
             label: "颜色",
             description: "调整侧边栏背景颜色。",
