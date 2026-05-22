@@ -258,11 +258,12 @@ const statsCards = computed(() => [
 ])
 
 const dashboardCardBackgroundClass = "dashboard-card-surface"
+const dashboardCardShellHoverBackgroundClass = "dashboard-card-shell-hover-surface"
 const dashboardCardHoverBackgroundClass = "dashboard-card-hover-surface"
 const dashboardGroupHoverCardBackgroundClass = "dashboard-card-group-hover-surface"
-const chartShellClass = `group flex h-full min-w-0 w-full flex-col gap-2 rounded-xl p-0 transition-colors ${dashboardCardHoverBackgroundClass} sm:p-2`
+const chartShellClass = `group flex h-full min-w-0 w-full flex-col gap-2 rounded-xl p-0 transition-colors ${dashboardCardShellHoverBackgroundClass} sm:p-2`
 const chartCardClass = `flex h-full min-w-0 w-full flex-col gap-0 overflow-hidden border-border/60 ${dashboardCardBackgroundClass} py-0 shadow-none transition-[background-color,border-color,box-shadow] group-hover:border-transparent ${dashboardGroupHoverCardBackgroundClass} group-hover:shadow-(--shadow-card)`
-const statsShellClass = `group flex min-w-0 w-full flex-col gap-2 rounded-xl p-0 transition-colors ${dashboardCardHoverBackgroundClass} sm:p-2`
+const statsShellClass = `group flex min-w-0 w-full flex-col gap-2 rounded-xl p-0 transition-colors ${dashboardCardShellHoverBackgroundClass} sm:p-2`
 const statsCardClass = `flex min-w-0 w-full flex-col overflow-hidden border-border/60 ${dashboardCardBackgroundClass} py-0 shadow-none transition-[background-color,border-color,box-shadow] group-hover:border-transparent ${dashboardGroupHoverCardBackgroundClass} group-hover:shadow-(--shadow-card)`
 const chartHeaderClass = "flex items-center px-0 sm:min-h-8 sm:pl-2 sm:pr-0"
 const chartTitleClass = "text-sm font-semibold tracking-tight text-foreground"
@@ -270,7 +271,7 @@ const chartContentClass = "flex min-w-0 flex-1 flex-col p-2 sm:p-4"
 const chartContainerClass = "aspect-auto min-w-0 w-full justify-start"
 const chartBodyClass = "h-[260px] min-w-0 w-full sm:h-[300px]"
 const chartMainBodyClass = "h-[220px] min-w-0 w-full sm:h-[250px]"
-const dashboardTrendShellClass = `group flex min-w-0 w-full flex-col gap-2 rounded-xl p-0 transition-colors ${dashboardCardHoverBackgroundClass} sm:p-2`
+const dashboardTrendShellClass = `group flex min-w-0 w-full flex-col gap-2 rounded-xl p-0 transition-colors ${dashboardCardShellHoverBackgroundClass} sm:p-2`
 const dashboardTrendCardClass = `flex min-w-0 w-full flex-col gap-0 overflow-hidden border-border/60 ${dashboardCardBackgroundClass} py-0 shadow-none transition-[background-color,border-color,box-shadow] group-hover:border-transparent ${dashboardGroupHoverCardBackgroundClass} group-hover:shadow-(--shadow-card)`
 const dashboardTrendContentClass = "flex min-w-0 flex-col p-2 sm:p-4"
 const dashboardSummaryCardClass = `rounded-lg border border-border/60 ${dashboardCardBackgroundClass} px-3 py-2 transition-colors ${dashboardCardHoverBackgroundClass}`
