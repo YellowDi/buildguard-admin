@@ -2,7 +2,7 @@ import { computed, watch } from "vue"
 import { usePreferredDark, useStorage } from "@vueuse/core"
 
 export type ThemeMode = "system" | "light" | "dark"
-export type SidebarColor = "mauve" | "olive" | "mist" | "taupe"
+export type SidebarColor = "default" | "mauve" | "olive" | "mist" | "taupe"
 
 export const THEME_OPTIONS: Array<{ value: ThemeMode, label: string, icon: string }> = [
   { value: "system", label: "系统", icon: "ri-computer-line" },
@@ -11,6 +11,7 @@ export const THEME_OPTIONS: Array<{ value: ThemeMode, label: string, icon: strin
 ]
 
 export const SIDEBAR_COLOR_OPTIONS: Array<{ value: SidebarColor, label: string }> = [
+  { value: "default", label: "默认" },
   { value: "mauve", label: "Mauve" },
   { value: "olive", label: "Olive" },
   { value: "mist", label: "Mist" },
@@ -20,9 +21,13 @@ export const SIDEBAR_COLOR_OPTIONS: Array<{ value: SidebarColor, label: string }
 const THEME_STORAGE_KEY = "app-theme"
 const LEGACY_THEME_STORAGE_KEY = "app-dark-mode"
 const SIDEBAR_COLOR_STORAGE_KEY = "app-sidebar-color"
+const SIDEBAR_COLOR_STORAGE_VERSION_KEY = "app-sidebar-color-version"
+const SIDEBAR_COLOR_STORAGE_VERSION = "2"
+const DEFAULT_SIDEBAR_COLOR: SidebarColor = "default"
 
 function isSidebarColor(value: string | null): value is SidebarColor {
-  return value === "mauve"
+  return value === "default"
+    || value === "mauve"
     || value === "olive"
     || value === "mist"
     || value === "taupe"
@@ -53,10 +58,23 @@ function resolveInitialTheme(): ThemeMode {
 }
 
 function resolveInitialSidebarColor(): SidebarColor {
-  if (typeof window === "undefined") return "taupe"
+  if (typeof window === "undefined") return DEFAULT_SIDEBAR_COLOR
 
   const stored = window.localStorage.getItem(SIDEBAR_COLOR_STORAGE_KEY)
-  return isSidebarColor(stored) ? stored : "taupe"
+  const storageVersion = window.localStorage.getItem(SIDEBAR_COLOR_STORAGE_VERSION_KEY)
+
+  if (storageVersion !== SIDEBAR_COLOR_STORAGE_VERSION) {
+    const migratedColor = stored === "mauve" || stored === "olive" || stored === "mist"
+      ? stored
+      : DEFAULT_SIDEBAR_COLOR
+
+    window.localStorage.setItem(SIDEBAR_COLOR_STORAGE_KEY, migratedColor)
+    window.localStorage.setItem(SIDEBAR_COLOR_STORAGE_VERSION_KEY, SIDEBAR_COLOR_STORAGE_VERSION)
+
+    return migratedColor
+  }
+
+  return isSidebarColor(stored) ? stored : DEFAULT_SIDEBAR_COLOR
 }
 
 function applyThemeClass(dark: boolean) {
@@ -80,7 +98,7 @@ const isDark = computed(() =>
 watch(isDark, value => applyThemeClass(value), { immediate: true })
 watch(sidebarColor, (value) => {
   if (!isSidebarColor(value)) {
-    sidebarColor.value = "taupe"
+    sidebarColor.value = DEFAULT_SIDEBAR_COLOR
     return
   }
 
