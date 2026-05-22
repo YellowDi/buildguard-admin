@@ -203,10 +203,11 @@ const statsCardClass = `flex min-w-0 w-full flex-col overflow-hidden border-bord
 const chartHeaderClass = "flex items-center px-0 sm:min-h-8 sm:pl-2 sm:pr-0"
 const chartTitleClass = "text-sm font-semibold tracking-tight text-foreground"
 const chartContainerClass = "aspect-auto min-w-0 w-full justify-start"
-const chartMainBodyClass = "h-[180px] min-w-0 w-full sm:h-[205px]"
+const chartMainBodyClass = "h-[240px] min-w-0 w-full sm:h-[275px]"
 const dashboardTrendShellClass = `group flex min-w-0 w-full flex-col gap-2 rounded-xl p-0 transition-colors ${dashboardCardShellHoverBackgroundClass} sm:p-2`
 const dashboardTrendCardClass = `flex min-w-0 w-full flex-col gap-0 overflow-hidden border-border/60 ${dashboardCardBackgroundClass} py-0 shadow-none transition-[background-color,border-color,box-shadow] group-hover:border-transparent ${dashboardGroupHoverCardBackgroundClass} group-hover:shadow-(--shadow-card)`
 const dashboardTrendContentClass = "flex min-w-0 flex-col p-2 sm:p-4"
+const dashboardPlaceholderCardClass = `flex h-full min-h-[160px] min-w-0 w-full flex-col overflow-hidden border-border/60 ${dashboardCardBackgroundClass} py-0 shadow-none transition-[background-color,border-color,box-shadow] group-hover:border-transparent ${dashboardGroupHoverCardBackgroundClass} group-hover:shadow-(--shadow-card)`
 const dashboardSummaryCardClass = `rounded-lg border border-border/60 ${dashboardCardBackgroundClass} px-3 py-1.5 transition-colors ${dashboardCardHoverBackgroundClass}`
 const buildingRankingPanelClass = "h-[520px] overflow-hidden"
 const buildingRankingRowClass = "h-[52px]"
@@ -778,7 +779,7 @@ function hashText(value: string) {
 </script>
 
 <template>
-  <div class="mx-auto flex w-full max-w-[1360px] flex-col gap-4 pb-[var(--app-page-bottom-gap)]">
+  <div class="mx-auto flex min-h-0 w-full max-w-[1360px] flex-1 flex-col gap-4 pb-[var(--app-page-bottom-gap)]">
     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <div
         v-for="stat in statsCards"
@@ -813,8 +814,8 @@ function hashText(value: string) {
       </div>
     </div>
 
-    <div class="grid items-stretch gap-4 xl:grid-cols-10">
-      <div class="flex min-w-0 flex-col gap-4 xl:col-span-7">
+    <div class="grid items-stretch gap-4 xl:min-h-0 xl:flex-1 xl:grid-cols-10">
+      <div class="flex min-w-0 flex-col gap-4 xl:col-span-7 xl:min-h-0">
         <div :class="dashboardTrendShellClass">
           <CardHeader class="flex flex-col gap-2 px-0 sm:min-h-8 sm:flex-row sm:items-center sm:justify-between sm:pl-2 sm:pr-0">
             <div class="flex flex-wrap items-center gap-3">
@@ -868,7 +869,7 @@ function hashText(value: string) {
 
           <Card :class="dashboardTrendCardClass">
             <CardContent :class="dashboardTrendContentClass">
-              <div v-if="workOrderOverview.error" class="flex h-[205px] items-center justify-center text-sm text-destructive">
+              <div v-if="workOrderOverview.error" class="flex h-[275px] items-center justify-center text-sm text-destructive">
                 {{ workOrderOverview.error }}
               </div>
 
@@ -880,7 +881,7 @@ function hashText(value: string) {
                     class="h-[54px] w-full rounded-lg border border-border/60"
                   />
                 </div>
-                <Skeleton class="h-[205px] w-full rounded-xl" />
+                <Skeleton class="h-[275px] w-full rounded-xl" />
               </div>
 
               <ChartContainer
@@ -984,118 +985,138 @@ function hashText(value: string) {
           </Card>
         </div>
 
+        <div class="grid min-h-[160px] grid-cols-2 gap-4 xl:min-h-0 xl:flex-1">
+          <div
+            v-for="placeholder in 2"
+            :key="`dashboard-placeholder-${placeholder}`"
+            :class="`${dashboardTrendShellClass} h-full min-h-0`"
+            aria-hidden="true"
+          >
+            <Card :class="dashboardPlaceholderCardClass">
+              <CardContent class="min-h-0 flex-1 p-0" />
+            </Card>
+          </div>
+        </div>
       </div>
 
-      <div :class="`${dashboardTrendShellClass} self-start xl:col-span-3`">
-        <CardHeader class="flex flex-col gap-3 px-0 sm:min-h-8 sm:flex-row sm:items-center sm:justify-between sm:pl-2 sm:pr-0">
-          <div class="flex items-center gap-3">
-            <CardTitle :class="chartTitleClass">
-              风险排行
-            </CardTitle>
-            <span class="text-xs text-muted-foreground">
-              按评分排序
-            </span>
-          </div>
+      <div class="flex min-w-0 flex-col gap-4 xl:col-span-3 xl:min-h-0">
+        <div :class="dashboardTrendShellClass">
+          <CardHeader class="flex flex-col gap-3 px-0 sm:min-h-8 sm:flex-row sm:items-center sm:justify-between sm:pl-2 sm:pr-0">
+            <div class="flex items-center gap-3">
+              <CardTitle :class="chartTitleClass">
+                风险排行
+              </CardTitle>
+              <span class="text-xs text-muted-foreground">
+                按评分排序
+              </span>
+            </div>
 
-          <div class="w-fit shrink-0 self-start sm:self-auto">
-            <Tabs
-              :model-value="activeBuildingRiskTab"
-              aria-label="切换建筑风险排行"
-              @update:model-value="handleBuildingRiskTabChange"
-            >
-              <TabsList>
-                <TabsTrigger
-                  v-for="tab in buildingRiskTabs"
-                  :key="tab.id"
-                  :value="tab.id"
-                  class="min-w-14 px-3 text-xs"
-                >
-                  {{ tab.label }}
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-          </div>
-        </CardHeader>
-
-        <div>
-          <Card :class="`${chartCardClass} w-full`">
-            <CardContent class="flex flex-col p-0">
-              <div :class="`flex flex-col ${buildingRankingPanelClass}`">
-                <div v-if="buildingRankingError" class="flex h-full flex-col items-center justify-center gap-3 text-center">
-                  <div class="text-sm text-destructive">
-                    {{ buildingRankingError }}
-                  </div>
-                  <Button size="sm" variant="outline" class="gap-2" @click="loadBuildingRanking">
-                    <i class="ri-refresh-line text-sm" />
-                    重试
-                  </Button>
-                </div>
-
-                <div v-else-if="buildingRankingLoading" class="flex h-full flex-col gap-0 p-0">
-                  <div
-                    v-for="rank in 10"
-                    :key="`building-rank-skeleton-${rank}`"
-                    :class="`${buildingRankingRowClass} flex w-full items-center gap-2.5 border-b border-dashed border-border/70 pl-1 pr-3 last:border-b-0`"
+            <div class="w-fit shrink-0 self-start sm:self-auto">
+              <Tabs
+                :model-value="activeBuildingRiskTab"
+                aria-label="切换建筑风险排行"
+                @update:model-value="handleBuildingRiskTabChange"
+              >
+                <TabsList>
+                  <TabsTrigger
+                    v-for="tab in buildingRiskTabs"
+                    :key="tab.id"
+                    :value="tab.id"
+                    class="min-w-14 px-3 text-xs"
                   >
-                    <Skeleton class="size-6 shrink-0 rounded-full" />
-                    <div class="min-w-0 flex-1 space-y-1.5">
-                      <Skeleton class="h-[13px] w-3/4 max-w-[16rem]" />
-                      <Skeleton class="h-3 w-1/2 max-w-48" />
+                    {{ tab.label }}
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+          </CardHeader>
+
+          <div>
+            <Card :class="`${chartCardClass} w-full`">
+              <CardContent class="flex flex-col p-0">
+                <div :class="`flex flex-col ${buildingRankingPanelClass}`">
+                  <div v-if="buildingRankingError" class="flex h-full flex-col items-center justify-center gap-3 text-center">
+                    <div class="text-sm text-destructive">
+                      {{ buildingRankingError }}
                     </div>
-                    <div class="flex shrink-0 items-center gap-1.5">
-                      <div class="space-y-0.5 text-right">
-                        <Skeleton class="ml-auto h-4 w-8" />
-                        <Skeleton class="ml-auto h-2.5 w-10" />
+                    <Button size="sm" variant="outline" class="gap-2" @click="loadBuildingRanking">
+                      <i class="ri-refresh-line text-sm" />
+                      重试
+                    </Button>
+                  </div>
+
+                  <div v-else-if="buildingRankingLoading" class="flex h-full flex-col gap-0 p-0">
+                    <div
+                      v-for="rank in 10"
+                      :key="`building-rank-skeleton-${rank}`"
+                      :class="`${buildingRankingRowClass} flex w-full items-center gap-2.5 border-b border-dashed border-border/70 pl-1 pr-3 last:border-b-0`"
+                    >
+                      <Skeleton class="size-6 shrink-0 rounded-full" />
+                      <div class="min-w-0 flex-1 space-y-1.5">
+                        <Skeleton class="h-[13px] w-3/4 max-w-[16rem]" />
+                        <Skeleton class="h-3 w-1/2 max-w-48" />
                       </div>
-                      <Skeleton class="size-4 shrink-0 rounded-sm" />
-                    </div>
-                  </div>
-                </div>
-
-                <div v-else-if="activeBuildingList.length" class="h-full">
-                  <button
-                    v-for="(building, index) in activeBuildingList"
-                    :key="building.id"
-                    type="button"
-                    :class="`${buildingRankingRowClass} dashboard-card-hover-surface group flex w-full items-center gap-2.5 border-b border-dashed border-border/70 pl-1 pr-3 text-left transition-[background-color,border-color] duration-150 last:border-b-0`"
-                    @click="goToBuildingDetail(building)"
-                  >
-                    <div class="dashboard-card-surface flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold text-foreground transition-colors">
-                      {{ index + 1 }}
-                    </div>
-
-                    <div class="min-w-0 flex-1">
-                      <div class="flex items-center justify-between gap-2">
-                        <div class="min-w-0">
-                          <div class="truncate text-[13px] font-semibold leading-5 text-foreground">
-                            {{ building.name }}
-                          </div>
-                          <div class="truncate text-[11px] leading-4 text-muted-foreground">
-                            {{ building.customerName }} · {{ building.parkName }}
-                          </div>
+                      <div class="flex shrink-0 items-center gap-1.5">
+                        <div class="space-y-0.5 text-right">
+                          <Skeleton class="ml-auto h-4 w-8" />
+                          <Skeleton class="ml-auto h-2.5 w-10" />
                         </div>
-
-                        <div class="flex shrink-0 items-center gap-1.5">
-                          <div class="text-right leading-none">
-                            <div class="text-base font-semibold tracking-tight text-foreground">
-                              {{ building.score }}
-                            </div>
-                            <div class="mt-0.5 text-[10px] text-muted-foreground">
-                              {{ building.riskLabel }}
-                            </div>
-                          </div>
-                          <i class="ri-arrow-right-s-line shrink-0 text-[16px] text-muted-foreground transition-colors group-hover:text-foreground" />
-                        </div>
+                        <Skeleton class="size-4 shrink-0 rounded-sm" />
                       </div>
                     </div>
-                  </button>
-                </div>
+                  </div>
 
-                <div v-else class="flex h-full items-center justify-center text-sm text-muted-foreground">
-                  当前暂无可展示的建筑
+                  <div v-else-if="activeBuildingList.length" class="h-full">
+                    <button
+                      v-for="(building, index) in activeBuildingList"
+                      :key="building.id"
+                      type="button"
+                      :class="`${buildingRankingRowClass} dashboard-card-hover-surface group flex w-full items-center gap-2.5 border-b border-dashed border-border/70 pl-1 pr-3 text-left transition-[background-color,border-color] duration-150 last:border-b-0`"
+                      @click="goToBuildingDetail(building)"
+                    >
+                      <div class="dashboard-card-surface flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold text-foreground transition-colors">
+                        {{ index + 1 }}
+                      </div>
+
+                      <div class="min-w-0 flex-1">
+                        <div class="flex items-center justify-between gap-2">
+                          <div class="min-w-0">
+                            <div class="truncate text-[13px] font-semibold leading-5 text-foreground">
+                              {{ building.name }}
+                            </div>
+                            <div class="truncate text-[11px] leading-4 text-muted-foreground">
+                              {{ building.customerName }} · {{ building.parkName }}
+                            </div>
+                          </div>
+
+                          <div class="flex shrink-0 items-center gap-1.5">
+                            <div class="text-right leading-none">
+                              <div class="text-base font-semibold tracking-tight text-foreground">
+                                {{ building.score }}
+                              </div>
+                              <div class="mt-0.5 text-[10px] text-muted-foreground">
+                                {{ building.riskLabel }}
+                              </div>
+                            </div>
+                            <i class="ri-arrow-right-s-line shrink-0 text-[16px] text-muted-foreground transition-colors group-hover:text-foreground" />
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+                  </div>
+
+                  <div v-else class="flex h-full items-center justify-center text-sm text-muted-foreground">
+                    当前暂无可展示的建筑
+                  </div>
                 </div>
-              </div>
-            </CardContent>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+
+        <div :class="`${dashboardTrendShellClass} min-h-[160px] xl:min-h-0 xl:flex-1`" aria-hidden="true">
+          <Card :class="dashboardPlaceholderCardClass">
+            <CardContent class="min-h-0 flex-1 p-0" />
           </Card>
         </div>
       </div>
