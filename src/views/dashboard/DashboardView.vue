@@ -954,7 +954,8 @@ function hashText(value: string) {
                         :tick-line="false"
                         :domain-line="false"
                         :grid-line="false"
-                        :num-ticks="workOrderOverviewTimeRange === '12m' ? 12 : workOrderOverviewTimeRange === '6m' ? 6 : 1"
+                        :num-ticks="workOrderOverview.filteredItems.length"
+                        :tick-values="workOrderOverview.filteredItems.map(d => d.date)"
                         :tick-format="(d: number) => formatMonthLabel(d)"
                       />
 
