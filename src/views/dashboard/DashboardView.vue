@@ -35,7 +35,7 @@ import { handleApiError } from "@/lib/api-errors"
 import customersData from "@/mocks/customers.json"
 import parksData from "@/mocks/parks.json"
 
-type TimeRange = "12m" | "6m" | "1m"
+type TimeRange = "12m" | "6m" | "3m"
 type WorkOrderOverviewKind = "inspection" | "repair"
 
 type CustomerRecord = {
@@ -251,7 +251,7 @@ function formatWorkOrderHistoryTooltipValue(_key: string, value: unknown) {
 }
 
 function getFilteredWorkOrderComparisonData(items: WorkOrderComparisonDatum[], timeRange: TimeRange) {
-  const monthCount = timeRange === "6m" ? 6 : timeRange === "1m" ? 1 : 12
+  const monthCount = timeRange === "6m" ? 6 : timeRange === "3m" ? 3 : 12
   return items.slice(-monthCount)
 }
 
@@ -291,7 +291,7 @@ function buildWorkOrderComparisonData(inspectionItems: WorkOrderHistoryDatum[], 
 }
 
 function handleWorkOrderOverviewTimeRangeChange(value: unknown) {
-  if (value === "12m" || value === "6m" || value === "1m") {
+  if (value === "12m" || value === "6m" || value === "3m") {
     workOrderOverviewTimeRange.value = value
   }
 }
@@ -860,8 +860,8 @@ function hashText(value: string) {
                 <SelectItem value="6m" class="rounded-lg">
                   过去 6 个月
                 </SelectItem>
-                <SelectItem value="1m" class="rounded-lg">
-                  过去 1 个月
+                <SelectItem value="3m" class="rounded-lg">
+                  过去 3 个月
                 </SelectItem>
               </SelectContent>
             </Select>
