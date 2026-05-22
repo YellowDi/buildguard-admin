@@ -20,13 +20,6 @@ import {
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { fetchBuildings, type BuildingListItem } from "@/lib/buildings-api"
 import { fetchInspectionPlans, type InspectionPlanListItem } from "@/lib/inspection-plans-api"
 import { isCompletedRepairWorkOrderStatus, isCompletedWorkOrderStatus } from "@/lib/work-order-status"
@@ -211,6 +204,11 @@ const dashboardPlaceholderCardClass = `flex h-full min-h-[160px] min-w-0 w-full 
 const dashboardSummaryCardClass = `rounded-lg border border-border/60 ${dashboardCardBackgroundClass} px-3 py-1.5 transition-colors ${dashboardCardHoverBackgroundClass}`
 const buildingRankingPanelClass = "h-[520px] overflow-hidden"
 const buildingRankingRowClass = "h-[52px]"
+const workOrderTimeRangeTabs = [
+  { id: "12m", label: "12个月" },
+  { id: "6m", label: "6个月" },
+  { id: "3m", label: "3个月" },
+] satisfies Array<{ id: TimeRange, label: string }>
 const buildingRiskTabs = [
   { id: "high-risk", label: "高危" },
   { id: "rectification", label: "整改" },
@@ -842,29 +840,24 @@ function hashText(value: string) {
               </div>
             </div>
 
-            <Select
-              :model-value="workOrderOverviewTimeRange"
-              @update:model-value="handleWorkOrderOverviewTimeRangeChange"
-            >
-              <SelectTrigger
-                class="flex h-8 w-full rounded-lg sm:ml-auto sm:w-[132px]"
+            <div class="w-fit shrink-0 self-start sm:self-auto">
+              <Tabs
+                :model-value="workOrderOverviewTimeRange"
                 aria-label="工单概览时间范围"
+                @update:model-value="handleWorkOrderOverviewTimeRangeChange"
               >
-                <SelectValue placeholder="过去 12 个月" />
-              </SelectTrigger>
-
-              <SelectContent class="rounded-xl border-0 shadow-(--shadow-card)">
-                <SelectItem value="12m" class="rounded-lg">
-                  过去 12 个月
-                </SelectItem>
-                <SelectItem value="6m" class="rounded-lg">
-                  过去 6 个月
-                </SelectItem>
-                <SelectItem value="3m" class="rounded-lg">
-                  过去 3 个月
-                </SelectItem>
-              </SelectContent>
-            </Select>
+                <TabsList>
+                  <TabsTrigger
+                    v-for="range in workOrderTimeRangeTabs"
+                    :key="range.id"
+                    :value="range.id"
+                    class="min-w-16 px-3 text-xs"
+                  >
+                    {{ range.label }}
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
           </CardHeader>
 
           <Card :class="dashboardTrendCardClass">
