@@ -1,13 +1,12 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue"
 import { useRouter } from "vue-router"
-import { VisAxis, VisDonut, VisDonutSelectors, VisLine, VisSingleContainer, VisStackedBar, VisXYContainer } from "@unovis/vue"
+import { VisAxis, VisLine, VisStackedBar, VisXYContainer } from "@unovis/vue"
 
 import type { ChartConfig } from "@/components/ui/chart"
 import {
   ChartContainer,
   ChartCrosshair,
-  ChartLegendContent,
   ChartTooltip,
   ChartTooltipContent,
   componentToString,
@@ -33,29 +32,10 @@ import { fetchInspectionPlans, type InspectionPlanListItem } from "@/lib/inspect
 import { isCompletedWorkOrderStatus } from "@/lib/work-order-status"
 import { fetchWorkOrders, type WorkOrderListItem } from "@/lib/work-orders-api"
 import { handleApiError } from "@/lib/api-errors"
-import alarmArchivesData from "@/mocks/alarm-archives.json"
-import alarmQueriesData from "@/mocks/alarm-queries.json"
 import customersData from "@/mocks/customers.json"
 import parksData from "@/mocks/parks.json"
-import usersData from "@/mocks/users.json"
 
 type TimeRange = "12m" | "6m" | "1m"
-
-type UserRecord = {
-  role: string
-  status: string
-}
-
-type AlarmQueryRecord = {
-  alarmTime: string
-  status: string
-  riskLevel: string
-}
-
-type AlarmArchiveRecord = {
-  archivedAt: string
-  archiveStatus: string
-}
 
 type CustomerRecord = {
   packageCode: string
@@ -81,9 +61,6 @@ type BuildingRankingItem = {
 
 const customerRecords = customersData as CustomerRecord[]
 const parkRecords = parksData as ParkRecord[]
-const userRecords = usersData as UserRecord[]
-const alarmQueryRecords = alarmQueriesData as AlarmQueryRecord[]
-const alarmArchiveRecords = alarmArchivesData as AlarmArchiveRecord[]
 const router = useRouter()
 
 type WorkOrderHistoryDatum = {
@@ -140,85 +117,6 @@ const workOrderHistoryMax = computed(() => {
   return Math.max(10, Math.ceil(max / 10) * 10)
 })
 
-const alarmStatusTrendData = Object.values(
-  [
-    ...alarmQueryRecords.map(item => ({
-      dateKey: item.alarmTime.slice(0, 10),
-      pending: item.status === "待复核" ? 1 : 0,
-      archived: 0,
-    })),
-    ...alarmArchiveRecords.map(item => ({
-      dateKey: item.archivedAt.slice(0, 10),
-      pending: 0,
-      archived: item.archiveStatus === "已归档" ? 1 : 0,
-    })),
-  ].reduce<Record<string, { date: Date, pending: number, archived: number }>>((acc, item) => {
-    acc[item.dateKey] ??= {
-      date: new Date(`${item.dateKey}T00:00:00`),
-      pending: 0,
-      archived: 0,
-    }
-
-    acc[item.dateKey].pending += item.pending
-    acc[item.dateKey].archived += item.archived
-
-    return acc
-  }, {}),
-).sort((a, b) => a.date.getTime() - b.date.getTime())
-
-type AlarmTrendDatum = (typeof alarmStatusTrendData)[number]
-
-const alarmStatusChartConfig = {
-  pending: {
-    label: "待复核",
-    color: "var(--chart-4)",
-  },
-  archived: {
-    label: "已归档",
-    color: "var(--chart-2)",
-  },
-} satisfies ChartConfig
-
-const alarmTrendMax = Math.max(
-  4,
-  Math.max(...alarmStatusTrendData.map(item => item.pending + item.archived), 0),
-)
-
-const personnelRoleData = Object.entries(
-  userRecords.reduce<Record<string, number>>((acc, item) => {
-    acc[item.role] = (acc[item.role] ?? 0) + 1
-    return acc
-  }, {}),
-).map(([role, count]) => ({
-  role,
-  count,
-}))
-
-type PersonnelRoleDatum = (typeof personnelRoleData)[number]
-
-const personnelRoleChartConfig = {
-  count: {
-    label: "人数",
-    color: undefined,
-  },
-  安全员: {
-    label: "安全员",
-    color: "var(--chart-1)",
-  },
-  驾驶员: {
-    label: "驾驶员",
-    color: "var(--chart-2)",
-  },
-  押运员: {
-    label: "押运员",
-    color: "var(--chart-3)",
-  },
-  调度员: {
-    label: "调度员",
-    color: "var(--chart-4)",
-  },
-} satisfies ChartConfig
-
 const numberFormatter = new Intl.NumberFormat("zh-CN")
 const totalParkCount = parkRecords.length
 const totalBuildingCount = parkRecords.reduce((sum, item) => sum + item.buildingCount, 0)
@@ -261,15 +159,12 @@ const dashboardCardBackgroundClass = "dashboard-card-surface"
 const dashboardCardShellHoverBackgroundClass = "dashboard-card-shell-hover-surface"
 const dashboardCardHoverBackgroundClass = "dashboard-card-hover-surface"
 const dashboardGroupHoverCardBackgroundClass = "dashboard-card-group-hover-surface"
-const chartShellClass = `group flex h-full min-w-0 w-full flex-col gap-2 rounded-xl p-0 transition-colors ${dashboardCardShellHoverBackgroundClass} sm:p-2`
 const chartCardClass = `flex h-full min-w-0 w-full flex-col gap-0 overflow-hidden border-border/60 ${dashboardCardBackgroundClass} py-0 shadow-none transition-[background-color,border-color,box-shadow] group-hover:border-transparent ${dashboardGroupHoverCardBackgroundClass} group-hover:shadow-(--shadow-card)`
 const statsShellClass = `group flex min-w-0 w-full flex-col gap-2 rounded-xl p-0 transition-colors ${dashboardCardShellHoverBackgroundClass} sm:p-2`
 const statsCardClass = `flex min-w-0 w-full flex-col overflow-hidden border-border/60 ${dashboardCardBackgroundClass} py-0 shadow-none transition-[background-color,border-color,box-shadow] group-hover:border-transparent ${dashboardGroupHoverCardBackgroundClass} group-hover:shadow-(--shadow-card)`
 const chartHeaderClass = "flex items-center px-0 sm:min-h-8 sm:pl-2 sm:pr-0"
 const chartTitleClass = "text-sm font-semibold tracking-tight text-foreground"
-const chartContentClass = "flex min-w-0 flex-1 flex-col p-2 sm:p-4"
 const chartContainerClass = "aspect-auto min-w-0 w-full justify-start"
-const chartBodyClass = "h-[260px] min-w-0 w-full sm:h-[300px]"
 const chartMainBodyClass = "h-[220px] min-w-0 w-full sm:h-[250px]"
 const dashboardTrendShellClass = `group flex min-w-0 w-full flex-col gap-2 rounded-xl p-0 transition-colors ${dashboardCardShellHoverBackgroundClass} sm:p-2`
 const dashboardTrendCardClass = `flex min-w-0 w-full flex-col gap-0 overflow-hidden border-border/60 ${dashboardCardBackgroundClass} py-0 shadow-none transition-[background-color,border-color,box-shadow] group-hover:border-transparent ${dashboardGroupHoverCardBackgroundClass} group-hover:shadow-(--shadow-card)`
@@ -981,102 +876,6 @@ function hashText(value: string) {
           </Card>
         </div>
 
-        <div class="grid gap-4 md:grid-cols-2">
-          <div :class="chartShellClass">
-            <CardHeader :class="chartHeaderClass">
-              <CardTitle :class="chartTitleClass">
-                报警处置趋势
-              </CardTitle>
-            </CardHeader>
-
-            <Card :class="`${chartCardClass} flex-1`">
-              <CardContent :class="chartContentClass">
-                <ChartContainer :config="alarmStatusChartConfig" :class="chartContainerClass">
-                  <div :class="chartBodyClass">
-                    <VisXYContainer
-                      :data="alarmStatusTrendData"
-                      :padding="{ top: 10, bottom: 10, left: 10, right: 10 }"
-                      :y-domain="[0, alarmTrendMax]"
-                    >
-                      <VisStackedBar
-                        :x="(d: AlarmTrendDatum) => d.date"
-                        :y="[(d: AlarmTrendDatum) => d.pending, (d: AlarmTrendDatum) => d.archived]"
-                        :color="[alarmStatusChartConfig.pending.color, alarmStatusChartConfig.archived.color]"
-                        :rounded-corners="4"
-                        :bar-padding="0.1"
-                      />
-
-                      <VisAxis
-                        type="x"
-                        :x="(d: AlarmTrendDatum) => d.date"
-                        :tick-line="false"
-                        :domain-line="false"
-                        :grid-line="false"
-                        :num-ticks="4"
-                        :tick-format="(d: number) => formatShortDate(d)"
-                        :tick-values="alarmStatusTrendData.map(d => d.date)"
-                      />
-
-                      <VisAxis
-                        type="y"
-                        :tick-line="false"
-                        :domain-line="false"
-                        :num-ticks="4"
-                      />
-
-                      <ChartTooltip />
-
-                      <ChartCrosshair
-                        :template="componentToString(alarmStatusChartConfig, ChartTooltipContent, {
-                          labelFormatter: d => formatShortDate(d),
-                        })"
-                        color="transparent"
-                      />
-                    </VisXYContainer>
-                  </div>
-
-                  <ChartLegendContent />
-                </ChartContainer>
-              </CardContent>
-            </Card>
-          </div>
-
-          <div :class="chartShellClass">
-            <CardHeader :class="chartHeaderClass">
-              <CardTitle :class="chartTitleClass">
-                从业人员角色分布
-              </CardTitle>
-            </CardHeader>
-
-            <Card :class="`${chartCardClass} flex-1`">
-              <CardContent :class="chartContentClass">
-                <ChartContainer
-                  :config="personnelRoleChartConfig"
-                  class="mx-auto flex min-w-0 w-full items-center justify-start"
-                >
-                  <div :class="chartBodyClass">
-                    <VisSingleContainer
-                      :data="personnelRoleData"
-                      class="h-full w-full"
-                      :margin="{ top: 30, bottom: 30 }"
-                    >
-                      <VisDonut
-                        :value="(d: PersonnelRoleDatum) => d.count"
-                        :color="(d: PersonnelRoleDatum) => personnelRoleChartConfig[d.role as keyof typeof personnelRoleChartConfig].color"
-                        :arc-width="30"
-                      />
-                      <ChartTooltip
-                        :triggers="{
-                          [VisDonutSelectors.segment]: componentToString(personnelRoleChartConfig, ChartTooltipContent, { hideLabel: true })!,
-                        }"
-                      />
-                    </VisSingleContainer>
-                  </div>
-                </ChartContainer>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
       </div>
 
       <div :class="`${dashboardTrendShellClass} self-start xl:col-span-3`">
