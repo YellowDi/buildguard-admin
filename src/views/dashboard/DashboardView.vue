@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue"
 import { useRouter } from "vue-router"
-import { VisAxis, VisLine, VisStackedBar, VisXYContainer } from "@unovis/vue"
+import { VisAxis, VisGroupedBar, VisXYContainer } from "@unovis/vue"
 
 import type { ChartConfig } from "@/components/ui/chart"
 import {
@@ -29,13 +29,14 @@ import {
 } from "@/components/ui/select"
 import { fetchBuildings, type BuildingListItem } from "@/lib/buildings-api"
 import { fetchInspectionPlans, type InspectionPlanListItem } from "@/lib/inspection-plans-api"
-import { isCompletedWorkOrderStatus } from "@/lib/work-order-status"
-import { fetchWorkOrders, type WorkOrderListItem } from "@/lib/work-orders-api"
+import { isCompletedRepairWorkOrderStatus, isCompletedWorkOrderStatus } from "@/lib/work-order-status"
+import { fetchRepairWorkOrders, fetchWorkOrders, type RepairWorkOrderListItem, type WorkOrderListItem } from "@/lib/work-orders-api"
 import { handleApiError } from "@/lib/api-errors"
 import customersData from "@/mocks/customers.json"
 import parksData from "@/mocks/parks.json"
 
 type TimeRange = "12m" | "6m" | "1m"
+type WorkOrderOverviewKind = "inspection" | "repair"
 
 type CustomerRecord = {
   packageCode: string
@@ -67,8 +68,13 @@ type WorkOrderHistoryDatum = {
   date: Date
   monthKey: string
   total: number
-  completionRate: number
-  completionRateScaled: number
+}
+
+type WorkOrderComparisonDatum = {
+  date: Date
+  monthKey: string
+  inspectionTotal: number
+  repairTotal: number
 }
 
 type WorkOrderSummary = {
@@ -79,10 +85,16 @@ type WorkOrderSummary = {
   completed: number
 }
 
-const workOrderHistoryItems = ref<WorkOrderHistoryDatum[]>([])
-const workOrderHistoryLoading = ref(false)
-const workOrderHistoryError = ref("")
-const workOrderSummary = ref<WorkOrderSummary>({
+type WorkOrderOverviewState = {
+  historyItems: WorkOrderHistoryDatum[]
+  loading: boolean
+  error: string
+  summary: WorkOrderSummary
+}
+
+type WorkOrderHistorySourceItem = WorkOrderListItem | RepairWorkOrderListItem
+
+const emptyWorkOrderSummary = (): WorkOrderSummary => ({
   total: 0,
   pendingAssign: 0,
   pendingExecute: 0,
@@ -90,31 +102,57 @@ const workOrderSummary = ref<WorkOrderSummary>({
   completed: 0,
 })
 
+const createWorkOrderOverviewState = (): WorkOrderOverviewState => ({
+  historyItems: [],
+  loading: false,
+  error: "",
+  summary: emptyWorkOrderSummary(),
+})
+
+const workOrderOverviewStates = ref<Record<WorkOrderOverviewKind, WorkOrderOverviewState>>({
+  inspection: createWorkOrderOverviewState(),
+  repair: createWorkOrderOverviewState(),
+})
+
+const workOrderOverviewTimeRange = ref<TimeRange>("12m")
+
 const workOrderHistoryChartConfig = {
-  total: {
-    label: "工单总量",
+  inspectionTotal: {
+    label: "检测工单",
     color: "var(--chart-2)",
   },
-  completionRateScaled: {
-    label: "完成率 (%)",
+  repairTotal: {
+    label: "报修工单",
     color: "var(--chart-1)",
   },
 } satisfies ChartConfig
 
-const timeRange = ref<TimeRange>("12m")
 const activeBuildingRiskTab = ref<BuildingRiskTab>("high-risk")
 const buildingRankingItems = ref<BuildingRankingItem[]>([])
 const buildingRankingLoading = ref(false)
 const buildingRankingError = ref("")
 
-const filteredWorkOrderHistory = computed(() => {
-  const monthCount = timeRange.value === "6m" ? 6 : timeRange.value === "1m" ? 1 : 12
-  return workOrderHistoryItems.value.slice(-monthCount)
-})
+const workOrderOverview = computed(() => {
+  const inspectionState = workOrderOverviewStates.value.inspection
+  const repairState = workOrderOverviewStates.value.repair
+  const filteredItems = getFilteredWorkOrderComparisonData(
+    buildWorkOrderComparisonData(inspectionState.historyItems, repairState.historyItems),
+    workOrderOverviewTimeRange.value,
+  )
 
-const workOrderHistoryMax = computed(() => {
-  const max = Math.max(...filteredWorkOrderHistory.value.map(item => item.total), 0)
-  return Math.max(10, Math.ceil(max / 10) * 10)
+  return {
+    loading: inspectionState.loading || repairState.loading,
+    error: [inspectionState.error, repairState.error].filter(Boolean).join(" / "),
+    filteredItems,
+    max: getWorkOrderComparisonMax(filteredItems),
+    summary: {
+      total: inspectionState.summary.total + repairState.summary.total,
+      inspectionTotal: inspectionState.summary.total,
+      repairTotal: repairState.summary.total,
+      inspectionCompleted: inspectionState.summary.completed,
+      repairCompleted: repairState.summary.completed,
+    },
+  }
 })
 
 const numberFormatter = new Intl.NumberFormat("zh-CN")
@@ -165,11 +203,11 @@ const statsCardClass = `flex min-w-0 w-full flex-col overflow-hidden border-bord
 const chartHeaderClass = "flex items-center px-0 sm:min-h-8 sm:pl-2 sm:pr-0"
 const chartTitleClass = "text-sm font-semibold tracking-tight text-foreground"
 const chartContainerClass = "aspect-auto min-w-0 w-full justify-start"
-const chartMainBodyClass = "h-[220px] min-w-0 w-full sm:h-[250px]"
+const chartMainBodyClass = "h-[180px] min-w-0 w-full sm:h-[205px]"
 const dashboardTrendShellClass = `group flex min-w-0 w-full flex-col gap-2 rounded-xl p-0 transition-colors ${dashboardCardShellHoverBackgroundClass} sm:p-2`
 const dashboardTrendCardClass = `flex min-w-0 w-full flex-col gap-0 overflow-hidden border-border/60 ${dashboardCardBackgroundClass} py-0 shadow-none transition-[background-color,border-color,box-shadow] group-hover:border-transparent ${dashboardGroupHoverCardBackgroundClass} group-hover:shadow-(--shadow-card)`
 const dashboardTrendContentClass = "flex min-w-0 flex-col p-2 sm:p-4"
-const dashboardSummaryCardClass = `rounded-lg border border-border/60 ${dashboardCardBackgroundClass} px-3 py-2 transition-colors ${dashboardCardHoverBackgroundClass}`
+const dashboardSummaryCardClass = `rounded-lg border border-border/60 ${dashboardCardBackgroundClass} px-3 py-1.5 transition-colors ${dashboardCardHoverBackgroundClass}`
 const buildingRankingPanelClass = "h-[520px] overflow-hidden"
 const buildingRankingRowClass = "h-[52px]"
 const buildingRiskTabs = [
@@ -196,17 +234,10 @@ const buildingRankedGroups = computed(() => ({
 const activeBuildingList = computed(() => buildingRankedGroups.value[activeBuildingRiskTab.value] ?? [])
 
 onMounted(() => {
-  void loadWorkOrderHistory()
+  void loadWorkOrderOverviews()
   void loadBuildingRanking()
   void loadInspectionPlanSummary()
 })
-
-function formatShortDate(date: number | Date, locale = "zh-CN") {
-  return new Date(date).toLocaleDateString(locale, {
-    month: "numeric",
-    day: "numeric",
-  })
-}
 
 function formatMonthLabel(date: number | Date, locale = "zh-CN") {
   return new Date(date).toLocaleDateString(locale, {
@@ -214,16 +245,54 @@ function formatMonthLabel(date: number | Date, locale = "zh-CN") {
   })
 }
 
-function formatCompletionRate(value: number) {
-  return `${Math.round(value)}%`
+function formatWorkOrderHistoryTooltipValue(_key: string, value: unknown) {
+  return typeof value === "number" ? numberFormatter.format(value) : String(value ?? "-")
 }
 
-function formatWorkOrderHistoryTooltipValue(key: string, value: unknown, payload: Record<string, unknown>) {
-  if (key === "completionRateScaled") {
-    return formatCompletionRate(toFiniteNumber(payload.completionRate) ?? 0)
+function getFilteredWorkOrderComparisonData(items: WorkOrderComparisonDatum[], timeRange: TimeRange) {
+  const monthCount = timeRange === "6m" ? 6 : timeRange === "1m" ? 1 : 12
+  return items.slice(-monthCount)
+}
+
+function getWorkOrderComparisonMax(items: WorkOrderComparisonDatum[]) {
+  const max = Math.max(...items.flatMap(item => [item.inspectionTotal, item.repairTotal]), 0)
+  return Math.max(10, Math.ceil(max / 10) * 10)
+}
+
+function buildWorkOrderComparisonData(inspectionItems: WorkOrderHistoryDatum[], repairItems: WorkOrderHistoryDatum[]) {
+  const buckets = new Map<string, WorkOrderComparisonDatum>()
+
+  for (const item of inspectionItems) {
+    const bucket = buckets.get(item.monthKey) ?? {
+      date: item.date,
+      monthKey: item.monthKey,
+      inspectionTotal: 0,
+      repairTotal: 0,
+    }
+
+    bucket.inspectionTotal = item.total
+    buckets.set(item.monthKey, bucket)
   }
 
-  return typeof value === "number" ? numberFormatter.format(value) : String(value ?? "-")
+  for (const item of repairItems) {
+    const bucket = buckets.get(item.monthKey) ?? {
+      date: item.date,
+      monthKey: item.monthKey,
+      inspectionTotal: 0,
+      repairTotal: 0,
+    }
+
+    bucket.repairTotal = item.total
+    buckets.set(item.monthKey, bucket)
+  }
+
+  return Array.from(buckets.values()).sort((a, b) => a.date.getTime() - b.date.getTime())
+}
+
+function handleWorkOrderOverviewTimeRangeChange(value: unknown) {
+  if (value === "12m" || value === "6m" || value === "1m") {
+    workOrderOverviewTimeRange.value = value
+  }
 }
 
 async function loadBuildingRanking() {
@@ -244,30 +313,50 @@ async function loadBuildingRanking() {
   }
 }
 
-async function loadWorkOrderHistory() {
-  workOrderHistoryLoading.value = true
-  workOrderHistoryError.value = ""
+async function loadWorkOrderOverviews() {
+  const inspectionState = workOrderOverviewStates.value.inspection
+  const repairState = workOrderOverviewStates.value.repair
 
-  try {
-    const workOrders = await fetchAllWorkOrders()
-    workOrderHistoryItems.value = buildWorkOrderHistory(workOrders)
-    workOrderSummary.value = buildWorkOrderSummary(workOrders)
-  } catch (error) {
-    workOrderHistoryItems.value = []
-    workOrderSummary.value = {
-      total: 0,
-      pendingAssign: 0,
-      pendingExecute: 0,
-      executing: 0,
-      completed: 0,
-    }
-    workOrderHistoryError.value = handleApiError(error, {
+  inspectionState.loading = true
+  inspectionState.error = ""
+  repairState.loading = true
+  repairState.error = ""
+
+  const [inspectionResult, repairResult] = await Promise.allSettled([
+    fetchAllWorkOrders(),
+    fetchAllRepairWorkOrders(),
+  ])
+
+  const inspectionWorkOrders = inspectionResult.status === "fulfilled" ? inspectionResult.value : []
+  const repairWorkOrders = repairResult.status === "fulfilled" ? repairResult.value : []
+  const referenceDate = resolveLatestWorkOrderDate([...inspectionWorkOrders, ...repairWorkOrders]) ?? new Date()
+
+  if (inspectionResult.status === "fulfilled") {
+    inspectionState.historyItems = buildWorkOrderHistory(inspectionWorkOrders, referenceDate)
+    inspectionState.summary = buildWorkOrderSummary(inspectionWorkOrders, "inspection")
+  } else {
+    inspectionState.historyItems = []
+    inspectionState.summary = emptyWorkOrderSummary()
+    inspectionState.error = handleApiError(inspectionResult.reason, {
       mode: "silent",
-      fallback: "历史趋势加载失败，请稍后重试。",
+      fallback: "检测工单概览加载失败，请稍后重试。",
     })
-  } finally {
-    workOrderHistoryLoading.value = false
   }
+
+  if (repairResult.status === "fulfilled") {
+    repairState.historyItems = buildWorkOrderHistory(repairWorkOrders, referenceDate)
+    repairState.summary = buildWorkOrderSummary(repairWorkOrders, "repair")
+  } else {
+    repairState.historyItems = []
+    repairState.summary = emptyWorkOrderSummary()
+    repairState.error = handleApiError(repairResult.reason, {
+      mode: "silent",
+      fallback: "报修工单概览加载失败，请稍后重试。",
+    })
+  }
+
+  inspectionState.loading = false
+  repairState.loading = false
 }
 
 async function fetchAllBuildings() {
@@ -306,6 +395,34 @@ async function fetchAllWorkOrders() {
 
   while (pageNum <= 20) {
     const result = await fetchWorkOrders({
+      PageNum: pageNum,
+      PageSize: pageSize,
+    })
+
+    if (pageNum === 1) {
+      total = result.total
+    }
+
+    allItems.push(...result.list)
+
+    if (!result.list.length || (total > 0 && allItems.length >= total)) {
+      break
+    }
+
+    pageNum += 1
+  }
+
+  return allItems
+}
+
+async function fetchAllRepairWorkOrders() {
+  const pageSize = 200
+  const allItems: RepairWorkOrderListItem[] = []
+  let pageNum = 1
+  let total = 0
+
+  while (pageNum <= 20) {
+    const result = await fetchRepairWorkOrders({
       PageNum: pageNum,
       PageSize: pageSize,
     })
@@ -365,9 +482,11 @@ async function fetchAllInspectionPlans() {
   return allItems
 }
 
-function buildWorkOrderHistory(items: WorkOrderListItem[]) {
-  const monthBuckets = new Map<string, { date: Date, total: number, completed: number }>()
-  const referenceDate = resolveLatestWorkOrderDate(items) ?? new Date()
+function buildWorkOrderHistory(
+  items: WorkOrderHistorySourceItem[],
+  referenceDate = resolveLatestWorkOrderDate(items) ?? new Date(),
+) {
+  const monthBuckets = new Map<string, { date: Date, total: number }>()
 
   for (let offset = 11; offset >= 0; offset -= 1) {
     const monthDate = new Date(referenceDate.getFullYear(), referenceDate.getMonth() - offset, 1)
@@ -376,7 +495,6 @@ function buildWorkOrderHistory(items: WorkOrderListItem[]) {
     monthBuckets.set(monthKey, {
       date: monthDate,
       total: 0,
-      completed: 0,
     })
   }
 
@@ -394,32 +512,22 @@ function buildWorkOrderHistory(items: WorkOrderListItem[]) {
     }
 
     bucket.total += 1
-
-    if (isCompletedWorkOrder(item)) {
-      bucket.completed += 1
-    }
   }
 
-  const maxTotal = Math.max(...Array.from(monthBuckets.values(), bucket => bucket.total), 0)
-
   return Array.from(monthBuckets.entries()).map(([monthKey, bucket]) => {
-    const completionRate = bucket.total > 0 ? Math.round((bucket.completed / bucket.total) * 100) : 0
-
     return {
       date: bucket.date,
       monthKey,
       total: bucket.total,
-      completionRate,
-      completionRateScaled: Math.round((completionRate / 100) * maxTotal),
     }
   })
 }
 
-function buildWorkOrderSummary(items: WorkOrderListItem[]): WorkOrderSummary {
+function buildWorkOrderSummary(items: WorkOrderHistorySourceItem[], kind: WorkOrderOverviewKind): WorkOrderSummary {
   return items.reduce<WorkOrderSummary>((summary, item) => {
     summary.total += 1
 
-    switch (resolveWorkOrderStage(item)) {
+    switch (resolveWorkOrderStage(item, kind)) {
       case "pending-assign":
         summary.pendingAssign += 1
         break
@@ -437,16 +545,10 @@ function buildWorkOrderSummary(items: WorkOrderListItem[]): WorkOrderSummary {
     }
 
     return summary
-  }, {
-    total: 0,
-    pendingAssign: 0,
-    pendingExecute: 0,
-    executing: 0,
-    completed: 0,
-  })
+  }, emptyWorkOrderSummary())
 }
 
-function resolveLatestWorkOrderDate(items: WorkOrderListItem[]) {
+function resolveLatestWorkOrderDate(items: WorkOrderHistorySourceItem[]) {
   const sortedDates = items
     .map(item => resolveWorkOrderDate(item))
     .filter((value): value is Date => value instanceof Date)
@@ -455,7 +557,7 @@ function resolveLatestWorkOrderDate(items: WorkOrderListItem[]) {
   return sortedDates[sortedDates.length - 1] ?? null
 }
 
-function resolveWorkOrderDate(item: WorkOrderListItem) {
+function resolveWorkOrderDate(item: WorkOrderHistorySourceItem) {
   const candidates = [item.CreatedAt, item.UpdatedAt, item.Deadline]
 
   for (const candidate of candidates) {
@@ -472,13 +574,29 @@ function resolveWorkOrderDate(item: WorkOrderListItem) {
   return null
 }
 
-function isCompletedWorkOrder(item: WorkOrderListItem) {
-  return resolveWorkOrderStage(item) === "completed"
-}
-
-function resolveWorkOrderStage(item: WorkOrderListItem) {
+function resolveWorkOrderStage(item: WorkOrderHistorySourceItem, kind: WorkOrderOverviewKind) {
   const status = toFiniteNumber(item.Status)
   const result = toFiniteNumber(item.Result)
+
+  if (kind === "repair") {
+    if (isCompletedRepairWorkOrderStatus(status) || (status === null && result === 1)) {
+      return "completed"
+    }
+
+    if (status === 1 || status === 0) {
+      return "pending-assign"
+    }
+
+    if (status === 2) {
+      return "executing"
+    }
+
+    if (status === 3) {
+      return "pending-execute"
+    }
+
+    return "pending-assign"
+  }
 
   if (isCompletedWorkOrderStatus(status) || (status === null && result === 1)) {
     return "completed"
@@ -701,32 +819,35 @@ function hashText(value: string) {
           <CardHeader class="flex flex-col gap-2 px-0 sm:min-h-8 sm:flex-row sm:items-center sm:justify-between sm:pl-2 sm:pr-0">
             <div class="flex flex-wrap items-center gap-3">
               <CardTitle :class="chartTitleClass">
-                历史数据趋势
+                工单概览
               </CardTitle>
 
               <div class="flex items-center gap-3 text-xs text-muted-foreground">
                 <div class="flex items-center gap-1.5">
                   <span
                     class="h-2.5 w-2.5 rounded-sm"
-                    :style="{ backgroundColor: workOrderHistoryChartConfig.total.color }"
+                    :style="{ backgroundColor: workOrderHistoryChartConfig.inspectionTotal.color }"
                   />
-                  <span>{{ workOrderHistoryChartConfig.total.label }}</span>
+                  <span>{{ workOrderHistoryChartConfig.inspectionTotal.label }}</span>
                 </div>
 
                 <div class="flex items-center gap-1.5">
                   <span
-                    class="h-0.5 w-4 rounded-full"
-                    :style="{ backgroundColor: workOrderHistoryChartConfig.completionRateScaled.color }"
+                    class="h-2.5 w-2.5 rounded-sm"
+                    :style="{ backgroundColor: workOrderHistoryChartConfig.repairTotal.color }"
                   />
-                  <span>{{ workOrderHistoryChartConfig.completionRateScaled.label }}</span>
+                  <span>{{ workOrderHistoryChartConfig.repairTotal.label }}</span>
                 </div>
               </div>
             </div>
 
-            <Select v-model="timeRange">
+            <Select
+              :model-value="workOrderOverviewTimeRange"
+              @update:model-value="handleWorkOrderOverviewTimeRangeChange"
+            >
               <SelectTrigger
                 class="flex h-8 w-full rounded-lg sm:ml-auto sm:w-[132px]"
-                aria-label="选择时间范围"
+                aria-label="工单概览时间范围"
               >
                 <SelectValue placeholder="过去 12 个月" />
               </SelectTrigger>
@@ -747,19 +868,19 @@ function hashText(value: string) {
 
           <Card :class="dashboardTrendCardClass">
             <CardContent :class="dashboardTrendContentClass">
-              <div v-if="workOrderHistoryError" class="flex h-[250px] items-center justify-center text-sm text-destructive">
-                {{ workOrderHistoryError }}
+              <div v-if="workOrderOverview.error" class="flex h-[205px] items-center justify-center text-sm text-destructive">
+                {{ workOrderOverview.error }}
               </div>
 
-              <div v-else-if="workOrderHistoryLoading" class="space-y-3">
+              <div v-else-if="workOrderOverview.loading" class="space-y-3">
                 <div class="mb-3 grid gap-2 sm:grid-cols-5">
                   <Skeleton
                     v-for="stat in 5"
-                    :key="`wo-history-stat-${stat}`"
+                    :key="`work-order-overview-stat-${stat}`"
                     class="h-[54px] w-full rounded-lg border border-border/60"
                   />
                 </div>
-                <Skeleton class="h-[250px] w-full rounded-xl" />
+                <Skeleton class="h-[205px] w-full rounded-xl" />
               </div>
 
               <ChartContainer
@@ -771,42 +892,42 @@ function hashText(value: string) {
                 <div class="mb-3 grid gap-2 sm:grid-cols-5">
                   <div :class="dashboardSummaryCardClass">
                     <div class="text-[11px] text-muted-foreground">
-                      历史工单总数
+                      工单总数
                     </div>
                     <div class="mt-1 text-lg font-semibold tracking-tight text-foreground">
-                      {{ numberFormatter.format(workOrderSummary.total) }}
+                      {{ numberFormatter.format(workOrderOverview.summary.total) }}
                     </div>
                   </div>
                   <div :class="dashboardSummaryCardClass">
                     <div class="text-[11px] text-muted-foreground">
-                      待指派
+                      检测工单
                     </div>
                     <div class="mt-1 text-lg font-semibold tracking-tight text-foreground">
-                      {{ numberFormatter.format(workOrderSummary.pendingAssign) }}
+                      {{ numberFormatter.format(workOrderOverview.summary.inspectionTotal) }}
                     </div>
                   </div>
                   <div :class="dashboardSummaryCardClass">
                     <div class="text-[11px] text-muted-foreground">
-                      待执行
+                      报修工单
                     </div>
                     <div class="mt-1 text-lg font-semibold tracking-tight text-foreground">
-                      {{ numberFormatter.format(workOrderSummary.pendingExecute) }}
+                      {{ numberFormatter.format(workOrderOverview.summary.repairTotal) }}
                     </div>
                   </div>
                   <div :class="dashboardSummaryCardClass">
                     <div class="text-[11px] text-muted-foreground">
-                      执行中
+                      检测已完成
                     </div>
                     <div class="mt-1 text-lg font-semibold tracking-tight text-foreground">
-                      {{ numberFormatter.format(workOrderSummary.executing) }}
+                      {{ numberFormatter.format(workOrderOverview.summary.inspectionCompleted) }}
                     </div>
                   </div>
                   <div :class="dashboardSummaryCardClass">
                     <div class="text-[11px] text-muted-foreground">
-                      已完成
+                      报修已完成
                     </div>
                     <div class="mt-1 text-lg font-semibold tracking-tight text-foreground">
-                      {{ numberFormatter.format(workOrderSummary.completed) }}
+                      {{ numberFormatter.format(workOrderOverview.summary.repairCompleted) }}
                     </div>
                   </div>
                 </div>
@@ -814,32 +935,26 @@ function hashText(value: string) {
                 <div :class="chartMainBodyClass">
                   <div class="relative h-full">
                     <VisXYContainer
-                      :data="filteredWorkOrderHistory"
+                      :data="workOrderOverview.filteredItems"
                       :margin="{ left: -20, right: 32, top: 8 }"
-                      :y-domain="[0, workOrderHistoryMax]"
+                      :y-domain="[0, workOrderOverview.max]"
                     >
-                      <VisStackedBar
-                        :x="(d: WorkOrderHistoryDatum) => d.date"
-                        :y="[(d: WorkOrderHistoryDatum) => d.total]"
-                        :color="[workOrderHistoryChartConfig.total.color]"
+                      <VisGroupedBar
+                        :x="(d: WorkOrderComparisonDatum) => d.date"
+                        :y="[(d: WorkOrderComparisonDatum) => d.inspectionTotal, (d: WorkOrderComparisonDatum) => d.repairTotal]"
+                        :color="[workOrderHistoryChartConfig.inspectionTotal.color, workOrderHistoryChartConfig.repairTotal.color]"
                         :rounded-corners="4"
-                        :bar-padding="0.35"
-                      />
-
-                      <VisLine
-                        :x="(d: WorkOrderHistoryDatum) => d.date"
-                        :y="(d: WorkOrderHistoryDatum) => d.completionRateScaled"
-                        :color="workOrderHistoryChartConfig.completionRateScaled.color"
-                        :line-width="2"
+                        :bar-padding="0.12"
+                        :group-padding="0.2"
                       />
 
                       <VisAxis
                         type="x"
-                        :x="(d: WorkOrderHistoryDatum) => d.date"
+                        :x="(d: WorkOrderComparisonDatum) => d.date"
                         :tick-line="false"
                         :domain-line="false"
                         :grid-line="false"
-                        :num-ticks="timeRange === '12m' ? 12 : timeRange === '6m' ? 6 : 1"
+                        :num-ticks="workOrderOverviewTimeRange === '12m' ? 12 : workOrderOverviewTimeRange === '6m' ? 6 : 1"
                         :tick-format="(d: number) => formatMonthLabel(d)"
                       />
 
@@ -857,18 +972,10 @@ function hashText(value: string) {
                           labelFormatter: (d) => formatMonthLabel(d),
                           valueFormatter: formatWorkOrderHistoryTooltipValue,
                         })"
-                        :color="(_d: WorkOrderHistoryDatum, i: number) => [workOrderHistoryChartConfig.total.color, workOrderHistoryChartConfig.completionRateScaled.color][i % 2]"
+                        :color="(_d: WorkOrderComparisonDatum, i: number) => [workOrderHistoryChartConfig.inspectionTotal.color, workOrderHistoryChartConfig.repairTotal.color][i % 2]"
                       />
 
                     </VisXYContainer>
-
-                    <div class="pointer-events-none absolute inset-y-0 right-0 flex flex-col justify-between pb-8 pt-2 text-[10px] text-muted-foreground">
-                      <span>100%</span>
-                      <span>75%</span>
-                      <span>50%</span>
-                      <span>25%</span>
-                      <span>0%</span>
-                    </div>
                   </div>
                 </div>
               </ChartContainer>
