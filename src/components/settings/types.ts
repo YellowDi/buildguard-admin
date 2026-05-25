@@ -26,20 +26,12 @@ export function isSettingsCategoryKey(value: string): value is SettingsCategoryK
 }
 
 export type SettingsActionKey =
-  | "save-profile"
   | "open-members-directory"
   | "review-member-invites"
   | "send-test-notification"
   | "review-active-sessions"
   | "revoke-other-sessions"
   | "delete-workspace"
-  | "manage-email"
-  | "change-password"
-  | "add-2fa"
-  | "add-passkey"
-  | "delete-account"
-  | "logout-all-devices"
-  | "copy-user-id"
 
 export type SettingsState = {
   accountName: string
@@ -78,7 +70,6 @@ export type SettingsState = {
   preferredName: string
   selectedAvatarKey: DefaultAvatarKey
   userId: string
-  supportAccessEnabled: boolean
 }
 
 export type AppReleasePlatform = "android" | "ios"

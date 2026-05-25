@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, ref, watch } from "vue"
+import { ref, watch } from "vue"
+import { useRouter } from "vue-router"
 import { useClipboard } from "@vueuse/core"
 import { toast } from "vue-sonner"
 
@@ -11,53 +12,34 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
-import { Separator } from "@/components/ui/separator"
-import { Switch } from "@/components/ui/switch"
 import {
   TooltipWrap,
 } from "@/components/ui/tooltip"
 import SettingsPageHeader from "@/components/settings/SettingsPageHeader.vue"
 import SettingsSection from "@/components/settings/SettingsSection.vue"
-import SettingsTable from "@/components/settings/SettingsTable.vue"
-import type { TableColumn, TableRowAction } from "@/components/table-page/types"
 import {
   DEFAULT_AVATAR_OPTIONS,
   type DefaultAvatarKey,
 } from "@/lib/default-avatars"
+import { clearCurrentUser } from "@/composables/useCurrentUser"
+import { clearAuthToken } from "@/lib/auth"
 import { cn } from "@/lib/utils"
-import type {
-  SettingsActionKey,
-} from "@/components/settings/types"
-
-interface Device {
-  id: string
-  name: string
-  isCurrent: boolean
-  lastActive: string
-  location: string
-}
 
 const props = defineProps<{
-  // User info
   userName: string
-  userEmail: string
   avatarSrc?: string
   avatarFallback: string
   preferredName: string
   selectedAvatarKey: DefaultAvatarKey
   userId: string
-  // Security
-  supportAccessEnabled: boolean
 }>()
 
 const emit = defineEmits<{
-  action: [actionKey: SettingsActionKey]
   "update:preferredName": [value: string]
   "update:selectedAvatarKey": [value: DefaultAvatarKey]
-  "update:supportAccessEnabled": [value: boolean]
 }>()
 
-// Local state for input
+const router = useRouter()
 const isAvatarPickerOpen = ref(false)
 const localPreferredName = ref(props.preferredName)
 const avatarOptions = DEFAULT_AVATAR_OPTIONS
@@ -66,84 +48,11 @@ watch(() => props.preferredName, (value) => {
   localPreferredName.value = value
 })
 
-// Clipboard for user ID
 const { copy } = useClipboard()
 
 function handleCopyUserId() {
   copy(props.userId)
   toast.success("已复制到剪贴板")
-}
-
-// Mock devices data (will be replaced by API later)
-const devices = ref<Device[]>([
-  {
-    id: "1",
-    name: "macOS",
-    isCurrent: true,
-    lastActive: "现在",
-    location: "Singapore",
-  },
-  {
-    id: "2",
-    name: "macOS",
-    isCurrent: false,
-    lastActive: "2024年4月22日 14:31",
-    location: "Singapore",
-  },
-  {
-    id: "3",
-    name: "macOS",
-    isCurrent: false,
-    lastActive: "2026年2月27日 21:37",
-    location: "MY-08, Malaysia",
-  },
-])
-
-const deviceRows = computed(() =>
-  devices.value.map(device => ({
-    ...device,
-    isCurrentLabel: device.isCurrent ? "此设备" : "",
-  })),
-)
-
-const deviceColumns: TableColumn[] = [
-  {
-    key: "name",
-    label: "设备名称",
-    filterType: "text",
-    cellRenderer: {
-      kind: "dual-inline",
-      primaryKey: "name",
-      secondaryKey: "isCurrentLabel",
-      primaryClass: "font-medium text-foreground",
-      secondaryClass: "text-primary",
-    },
-  },
-  {
-    key: "lastActive",
-    label: "上次活动",
-    filterType: "text",
-    tone: "muted",
-  },
-  {
-    key: "location",
-    label: "位置",
-    filterType: "text",
-    tone: "muted",
-  },
-]
-
-const deviceRowActions = computed<TableRowAction[]>(() => [
-  {
-    key: "logout",
-    label: "登出",
-    visible: row => !asDeviceRow(row).isCurrent,
-    onClick: row => handleDeviceLogout(asDeviceRow(row).id),
-  },
-])
-
-function asDeviceRow(row: unknown) {
-  return row as Device & { isCurrentLabel: string }
 }
 
 function handleSavePreferredName() {
@@ -161,17 +70,10 @@ function handleSelectAvatar(avatarKey: DefaultAvatarKey) {
   isAvatarPickerOpen.value = false
 }
 
-function handleDeviceLogout(deviceId: string) {
-  devices.value = devices.value.filter(d => d.id !== deviceId)
-  toast.success("设备已登出")
-}
-
-function handleLogoutAllDevices() {
-  emit("action", "logout-all-devices")
-}
-
-function handleDeleteAccount() {
-  emit("action", "delete-account")
+function handleLogout() {
+  clearAuthToken()
+  clearCurrentUser()
+  void router.replace({ name: "login" })
 }
 </script>
 
@@ -179,7 +81,7 @@ function handleDeleteAccount() {
   <div class="flex min-h-0 flex-1 flex-col">
     <SettingsPageHeader
       title="我"
-      description="管理你的档案、登录信息和设备"
+      description="管理你的档案和头像"
     />
 
     <div class="min-h-0 flex-1 overflow-y-auto px-3 pb-4 sm:px-4">
@@ -190,321 +92,126 @@ function handleDeleteAccount() {
           description=""
           :show-header="true"
         >
-          <div class="flex flex-col gap-4 py-4 sm:flex-row sm:items-start">
-            <Popover v-model:open="isAvatarPickerOpen">
-              <PopoverTrigger as-child>
-                <button
-                  type="button"
-                  class="inline-flex w-fit shrink-0 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                  aria-label="选择头像"
-                >
-                  <Avatar class="size-16 rounded-sm">
-                    <AvatarImage
-                      v-if="avatarSrc"
-                      :src="avatarSrc"
-                      :alt="userName"
-                      class="object-cover"
-                    />
-                    <AvatarFallback class="rounded-sm bg-avatar-placeholder text-xl font-semibold">
-                      {{ avatarFallback }}
-                    </AvatarFallback>
-                  </Avatar>
-                </button>
-              </PopoverTrigger>
-
-              <PopoverContent
-                align="start"
-                class="w-auto rounded-xl p-3"
-              >
-                <div class="grid grid-cols-3 gap-2">
+          <div class="space-y-0 py-4">
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-start">
+              <Popover v-model:open="isAvatarPickerOpen">
+                <PopoverTrigger as-child>
                   <button
-                    v-for="avatar in avatarOptions"
-                    :key="avatar.key"
                     type="button"
-                    :class="
-                      cn(
-                        'rounded-sm p-0.5 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
-                        props.selectedAvatarKey === avatar.key && 'ring-2 ring-primary ring-offset-2',
-                      )
-                    "
-                    :aria-label="`选择${avatar.label}头像`"
-                    :aria-pressed="props.selectedAvatarKey === avatar.key"
-                    @click="handleSelectAvatar(avatar.key)"
+                    class="inline-flex w-fit shrink-0 rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    aria-label="选择头像"
                   >
-                    <Avatar class="size-14 rounded-sm">
+                    <Avatar class="size-16 rounded-sm">
                       <AvatarImage
-                        :src="avatar.src"
-                        :alt="`${avatar.label}头像`"
+                        v-if="avatarSrc"
+                        :src="avatarSrc"
+                        :alt="userName"
                         class="object-cover"
                       />
-                      <AvatarFallback class="rounded-sm bg-avatar-placeholder text-base font-semibold">
+                      <AvatarFallback class="rounded-sm bg-avatar-placeholder text-xl font-semibold">
                         {{ avatarFallback }}
                       </AvatarFallback>
                     </Avatar>
                   </button>
-                </div>
-              </PopoverContent>
-            </Popover>
+                </PopoverTrigger>
 
-            <div class="flex-1 space-y-2">
-              <label class="text-sm font-medium text-foreground">
-                偏好名称
-              </label>
-              <div class="flex gap-2">
-                <Input
-                  v-model="localPreferredName"
-                  placeholder="输入偏好名称"
-                  class="h-9 max-w-[280px]"
-                />
-              </div>
-            </div>
-          </div>
-        </SettingsSection>
-
-        <!-- 账号安全 -->
-        <SettingsSection
-          title="账号安全"
-          description=""
-          :show-header="true"
-        >
-          <div class="space-y-0">
-            <!-- 邮件地址 -->
-            <div class="flex min-w-0 flex-row items-center gap-4 sm:gap-6 lg:gap-8">
-              <div class="min-w-0 flex-1 gap-1.5">
-                <div class="text-sm font-medium text-foreground">
-                  邮件地址
-                </div>
-                <div class="text-sm leading-5 text-muted-foreground">
-                  {{ userEmail }}
-                </div>
-              </div>
-              <div class="flex w-[196px] shrink-0 items-center justify-end xl:w-[220px]">
-                <Button
-                  variant="outline"
-                  class="h-8 shrink-0 rounded-md px-3.5"
-                  @click="emit('action', 'manage-email')"
+                <PopoverContent
+                  align="start"
+                  class="w-auto rounded-xl p-3"
                 >
-                  管理电子邮件地址
-                </Button>
-              </div>
-            </div>
-
-            <div class="h-6" />
-
-            <!-- 密码 -->
-            <div class="flex min-w-0 flex-row items-center gap-4 sm:gap-6 lg:gap-8">
-              <div class="min-w-0 flex-1 gap-1.5">
-                <div class="text-sm font-medium text-foreground">
-                  密码
-                </div>
-                <div class="text-sm leading-5 text-muted-foreground">
-                  更改用于登录的密码
-                </div>
-              </div>
-              <div class="flex w-[196px] shrink-0 items-center justify-end xl:w-[220px]">
-                <Button
-                  variant="outline"
-                  class="h-8 shrink-0 rounded-md px-3.5"
-                  @click="emit('action', 'change-password')"
-                >
-                  更改密码
-                </Button>
-              </div>
-            </div>
-
-            <div class="h-6" />
-
-            <!-- 两步验证 -->
-            <div class="flex min-w-0 flex-row items-center gap-4 sm:gap-6 lg:gap-8">
-              <div class="min-w-0 flex-1 gap-1.5">
-                <div class="text-sm font-medium text-foreground">
-                  两步验证
-                </div>
-                <div class="text-sm leading-5 text-muted-foreground">
-                  为你的账号多加一层安全保障
-                </div>
-              </div>
-              <div class="flex w-[196px] shrink-0 items-center justify-end xl:w-[220px]">
-                <Button
-                  variant="outline"
-                  class="h-8 shrink-0 rounded-md px-3.5"
-                  @click="emit('action', 'add-2fa')"
-                >
-                  添加验证方法
-                </Button>
-              </div>
-            </div>
-
-            <div class="h-6" />
-
-            <!-- 密钥 -->
-            <div class="flex min-w-0 flex-row items-center gap-4 sm:gap-6 lg:gap-8">
-              <div class="min-w-0 flex-1 gap-1.5">
-                <div class="text-sm font-medium text-foreground">
-                  密钥
-                </div>
-                <div class="text-sm leading-5 text-muted-foreground">
-                  使用设备上的生物识别验证信息登录
-                </div>
-              </div>
-              <div class="flex w-[196px] shrink-0 items-center justify-end xl:w-[220px]">
-                <Button
-                  variant="outline"
-                  class="h-8 shrink-0 rounded-md px-3.5"
-                  @click="emit('action', 'add-passkey')"
-                >
-                  添加密钥
-                </Button>
-              </div>
-            </div>
-          </div>
-        </SettingsSection>
-
-        <!-- 支持 -->
-        <SettingsSection
-          title="支持"
-          description=""
-          :show-header="true"
-        >
-          <div class="space-y-0">
-            <!-- 支持访问权限 -->
-            <div class="flex min-w-0 flex-row items-center gap-4 sm:gap-6 lg:gap-8">
-              <div class="min-w-0 flex-1 gap-1.5">
-                <div class="text-sm font-medium text-foreground">
-                  支持访问权限
-                </div>
-                <div class="text-sm leading-5 text-muted-foreground">
-                  授予支持团队对你账号的临时访问权限，以便代表你解决问题或恢复内容。你可以随时撤销访问权限。
-                </div>
-              </div>
-              <div class="flex shrink-0 items-center justify-end">
-                <Switch
-                  :checked="supportAccessEnabled"
-                  @update:checked="emit('update:supportAccessEnabled', $event)"
-                />
-              </div>
-            </div>
-
-            <div class="h-6" />
-
-            <!-- 删除我的账号 -->
-            <div class="flex min-w-0 flex-row items-center gap-4 sm:gap-6 lg:gap-8">
-              <div class="min-w-0 flex-1 gap-1.5">
-                <div class="text-sm font-medium text-foreground">
-                  删除我的账号
-                </div>
-                <div class="text-sm leading-5 text-muted-foreground">
-                  永久删除你的账号。你将无法再访问你的页面和你所属的任何工作空间。
-                </div>
-              </div>
-              <div class="flex shrink-0 items-center justify-end">
-                <Button
-                  variant="outline"
-                  class="h-8 shrink-0 rounded-md px-3.5 font-medium text-destructive hover:bg-destructive/5 hover:text-destructive"
-                  @click="handleDeleteAccount"
-                >
-                  删除我的账号
-                </Button>
-              </div>
-            </div>
-          </div>
-        </SettingsSection>
-
-        <!-- 设备 -->
-        <SettingsSection
-          title="设备"
-          description=""
-          :show-header="true"
-        >
-          <div class="space-y-0">
-            <!-- 从所有设备登出 -->
-            <div class="flex min-w-0 flex-row items-center gap-4 sm:gap-6 lg:gap-8">
-              <div class="min-w-0 flex-1 gap-1.5">
-                <div class="text-sm font-medium text-foreground">
-                  从所有设备登出
-                </div>
-                <div class="text-sm leading-5 text-muted-foreground">
-                  登出其他设备上的所有活动会话（当前设备除外）
-                </div>
-              </div>
-              <div class="flex shrink-0 items-center justify-end">
-                <Button
-                  variant="outline"
-                  class="h-8 shrink-0 rounded-md px-3.5 font-medium text-destructive hover:bg-destructive/5 hover:text-destructive"
-                  @click="handleLogoutAllDevices"
-                >
-                  从所有设备登出
-                </Button>
-              </div>
-            </div>
-
-            <div class="h-6" />
-
-            <!-- 设备表格 -->
-            <SettingsTable
-              :columns="deviceColumns"
-              :rows="deviceRows"
-              :row-actions="deviceRowActions"
-              row-key="id"
-            >
-              <template #cell-name="{ row: rawRow }">
-                <div class="flex items-center gap-2">
-                  <i class="ri-computer-line text-lg text-muted-foreground" />
-                  <div>
-                    <div class="text-sm font-medium text-foreground">
-                      {{ asDeviceRow(rawRow).name }}
-                    </div>
-                    <div
-                      v-if="asDeviceRow(rawRow).isCurrent"
-                      class="text-xs text-primary"
+                  <div class="grid grid-cols-3 gap-2">
+                    <button
+                      v-for="avatar in avatarOptions"
+                      :key="avatar.key"
+                      type="button"
+                      :class="
+                        cn(
+                          'rounded-sm p-0.5 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+                          props.selectedAvatarKey === avatar.key && 'ring-2 ring-primary ring-offset-2',
+                        )
+                      "
+                      :aria-label="`选择${avatar.label}头像`"
+                      :aria-pressed="props.selectedAvatarKey === avatar.key"
+                      @click="handleSelectAvatar(avatar.key)"
                     >
-                      此设备
-                    </div>
+                      <Avatar class="size-14 rounded-sm">
+                        <AvatarImage
+                          :src="avatar.src"
+                          :alt="`${avatar.label}头像`"
+                          class="object-cover"
+                        />
+                        <AvatarFallback class="rounded-sm bg-avatar-placeholder text-base font-semibold">
+                          {{ avatarFallback }}
+                        </AvatarFallback>
+                      </Avatar>
+                    </button>
                   </div>
+                </PopoverContent>
+              </Popover>
+
+              <div class="flex-1 space-y-2">
+                <label class="text-sm font-medium text-foreground">
+                  偏好名称
+                </label>
+                <div class="flex gap-2">
+                  <Input
+                    v-model="localPreferredName"
+                    placeholder="输入偏好名称"
+                    class="h-9 max-w-[280px]"
+                  />
                 </div>
-              </template>
-            </SettingsTable>
-
-            <!-- 加载更多 -->
-            <div class="py-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                class="h-8 gap-1 text-muted-foreground"
-              >
-                <i class="ri-arrow-down-s-line" />
-                加载 2 个其他设备
-              </Button>
-            </div>
-          </div>
-        </SettingsSection>
-
-        <!-- 用户 ID -->
-        <SettingsSection
-          title="用户 ID"
-          description=""
-          :show-header="true"
-        >
-          <div class="flex min-w-0 flex-row items-center gap-4 py-4 sm:gap-6 lg:gap-8">
-            <div class="min-w-0 flex-1 gap-1.5">
-              <div class="text-sm font-medium text-foreground">
-                用户 ID
               </div>
             </div>
-            <div class="flex shrink-0 items-center gap-2">
-              <code class="rounded bg-muted px-2 py-1 text-sm text-muted-foreground">
-                {{ userId }}
-              </code>
-              <TooltipWrap content="复制用户 ID">
+
+            <div class="h-6" />
+
+            <div class="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:gap-6 lg:gap-8">
+              <div class="min-w-0 flex-1 gap-1.5">
+                <div class="text-sm font-medium text-foreground">
+                  用户 ID
+                </div>
+                <div class="text-sm leading-5 text-muted-foreground">
+                  用于定位当前账号。
+                </div>
+              </div>
+              <div class="flex w-full min-w-0 items-center gap-2 sm:w-auto sm:shrink-0">
+                <code class="min-w-0 max-w-full truncate rounded bg-muted px-2 py-1 text-sm text-muted-foreground sm:max-w-[320px]">
+                  {{ userId }}
+                </code>
+                <TooltipWrap content="复制用户 ID">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    class="size-8 shrink-0"
+                    @click="handleCopyUserId"
+                  >
+                    <i class="ri-file-copy-line" />
+                  </Button>
+                </TooltipWrap>
+              </div>
+            </div>
+
+            <div class="h-6" />
+
+            <div class="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:gap-6 lg:gap-8">
+              <div class="min-w-0 flex-1 gap-1.5">
+                <div class="text-sm font-medium text-foreground">
+                  退出登录
+                </div>
+                <div class="text-sm leading-5 text-muted-foreground">
+                  退出当前账号并返回登录页。
+                </div>
+              </div>
+              <div class="flex shrink-0 items-center justify-end">
                 <Button
-                  variant="ghost"
-                  size="icon"
-                  class="size-8"
-                  @click="handleCopyUserId"
+                  variant="outline"
+                  class="h-8 shrink-0 gap-1.5 rounded-md px-3.5 font-medium text-destructive hover:bg-destructive/5 hover:text-destructive"
+                  @click="handleLogout"
                 >
-                  <i class="ri-file-copy-line" />
+                  <i class="ri-logout-box-r-line text-base" />
+                  退出登录
                 </Button>
-              </TooltipWrap>
+              </div>
             </div>
           </div>
         </SettingsSection>

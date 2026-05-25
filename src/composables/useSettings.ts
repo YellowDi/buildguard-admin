@@ -144,7 +144,6 @@ const state = reactive<SettingsState>({
   preferredName: currentUser.name,
   selectedAvatarKey: currentUser.avatarKey,
   userId: currentUser.uuid,
-  supportAccessEnabled: false,
 })
 
 watch(
@@ -208,9 +207,9 @@ const categories = computed<SettingsCategory[]>(() => [
     key: "me",
     group: "account",
     label: currentUser.name,
-    description: "管理你的档案、登录信息和设备",
+    description: "管理你的档案和头像",
     pageTitle: "我",
-    pageDescription: "管理你的档案、登录信息和设备",
+    pageDescription: "管理你的档案和头像",
     icon: "ri-user-line",
     avatarSrc: currentUser.avatarSrc,
     avatarFallback: currentUser.name.charAt(0).toUpperCase(),
@@ -554,13 +553,6 @@ function setActiveKey(nextKey: SettingsCategoryKey) {
 }
 
 function runAction(actionKey: SettingsActionKey) {
-  if (actionKey === "save-profile") {
-    toast.success("设置已保存", {
-      description: "工作区资料和默认偏好已更新。",
-    })
-    return
-  }
-
   if (actionKey === "send-test-notification") {
     toast.success("测试通知已发送", {
       description: "请检查浏览器通知和消息中心是否已收到。",
@@ -593,53 +585,6 @@ function runAction(actionKey: SettingsActionKey) {
     toast.success("已请求退出其他设备", {
       description: "当前设备会保持登录状态。",
     })
-    return
-  }
-
-  if (actionKey === "delete-account") {
-    toast.error("删除账号未开放", {
-      description: "危险操作入口已预留，接入前端确认流后再启用。",
-    })
-    return
-  }
-
-  if (actionKey === "manage-email") {
-    toast("邮箱管理待接入", {
-      description: "当前先保留交互入口，后续可接真实邮箱管理功能。",
-    })
-    return
-  }
-
-  if (actionKey === "change-password") {
-    toast("密码修改待接入", {
-      description: "当前先保留交互入口，后续可接真实密码修改功能。",
-    })
-    return
-  }
-
-  if (actionKey === "add-2fa") {
-    toast("两步验证待接入", {
-      description: "当前先保留交互入口，后续可接真实两步验证功能。",
-    })
-    return
-  }
-
-  if (actionKey === "add-passkey") {
-    toast("密钥管理待接入", {
-      description: "当前先保留交互入口，后续可接真实密钥管理功能。",
-    })
-    return
-  }
-
-  if (actionKey === "logout-all-devices") {
-    toast.success("已请求退出所有其他设备", {
-      description: "当前设备会保持登录状态。",
-    })
-    return
-  }
-
-  if (actionKey === "copy-user-id") {
-    toast.success("用户 ID 已复制")
     return
   }
 

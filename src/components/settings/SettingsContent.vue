@@ -84,17 +84,13 @@ function getBooleanValue(key: keyof SettingsState) {
   <SettingsMePage
     v-if="props.category.key === 'me'"
     :user-name="state.accountName"
-    :user-email="state.accountEmail"
     :avatar-src="props.category.avatarSrc"
     :avatar-fallback="props.category.avatarFallback ?? state.accountName.charAt(0).toUpperCase()"
     :preferred-name="state.preferredName"
     :selected-avatar-key="state.selectedAvatarKey"
     :user-id="state.userId"
-    :support-access-enabled="state.supportAccessEnabled"
-    @action="emit('action', $event)"
     @update:preferred-name="updateString('preferredName', $event)"
     @update:selected-avatar-key="updateString('selectedAvatarKey', $event)"
-    @update:support-access-enabled="updateBoolean('supportAccessEnabled', $event)"
   />
   <SettingsMembersTable
     v-else-if="props.category.key === 'members'"
