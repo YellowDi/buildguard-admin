@@ -37,9 +37,6 @@ const state = reactive<SettingsState>({
   memberDefaultRole: "member",
   inviteApprovalRequired: true,
   allowExternalMembers: false,
-  criticalAlerts: true,
-  browserNotifications: false,
-  digestFrequency: "daily",
   appRelease: {
     hasUpdate: true,
     versionName: "1.0.1",
@@ -344,58 +341,6 @@ const categories = computed<SettingsCategory[]>(() => [
     sections: [],
   },
   {
-    key: "notifications",
-    group: "feature",
-    label: "通知",
-    description: "报警推送、摘要频率和浏览器提醒。",
-    icon: "ri-notification-3-line",
-    sections: [
-      {
-        key: "delivery",
-        title: "投递策略",
-        description: "控制哪些事件需要即时触达，哪些进入汇总。",
-        items: [
-          {
-            key: "criticalAlerts",
-            type: "toggle",
-            modelKey: "criticalAlerts",
-            label: "高优先级报警即时提醒",
-            description: "对严重报警直接触发横幅和通知中心提醒。",
-          },
-          {
-            key: "browserNotifications",
-            type: "toggle",
-            modelKey: "browserNotifications",
-            label: "浏览器桌面提醒",
-            description: "在浏览器被切到后台时，继续接收桌面通知。",
-          },
-          {
-            key: "digestFrequency",
-            type: "select",
-            modelKey: "digestFrequency",
-            label: "摘要频率",
-            description: "将非紧急消息合并为固定频率发送。",
-            options: [
-              { label: "实时", value: "realtime" },
-              { label: "每日报告", value: "daily" },
-              { label: "每周摘要", value: "weekly" },
-              { label: "关闭摘要", value: "off" },
-            ],
-          },
-          {
-            key: "sendTestNotification",
-            type: "button",
-            actionKey: "send-test-notification",
-            label: "测试通知链路",
-            description: "立即发送一条测试消息，验证当前通知配置是否生效。",
-            buttonLabel: "发送测试通知",
-            variant: "outline",
-          },
-        ],
-      },
-    ],
-  },
-  {
     key: "apps",
     group: "admin",
     label: "应用更新",
@@ -445,13 +390,6 @@ function setActiveKey(nextKey: SettingsCategoryKey) {
 }
 
 function runAction(actionKey: SettingsActionKey) {
-  if (actionKey === "send-test-notification") {
-    toast.success("测试通知已发送", {
-      description: "请检查浏览器通知和消息中心是否已收到。",
-    })
-    return
-  }
-
   if (actionKey === "open-members-directory") {
     toast("成员名册待接入", {
       description: "入口已预留，后续可直接连到成员列表或权限页。",

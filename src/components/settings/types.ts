@@ -12,7 +12,6 @@ export const SETTINGS_CATEGORY_KEYS = [
   "business-presets",
   "inspection-items",
   "report-template",
-  "notifications",
 ] as const
 
 export type SettingsCategoryKey = (typeof SETTINGS_CATEGORY_KEYS)[number]
@@ -26,7 +25,6 @@ export function isSettingsCategoryKey(value: string): value is SettingsCategoryK
 export type SettingsActionKey =
   | "open-members-directory"
   | "review-member-invites"
-  | "send-test-notification"
 
 export type SettingsState = {
   accountName: string
@@ -51,9 +49,6 @@ export type SettingsState = {
   memberDefaultRole: string
   inviteApprovalRequired: boolean
   allowExternalMembers: boolean
-  criticalAlerts: boolean
-  browserNotifications: boolean
-  digestFrequency: string
   appRelease: AppReleaseDraft
   appReleases: AppReleaseEntry[]
   // Me page fields
