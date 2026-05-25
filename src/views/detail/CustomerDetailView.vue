@@ -163,8 +163,7 @@ type CustomerBuildingAssetRow = {
   buildingArea: string
   contactName: string
   contactPhone: string
-  statusValue: number
-  statusLabel: string
+  createdAt: string
   updatedAt: string
 }
 
@@ -716,7 +715,7 @@ const activeWorkOrderTableTotal = computed(() => (
 const filteredBuildingAssets = computed(() => {
   const query = buildingAssetsQuery.value.trim().toLowerCase()
   const rows = query
-    ? buildingAssets.value.filter(row => [row.buildingName, row.parkName, row.address].join(" ").toLowerCase().includes(query))
+    ? buildingAssets.value.filter(row => buildBuildingAssetsFilterText(row).toLowerCase().includes(query))
     : buildingAssets.value
 
   return [...rows].sort((left, right) => compareDateStrings(left.updatedAt, right.updatedAt, buildingAssetsSortDirection.value, left.buildingName, right.buildingName))
@@ -1166,17 +1165,6 @@ const buildingAssetsSchema: TablePageSchema<CustomerBuildingAssetRow> = {
       sort: true,
     },
     {
-      key: "address",
-      label: "地址",
-      filterType: "text",
-      tone: "muted",
-      filter: {
-        type: "text",
-        placeholder: "输入地址",
-      },
-      sort: true,
-    },
-    {
       key: "contactName",
       label: "联系人",
       filterType: "contact",
@@ -1207,23 +1195,40 @@ const buildingAssetsSchema: TablePageSchema<CustomerBuildingAssetRow> = {
       sort: true,
     },
     {
-      key: "statusLabel",
-      label: "状态",
-      filterType: "tag",
-      cellRenderer: {
-        kind: "status",
-        map: workOrderStatusMap,
-        fallback: { tone: "gray", icon: "dot" },
-      },
+      key: "builtTime",
+      label: "建成时间",
+      filterType: "time",
+      tone: "muted",
+      format: "numeric",
       filter: {
-        type: "tag",
-        defaultVisible: true,
+        type: "date",
+        value: row => extractDatePart(row.builtTime),
       },
-      sort: {
-        label: "状态",
-        kind: "metric",
-        value: row => row.statusValue,
+      sort: true,
+    },
+    {
+      key: "operationTime",
+      label: "投入运营时间",
+      filterType: "time",
+      tone: "muted",
+      format: "numeric",
+      filter: {
+        type: "date",
+        value: row => extractDatePart(row.operationTime),
       },
+      sort: true,
+    },
+    {
+      key: "createdAt",
+      label: "创建时间",
+      filterType: "time",
+      tone: "muted",
+      format: "numeric",
+      filter: {
+        type: "date",
+        value: row => extractDatePart(row.createdAt),
+      },
+      sort: true,
     },
     {
       key: "updatedAt",
@@ -3759,7 +3764,7 @@ function buildBuildingAssetsFilterText(row: CustomerBuildingAssetRow) {
     row.buildingArea,
     row.contactName,
     row.contactPhone,
-    row.statusLabel,
+    row.createdAt,
     row.updatedAt,
   ].join(" ")
 }
@@ -3848,8 +3853,7 @@ function mapBuildingAssetRow(item: BuildingListItem, currentCustomerUuid: string
     buildingArea: toDisplayText(item.BuildingArea ?? item.BuildArea, "-"),
     contactName: toDisplayText(item.ContactPerson ?? item.Contact, "-"),
     contactPhone: toDisplayText(item.ContactPhone, "-"),
-    statusValue: 0,
-    statusLabel: "未设置",
+    createdAt: toDisplayText(item.CreatedAt, "-"),
     updatedAt: toDisplayText(item.UpdatedAt, "-"),
   }
 }

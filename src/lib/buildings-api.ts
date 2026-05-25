@@ -70,8 +70,6 @@ export type ListBuildingsPayload = {
   Name?: string
   ParkUuid?: string
   CustomerUuid?: string
-  ParkUuids?: string[]
-  CustomerUuids?: string[]
   PageNum?: number
   PageSize?: number
   [property: string]: unknown
@@ -91,8 +89,6 @@ export async function fetchBuildings(payload: ListBuildingsPayload = {}): Promis
     Name: getOptionalString(payload.Name),
     ParkUuid: getOptionalString(payload.ParkUuid),
     CustomerUuid: getOptionalString(payload.CustomerUuid),
-    ParkUuids: getOptionalStringArray(payload.ParkUuids),
-    CustomerUuids: getOptionalStringArray(payload.CustomerUuids),
     PageNum: getOptionalNumber(payload.PageNum, "PageNum"),
     PageSize: getOptionalNumber(payload.PageSize, "PageSize"),
   }
@@ -342,20 +338,4 @@ function getOptionalString(value: unknown) {
   }
 
   throw new ApiError("请求参数校验失败：字段必须是有效字符串。")
-}
-
-function getOptionalStringArray(value: unknown) {
-  if (value === undefined || value === null || value === "") {
-    return undefined
-  }
-
-  if (!Array.isArray(value)) {
-    throw new ApiError("请求参数校验失败：字段必须是字符串数组。")
-  }
-
-  const normalized = value
-    .map(item => getOptionalString(item))
-    .filter((item): item is string => Boolean(item))
-
-  return normalized.length ? normalized : undefined
 }
