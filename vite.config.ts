@@ -7,6 +7,7 @@ import { defineConfig } from "vite"
 const apiTarget = "http://192.168.2.4:8000"
 
 export default defineConfig({
+  base: "/admin/",
   plugins: [vue(), tailwindcss()],
   build: {
     rollupOptions: {

@@ -18,6 +18,7 @@ export type ListCustomerSubAccountsPayload = {
 }
 
 export type CustomerSubAccountListItem = {
+  Account?: string
   IsMain?: number
   Name?: string
   Status?: number
@@ -55,12 +56,12 @@ export type CustomerSubAccountLocalRecord = {
 
 const CUSTOMER_SUB_ACCOUNTS_LIST_API_URL = buildApiUrl(API_PATHS.customerSubAccountsList)
 const CUSTOMER_SUB_ACCOUNT_CREATE_API_URL = buildApiUrl(API_PATHS.customerSubAccountCreate)
+const CUSTOMER_SUB_ACCOUNT_UPDATE_API_URL = buildApiUrl(API_PATHS.customerSubAccountUpdate)
 const CUSTOMER_SUB_ACCOUNT_PASSWORD_RESET_OLD_API_URL = buildApiUrl(API_PATHS.customerSubAccountPasswordResetOld)
-const CUSTOMER_SUB_ACCOUNT_PASSWORD_RESET_NEW_API_URL = buildApiUrl(API_PATHS.customerSubAccountPasswordResetNew)
 const CUSTOMER_SUB_ACCOUNTS_LOAD_ERROR_MESSAGE = "子账号列表加载失败，请稍后重试。"
 const CUSTOMER_SUB_ACCOUNT_CREATE_ERROR_MESSAGE = "子账号创建失败，请稍后重试。"
+const CUSTOMER_SUB_ACCOUNT_UPDATE_ERROR_MESSAGE = "子账号编辑失败，请稍后重试。"
 const CUSTOMER_SUB_ACCOUNT_PASSWORD_RESET_OLD_ERROR_MESSAGE = "子账号密码重置失败，请稍后重试。"
-const CUSTOMER_SUB_ACCOUNT_PASSWORD_RESET_NEW_ERROR_MESSAGE = "子账号密码更新失败，请稍后重试。"
 const CUSTOMER_SUB_ACCOUNT_STORAGE_KEY = "customer-sub-accounts:local-records"
 
 export async function fetchCustomerSubAccounts(payload: ListCustomerSubAccountsPayload = {}): Promise<CustomerSubAccountsListResult> {
@@ -154,29 +155,42 @@ export async function resetCustomerSubAccountPassword(payload: ResetCustomerSubA
   assertApiSuccess(responseBody, CUSTOMER_SUB_ACCOUNT_PASSWORD_RESET_OLD_ERROR_MESSAGE)
 }
 
-export type ResetCustomerSubAccountPasswordNewPayload = {
+export type UpdateCustomerSubAccountPayload = {
   /**
-   * 子账号 UUID
+   * 账号
    */
-  Uuid: string
+  Account?: string
   /**
-   * 旧密码
+   * 名称
    */
-  OldPassword: string
+  Name?: string
   /**
-   * 新密码
+   * 账号UUID
    */
-  Password: string
+  Uuid?: string
+  [property: string]: unknown
 }
 
-export async function updateCustomerSubAccountPassword(payload: ResetCustomerSubAccountPasswordNewPayload): Promise<void> {
-  const normalizedPayload = {
+export async function updateCustomerSubAccount(payload: UpdateCustomerSubAccountPayload): Promise<void> {
+  const normalizedPayload: UpdateCustomerSubAccountPayload = {
     Uuid: getRequiredString(payload.Uuid, "Uuid"),
-    OldPassword: normalizePasswordForApi(payload.OldPassword, "OldPassword"),
-    Password: normalizePasswordForApi(payload.Password, "Password"),
+  }
+  const account = getOptionalString(payload.Account)
+  const name = getOptionalString(payload.Name)
+
+  if (!account && !name) {
+    throw new ApiError("请求参数校验失败：Account 和 Name 至少填写一项。")
   }
 
-  const response = await fetch(CUSTOMER_SUB_ACCOUNT_PASSWORD_RESET_NEW_API_URL, {
+  if (account) {
+    normalizedPayload.Account = account
+  }
+
+  if (name) {
+    normalizedPayload.Name = name
+  }
+
+  const response = await fetch(CUSTOMER_SUB_ACCOUNT_UPDATE_API_URL, {
     method: "POST",
     headers: buildApiHeaders({
       "Content-Type": "application/json",
@@ -187,10 +201,10 @@ export async function updateCustomerSubAccountPassword(payload: ResetCustomerSub
   const responseBody = await readResponseBody(response)
 
   if (!response.ok) {
-    throw createHttpError(response, responseBody, CUSTOMER_SUB_ACCOUNT_PASSWORD_RESET_NEW_ERROR_MESSAGE)
+    throw createHttpError(response, responseBody, CUSTOMER_SUB_ACCOUNT_UPDATE_ERROR_MESSAGE)
   }
 
-  assertApiSuccess(responseBody, CUSTOMER_SUB_ACCOUNT_PASSWORD_RESET_NEW_ERROR_MESSAGE)
+  assertApiSuccess(responseBody, CUSTOMER_SUB_ACCOUNT_UPDATE_ERROR_MESSAGE)
 }
 
 export function readCustomerSubAccountLocalRecords(customerUuid: string) {
@@ -341,6 +355,10 @@ function getRequiredString(value: unknown, field: string) {
   }
 
   throw new ApiError(`请求参数校验失败：${field} 不能为空。`)
+}
+
+function getOptionalString(value: unknown) {
+  return typeof value === "string" ? value.trim() : ""
 }
 
 function normalizePasswordForApi(value: unknown, field: string) {

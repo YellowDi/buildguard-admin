@@ -18,8 +18,8 @@ export const API_PATHS = {
   customerDelete: "/bqi/customer/del",
   customerSubAccountsList: "/bqi/customer/account/list",
   customerSubAccountCreate: "/bqi/customer/account/new",
+  customerSubAccountUpdate: "/bqi/customer/account/update",
   customerSubAccountPasswordResetOld: "/bqi/customer/account/passwd/reset",
-  customerSubAccountPasswordResetNew: "/bqi/customer/account/pwd/reset",
   parksList: "/bqi/park/list",
   parkCreate: "/bqi/park/new",
   parkUpdate: "/bqi/park/update",
@@ -156,17 +156,7 @@ export function ensureApiEnvironmentSecurity() {
 }
 
 export function getApiBaseUrl() {
-  const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim()
-
-  if (configuredBaseUrl) {
-    return configuredBaseUrl
-  }
-
-  if (import.meta.env.DEV) {
-    return ""
-  }
-
-  throw new ApiConfigurationError("缺少 VITE_API_BASE_URL 配置，生产环境必须显式指定 API 地址。")
+  return import.meta.env.VITE_API_BASE_URL?.trim() ?? ""
 }
 
 export function buildApiUrl(path: string) {

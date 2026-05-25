@@ -82,7 +82,7 @@ import {
   createCustomerSubAccount,
   fetchCustomerSubAccounts,
   resetCustomerSubAccountPassword,
-  updateCustomerSubAccountPassword,
+  updateCustomerSubAccount,
   readCustomerSubAccountLocalRecords,
   type CustomerSubAccountListItem,
   type CustomerSubAccountLocalRecord,
@@ -207,6 +207,7 @@ type SubAccountRow = {
   id: string
   uuid: string
   name: string
+  account: string
   username: string
   isMain: number | null
   isMainLabel: string
@@ -219,6 +220,11 @@ type CustomerSubAccountCreateFormState = {
   account: string
   password: string
   phone: string
+}
+
+type CustomerSubAccountEditFormState = {
+  name: string
+  account: string
 }
 
 type CustomerPackageMockRecord = {
@@ -411,14 +417,16 @@ const assignSubmitting = ref(false)
 const subAccountCreateDialogOpen = ref(false)
 const subAccountCreateSubmitting = ref(false)
 const subAccountCreateForm = ref<CustomerSubAccountCreateFormState>(createEmptySubAccountCreateForm())
-type SubAccountPasswordResetDialogKind = "passwdReset" | "pwdUpdate"
-const subAccountPasswordResetDialogKind = ref<SubAccountPasswordResetDialogKind>("passwdReset")
 const subAccountPasswordResetDialogOpen = ref(false)
 const subAccountPasswordResetSubmitting = ref(false)
 const subAccountPasswordResetTargetUuid = ref("")
 const subAccountPasswordResetTargetName = ref("")
-const subAccountPasswordResetOldPassword = ref("")
 const subAccountPasswordResetPassword = ref("")
+const subAccountEditDialogOpen = ref(false)
+const subAccountEditSubmitting = ref(false)
+const subAccountEditTargetUuid = ref("")
+const subAccountEditTargetName = ref("")
+const subAccountEditForm = ref<CustomerSubAccountEditFormState>(createEmptySubAccountEditForm())
 const buildingDetailSheetOpen = ref(false)
 const activeBuildingUuid = ref("")
 const activeBuildingParkUuid = ref("")
@@ -485,17 +493,17 @@ const canSubmitSubAccountPasswordReset = computed(() => {
   const targetUuid = normalizeDialogText(subAccountPasswordResetTargetUuid.value)
   const newPassword = normalizeDialogText(subAccountPasswordResetPassword.value)
 
-  if (!targetUuid || !newPassword) {
-    return false
-  }
-
-  if (subAccountPasswordResetDialogKind.value === "pwdUpdate") {
-    const oldPassword = normalizeDialogText(subAccountPasswordResetOldPassword.value)
-    return Boolean(oldPassword)
-  }
-
-  return true
+  return Boolean(targetUuid && newPassword)
 })
+
+const canSubmitSubAccountEdit = computed(() => (
+  Boolean(
+    normalizeDialogText(subAccountEditTargetUuid.value)
+    && normalizeDialogText(subAccountEditForm.value.name)
+    && normalizeDialogText(subAccountEditForm.value.account)
+    && !subAccountEditSubmitting.value,
+  )
+))
 
 const detailTabActionsByTab: Record<CustomerDetailTab, CustomerDetailTabActions> = {
   "basic-info": {
@@ -1687,13 +1695,13 @@ const subAccountsSchema: TablePageSchema<SubAccountRow> = {
       key: "reset-password",
       label: "重置密码",
       permissionCode: PERMISSION_CODES.customerSubAccountPasswordReset,
-      onClick: row => handleOpenSubAccountPasswordResetDialog("passwdReset", row as SubAccountRow),
+      onClick: row => handleOpenSubAccountPasswordResetDialog(row as SubAccountRow),
     },
     {
-      key: "update-password",
-      label: "更新密码",
+      key: "edit",
+      label: "编辑",
       permissionCode: PERMISSION_CODES.customerSubAccountPasswordReset,
-      onClick: row => handleOpenSubAccountPasswordResetDialog("pwdUpdate", row as SubAccountRow),
+      onClick: row => handleOpenSubAccountEditDialog(row as SubAccountRow),
     },
   ],
   columns: [
@@ -2396,16 +2404,14 @@ function handleAddSubAccount() {
   subAccountCreateDialogOpen.value = true
 }
 
-function handleOpenSubAccountPasswordResetDialog(kind: SubAccountPasswordResetDialogKind, row: SubAccountRow) {
+function handleOpenSubAccountPasswordResetDialog(row: SubAccountRow) {
   if (!row.uuid) {
     toast.error("子账号 UUID 缺失，无法重置密码")
     return
   }
 
-  subAccountPasswordResetDialogKind.value = kind
   subAccountPasswordResetTargetUuid.value = row.uuid
   subAccountPasswordResetTargetName.value = row.name
-  subAccountPasswordResetOldPassword.value = ""
   subAccountPasswordResetPassword.value = ""
   subAccountPasswordResetDialogOpen.value = true
 }
@@ -2416,10 +2422,8 @@ function closeSubAccountPasswordResetDialog(force = false) {
   }
 
   subAccountPasswordResetDialogOpen.value = false
-  subAccountPasswordResetDialogKind.value = "passwdReset"
   subAccountPasswordResetTargetUuid.value = ""
   subAccountPasswordResetTargetName.value = ""
-  subAccountPasswordResetOldPassword.value = ""
   subAccountPasswordResetPassword.value = ""
 }
 
@@ -2432,7 +2436,6 @@ function handleSubAccountPasswordResetDialogOpenChange(open: boolean) {
 }
 
 async function submitSubAccountPasswordReset() {
-  const kind = subAccountPasswordResetDialogKind.value
   const targetUuid = normalizeDialogText(subAccountPasswordResetTargetUuid.value)
   const targetName = subAccountPasswordResetTargetName.value
   const newPassword = normalizeDialogText(subAccountPasswordResetPassword.value)
@@ -2444,36 +2447,6 @@ async function submitSubAccountPasswordReset() {
 
   if (!newPassword) {
     toast.error("请填写新密码")
-    return
-  }
-
-  if (kind === "pwdUpdate") {
-    const oldPassword = normalizeDialogText(subAccountPasswordResetOldPassword.value)
-    if (!oldPassword) {
-      toast.error("请填写旧密码")
-      return
-    }
-
-    subAccountPasswordResetSubmitting.value = true
-
-    try {
-      await updateCustomerSubAccountPassword({
-        Uuid: targetUuid,
-        OldPassword: oldPassword,
-        Password: newPassword,
-      })
-
-      toast.success(`子账号「${targetName}」密码已更新`)
-      closeSubAccountPasswordResetDialog(true)
-    } catch (error) {
-      handleApiError(error, {
-        title: "子账号密码更新失败",
-        fallback: "子账号密码更新失败，请稍后重试。",
-      })
-    } finally {
-      subAccountPasswordResetSubmitting.value = false
-    }
-
     return
   }
 
@@ -2494,6 +2467,81 @@ async function submitSubAccountPasswordReset() {
     })
   } finally {
     subAccountPasswordResetSubmitting.value = false
+  }
+}
+
+function handleOpenSubAccountEditDialog(row: SubAccountRow) {
+  if (!row.uuid) {
+    toast.error("子账号 UUID 缺失，无法编辑")
+    return
+  }
+
+  subAccountEditTargetUuid.value = row.uuid
+  subAccountEditTargetName.value = row.name
+  subAccountEditForm.value = {
+    name: normalizeDialogText(row.name),
+    account: normalizeDialogText(row.account || row.username),
+  }
+  subAccountEditDialogOpen.value = true
+}
+
+function closeSubAccountEditDialog(force = false) {
+  if (subAccountEditSubmitting.value && !force) {
+    return
+  }
+
+  subAccountEditDialogOpen.value = false
+  subAccountEditTargetUuid.value = ""
+  subAccountEditTargetName.value = ""
+  subAccountEditForm.value = createEmptySubAccountEditForm()
+}
+
+function handleSubAccountEditDialogOpenChange(open: boolean) {
+  if (open) {
+    subAccountEditDialogOpen.value = true
+    return
+  }
+
+  closeSubAccountEditDialog()
+}
+
+async function submitSubAccountEdit() {
+  const payload = {
+    Uuid: normalizeDialogText(subAccountEditTargetUuid.value),
+    Name: normalizeDialogText(subAccountEditForm.value.name),
+    Account: normalizeDialogText(subAccountEditForm.value.account),
+  }
+
+  if (!payload.Uuid) {
+    toast.error("子账号 UUID 缺失，无法提交")
+    return
+  }
+
+  if (!payload.Name) {
+    toast.error("请填写名称")
+    return
+  }
+
+  if (!payload.Account) {
+    toast.error("请填写账号")
+    return
+  }
+
+  subAccountEditSubmitting.value = true
+
+  try {
+    await updateCustomerSubAccount(payload)
+    await loadSubAccounts(customerUuid.value)
+
+    toast.success(`子账号「${subAccountEditTargetName.value || payload.Name}」已更新`)
+    closeSubAccountEditDialog(true)
+  } catch (error) {
+    handleApiError(error, {
+      title: "子账号编辑失败",
+      fallback: "子账号编辑失败，请稍后重试。",
+    })
+  } finally {
+    subAccountEditSubmitting.value = false
   }
 }
 
@@ -4093,12 +4141,14 @@ function clampClientPageNum(pageNum: number, pageSize: number, total: number) {
 
 function mapSubAccountRow(item: CustomerSubAccountListItem, index: number): SubAccountRow {
   const uuid = toDisplayText(item.Uuid, "")
+  const account = normalizeDialogText(item.Account ?? item.Username)
 
   return {
     id: uuid || `sub-account-${index + 1}`,
     uuid,
     name: toDisplayText(item.Name, "未命名子账号"),
-    username: toDisplayText(item.Username, "-"),
+    account,
+    username: account || "-",
     isMain: toOptionalNumber(item.IsMain),
     isMainLabel: resolveSubAccountTypeLabel(item.IsMain),
     status: toOptionalNumber(item.Status),
@@ -4111,6 +4161,7 @@ function mapLocalSubAccountRow(record: CustomerSubAccountLocalRecord): SubAccoun
     id: record.id,
     uuid: "",
     name: toDisplayText(record.username, "未命名子账号"),
+    account: record.account,
     username: toDisplayText(record.account, "-"),
     isMain: 2,
     isMainLabel: "子账号",
@@ -4147,6 +4198,13 @@ function createEmptySubAccountCreateForm(): CustomerSubAccountCreateFormState {
     account: "",
     password: "",
     phone: "",
+  }
+}
+
+function createEmptySubAccountEditForm(): CustomerSubAccountEditFormState {
+  return {
+    name: "",
+    account: "",
   }
 }
 
@@ -5012,28 +5070,13 @@ function toDisplayText(value: unknown, fallback = "未填写") {
   <Dialog :open="subAccountPasswordResetDialogOpen" @update:open="handleSubAccountPasswordResetDialogOpenChange">
     <DialogContent class="sm:max-w-[520px]">
       <DialogHeader>
-        <DialogTitle>{{ subAccountPasswordResetDialogKind === "pwdUpdate" ? "更新子账号密码" : "重置子账号密码" }}</DialogTitle>
+        <DialogTitle>重置子账号密码</DialogTitle>
         <DialogDescription>
-          {{
-            subAccountPasswordResetDialogKind === "pwdUpdate"
-              ? `请为子账号「${subAccountPasswordResetTargetName}」输入旧密码与新密码。`
-              : `请为子账号「${subAccountPasswordResetTargetName}」输入新密码。`
-          }}
+          请为子账号「{{ subAccountPasswordResetTargetName }}」输入新密码。
         </DialogDescription>
       </DialogHeader>
 
       <form class="grid gap-4" @submit.prevent="submitSubAccountPasswordReset">
-        <div v-if="subAccountPasswordResetDialogKind === 'pwdUpdate'" class="grid gap-2">
-          <label class="text-sm font-medium text-foreground" for="sub-account-reset-old-password">旧密码</label>
-          <Input
-            id="sub-account-reset-old-password"
-            v-model="subAccountPasswordResetOldPassword"
-            :disabled="subAccountPasswordResetSubmitting"
-            type="password"
-            placeholder="请输入旧密码"
-          />
-        </div>
-
         <div class="grid gap-2">
           <label class="text-sm font-medium text-foreground" for="sub-account-reset-password">新密码</label>
           <Input
@@ -5055,11 +5098,54 @@ function toDisplayText(value: unknown, fallback = "未填写") {
             取消
           </Button>
           <Button type="submit" :disabled="!canSubmitSubAccountPasswordReset">
-            {{
-              subAccountPasswordResetSubmitting
-                ? "提交中..."
-                : (subAccountPasswordResetDialogKind === "pwdUpdate" ? "确认更新" : "确认重置")
-            }}
+            {{ subAccountPasswordResetSubmitting ? "提交中..." : "确认重置" }}
+          </Button>
+        </DialogFooter>
+      </form>
+    </DialogContent>
+  </Dialog>
+
+  <Dialog :open="subAccountEditDialogOpen" @update:open="handleSubAccountEditDialogOpenChange">
+    <DialogContent class="sm:max-w-[520px]">
+      <DialogHeader>
+        <DialogTitle>编辑子账号</DialogTitle>
+        <DialogDescription>
+          请更新子账号「{{ subAccountEditTargetName }}」的名称与账号。
+        </DialogDescription>
+      </DialogHeader>
+
+      <form class="grid gap-4" @submit.prevent="submitSubAccountEdit">
+        <div class="grid gap-2">
+          <label class="text-sm font-medium text-foreground" for="sub-account-edit-account">账号</label>
+          <Input
+            id="sub-account-edit-account"
+            v-model="subAccountEditForm.account"
+            :disabled="subAccountEditSubmitting"
+            placeholder="请输入账号"
+          />
+        </div>
+
+        <div class="grid gap-2">
+          <label class="text-sm font-medium text-foreground" for="sub-account-edit-name">名称</label>
+          <Input
+            id="sub-account-edit-name"
+            v-model="subAccountEditForm.name"
+            :disabled="subAccountEditSubmitting"
+            placeholder="请输入名称"
+          />
+        </div>
+
+        <DialogFooter class="pt-2">
+          <Button
+            type="button"
+            variant="outline"
+            :disabled="subAccountEditSubmitting"
+            @click="closeSubAccountEditDialog"
+          >
+            取消
+          </Button>
+          <Button type="submit" :disabled="!canSubmitSubAccountEdit">
+            {{ subAccountEditSubmitting ? "提交中..." : "保存" }}
           </Button>
         </DialogFooter>
       </form>
