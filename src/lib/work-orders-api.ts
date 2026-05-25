@@ -1365,7 +1365,7 @@ function getFirstTextArray(record: Record<string, unknown>, keys: string[]) {
     }
 
     const normalized = value
-      .map(item => getOptionalString(item))
+      .map(item => getTextArrayItem(item))
       .filter((item): item is string => Boolean(item))
 
     if (normalized.length) {
@@ -1374,6 +1374,41 @@ function getFirstTextArray(record: Record<string, unknown>, keys: string[]) {
   }
 
   return undefined
+}
+
+function getTextArrayItem(value: unknown) {
+  const directValue = getOptionalStringSilently(value)
+
+  if (directValue) {
+    return directValue
+  }
+
+  const record = asRecord(value)
+
+  if (!record) {
+    return undefined
+  }
+
+  return getFirstText(record, [
+    "Name",
+    "name",
+    "UserName",
+    "userName",
+    "Username",
+    "username",
+    "ExecutorName",
+    "executorName",
+    "RealName",
+    "realName",
+    "DisplayName",
+    "displayName",
+    "NickName",
+    "nickName",
+    "Uuid",
+    "uuid",
+    "UserUuid",
+    "userUuid",
+  ])
 }
 
 function getFirstArray(record: Record<string, unknown>, keys: string[]) {
