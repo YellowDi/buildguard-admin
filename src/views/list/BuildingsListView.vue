@@ -39,11 +39,8 @@ type BuildingRecord = {
   buildingName: string
   builtTime: string
   operationTime: string
-  buildingArea: string
-  buildingAreaValue: number | null
   contactName: string
   contactPhone: string
-  address: string
   updatedAt: string
 }
 
@@ -231,17 +228,6 @@ const schema: TablePageSchema<BuildingRecord> = {
       slot: "cell-parkName",
     },
     {
-      key: "buildingArea",
-      label: "建筑面积",
-      filterType: "number",
-      variant: "metric",
-      cellRenderer: {
-        kind: "metric-unit",
-        valueKey: "buildingAreaValue",
-        unit: "㎡",
-      },
-    },
-    {
       key: "contactName",
       label: "联系人",
       filterType: "contact",
@@ -265,12 +251,6 @@ const schema: TablePageSchema<BuildingRecord> = {
       filterType: "time",
       tone: "muted",
       format: "numeric",
-    },
-    {
-      key: "address",
-      label: "地址",
-      filterType: "text",
-      width: "fill",
     },
     {
       key: "updatedAt",
@@ -641,10 +621,8 @@ async function fetchBuildingsForCurrentFilters() {
       Name: row.buildingName,
       BuiltTime: row.builtTime,
       OperationTime: row.operationTime,
-      BuildingArea: row.buildingArea,
       ContactPerson: row.contactName,
       ContactPhone: row.contactPhone,
-      Address: row.address,
       UpdatedAt: row.updatedAt,
     })),
   }
@@ -854,7 +832,6 @@ function normalizeBuildingRows(items: BuildingListItem[]) {
     const parkUuid = toText(item.ParkUuid)
     const directCustomerUuid = toText(item.CustomerUuid)
     const directCustomerName = toText(item.CorpName || item.CustomerName)
-    const buildingAreaValue = parseAreaValue(item.BuildingArea ?? item.BuildArea)
     const needsCustomerHydration = Boolean(parkUuid) && (!directCustomerUuid || !directCustomerName)
 
     if (parkUuid && directCustomerUuid && directCustomerName) {
@@ -875,11 +852,8 @@ function normalizeBuildingRows(items: BuildingListItem[]) {
       buildingName: toText(item.Name, "未命名建筑"),
       builtTime: toText(item.BuiltTime, "-"),
       operationTime: toText(item.OperationTime, "-"),
-      buildingArea: buildingAreaValue === null ? "-" : String(buildingAreaValue),
-      buildingAreaValue,
       contactName: toText(item.ContactPerson ?? item.Contact, "未填写"),
       contactPhone: toText(item.ContactPhone, "-"),
-      address: toText(item.Address, "-"),
       updatedAt: toText(item.UpdatedAt || item.CreatedAt, "-"),
     }
   })
@@ -962,17 +936,6 @@ function extractDatePart(value: string) {
 function getSortTimestamp(value: string) {
   const timestamp = Date.parse(value)
   return Number.isFinite(timestamp) ? timestamp : 0
-}
-
-function parseAreaValue(value: unknown) {
-  const normalized = toText(value)
-
-  if (!normalized) {
-    return null
-  }
-
-  const numeric = Number(normalized.replace(/[^\d.]/g, ""))
-  return Number.isFinite(numeric) ? numeric : null
 }
 
 function normalizeText(value: unknown) {

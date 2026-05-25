@@ -34,11 +34,8 @@ type ParkRecord = {
   buildingCountValue: number | null
   builtTime: string
   operationTime: string
-  buildArea: string
-  buildAreaValue: number | null
   contactName: string
   contactPhone: string
-  address: string
   updatedAt: string
 }
 
@@ -132,27 +129,6 @@ const schema: TablePageSchema<ParkRecord> = {
       sort: true,
     },
     {
-      key: "buildArea",
-      label: "建筑面积",
-      filterType: "number",
-      variant: "metric",
-      filter: {
-        type: "number",
-        placeholder: "输入建筑面积",
-        value: row => row.buildAreaValue ?? "",
-      },
-      sort: {
-        label: "建筑面积",
-        kind: "metric",
-        value: row => row.buildAreaValue ?? -1,
-      },
-      cellRenderer: {
-        kind: "metric-unit",
-        valueKey: "buildAreaValue",
-        unit: "㎡",
-      },
-    },
-    {
       key: "buildingCount",
       label: "建筑数量",
       filterType: "number",
@@ -209,17 +185,6 @@ const schema: TablePageSchema<ParkRecord> = {
       format: "numeric",
       filter: {
         type: "date",
-      },
-      sort: true,
-    },
-    {
-      key: "address",
-      label: "地址",
-      filterType: "text",
-      width: "fill",
-      filter: {
-        type: "text",
-        placeholder: "输入地址",
       },
       sort: true,
     },
@@ -435,7 +400,6 @@ async function loadParks() {
     total.value = parksResult.total
     parks.value = parksResult.list.map((item, index) => {
       const uuid = toText(item.Uuid, `park-${index + 1}`)
-      const buildAreaValue = parseAreaValue(item.BuildArea)
       const buildingCountValue = getFirstNumber(item, ["BuildNum", "BuildingNum", "BuildCount", "BuildingCount", "buildingCount"])
 
       return {
@@ -448,11 +412,8 @@ async function loadParks() {
         buildingCountValue,
         builtTime: toText(item.BuiltTime, "-"),
         operationTime: toText(item.OperationTime, "-"),
-        buildArea: buildAreaValue === null ? "-" : String(buildAreaValue),
-        buildAreaValue,
         contactName: toText(item.Contact, "未填写"),
         contactPhone: toText(item.ContactPhone, "-"),
-        address: toText(item.Address, "-"),
         updatedAt: toText(item.UpdatedAt || item.CreatedAt, "-"),
       }
     })
@@ -509,10 +470,8 @@ function buildPageFilterText(row: ParkRecord) {
     row.parkName,
     row.customerName,
     row.buildingCount,
-    row.buildArea,
     row.contactName,
     row.contactPhone,
-    row.address,
     row.builtTime,
     row.operationTime,
     row.updatedAt,
@@ -522,17 +481,6 @@ function buildPageFilterText(row: ParkRecord) {
 function extractDatePart(value: string) {
   const [datePart] = value.split(/[ T]/)
   return datePart ?? value
-}
-
-function parseAreaValue(value: unknown) {
-  const normalized = toText(value)
-
-  if (!normalized) {
-    return null
-  }
-
-  const numeric = Number(normalized.replace(/[^\d.]/g, ""))
-  return Number.isFinite(numeric) ? numeric : null
 }
 
 function getFirstNumber(record: Record<string, unknown>, keys: string[]) {

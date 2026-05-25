@@ -167,6 +167,11 @@ const sections = computed<DetailFieldSection[]>(() => {
         title: "园区基础信息",
         rows: [
           { key: "name", label: "园区名称", value: toText(parkDetail.value.Name, "未命名园区") },
+          { key: "park-id", label: "园区 ID", value: toText(parkDetail.value.Id, "-") },
+          { key: "park-uuid", label: "园区 UUID", value: toText(parkDetail.value.Uuid, "-") },
+          { key: "corp-name", label: "公司名称", value: toText(parkDetail.value.CorpName, "-") },
+          { key: "customer-uuid", label: "客户 UUID", value: toText(parkDetail.value.CustomerUuid, "-") },
+          { key: "build-num", label: "建筑数量", value: toText(parkDetail.value.BuildNum, "-") },
           { key: "built-time", label: "建成时间", value: toText(parkDetail.value.BuiltTime, "-") },
           { key: "operation-time", label: "投运时间", value: toText(parkDetail.value.OperationTime, "-") },
           { key: "building-area", label: "建筑面积", value: toText(parkDetail.value.BuildArea, "-") },
@@ -174,6 +179,8 @@ const sections = computed<DetailFieldSection[]>(() => {
           { key: "latitude", label: "纬度", value: toText(parkDetail.value.Latitude, "-") },
           { key: "longitude", label: "经度", value: toText(parkDetail.value.Longitude, "-") },
           { key: "address", label: "地址", value: toText(parkDetail.value.Address, "-"), truncate: false, valueClass: "leading-6" },
+          { key: "created-at", label: "创建时间", value: toText(parkDetail.value.CreatedAt, "-") },
+          { key: "updated-at", label: "更新时间", value: toText(parkDetail.value.UpdatedAt, "-") },
         ],
       },
     ]
