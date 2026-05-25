@@ -36,6 +36,7 @@ export const API_PATHS = {
   workOrderRepairUpdate: "/bqi/work-order/repair/update",
   workOrderRepairDelete: "/bqi/work-order/repair/del",
   workOrderRepairStatusUpdate: "/bqi/work-order/repair/status/update",
+  workOrderReportList: "/bqi/work-order/report/list",
   workOrderReportUpload: "/bqi/work-order/report/upload",
   workOrderCreate: "/bqi/work-order/new",
   workOrderDetail: "/bqi/work-order/detail",

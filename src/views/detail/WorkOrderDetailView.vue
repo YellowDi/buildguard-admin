@@ -57,12 +57,14 @@ import {
   fetchRepairWorkOrderDetail,
   fetchWorkOrderInspectionHistoryDetail,
   fetchWorkOrderDetail,
+  fetchWorkOrderReportList,
   generateWorkOrderGnReport,
   updateRepairWorkOrderStatus,
   uploadWorkOrderReport,
   type WorkOrderInspectionHistoryDetailItem,
   type WorkOrderBuildInspectionItem,
   type RepairWorkOrderDetailResult,
+  type WorkOrderReportItem,
   type WorkOrderBuildInfo,
   type WorkOrderDetailResult,
 } from "@/lib/work-orders-api"
@@ -155,6 +157,7 @@ const repairImportanceOptions = ref<RepairDictionaryOption[]>([])
 const repairTypeOptions = ref<RepairDictionaryOption[]>([])
 let latestRequestId = 0
 let latestInspectionHistoryRequestId = 0
+let latestReportListRequestId = 0
 
 type AssignableUserOption = {
   uuid: string
@@ -185,6 +188,9 @@ const generatedReportPdfUrl = ref("")
 const pdfRenderReport = ref<InspectionReportRecord | null>(null)
 const reportPdfElement = ref<HTMLElement | null>(null)
 const reportBuilding = ref<WorkOrderBuildInfo | null>(null)
+const reportList = ref<WorkOrderReportItem[]>([])
+const reportListLoading = ref(false)
+const reportListError = ref("")
 const reportForm = ref({
   remark: "",
 })
@@ -405,7 +411,7 @@ const reportSubmitButtonText = computed(() => {
     return reportGenerationStage.value ? `${reportGenerationStage.value}中...` : "生成中..."
   }
 
-  return generatedReport.value ? "重新生成" : "生成报告"
+  return generatedReport.value || reportList.value.length ? "重新生成" : "生成报告"
 })
 
 watch([inspectionWorkOrder, repairWorkOrder], () => {
@@ -426,6 +432,7 @@ watch(workOrderUuid, (uuid) => {
   generatedReportUrl.value = ""
   generatedReportPdfUrl.value = ""
   reportBuilding.value = null
+  resetReportListState()
   reportDialogOpen.value = false
   resetInspectionHistorySheet()
   void loadWorkOrderDetail(uuid)
@@ -433,6 +440,7 @@ watch(workOrderUuid, (uuid) => {
 
 onUnmounted(() => {
   detailBreadcrumbTitle.value = null
+  resetReportListState()
   resetInspectionHistorySheet()
 })
 
@@ -1257,6 +1265,7 @@ function openReportDialog(buildingKey: string) {
   setGeneratedReportState(findLatestGeneratedInspectionReport(currentWorkOrder, currentBuilding))
   pdfRenderReport.value = null
   reportDialogOpen.value = true
+  void loadReportList()
 }
 
 function findLatestGeneratedInspectionReport(
@@ -1274,6 +1283,125 @@ function setGeneratedReportState(report: InspectionReportRecord | null) {
   generatedReport.value = report
   generatedReportUrl.value = report ? buildInspectionReportUrl(report.id) : ""
   generatedReportPdfUrl.value = report?.fileUrl?.trim() ?? ""
+}
+
+async function loadReportList() {
+  const currentWorkOrder = resolvedInspectionWorkOrder.value
+  const currentBuilding = reportBuilding.value
+  const buildUuid = toText(currentBuilding?.BuildUuid, "")
+  const targetWorkOrderUuid = toText(currentWorkOrder?.Uuid, workOrderUuid.value)
+  const requestId = ++latestReportListRequestId
+
+  reportListError.value = ""
+
+  if (!buildUuid || !targetWorkOrderUuid) {
+    reportList.value = []
+    reportListLoading.value = false
+    return
+  }
+
+  reportListLoading.value = true
+
+  try {
+    const list = await fetchWorkOrderReportList({
+      BuildUuid: buildUuid,
+      WorkOrderUuid: targetWorkOrderUuid,
+    })
+
+    if (requestId !== latestReportListRequestId) {
+      return
+    }
+
+    reportList.value = sortReportList(list)
+  } catch (error) {
+    if (requestId !== latestReportListRequestId) {
+      return
+    }
+
+    reportList.value = []
+    reportListError.value = handleApiError(error, {
+      mode: "silent",
+      fallback: "报告列表加载失败，请稍后重试。",
+    })
+  } finally {
+    if (requestId === latestReportListRequestId) {
+      reportListLoading.value = false
+    }
+  }
+}
+
+function resetReportListState() {
+  latestReportListRequestId += 1
+  reportList.value = []
+  reportListLoading.value = false
+  reportListError.value = ""
+}
+
+function sortReportList(list: WorkOrderReportItem[]) {
+  return [...list].sort((left, right) => {
+    const rightTime = getReportCreatedTime(right)
+    const leftTime = getReportCreatedTime(left)
+
+    if (rightTime !== leftTime) {
+      return rightTime - leftTime
+    }
+
+    return (toNumber(right.Version) ?? 0) - (toNumber(left.Version) ?? 0)
+  })
+}
+
+function getReportCreatedTime(report: WorkOrderReportItem) {
+  const createdAt = toText(report.CreatedAt, "")
+
+  if (!createdAt) {
+    return 0
+  }
+
+  const normalized = createdAt.includes("T") ? createdAt : createdAt.replace(" ", "T")
+  const parsed = Date.parse(normalized)
+
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
+function getReportFileUrl(report: WorkOrderReportItem) {
+  return toText(report.FileUrl, "")
+}
+
+function getReportItemTitle(report: WorkOrderReportItem, index: number) {
+  const version = toPositiveInteger(report.Version)
+
+  return version ? `检测报告 v${version}` : `检测报告 ${index + 1}`
+}
+
+function formatReportCreatedAt(value: unknown) {
+  return toText(value, "-") || "-"
+}
+
+async function copyReportFileUrl(report: WorkOrderReportItem) {
+  const fileUrl = getReportFileUrl(report)
+
+  if (!fileUrl) {
+    toast.error("报告文件地址为空")
+    return
+  }
+
+  try {
+    await navigator.clipboard.writeText(fileUrl)
+    toast.success("PDF 链接已复制")
+  } catch {
+    toast.error("复制失败，请手动复制链接")
+  }
+}
+
+function openReportFile(report: WorkOrderReportItem) {
+  const fileUrl = getReportFileUrl(report)
+
+  if (!fileUrl) {
+    toast.error("报告文件地址为空")
+    return
+  }
+
+  window.open(fileUrl, "_blank", "noopener,noreferrer")
 }
 
 function findInspectionReportBuild(buildingKey: string) {
@@ -1415,6 +1543,7 @@ async function submitReportGeneration() {
     })
 
     setGeneratedReportState(updatedRecord)
+    await loadReportList()
     toast.success("报告已生成", {
       description: "PDF 已上传并保存文件地址。",
     })
@@ -1857,7 +1986,7 @@ async function submitAssign() {
 
   <Dialog :open="reportDialogOpen" @update:open="handleReportDialogOpenChange">
     <DialogContent
-      class="max-w-[min(96vw,44rem)] gap-0 overflow-hidden p-0"
+      class="max-h-[min(92svh,48rem)] max-w-[min(96vw,44rem)] grid-rows-[auto,minmax(0,1fr),auto] gap-0 overflow-hidden p-0"
       :show-close-button="!reportSubmitting"
       @escape-key-down="preventReportDialogDismiss"
       @pointer-down-outside="preventReportDialogDismiss"
@@ -1870,7 +1999,7 @@ async function submitAssign() {
         </DialogDescription>
       </DialogHeader>
 
-      <div class="space-y-4 px-5 pt-4 pb-0">
+      <div class="min-h-0 space-y-4 overflow-y-auto px-5 pt-4 pb-4">
         <Alert
           v-if="reportSubmitting"
           class="border-link/15 bg-brand-surface text-foreground shadow-[inset_0_0_0_1px_rgb(0_117_222_/_0.08)]"
@@ -1958,6 +2087,108 @@ async function submitAssign() {
         </section>
 
         <section class="space-y-2">
+          <div class="flex min-w-0 items-center justify-between gap-3">
+            <div class="min-w-0">
+              <p class="text-sm font-medium text-foreground">已生成报告</p>
+              <p class="mt-0.5 text-xs text-muted-foreground">
+                {{ reportListLoading ? "正在加载" : `共 ${reportList.length} 份` }}
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              class="h-8 gap-1.5 px-2.5"
+              :disabled="reportSubmitting || reportListLoading"
+              @click="loadReportList"
+            >
+              <i class="ri-refresh-line text-base" />
+              刷新
+            </Button>
+          </div>
+
+          <div
+            v-if="reportListLoading"
+            class="flex min-h-24 items-center justify-center gap-2 rounded-lg bg-muted/30 text-sm text-muted-foreground shadow-[inset_0_0_0_1px_rgb(15_23_42_/_0.06)] dark:shadow-[inset_0_0_0_1px_rgb(255_255_255_/_0.08)]"
+          >
+            <Spinner class="size-4" label="报告列表加载中" />
+            正在加载报告列表
+          </div>
+
+          <div
+            v-else-if="reportListError"
+            class="rounded-lg bg-destructive/5 p-3 text-sm text-destructive shadow-[inset_0_0_0_1px_rgb(220_38_38_/_0.18)]"
+          >
+            <div class="flex min-w-0 items-start gap-2">
+              <i class="ri-error-warning-line mt-0.5 shrink-0 text-base" />
+              <p class="min-w-0 leading-5">{{ reportListError }}</p>
+            </div>
+          </div>
+
+          <div
+            v-else-if="!reportList.length"
+            class="flex min-h-24 flex-col items-center justify-center rounded-lg bg-muted/30 px-4 py-5 text-center shadow-[inset_0_0_0_1px_rgb(15_23_42_/_0.06)] dark:shadow-[inset_0_0_0_1px_rgb(255_255_255_/_0.08)]"
+          >
+            <div class="inline-flex size-9 items-center justify-center rounded-md bg-background text-muted-foreground shadow-(--shadow-border)">
+              <i class="ri-file-list-3-line text-lg" />
+            </div>
+            <p class="mt-2 text-sm font-medium text-foreground">暂无已生成报告</p>
+            <p class="mt-0.5 text-xs text-muted-foreground">当前建筑还没有生成过报告。</p>
+          </div>
+
+          <div
+            v-else
+            class="max-h-56 space-y-2 overflow-y-auto rounded-lg bg-muted/25 p-1.5 shadow-[inset_0_0_0_1px_rgb(15_23_42_/_0.06)] dark:shadow-[inset_0_0_0_1px_rgb(255_255_255_/_0.08)]"
+          >
+            <div
+              v-for="(report, index) in reportList"
+              :key="`${report.Version ?? index}-${report.CreatedAt ?? index}-${report.FileUrl ?? index}`"
+              class="flex min-w-0 flex-col gap-3 rounded-md bg-background p-3 shadow-(--shadow-border) sm:flex-row sm:items-center sm:justify-between"
+            >
+              <div class="flex min-w-0 items-start gap-3">
+                <div class="inline-flex size-9 shrink-0 items-center justify-center rounded-md bg-link/10 text-link">
+                  <i class="ri-file-pdf-2-line text-lg" />
+                </div>
+                <div class="min-w-0">
+                  <p class="truncate text-sm font-semibold text-foreground" :title="getReportItemTitle(report, index)">
+                    {{ getReportItemTitle(report, index) }}
+                  </p>
+                  <p class="mt-0.5 truncate text-xs text-muted-foreground" :title="formatReportCreatedAt(report.CreatedAt)">
+                    上传时间：{{ formatReportCreatedAt(report.CreatedAt) }}
+                  </p>
+                  <p
+                    class="mt-1 truncate text-xs text-muted-foreground"
+                    :title="getReportFileUrl(report) || '文件地址为空'"
+                  >
+                    {{ getReportFileUrl(report) || "文件地址为空" }}
+                  </p>
+                </div>
+              </div>
+              <div class="grid grid-cols-2 gap-2 sm:flex sm:shrink-0 sm:items-center">
+                <Button
+                  type="button"
+                  variant="outline"
+                  class="h-8 gap-1.5 px-2.5"
+                  :disabled="!getReportFileUrl(report)"
+                  @click="copyReportFileUrl(report)"
+                >
+                  <i class="ri-file-copy-line text-base" />
+                  复制
+                </Button>
+                <Button
+                  type="button"
+                  class="h-8 gap-1.5 px-2.5"
+                  :disabled="!getReportFileUrl(report)"
+                  @click="openReportFile(report)"
+                >
+                  <i class="ri-download-2-line text-base" />
+                  下载
+                </Button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="space-y-2">
           <label class="block space-y-2">
             <span class="flex items-center justify-between gap-3">
               <span class="text-sm font-medium text-foreground">专家建议</span>
@@ -1976,7 +2207,7 @@ async function submitAssign() {
 
       </div>
 
-      <DialogFooter class="gap-2 bg-muted/20 px-5 py-3">
+      <DialogFooter class="shrink-0 gap-2 bg-muted/20 px-5 py-3">
         <Button type="button" variant="outline" :disabled="reportSubmitting" @click="closeReportDialog">
           关闭
         </Button>
