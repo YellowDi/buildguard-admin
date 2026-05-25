@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useSlots } from "vue"
+import { computed, useSlots } from "vue"
 
 import { SETTINGS_TABLE_PAGE_CLASS } from "@/components/settings/settingsTablePageClass"
 import TablePageTable from "@/components/table-page/TablePageTable.vue"
@@ -41,6 +41,7 @@ const emit = defineEmits<{
 }>()
 
 const slots = useSlots()
+const resolvedSummary = computed(() => props.summary || `共 ${props.rows.length} 条`)
 </script>
 
 <template>
@@ -51,6 +52,7 @@ const slots = useSlots()
     :edge-gutter="false"
     :show-row-action-icons="true"
     :pin-row-actions="true"
+    sticky-bottom-dock
     :columns="props.columns"
     :rows="props.rows"
     :row-key="props.rowKey"
@@ -58,7 +60,7 @@ const slots = useSlots()
     :on-row-click="props.onRowClick"
     :on-quick-action="props.onQuickAction"
     :selected-row-keys="props.selectedRowKeys"
-    :summary="props.summary"
+    :summary="resolvedSummary"
     :wrapper-class="props.wrapperClass"
     :table-class="cn(SETTINGS_TABLE_PAGE_CLASS, props.tableClass)"
     :empty-state="props.emptyState"

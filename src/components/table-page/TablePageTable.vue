@@ -116,6 +116,8 @@ const props = withDefaults(defineProps<{
   pinRowActions?: boolean
   /** 让表格自身占满可用高度，并将滚动限制在表格内部。 */
   fillAvailableHeight?: boolean
+  /** 将底部汇总/横向滚动条栏固定在最近的纵向滚动容器底部。 */
+  stickyBottomDock?: boolean
   /** 首屏加载时保留真实表头，仅在 tbody 渲染占位行。 */
   loading?: boolean
   loadingRowCount?: number
@@ -134,6 +136,7 @@ const props = withDefaults(defineProps<{
   alignToHeaderAtWide: false,
   pinRowActions: true,
   fillAvailableHeight: false,
+  stickyBottomDock: false,
   loading: false,
   loadingRowCount: 8,
 })
@@ -335,10 +338,14 @@ const bottomDockStyle = computed(() => revealContainerStyle.value)
 const bottomDockClassName = computed(() => cn(
   "relative z-[31] min-w-0 bg-background",
   props.fillAvailableHeight ? "shrink-0" : "",
+  props.stickyBottomDock
+    ? "sticky -bottom-4 -mb-4 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/88"
+    : "",
 ))
 const summaryClassName = computed(() => cn(
   tableTheme.summary,
   props.listLevelTable ? "px-4 sm:px-8" : "",
+  props.stickyBottomDock ? "py-2" : "",
 ))
 const summaryStyle = computed(() => (
   props.listLevelTable ? undefined : horizontalScrollbarTrackWrapperStyle.value
@@ -1707,6 +1714,7 @@ onBeforeUnmount(() => {
       <div
         ref="tableWrapperRef"
         data-table-scroll-viewport
+        :data-table-hide-native-hscroll="props.stickyBottomDock ? 'true' : undefined"
         :class="tableViewportClassName"
         :style="scrollViewportStyle"
       >
@@ -2085,21 +2093,48 @@ onBeforeUnmount(() => {
       :class="bottomDockClassName"
       :style="bottomDockStyle"
     >
+      <div
+        v-if="props.stickyBottomDock && hasVisibleBodyRows && horizontalOverflow"
+        :class="horizontalScrollbarSectionClassName"
+        :style="horizontalScrollbarSectionStyle"
+      >
+        <div class="relative h-px w-full overflow-visible">
+          <div
+            ref="horizontalScrollbarTrackRef"
+            class="group absolute inset-x-0 top-1/2 h-4 -translate-y-1/2 touch-none select-none"
+            @pointerdown="handleHorizontalScrollbarTrackPointerDown"
+          >
+            <div class="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-border" />
+            <div
+              data-table-hscroll-thumb="true"
+              :class="[
+                'absolute top-1/2 -translate-y-1/2 rounded-full bg-border-hover transition-[height,background-color] duration-150 ease-out',
+                horizontalScrollbarDrag
+                  ? 'h-1.5 cursor-grabbing bg-border-hover'
+                  : 'h-px cursor-grab group-hover:h-1.5 group-hover:bg-border-hover active:cursor-grabbing active:h-1.5',
+              ]"
+              :style="horizontalScrollbarThumbStyle"
+              @pointerdown.stop="handleHorizontalScrollbarThumbPointerDown"
+            />
+          </div>
+        </div>
+      </div>
+
       <div v-if="summary" :class="summaryClassName" :style="summaryStyle">
         {{ summary }}
       </div>
 
+      <div
+        v-if="!props.stickyBottomDock && hasVisibleBodyRows && horizontalOverflow"
+        :class="horizontalScrollbarSectionClassName"
+        :style="horizontalScrollbarSectionStyle"
+      >
         <div
-          v-if="hasVisibleBodyRows && horizontalOverflow"
-          :class="horizontalScrollbarSectionClassName"
-          :style="horizontalScrollbarSectionStyle"
+          class="relative h-px w-full overflow-visible"
         >
           <div
-            class="relative h-px w-full overflow-visible"
-          >
-            <div
-              ref="horizontalScrollbarTrackRef"
-              class="group absolute inset-x-0 top-1/2 h-4 -translate-y-1/2 touch-none select-none"
+            ref="horizontalScrollbarTrackRef"
+            class="group absolute inset-x-0 top-1/2 h-4 -translate-y-1/2 touch-none select-none"
             @pointerdown="handleHorizontalScrollbarTrackPointerDown"
           >
             <div class="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-border" />
@@ -2154,6 +2189,10 @@ onBeforeUnmount(() => {
   background: transparent;
   border: 0;
   box-shadow: none;
+}
+
+[data-table-hide-native-hscroll="true"] {
+  scrollbar-width: none;
 }
 
 </style>
