@@ -58,6 +58,7 @@ import {
   fetchWorkOrderInspectionHistoryDetail,
   fetchWorkOrderDetail,
   generateWorkOrderGnReport,
+  updateRepairWorkOrderStatus,
   uploadWorkOrderReport,
   type WorkOrderInspectionHistoryDetailItem,
   type WorkOrderBuildInspectionItem,
@@ -69,6 +70,9 @@ import {
 type WorkOrderDetailKind = "inspection" | "repair"
 type LinkedDetailSheetKind = "customer" | "service" | "plan" | "park"
 type ReportGenerationStage = "生成报告" | "生成 PDF" | "上传 PDF" | "保存地址"
+const REPAIR_STATUS_IN_PROGRESS = 2
+const REPAIR_STATUS_REVIEWING = 3
+const REPAIR_STATUS_COMPLETED = 4
 const REPORT_GENERATION_STEPS: Array<{
   stage: ReportGenerationStage
   label: string
@@ -165,6 +169,8 @@ const assignableUsersLoaded = ref(false)
 const assignSubmitting = ref(false)
 const deleteConfirmOpen = ref(false)
 const deleteSubmitting = ref(false)
+const repairReviewDialogOpen = ref(false)
+const repairReviewSubmitting = ref(false)
 const linkedDetailSheetOpen = ref(false)
 const linkedDetailSheetKind = ref<LinkedDetailSheetKind | null>(null)
 const linkedDetailSheetUuid = ref("")
@@ -361,6 +367,13 @@ const hasWorkOrder = computed(() => (
 const showAssignAction = computed(() => !loading.value && hasWorkOrder.value && Boolean(workOrderUuid.value))
 const showRepairDeleteAction = computed(() => props.kind === "repair" && !loading.value && hasWorkOrder.value && Boolean(workOrderUuid.value))
 const showRepairEditAction = computed(() => props.kind === "repair" && !loading.value && hasWorkOrder.value && Boolean(workOrderUuid.value))
+const showRepairReviewAction = computed(() => (
+  props.kind === "repair"
+  && !loading.value
+  && hasWorkOrder.value
+  && Boolean(workOrderUuid.value)
+  && repairWorkOrder.value?.Status === REPAIR_STATUS_REVIEWING
+))
 const assignPermissionCode = computed(() => props.kind === "repair"
   ? PERMISSION_CODES.repairWorkOrderAssign
   : PERMISSION_CODES.inspectionWorkOrderAssign)
@@ -484,6 +497,50 @@ async function confirmDeleteRepairWorkOrder() {
     })
   } finally {
     deleteSubmitting.value = false
+  }
+}
+
+function handleRepairReviewDialogOpenChange(open: boolean) {
+  if (repairReviewSubmitting.value) {
+    return
+  }
+
+  repairReviewDialogOpen.value = open
+}
+
+function openRepairReviewDialog() {
+  if (!showRepairReviewAction.value) {
+    toast.error("当前报修工单不是待复核状态，无法复核")
+    return
+  }
+
+  repairReviewDialogOpen.value = true
+}
+
+async function submitRepairReviewStatus(status: typeof REPAIR_STATUS_IN_PROGRESS | typeof REPAIR_STATUS_COMPLETED) {
+  const uuid = workOrderUuid.value
+
+  if (!uuid || repairReviewSubmitting.value) {
+    return
+  }
+
+  repairReviewSubmitting.value = true
+
+  try {
+    await updateRepairWorkOrderStatus({
+      Uuid: uuid,
+      Status: status,
+    })
+    repairReviewDialogOpen.value = false
+    toast.success(status === REPAIR_STATUS_COMPLETED ? "报修工单已完成" : "报修工单已退回进行中")
+    await loadWorkOrderDetail(uuid)
+  } catch (error) {
+    toast.error(handleApiError(error, {
+      mode: "silent",
+      fallback: "报修工单状态更新失败，请稍后重试。",
+    }))
+  } finally {
+    repairReviewSubmitting.value = false
   }
 }
 
@@ -1710,6 +1767,46 @@ async function submitAssign() {
           <i class="ri-edit-line text-base" />
           编辑
         </Button>
+      </PermissionGate>
+      <PermissionGate :code="PERMISSION_CODES.repairWorkOrderEdit">
+        <Dialog :open="repairReviewDialogOpen" @update:open="handleRepairReviewDialogOpenChange">
+          <Button
+            v-if="showRepairReviewAction"
+            type="button"
+            size="sm"
+            class="h-8 gap-1 px-3 text-[14px] font-medium"
+            :disabled="repairReviewSubmitting"
+            @click="openRepairReviewDialog"
+          >
+            <i class="ri-check-double-line text-base" />
+            复核
+          </Button>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>复核报修工单</DialogTitle>
+              <DialogDescription>
+                根据复核结果，将当前报修工单更新为已完成，或退回进行中继续处理。
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                :disabled="repairReviewSubmitting"
+                @click="submitRepairReviewStatus(REPAIR_STATUS_IN_PROGRESS)"
+              >
+                退回进行中
+              </Button>
+              <Button
+                type="button"
+                :disabled="repairReviewSubmitting"
+                @click="submitRepairReviewStatus(REPAIR_STATUS_COMPLETED)"
+              >
+                {{ repairReviewSubmitting ? "更新中..." : "设为已完成" }}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </PermissionGate>
     </template>
 

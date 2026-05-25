@@ -28,7 +28,7 @@ export type WorkOrderListItem = {
   Deadline?: string
   EndTime?: string
   Executor?: string
-  Executors?: string[]
+  Executors?: string[] | WorkOrderExecutor[]
   Status?: number
   Score?: number
   Result?: number
@@ -46,6 +46,13 @@ export type WorkOrderBuildInfo = {
   ItemTotal?: number
   Result?: number
   Score?: number
+  Version?: number
+  [property: string]: unknown
+}
+
+export type WorkOrderExecutor = {
+  Name?: string
+  Uuid?: string
   [property: string]: unknown
 }
 
@@ -103,6 +110,11 @@ export type UpdateRepairWorkOrderPayload = {
   Important?: string
   Content?: string
   Status?: number
+}
+
+export type UpdateRepairWorkOrderStatusPayload = {
+  Uuid: string
+  Status: number
 }
 
 export type UpdateWorkOrderPayload = {
@@ -202,9 +214,10 @@ export type RepairWorkOrderDetailResult = {
   CustomerName?: string
   ParkUuid?: string
   ParkName?: string
+  PlanName?: string
   UserUuid?: string
   UserName?: string
-  Executors?: string[]
+  Executors?: string[] | WorkOrderExecutor[]
   Important?: string
   ReportType?: string
   Content?: string
@@ -273,6 +286,7 @@ const REPAIR_WORK_ORDER_DETAIL_API_URL = API_PATHS.workOrderRepairDetail
 const REPAIR_WORK_ORDER_CREATE_API_URL = buildApiUrl(API_PATHS.workOrderRepairCreate)
 const REPAIR_WORK_ORDER_UPDATE_API_URL = buildApiUrl(API_PATHS.workOrderRepairUpdate)
 const REPAIR_WORK_ORDER_DELETE_API_URL = API_PATHS.workOrderRepairDelete
+const REPAIR_WORK_ORDER_STATUS_UPDATE_API_URL = buildApiUrl(API_PATHS.workOrderRepairStatusUpdate)
 const WORK_ORDER_CREATE_API_URL = buildApiUrl(API_PATHS.workOrderCreate)
 const WORK_ORDER_DETAIL_API_URL = API_PATHS.workOrderDetail
 const WORK_ORDER_INSPECTION_HISTORY_DETAIL_API_URL = API_PATHS.workOrderInspectionHistoryDetail
@@ -285,6 +299,7 @@ const WORK_ORDERS_LOAD_ERROR_MESSAGE = "工单列表加载失败，请稍后重�
 const WORK_ORDER_CREATE_ERROR_MESSAGE = "工单创建失败，请稍后重试。"
 const REPAIR_WORK_ORDER_CREATE_ERROR_MESSAGE = "报修工单创建失败，请稍后重试。"
 const REPAIR_WORK_ORDER_UPDATE_ERROR_MESSAGE = "报修工单更新失败，请稍后重试。"
+const REPAIR_WORK_ORDER_STATUS_UPDATE_ERROR_MESSAGE = "报修工单状态更新失败，请稍后重试。"
 const REPAIR_WORK_ORDER_DELETE_ERROR_MESSAGE = "报修工单删除失败，请稍后重试。"
 const WORK_ORDER_DETAIL_ERROR_MESSAGE = "工单详情加载失败，请稍后重试。"
 const WORK_ORDER_INSPECTION_HISTORY_DETAIL_ERROR_MESSAGE = "检测结果历史加载失败，请稍后重试。"
@@ -421,6 +436,30 @@ export async function updateRepairWorkOrder(payload: UpdateRepairWorkOrderPayloa
   }
 
   assertApiSuccess(responseBody, REPAIR_WORK_ORDER_UPDATE_ERROR_MESSAGE)
+
+  return extractCreateResult(responseBody)
+}
+
+export async function updateRepairWorkOrderStatus(payload: UpdateRepairWorkOrderStatusPayload): Promise<CreateWorkOrderResult> {
+  const normalizedPayload = {
+    Uuid: getRequiredString(payload.Uuid, "Uuid"),
+    Status: getRequiredNumber(payload.Status, "Status"),
+  }
+
+  const response = await fetch(REPAIR_WORK_ORDER_STATUS_UPDATE_API_URL, {
+    method: "POST",
+    headers: buildApiHeaders({
+      "Content-Type": "application/json",
+    }),
+    body: JSON.stringify(normalizedPayload),
+  })
+  const responseBody = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responseBody, REPAIR_WORK_ORDER_STATUS_UPDATE_ERROR_MESSAGE)
+  }
+
+  assertApiSuccess(responseBody, REPAIR_WORK_ORDER_STATUS_UPDATE_ERROR_MESSAGE)
 
   return extractCreateResult(responseBody)
 }
@@ -782,7 +821,7 @@ function normalizeWorkOrderListItem(value: unknown): WorkOrderListItem {
     ParkUuid: getFirstText(record, ["ParkUuid", "parkUuid"]),
     ParkName: getFirstText(record, ["ParkName", "parkName"]),
     BuildName: getFirstText(record, ["BuildName", "buildName", "BuildingName", "buildingName"]),
-    Builds: normalizeWorkOrderBuildInfos(record.Builds),
+    Builds: normalizeWorkOrderBuildInfos(getFirstArray(record, ["Builds", "builds"])),
     Deadline: getFirstText(record, ["Deadline", "deadline", "ExpireAt", "expireAt", "DueAt", "dueAt"]),
     EndTime: getFirstText(record, ["EndTime", "endTime"]),
     Executor: getFirstText(record, ["Executor", "executor", "PrincipalName", "principalName", "Assignee", "assignee"]),
@@ -815,6 +854,7 @@ function normalizeRepairWorkOrderListItem(value: unknown): RepairWorkOrderListIt
     CustomerName: getFirstText(record, ["CustomerName", "customerName", "CorpName", "corpName"]),
     ParkUuid: getFirstText(record, ["ParkUuid", "parkUuid"]),
     ParkName: getFirstText(record, ["ParkName", "parkName"]),
+    PlanName: getFirstText(record, ["PlanName", "planName"]),
     BuildName: getFirstText(record, ["BuildName", "buildName", "BuildingName", "buildingName"]),
     UserUuid: getFirstText(record, ["UserUuid", "userUuid"]),
     UserName: getFirstText(record, ["UserName", "userName"]),
@@ -1437,11 +1477,12 @@ function normalizeWorkOrderBuildInfos(value: unknown): WorkOrderBuildInfo[] {
         ...record,
         BuildName: getFirstText(record, ["BuildName", "buildName", "BuildingName", "buildingName"]),
         BuildUuid: getFirstText(record, ["BuildUuid", "buildUuid"]),
-        InspectionItems: normalizeWorkOrderBuildInspectionItems(record.InspectionItems),
+        InspectionItems: normalizeWorkOrderBuildInspectionItems(getFirstArray(record, ["InspectionItems", "inspectionItems"])),
         ItemPassTotal: getFirstNumber(record, ["ItemPassTotal", "itemPassTotal"]),
         ItemTotal: getFirstNumber(record, ["ItemTotal", "itemTotal"]),
         Result: getFirstNumber(record, ["Result", "result"]),
         Score: getFirstNumber(record, ["Score", "score"]),
+        Version: getFirstNumber(record, ["Version", "version"]),
       }
     })
 }
