@@ -269,10 +269,10 @@ export type ListRepairWorkOrdersPayload = {
 
 const WORK_ORDERS_API_URL = buildApiUrl(API_PATHS.workOrdersList)
 const REPAIR_WORK_ORDERS_API_URL = buildApiUrl(API_PATHS.workOrderRepairList)
-const REPAIR_WORK_ORDER_DETAIL_API_URL = API_PATHS.workOrderReportDetail
-const REPAIR_WORK_ORDER_CREATE_API_URL = buildApiUrl(API_PATHS.workOrderReportCreate)
-const REPAIR_WORK_ORDER_UPDATE_API_URL = buildApiUrl(API_PATHS.workOrderReportUpdate)
-const REPAIR_WORK_ORDER_DELETE_API_URL = API_PATHS.workOrderReportDelete
+const REPAIR_WORK_ORDER_DETAIL_API_URL = API_PATHS.workOrderRepairDetail
+const REPAIR_WORK_ORDER_CREATE_API_URL = buildApiUrl(API_PATHS.workOrderRepairCreate)
+const REPAIR_WORK_ORDER_UPDATE_API_URL = buildApiUrl(API_PATHS.workOrderRepairUpdate)
+const REPAIR_WORK_ORDER_DELETE_API_URL = API_PATHS.workOrderRepairDelete
 const WORK_ORDER_CREATE_API_URL = buildApiUrl(API_PATHS.workOrderCreate)
 const WORK_ORDER_DETAIL_API_URL = API_PATHS.workOrderDetail
 const WORK_ORDER_INSPECTION_HISTORY_DETAIL_API_URL = API_PATHS.workOrderInspectionHistoryDetail
