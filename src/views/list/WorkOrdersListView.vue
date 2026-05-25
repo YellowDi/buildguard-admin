@@ -468,6 +468,22 @@ function formatDateOnly(value: string) {
   return datePart || normalized
 }
 
+function formatShortOrderNo(value: unknown) {
+  const normalized = toText(value, "")
+
+  if (!normalized || normalized === "-") {
+    return "-"
+  }
+
+  const compact = normalized.replace(/[\s_-]+/g, "")
+  return compact.length > 8 ? compact.slice(-8) : compact
+}
+
+function formatInspectionWorkOrderTitle(row: WorkOrderRecord) {
+  const parkName = toText(row.parkName, "")
+  return parkName && parkName !== "-" ? parkName : "未关联园区"
+}
+
 function buildPageFilterText(row: WorkOrderRecord) {
   if (props.kind === "repair") {
     return [
@@ -902,7 +918,11 @@ function createInspectionColumns(): TablePageSchema<WorkOrderRecord>["columns"] 
         placeholder: "输入工单编号",
         defaultVisible: true,
       },
-      sort: true,
+      sort: {
+        label: "检测工单",
+        kind: "text",
+        value: row => `${formatInspectionWorkOrderTitle(row)} ${formatShortOrderNo(row.orderNo)}`,
+      },
     },
     {
       key: "customerName",
@@ -1472,10 +1492,10 @@ async function ensureRepairDictionaries() {
       <template #cell-orderNo="{ row }">
         <div class="inline-flex max-w-full items-baseline gap-1.5">
           <span class="truncate text-foreground">
-            {{ props.kind === "inspection" ? toText(row.packageName, "-") : toText(row.customerName, "-") }}
+            {{ props.kind === "inspection" ? formatInspectionWorkOrderTitle(row) : toText(row.customerName, "-") }}
           </span>
           <span class="shrink-0 text-muted-foreground">
-            #{{ toText(row.orderNo, "-") }}
+            #{{ props.kind === "inspection" ? formatShortOrderNo(row.orderNo) : toText(row.orderNo, "-") }}
           </span>
         </div>
       </template>
