@@ -37,6 +37,7 @@ export function buildBuildingDetailSections(
       title: "建筑基础信息",
       rows: [
         { key: "name", label: "建筑名称", value: toText(building.Name, "未命名建筑") },
+        { key: "building-id", label: "建筑 ID", value: toText(building.Id, "-") },
         { key: "building-uuid", label: "建筑 UUID", value: toText(building.Uuid, "-") },
         { key: "park-name", label: "所属园区", value: toText(building.ParkName, "-") },
         { key: "park-uuid", label: "园区 UUID", value: toText(building.ParkUuid, "-") },

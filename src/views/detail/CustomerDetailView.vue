@@ -2006,11 +2006,15 @@ const parkDetailSheetSections = computed<DetailFieldSection[]>(() => {
       title: "园区信息",
       rows: [
         { key: "name", label: "园区名称", value: toDisplayText(current.Name, "未命名园区") },
+        { key: "corp-name", label: "公司名称", value: toDisplayText(current.CorpName, "-") },
+        { key: "build-num", label: "建筑数量", value: formatParkCount(current.BuildNum, "栋") },
         { key: "built-time", label: "建成时间", value: toDisplayText(current.BuiltTime, "-") },
         { key: "operation-time", label: "投运时间", value: toDisplayText(current.OperationTime, "-") },
         { key: "building-area", label: "建筑面积", value: toDisplayText(current.BuildArea, "-") },
         { key: "contact", label: "联系人", value: buildContactValue(toDisplayText(current.Contact, "未填写"), toDisplayText(current.ContactPhone, "-")) },
         addressRow,
+        { key: "created-at", label: "创建时间", value: toDisplayText(current.CreatedAt, "-") },
+        { key: "updated-at", label: "更新时间", value: toDisplayText(current.UpdatedAt, "-") },
       ],
     },
   ]
