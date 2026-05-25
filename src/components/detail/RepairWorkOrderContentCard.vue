@@ -3,12 +3,8 @@ import { computed } from "vue"
 
 import TitleBlock from "@/components/layout/TitleBlock.vue"
 import MediaLightbox from "@/components/media/MediaLightbox.vue"
-import TableStatusChip from "@/components/table-page/TableStatusChip.vue"
-import { workOrderStatusMap } from "@/components/table-page/statusPresets"
 import { Badge } from "@/components/ui/badge"
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
-import { Separator } from "@/components/ui/separator"
-import { getRepairWorkOrderStatusLabel } from "@/lib/work-order-status"
 import type { RepairWorkOrderDetailResult, WorkOrderFile } from "@/lib/work-orders-api"
 
 type RepairMediaGroup = {
@@ -49,16 +45,9 @@ const mediaGroups = computed<RepairMediaGroup[]>(() => {
 })
 const mediaCount = computed(() => mediaGroups.value.reduce((total, group) => total + group.files.length, 0))
 const hasContent = computed(() => Boolean(props.workOrder))
-const hasRepairRecords = computed(() => Boolean(toText(props.workOrder?.RepairContent) || mediaGroups.value.length))
-const recordCount = computed(() => (toText(props.workOrder?.RepairContent) ? 1 : 0) + mediaCount.value)
-const repairStatusLabel = computed(() => getRepairWorkOrderStatusLabel(toNumber(props.workOrder?.Status), "-"))
-const executorText = computed(() => formatExecutors(props.workOrder?.Executors))
-const repairUserText = computed(() => toText(props.workOrder?.UserName, "-"))
-const repairStatusRenderer = {
-  kind: "status" as const,
-  map: workOrderStatusMap,
-  fallback: { tone: "gray" as const, icon: "dot" as const },
-}
+const repairContentText = computed(() => toText(props.workOrder?.RepairContent))
+const hasRepairRecords = computed(() => Boolean(repairContentText.value || mediaGroups.value.length))
+const resultStateText = computed(() => hasRepairRecords.value ? "有维修结果" : "待补充结果")
 
 function normalizeFiles(value: unknown) {
   return Array.isArray(value)
@@ -78,6 +67,16 @@ function buildMediaItem(file: WorkOrderFile, group: RepairMediaGroup, index: num
     type: isVideo(file) ? "video" as const : "image" as const,
     alt: `${group.title}附件 ${index + 1}`,
   }
+}
+
+function mediaGroupIcon(group: RepairMediaGroup) {
+  return group.key === "before" ? "ri-camera-line" : "ri-checkbox-circle-line"
+}
+
+function mediaGroupIconClass(group: RepairMediaGroup) {
+  return group.key === "before"
+    ? "bg-warning-surface text-warning ring-warning/15"
+    : "bg-success-surface text-success ring-success/15"
 }
 
 function toNumber(value: unknown) {
@@ -104,42 +103,6 @@ function toText(value: unknown, fallback = "") {
 
   return fallback
 }
-
-function formatExecutors(value: unknown) {
-  if (!Array.isArray(value)) {
-    return "-"
-  }
-
-  const executors = value
-    .map(item => toExecutorName(item))
-    .filter(Boolean)
-
-  return executors.length ? executors.join("、") : "-"
-}
-
-function toExecutorName(value: unknown) {
-  const directValue = toText(value)
-
-  if (directValue) {
-    return directValue
-  }
-
-  if (!value || typeof value !== "object") {
-    return ""
-  }
-
-  const record = value as Record<string, unknown>
-
-  for (const key of ["Name", "name", "UserName", "userName", "ExecutorName", "executorName"]) {
-    const name = toText(record[key])
-
-    if (name) {
-      return name
-    }
-  }
-
-  return ""
-}
 </script>
 
 <template>
@@ -152,11 +115,8 @@ function toExecutorName(value: unknown) {
           class="detail-section-inset pt-4 pb-1"
         >
           <template #append>
-            <Badge
-              variant="secondary"
-              class="min-w-6 justify-center rounded-md px-1.5 py-0.5 text-[12px] font-medium leading-none"
-            >
-              {{ recordCount }}
+            <Badge variant="secondary" class="rounded-md px-1.5 py-0.5 text-[12px] font-medium leading-none">
+              {{ resultStateText }}
             </Badge>
           </template>
         </TitleBlock>
@@ -176,89 +136,87 @@ function toExecutorName(value: unknown) {
           </Empty>
         </div>
 
-        <div v-else class="detail-group-stack pb-2">
-          <section>
-            <div class="detail-group-divider-row detail-section-inset flex min-w-0 items-center gap-3">
-              <div class="min-w-0 truncate text-[14px] font-medium text-muted-foreground">处理信息</div>
-              <div class="h-px min-w-0 flex-1 bg-border/80" />
-            </div>
-
-            <div class="detail-field-row group">
-              <div class="detail-field-row__label">维修状态</div>
-              <div class="detail-field-row__value">
-                <TableStatusChip
-                  v-if="repairStatusLabel !== '-'"
-                  :value="repairStatusLabel"
-                  :renderer="repairStatusRenderer"
-                />
-                <span v-else class="detail-field-row__value--empty">无数据</span>
+        <div v-else class="detail-section-inset space-y-4 pb-4 pt-2">
+          <section class="rounded-[8px] bg-card p-3 shadow-(--shadow-border)">
+            <div class="flex min-w-0 items-start justify-between gap-3">
+              <div class="flex min-w-0 items-center gap-2.5">
+                <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] bg-success-surface text-success ring-1 ring-success/15">
+                  <i class="ri-file-check-line text-[17px]" />
+                </div>
+                <div class="min-w-0">
+                  <div class="truncate text-[15px] font-semibold text-foreground">维修结果</div>
+                  <div class="truncate text-[12px] text-muted-foreground">
+                    {{ mediaCount ? `${mediaCount} 个过程附件` : "暂无过程附件" }}
+                  </div>
+                </div>
               </div>
+              <Badge v-if="hasRepairRecords" variant="secondary" class="shrink-0 rounded-md px-1.5 py-0.5 text-[12px]">
+                已记录
+              </Badge>
             </div>
 
-            <div class="detail-field-row group">
-              <div class="detail-field-row__label">执行人</div>
-              <div class="detail-field-row__value">
-                <span :class="executorText === '-' && 'detail-field-row__value--empty'">
-                  {{ executorText === "-" ? "无数据" : executorText }}
-                </span>
+            <div
+              v-if="!hasRepairRecords"
+              class="mt-4 flex min-h-[140px] w-full min-w-0 flex-col items-center justify-center rounded-[6px] bg-surface-secondary px-4 py-8"
+            >
+              <Empty class="w-full max-w-md flex-none border-0 bg-transparent p-0! shadow-none">
+                <EmptyHeader class="max-w-md">
+                  <EmptyMedia variant="icon">
+                    <i class="ri-inbox-line text-[18px]" />
+                  </EmptyMedia>
+                  <EmptyTitle>暂无维修结果</EmptyTitle>
+                  <EmptyDescription>当前工单没有返回维修内容、维修前或维修后附件。</EmptyDescription>
+                </EmptyHeader>
+              </Empty>
+            </div>
+
+            <template v-else>
+              <div
+                v-if="repairContentText"
+                class="mt-4 rounded-[6px] bg-surface-secondary px-3 py-3 text-[14px] leading-6 text-foreground shadow-(--shadow-border)"
+              >
+                <div class="mb-1.5 flex items-center gap-1.5 text-[12px] font-medium text-muted-foreground">
+                  <i class="ri-file-text-line text-[14px]" />
+                  <span>维修内容</span>
+                </div>
+                <div class="whitespace-pre-wrap break-words text-pretty">
+                  {{ repairContentText }}
+                </div>
               </div>
-            </div>
 
-            <div class="detail-field-row group">
-              <div class="detail-field-row__label">维修人员</div>
-              <div class="detail-field-row__value">
-                <span :class="repairUserText === '-' && 'detail-field-row__value--empty'">
-                  {{ repairUserText === "-" ? "无数据" : repairUserText }}
-                </span>
-              </div>
-            </div>
-          </section>
-
-          <Separator
-            v-if="toText(props.workOrder?.RepairContent) || mediaGroups.length"
-            class="bg-border/80"
-          />
-
-          <section v-if="toText(props.workOrder?.RepairContent)">
-            <div class="detail-group-divider-row detail-section-inset flex min-w-0 items-center gap-3">
-              <div class="min-w-0 truncate text-[14px] font-medium text-muted-foreground">文字记录</div>
-              <div class="h-px min-w-0 flex-1 bg-border/80" />
-            </div>
-
-            <div class="detail-field-row detail-field-row--top-aligned group">
-              <div class="detail-field-row__label">维修内容</div>
-              <div class="detail-field-row__value whitespace-pre-wrap break-words leading-6">
-                {{ toText(props.workOrder?.RepairContent) }}
-              </div>
-            </div>
-          </section>
-
-          <Separator v-if="toText(props.workOrder?.RepairContent) && mediaGroups.length" class="bg-border/80" />
-
-          <section v-if="mediaGroups.length">
-            <div class="detail-group-divider-row detail-section-inset flex min-w-0 items-center gap-3">
-              <div class="min-w-0 truncate text-[14px] font-medium text-muted-foreground">图片与视频</div>
-              <div class="h-px min-w-0 flex-1 bg-border/80" />
-              <Badge variant="secondary" class="rounded-md px-1.5 py-0.5 text-[12px]">{{ mediaCount }}</Badge>
-            </div>
-
-            <MediaLightbox v-slot="{ open: openMediaLightbox }">
-              <div class="space-y-4">
-                <template
-                  v-for="(group, groupIndex) in mediaGroups"
-                  :key="group.key"
+              <MediaLightbox v-if="mediaGroups.length" v-slot="{ open: openMediaLightbox }">
+                <div
+                  :class="[
+                    'mt-4 grid gap-3',
+                    mediaGroups.length > 1 ? 'md:grid-cols-2' : '',
+                  ]"
                 >
-                  <Separator v-if="groupIndex > 0" class="bg-border/80" />
-                  <div class="detail-section-inset space-y-2">
-                    <div class="flex min-w-0 items-center justify-between gap-3">
-                      <div class="min-w-0">
-                        <div class="truncate text-[13px] font-medium text-foreground">{{ group.title }}</div>
-                        <div class="truncate text-[12px] text-muted-foreground">{{ group.description }}</div>
+                  <article
+                    v-for="group in mediaGroups"
+                    :key="group.key"
+                    class="min-w-0 rounded-[8px] bg-surface-secondary p-3 shadow-(--shadow-border)"
+                  >
+                    <div class="flex min-w-0 items-start justify-between gap-3">
+                      <div class="flex min-w-0 items-center gap-2.5">
+                        <div
+                          :class="[
+                            'flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] ring-1',
+                            mediaGroupIconClass(group),
+                          ]"
+                        >
+                          <i :class="[mediaGroupIcon(group), 'text-[16px]']" />
+                        </div>
+                        <div class="min-w-0">
+                          <div class="truncate text-[14px] font-semibold text-foreground">{{ group.title }}</div>
+                          <div class="truncate text-[12px] text-muted-foreground">{{ group.description }}</div>
+                        </div>
                       </div>
-                      <div class="shrink-0 text-[12px] tabular-nums text-muted-foreground">{{ group.files.length }} 个</div>
+                      <Badge variant="secondary" class="shrink-0 rounded-md px-1.5 py-0.5 text-[12px] tabular-nums">
+                        {{ group.files.length }} 个
+                      </Badge>
                     </div>
 
-                    <div class="grid grid-cols-[repeat(auto-fill,minmax(88px,1fr))] gap-2">
+                    <div class="mt-3 grid grid-cols-[repeat(auto-fill,minmax(88px,1fr))] gap-2">
                       <button
                         v-for="(file, index) in group.files"
                         :key="`${group.key}-${index}-${file.Url}`"
@@ -289,26 +247,11 @@ function toExecutorName(value: unknown) {
                         </span>
                       </button>
                     </div>
-                  </div>
-                </template>
-              </div>
-            </MediaLightbox>
+                  </article>
+                </div>
+              </MediaLightbox>
+            </template>
           </section>
-
-          <div
-            v-if="!hasRepairRecords"
-            class="flex min-h-[min(160px,30vh)] w-full min-w-0 flex-col items-center justify-center px-4 py-12"
-          >
-            <Empty class="w-full max-w-md flex-none border-0 bg-transparent p-6! shadow-none md:p-8!">
-              <EmptyHeader class="max-w-md">
-                <EmptyMedia variant="icon">
-                  <i class="ri-inbox-line text-[18px]" />
-                </EmptyMedia>
-                <EmptyTitle>暂无维修记录</EmptyTitle>
-                <EmptyDescription>当前工单没有返回维修内容、维修前或维修后附件。</EmptyDescription>
-              </EmptyHeader>
-            </Empty>
-          </div>
         </div>
       </div>
     </div>

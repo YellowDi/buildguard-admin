@@ -30,6 +30,9 @@ export function buildRepairWorkOrderPrimarySections(
       rows: [
         { key: "report-type", label: "报修类型", value: formatRepairReportTypeLabel(workOrder.ReportType, options?.dictionaries?.typeOptions) },
         { key: "important", label: "重要程度", value: formatRepairImportantLabel(workOrder.Important, options?.dictionaries?.importanceOptions) },
+        { key: "status", label: "状态", value: buildRepairWorkOrderStatusValue(workOrder.Status) },
+        { key: "executors", label: "执行人", value: formatExecutors(workOrder.Executors) },
+        { key: "repair-user", label: "维修人员", value: toText(workOrder.UserName, "-") },
         { key: "plan-name", label: "计划名称", value: toText(workOrder.PlanName, "-") },
         { key: "category-name", label: "检查项类别", value: toText(workOrder.CategoryName, "-") },
         {
@@ -114,9 +117,6 @@ export function buildRepairWorkOrderSecondarySections(workOrder: RepairWorkOrder
       key: "repair-work-order-repair",
       title: "维修记录",
       rows: [
-        { key: "status", label: "维修状态", value: buildRepairWorkOrderStatusValue(workOrder.Status) },
-        { key: "executors", label: "执行人", value: formatExecutors(workOrder.Executors) },
-        { key: "repair-user", label: "维修人员", value: toText(workOrder.UserName, "-") },
         {
           key: "repair-content",
           label: "维修内容",
