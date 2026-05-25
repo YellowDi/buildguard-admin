@@ -7,7 +7,6 @@ export const SETTINGS_CATEGORY_KEYS = [
   "me",
   "preferences",
   "apps",
-  "general",
   "members",
   "developer",
   "business-presets",
@@ -32,9 +31,6 @@ export type SettingsActionKey =
 export type SettingsState = {
   accountName: string
   accountEmail: string
-  displayName: string
-  supportEmail: string
-  startupView: string
   enterKeyStartsNewLine: boolean
   language: string
   numberFormat: string

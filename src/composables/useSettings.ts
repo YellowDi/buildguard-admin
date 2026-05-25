@@ -17,9 +17,6 @@ const { currentUser } = useCurrentUser()
 const state = reactive<SettingsState>({
   accountName: currentUser.name,
   accountEmail: currentUser.email,
-  displayName: "宝京云维",
-  supportEmail: "ops@buildguard.cn",
-  startupView: "dashboard",
   enterKeyStartsNewLine: true,
   language: "zh-CN",
   numberFormat: "default",
@@ -244,38 +241,6 @@ const categories = computed<SettingsCategory[]>(() => [
             label: "颜色",
             description: "调整侧边栏背景颜色。",
             options: sidebarColorOptions,
-          },
-        ],
-      },
-    ],
-  },
-  {
-    key: "general",
-    group: "workspace",
-    label: "通用",
-    description: "工作区基础信息和默认联络方式。",
-    icon: "ri-settings-3-line",
-    sections: [
-      {
-        key: "profile",
-        title: "工作区资料",
-        description: "维护默认展示信息，供导航、通知和协作场景复用。",
-        items: [
-          {
-            key: "displayName",
-            type: "input",
-            modelKey: "displayName",
-            label: "工作区名称",
-            description: "显示在顶部标题、系统通知和导出摘要中的名称。",
-            placeholder: "输入工作区名称",
-          },
-          {
-            key: "supportEmail",
-            type: "input",
-            modelKey: "supportEmail",
-            label: "通知回邮地址",
-            description: "报警、审批和系统提醒默认使用的回复邮箱。",
-            placeholder: "ops@company.com",
           },
         ],
       },
