@@ -3893,7 +3893,7 @@ function mapInspectionWorkOrderRow(item: WorkOrderListItem, index: number): Cust
 function normalizeExecutors(value: unknown, fallback?: unknown) {
   if (Array.isArray(value)) {
     const normalized = value
-      .map(item => toDisplayText(item, ""))
+      .map(item => toExecutorName(item))
       .filter(Boolean)
 
     if (normalized.length) {
@@ -3903,6 +3903,30 @@ function normalizeExecutors(value: unknown, fallback?: unknown) {
 
   const fallbackText = toDisplayText(fallback, "")
   return fallbackText ? [fallbackText] : []
+}
+
+function toExecutorName(value: unknown) {
+  const directValue = toDisplayText(value, "")
+
+  if (directValue) {
+    return directValue
+  }
+
+  if (!value || typeof value !== "object") {
+    return ""
+  }
+
+  const record = value as Record<string, unknown>
+
+  for (const key of ["Name", "name", "UserName", "userName", "ExecutorName", "executorName", "Uuid", "uuid"]) {
+    const name = toDisplayText(record[key], "")
+
+    if (name) {
+      return name
+    }
+  }
+
+  return ""
 }
 
 function formatExecutorText(executors: string[]) {

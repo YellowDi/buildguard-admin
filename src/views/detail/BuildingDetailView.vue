@@ -406,7 +406,7 @@ async function loadBuildingRecords(currentBuilding: BuildingListItem) {
 function normalizeExecutors(value: unknown, fallback?: unknown) {
   if (Array.isArray(value)) {
     const normalized = value
-      .map(item => recordText(item, ""))
+      .map(item => executorName(item))
       .filter(Boolean)
 
     if (normalized.length) {
@@ -416,6 +416,30 @@ function normalizeExecutors(value: unknown, fallback?: unknown) {
 
   const fallbackText = recordText(fallback, "")
   return fallbackText ? [fallbackText] : []
+}
+
+function executorName(value: unknown) {
+  const directValue = recordText(value, "")
+
+  if (directValue) {
+    return directValue
+  }
+
+  if (!value || typeof value !== "object") {
+    return ""
+  }
+
+  const record = value as Record<string, unknown>
+
+  for (const key of ["Name", "name", "UserName", "userName", "ExecutorName", "executorName", "Uuid", "uuid"]) {
+    const name = recordText(record[key], "")
+
+    if (name) {
+      return name
+    }
+  }
+
+  return ""
 }
 
 function formatExecutorText(executors: string[]) {

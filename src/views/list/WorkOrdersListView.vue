@@ -779,7 +779,7 @@ function normalizeInspectionWorkOrderRecord(item: WorkOrderListItem, index: numb
 function formatInspectionExecutors(value: unknown, fallback?: unknown) {
   if (Array.isArray(value)) {
     const normalized = value
-      .map(item => toText(item))
+      .map(item => toExecutorName(item))
       .filter(Boolean)
 
     if (normalized.length) {
@@ -788,6 +788,30 @@ function formatInspectionExecutors(value: unknown, fallback?: unknown) {
   }
 
   return toText(fallback, "-")
+}
+
+function toExecutorName(value: unknown) {
+  const directValue = toText(value)
+
+  if (directValue) {
+    return directValue
+  }
+
+  if (!value || typeof value !== "object") {
+    return ""
+  }
+
+  const record = value as Record<string, unknown>
+
+  for (const key of ["Name", "name", "UserName", "userName", "ExecutorName", "executorName", "Uuid", "uuid"]) {
+    const name = toText(record[key])
+
+    if (name) {
+      return name
+    }
+  }
+
+  return ""
 }
 
 function normalizeRepairWorkOrderRecord(item: RepairWorkOrderListItem, index: number): WorkOrderRecord {

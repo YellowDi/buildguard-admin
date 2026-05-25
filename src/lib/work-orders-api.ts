@@ -28,7 +28,7 @@ export type WorkOrderListItem = {
   Deadline?: string
   EndTime?: string
   Executor?: string
-  Executors?: string[] | WorkOrderExecutor[]
+  Executors?: WorkOrderExecutor[]
   Status?: number
   Score?: number
   Result?: number
@@ -44,6 +44,7 @@ export type WorkOrderBuildInfo = {
   InspectionItems?: WorkOrderBuildInspectionItem[]
   ItemPassTotal?: number
   ItemTotal?: number
+  ReportUrl?: string
   Result?: number
   Score?: number
   Version?: number
@@ -230,7 +231,7 @@ export type RepairWorkOrderDetailResult = {
   PlanName?: string
   UserUuid?: string
   UserName?: string
-  Executors?: string[] | WorkOrderExecutor[]
+  Executors?: WorkOrderExecutor[]
   Important?: string
   ReportType?: string
   Content?: string
@@ -866,7 +867,7 @@ function normalizeWorkOrderListItem(value: unknown): WorkOrderListItem {
     Deadline: getFirstText(record, ["Deadline", "deadline", "ExpireAt", "expireAt", "DueAt", "dueAt"]),
     EndTime: getFirstText(record, ["EndTime", "endTime"]),
     Executor: getFirstText(record, ["Executor", "executor", "PrincipalName", "principalName", "Assignee", "assignee"]),
-    Executors: getFirstTextArray(record, ["Executors", "executors"]),
+    Executors: normalizeWorkOrderExecutors(record.Executors ?? record.executors),
     Status: getFirstNumber(record, ["Status", "status", "WorkOrderStatus", "workOrderStatus"]),
     Score: getFirstNumber(record, ["Score", "score", "TotalScore", "totalScore"]),
     Result: getFirstNumber(record, ["Result", "result", "WorkOrderResult", "workOrderResult"]),
@@ -899,7 +900,7 @@ function normalizeRepairWorkOrderListItem(value: unknown): RepairWorkOrderListIt
     BuildName: getFirstText(record, ["BuildName", "buildName", "BuildingName", "buildingName"]),
     UserUuid: getFirstText(record, ["UserUuid", "userUuid"]),
     UserName: getFirstText(record, ["UserName", "userName"]),
-    Executors: getFirstTextArray(record, ["Executors", "executors"]),
+    Executors: normalizeWorkOrderExecutors(record.Executors ?? record.executors),
     Important: getFirstText(record, ["Important", "important"]),
     ReportType: getFirstText(record, ["ReportType", "reportType"]),
     Content: getFirstText(record, ["Content", "content"]),
@@ -1507,6 +1508,65 @@ function getTextArrayItem(value: unknown) {
   ])
 }
 
+function normalizeWorkOrderExecutors(value: unknown): WorkOrderExecutor[] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined
+  }
+
+  const executors = value
+    .map(item => normalizeWorkOrderExecutor(item))
+    .filter((item): item is WorkOrderExecutor => item !== null)
+
+  return executors.length ? executors : undefined
+}
+
+function normalizeWorkOrderExecutor(value: unknown): WorkOrderExecutor | null {
+  const directName = getOptionalStringSilently(value)
+
+  if (directName) {
+    return { Name: directName }
+  }
+
+  const record = asRecord(value)
+
+  if (!record) {
+    return null
+  }
+
+  const name = getFirstText(record, [
+    "Name",
+    "name",
+    "UserName",
+    "userName",
+    "ExecutorName",
+    "executorName",
+    "RealName",
+    "realName",
+    "DisplayName",
+    "displayName",
+    "NickName",
+    "nickName",
+  ])
+  const uuid = getFirstText(record, [
+    "Uuid",
+    "uuid",
+    "UserUuid",
+    "userUuid",
+    "ExecutorUuid",
+    "executorUuid",
+  ])
+
+  if (!name && !uuid) {
+    return null
+  }
+
+  return {
+    ...record,
+    Name: name,
+    Uuid: uuid,
+  }
+}
+
 function getFirstArray(record: Record<string, unknown>, keys: string[]) {
   for (const key of keys) {
     const value = record[key]
@@ -1536,6 +1596,7 @@ function normalizeWorkOrderBuildInfos(value: unknown): WorkOrderBuildInfo[] {
         InspectionItems: normalizeWorkOrderBuildInspectionItems(getFirstArray(record, ["InspectionItems", "inspectionItems"])),
         ItemPassTotal: getFirstNumber(record, ["ItemPassTotal", "itemPassTotal"]),
         ItemTotal: getFirstNumber(record, ["ItemTotal", "itemTotal"]),
+        ReportUrl: getFirstText(record, ["ReportUrl", "reportUrl", "FileUrl", "fileUrl", "Url", "url"]),
         Result: getFirstNumber(record, ["Result", "result"]),
         Score: getFirstNumber(record, ["Score", "score"]),
         Version: getFirstNumber(record, ["Version", "version"]),
