@@ -346,6 +346,18 @@ function handleDateChange(control: TableQueryDateControl, value: { toString: () 
   collapseControl(control.key)
 }
 
+function handleDatePopoverPointerDownOutside(control: TableQueryDateControl, event: Event) {
+  const originalEvent = (event as CustomEvent<{ originalEvent?: Event }>).detail?.originalEvent
+  const target = originalEvent?.target ?? event.target
+
+  if (target instanceof Node && rootRef.value?.contains(target)) {
+    event.preventDefault()
+    return
+  }
+
+  collapseControl(control.key)
+}
+
 function getCalendarValue(control: TableQueryDateControl) {
   const value = getDateValue(control)
 
@@ -510,7 +522,7 @@ function setDateTriggerRef(key: string, value: HTMLElement | null) {
                 class="w-auto p-0"
                 align="start"
                 @escape-key-down="collapseControl(control.key)"
-                @pointer-down-outside="collapseControl(control.key)"
+                @pointer-down-outside="handleDatePopoverPointerDownOutside(control, $event)"
               >
                 <Calendar
                   :model-value="getCalendarValue(control)"
