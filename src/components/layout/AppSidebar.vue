@@ -131,7 +131,7 @@ const businessItems = reactive<AppSidebarNavItem[]>([
   {
     label: "设置",
     icon: "ri-settings-3-line",
-    path: "/settings/me",
+    path: `/settings/${DEFAULT_SETTINGS_CATEGORY_KEY}`,
   },
 ])
 

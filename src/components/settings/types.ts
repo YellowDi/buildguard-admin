@@ -19,7 +19,7 @@ export const SETTINGS_CATEGORY_KEYS = [
 
 export type SettingsCategoryKey = (typeof SETTINGS_CATEGORY_KEYS)[number]
 
-export const DEFAULT_SETTINGS_CATEGORY_KEY: SettingsCategoryKey = "me"
+export const DEFAULT_SETTINGS_CATEGORY_KEY: SettingsCategoryKey = "preferences"
 
 export function isSettingsCategoryKey(value: string): value is SettingsCategoryKey {
   return (SETTINGS_CATEGORY_KEYS as readonly string[]).includes(value)
