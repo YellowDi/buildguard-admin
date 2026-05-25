@@ -937,12 +937,43 @@ function createInspectionColumns(): TablePageSchema<WorkOrderRecord>["columns"] 
       sort: true,
     },
     {
-      key: "parkName",
-      label: "园区",
+      key: "statusLabel",
+      label: "状态",
+      filterType: "tag",
+      cellRenderer: {
+        kind: "status",
+        map: workOrderStatusMap,
+        fallback: { tone: "gray", icon: "dot" },
+      },
+      filter: {
+        type: "tag",
+        defaultVisible: true,
+      },
+      sort: {
+        label: "状态",
+        kind: "metric",
+        value: row => row.statusValue ?? -1,
+      },
+    },
+    {
+      key: "executor",
+      label: "执行人",
       filterType: "text",
       filter: {
         type: "text",
-        placeholder: "输入园区名称",
+        placeholder: "输入执行人",
+      },
+      sort: true,
+    },
+    {
+      key: "deadline",
+      label: "截止时间",
+      filterType: "time",
+      tone: "muted",
+      format: "numeric",
+      filter: {
+        type: "date",
+        value: row => extractDatePart(row.deadline),
       },
       sort: true,
     },
@@ -967,43 +998,12 @@ function createInspectionColumns(): TablePageSchema<WorkOrderRecord>["columns"] 
       sort: true,
     },
     {
-      key: "executor",
-      label: "执行人",
+      key: "parkName",
+      label: "园区",
       filterType: "text",
       filter: {
         type: "text",
-        placeholder: "输入执行人",
-      },
-      sort: true,
-    },
-    {
-      key: "statusLabel",
-      label: "状态",
-      filterType: "tag",
-      cellRenderer: {
-        kind: "status",
-        map: workOrderStatusMap,
-        fallback: { tone: "gray", icon: "dot" },
-      },
-      filter: {
-        type: "tag",
-        defaultVisible: true,
-      },
-      sort: {
-        label: "状态",
-        kind: "metric",
-        value: row => row.statusValue ?? -1,
-      },
-    },
-    {
-      key: "deadline",
-      label: "截止时间",
-      filterType: "time",
-      tone: "muted",
-      format: "numeric",
-      filter: {
-        type: "date",
-        value: row => extractDatePart(row.deadline),
+        placeholder: "输入园区名称",
       },
       sort: true,
     },
