@@ -66,7 +66,7 @@ function getStartupErrorMessage() {
 function renderStartupError(message: string) {
   document.body.classList.add("app-ready")
   document.body.innerHTML = `
-    <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:var(--surface-warm);color:var(--foreground);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;">
+    <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;background:var(--surface-warm);color:var(--foreground);font-family:ui-sans-serif,-apple-system,BlinkMacSystemFont,'Segoe UI Variable Display','Segoe UI',Helvetica,'PingFang SC','Microsoft YaHei',Helvetica,'Apple Color Emoji',Arial,sans-serif,'Segoe UI Emoji','Segoe UI Symbol';">
       <div style="width:min(520px,100%);border:1px solid var(--border-whisper);border-radius:16px;background:var(--card);padding:24px;box-shadow:var(--shadow-deep);">
         <p style="margin:0 0 8px;font-size:14px;font-weight:600;color:var(--destructive);">启动失败</p>
         <h1 style="margin:0 0 12px;font-size:24px;line-height:1.3;">登录服务配置不安全或不完整</h1>

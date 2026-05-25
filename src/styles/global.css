@@ -310,6 +310,10 @@
 }
 
 @theme inline {
+  --font-sans:
+    ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI Variable Display", "Segoe UI",
+    Helvetica, "PingFang SC", "Microsoft YaHei", Helvetica, "Apple Color Emoji", Arial,
+    sans-serif, "Segoe UI Emoji", "Segoe UI Symbol";
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);

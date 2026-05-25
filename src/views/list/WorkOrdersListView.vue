@@ -479,7 +479,7 @@ function formatShortOrderNo(value: unknown) {
   return compact.length > 8 ? compact.slice(-8) : compact
 }
 
-function formatInspectionWorkOrderTitle(row: WorkOrderRecord) {
+function formatInspectionWorkOrderTitle(row: { parkName?: unknown }) {
   const parkName = toText(row.parkName, "")
   return parkName && parkName !== "-" ? parkName : "未关联园区"
 }
