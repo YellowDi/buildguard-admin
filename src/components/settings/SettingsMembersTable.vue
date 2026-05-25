@@ -355,12 +355,10 @@ const viewTabs = computed(() => [
   {
     id: "members",
     label: "成员列表",
-    badge: rows.value.length,
   },
   {
     id: "roles",
     label: "权限组",
-    badge: roleRows.value.length,
   },
 ])
 

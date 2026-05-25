@@ -28,9 +28,6 @@ const props = defineProps<{
 const { canButton } = useCurrentUserPermissions()
 
 const activeTab = ref<InspectionHubTabKey>("items")
-const itemsCount = ref(0)
-const categoriesCount = ref(0)
-const templatesCount = ref(0)
 const searchExpanded = ref(false)
 const searchQueries = ref<Record<InspectionHubTabKey, string>>({
   items: "",
@@ -42,9 +39,9 @@ const categoriesTableRef = ref<ExposedActions | null>(null)
 const templatesTableRef = ref<ExposedActions | null>(null)
 
 const tabs = computed(() => [
-  { id: "items", label: "检测项", badge: itemsCount.value },
-  { id: "categories", label: "分类", badge: categoriesCount.value },
-  { id: "templates", label: "模板", badge: templatesCount.value },
+  { id: "items", label: "检测项" },
+  { id: "categories", label: "分类" },
+  { id: "templates", label: "模板" },
 ])
 
 const currentSearchQuery = computed({
@@ -183,7 +180,6 @@ async function refreshCurrentTab() {
         ref="itemsTableRef"
         :hide-toolbar="true"
         :search-query="searchQueries.items"
-        @count-change="itemsCount = $event"
       />
     </div>
 
@@ -192,7 +188,6 @@ async function refreshCurrentTab() {
         ref="categoriesTableRef"
         :hide-toolbar="true"
         :search-query="searchQueries.categories"
-        @count-change="categoriesCount = $event"
       />
     </div>
 
@@ -201,7 +196,6 @@ async function refreshCurrentTab() {
         ref="templatesTableRef"
         :hide-toolbar="true"
         :search-query="searchQueries.templates"
-        @count-change="templatesCount = $event"
       />
     </div>
     </section>

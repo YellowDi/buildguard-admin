@@ -332,17 +332,14 @@ const viewTabs = computed(() => [
   {
     id: "menus",
     label: "菜单",
-    badge: rows.value.length,
   },
   {
     id: "buttons",
     label: "按钮",
-    badge: buttonRows.value.length,
   },
   {
     id: "apis",
     label: "API",
-    badge: apiRows.value.length,
   },
 ])
 
@@ -532,7 +529,6 @@ onMounted(() => {
   void bootstrapSystemResources()
 })
 
-/** 进入系统页时并行拉取菜单 / 按钮 / API，胶囊 badge 才能立刻显示正确数量（否则仅当前 Tab 有数据，其余长期为 0） */
 async function bootstrapSystemResources() {
   loading.value = true
   errorMessage.value = ""
