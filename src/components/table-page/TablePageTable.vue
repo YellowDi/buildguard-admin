@@ -342,9 +342,15 @@ const bottomDockClassName = computed(() => cn(
     ? "sticky -bottom-4 -mb-4 bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/88"
     : "",
 ))
+const bottomDockContentInsetClass = computed(() => (
+  props.listLevelTable && (!props.stickyBottomDock || props.edgeGutter)
+    ? "px-4 sm:px-8"
+    : ""
+))
 const summaryClassName = computed(() => cn(
   tableTheme.summary,
-  props.listLevelTable ? "px-4 sm:px-8" : "",
+  bottomDockContentInsetClass.value,
+  props.stickyBottomDock && !props.edgeGutter ? "px-0" : "",
   props.stickyBottomDock ? "py-2" : "",
 ))
 const summaryStyle = computed(() => (
@@ -352,7 +358,7 @@ const summaryStyle = computed(() => (
 ))
 const horizontalScrollbarSectionClassName = computed(() => cn(
   "relative",
-  props.listLevelTable ? "px-4 sm:px-8" : "",
+  bottomDockContentInsetClass.value,
 ))
 const horizontalScrollbarSectionStyle = computed(() => (
   props.listLevelTable ? undefined : horizontalScrollbarTrackWrapperStyle.value
