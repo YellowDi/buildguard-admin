@@ -30,7 +30,6 @@ const sections = computed<DetailFieldSection[]>(() => {
       key: "repair-media-basic",
       title: "报修信息",
       rows: [
-        { key: "title", label: "报修标题", value: toText(props.workOrder.Title, "-") },
         {
           key: "content",
           label: "报修内容",
@@ -53,8 +52,8 @@ const sections = computed<DetailFieldSection[]>(() => {
 const beforeFiles = computed(() => normalizeFiles(props.workOrder?.BeforeRepairFile))
 const afterFiles = computed(() => normalizeFiles(props.workOrder?.AfterRepairFile))
 const mediaCount = computed(() => beforeFiles.value.length + afterFiles.value.length)
-const sheetTitle = computed(() => toText(props.workOrder?.Title, "维修过程"))
-const sheetDescription = computed(() => toText(props.workOrder?.OrderNo, "报修工单"))
+const sheetTitle = "维修过程"
+const sheetDescription = "报修工单"
 
 function handleOpenChange(open: boolean) {
   emit("update:open", open)

@@ -30,6 +30,17 @@ export function buildRepairWorkOrderPrimarySections(
       rows: [
         { key: "report-type", label: "报修类型", value: formatRepairReportTypeLabel(workOrder.ReportType, options?.dictionaries?.typeOptions) },
         { key: "important", label: "重要程度", value: formatRepairImportantLabel(workOrder.Important, options?.dictionaries?.importanceOptions) },
+        { key: "plan-name", label: "计划名称", value: toText(workOrder.PlanName, "-") },
+        { key: "category-name", label: "检查项类别", value: toText(workOrder.CategoryName, "-") },
+        {
+          key: "category-content",
+          label: "检查项分类说明",
+          value: toText(workOrder.CategoryContent, "-"),
+          truncate: false,
+          valueClass: "leading-6",
+        },
+        { key: "inspection-item-name", label: "检查项", value: toText(workOrder.InspectionItemName, "-") },
+        { key: "result", label: "检查结果", value: formatRepairResult(workOrder.Result) },
         {
           key: "content",
           label: "报修内容",
@@ -37,10 +48,18 @@ export function buildRepairWorkOrderPrimarySections(
           truncate: false,
           valueClass: "leading-6",
         },
-        ...buildRepairFileRows(workOrder.RepairFile),
+        {
+          key: "before-content",
+          label: "报修前内容",
+          value: formatTextList(workOrder.BeforeContent),
+          truncate: false,
+          valueClass: "leading-6",
+        },
+        ...buildMediaFileRows(workOrder.RepairFile, "需维修图片", "repair-file"),
         { key: "status", label: "状态", value: buildRepairWorkOrderStatusValue(workOrder.Status) },
         { key: "created-at", label: "创建时间", value: toText(workOrder.CreatedAt, "-") },
         { key: "executors", label: "执行人", value: formatExecutors(workOrder.Executors) },
+        { key: "repair-user", label: "维修人员", value: toText(workOrder.UserName, "-") },
       ],
     },
     {
@@ -48,12 +67,17 @@ export function buildRepairWorkOrderPrimarySections(
       title: "客户信息",
       rows: [
         {
-          key: "customer-name",
-          label: "客户名称",
-          value: toText(customer?.CorpName, toText(workOrder.CorpName || workOrder.CustomerName, "-")),
+          key: "corp-name",
+          label: "公司名称",
+          value: toText(workOrder.CorpName, toText(customer?.CorpName, "-")),
           ...(options?.onOpenCustomer
             ? { linkAction: { onClick: options.onOpenCustomer } }
             : {}),
+        },
+        {
+          key: "customer-name",
+          label: "客户名称",
+          value: toText(workOrder.CustomerName, toText(customer?.CorpName, "-")),
         },
         {
           key: "park-name",
@@ -100,16 +124,8 @@ export function buildRepairWorkOrderSecondarySections(workOrder: RepairWorkOrder
           truncate: false,
           valueClass: "leading-6",
         },
-        {
-          key: "before-repair-file",
-          label: "维修前附件",
-          value: formatFileCount(workOrder.BeforeRepairFile),
-        },
-        {
-          key: "after-repair-file",
-          label: "维修后附件",
-          value: formatFileCount(workOrder.AfterRepairFile),
-        },
+        ...buildMediaFileRows(workOrder.BeforeRepairFile, "维修前图片", "before-repair-file"),
+        ...buildMediaFileRows(workOrder.AfterRepairFile, "维修后图片", "after-repair-file"),
       ],
     },
   ]
@@ -127,40 +143,44 @@ export function toText(value: unknown, fallback = "") {
   return fallback
 }
 
-function formatFileCount(value: unknown) {
-  if (!Array.isArray(value) || value.length === 0) {
+function formatTextList(value: unknown) {
+  if (!Array.isArray(value)) {
     return "-"
   }
 
-  return `${value.length} 个附件`
+  const items = value
+    .map(item => toText(item, ""))
+    .filter(Boolean)
+
+  return items.length ? items.join("\n") : "-"
 }
 
-function buildRepairFileRows(value: unknown) {
-  const mediaFiles = normalizeWorkOrderMediaFiles(value)
+function buildMediaFileRows(value: unknown, label: string, key: string) {
+  const mediaFiles = normalizeWorkOrderMediaFiles(value, key, label)
 
   if (!mediaFiles.length) {
     return []
   }
 
   return [{
-    key: "repair-file",
-    label: "需维修图片",
+    key,
+    label,
     value: `${mediaFiles.length} 个附件`,
     mediaFiles,
   }]
 }
 
-function normalizeWorkOrderMediaFiles(value: unknown): DetailFieldMediaFile[] {
+function normalizeWorkOrderMediaFiles(value: unknown, keyPrefix: string, altPrefix: string): DetailFieldMediaFile[] {
   if (!Array.isArray(value)) {
     return []
   }
 
   return value
-    .map((file, index) => normalizeWorkOrderMediaFile(file, index))
+    .map((file, index) => normalizeWorkOrderMediaFile(file, index, keyPrefix, altPrefix))
     .filter((file): file is DetailFieldMediaFile => file !== null)
 }
 
-function normalizeWorkOrderMediaFile(value: unknown, index: number): DetailFieldMediaFile | null {
+function normalizeWorkOrderMediaFile(value: unknown, index: number, keyPrefix: string, altPrefix: string): DetailFieldMediaFile | null {
   if (!value || typeof value !== "object") {
     return null
   }
@@ -173,10 +193,10 @@ function normalizeWorkOrderMediaFile(value: unknown, index: number): DetailField
   }
 
   return {
-    key: `repair-file-${index}-${src}`,
+    key: `${keyPrefix}-${index}-${src}`,
     src,
     type: file.Type === 2 || /\.(mp4|mov|m4v|webm|ogg)(\?|#|$)/i.test(src) ? "video" : "image",
-    alt: `需维修图片 ${index + 1}`,
+    alt: `${altPrefix} ${index + 1}`,
   }
 }
 
@@ -218,6 +238,17 @@ function toExecutorName(value: unknown) {
 
 function toNumber(value: unknown) {
   return typeof value === "number" && Number.isFinite(value) ? value : null
+}
+
+function formatRepairResult(value: unknown) {
+  const result = toNumber(value)
+
+  if (result === null || result === 0) return "未反馈"
+  if (result === 1) return "正常"
+  if (result === 2) return "轻微风险"
+  if (result === 3) return "存在隐患"
+
+  return `结果 ${result}`
 }
 
 function formatRepairWorkOrderStatus(value: unknown) {

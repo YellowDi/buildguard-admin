@@ -46,7 +46,7 @@ let latestRequestId = 0
 
 const title = computed(() => (
   props.kind === "repair"
-    ? toRepairWorkOrderText(repairWorkOrder.value?.Title, "报修工单详情")
+    ? "报修工单详情"
     : toWorkOrderText(inspectionWorkOrder.value?.PackageName, "检测工单详情")
 ))
 

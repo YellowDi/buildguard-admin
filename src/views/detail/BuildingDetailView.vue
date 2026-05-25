@@ -376,7 +376,7 @@ async function loadBuildingRecords(currentBuilding: BuildingListItem) {
           uuid: recordText(item.Uuid, ""),
           kind: "repair" as const,
           serviceName: "-",
-          item: recordText(item.Title || item.Content, "未命名报修工单"),
+          item: recordText(item.RepairContent || item.Content, "未命名报修工单"),
           executors,
           executor: formatExecutorText(executors),
           deadline: formatDateOnly(recordText(item.CreatedAt, "-")),

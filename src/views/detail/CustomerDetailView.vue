@@ -749,7 +749,7 @@ const filteredRepairWorkOrders = computed(() => {
       return true
     }
 
-    return [row.orderNo, row.workOrderName, row.parkName, row.executor, row.remark].join(" ").toLowerCase().includes(query)
+    return [row.orderNo, row.parkName, row.executor, row.remark].join(" ").toLowerCase().includes(query)
   })
 
   return [...rows].sort((left, right) => compareDateStrings(left.createdAt, right.createdAt, repairWorkOrdersSortDirection.value, left.orderNo, right.orderNo))
@@ -822,7 +822,7 @@ const repairWorkOrdersQueryBar = computed<TableQueryBarConfig>(() => ({
       key: "q",
       label: "工单搜索",
       icon: "ri-text",
-      placeholder: "输入标题、园区、执行人或备注搜索",
+      placeholder: "输入内容、园区、执行人或备注搜索",
       value: repairWorkOrdersQuery.value,
       expandedWidth: 248,
       collapsedMaxWidth: 248,
@@ -1446,17 +1446,6 @@ const repairWorkOrdersSchema: TablePageSchema<CustomerWorkOrderRow> = {
   onRowClick: row => handleViewWorkOrder(row as CustomerWorkOrderRow),
   columns: [
     {
-      key: "workOrderName",
-      label: "报修标题",
-      filterType: "text",
-      filter: {
-        type: "text",
-        placeholder: "输入报修标题",
-        defaultVisible: true,
-      },
-      sort: true,
-    },
-    {
       key: "parkName",
       label: "园区名称",
       filterType: "text",
@@ -1977,7 +1966,7 @@ const parkDetailSheetSections = computed<DetailFieldSection[]>(() => {
 
 const workOrderDetailSheetTitle = computed(() => (
   activeWorkOrderDetailKind.value === "repair"
-    ? toRepairWorkOrderText(activeRepairWorkOrderDetail.value?.Title, "报修工单详情")
+    ? "报修工单详情"
     : toWorkOrderText(activeInspectionWorkOrderDetail.value?.PackageName, "检测工单详情")
 ))
 
@@ -3579,7 +3568,7 @@ function mapMaintenanceRecordRow(row: CustomerWorkOrderRow): MaintenanceRecordRo
     result: row.resultLabel,
     location,
     parkName: row.parkName !== "-" ? row.parkName : "未关联园区",
-    item: row.workOrderName !== "-" ? row.workOrderName : row.planName,
+    item: row.remark !== "-" ? row.remark : row.reportTypeLabel,
     executor: row.executor,
     executors: row.executors,
     deadline: row.deadline,
@@ -3720,7 +3709,6 @@ function buildInspectionWorkOrdersFilterText(row: CustomerWorkOrderRow) {
 function buildRepairWorkOrdersFilterText(row: CustomerWorkOrderRow) {
   return [
     row.orderNo,
-    row.workOrderName,
     row.customerName,
     row.parkName,
     row.executor,
@@ -3911,7 +3899,7 @@ function mapRepairWorkOrderRow(item: RepairWorkOrderListItem, index: number): Cu
     customerUuid: toDisplayText(item.CustomerUuid, customerUuid.value),
     planUuid: "",
     orderNo: toDisplayText(item.OrderNo, "-"),
-    workOrderName: toDisplayText(item.Title, "-"),
+    workOrderName: toDisplayText(item.RepairContent || item.Content, "-"),
     customerName: toDisplayText(item.CorpName || item.CustomerName, toDisplayText(customer.value?.CorpName, "-")),
     parkName: toDisplayText(item.ParkName, "-"),
     buildingName: toDisplayText(item.BuildName, "-"),
