@@ -43,8 +43,6 @@ const state = reactive<SettingsState>({
   criticalAlerts: true,
   browserNotifications: false,
   digestFrequency: "daily",
-  twoFactorEnabled: true,
-  sessionTimeout: "30",
   appRelease: {
     hasUpdate: true,
     versionName: "1.0.1",
@@ -452,77 +450,6 @@ const categories = computed<SettingsCategory[]>(() => [
     pageDescription: "查看并维护后台路由、操作权限与接口元数据，支撑权限策略与前后端联调。",
     sections: [],
   },
-  {
-    key: "security",
-    group: "admin",
-    label: "安全",
-    description: "会话管理、登录保护和高风险操作。",
-    icon: "ri-shield-keyhole-line",
-    sections: [
-      {
-        key: "session",
-        title: "登录保护",
-        description: "控制后台访问时效和高风险登录校验强度。",
-        items: [
-          {
-            key: "twoFactorEnabled",
-            type: "toggle",
-            modelKey: "twoFactorEnabled",
-            label: "启用双重验证",
-            description: "管理员登录时要求额外验证码确认。",
-          },
-          {
-            key: "sessionTimeout",
-            type: "select",
-            modelKey: "sessionTimeout",
-            label: "会话超时",
-            description: "后台无操作达到该时长后自动要求重新登录。",
-            options: [
-              { label: "15 分钟", value: "15" },
-              { label: "30 分钟", value: "30" },
-              { label: "1 小时", value: "60" },
-              { label: "4 小时", value: "240" },
-            ],
-          },
-          {
-            key: "reviewSessions",
-            type: "button",
-            actionKey: "review-active-sessions",
-            label: "查看活跃设备",
-            description: "检查当前工作区已登录设备和最近访问记录。",
-            buttonLabel: "查看会话",
-            variant: "outline",
-          },
-        ],
-      },
-      {
-        key: "danger-zone",
-        title: "危险操作区",
-        description: "这些操作不可逆，应只在确认影响范围后执行。",
-        tone: "danger",
-        items: [
-          {
-            key: "revokeOthers",
-            type: "button",
-            actionKey: "revoke-other-sessions",
-            label: "退出其他设备",
-            description: "强制当前账号在其他浏览器和设备上退出登录。",
-            buttonLabel: "全部退出",
-            variant: "outline",
-          },
-          {
-            key: "deleteWorkspace",
-            type: "button",
-            actionKey: "delete-workspace",
-            label: "删除当前工作区",
-            description: "移除当前工作区及其设置，操作后无法恢复。",
-            buttonLabel: "删除工作区",
-            variant: "destructive",
-          },
-        ],
-      },
-    ],
-  },
 ])
 
 const activeKey = ref<SettingsCategoryKey>("me")
@@ -570,20 +497,6 @@ function runAction(actionKey: SettingsActionKey) {
   if (actionKey === "review-member-invites") {
     toast("邀请审批面板待接入", {
       description: "当前先保留交互入口，后续可接真实邀请流。",
-    })
-    return
-  }
-
-  if (actionKey === "review-active-sessions") {
-    toast("活跃会话面板待接入", {
-      description: "当前先保留交互入口，后续可接真实设备列表。",
-    })
-    return
-  }
-
-  if (actionKey === "revoke-other-sessions") {
-    toast.success("已请求退出其他设备", {
-      description: "当前设备会保持登录状态。",
     })
     return
   }

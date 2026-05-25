@@ -14,7 +14,6 @@ export const SETTINGS_CATEGORY_KEYS = [
   "inspection-items",
   "report-template",
   "notifications",
-  "security",
 ] as const
 
 export type SettingsCategoryKey = (typeof SETTINGS_CATEGORY_KEYS)[number]
@@ -29,9 +28,6 @@ export type SettingsActionKey =
   | "open-members-directory"
   | "review-member-invites"
   | "send-test-notification"
-  | "review-active-sessions"
-  | "revoke-other-sessions"
-  | "delete-workspace"
 
 export type SettingsState = {
   accountName: string
@@ -62,8 +58,6 @@ export type SettingsState = {
   criticalAlerts: boolean
   browserNotifications: boolean
   digestFrequency: string
-  twoFactorEnabled: boolean
-  sessionTimeout: string
   appRelease: AppReleaseDraft
   appReleases: AppReleaseEntry[]
   // Me page fields
