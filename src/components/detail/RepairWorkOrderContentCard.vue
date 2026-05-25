@@ -3,9 +3,12 @@ import { computed } from "vue"
 
 import TitleBlock from "@/components/layout/TitleBlock.vue"
 import MediaLightbox from "@/components/media/MediaLightbox.vue"
+import TableStatusChip from "@/components/table-page/TableStatusChip.vue"
+import { workOrderStatusMap } from "@/components/table-page/statusPresets"
 import { Badge } from "@/components/ui/badge"
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import { Separator } from "@/components/ui/separator"
+import { getRepairWorkOrderStatusLabel } from "@/lib/work-order-status"
 import type { RepairWorkOrderDetailResult, WorkOrderFile } from "@/lib/work-orders-api"
 
 type RepairMediaGroup = {
@@ -48,6 +51,14 @@ const mediaCount = computed(() => mediaGroups.value.reduce((total, group) => tot
 const hasContent = computed(() => Boolean(props.workOrder))
 const hasRepairRecords = computed(() => Boolean(toText(props.workOrder?.RepairContent) || mediaGroups.value.length))
 const recordCount = computed(() => (toText(props.workOrder?.RepairContent) ? 1 : 0) + mediaCount.value)
+const repairStatusLabel = computed(() => getRepairWorkOrderStatusLabel(toNumber(props.workOrder?.Status), "-"))
+const executorText = computed(() => formatExecutors(props.workOrder?.Executors))
+const repairUserText = computed(() => toText(props.workOrder?.UserName, "-"))
+const repairStatusRenderer = {
+  kind: "status" as const,
+  map: workOrderStatusMap,
+  fallback: { tone: "gray" as const, icon: "dot" as const },
+}
 
 function normalizeFiles(value: unknown) {
   return Array.isArray(value)
@@ -93,6 +104,42 @@ function toText(value: unknown, fallback = "") {
 
   return fallback
 }
+
+function formatExecutors(value: unknown) {
+  if (!Array.isArray(value)) {
+    return "-"
+  }
+
+  const executors = value
+    .map(item => toExecutorName(item))
+    .filter(Boolean)
+
+  return executors.length ? executors.join("、") : "-"
+}
+
+function toExecutorName(value: unknown) {
+  const directValue = toText(value)
+
+  if (directValue) {
+    return directValue
+  }
+
+  if (!value || typeof value !== "object") {
+    return ""
+  }
+
+  const record = value as Record<string, unknown>
+
+  for (const key of ["Name", "name", "UserName", "userName", "ExecutorName", "executorName"]) {
+    const name = toText(record[key])
+
+    if (name) {
+      return name
+    }
+  }
+
+  return ""
+}
 </script>
 
 <template>
@@ -130,6 +177,48 @@ function toText(value: unknown, fallback = "") {
         </div>
 
         <div v-else class="detail-group-stack pb-2">
+          <section>
+            <div class="detail-group-divider-row detail-section-inset flex min-w-0 items-center gap-3">
+              <div class="min-w-0 truncate text-[14px] font-medium text-muted-foreground">处理信息</div>
+              <div class="h-px min-w-0 flex-1 bg-border/80" />
+            </div>
+
+            <div class="detail-field-row group">
+              <div class="detail-field-row__label">维修状态</div>
+              <div class="detail-field-row__value">
+                <TableStatusChip
+                  v-if="repairStatusLabel !== '-'"
+                  :value="repairStatusLabel"
+                  :renderer="repairStatusRenderer"
+                />
+                <span v-else class="detail-field-row__value--empty">无数据</span>
+              </div>
+            </div>
+
+            <div class="detail-field-row group">
+              <div class="detail-field-row__label">执行人</div>
+              <div class="detail-field-row__value">
+                <span :class="executorText === '-' && 'detail-field-row__value--empty'">
+                  {{ executorText === "-" ? "无数据" : executorText }}
+                </span>
+              </div>
+            </div>
+
+            <div class="detail-field-row group">
+              <div class="detail-field-row__label">维修人员</div>
+              <div class="detail-field-row__value">
+                <span :class="repairUserText === '-' && 'detail-field-row__value--empty'">
+                  {{ repairUserText === "-" ? "无数据" : repairUserText }}
+                </span>
+              </div>
+            </div>
+          </section>
+
+          <Separator
+            v-if="toText(props.workOrder?.RepairContent) || mediaGroups.length"
+            class="bg-border/80"
+          />
+
           <section v-if="toText(props.workOrder?.RepairContent)">
             <div class="detail-group-divider-row detail-section-inset flex min-w-0 items-center gap-3">
               <div class="min-w-0 truncate text-[14px] font-medium text-muted-foreground">文字记录</div>

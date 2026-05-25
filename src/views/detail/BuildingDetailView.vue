@@ -431,7 +431,7 @@ function executorName(value: unknown) {
 
   const record = value as Record<string, unknown>
 
-  for (const key of ["Name", "name", "UserName", "userName", "ExecutorName", "executorName", "Uuid", "uuid"]) {
+  for (const key of ["Name", "name", "UserName", "userName", "ExecutorName", "executorName"]) {
     const name = recordText(record[key], "")
 
     if (name) {

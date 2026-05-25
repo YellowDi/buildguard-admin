@@ -56,10 +56,7 @@ export function buildRepairWorkOrderPrimarySections(
           valueClass: "leading-6",
         },
         ...buildMediaFileRows(workOrder.RepairFile, "需维修图片", "repair-file"),
-        { key: "status", label: "状态", value: buildRepairWorkOrderStatusValue(workOrder.Status) },
         { key: "created-at", label: "创建时间", value: toText(workOrder.CreatedAt, "-") },
-        { key: "executors", label: "执行人", value: formatExecutors(workOrder.Executors) },
-        { key: "repair-user", label: "维修人员", value: toText(workOrder.UserName, "-") },
       ],
     },
     {
@@ -117,6 +114,9 @@ export function buildRepairWorkOrderSecondarySections(workOrder: RepairWorkOrder
       key: "repair-work-order-repair",
       title: "维修记录",
       rows: [
+        { key: "status", label: "维修状态", value: buildRepairWorkOrderStatusValue(workOrder.Status) },
+        { key: "executors", label: "执行人", value: formatExecutors(workOrder.Executors) },
+        { key: "repair-user", label: "维修人员", value: toText(workOrder.UserName, "-") },
         {
           key: "repair-content",
           label: "维修内容",
@@ -225,7 +225,7 @@ function toExecutorName(value: unknown) {
 
   const record = value as Record<string, unknown>
 
-  for (const key of ["Name", "name", "UserName", "userName", "ExecutorName", "executorName", "Uuid", "uuid"]) {
+  for (const key of ["Name", "name", "UserName", "userName", "ExecutorName", "executorName"]) {
     const name = toText(record[key], "")
 
     if (name) {
