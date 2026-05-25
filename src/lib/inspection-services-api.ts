@@ -480,7 +480,7 @@ function normalizeInspectionServiceListItem(value: unknown): InspectionServiceLi
   }
 
   const record = value as Record<string, unknown>
-  const customerName = getOptionalString(record.CustomerName)
+  const customerName = getOptionalString(record.CustomerName) ?? getOptionalString(record.CorpName)
   const corpName = getOptionalString(record.CorpName) ?? customerName
   const contractEndTime = getOptionalString(record.ContractEndTime)
     ?? getOptionalString(record.ExpireAt)
@@ -493,6 +493,9 @@ function normalizeInspectionServiceListItem(value: unknown): InspectionServiceLi
 
   return {
     ...record,
+    Uuid: getOptionalString(record.Uuid),
+    Id: normalizeOptionalNumberLike(record.Id),
+    Name: getOptionalString(record.Name),
     Status: status,
     StartTime: getOptionalString(record.StartTime),
     ContractEndTime: contractEndTime,
@@ -501,10 +504,16 @@ function normalizeInspectionServiceListItem(value: unknown): InspectionServiceLi
     CorpName: corpName,
     CustomerName: customerName,
     CustomerUuid: getOptionalString(record.CustomerUuid),
+    Level: getOptionalString(record.Level),
+    ManagerName: getOptionalString(record.ManagerName),
+    ManagerPhone: getOptionalString(record.ManagerPhone),
     InspectionUuids: normalizeOptionalStringList(record.InspectionUuids),
     Inspections: resolveInspectionServiceInspectionItems(record),
     BuildInfos: normalizeInspectionServiceBuildItems(record.BuildInfos ?? record.Builds),
     Builds: normalizeInspectionServiceBuildItems(record.BuildInfos ?? record.Builds),
+    Remark: getOptionalString(record.Remark),
+    CreatedAt: getOptionalString(record.CreatedAt),
+    UpdatedAt: getOptionalString(record.UpdatedAt),
   }
 }
 

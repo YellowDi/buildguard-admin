@@ -134,7 +134,7 @@ const schema: TablePageSchema<InspectionServiceRecord> = {
     },
     {
       key: "Level",
-      label: "服务等级",
+      label: "套餐等级",
       filterType: "tag",
       filter: {
         type: "tag",
@@ -298,6 +298,22 @@ watch(
   { immediate: true },
 )
 
+watch(
+  () => page.selectedTab.value,
+  (nextTab, previousTab) => {
+    if (nextTab === previousTab) {
+      return
+    }
+
+    if (pageNum.value !== 1) {
+      pageNum.value = 1
+      return
+    }
+
+    void loadInspectionServices()
+  },
+)
+
 void loadCustomerOptions()
 
 function handleCreateInspectionService() {
@@ -355,6 +371,7 @@ async function loadInspectionServices() {
     const result = await fetchInspectionServices({
       Name: serviceNameQuery.value || undefined,
       CustomerUuid: selectedCustomerUuid.value || undefined,
+      Status: getServiceStatusCodeByLabel(page.selectedTab.value),
       PageNum: pageNum.value,
       PageSize: pageSize.value,
     })
@@ -402,7 +419,6 @@ function normalizeInspectionServiceRecord(item: InspectionServiceListItem, index
     customerUuid,
     Name: toText(item.Name, "未命名服务"),
     Level: toText(item.Level, "未分级"),
-    // 接口字段从 CustomerName 调整为 CorpName
     CorpName: toText(item.CorpName || item.CustomerName, "未绑定客户"),
     StartTime: toText(item.StartTime, "-"),
     ParkUuid: park.uuid,
@@ -596,6 +612,17 @@ function formatServiceStatus(status: unknown) {
   if (normalized === 4) return "已结单"
 
   return "-"
+}
+
+function getServiceStatusCodeByLabel(value: unknown) {
+  const label = toText(value, "")
+
+  if (label === "待签署") return 1
+  if (label === "进行中") return 2
+  if (label === "已逾期") return 3
+  if (label === "已结单") return 4
+
+  return undefined
 }
 
 function getRowServiceStatus(row: unknown) {
