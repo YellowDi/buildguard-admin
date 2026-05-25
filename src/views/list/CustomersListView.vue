@@ -55,13 +55,22 @@ const errorMessage = ref("")
 const pageNum = ref(1)
 const pageSize = ref(50)
 const total = ref(0)
+const corpNameQuery = ref("")
 const customerNameQuery = ref("")
+const customerPhoneQuery = ref("")
+const selectedStatus = ref("")
 const customerLevelTabOptions = ref<string[]>(["未评级"])
 const sortDirection = ref<"asc" | "desc">("desc")
 const activeLinkedDetailKind = ref<LinkedDetailSheetKind | null>(null)
 const activeLinkedDetailUuid = ref("")
 let latestRequestId = 0
 let syncingRoute = false
+
+const customerStatusOptions = [
+  { label: "正常", value: "1" },
+  { label: "封禁", value: "2" },
+  { label: "未完善", value: "3" },
+]
 
 const schema: TablePageSchema<CustomerRecord> = {
   title: "客户",
@@ -109,14 +118,14 @@ const schema: TablePageSchema<CustomerRecord> = {
   columns: [
     {
       key: "customerName",
-      label: "客户名称",
+      label: "公司名称",
       filterType: "text",
       emphasis: "strong",
       tone: "primary",
       filter: {
         type: "text",
-        label: "客户名称",
-        placeholder: "输入客户名称",
+        label: "公司名称",
+        placeholder: "输入公司名称",
         defaultVisible: true,
       },
       sort: true,
@@ -311,20 +320,57 @@ const queryBar = computed<TableQueryBarConfig>(() => ({
   controls: [
     {
       type: "search",
-      key: "q",
+      key: "corpName",
       queryKey: "q",
-      label: "客户名称",
+      label: "公司名称",
       icon: "ri-text",
+      placeholder: "请输入",
+      value: corpNameQuery.value,
+      expandedWidth: 248,
+      collapsedMaxWidth: 248,
+    },
+    {
+      type: "search",
+      key: "customerName",
+      queryKey: "customerName",
+      label: "客户名称",
+      icon: "ri-user-line",
       placeholder: "请输入",
       value: customerNameQuery.value,
       expandedWidth: 248,
       collapsedMaxWidth: 248,
     },
+    {
+      type: "search",
+      key: "customerPhone",
+      queryKey: "customerPhone",
+      label: "客户手机",
+      icon: "ri-phone-line",
+      placeholder: "请输入",
+      value: customerPhoneQuery.value,
+      expandedWidth: 248,
+      collapsedMaxWidth: 248,
+    },
+    {
+      type: "select",
+      key: "status",
+      queryKey: "status",
+      label: "客户状态",
+      icon: "ri-price-tag-3-line",
+      value: selectedStatus.value,
+      options: customerStatusOptions,
+      placeholder: "请选择状态",
+      expandedWidth: 248,
+      collapsedMaxWidth: 248,
+    },
   ],
   values: {
-    q: customerNameQuery.value,
+    corpName: corpNameQuery.value,
+    customerName: customerNameQuery.value,
+    customerPhone: customerPhoneQuery.value,
+    status: selectedStatus.value,
   },
-  canClear: Boolean(customerNameQuery.value),
+  canClear: Boolean(corpNameQuery.value || customerNameQuery.value || customerPhoneQuery.value || selectedStatus.value),
 }))
 
 watch([pageNum, pageSize], ([nextPageNum, nextPageSize], [previousPageNum, previousPageSize]) => {
@@ -336,17 +382,29 @@ watch([pageNum, pageSize], ([nextPageNum, nextPageSize], [previousPageNum, previ
 })
 
 watch(
-  () => normalizeQueryValue(route.query.q),
+  () => [
+    normalizeQueryValue(route.query.q),
+    normalizeQueryValue(route.query.customerName),
+    normalizeQueryValue(route.query.customerPhone),
+    normalizeQueryValue(route.query.status),
+  ] as const,
   (nextValue, previousValue) => {
     if (syncingRoute) {
       return
     }
 
-    if (nextValue === previousValue) {
+    if (
+      previousValue
+      && nextValue.length === previousValue.length
+      && nextValue.every((value, index) => value === previousValue[index])
+    ) {
       return
     }
 
-    customerNameQuery.value = nextValue
+    corpNameQuery.value = nextValue[0] ?? ""
+    customerNameQuery.value = nextValue[1] ?? ""
+    customerPhoneQuery.value = nextValue[2] ?? ""
+    selectedStatus.value = nextValue[3] ?? ""
 
     if (pageNum.value !== 1) {
       pageNum.value = 1
@@ -385,7 +443,10 @@ async function loadCustomers() {
 
   try {
     const result = await fetchCustomers({
-      CorpName: customerNameQuery.value || undefined,
+      CorpName: corpNameQuery.value || undefined,
+      CustomerName: customerNameQuery.value || undefined,
+      CustomerPhone: customerPhoneQuery.value || undefined,
+      Status: selectedStatus.value || undefined,
       PageNum: pageNum.value,
       PageSize: pageSize.value,
     })
@@ -637,20 +698,32 @@ function handleToolbarSortToggle() {
 }
 
 function handleQueryChange(payload: { key: string; value: string | string[] }) {
-  if (payload.key !== "q") {
+  const value = typeof payload.value === "string" ? payload.value.trim() : ""
+
+  if (payload.key === "corpName") {
+    corpNameQuery.value = value
+  } else if (payload.key === "customerName") {
+    customerNameQuery.value = value
+  } else if (payload.key === "customerPhone") {
+    customerPhoneQuery.value = value
+  } else if (payload.key === "status") {
+    selectedStatus.value = value
+  } else {
     return
   }
 
-  customerNameQuery.value = typeof payload.value === "string" ? payload.value.trim() : ""
   void syncRouteQueryAndReload()
 }
 
 function handleQueryClear() {
-  if (!customerNameQuery.value) {
+  if (!corpNameQuery.value && !customerNameQuery.value && !customerPhoneQuery.value && !selectedStatus.value) {
     return
   }
 
+  corpNameQuery.value = ""
   customerNameQuery.value = ""
+  customerPhoneQuery.value = ""
+  selectedStatus.value = ""
   void syncRouteQueryAndReload()
 }
 
@@ -661,7 +734,10 @@ async function syncRouteQueryAndReload() {
     await router.replace({
       query: {
         ...route.query,
-        q: customerNameQuery.value || undefined,
+        q: corpNameQuery.value || undefined,
+        customerName: customerNameQuery.value || undefined,
+        customerPhone: customerPhoneQuery.value || undefined,
+        status: selectedStatus.value || undefined,
       },
     })
   } finally {

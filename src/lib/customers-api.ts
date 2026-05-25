@@ -9,24 +9,26 @@ type CustomerListEnvelope = {
   rows?: unknown
 }
 
+export type CustomerServiceInfo = {
+  Id?: number
+  Name?: string
+  Uuid?: string
+  [property: string]: unknown
+}
+
 export type CustomerListItem = {
   Id?: number
   Uuid?: string
   CorpName?: string
   Business?: string
   Status?: number
-  Level?: number | string
+  Level?: string
   ParkNum?: number
   BuildNum?: number
   CreatedAt?: string
   PrincipalName?: string
   PrincipalPhone?: string
-  Services?: Array<{
-    Id?: number
-    Uuid?: string
-    Name?: string
-    [property: string]: unknown
-  }>
+  Services?: CustomerServiceInfo[]
   [property: string]: unknown
 }
 
@@ -112,8 +114,6 @@ export type ListCustomersPayload = {
   CustomerName?: string
   CustomerPhone?: string
   Status?: string | number
-  Level?: string
-  Business?: string
   PageNum?: number
   PageSize?: number
   [property: string]: unknown
@@ -137,8 +137,6 @@ export async function fetchCustomers(payload: ListCustomersPayload = {}): Promis
     CustomerName: getOptionalString(payload.CustomerName),
     CustomerPhone: getOptionalString(payload.CustomerPhone),
     Status: getOptionalString(payload.Status),
-    Level: getOptionalString(payload.Level),
-    Business: getOptionalString(payload.Business),
     PageNum: getOptionalNumber(payload.PageNum, "PageNum"),
     PageSize: getOptionalNumber(payload.PageSize, "PageSize"),
   }
