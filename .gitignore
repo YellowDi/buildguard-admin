@@ -11,3 +11,5 @@ dist
 .cursor
 AGENTS.md
 docs/
+makefile
+push.sh

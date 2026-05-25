@@ -98,6 +98,7 @@ const pageSize = ref(50)
 const total = ref(0)
 const orderNoQuery = ref("")
 const createdAtQuery = ref("")
+const deadlineQuery = ref("")
 const serviceNameQuery = ref("")
 const executorQuery = ref("")
 const selectedStatus = ref("")
@@ -285,6 +286,17 @@ const queryBar = computed<TableQueryBarConfig>(() => ({
           collapsedMaxWidth: 248,
         },
         {
+          type: "date" as const,
+          key: "deadline",
+          queryKey: "deadline",
+          label: "截止时间",
+          icon: "ri-calendar-line",
+          placeholder: "请选择日期",
+          value: deadlineQuery.value,
+          expandedWidth: 248,
+          collapsedMaxWidth: 248,
+        },
+        {
           type: "select" as const,
           key: "status",
           queryKey: "status",
@@ -364,13 +376,14 @@ const queryBar = computed<TableQueryBarConfig>(() => ({
     planUuid: props.kind === "inspection" ? selectedPlanUuid.value : "",
     serviceName: props.kind === "inspection" ? serviceNameQuery.value : "",
     executor: props.kind === "inspection" ? executorQuery.value : "",
+    deadline: props.kind === "inspection" ? deadlineQuery.value : "",
     createdAt: props.kind === "repair" ? createdAtQuery.value : "",
     important: props.kind === "repair" ? selectedImportant.value : "",
     status: selectedStatus.value,
     result: props.kind === "inspection" ? selectedResult.value : "",
   },
   canClear: props.kind === "inspection"
-    ? Boolean(orderNoQuery.value || selectedCustomerUuid.value || selectedPlanUuid.value || serviceNameQuery.value || executorQuery.value || selectedStatus.value || selectedResult.value)
+    ? Boolean(orderNoQuery.value || selectedCustomerUuid.value || selectedPlanUuid.value || serviceNameQuery.value || executorQuery.value || deadlineQuery.value || selectedStatus.value || selectedResult.value)
     : Boolean(orderNoQuery.value || createdAtQuery.value || selectedImportant.value || selectedStatus.value),
 }))
 
@@ -390,6 +403,7 @@ watch(
         normalizeQueryValue(route.query.planUuid),
         normalizeQueryValue(route.query.serviceName),
         normalizeQueryValue(route.query.executor),
+        normalizeQueryValue(route.query.deadline),
         normalizeQueryValue(route.query.status),
         normalizeQueryValue(route.query.result),
       ] as const
@@ -415,8 +429,9 @@ watch(
       selectedPlanUuid.value = nextValue[2] ?? ""
       serviceNameQuery.value = nextValue[3] ?? ""
       executorQuery.value = nextValue[4] ?? ""
-      selectedStatus.value = nextValue[5] ?? ""
-      selectedResult.value = nextValue[6] ?? ""
+      deadlineQuery.value = nextValue[5] ?? ""
+      selectedStatus.value = nextValue[6] ?? ""
+      selectedResult.value = nextValue[7] ?? ""
     } else {
       createdAtQuery.value = nextValue[1] ?? ""
       selectedImportant.value = nextValue[2] ?? ""
@@ -649,6 +664,7 @@ async function loadWorkOrders() {
           PlanUuid: selectedPlanUuid.value || undefined,
           ServiceName: serviceNameQuery.value || undefined,
           Executor: executorQuery.value || undefined,
+          Deadline: deadlineQuery.value || undefined,
           Status: toApiStatus(selectedStatus.value),
           Result: toApiStatus(selectedResult.value),
           PageNum: pageNum.value,
@@ -1209,6 +1225,10 @@ function handleQueryChange(payload: { key: string; value: string | string[] }) {
     executorQuery.value = typeof payload.value === "string" ? payload.value.trim() : ""
   }
 
+  if (payload.key === "deadline") {
+    deadlineQuery.value = typeof payload.value === "string" ? payload.value.trim() : ""
+  }
+
   if (payload.key === "status") {
     selectedStatus.value = typeof payload.value === "string" ? payload.value.trim() : ""
   }
@@ -1236,6 +1256,7 @@ function handleQueryClear() {
         || selectedPlanUuid.value
         || serviceNameQuery.value
         || executorQuery.value
+        || deadlineQuery.value
         || selectedStatus.value
         || selectedResult.value,
       )
@@ -1249,6 +1270,7 @@ function handleQueryClear() {
   selectedCustomerUuid.value = ""
   selectedPlanUuid.value = ""
   createdAtQuery.value = ""
+  deadlineQuery.value = ""
   serviceNameQuery.value = ""
   executorQuery.value = ""
   selectedStatus.value = ""
@@ -1269,6 +1291,7 @@ async function syncRouteQueryAndReload() {
       planUuid: props.kind === "inspection" ? selectedPlanUuid.value || undefined : undefined,
       serviceName: props.kind === "inspection" ? serviceNameQuery.value || undefined : undefined,
       executor: props.kind === "inspection" ? executorQuery.value || undefined : undefined,
+      deadline: props.kind === "inspection" ? deadlineQuery.value || undefined : undefined,
       status: selectedStatus.value || undefined,
       result: props.kind === "inspection" ? selectedResult.value || undefined : undefined,
     },

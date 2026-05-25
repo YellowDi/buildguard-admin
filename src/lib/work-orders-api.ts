@@ -240,21 +240,30 @@ export type RepairWorkOrdersListResult = {
 }
 
 export type ListWorkOrdersPayload = {
-  OrderNo?: string
-  PlanUuid?: string
   CustomerUuid?: string
-  ServiceName?: string
   Deadline?: string
   Executor?: string
-  Status?: number
-  Result?: number
-  CreatedStartAt?: string
-  CreatedEndAt?: string
-  Important?: string
-  Title?: string
-  UserUuid?: number
+  OrderNo?: string
   PageNum?: number
   PageSize?: number
+  PlanUuid?: string
+  Result?: number
+  ServiceName?: string
+  Status?: number
+  [property: string]: unknown
+}
+
+export type ListRepairWorkOrdersPayload = {
+  CreatedEndAt?: string
+  CreatedStartAt?: string
+  CustomerUuid?: string
+  Important?: string
+  OrderNo?: string
+  PageNum?: number
+  PageSize?: number
+  Status?: number
+  Title?: string
+  UserUuid?: number
   [property: string]: unknown
 }
 
@@ -285,18 +294,27 @@ const WORK_ORDER_GN_REPORT_ERROR_MESSAGE = "检测报告生成失败，请稍后
 const WORK_ORDER_REPORT_UPLOAD_ERROR_MESSAGE = "报告文件地址保存失败，请稍后重试。"
 
 export async function fetchWorkOrders(payload: ListWorkOrdersPayload = {}): Promise<WorkOrdersListResult> {
-  const normalizedPayload = {
-    OrderNo: getOptionalString(payload.OrderNo) ?? "",
-    PlanUuid: getOptionalString(payload.PlanUuid) ?? "",
-    ServiceName: getOptionalString(payload.ServiceName) ?? "",
-    CustomerUuid: getOptionalString(payload.CustomerUuid) ?? "",
-    Deadline: getOptionalString(payload.Deadline) ?? "",
-    Executor: getOptionalString(payload.Executor) ?? "",
-    Status: getOptionalNumber(payload.Status, "Status") ?? 0,
-    Result: getOptionalNumber(payload.Result, "Result") ?? 0,
-    PageNum: getOptionalNumber(payload.PageNum, "PageNum") ?? 1,
-    PageSize: getOptionalNumber(payload.PageSize, "PageSize") ?? 10,
+  const normalizedPayload: ListWorkOrdersPayload = {
+    PageNum: getOptionalPositiveInteger(payload.PageNum, "PageNum") ?? 1,
+    PageSize: getOptionalPositiveInteger(payload.PageSize, "PageSize") ?? 10,
   }
+  const customerUuid = getOptionalString(payload.CustomerUuid)
+  const deadline = getOptionalString(payload.Deadline)
+  const executor = getOptionalString(payload.Executor)
+  const orderNo = getOptionalString(payload.OrderNo)
+  const planUuid = getOptionalString(payload.PlanUuid)
+  const result = getOptionalPositiveFilterNumber(payload.Result, "Result")
+  const serviceName = getOptionalString(payload.ServiceName)
+  const status = getOptionalPositiveFilterNumber(payload.Status, "Status")
+
+  if (customerUuid) normalizedPayload.CustomerUuid = customerUuid
+  if (deadline) normalizedPayload.Deadline = deadline
+  if (executor) normalizedPayload.Executor = executor
+  if (orderNo) normalizedPayload.OrderNo = orderNo
+  if (planUuid) normalizedPayload.PlanUuid = planUuid
+  if (result !== undefined) normalizedPayload.Result = result
+  if (serviceName) normalizedPayload.ServiceName = serviceName
+  if (status !== undefined) normalizedPayload.Status = status
 
   const response = await fetch(WORK_ORDERS_API_URL, {
     method: "POST",
@@ -639,7 +657,7 @@ export async function dispatchRepairWorkOrder(payload: DispatchRepairWorkOrderPa
   return extractCreateResult(responseBody)
 }
 
-export async function fetchRepairWorkOrders(payload: ListWorkOrdersPayload = {}): Promise<RepairWorkOrdersListResult> {
+export async function fetchRepairWorkOrders(payload: ListRepairWorkOrdersPayload = {}): Promise<RepairWorkOrdersListResult> {
   const normalizedPayload = {
     CreatedEndAt: getOptionalString(payload.CreatedEndAt) ?? "",
     CreatedStartAt: getOptionalString(payload.CreatedStartAt) ?? "",
@@ -1248,6 +1266,20 @@ function getOptionalNumber(value: unknown, fieldName: string) {
   }
 
   return value
+}
+
+function getOptionalPositiveFilterNumber(value: unknown, fieldName: string) {
+  const normalized = getOptionalNumber(value, fieldName)
+
+  if (normalized === undefined || normalized === 0) {
+    return undefined
+  }
+
+  if (!Number.isInteger(normalized) || normalized < 0) {
+    throw new TypeError(`${fieldName} must be a positive integer.`)
+  }
+
+  return normalized
 }
 
 function normalizeOptionalStringArray(value: unknown) {
