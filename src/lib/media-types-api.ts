@@ -42,6 +42,7 @@ export type CreateMediaTypePayload = {
   Name: string
   ParentUuid?: string
   SortNum?: number
+  Tag?: string
   [property: string]: unknown
 }
 
@@ -116,6 +117,7 @@ export async function createMediaType(payload: CreateMediaTypePayload) {
       Name: getRequiredString(payload.Name, "Name"),
       ParentUuid: getStringOrEmpty(payload.ParentUuid),
       SortNum: getOptionalNumber(payload.SortNum, "SortNum") ?? 0,
+      Tag: getOptionalString(payload.Tag) ?? "",
     }),
   })
   const responseBody = await readResponseBody(response)

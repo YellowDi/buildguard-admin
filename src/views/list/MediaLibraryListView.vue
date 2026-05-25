@@ -46,6 +46,10 @@ import {
   getApiErrorMessage,
   handleApiError,
 } from "@/lib/api-errors"
+import {
+  fetchBusinessPresetEntryOptions,
+  type BusinessPresetEntryOption,
+} from "@/lib/business-preset-options"
 import { useCurrentUserPermissions } from "@/composables/useCurrentUserPermissions"
 import { buildCosVideoSnapshotUrl } from "@/lib/cos-video-snapshot"
 import {
@@ -153,6 +157,11 @@ type MediaCategoryForm = {
   tag: string
 }
 
+type SelectOption = {
+  value: string
+  label: string
+}
+
 type SwitchTab = {
   id: string
   label: string
@@ -185,6 +194,7 @@ const MEDIA_VIDEO_LOAD_ERROR_MESSAGE = "媒体视频列表加载失败，请稍�
 const MEDIA_ARTICLE_PAGE_SIZE = 500
 const MEDIA_ARTICLE_LOAD_ERROR_MESSAGE = "媒体文章列表加载失败，请稍后重试。"
 const ROOT_CATEGORY_PARENT_VALUE = "__root__"
+const MEDIA_CATEGORY_TAG_EMPTY_VALUE = "__none__"
 
 const { canButton } = useCurrentUserPermissions()
 const MEDIA_STATUS_OPTIONS: Array<{ value: MediaStatus; label: string }> = [
@@ -246,6 +256,7 @@ const categoryCreateSubmitting = ref(false)
 const categoryEditSubmitting = ref(false)
 const categoryDeleteSubmitting = ref(false)
 const categoryDetailLoading = ref(false)
+const mediaCategoryTagLoading = ref(false)
 const categoryCreateModule = ref<MediaModuleKey>("videos")
 const categoryEditModule = ref<MediaModuleKey>("videos")
 const categoryDeleteModule = ref<MediaModuleKey>("videos")
@@ -253,6 +264,7 @@ const editingCategoryId = ref("")
 const deletingCategoryId = ref("")
 const categoryCreateForm = reactive<MediaCategoryForm>(createEmptyCategoryForm())
 const categoryEditForm = reactive<MediaCategoryForm>(createEmptyCategoryForm())
+const mediaCategoryTagEntries = ref<BusinessPresetEntryOption[]>([])
 
 const normalizedSearch = computed(() => searchQuery.value.trim().toLowerCase())
 const articleCoverPreviewSrc = computed(() => normalizeArticleCoverSource(formState.cover))
@@ -345,6 +357,20 @@ const visibleCurrentCategoryRows = computed(() => (
 ))
 const categoryCreateParentOptions = computed(() => flattenCategoryTree(getModuleCategories(categoryCreateModule.value)))
 const categoryCreateParentModel = computed(() => categoryCreateForm.parentUuid || ROOT_CATEGORY_PARENT_VALUE)
+const categoryCreateTagModel = computed({
+  get: () => categoryCreateForm.tag || MEDIA_CATEGORY_TAG_EMPTY_VALUE,
+  set: value => {
+    categoryCreateForm.tag = normalizeCategoryTagSelectValue(value)
+  },
+})
+const categoryEditTagModel = computed({
+  get: () => categoryEditForm.tag || MEDIA_CATEGORY_TAG_EMPTY_VALUE,
+  set: value => {
+    categoryEditForm.tag = normalizeCategoryTagSelectValue(value)
+  },
+})
+const categoryCreateTagOptions = computed(() => buildMediaCategoryTagOptions(categoryCreateForm.tag))
+const categoryEditTagOptions = computed(() => buildMediaCategoryTagOptions(categoryEditForm.tag))
 const canAddMediaContent = computed(() => canButton(PERMISSION_CODES.mediaLibraryContentAdd))
 const canEditMediaContent = computed(() => canButton(PERMISSION_CODES.mediaLibraryContentEdit))
 const canDeleteMediaContent = computed(() => canButton(PERMISSION_CODES.mediaLibraryContentDelete))
@@ -450,6 +476,7 @@ const previewArticleContentHtml = computed(() => {
 
 onMounted(() => {
   void loadAllMediaCategories()
+  void loadMediaCategoryTagOptions()
   void loadMediaVideos()
   void loadMediaArticles()
 })
@@ -522,6 +549,23 @@ async function loadMediaCategories(module: MediaModuleKey) {
     })
   } finally {
     categoryLoading[module] = false
+  }
+}
+
+async function loadMediaCategoryTagOptions() {
+  mediaCategoryTagLoading.value = true
+
+  try {
+    const options = await fetchBusinessPresetEntryOptions(["mediaCategory"])
+    mediaCategoryTagEntries.value = options.mediaCategory ?? []
+  } catch (error) {
+    mediaCategoryTagEntries.value = []
+    handleApiError(error, {
+      title: "媒体库分类预设加载失败",
+      fallback: "媒体库分类预设加载失败，请稍后重试。",
+    })
+  } finally {
+    mediaCategoryTagLoading.value = false
   }
 }
 
@@ -627,6 +671,7 @@ function openCreateCategoryDialog(module: MediaModuleKey, parentUuid: string) {
   Object.assign(categoryCreateForm, createEmptyCategoryForm({
     parentUuid,
     sortNum: getNextCategorySortNum(module, parentUuid),
+    tag: "",
   }))
   categoryCreateDialogOpen.value = true
 }
@@ -659,6 +704,7 @@ async function submitCreateCategory() {
       Name: name,
       ParentUuid: categoryCreateForm.parentUuid,
       SortNum: categoryCreateForm.sortNum,
+      Tag: categoryCreateForm.tag.trim(),
     })
     await loadMediaCategories(categoryCreateModule.value)
     const createdUuid = typeof created.Uuid === "string" ? created.Uuid : ""
@@ -755,7 +801,7 @@ async function submitEditCategory() {
       Name: name,
       ParentUuid: categoryEditForm.parentUuid,
       SortNum: categoryEditForm.sortNum,
-      Tag: categoryEditForm.tag,
+      Tag: categoryEditForm.tag.trim(),
       Type: MEDIA_TYPE_MAP[categoryEditModule.value],
       Uuid: editingCategoryId.value,
     })
@@ -1344,6 +1390,40 @@ function getEntityLabel(kind: SheetEntityKind) {
 
 function getStatusLabel(status: MediaStatus) {
   return statusLabelMap.get(status) ?? "未知状态"
+}
+
+function buildMediaCategoryTagOptions(currentValue: string): SelectOption[] {
+  const options = mediaCategoryTagEntries.value.map(entry => ({
+    value: entry.name,
+    label: entry.name,
+  }))
+  const normalizedCurrentValue = currentValue.trim()
+
+  if (normalizedCurrentValue && !options.some(option => option.value === normalizedCurrentValue)) {
+    options.unshift({
+      value: normalizedCurrentValue,
+      label: normalizedCurrentValue,
+    })
+  }
+
+  return dedupeSelectOptions(options)
+}
+
+function normalizeCategoryTagSelectValue(value: unknown) {
+  return typeof value === "string" && value !== MEDIA_CATEGORY_TAG_EMPTY_VALUE ? value : ""
+}
+
+function dedupeSelectOptions(options: SelectOption[]) {
+  const seen = new Set<string>()
+
+  return options.filter((option) => {
+    if (!option.value || seen.has(option.value)) {
+      return false
+    }
+
+    seen.add(option.value)
+    return true
+  })
 }
 
 function normalizeArticleCoverSource(value: string) {
@@ -2718,6 +2798,36 @@ function escapeHtml(value: string) {
             />
           </label>
 
+          <div v-if="categoryCreateModule === 'articles'" class="grid gap-2 text-sm">
+            <span class="font-medium text-foreground">媒体库分类</span>
+            <Select
+              v-model="categoryCreateTagModel"
+              :disabled="categoryCreateSubmitting || mediaCategoryTagLoading"
+            >
+              <SelectTrigger class="w-full">
+                <SelectValue :placeholder="mediaCategoryTagLoading ? '正在加载媒体库分类...' : '请选择媒体库分类'" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem :value="MEDIA_CATEGORY_TAG_EMPTY_VALUE">
+                  不选择媒体库分类
+                </SelectItem>
+                <SelectItem
+                  v-for="option in categoryCreateTagOptions"
+                  :key="option.value"
+                  :value="option.value"
+                >
+                  {{ option.label }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            <p
+              v-if="!mediaCategoryTagLoading && !categoryCreateTagOptions.length"
+              class="text-xs leading-5 text-muted-foreground"
+            >
+              暂无可选 Tag，可先不选择，或在业务预设中维护「媒体库分类Tag」。
+            </p>
+          </div>
+
           <div class="grid gap-2 text-sm">
             <span class="font-medium text-foreground">父级分类</span>
             <Select
@@ -2792,6 +2902,36 @@ function escapeHtml(value: string) {
               @keydown.enter.prevent="submitEditCategory"
             />
           </label>
+
+          <div v-if="categoryEditModule === 'articles'" class="grid gap-2 text-sm">
+            <span class="font-medium text-foreground">媒体库分类</span>
+            <Select
+              v-model="categoryEditTagModel"
+              :disabled="categoryDetailLoading || categoryEditSubmitting || mediaCategoryTagLoading"
+            >
+              <SelectTrigger class="w-full">
+                <SelectValue :placeholder="mediaCategoryTagLoading ? '正在加载媒体库分类...' : '请选择媒体库分类'" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem :value="MEDIA_CATEGORY_TAG_EMPTY_VALUE">
+                  不选择媒体库分类
+                </SelectItem>
+                <SelectItem
+                  v-for="option in categoryEditTagOptions"
+                  :key="option.value"
+                  :value="option.value"
+                >
+                  {{ option.label }}
+                </SelectItem>
+              </SelectContent>
+            </Select>
+            <p
+              v-if="!mediaCategoryTagLoading && !categoryEditTagOptions.length"
+              class="text-xs leading-5 text-muted-foreground"
+            >
+              暂无可选 Tag，可先不选择，或在业务预设中维护「媒体库分类Tag」。
+            </p>
+          </div>
 
           <label class="grid gap-2 text-sm">
             <span class="font-medium text-foreground">排序</span>

@@ -4,7 +4,7 @@ import {
   type DictTypeItem,
 } from "@/lib/business-presets-api"
 
-export type BusinessPresetTarget = "industry" | "customerLevel" | "serviceLevel"
+export type BusinessPresetTarget = "industry" | "customerLevel" | "serviceLevel" | "mediaCategory"
 
 export type BusinessPresetEntryOption = {
   uuid: string
@@ -30,6 +30,10 @@ const BUSINESS_PRESET_TARGETS: Record<BusinessPresetTarget, {
   serviceLevel: {
     codeAliases: ["service_level", "inspection_service_level", "package_level"],
     nameAliases: ["服务等级", "检测服务等级", "套餐等级"],
+  },
+  mediaCategory: {
+    codeAliases: ["media_category_tag", "media_library_category_tag", "media_category", "media_library_category", "media_type", "media_library_type"],
+    nameAliases: ["媒体库分类Tag", "媒体库分类"],
   },
 }
 
