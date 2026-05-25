@@ -37,12 +37,8 @@ export function buildBuildingDetailSections(
       title: "建筑基础信息",
       rows: [
         { key: "name", label: "建筑名称", value: toText(building.Name, "未命名建筑") },
-        { key: "building-id", label: "建筑 ID", value: toText(building.Id, "-") },
-        { key: "building-uuid", label: "建筑 UUID", value: toText(building.Uuid, "-") },
         { key: "customer-name", label: "所属客户", value: toText(building.CorpName ?? building.CustomerName, "-") },
-        { key: "customer-uuid", label: "客户 UUID", value: toText(building.CustomerUuid, "-") },
         { key: "park-name", label: "所属园区", value: toText(building.ParkName, "-") },
-        { key: "park-uuid", label: "园区 UUID", value: toText(building.ParkUuid, "-") },
         { key: "built-time", label: "建成时间", value: toText(building.BuiltTime, "-") },
         { key: "operation-time", label: "投运时间", value: toText(building.OperationTime, "-") },
         { key: "building-area", label: "建筑面积", value: toText(building.BuildingArea ?? building.BuildArea, "-") },

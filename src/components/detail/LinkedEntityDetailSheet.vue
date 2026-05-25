@@ -122,7 +122,6 @@ const sections = computed<DetailFieldSection[]>(() => {
         title: "计划信息",
         rows: [
           { key: "name", label: "计划名称", value: toText(planDetail.value.Name, "未命名计划") },
-          { key: "code", label: "计划编号", value: toText(planDetail.value.Code, "-"), valueClass: "text-muted-foreground" },
           { key: "customer-name", label: "所属客户", value: toText(planDetail.value.CorpName, "-") },
           { key: "service-name", label: "关联服务", value: toText(planDetail.value.ServiceName, "-") },
           { key: "duration", label: "执行频率", value: formatDayValue(planDetail.value.Duration) },
@@ -152,7 +151,6 @@ const sections = computed<DetailFieldSection[]>(() => {
             value: formatDateOnly(toText(planDetail.value.LastestTime, "-")),
             suffixHint: getElapsedDaysHint(planDetail.value.LastestTime),
           },
-          { key: "lastest-order-no", label: "最近执行订单号", value: toText(planDetail.value.LastestOrderNo, "-"), valueClass: "text-muted-foreground" },
           { key: "creator", label: "创建人", value: toText(planDetail.value.Creator, "-") },
           { key: "created-at", label: "创建时间", value: toText(planDetail.value.CreatedAt, "-") },
         ],
@@ -167,10 +165,7 @@ const sections = computed<DetailFieldSection[]>(() => {
         title: "园区基础信息",
         rows: [
           { key: "name", label: "园区名称", value: toText(parkDetail.value.Name, "未命名园区") },
-          { key: "park-id", label: "园区 ID", value: toText(parkDetail.value.Id, "-") },
-          { key: "park-uuid", label: "园区 UUID", value: toText(parkDetail.value.Uuid, "-") },
           { key: "corp-name", label: "公司名称", value: toText(parkDetail.value.CorpName, "-") },
-          { key: "customer-uuid", label: "客户 UUID", value: toText(parkDetail.value.CustomerUuid, "-") },
           { key: "build-num", label: "建筑数量", value: toText(parkDetail.value.BuildNum, "-") },
           { key: "built-time", label: "建成时间", value: toText(parkDetail.value.BuiltTime, "-") },
           { key: "operation-time", label: "投运时间", value: toText(parkDetail.value.OperationTime, "-") },

@@ -28,7 +28,6 @@ export function buildRepairWorkOrderPrimarySections(
       key: "repair-work-order-basic",
       title: "基本信息",
       rows: [
-        { key: "order-no", label: "工单编号", value: toText(workOrder.OrderNo, "-") },
         { key: "report-type", label: "报修类型", value: formatRepairReportTypeLabel(workOrder.ReportType, options?.dictionaries?.typeOptions) },
         { key: "important", label: "重要程度", value: formatRepairImportantLabel(workOrder.Important, options?.dictionaries?.importanceOptions) },
         {

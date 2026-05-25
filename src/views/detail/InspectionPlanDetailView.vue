@@ -89,7 +89,6 @@ const fieldSections = computed<DetailFieldSection[]>(() => {
       title: "计划信息",
       rows: [
         { key: "name", label: "计划名称", value: toText(current.Name, "未命名计划") },
-        { key: "code", label: "计划编号", value: toText(current.Code, "-"), valueClass: "text-muted-foreground" },
         {
           key: "customer-name",
           label: "所属客户",
@@ -129,7 +128,6 @@ const fieldSections = computed<DetailFieldSection[]>(() => {
           value: formatDateOnly(toText(current.LastestTime, "-")),
           suffixHint: getElapsedDaysHint(current.LastestTime),
         },
-        { key: "lastest-order-no", label: "最近执行订单号", value: toText(current.LastestOrderNo, "-"), valueClass: "text-muted-foreground" },
         { key: "creator", label: "创建人", value: toText(current.Creator, "-") },
         { key: "created-at", label: "创建时间", value: toText(current.CreatedAt, "-") },
       ],
@@ -147,15 +145,10 @@ const workOrdersModule = computed<DetailRelationModuleSchema<InspectionPlanWorkO
     icon: "ri-file-list-3-line",
   },
   rowKey: "uuid",
-  mobileMinWidth: "42rem",
-  columnTemplateMobile: "minmax(10rem, 1.5fr) minmax(6.25rem, 0.9fr) minmax(6.5rem, 0.9fr) minmax(4.5rem, 0.65fr) minmax(6rem, 0.85fr) 2.5rem",
-  columnTemplateDesktop: "minmax(11rem, 1.6fr) minmax(6.5rem, 0.9fr) minmax(6.75rem, 0.9fr) minmax(4.75rem, 0.65fr) minmax(6.25rem, 0.85fr) 2.5rem",
+  mobileMinWidth: "32rem",
+  columnTemplateMobile: "minmax(6.25rem, 1fr) minmax(6.5rem, 1fr) minmax(4.5rem, 0.7fr) minmax(6rem, 0.9fr) 2.5rem",
+  columnTemplateDesktop: "minmax(6.5rem, 1fr) minmax(6.75rem, 1fr) minmax(4.75rem, 0.7fr) minmax(6.25rem, 0.9fr) 2.5rem",
   columns: [
-    {
-      key: "orderNo",
-      label: "工单编号",
-      slot: "order-no-cell",
-    },
     {
       key: "executor",
       label: "执行人",
@@ -505,16 +498,6 @@ function getWorkOrderStatusPreset(label: string) {
   return workOrderStatusMap[label as keyof typeof workOrderStatusMap]
 }
 
-function buildWorkOrderOrderNoTooltip(row: InspectionPlanWorkOrderRow) {
-  const parts = [`工单编号：${row.orderNo}`]
-
-  if (row.createdAt && row.createdAt !== "-") {
-    parts.push(`创建于 ${row.createdAt}`)
-  }
-
-  return parts.join(" | ")
-}
-
 function buildExecutorTooltip(row: InspectionPlanWorkOrderRow) {
   if (!row.executors.length) {
     return ""
@@ -730,18 +713,6 @@ function getRemainingDaysHint(value: unknown) {
         </Alert>
 
         <DetailRelationModule :schema="workOrdersModule" use-title-block>
-          <template #order-no-cell="{ row }">
-            <TooltipWrap :content="buildWorkOrderOrderNoTooltip(row)" align="start" class="max-w-sm">
-              <button
-                type="button"
-                class="block min-w-0 max-w-full truncate text-left font-medium text-foreground transition-colors hover:text-primary"
-                @click="openWorkOrderPreview(row)"
-              >
-                {{ row.orderNo }}
-              </button>
-            </TooltipWrap>
-          </template>
-
           <template #executor="{ row }">
             <div class="flex w-full min-w-0 items-center justify-center">
               <TooltipWrap :content="buildExecutorTooltip(row)" align="center" class="max-w-sm">

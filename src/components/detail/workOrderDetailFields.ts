@@ -23,23 +23,18 @@ export function buildWorkOrderPrimarySections(
       key: "work-order-basic",
       title: "基本信息",
       rows: [
-        { key: "order-no", label: "工单编号", value: toText(workOrder.OrderNo, "-") },
-        { key: "work-order-id", label: "工单 ID", value: toText(workOrder.Id, "-") },
-        { key: "work-order-uuid", label: "工单 UUID", value: toText(workOrder.Uuid, "-") },
         {
           key: "service-name",
           label: "检测服务",
           value: toText(workOrder.ServiceName, "-"),
           linkAction: options.onOpenService && toText(workOrder.ServiceUuid, "") ? { onClick: options.onOpenService } : undefined,
         },
-        { key: "service-uuid", label: "服务 UUID", value: toText(workOrder.ServiceUuid, "-") },
         {
           key: "plan-name",
           label: "检测计划",
           value: toText(workOrder.PlanName, "-"),
           linkAction: options.onOpenPlan && toText(workOrder.PlanUuid, "") ? { onClick: options.onOpenPlan } : undefined,
         },
-        { key: "plan-uuid", label: "检测计划 UUID", value: toText(workOrder.PlanUuid, "-") },
         { key: "executor", label: "执行人", value: formatExecutors(workOrder.Executors, workOrder.Executor) },
         { key: "status", label: "工单状态", value: buildWorkOrderStatusValue(workOrder.Status) },
         { key: "deadline", label: "截止时间", value: formatDateOnly(toText(workOrder.Deadline, "-")) },
@@ -59,14 +54,12 @@ export function buildWorkOrderPrimarySections(
           linkAction: options.onOpenCustomer && toText(workOrder.CustomerUuid, "") ? { onClick: options.onOpenCustomer } : undefined,
         },
         { key: "customer-name", label: "客户名称", value: toText(workOrder.CustomerName, toText(customer?.CorpName, "-")) },
-        { key: "customer-uuid", label: "客户 UUID", value: toText(workOrder.CustomerUuid, "-") },
         {
           key: "park-name",
           label: "园区",
           value: toText(workOrder.ParkName, "-"),
           linkAction: options.onOpenPark && toText(workOrder.ParkUuid, "") ? { onClick: options.onOpenPark } : undefined,
         },
-        { key: "park-uuid", label: "园区 UUID", value: toText(workOrder.ParkUuid, "-") },
         {
           key: "address",
           label: "地址",

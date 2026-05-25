@@ -793,9 +793,9 @@ const inspectionWorkOrdersQueryBar = computed<TableQueryBarConfig>(() => ({
     {
       type: "search",
       key: "q",
-      label: "工单编号",
+      label: "工单搜索",
       icon: "ri-text",
-      placeholder: "输入工单编号搜索",
+      placeholder: "输入服务、计划、执行人或备注搜索",
       value: inspectionWorkOrdersQuery.value,
       expandedWidth: 248,
       collapsedMaxWidth: 248,
@@ -820,9 +820,9 @@ const repairWorkOrdersQueryBar = computed<TableQueryBarConfig>(() => ({
     {
       type: "search",
       key: "q",
-      label: "工单编号",
+      label: "工单搜索",
       icon: "ri-text",
-      placeholder: "输入工单编号搜索",
+      placeholder: "输入标题、园区、执行人或备注搜索",
       value: repairWorkOrdersQuery.value,
       expandedWidth: 248,
       collapsedMaxWidth: 248,
@@ -1282,20 +1282,6 @@ const inspectionWorkOrdersSchema: TablePageSchema<CustomerWorkOrderRow> = {
   onRowClick: row => handleViewWorkOrder(row as CustomerWorkOrderRow),
   columns: [
     {
-      key: "orderNo",
-      label: "检测工单",
-      filterType: "text",
-      slot: "cell-orderNo",
-      emphasis: "default",
-      tone: "muted",
-      filter: {
-        type: "text",
-        placeholder: "输入工单编号",
-        defaultVisible: true,
-      },
-      sort: true,
-    },
-    {
       key: "packageName",
       label: "检测服务名称",
       filterType: "text",
@@ -1459,20 +1445,6 @@ const repairWorkOrdersSchema: TablePageSchema<CustomerWorkOrderRow> = {
   ],
   onRowClick: row => handleViewWorkOrder(row as CustomerWorkOrderRow),
   columns: [
-    {
-      key: "orderNo",
-      label: "报修工单",
-      filterType: "text",
-      slot: "cell-orderNo",
-      emphasis: "default",
-      tone: "muted",
-      filter: {
-        type: "text",
-        placeholder: "输入工单编号",
-        defaultVisible: true,
-      },
-      sort: true,
-    },
     {
       key: "workOrderName",
       label: "报修标题",
@@ -1638,17 +1610,6 @@ const monitoringSchema: TablePageSchema<MonitoringRow> = {
       sort: true,
     },
     {
-      key: "deviceId",
-      label: "设备ID",
-      filterType: "text",
-      filter: {
-        type: "text",
-        placeholder: "输入设备ID",
-        defaultVisible: true,
-      },
-      sort: true,
-    },
-    {
       key: "customerName",
       label: "客户名称",
       filterType: "text",
@@ -1766,17 +1727,6 @@ const subAccountsSchema: TablePageSchema<SubAccountRow> = {
         kind: "status",
         map: subAccountStatusMap,
         fallback: { tone: "gray", icon: "dot" },
-      },
-      sort: true,
-    },
-    {
-      key: "uuid",
-      label: "Uuid",
-      filterType: "text",
-      tone: "muted",
-      filter: {
-        type: "text",
-        placeholder: "输入 Uuid",
       },
       sort: true,
     },
@@ -4671,17 +4621,6 @@ function toDisplayText(value: unknown, fallback = "未填写") {
                   :collapse-inactive="false"
                 />
                 <div class="h-5 w-px shrink-0 bg-border" aria-hidden="true" />
-              </div>
-            </template>
-
-            <template #cell-orderNo="{ row }">
-              <div class="inline-flex max-w-full items-baseline gap-1.5">
-                <span class="truncate text-foreground">
-                  {{ row.workOrderKind === "inspection" ? toDisplayText(row.packageName, "-") : toDisplayText(row.customerName, "-") }}
-                </span>
-                <span class="shrink-0 text-muted-foreground">
-                  #{{ toDisplayText(row.orderNo, "-") }}
-                </span>
               </div>
             </template>
 
