@@ -224,6 +224,40 @@ function collapseControl(key: string) {
   }
 }
 
+function clearAndCollapseControl(control: TableQueryControl) {
+  if (control.type === "search") {
+    const existingTimer = debounceTimers.get(control.key)
+
+    if (existingTimer) {
+      clearTimeout(existingTimer)
+      debounceTimers.delete(control.key)
+    }
+
+    searchDrafts[control.key] = ""
+    emit("query-change", {
+      key: control.key,
+      value: "",
+    })
+  } else if (control.type === "select") {
+    emit("query-change", {
+      key: control.key,
+      value: control.multiple ? [] : "",
+    })
+  } else {
+    emit("query-change", {
+      key: control.key,
+      value: "",
+    })
+  }
+
+  selectOpenState[control.key] = false
+  datePopoverOpenState[control.key] = false
+
+  if (expandedKey.value === control.key) {
+    expandedKey.value = null
+  }
+}
+
 function handleDocumentPointerDown(event: PointerEvent) {
   if (!expandedKey.value) {
     return
@@ -524,8 +558,8 @@ function setDateTriggerRef(key: string, value: HTMLElement | null) {
           <button
             type="button"
             class="absolute right-1 top-1/2 z-10 inline-flex size-7 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground transition-[background-color,color,transform] duration-180 ease-out hover:bg-interactive-hover hover:text-foreground active:scale-[0.96]"
-            :aria-label="`收起${control.label}`"
-            @click="collapseControl(control.key)"
+            :aria-label="`清除并收起${control.label}`"
+            @click="clearAndCollapseControl(control)"
           >
             <i class="ri-close-line text-[16px]" />
           </button>
