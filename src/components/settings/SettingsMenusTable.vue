@@ -27,8 +27,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import TopTabSwitch from "@/components/layout/TopTabSwitch.vue"
-import { SETTINGS_TABLE_PAGE_CLASS } from "@/components/settings/settingsTablePageClass"
 import SettingsRightPanelLayout from "@/components/settings/SettingsRightPanelLayout.vue"
+import SettingsTable from "@/components/settings/SettingsTable.vue"
 import SettingsToolbarRow from "@/components/settings/SettingsToolbarRow.vue"
 import SettingsToolbarRefreshSlot from "@/components/settings/SettingsToolbarRefreshSlot.vue"
 import SettingsToolbarSearchInput from "@/components/settings/SettingsToolbarSearchInput.vue"
@@ -40,9 +40,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import TablePageTable from "@/components/table-page/TablePageTable.vue"
 import { useCurrentUserPermissions } from "@/composables/useCurrentUserPermissions"
-import type { TableColumn, TablePageEmptyState } from "@/components/table-page/types"
+import type { TableColumn, TablePageEmptyState, TableRowAction } from "@/components/table-page/types"
 import { handleApiError } from "@/lib/api-errors"
 import {
   createButton as requestButtonCreate,
@@ -259,13 +258,6 @@ const columns: TableColumn[] = [
       map: menuStatusMap,
     },
   },
-  {
-    key: "actions",
-    label: "",
-    filterType: "none",
-    slot: "cell-actions",
-    cellClass: "text-right",
-  },
 ]
 
 const buttonColumns: TableColumn[] = [
@@ -303,12 +295,6 @@ const buttonColumns: TableColumn[] = [
     tone: "muted",
     width: "fill",
   },
-  {
-    key: "actions",
-    label: "",
-    filterType: "none",
-    cellClass: "text-right",
-  },
 ]
 
 const apiColumns: TableColumn[] = [
@@ -339,12 +325,6 @@ const apiColumns: TableColumn[] = [
     filterType: "text",
     tone: "muted",
     width: "fill",
-  },
-  {
-    key: "actions",
-    label: "",
-    filterType: "none",
-    cellClass: "text-right",
   },
 ]
 
@@ -465,6 +445,36 @@ const currentRows = computed<Record<string, unknown>[]>(() => {
   }
 
   return filteredRows.value
+})
+
+const currentRowActions = computed<TableRowAction[]>(() => {
+  if (activeView.value === "menus") {
+    return canButton(PERMISSION_CODES.developerMenuEdit)
+      ? [
+          {
+            key: "edit",
+            label: "编辑",
+            icon: "ri-edit-line",
+            onClick: row => openEditDialog(asMenuRow(row)),
+          },
+        ]
+      : []
+  }
+
+  if (activeView.value === "buttons") {
+    return canButton(PERMISSION_CODES.developerButtonEdit)
+      ? [
+          {
+            key: "edit",
+            label: "编辑",
+            icon: "ri-edit-line",
+            onClick: row => openEditButtonDialog(asButtonRow(row)),
+          },
+        ]
+      : []
+  }
+
+  return []
 })
 const currentResourceLabel = computed(() => {
   if (activeView.value === "buttons") {
@@ -1411,43 +1421,14 @@ function formatDateTime(...values: unknown[]) {
       <AlertDescription>{{ errorMessage }}</AlertDescription>
     </Alert>
 
-    <TablePageTable
+    <SettingsTable
       row-key="id"
-      show-index
-      sticky-header
-      :end-spacer="false"
-      :show-index-checkbox="false"
-      :edge-gutter="false"
-      :show-row-action-icons="true"
       :columns="currentColumns"
       :rows="currentRows"
+      :row-actions="currentRowActions"
       :on-row-click="activeView === 'menus' ? handleMenuRowClick : (activeView === 'buttons' ? handleButtonRowClick : undefined)"
-      :table-class="SETTINGS_TABLE_PAGE_CLASS"
       :empty-state="tableEmptyState"
-    >
-      <template #cell-actions="{ row: rawRow }">
-        <Button
-          v-if="activeView === 'menus' && canButton(PERMISSION_CODES.developerMenuEdit)"
-          variant="outline"
-          size="sm"
-          class="ml-auto h-7 gap-1.5 rounded-md px-2.5 text-[13px]"
-          @click.stop="openEditDialog(asMenuRow(rawRow))"
-        >
-          <i class="ri-edit-line text-base" />
-          <span>编辑</span>
-        </Button>
-        <Button
-          v-else-if="activeView === 'buttons' && canButton(PERMISSION_CODES.developerButtonEdit)"
-          variant="outline"
-          size="sm"
-          class="ml-auto h-7 gap-1.5 rounded-md px-2.5 text-[13px]"
-          @click.stop="openEditButtonDialog(asButtonRow(rawRow))"
-        >
-          <i class="ri-edit-line text-base" />
-          <span>编辑</span>
-        </Button>
-      </template>
-    </TablePageTable>
+    />
 
     <Dialog :open="menuDialogOpen" @update:open="($event ? (menuDialogOpen = true) : closeMenuDialog())">
       <DialogContent stack-above-sticky-header class="sm:max-w-[560px]">

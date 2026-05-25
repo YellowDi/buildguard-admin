@@ -31,9 +31,8 @@ import { Input } from "@/components/ui/input"
 import SettingsToolbarRefreshSlot from "@/components/settings/SettingsToolbarRefreshSlot.vue"
 import SettingsToolbarRow from "@/components/settings/SettingsToolbarRow.vue"
 import SettingsToolbarSearchInput from "@/components/settings/SettingsToolbarSearchInput.vue"
-import { SETTINGS_TABLE_PAGE_CLASS } from "@/components/settings/settingsTablePageClass"
-import TablePageTable from "@/components/table-page/TablePageTable.vue"
-import type { TableColumn, TablePageEmptyState } from "@/components/table-page/types"
+import SettingsTable from "@/components/settings/SettingsTable.vue"
+import type { TableColumn, TablePageEmptyState, TableRowAction } from "@/components/table-page/types"
 import { useCurrentUserPermissions } from "@/composables/useCurrentUserPermissions"
 import { handleApiError } from "@/lib/api-errors"
 import {
@@ -114,14 +113,18 @@ const columns: TableColumn[] = [
     tone: "muted",
     width: "fill",
   },
-  {
-    key: "actions",
-    label: "",
-    filterType: "none",
-    slot: "cell-actions",
-    cellClass: "text-right",
-  },
 ]
+
+const rowActions = computed<TableRowAction[]>(() => canEditInspectionTemplate.value
+  ? [
+      {
+        key: "edit",
+        label: "编辑",
+        icon: "ri-edit-line",
+        onClick: row => openEditDialog(row as TemplateRow),
+      },
+    ]
+  : [])
 
 const effectiveSearchQuery = computed(() => props.searchQuery ?? searchQuery.value)
 const filteredRows = computed(() => {
@@ -500,33 +503,14 @@ defineExpose({
       </AlertDescription>
     </Alert>
 
-    <TablePageTable
-      show-index
-      sticky-header
-      :end-spacer="false"
-      :show-index-checkbox="false"
-      :edge-gutter="false"
-      :show-row-action-icons="true"
+    <SettingsTable
       :columns="columns"
       :rows="filteredRows"
+      :row-actions="rowActions"
       row-key="id"
       :on-row-click="handleRowClick"
-      :table-class="SETTINGS_TABLE_PAGE_CLASS"
       :empty-state="tableEmptyState"
-    >
-      <template #cell-actions="{ row }">
-        <Button
-          v-if="canEditInspectionTemplate"
-          variant="outline"
-          size="sm"
-          class="ml-auto h-7 gap-1.5 rounded-md px-2.5 text-[13px]"
-          @click.stop="openEditDialog(row as TemplateRow)"
-        >
-          <i class="ri-edit-line text-base" />
-          <span>编辑</span>
-        </Button>
-      </template>
-    </TablePageTable>
+    />
 
     <Dialog :open="createDialogOpen" @update:open="($event ? (createDialogOpen = true) : closeDialog())">
       <DialogContent stack-above-sticky-header class="max-w-4xl gap-0 p-0">

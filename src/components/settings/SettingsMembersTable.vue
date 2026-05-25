@@ -78,9 +78,8 @@ import {
 } from "@/lib/roles-api"
 import { PERMISSION_CODES } from "@/lib/permission-codes"
 import { fetchSystemButtons, type SystemResourceRecord } from "@/lib/system-resources-api"
-import { SETTINGS_TABLE_PAGE_CLASS } from "@/components/settings/settingsTablePageClass"
-import TablePageTable from "@/components/table-page/TablePageTable.vue"
-import type { TableColumn, TablePageEmptyState } from "@/components/table-page/types"
+import SettingsTable from "@/components/settings/SettingsTable.vue"
+import type { TableColumn, TablePageEmptyState, TableRowAction } from "@/components/table-page/types"
 
 const props = defineProps<{
   pageTitle: string
@@ -318,13 +317,6 @@ const memberColumns: TableColumn[] = [
     width: "fill",
     slot: "cell-status",
   },
-  {
-    key: "actions",
-    label: "",
-    filterType: "none",
-    slot: "cell-actions",
-    cellClass: "text-right",
-  },
 ]
 
 const roleColumns: TableColumn[] = [
@@ -356,13 +348,6 @@ const roleColumns: TableColumn[] = [
     filterType: "text",
     tone: "muted",
     width: "fill",
-  },
-  {
-    key: "actions",
-    label: "",
-    filterType: "none",
-    slot: "cell-actions",
-    cellClass: "text-right",
   },
 ]
 
@@ -436,6 +421,32 @@ const currentRows = computed<Record<string, unknown>[]>(() => {
   }
 
   return filteredMemberRows.value
+})
+
+const currentRowActions = computed<TableRowAction[]>(() => {
+  if (activeView.value === "members") {
+    return canEditMember.value
+      ? [
+          {
+            key: "edit",
+            label: "编辑",
+            icon: "ri-edit-line",
+            onClick: row => void openEditMemberDialog(asMemberRow(row)),
+          },
+        ]
+      : []
+  }
+
+  return canEditRole.value || canBindRolePermission.value
+    ? [
+        {
+          key: "edit",
+          label: "编辑",
+          icon: "ri-edit-line",
+          onClick: row => void openEditRoleDialog(asRoleRow(row)),
+        },
+      ]
+    : []
 })
 
 const currentRowKey = computed(() => (
@@ -2310,18 +2321,12 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
       </AlertDescription>
     </Alert>
 
-    <TablePageTable
-      show-index
-      sticky-header
-      :end-spacer="false"
-      :show-index-checkbox="false"
-      :edge-gutter="false"
-      :show-row-action-icons="true"
+    <SettingsTable
       :columns="currentColumns"
       :rows="currentRows"
       :row-key="currentRowKey"
+      :row-actions="currentRowActions"
       :on-row-click="handleCurrentRowClick"
-      :table-class="SETTINGS_TABLE_PAGE_CLASS"
       :empty-state="tableEmptyState"
     >
       <template #cell-role="{ row: rawRow }">
@@ -2432,29 +2437,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
         </span>
       </template>
 
-      <template #cell-actions="{ row: rawRow }">
-        <Button
-          v-if="activeView === 'members' && canEditMember"
-          variant="outline"
-          size="sm"
-          class="ml-auto h-7 gap-1.5 rounded-md px-2.5 text-[13px]"
-          @click.stop="openEditMemberDialog(asMemberRow(rawRow))"
-        >
-          <i class="ri-edit-line text-base" />
-          <span>编辑</span>
-        </Button>
-        <Button
-          v-else-if="activeView === 'roles' && (canEditRole || canBindRolePermission)"
-          variant="outline"
-          size="sm"
-          class="ml-auto h-7 gap-1.5 rounded-md px-2.5 text-[13px]"
-          @click.stop="openEditRoleDialog(asRoleRow(rawRow))"
-        >
-          <i class="ri-edit-line text-base" />
-          <span>编辑</span>
-        </Button>
-      </template>
-    </TablePageTable>
+    </SettingsTable>
 
     <Dialog :open="manualDialogOpen" @update:open="manualDialogOpen = $event">
       <DialogContent stack-above-sticky-header class="sm:max-w-[520px]">

@@ -38,9 +38,8 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
-import { SETTINGS_TABLE_PAGE_CLASS } from "@/components/settings/settingsTablePageClass"
-import TablePageTable from "@/components/table-page/TablePageTable.vue"
-import type { TableColumn, TablePageEmptyState } from "@/components/table-page/types"
+import SettingsTable from "@/components/settings/SettingsTable.vue"
+import type { TableColumn, TablePageEmptyState, TableRowAction } from "@/components/table-page/types"
 import { Textarea } from "@/components/ui/textarea"
 import { useCurrentUserPermissions } from "@/composables/useCurrentUserPermissions"
 import { handleApiError } from "@/lib/api-errors"
@@ -168,14 +167,18 @@ const columns: TableColumn[] = [
     tone: "muted",
     width: "fill",
   },
-  {
-    key: "actions",
-    label: "",
-    filterType: "none",
-    slot: "cell-actions",
-    cellClass: "text-right",
-  },
 ]
+
+const rowActions = computed<TableRowAction[]>(() => canEditInspectionItem.value
+  ? [
+      {
+        key: "edit",
+        label: "编辑",
+        icon: "ri-edit-line",
+        onClick: row => openEditDialog(asInspectionItemRow(row)),
+      },
+    ]
+  : [])
 
 const categoryOptions = computed(() => inspectionCategories.value
   .filter(category => category.name && category.uuid)
@@ -743,18 +746,12 @@ defineExpose({
       </AlertDescription>
     </Alert>
 
-    <TablePageTable
-      show-index
-      sticky-header
-      :end-spacer="false"
-      :show-index-checkbox="false"
-      :edge-gutter="false"
-      :show-row-action-icons="true"
+    <SettingsTable
       :columns="columns"
       :rows="filteredRows"
+      :row-actions="rowActions"
       row-key="id"
       :on-row-click="handleRowClick"
-      :table-class="SETTINGS_TABLE_PAGE_CLASS"
       :empty-state="tableEmptyState"
     >
       <template #cell-isForcePhotoLabel="{ row: rawRow }">
@@ -779,19 +776,7 @@ defineExpose({
           />
         </span>
       </template>
-      <template #cell-actions="{ row: rawRow }">
-        <Button
-          v-if="canEditInspectionItem"
-          variant="outline"
-          size="sm"
-          class="ml-auto h-7 gap-1.5 rounded-md px-2.5 text-[13px]"
-          @click.stop="openEditDialog(asInspectionItemRow(rawRow))"
-        >
-          <i class="ri-edit-line text-base" />
-          <span>编辑</span>
-        </Button>
-      </template>
-    </TablePageTable>
+    </SettingsTable>
 
     <Dialog :open="createDialogOpen" @update:open="createDialogOpen = $event">
       <DialogContent stack-above-sticky-header class="sm:max-w-[640px]">

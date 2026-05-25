@@ -33,9 +33,8 @@ import SettingsToolbarSearchInput from "@/components/settings/SettingsToolbarSea
 import { Input } from "@/components/ui/input"
 import { Slider } from "@/components/ui/slider"
 import { Textarea } from "@/components/ui/textarea"
-import { SETTINGS_TABLE_PAGE_CLASS } from "@/components/settings/settingsTablePageClass"
-import TablePageTable from "@/components/table-page/TablePageTable.vue"
-import type { TableColumn, TablePageEmptyState } from "@/components/table-page/types"
+import SettingsTable from "@/components/settings/SettingsTable.vue"
+import type { TableColumn, TablePageEmptyState, TableRowAction } from "@/components/table-page/types"
 import { useCurrentUserPermissions } from "@/composables/useCurrentUserPermissions"
 import { handleApiError } from "@/lib/api-errors"
 import {
@@ -138,15 +137,18 @@ const columns: TableColumn[] = [
     tone: "muted",
     slot: "cell-score-limit",
   },
-  {
-    key: "actions",
-    label: "",
-    filterType: "none",
-    slot: "cell-actions",
-    headerClass: "min-w-[6rem]",
-    cellClass: "min-w-[6rem] text-right",
-  },
 ]
+
+const rowActions = computed<TableRowAction[]>(() => canEditInspectionCategory.value
+  ? [
+      {
+        key: "edit",
+        label: "编辑",
+        icon: "ri-edit-line",
+        onClick: row => openEditDialog(asInspectionCategoryRow(row)),
+      },
+    ]
+  : [])
 
 const effectiveSearchQuery = computed(() => props.searchQuery ?? searchQuery.value)
 
@@ -657,18 +659,12 @@ defineExpose({
       <AlertDescription>{{ errorMessage }}</AlertDescription>
     </Alert>
 
-    <TablePageTable
+    <SettingsTable
       row-key="uuid"
-      show-index
-      sticky-header
-      :end-spacer="false"
-      :show-index-checkbox="false"
-      :edge-gutter="false"
-      :show-row-action-icons="true"
       :columns="columns"
       :rows="filteredRows"
+      :row-actions="rowActions"
       :on-row-click="handleRowClick"
-      :table-class="SETTINGS_TABLE_PAGE_CLASS"
       :empty-state="tableEmptyState"
     >
       <template #cell-content="{ row: rawRow }">
@@ -681,19 +677,7 @@ defineExpose({
         <InspectionCategoryScoreLimitInline :limit="asInspectionCategoryRow(rawRow).scoreLimit" />
       </template>
 
-      <template #cell-actions="{ row: rawRow }">
-        <Button
-          v-if="canEditInspectionCategory"
-          variant="outline"
-          size="sm"
-          class="ml-auto h-7 shrink-0 gap-1.5 rounded-md px-2.5 text-[13px]"
-          @click.stop="openEditDialog(asInspectionCategoryRow(rawRow))"
-        >
-          <i class="ri-edit-line text-base" />
-          <span>编辑</span>
-        </Button>
-      </template>
-    </TablePageTable>
+    </SettingsTable>
 
     <Dialog :open="createDialogOpen" @update:open="createDialogOpen = $event">
       <DialogContent stack-above-sticky-header class="sm:max-w-[640px]">

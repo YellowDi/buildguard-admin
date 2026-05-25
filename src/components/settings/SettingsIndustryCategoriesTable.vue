@@ -33,9 +33,8 @@ import SettingsToolbarRow from "@/components/settings/SettingsToolbarRow.vue"
 import SettingsToolbarRefreshSlot from "@/components/settings/SettingsToolbarRefreshSlot.vue"
 import SettingsToolbarSearchInput from "@/components/settings/SettingsToolbarSearchInput.vue"
 import { Input } from "@/components/ui/input"
-import { SETTINGS_TABLE_PAGE_CLASS } from "@/components/settings/settingsTablePageClass"
-import TablePageTable from "@/components/table-page/TablePageTable.vue"
-import type { TableColumn, TablePageEmptyState } from "@/components/table-page/types"
+import SettingsTable from "@/components/settings/SettingsTable.vue"
+import type { TableColumn, TablePageEmptyState, TableRowAction } from "@/components/table-page/types"
 import { buildIndustryPresetsFromMock } from "@/lib/industry-presets-mock"
 
 const props = withDefaults(defineProps<{
@@ -113,13 +112,6 @@ const majorColumns: TableColumn[] = [
     tone: "primary",
     cellClass: "font-medium text-foreground",
   },
-  {
-    key: "actions",
-    label: "",
-    filterType: "none",
-    slot: "cell-major-actions",
-    cellClass: "text-right",
-  },
 ]
 
 const categoryColumns: TableColumn[] = [
@@ -137,14 +129,25 @@ const categoryColumns: TableColumn[] = [
     filterType: "text",
     tone: "default",
   },
-  {
-    key: "actions",
-    label: "",
-    filterType: "none",
-    slot: "cell-category-actions",
-    cellClass: "text-right",
-  },
 ]
+
+const majorRowActions = computed<TableRowAction[]>(() => [
+  {
+    key: "edit",
+    label: "编辑",
+    icon: "ri-edit-line",
+    onClick: row => openEditMajor(asMajorRow(row)),
+  },
+])
+
+const categoryRowActions = computed<TableRowAction[]>(() => [
+  {
+    key: "edit",
+    label: "编辑",
+    icon: "ri-edit-line",
+    onClick: row => openEditCategory(asCategoryRow(row)),
+  },
+])
 
 const effectiveSearchQuery = computed(() => props.searchQuery ?? localSearchQuery.value)
 
@@ -539,68 +542,28 @@ defineExpose({
       <h3 class="text-sm font-semibold text-foreground">
         行业大类
       </h3>
-      <TablePageTable
+      <SettingsTable
         row-key="id"
-        show-index
-        sticky-header
-        :end-spacer="false"
-        :show-index-checkbox="false"
-        :edge-gutter="false"
-        :show-row-action-icons="true"
         :columns="majorColumns"
         :rows="filteredMajorRows"
+        :row-actions="majorRowActions"
         :on-row-click="handleMajorRowClick"
-        :table-class="SETTINGS_TABLE_PAGE_CLASS"
         :empty-state="majorEmptyState"
-      >
-        <template #cell-major-actions="{ row: rawRow }">
-          <div class="flex justify-end">
-            <Button
-              variant="outline"
-              size="sm"
-              class="h-7 gap-1.5 rounded-md px-2.5 text-[13px]"
-              @click.stop="openEditMajor(asMajorRow(rawRow))"
-            >
-              <i class="ri-edit-line text-base" />
-              <span>编辑</span>
-            </Button>
-          </div>
-        </template>
-      </TablePageTable>
+      />
     </div>
 
     <div class="space-y-3">
       <h3 class="text-sm font-semibold text-foreground">
         行业分类
       </h3>
-      <TablePageTable
+      <SettingsTable
         row-key="id"
-        show-index
-        sticky-header
-        :end-spacer="false"
-        :show-index-checkbox="false"
-        :edge-gutter="false"
-        :show-row-action-icons="true"
         :columns="categoryColumns"
         :rows="categoryDisplayRows"
+        :row-actions="categoryRowActions"
         :on-row-click="handleCategoryRowClick"
-        :table-class="SETTINGS_TABLE_PAGE_CLASS"
         :empty-state="categoryEmptyState"
-      >
-        <template #cell-category-actions="{ row: rawRow }">
-          <div class="flex justify-end">
-            <Button
-              variant="outline"
-              size="sm"
-              class="h-7 gap-1.5 rounded-md px-2.5 text-[13px]"
-              @click.stop="openEditCategory(asCategoryRow(rawRow))"
-            >
-              <i class="ri-edit-line text-base" />
-              <span>编辑</span>
-            </Button>
-          </div>
-        </template>
-      </TablePageTable>
+      />
     </div>
 
     <Dialog :open="createMajorOpen" @update:open="createMajorOpen = $event">

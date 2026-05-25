@@ -103,6 +103,8 @@ export type TableRowAction<Row = Record<string, unknown>> = {
   permissionCode?: string
   /** 未传时按 `label` 从 `remixIconForTableRowAction` 推断 */
   icon?: string
+  visible?: boolean | ((row: Row, index: number) => boolean)
+  disabled?: boolean | ((row: Row, index: number) => boolean)
   onClick?: (row: Row, index: number) => void
 }
 

@@ -18,9 +18,8 @@ import {
 } from "@/components/ui/tooltip"
 import SettingsPageHeader from "@/components/settings/SettingsPageHeader.vue"
 import SettingsSection from "@/components/settings/SettingsSection.vue"
-import { SETTINGS_TABLE_PAGE_CLASS } from "@/components/settings/settingsTablePageClass"
-import TablePageTable from "@/components/table-page/TablePageTable.vue"
-import type { TableColumn } from "@/components/table-page/types"
+import SettingsTable from "@/components/settings/SettingsTable.vue"
+import type { TableColumn, TableRowAction } from "@/components/table-page/types"
 import {
   DEFAULT_AVATAR_OPTIONS,
   type DefaultAvatarKey,
@@ -132,14 +131,16 @@ const deviceColumns: TableColumn[] = [
     filterType: "text",
     tone: "muted",
   },
-  {
-    key: "actions",
-    label: "",
-    filterType: "none",
-    slot: "cell-actions",
-    cellClass: "text-right",
-  },
 ]
+
+const deviceRowActions = computed<TableRowAction[]>(() => [
+  {
+    key: "logout",
+    label: "登出",
+    visible: row => !asDeviceRow(row).isCurrent,
+    onClick: row => handleDeviceLogout(asDeviceRow(row).id),
+  },
+])
 
 function asDeviceRow(row: unknown) {
   return row as Device & { isCurrentLabel: string }
@@ -440,17 +441,11 @@ function handleDeleteAccount() {
             <div class="h-6" />
 
             <!-- 设备表格 -->
-            <TablePageTable
-              show-index
-              sticky-header
-              :end-spacer="false"
-              :show-index-checkbox="false"
-              :edge-gutter="false"
-              :show-row-action-icons="true"
+            <SettingsTable
               :columns="deviceColumns"
               :rows="deviceRows"
+              :row-actions="deviceRowActions"
               row-key="id"
-              :table-class="SETTINGS_TABLE_PAGE_CLASS"
             >
               <template #cell-name="{ row: rawRow }">
                 <div class="flex items-center gap-2">
@@ -468,19 +463,7 @@ function handleDeleteAccount() {
                   </div>
                 </div>
               </template>
-
-              <template #cell-actions="{ row: rawRow }">
-                <Button
-                  v-if="!asDeviceRow(rawRow).isCurrent"
-                  variant="outline"
-                  size="sm"
-                  class="h-7 gap-1.5 rounded-md px-2.5 text-[13px]"
-                  @click="handleDeviceLogout(asDeviceRow(rawRow).id)"
-                >
-                  登出
-                </Button>
-              </template>
-            </TablePageTable>
+            </SettingsTable>
 
             <!-- 加载更多 -->
             <div class="py-2">

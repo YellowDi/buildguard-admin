@@ -36,9 +36,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { SETTINGS_TABLE_PAGE_CLASS } from "@/components/settings/settingsTablePageClass"
-import TablePageTable from "@/components/table-page/TablePageTable.vue"
-import type { TableColumn, TablePageEmptyState } from "@/components/table-page/types"
+import SettingsTable from "@/components/settings/SettingsTable.vue"
+import type { TableColumn, TablePageEmptyState, TableRowAction } from "@/components/table-page/types"
 import { useCurrentUserPermissions } from "@/composables/useCurrentUserPermissions"
 import {
   createDictEntry,
@@ -151,14 +150,18 @@ const tableColumns: TableColumn[] = [
     cellRenderer: { kind: "note" },
     width: "fill",
   },
-  {
-    key: "actions",
-    label: "",
-    filterType: "none",
-    slot: "cell-actions",
-    cellClass: "text-right",
-  },
 ]
+
+const rowActions = computed<TableRowAction[]>(() => canEditItem.value
+  ? [
+      {
+        key: "edit",
+        label: "编辑",
+        icon: "ri-edit-line",
+        onClick: row => openEditItemDialog(row as DictEntryDisplayRow),
+      },
+    ]
+  : [])
 
 const filteredEntries = computed(() => {
   const query = searchQuery.value.trim().toLowerCase()
@@ -768,18 +771,12 @@ defineExpose<ExposedActions>({
     </template>
 
     <section class="space-y-4">
-      <TablePageTable
+      <SettingsTable
         row-key="uuid"
-        show-index
-        sticky-header
-        :end-spacer="false"
-        :show-index-checkbox="false"
-        :edge-gutter="false"
-        :show-row-action-icons="true"
         :columns="tableColumns"
         :rows="filteredEntries"
+        :row-actions="rowActions"
         :on-row-click="handleItemRowClick"
-        :table-class="SETTINGS_TABLE_PAGE_CLASS"
         :empty-state="emptyState"
       >
         <template #cell-remark="{ value }">
@@ -787,22 +784,7 @@ defineExpose<ExposedActions>({
             {{ value }}
           </div>
         </template>
-
-        <template #cell-actions="{ row: rawRow }">
-          <div class="flex justify-end">
-            <Button
-              v-if="canEditItem"
-              variant="outline"
-              size="sm"
-              class="h-7 gap-1.5 rounded-md px-2.5 text-[13px]"
-              @click.stop="openEditItemDialog(rawRow as DictEntryDisplayRow)"
-            >
-              <i class="ri-edit-line text-base" />
-              <span>编辑</span>
-            </Button>
-          </div>
-        </template>
-      </TablePageTable>
+      </SettingsTable>
     </section>
 
     <Dialog :open="createTypeOpen" @update:open="createTypeOpen = $event">

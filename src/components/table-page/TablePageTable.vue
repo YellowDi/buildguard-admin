@@ -190,9 +190,6 @@ const rowClickEnabled = computed(() => typeof props.onRowClick === "function")
 const inlineQuickActionEnabled = computed(() => (
   horizontalOverflow.value && typeof props.onQuickAction === "function"
 ))
-const inlineSecondaryActions = computed(() => (
-  visibleRowActions.value.filter(action => !isInlinePreviewAction(action))
-))
 /**
  * 布局层只允许最后一个非操作列吃剩余宽度。
  * 这样前面列保持内容宽度，操作列也不会被中间列或表格余量挤到视口边缘。
@@ -672,7 +669,35 @@ function isPrimaryColumn(columnIndex: number) {
   return columnIndex === 0
 }
 
+function resolveRowActionState(actionValue: TableRowAction["visible"] | TableRowAction["disabled"], row: Record<string, unknown>, index: number, fallback: boolean) {
+  if (typeof actionValue === "function") {
+    return actionValue(row, index)
+  }
+
+  if (typeof actionValue === "boolean") {
+    return actionValue
+  }
+
+  return fallback
+}
+
+function getVisibleRowActions(row: Record<string, unknown>, index: number) {
+  return visibleRowActions.value.filter(action => resolveRowActionState(action.visible, row, index, true))
+}
+
+function getInlineSecondaryActions(row: Record<string, unknown>, index: number) {
+  return getVisibleRowActions(row, index).filter(action => !isInlinePreviewAction(action))
+}
+
+function isRowActionDisabled(action: TableRowAction, row: Record<string, unknown>, index: number) {
+  return resolveRowActionState(action.disabled, row, index, false)
+}
+
 function handleRowActionClick(action: TableRowAction, row: Record<string, unknown>, index: number) {
+  if (isRowActionDisabled(action, row, index)) {
+    return
+  }
+
   action.onClick?.(row, index)
 }
 
@@ -819,6 +844,10 @@ function handleInlineQuickAction(row: Record<string, unknown>, index: number, ev
 }
 
 function handleInlineSecondaryAction(action: TableRowAction, row: Record<string, unknown>, index: number, event?: MouseEvent) {
+  if (isRowActionDisabled(action, row, index)) {
+    return
+  }
+
   clearInlineActionState(event)
   action.onClick?.(row, index)
 }
@@ -1232,8 +1261,15 @@ function syncActionColumnWidth(headerCells?: HTMLElement[]) {
   const actionHeader = targetCells[props.columns.length]
   const headerLabelElement = tableRef.value?.querySelector("[data-table-action-header-label]") as HTMLElement | null
   const headerLabelWidth = Math.ceil(headerLabelElement?.getBoundingClientRect().width ?? 0)
-  const contentElement = tableRef.value?.querySelector("[data-table-action-buttons]") as HTMLElement | null
-  const actionCell = contentElement?.closest("[data-table-action-cell]") as HTMLElement | null
+  const contentElements = Array.from(tableRef.value?.querySelectorAll("[data-table-action-buttons]") ?? []) as HTMLElement[]
+  const widestContentElement = contentElements.reduce<HTMLElement | null>((widest, element) => {
+    if (!widest) {
+      return element
+    }
+
+    return element.getBoundingClientRect().width > widest.getBoundingClientRect().width ? element : widest
+  }, null)
+  const actionCell = widestContentElement?.closest("[data-table-action-cell]") as HTMLElement | null
 
   if (typeof window === "undefined") {
     actionColumnWidth.value = Math.max(0, headerLabelWidth)
@@ -1248,7 +1284,7 @@ function syncActionColumnWidth(headerCells?: HTMLElement[]) {
   // 只测标题文本和按钮组本身，避免 table-auto 拉伸后的操作列宽度反向污染布局状态。
   const headerWidth = headerLabelWidth + headerPaddingLeft + headerPaddingRight
 
-  if (!contentElement || !actionCell) {
+  if (!widestContentElement || !actionCell) {
     actionColumnWidth.value = Math.max(0, Math.ceil(headerWidth))
     actionColumnContentWidth.value = Math.max(0, headerLabelWidth)
     actionColumnFadeWidth.value = 0
@@ -1258,7 +1294,7 @@ function syncActionColumnWidth(headerCells?: HTMLElement[]) {
   const cellStyles = window.getComputedStyle(actionCell)
   const paddingLeft = Number.parseFloat(cellStyles.paddingLeft || "0")
   const paddingRight = Number.parseFloat(cellStyles.paddingRight || "0")
-  const contentWidth = Math.ceil(contentElement.getBoundingClientRect().width)
+  const contentWidth = Math.ceil(widestContentElement.getBoundingClientRect().width)
   const measuredWidth = Math.max(headerWidth, contentWidth + paddingLeft + paddingRight)
 
   actionColumnWidth.value = Math.max(0, Math.ceil(measuredWidth))
@@ -1971,7 +2007,7 @@ onBeforeUnmount(() => {
                         :class="getInlineQuickActionWrapperClass(row, index)"
                       >
                         <TooltipWrap
-                          v-for="action in inlineSecondaryActions"
+                          v-for="action in getInlineSecondaryActions(row, index)"
                           :key="`${getRowKey(row, index)}-${action.key}-inline`"
                           :content="action.label"
                         >
@@ -1979,6 +2015,7 @@ onBeforeUnmount(() => {
                             variant="ghost"
                             size="sm"
                             :class="tableTheme.quickAction.button"
+                            :disabled="isRowActionDisabled(action, row, index)"
                             :aria-label="action.label"
                             :title="action.label"
                             data-row-click-ignore
@@ -2019,11 +2056,12 @@ onBeforeUnmount(() => {
                   <div :class="tableTheme.actionCellContent" :style="getActionContentStyle()">
                     <div :class="tableTheme.actionCellButtons" data-table-action-buttons>
                       <Button
-                        v-for="action in visibleRowActions"
+                        v-for="action in getVisibleRowActions(row, index)"
                         :key="`${getRowKey(row, index)}-${action.key}`"
                         variant="outline"
                         size="sm"
                         :class="tableTheme.actionButton"
+                        :disabled="isRowActionDisabled(action, row, index)"
                         @click.stop="handleRowActionClick(action, row, index)"
                       >
                         <i v-if="props.showRowActionIcons" :class="remixIconForTableRowAction(action.label, action.icon)" />
@@ -2118,19 +2156,4 @@ onBeforeUnmount(() => {
   box-shadow: none;
 }
 
-[data-settings-auto-width] [data-table-outer] {
-  width: max-content;
-  min-width: 100%;
-  max-width: none;
-}
-
-[data-settings-auto-width] [data-table-scroll-viewport] {
-  width: max-content;
-  min-width: 100%;
-  max-width: none;
-}
-
-[data-settings-auto-width] [data-table-scroll-content] {
-  min-width: max-content;
-}
 </style>
