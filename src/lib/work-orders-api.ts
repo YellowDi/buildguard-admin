@@ -303,6 +303,7 @@ const REPAIR_WORK_ORDER_DELETE_API_URL = API_PATHS.workOrderRepairDelete
 const REPAIR_WORK_ORDER_STATUS_UPDATE_API_URL = buildApiUrl(API_PATHS.workOrderRepairStatusUpdate)
 const WORK_ORDER_CREATE_API_URL = buildApiUrl(API_PATHS.workOrderCreate)
 const WORK_ORDER_DETAIL_API_URL = API_PATHS.workOrderDetail
+const WORK_ORDER_DELETE_API_URL = API_PATHS.workOrderDelete
 const WORK_ORDER_INSPECTION_HISTORY_DETAIL_API_URL = API_PATHS.workOrderInspectionHistoryDetail
 const WORK_ORDER_UPDATE_API_URL = buildApiUrl(API_PATHS.workOrderUpdate)
 const WORK_ORDER_DISPATCH_API_URL = buildApiUrl(API_PATHS.workOrderDispatch)
@@ -316,6 +317,7 @@ const REPAIR_WORK_ORDER_CREATE_ERROR_MESSAGE = "报修工单创建失败，请�
 const REPAIR_WORK_ORDER_UPDATE_ERROR_MESSAGE = "报修工单更新失败，请稍后重试。"
 const REPAIR_WORK_ORDER_STATUS_UPDATE_ERROR_MESSAGE = "报修工单状态更新失败，请稍后重试。"
 const REPAIR_WORK_ORDER_DELETE_ERROR_MESSAGE = "报修工单删除失败，请稍后重试。"
+const WORK_ORDER_DELETE_ERROR_MESSAGE = "检测工单删除失败，请稍后重试。"
 const WORK_ORDER_DETAIL_ERROR_MESSAGE = "工单详情加载失败，请稍后重试。"
 const WORK_ORDER_INSPECTION_HISTORY_DETAIL_ERROR_MESSAGE = "检测结果历史加载失败，请稍后重试。"
 const WORK_ORDER_UPDATE_ERROR_MESSAGE = "工单更新失败，请稍后重试。"
@@ -539,6 +541,25 @@ export async function deleteRepairWorkOrder(payload: WorkOrderDetailPayload) {
   }
 
   assertApiSuccess(responseBody, REPAIR_WORK_ORDER_DELETE_ERROR_MESSAGE)
+}
+
+export async function deleteWorkOrder(payload: WorkOrderDetailPayload) {
+  const url = buildApiRequestUrl(WORK_ORDER_DELETE_API_URL)
+  const uuid = getRequiredString(payload.Uuid, "Uuid")
+
+  url.searchParams.set("Uuid", uuid)
+
+  const response = await fetch(url.toString(), {
+    method: "GET",
+    headers: buildApiHeaders(),
+  })
+  const responseBody = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responseBody, WORK_ORDER_DELETE_ERROR_MESSAGE)
+  }
+
+  assertApiSuccess(responseBody, WORK_ORDER_DELETE_ERROR_MESSAGE)
 }
 
 export async function fetchWorkOrderInspectionHistoryDetail(

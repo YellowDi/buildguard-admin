@@ -52,6 +52,7 @@ import { PERMISSION_CODES } from "@/lib/permission-codes"
 import { uploadTencentCosFile } from "@/lib/tencent-cos-sdk"
 import {
   deleteRepairWorkOrder,
+  deleteWorkOrder,
   dispatchRepairWorkOrder,
   dispatchWorkOrder,
   fetchRepairWorkOrderDetail,
@@ -371,7 +372,7 @@ const hasWorkOrder = computed(() => (
 ))
 
 const showAssignAction = computed(() => !loading.value && hasWorkOrder.value && Boolean(workOrderUuid.value))
-const showRepairDeleteAction = computed(() => props.kind === "repair" && !loading.value && hasWorkOrder.value && Boolean(workOrderUuid.value))
+const showDeleteAction = computed(() => !loading.value && hasWorkOrder.value && Boolean(workOrderUuid.value))
 const showRepairEditAction = computed(() => props.kind === "repair" && !loading.value && hasWorkOrder.value && Boolean(workOrderUuid.value))
 const showRepairReviewAction = computed(() => (
   props.kind === "repair"
@@ -383,6 +384,15 @@ const showRepairReviewAction = computed(() => (
 const assignPermissionCode = computed(() => props.kind === "repair"
   ? PERMISSION_CODES.repairWorkOrderAssign
   : PERMISSION_CODES.inspectionWorkOrderAssign)
+const deletePermissionCode = computed(() => props.kind === "repair"
+  ? PERMISSION_CODES.repairWorkOrderDelete
+  : PERMISSION_CODES.inspectionWorkOrderEdit)
+const deleteDialogTitle = computed(() => props.kind === "repair" ? "确认删除当前报修工单？" : "确认删除当前检测工单？")
+const deleteDialogDescription = computed(() => (
+  props.kind === "repair"
+    ? "删除后将无法恢复，该操作会移除当前报修工单。"
+    : "删除后将无法恢复，该操作会移除当前检测工单。"
+))
 const selectedReportBuildingName = computed(() => toText(reportBuilding.value?.BuildName, "当前建筑"))
 const canSubmitReport = computed(() => (
   !reportSubmitting.value
@@ -485,7 +495,7 @@ function openRepairEditPage() {
   })
 }
 
-async function confirmDeleteRepairWorkOrder() {
+async function confirmDeleteWorkOrder() {
   const uuid = workOrderUuid.value
 
   if (!uuid || deleteSubmitting.value) {
@@ -495,13 +505,18 @@ async function confirmDeleteRepairWorkOrder() {
   deleteSubmitting.value = true
 
   try {
-    await deleteRepairWorkOrder({ Uuid: uuid })
+    if (props.kind === "repair") {
+      await deleteRepairWorkOrder({ Uuid: uuid })
+    } else {
+      await deleteWorkOrder({ Uuid: uuid })
+    }
+
     deleteConfirmOpen.value = false
-    toast.success("报修工单已删除")
-    await router.push({ name: "repair-work-orders" })
+    toast.success(props.kind === "repair" ? "报修工单已删除" : "检测工单已删除")
+    await router.push({ name: props.kind === "repair" ? "repair-work-orders" : "inspection-work-orders" })
   } catch (error) {
     handleApiError(error, {
-      fallback: "报修工单删除失败，请稍后重试。",
+      fallback: props.kind === "repair" ? "报修工单删除失败，请稍后重试。" : "检测工单删除失败，请稍后重试。",
     })
   } finally {
     deleteSubmitting.value = false
@@ -1836,10 +1851,10 @@ async function submitAssign() {
     @back="goBack"
   >
     <template #actions>
-      <PermissionGate :code="PERMISSION_CODES.repairWorkOrderDelete">
+      <PermissionGate :code="deletePermissionCode">
         <AlertDialog :open="deleteConfirmOpen" @update:open="deleteConfirmOpen = $event">
           <Button
-            v-if="showRepairDeleteAction"
+            v-if="showDeleteAction"
             type="button"
             variant="outline"
             size="sm"
@@ -1851,9 +1866,9 @@ async function submitAssign() {
           </Button>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>确认删除当前报修工单？</AlertDialogTitle>
+              <AlertDialogTitle>{{ deleteDialogTitle }}</AlertDialogTitle>
               <AlertDialogDescription>
-                删除后将无法恢复，该操作会移除当前报修工单。
+                {{ deleteDialogDescription }}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
@@ -1863,7 +1878,7 @@ async function submitAssign() {
               <AlertDialogAction
                 :disabled="deleteSubmitting"
                 class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                @click="confirmDeleteRepairWorkOrder"
+                @click="confirmDeleteWorkOrder"
               >
                 {{ deleteSubmitting ? "删除中..." : "确认删除" }}
               </AlertDialogAction>

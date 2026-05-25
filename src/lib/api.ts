@@ -40,6 +40,7 @@ export const API_PATHS = {
   workOrderReportUpload: "/bqi/work-order/report/upload",
   workOrderCreate: "/bqi/work-order/new",
   workOrderDetail: "/bqi/work-order/detail",
+  workOrderDelete: "/bqi/work-order/del",
   workOrderInspectionHistoryDetail: "/bqi/work-order/inspection/history/detail",
   workOrderUpdate: "/bqi/work-order/update",
   workOrderDispatch: "/bqi/work-order/dispatch",
