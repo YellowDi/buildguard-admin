@@ -487,8 +487,8 @@ function formatWorkOrderResult(value: number | null) {
 
   if (value === 0) return "未反馈"
   if (value === 1) return "正常"
-  if (value === 2) return "异常"
-  if (value === 3) return "已驳回"
+  if (value === 2) return "轻微风险"
+  if (value === 3) return "存在隐患"
 
   return `结果 ${value}`
 }

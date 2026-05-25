@@ -3370,28 +3370,7 @@ async function loadMaintenanceRecords(uuid: string) {
       .sort((left, right) => getMaintenanceRecordSortTime(right) - getMaintenanceRecordSortTime(left))
       .slice(0, 5)
 
-    const rowsWithDetailPlanName = await Promise.all(overviewRows.map(async (row) => {
-      if (!row.uuid) {
-        return row
-      }
-
-      try {
-        const detail = await fetchWorkOrderDetail({ Uuid: row.uuid })
-
-        return {
-          ...row,
-          planName: toDisplayText(detail.PlanName, row.planName !== "-" ? row.planName : "未关联计划"),
-        }
-      } catch {
-        return row
-      }
-    }))
-
-    if (requestId !== latestMaintenanceRecordsRequestId) {
-      return
-    }
-
-    maintenanceRecords.value = rowsWithDetailPlanName.map(mapMaintenanceRecordRow)
+    maintenanceRecords.value = overviewRows.map(mapMaintenanceRecordRow)
   } catch (error) {
     if (requestId !== latestMaintenanceRecordsRequestId) {
       return
@@ -3821,9 +3800,9 @@ function formatWorkOrderResult(result: number | null) {
     case 1:
       return "正常"
     case 2:
-      return "异常"
+      return "轻微风险"
     case 3:
-      return "已驳回"
+      return "存在隐患"
     default:
       return `结果 ${result}`
   }

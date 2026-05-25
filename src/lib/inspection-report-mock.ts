@@ -978,8 +978,8 @@ function formatResultLabel(value: unknown) {
 
   if (result === null || result === 0) return "未反馈"
   if (result === 1) return "正常"
-  if (result === 2) return "异常"
-  if (result === 3) return "已驳回"
+  if (result === 2) return "轻微风险"
+  if (result === 3) return "存在隐患"
 
   return `结果 ${result}`
 }

@@ -2,7 +2,7 @@ import type { DetailContactValue, DetailFieldSection, DetailStatusValue } from "
 import { workOrderStatusMap } from "@/components/table-page/statusPresets"
 import type { CustomerDetailResult } from "@/lib/customers-api"
 import { getWorkOrderStatusLabel } from "@/lib/work-order-status"
-import type { WorkOrderDetailResult } from "@/lib/work-orders-api"
+import type { WorkOrderBuildInfo, WorkOrderDetailResult } from "@/lib/work-orders-api"
 
 export function buildWorkOrderPrimarySections(
   workOrder: WorkOrderDetailResult | null,
@@ -24,21 +24,26 @@ export function buildWorkOrderPrimarySections(
       title: "基本信息",
       rows: [
         { key: "order-no", label: "工单编号", value: toText(workOrder.OrderNo, "-") },
+        { key: "work-order-id", label: "工单 ID", value: toText(workOrder.Id, "-") },
+        { key: "work-order-uuid", label: "工单 UUID", value: toText(workOrder.Uuid, "-") },
         {
           key: "service-name",
           label: "检测服务",
           value: toText(workOrder.ServiceName, "-"),
           linkAction: options.onOpenService && toText(workOrder.ServiceUuid, "") ? { onClick: options.onOpenService } : undefined,
         },
+        { key: "service-uuid", label: "服务 UUID", value: toText(workOrder.ServiceUuid, "-") },
         {
           key: "plan-name",
           label: "检测计划",
           value: toText(workOrder.PlanName, "-"),
           linkAction: options.onOpenPlan && toText(workOrder.PlanUuid, "") ? { onClick: options.onOpenPlan } : undefined,
         },
+        { key: "plan-uuid", label: "检测计划 UUID", value: toText(workOrder.PlanUuid, "-") },
         { key: "executor", label: "执行人", value: formatExecutors(workOrder.Executors, workOrder.Executor) },
         { key: "status", label: "工单状态", value: buildWorkOrderStatusValue(workOrder.Status) },
         { key: "deadline", label: "截止时间", value: formatDateOnly(toText(workOrder.Deadline, "-")) },
+        { key: "end-time", label: "结束时间", value: formatDateOnly(toText(workOrder.EndTime, "-")) },
         { key: "created-at", label: "创建时间", value: toText(workOrder.CreatedAt, "-") },
         { key: "updated-at", label: "更新时间", value: toText(workOrder.UpdatedAt, "-") },
       ],
@@ -48,17 +53,20 @@ export function buildWorkOrderPrimarySections(
       title: "客户信息",
       rows: [
         {
-          key: "customer-name",
-          label: "客户名称",
-          value: toText(customer?.CorpName, toText(workOrder.CustomerName, "-")),
+          key: "corp-name",
+          label: "公司名称",
+          value: toText(workOrder.CorpName, toText(customer?.CorpName, "-")),
           linkAction: options.onOpenCustomer && toText(workOrder.CustomerUuid, "") ? { onClick: options.onOpenCustomer } : undefined,
         },
+        { key: "customer-name", label: "客户名称", value: toText(workOrder.CustomerName, toText(customer?.CorpName, "-")) },
+        { key: "customer-uuid", label: "客户 UUID", value: toText(workOrder.CustomerUuid, "-") },
         {
           key: "park-name",
           label: "园区",
           value: toText(workOrder.ParkName, "-"),
           linkAction: options.onOpenPark && toText(workOrder.ParkUuid, "") ? { onClick: options.onOpenPark } : undefined,
         },
+        { key: "park-uuid", label: "园区 UUID", value: toText(workOrder.ParkUuid, "-") },
         {
           key: "address",
           label: "地址",
@@ -91,6 +99,24 @@ export function buildWorkOrderSecondarySections(workOrder: WorkOrderDetailResult
       rows: [
         { key: "score", label: "园区分数", value: formatWorkOrderScore(workOrder.Score) },
         { key: "result", label: "检测结果", value: formatWorkOrderResult(workOrder.Result) },
+        {
+          key: "builds",
+          label: "建筑",
+          value: formatBuilds(workOrder.Builds),
+          truncate: false,
+          valueClass: "leading-6",
+        },
+        { key: "inspection-progress", label: "检查进度", value: formatBuildInspectionProgress(workOrder.Builds) },
+        { key: "build-results", label: "建筑结果", value: formatBuildResults(workOrder.Builds) },
+        { key: "build-scores", label: "建筑分数", value: formatBuildScores(workOrder.Builds) },
+        {
+          key: "build-reports",
+          label: "报告文件",
+          value: formatBuildReports(workOrder.Builds),
+          truncate: false,
+          valueClass: "leading-6 break-all",
+        },
+        { key: "build-versions", label: "版本号", value: formatBuildVersions(workOrder.Builds) },
         {
           key: "remark",
           label: "备注",
@@ -191,8 +217,8 @@ function formatWorkOrderResult(value: unknown) {
   if (result === null) return "未反馈"
   if (result === 0) return "未反馈"
   if (result === 1) return "正常"
-  if (result === 2) return "异常"
-  if (result === 3) return "已驳回"
+  if (result === 2) return "轻微风险"
+  if (result === 3) return "存在隐患"
 
   return `结果 ${result}`
 }
@@ -200,6 +226,82 @@ function formatWorkOrderResult(value: unknown) {
 function formatWorkOrderScore(value: unknown) {
   const score = toNumber(value)
   return score === null ? "-" : String(score)
+}
+
+function formatBuilds(value: WorkOrderBuildInfo[] | undefined) {
+  if (!Array.isArray(value) || value.length === 0) {
+    return "-"
+  }
+
+  const names = value
+    .map(build => toText(build.BuildName, toText(build.BuildUuid, "")))
+    .filter(Boolean)
+
+  return names.length ? names.join("、") : "-"
+}
+
+function formatBuildInspectionProgress(value: WorkOrderBuildInfo[] | undefined) {
+  if (!Array.isArray(value) || value.length === 0) {
+    return "-"
+  }
+
+  let passTotal = 0
+  let itemTotal = 0
+
+  for (const build of value) {
+    const buildPassTotal = toNumber(build.ItemPassTotal)
+    const buildItemTotal = toNumber(build.ItemTotal)
+
+    if (buildPassTotal !== null) {
+      passTotal += buildPassTotal
+    }
+
+    if (buildItemTotal !== null) {
+      itemTotal += buildItemTotal
+    }
+  }
+
+  return itemTotal > 0 ? `${passTotal}/${itemTotal} 项通过` : "-"
+}
+
+function formatBuildResults(value: WorkOrderBuildInfo[] | undefined) {
+  return formatBuildValues(value, (build) => {
+    const result = toNumber(build.Result)
+    return result === null ? "" : formatWorkOrderResult(result)
+  })
+}
+
+function formatBuildScores(value: WorkOrderBuildInfo[] | undefined) {
+  return formatBuildValues(value, build => formatWorkOrderScore(build.Score))
+}
+
+function formatBuildReports(value: WorkOrderBuildInfo[] | undefined) {
+  return formatBuildValues(value, build => toText(build.ReportUrl, ""))
+}
+
+function formatBuildVersions(value: WorkOrderBuildInfo[] | undefined) {
+  return formatBuildValues(value, build => toText(build.Version, ""))
+}
+
+function formatBuildValues(value: WorkOrderBuildInfo[] | undefined, resolveValue: (build: WorkOrderBuildInfo) => string) {
+  if (!Array.isArray(value) || value.length === 0) {
+    return "-"
+  }
+
+  const items = value
+    .map((build, index) => {
+      const itemValue = resolveValue(build)
+
+      if (!itemValue || itemValue === "-") {
+        return ""
+      }
+
+      const buildName = toText(build.BuildName, `建筑${index + 1}`)
+      return `${buildName}: ${itemValue}`
+    })
+    .filter(Boolean)
+
+  return items.length ? items.join("、") : "-"
 }
 
 function buildContactValue(name: string, phone?: string | null): DetailContactValue {
