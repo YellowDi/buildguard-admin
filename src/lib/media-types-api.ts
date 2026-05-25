@@ -38,11 +38,11 @@ export type ListMediaTypesPayload = {
 }
 
 export type CreateMediaTypePayload = {
-  Type: MediaTypeKind
-  Name: string
+  Name?: string
   ParentUuid?: string
   SortNum?: number
   Tag?: string
+  Type?: MediaTypeKind
   [property: string]: unknown
 }
 
@@ -264,7 +264,7 @@ function extractDetailRecord(payload: unknown) {
     return {}
   }
 
-  const nestedRecord = asRecord(directRecord.data)
+  const nestedRecord = asRecord(directRecord.data) ?? asRecord(directRecord.Data)
   return (nestedRecord ?? directRecord) as MediaTypeRecord
 }
 
