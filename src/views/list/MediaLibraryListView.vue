@@ -94,6 +94,7 @@ type MediaCategoryNode = {
   isDefault?: boolean
   parentUuid?: string
   sortOrder?: number
+  tag?: string
   children?: MediaCategoryNode[]
 }
 
@@ -149,6 +150,7 @@ type MediaCategoryForm = {
   name: string
   sortNum: number
   parentUuid: string
+  tag: string
 }
 
 type SwitchTab = {
@@ -697,6 +699,7 @@ async function openEditCategoryDialog(module: MediaModuleKey, id: string) {
     name: row.name,
     sortNum: row.sortOrder ?? 0,
     parentUuid: row.parentUuid ?? "",
+    tag: row.tag ?? "",
   }))
   categoryDetailLoading.value = true
   categoryEditDialogOpen.value = true
@@ -710,6 +713,7 @@ async function openEditCategoryDialog(module: MediaModuleKey, id: string) {
         name: detailNode.name || row.name,
         sortNum: detailNode.sortOrder ?? row.sortOrder ?? 0,
         parentUuid: detailNode.parentUuid ?? row.parentUuid ?? "",
+        tag: detailNode.tag ?? row.tag ?? "",
       }))
     }
   } catch (error) {
@@ -748,9 +752,12 @@ async function submitEditCategory() {
 
   try {
     await updateMediaType({
-      Uuid: editingCategoryId.value,
       Name: name,
+      ParentUuid: categoryEditForm.parentUuid,
       SortNum: categoryEditForm.sortNum,
+      Tag: categoryEditForm.tag,
+      Type: MEDIA_TYPE_MAP[categoryEditModule.value],
+      Uuid: editingCategoryId.value,
     })
     await loadMediaCategories(categoryEditModule.value)
     selectCategory(categoryEditModule.value, editingCategoryId.value)
@@ -1409,6 +1416,7 @@ function createEmptyCategoryForm(overrides: Partial<MediaCategoryForm> = {}): Me
     name: "",
     sortNum: 0,
     parentUuid: "",
+    tag: "",
     ...overrides,
   }
 }
@@ -1435,6 +1443,7 @@ function normalizeMediaCategory(item: MediaTypeRecord, module: MediaModuleKey): 
     isDefault: Number(item.IsDefault) === 1,
     parentUuid: toOptionalText(item.ParentUuid),
     sortOrder: toOptionalNumber(item.SortNum) ?? 0,
+    tag: toOptionalText(item.Tag),
     children,
   }
 }

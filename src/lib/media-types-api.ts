@@ -19,6 +19,8 @@ export type MediaTypeRecord = {
   ParentName?: string
   ParentUuid?: string
   SortNum?: number
+  Tag?: string
+  Type?: number
   Uuid?: string
   [property: string]: unknown
 }
@@ -49,9 +51,12 @@ export type MediaTypeDetailPayload = {
 }
 
 export type UpdateMediaTypePayload = {
-  Uuid?: string
   Name?: string
+  ParentUuid?: string
   SortNum?: number
+  Tag?: string
+  Type?: MediaTypeKind
+  Uuid?: string
   [property: string]: unknown
 }
 
@@ -152,9 +157,12 @@ export async function updateMediaType(payload: UpdateMediaTypePayload) {
       "Content-Type": "application/json",
     }),
     body: JSON.stringify({
-      Uuid: getRequiredString(payload.Uuid, "Uuid"),
       Name: getRequiredString(payload.Name, "Name"),
+      ParentUuid: getStringOrEmpty(payload.ParentUuid),
       SortNum: getOptionalNumber(payload.SortNum, "SortNum") ?? 0,
+      Tag: getOptionalString(payload.Tag) ?? "",
+      Type: getRequiredNumber(payload.Type, "Type"),
+      Uuid: getRequiredString(payload.Uuid, "Uuid"),
     }),
   })
   const responseBody = await readResponseBody(response)
