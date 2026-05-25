@@ -11,7 +11,6 @@ export const SETTINGS_CATEGORY_KEYS = [
   "developer",
   "business-presets",
   "inspection-items",
-  "report-template",
 ] as const
 
 export type SettingsCategoryKey = (typeof SETTINGS_CATEGORY_KEYS)[number]

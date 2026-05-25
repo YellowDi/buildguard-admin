@@ -331,16 +331,6 @@ const categories = computed<SettingsCategory[]>(() => [
     sections: [],
   },
   {
-    key: "report-template",
-    group: "feature",
-    label: "报告模板",
-    description: "配置检测报告导出模板、模块顺序和默认展示信息。",
-    icon: "ri-file-chart-line",
-    pageTitle: "报告模板",
-    pageDescription: "调整检测报告 HTML 与 PDF 打印版本的模块、顺序、水印和页脚说明。",
-    sections: [],
-  },
-  {
     key: "apps",
     group: "admin",
     label: "应用更新",

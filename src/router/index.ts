@@ -759,10 +759,6 @@ function resolveRoutePermissionPath(route: RouteLocationNormalized) {
       ? route.params.category.trim()
       : DEFAULT_SETTINGS_CATEGORY_KEY
 
-    if (category === "report-template") {
-      return ""
-    }
-
     return `/settings/${category}`
   }
 
