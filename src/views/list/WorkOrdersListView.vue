@@ -97,6 +97,7 @@ const pageNum = ref(1)
 const pageSize = ref(50)
 const total = ref(0)
 const orderNoQuery = ref("")
+const titleQuery = ref("")
 const createdAtQuery = ref("")
 const deadlineQuery = ref("")
 const serviceNameQuery = ref("")
@@ -334,6 +335,17 @@ const queryBar = computed<TableQueryBarConfig>(() => ({
           collapsedMaxWidth: 248,
         },
         {
+          type: "search" as const,
+          key: "title",
+          queryKey: "title",
+          label: "报修标题",
+          icon: "ri-text",
+          placeholder: "请输入",
+          value: titleQuery.value,
+          expandedWidth: 248,
+          collapsedMaxWidth: 248,
+        },
+        {
           type: "date" as const,
           key: "createdAt",
           queryKey: "createdAt",
@@ -377,6 +389,7 @@ const queryBar = computed<TableQueryBarConfig>(() => ({
     serviceName: props.kind === "inspection" ? serviceNameQuery.value : "",
     executor: props.kind === "inspection" ? executorQuery.value : "",
     deadline: props.kind === "inspection" ? deadlineQuery.value : "",
+    title: props.kind === "repair" ? titleQuery.value : "",
     createdAt: props.kind === "repair" ? createdAtQuery.value : "",
     important: props.kind === "repair" ? selectedImportant.value : "",
     status: selectedStatus.value,
@@ -384,7 +397,7 @@ const queryBar = computed<TableQueryBarConfig>(() => ({
   },
   canClear: props.kind === "inspection"
     ? Boolean(orderNoQuery.value || selectedCustomerUuid.value || selectedPlanUuid.value || serviceNameQuery.value || executorQuery.value || deadlineQuery.value || selectedStatus.value || selectedResult.value)
-    : Boolean(orderNoQuery.value || createdAtQuery.value || selectedImportant.value || selectedStatus.value),
+    : Boolean(orderNoQuery.value || titleQuery.value || createdAtQuery.value || selectedImportant.value || selectedStatus.value),
 }))
 
 watch([pageNum, pageSize], ([nextPageNum, nextPageSize], [previousPageNum, previousPageSize]) => {
@@ -409,6 +422,7 @@ watch(
       ] as const
     : [
         normalizeQueryValue(route.query.q),
+        normalizeQueryValue(route.query.title),
         normalizeQueryValue(route.query.createdAt),
         normalizeQueryValue(route.query.important),
         normalizeQueryValue(route.query.status),
@@ -433,9 +447,10 @@ watch(
       selectedStatus.value = nextValue[6] ?? ""
       selectedResult.value = nextValue[7] ?? ""
     } else {
-      createdAtQuery.value = nextValue[1] ?? ""
-      selectedImportant.value = nextValue[2] ?? ""
-      selectedStatus.value = nextValue[3] ?? ""
+      titleQuery.value = nextValue[1] ?? ""
+      createdAtQuery.value = nextValue[2] ?? ""
+      selectedImportant.value = nextValue[3] ?? ""
+      selectedStatus.value = nextValue[4] ?? ""
     }
 
     if (pageNum.value !== 1) {
@@ -672,6 +687,7 @@ async function loadWorkOrders() {
         })
       : await fetchRepairWorkOrders({
           OrderNo: orderNoQuery.value || undefined,
+          Title: titleQuery.value || undefined,
           CreatedStartAt: createdAtQuery.value || undefined,
           CreatedEndAt: createdAtQuery.value || undefined,
           Important: selectedImportant.value || undefined,
@@ -1209,6 +1225,10 @@ function handleQueryChange(payload: { key: string; value: string | string[] }) {
     orderNoQuery.value = typeof payload.value === "string" ? payload.value.trim() : ""
   }
 
+  if (payload.key === "title") {
+    titleQuery.value = typeof payload.value === "string" ? payload.value.trim() : ""
+  }
+
   if (payload.key === "customerUuid") {
     selectedCustomerUuid.value = typeof payload.value === "string" ? payload.value.trim() : ""
   }
@@ -1260,13 +1280,14 @@ function handleQueryClear() {
         || selectedStatus.value
         || selectedResult.value,
       )
-    : Boolean(orderNoQuery.value || createdAtQuery.value || selectedImportant.value || selectedStatus.value)
+    : Boolean(orderNoQuery.value || titleQuery.value || createdAtQuery.value || selectedImportant.value || selectedStatus.value)
 
   if (!hasFilters) {
     return
   }
 
   orderNoQuery.value = ""
+  titleQuery.value = ""
   selectedCustomerUuid.value = ""
   selectedPlanUuid.value = ""
   createdAtQuery.value = ""
@@ -1285,7 +1306,7 @@ async function syncRouteQueryAndReload() {
       ...route.query,
       q: orderNoQuery.value || undefined,
       createdAt: props.kind === "repair" ? createdAtQuery.value || undefined : undefined,
-      title: undefined,
+      title: props.kind === "repair" ? titleQuery.value || undefined : undefined,
       important: props.kind === "repair" ? selectedImportant.value || undefined : undefined,
       customerUuid: props.kind === "inspection" ? selectedCustomerUuid.value || undefined : undefined,
       planUuid: props.kind === "inspection" ? selectedPlanUuid.value || undefined : undefined,

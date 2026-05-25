@@ -268,7 +268,7 @@ export type ListRepairWorkOrdersPayload = {
 }
 
 const WORK_ORDERS_API_URL = buildApiUrl(API_PATHS.workOrdersList)
-const REPAIR_WORK_ORDERS_API_URL = buildApiUrl(API_PATHS.workOrderReportList)
+const REPAIR_WORK_ORDERS_API_URL = buildApiUrl(API_PATHS.workOrderRepairList)
 const REPAIR_WORK_ORDER_DETAIL_API_URL = API_PATHS.workOrderReportDetail
 const REPAIR_WORK_ORDER_CREATE_API_URL = buildApiUrl(API_PATHS.workOrderReportCreate)
 const REPAIR_WORK_ORDER_UPDATE_API_URL = buildApiUrl(API_PATHS.workOrderReportUpdate)
@@ -658,18 +658,27 @@ export async function dispatchRepairWorkOrder(payload: DispatchRepairWorkOrderPa
 }
 
 export async function fetchRepairWorkOrders(payload: ListRepairWorkOrdersPayload = {}): Promise<RepairWorkOrdersListResult> {
-  const normalizedPayload = {
-    CreatedEndAt: getOptionalString(payload.CreatedEndAt) ?? "",
-    CreatedStartAt: getOptionalString(payload.CreatedStartAt) ?? "",
-    OrderNo: getOptionalString(payload.OrderNo) ?? "",
-    CustomerUuid: getOptionalString(payload.CustomerUuid) ?? "",
-    Important: getOptionalString(payload.Important) ?? "",
-    Status: getOptionalNumber(payload.Status, "Status") ?? 0,
-    Title: getOptionalString(payload.Title) ?? "",
-    UserUuid: getOptionalNumber(payload.UserUuid, "UserUuid") ?? 0,
-    PageNum: getOptionalNumber(payload.PageNum, "PageNum") ?? 1,
-    PageSize: getOptionalNumber(payload.PageSize, "PageSize") ?? 10,
+  const normalizedPayload: ListRepairWorkOrdersPayload = {
+    PageNum: getOptionalPositiveInteger(payload.PageNum, "PageNum") ?? 1,
+    PageSize: getOptionalPositiveInteger(payload.PageSize, "PageSize") ?? 10,
   }
+  const createdEndAt = getOptionalString(payload.CreatedEndAt)
+  const createdStartAt = getOptionalString(payload.CreatedStartAt)
+  const customerUuid = getOptionalString(payload.CustomerUuid)
+  const important = getOptionalString(payload.Important)
+  const orderNo = getOptionalString(payload.OrderNo)
+  const status = getOptionalPositiveFilterNumber(payload.Status, "Status")
+  const title = getOptionalString(payload.Title)
+  const userUuid = getOptionalPositiveFilterNumber(payload.UserUuid, "UserUuid")
+
+  if (createdEndAt) normalizedPayload.CreatedEndAt = createdEndAt
+  if (createdStartAt) normalizedPayload.CreatedStartAt = createdStartAt
+  if (customerUuid) normalizedPayload.CustomerUuid = customerUuid
+  if (important) normalizedPayload.Important = important
+  if (orderNo) normalizedPayload.OrderNo = orderNo
+  if (status !== undefined) normalizedPayload.Status = status
+  if (title) normalizedPayload.Title = title
+  if (userUuid !== undefined) normalizedPayload.UserUuid = userUuid
 
   const response = await fetch(REPAIR_WORK_ORDERS_API_URL, {
     method: "POST",
