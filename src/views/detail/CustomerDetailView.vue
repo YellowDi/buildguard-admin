@@ -114,6 +114,11 @@ type BuildingRow = {
   parkUuid: string
   name: string
   address: string
+  contactName: string
+  contactPhone: string
+  contactDisplay: string
+  operationTime: string
+  updatedAt: string
   status: "一切正常" | "需重点关注" | "存在风险"
 }
 
@@ -4315,9 +4320,21 @@ function normalizeBuildingRow(building: BuildingListItem, park: ParkDetailResult
     parkUuid,
     name: toDisplayText(building.Name, "未命名建筑"),
     address: toDisplayText(building.Address, "-"),
+    contactName: toDisplayText(building.Contact ?? building.ContactPerson, "-"),
+    contactPhone: toDisplayText(building.ContactPhone, "-"),
+    contactDisplay: buildBuildingContactDisplay(building),
+    operationTime: formatDateOnly(toDisplayText(building.OperationTime, "-")),
+    updatedAt: formatDateOnly(toDisplayText(building.UpdatedAt, "-")),
     // 建筑风险状态当前不在园区详情接口中，继续按默认状态展示明细。
     status: "一切正常",
   }
+}
+
+function buildBuildingContactDisplay(building: BuildingListItem) {
+  const contactName = toDisplayText(building.Contact ?? building.ContactPerson, "")
+  const contactPhone = toDisplayText(building.ContactPhone, "")
+
+  return [contactName, contactPhone].filter(Boolean).join(" ") || "-"
 }
 
 function buildBuildingStatusGroups(buildings: BuildingListItem[], park: ParkDetailResult) {
@@ -4352,14 +4369,16 @@ function buildParkBuildingModule(park: ParkDetailResult, buildings: BuildingList
     rowKey: "key",
     columns: [
       { key: "name", label: "名称", slot: "building-status-cell" },
-      { key: "address", label: "地址", cellClass: "truncate text-muted-foreground" },
+      { key: "contactDisplay", label: "联系人", cellClass: "truncate text-muted-foreground" },
+      { key: "operationTime", label: "投入运营时间", cellClass: "truncate text-muted-foreground" },
+      { key: "updatedAt", label: "更新时间", cellClass: "truncate text-muted-foreground" },
       { key: "actions", label: "", slot: "building-action-cell", cellClass: "flex justify-end" },
     ],
     groups,
     rowAction: row => goToBuildingDetail(row.uuid, row.parkUuid),
-    mobileMinWidth: "40rem",
-    columnTemplateMobile: "minmax(10rem,1.1fr) minmax(14rem,1.8fr) 6rem",
-    columnTemplateDesktop: "minmax(10rem,1.1fr) minmax(14rem,1.8fr) 6rem",
+    mobileMinWidth: "46rem",
+    columnTemplateMobile: "minmax(10rem,1.4fr) minmax(9rem,1fr) minmax(8rem,0.9fr) minmax(8rem,0.9fr) 3rem",
+    columnTemplateDesktop: "minmax(10rem,1.4fr) minmax(9rem,1fr) minmax(8rem,0.9fr) minmax(8rem,0.9fr) 3rem",
     columnGapMobile: "0.75rem",
     columnGapDesktop: "1rem",
   }
