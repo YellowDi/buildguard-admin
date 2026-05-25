@@ -78,6 +78,7 @@ export type ParkDetailResult = {
   OperationTime?: string
   CorpName?: string
   BuildArea?: string
+  BuildNum?: number
   Contact?: string
   ContactPhone?: string
   Latitude?: string

@@ -87,7 +87,12 @@ import {
   type CustomerSubAccountListItem,
   type CustomerSubAccountLocalRecord,
 } from "@/lib/customer-sub-accounts-api"
-import { deleteCustomer, fetchCustomerDetail, type CustomerDetailPerson, type CustomerDetailResult } from "@/lib/customers-api"
+import {
+  deleteCustomer,
+  fetchCustomerDetail,
+  type CustomerDetailPerson,
+  type CustomerDetailResult,
+} from "@/lib/customers-api"
 import {
   dispatchRepairWorkOrder,
   dispatchWorkOrder,
@@ -101,7 +106,7 @@ import {
   type WorkOrderListItem,
 } from "@/lib/work-orders-api"
 import customersData from "@/mocks/customers.json"
-import { fetchParkDetail, fetchParks, type ParkDetailResult, type ParkListItem } from "@/lib/parks-api"
+import { fetchParkDetail, fetchParks, type ParkDetailResult } from "@/lib/parks-api"
 
 type BuildingRow = {
   key: string
@@ -3118,19 +3123,14 @@ async function loadParkBuildings(uuid: string) {
     const groups = await Promise.all(
       parksResult.list.map(async (park, parkIndex) => {
         const parkUuid = toDisplayText(park.Uuid, "")
+        const parkDetail = parkUuid
+          ? await fetchParkDetail({ Uuid: parkUuid })
+          : park
         const buildingsResult = parkUuid
           ? await fetchBuildings({ ParkUuid: parkUuid })
           : { list: [], total: 0 }
 
-        return {
-          key: parkUuid || `park-${parkIndex + 1}`,
-          title: toDisplayText(park.Name, "未命名园区"),
-          meta: "",
-          details: buildParkFieldSections(park),
-          buildingModule: buildParkBuildingModule(park, buildingsResult.list),
-          parkUuid,
-          customerUuid: uuid,
-        }
+        return mapParkBuildingGroup(parkDetail, parkIndex, uuid, buildingsResult.list)
       }),
     )
 
@@ -4258,7 +4258,55 @@ function toOptionalNumber(value: unknown) {
   return Number.isFinite(parsed) ? parsed : null
 }
 
-function normalizeBuildingRow(building: BuildingListItem, park: ParkListItem, index: number): BuildingRow {
+function mapParkBuildingGroup(
+  park: ParkDetailResult,
+  index: number,
+  customerUuidValue: string,
+  buildings: BuildingListItem[],
+): ParkBuildingGroup {
+  const parkUuid = toDisplayText(park.Uuid, "")
+
+  return {
+    key: parkUuid || `park-${index + 1}`,
+    title: toDisplayText(park.Name, "未命名园区"),
+    meta: buildParkMeta(park, buildings),
+    details: buildParkFieldSections(park),
+    buildingModule: buildParkBuildingModule(park, buildings),
+    parkUuid,
+    customerUuid: customerUuidValue,
+  }
+}
+
+function buildParkFieldSections(park: ParkDetailResult): DetailFieldSection[] {
+  return [
+    {
+      key: "park-fields",
+      title: "",
+      rows: [
+        { key: "build-num", label: "建筑数量", value: formatParkCount(park.BuildNum, "栋") },
+        { key: "build-area", label: "建筑面积", value: toDisplayText(park.BuildArea, "-") },
+        { key: "built-time", label: "建成时间", value: toDisplayText(park.BuiltTime, "-") },
+        { key: "operation-time", label: "投入运营时间", value: toDisplayText(park.OperationTime, "-") },
+        { key: "contact", label: "联系人", value: toDisplayText(park.Contact, "-") },
+        { key: "contact-phone", label: "联系方式", value: toDisplayText(park.ContactPhone, "-") },
+        { key: "address", label: "地址", value: toDisplayText(park.Address, "-"), truncate: false, valueClass: "leading-6" },
+        { key: "updated-at", label: "更新时间", value: toDisplayText(park.UpdatedAt, "-") },
+      ],
+    },
+  ]
+}
+
+function buildParkMeta(park: ParkDetailResult, buildings: BuildingListItem[]) {
+  const buildCount = toOptionalNumber(park.BuildNum) ?? buildings.length
+  return `建筑 ${formatParkCount(buildCount, "栋")}`
+}
+
+function formatParkCount(value: unknown, unit: string) {
+  const count = toOptionalNumber(value)
+  return count === null ? "-" : `${count}${unit}`
+}
+
+function normalizeBuildingRow(building: BuildingListItem, park: ParkDetailResult, index: number): BuildingRow {
   const parkUuid = toDisplayText(park.Uuid, "park")
 
   return {
@@ -4267,12 +4315,12 @@ function normalizeBuildingRow(building: BuildingListItem, park: ParkListItem, in
     parkUuid,
     name: toDisplayText(building.Name, "未命名建筑"),
     address: toDisplayText(building.Address, "-"),
-    // 接口暂未返回检测状态，先用默认值占位，后续可直接替换成真实字段映射。
+    // 建筑风险状态当前不在园区详情接口中，继续按默认状态展示明细。
     status: "一切正常",
   }
 }
 
-function buildBuildingStatusGroups(buildings: BuildingListItem[], park: ParkListItem) {
+function buildBuildingStatusGroups(buildings: BuildingListItem[], park: ParkDetailResult) {
   const rows = buildings.map((building, index) => normalizeBuildingRow(building, park, index))
 
   return [
@@ -4294,21 +4342,7 @@ function buildBuildingStatusGroups(buildings: BuildingListItem[], park: ParkList
   ].filter(group => group.rows.length)
 }
 
-function buildParkFieldSections(park: ParkListItem): DetailFieldSection[] {
-  return [
-    {
-      key: "park-fields",
-      title: "",
-      rows: [
-        { key: "built-time", label: "建成时间", value: toDisplayText(park.BuiltTime, "-") },
-        { key: "operation-time", label: "投入运营时间", value: toDisplayText(park.OperationTime, "-") },
-        { key: "address", label: "地址", value: toDisplayText(park.Address, "-"), truncate: false, valueClass: "leading-6" },
-      ],
-    },
-  ]
-}
-
-function buildParkBuildingModule(park: ParkListItem, buildings: BuildingListItem[]): DetailRelationModuleSchema<BuildingRow> {
+function buildParkBuildingModule(park: ParkDetailResult, buildings: BuildingListItem[]): DetailRelationModuleSchema<BuildingRow> {
   const groups = buildBuildingStatusGroups(buildings, park)
 
   return {
