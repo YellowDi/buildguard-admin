@@ -61,7 +61,7 @@ export type CustomerDetailResult = {
   CorpName?: string
   Address?: string
   Invoice?: string
-  Level?: number | string
+  Level?: string
   [property: string]: unknown
 }
 
