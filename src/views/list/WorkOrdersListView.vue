@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import TablePage from "@/components/table-page/TablePage.vue"
 import { TooltipWrap } from "@/components/ui/tooltip"
-import { workOrderStatusMap } from "@/components/table-page/statusPresets"
+import { repairWorkOrderStatusMap, workOrderStatusMap } from "@/components/table-page/statusPresets"
 import { createTablePageDefinition, useTablePage } from "@/components/table-page/useTablePage"
 import type { TablePageSchema, TableQueryBarConfig } from "@/components/table-page/types"
 import { handleApiError } from "@/lib/api-errors"
@@ -1074,7 +1074,7 @@ function createRepairColumns(): TablePageSchema<WorkOrderRecord>["columns"] {
       filterType: "tag",
       cellRenderer: {
         kind: "status",
-        map: workOrderStatusMap,
+        map: repairWorkOrderStatusMap,
         fallback: { tone: "gray", icon: "dot" },
       },
       filter: {

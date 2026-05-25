@@ -1,5 +1,5 @@
 import type { DetailContactValue, DetailFieldMediaFile, DetailFieldSection, DetailStatusValue } from "@/components/detail/types"
-import { workOrderStatusMap } from "@/components/table-page/statusPresets"
+import { repairWorkOrderStatusMap } from "@/components/table-page/statusPresets"
 import type { CustomerDetailResult } from "@/lib/customers-api"
 import { formatRepairDictionaryLabel, type RepairDictionaryOption } from "@/lib/repair-work-order-dictionaries"
 import { getRepairWorkOrderStatusLabel } from "@/lib/work-order-status"
@@ -262,7 +262,7 @@ function buildRepairWorkOrderStatusValue(value: unknown): DetailStatusValue {
     value: formatRepairWorkOrderStatus(value),
     renderer: {
       kind: "status",
-      map: workOrderStatusMap,
+      map: repairWorkOrderStatusMap,
       fallback: { tone: "gray", icon: "dot" },
     },
   }

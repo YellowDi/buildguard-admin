@@ -36,7 +36,7 @@ import CustomerDetailContentLoading from "@/components/loading/CustomerDetailCon
 import DetailFieldsSkeleton from "@/components/loading/DetailFieldsSkeleton.vue"
 import TopTabSwitch from "@/components/layout/TopTabSwitch.vue"
 import ExportTableDialog from "@/components/table-page/ExportTableDialog.vue"
-import { customerStatusMap, subAccountStatusMap, workOrderStatusMap } from "@/components/table-page/statusPresets"
+import { customerStatusMap, repairWorkOrderStatusMap, subAccountStatusMap, workOrderStatusMap } from "@/components/table-page/statusPresets"
 import {
   Pagination,
   PaginationContent,
@@ -1499,7 +1499,7 @@ const repairWorkOrdersSchema: TablePageSchema<CustomerWorkOrderRow> = {
       filterType: "tag",
       cellRenderer: {
         kind: "status",
-        map: workOrderStatusMap,
+        map: repairWorkOrderStatusMap,
         fallback: { tone: "gray", icon: "dot" },
       },
       filter: {
