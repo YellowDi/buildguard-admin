@@ -144,7 +144,6 @@ type MaintenanceRecordRow = {
   orderNo: string
   status: "pending" | "processing" | "completed"
   serviceTooltip: string
-  result: string
   location: string
   parkName: string
   item: string
@@ -894,12 +893,6 @@ const maintenanceModule = computed<DetailRelationModuleSchema<MaintenanceRecordR
       columns: [
         { key: "orderNo", label: "检测工单", slot: "inspection-overview-service-cell" },
         {
-          key: "result",
-          label: "检测结果",
-          headerClass: "text-center",
-          cellClass: "flex min-w-0 items-center justify-center overflow-hidden text-center whitespace-nowrap text-muted-foreground",
-        },
-        {
           key: "executor",
           label: "执行人",
           headerClass: "text-center",
@@ -915,9 +908,9 @@ const maintenanceModule = computed<DetailRelationModuleSchema<MaintenanceRecordR
       ],
       groups: [],
       rowAction: row => handleOverviewWorkOrderDetail(row),
-      mobileMinWidth: "44rem",
-      columnTemplateMobile: "minmax(11rem,1.2fr) 6.5rem minmax(12rem,1.5fr) 8rem 2.75rem",
-      columnTemplateDesktop: "minmax(11rem,1.2fr) 6.5rem minmax(12rem,1.5fr) 8rem 2.75rem",
+      mobileMinWidth: "42rem",
+      columnTemplateMobile: "minmax(16rem,2fr) minmax(12rem,1fr) 8rem 2.75rem",
+      columnTemplateDesktop: "minmax(16rem,2fr) minmax(12rem,1fr) 8rem 2.75rem",
       columnGapMobile: "0.75rem",
       columnGapDesktop: "1rem",
     }
@@ -935,12 +928,6 @@ const maintenanceModule = computed<DetailRelationModuleSchema<MaintenanceRecordR
     columns: [
       { key: "orderNo", label: "检测工单", slot: "inspection-overview-service-cell" },
       {
-        key: "result",
-        label: "检测结果",
-        headerClass: "text-center",
-        cellClass: "flex min-w-0 items-center justify-center overflow-hidden text-center whitespace-nowrap text-muted-foreground",
-      },
-      {
         key: "executor",
         label: "执行人",
         headerClass: "text-center",
@@ -956,9 +943,9 @@ const maintenanceModule = computed<DetailRelationModuleSchema<MaintenanceRecordR
     ],
     groups: buildMaintenanceGroups(maintenanceRecords.value),
     rowAction: row => handleOverviewWorkOrderDetail(row),
-    mobileMinWidth: "44rem",
-    columnTemplateMobile: "minmax(11rem,1.2fr) 6.5rem minmax(12rem,1.5fr) 8rem 2.75rem",
-    columnTemplateDesktop: "minmax(11rem,1.2fr) 6.5rem minmax(12rem,1.5fr) 8rem 2.75rem",
+    mobileMinWidth: "42rem",
+    columnTemplateMobile: "minmax(16rem,2fr) minmax(12rem,1fr) 8rem 2.75rem",
+    columnTemplateDesktop: "minmax(16rem,2fr) minmax(12rem,1fr) 8rem 2.75rem",
     columnGapMobile: "0.75rem",
     columnGapDesktop: "1rem",
   }
@@ -3686,7 +3673,6 @@ function mapMaintenanceRecordRow(row: CustomerWorkOrderRow): MaintenanceRecordRo
       row.packageName !== "-" ? row.packageName : "未设置检测服务",
       row.planName !== "-" ? row.planName : "未关联计划",
     ].join(" / "),
-    result: row.resultLabel,
     location,
     parkName: row.parkName !== "-" ? row.parkName : "未关联园区",
     item: row.remark !== "-" ? row.remark : row.reportTypeLabel,
@@ -3711,7 +3697,6 @@ function mapRepairOverviewRecordRow(row: CustomerWorkOrderRow): MaintenanceRecor
     orderNo: row.orderNo,
     status: mapMaintenanceStatus(row),
     serviceTooltip: "-",
-    result: "-",
     location,
     parkName: row.parkName !== "-" ? row.parkName : "未关联园区",
     item: row.reportTypeLabel !== "-" ? row.reportTypeLabel : "未设置",
