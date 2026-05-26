@@ -37,9 +37,6 @@ type CustomerRecord = {
   principalName: string
   principalPhone: string
   principalDisplay: string
-  packageInfo: string
-  packageName: string
-  packageCode: string
   parkCount: string
   parkCountValue: number | null
   buildingCount: string
@@ -191,19 +188,6 @@ const schema: TablePageSchema<CustomerRecord> = {
         type: "tag",
         label: "行业",
         defaultVisible: true,
-      },
-      sort: true,
-    },
-    {
-      key: "packageInfo",
-      label: "服务信息",
-      filterType: "text",
-      width: "fill",
-      slot: "cell-packageInfo",
-      filter: {
-        type: "text",
-        label: "服务信息",
-        placeholder: "输入服务名称或编码",
       },
       sort: true,
     },
@@ -428,7 +412,6 @@ function buildPageFilterText(row: CustomerRecord) {
     row.principalDisplay,
     row.levelLabel,
     row.business,
-    row.packageInfo,
     row.parkCount,
     row.buildingCount,
     row.createdAt,
@@ -526,8 +509,6 @@ function normalizeCustomerRecord(
   const customerName = getDirectCustomerName(item)
   const principalName = toText(item.PrincipalName, "-")
   const principalPhone = toText(item.PrincipalPhone, "-")
-  const packageName = getPrimaryPackageName(item)
-  const packageCode = getPrimaryPackageCode(item)
   const status = getFirstNumber(item, ["Status", "status"])
   const parkCountValue = getFirstNumber(item, ["ParkNum", "ParkCount", "ParksCount"])
   const buildingCountValue = getFirstNumber(item, ["BuildNum", "BuildingNum", "BuildCount"])
@@ -546,9 +527,6 @@ function normalizeCustomerRecord(
     principalName,
     principalPhone,
     principalDisplay: [principalName, principalPhone].filter(value => value && value !== "-").join(" "),
-    packageInfo: formatPackageInfo(packageName, packageCode),
-    packageName,
-    packageCode,
     parkCount: parkCountValue === null ? "-" : String(parkCountValue),
     parkCountValue,
     buildingCount: buildingCountValue === null ? "-" : String(buildingCountValue),
@@ -561,40 +539,12 @@ function getLevelValue(item: CustomerListItem) {
   return getFirstText(item, ["Level", "CustomerLevel", "LevelLabel", "CustomerLevelLabel", "LevelName"], "")
 }
 
-function formatPackageInfo(packageName: string, packageCode: string) {
-  if (!packageName || packageName === "-") {
-    return "-"
-  }
-
-  return packageCode ? `${packageName} (${packageCode})` : packageName
-}
-
 function getCustomerUuid(item: CustomerListItem) {
   return getFirstText(item, ["Uuid", "uuid", "CustomerUuid"], "")
 }
 
 function getDirectCustomerName(item: CustomerListItem) {
   return getFirstText(item, ["CorpName", "CustomerName", "Name", "CompanyName"], "")
-}
-
-function getPrimaryPackageName(item: CustomerListItem) {
-  const listServices = uniqueText(
-    (Array.isArray(item.Services) ? item.Services : [])
-      .map(service => toText(service?.Name))
-      .filter(Boolean),
-  )
-
-  return listServices.length ? listServices.join("、") : "-"
-}
-
-function getPrimaryPackageCode(item: CustomerListItem) {
-  const listServiceCodes = uniqueText(
-    (Array.isArray(item.Services) ? item.Services : [])
-      .map(service => toText(service?.Uuid, toText(service?.Id)))
-      .filter(Boolean),
-  )
-
-  return listServiceCodes.length ? listServiceCodes.join("、") : ""
 }
 
 function getFirstText(
@@ -654,10 +604,6 @@ function toNumber(value: unknown) {
   return null
 }
 
-function uniqueText(values: string[]) {
-  return Array.from(new Set(values.map(value => value.trim()).filter(Boolean)))
-}
-
 function toTimestamp(value: unknown) {
   const text = toText(value)
 
@@ -667,26 +613,6 @@ function toTimestamp(value: unknown) {
 
   const timestamp = new Date(text.replace(" ", "T")).getTime()
   return Number.isFinite(timestamp) ? timestamp : null
-}
-
-function jumpToInspectionServices(row: unknown) {
-  if (!row || typeof row !== "object") {
-    return
-  }
-
-  const customerName = toText((row as { customerName?: unknown }).customerName, "")
-  const packageName = toText((row as { packageName?: unknown }).packageName, "")
-  const packageCode = toText((row as { packageCode?: unknown }).packageCode, "")
-  const query = customerName && customerName !== "未命名客户"
-    ? customerName
-    : packageName && packageName !== "-"
-      ? packageName
-      : packageCode
-
-  void router.push({
-    name: "inspection-services",
-    query: query ? { q: query } : undefined,
-  })
 }
 
 function handleCreateCustomer() {
@@ -798,17 +724,6 @@ function handleLinkedDetailSheetOpenChange(open: boolean) {
       @query-change="handleQueryChange"
       @query-clear="handleQueryClear"
     >
-      <template #cell-packageInfo="{ row }">
-        <button
-          type="button"
-          class="inline-flex max-w-full items-center gap-1 text-left text-link transition-colors hover:text-link-hover"
-          @click="jumpToInspectionServices(row)"
-        >
-          <span class="truncate">{{ row.packageInfo }}</span>
-          <i class="ri-arrow-right-up-line shrink-0 text-sm" />
-        </button>
-      </template>
-
       <template #footer>
         <Pagination
           v-model:page="pageNum"
