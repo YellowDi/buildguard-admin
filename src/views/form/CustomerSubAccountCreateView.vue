@@ -158,9 +158,7 @@ async function handleSubmit() {
     })
 
     toast.success("子账号已创建", {
-      description: result.Uuid
-        ? `子账号 UUID：${result.Uuid}`
-        : "子账号信息已提交到接口。",
+      description: "子账号信息已保存。",
     })
 
     await router.push({

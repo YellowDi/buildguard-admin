@@ -94,7 +94,7 @@ const schema: TablePageSchema<ParkRecord> = {
   },
   onQuickAction: row => {
     if (!row.uuid) {
-      toast.error("当前园区缺少 Uuid，无法打开侧边详情")
+      toast.error("园区信息不完整，无法打开详情")
       return
     }
 

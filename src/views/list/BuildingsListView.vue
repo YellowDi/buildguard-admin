@@ -178,7 +178,7 @@ const schema: TablePageSchema<BuildingRecord> = {
   ],
   onRowClick: row => {
     if (!row.uuid) {
-      toast.error("当前建筑缺少 Uuid，无法打开详情")
+      toast.error("建筑信息不完整，无法打开详情")
       return
     }
 
@@ -198,7 +198,7 @@ const schema: TablePageSchema<BuildingRecord> = {
   },
   onQuickAction: row => {
     if (!row.uuid || !row.parkUuid) {
-      toast.error("当前建筑缺少必要参数，无法打开侧边详情")
+      toast.error("建筑信息不完整，无法打开详情")
       return
     }
 

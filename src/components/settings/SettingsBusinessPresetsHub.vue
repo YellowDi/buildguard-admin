@@ -337,7 +337,7 @@ function promptDeleteEditingItem() {
   }
 
   if (!editingItemUuid.value) {
-    toast.error("当前条目缺少标识，无法删除")
+    toast.error("条目信息不完整，无法删除")
     return
   }
 
@@ -396,7 +396,7 @@ async function submitEditType() {
   const remark = typeForm.value.remark.trim()
 
   if (!currentType?.Uuid) {
-    toast.error("当前字典类型缺少标识，无法编辑")
+    toast.error("字典类型信息不完整，无法编辑")
     return
   }
 
@@ -490,7 +490,7 @@ async function confirmDeleteItem() {
   }
 
   if (!deletingItem.value?.uuid) {
-    toast.error("当前条目缺少标识，无法删除")
+    toast.error("条目信息不完整，无法删除")
     return
   }
 
@@ -517,7 +517,7 @@ async function confirmDeleteType() {
   const currentType = activeType.value
 
   if (!currentType?.Uuid) {
-    toast.error("当前字典类型缺少标识，无法删除")
+    toast.error("字典类型信息不完整，无法删除")
     return
   }
 

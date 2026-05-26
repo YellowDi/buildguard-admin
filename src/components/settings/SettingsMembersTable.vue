@@ -1370,7 +1370,7 @@ async function updateMemberRole(memberId: number, nextRoleUuidValue: string) {
 
   if (!member.uuid) {
     toast.error("成员权限组更新失败", {
-      description: `${member.name} 缺少用户 UUID，无法提交更新。`,
+      description: `${member.name} 的信息不完整，无法提交更新。`,
     })
     return
   }
@@ -1426,7 +1426,7 @@ async function updateMemberUserTypesInline(memberId: number, nextUserTypeValues:
 
   if (!member.uuid) {
     toast.error("成员类型更新失败", {
-      description: `${member.name} 缺少用户 UUID，无法提交更新。`,
+      description: `${member.name} 的信息不完整，无法提交更新。`,
     })
     return
   }
@@ -1469,7 +1469,7 @@ async function updateMemberStatus(member: MemberRow, nextStatus: number) {
 
   if (!member.uuid) {
     toast.error("成员状态更新失败", {
-      description: `${member.name} 缺少用户 UUID，无法提交更新。`,
+      description: `${member.name} 的信息不完整，无法提交更新。`,
     })
     return
   }
@@ -1507,15 +1507,15 @@ function handleMemberAction(actionKey: MemberActionKey, member?: MemberRow) {
   }
 
   if (actionKey === "import-excel") {
-    toast("导入流程待接入", {
-      description: "后续可接 Excel / CSV 导入并校验成员数据。",
+    toast("导入功能暂不可用", {
+      description: "成员导入功能暂不可用，请稍后再试。",
     })
     return
   }
 
   if (actionKey === "sync-directory") {
-    toast("组织架构同步待接入", {
-      description: "当前先预留同步入口，后续可接企业微信或内部组织树。",
+    toast("组织架构同步暂不可用", {
+      description: "组织架构同步暂不可用，请稍后再试。",
     })
     return
   }
@@ -1534,8 +1534,8 @@ function handleMemberAction(actionKey: MemberActionKey, member?: MemberRow) {
   }
 
   if (actionKey === "view") {
-    toast("成员详情待接入", {
-      description: `已为 ${member.name} 预留详情入口。`,
+    toast("成员详情暂不可用", {
+      description: `${member.name} 的详情暂不可查看。`,
     })
     return
   }
@@ -1732,7 +1732,7 @@ async function submitManualMember() {
     manualDialogOpen.value = false
     manualMemberForm.value = createManualMemberForm()
     toast.success("成员已创建", {
-      description: `${name} 已提交到成员接口。`,
+      description: `${name} 的成员信息已保存。`,
     })
     await loadMembers()
   } catch (error) {
@@ -1797,7 +1797,7 @@ async function submitRole() {
     if (isEditingRole) {
       if (!editingRoleUuidValue) {
         toast.error("角色更新失败", {
-          description: `${name} 缺少角色 Uuid，无法提交更新。`,
+          description: `${name} 的角色信息不完整，无法提交更新。`,
         })
         return
       }
@@ -1847,7 +1847,7 @@ async function submitRole() {
 
       if (!savedRoleUuid) {
         toast.error("角色创建失败", {
-          description: `${name} 缺少角色 Uuid，无法保存菜单权限。`,
+          description: `${name} 的角色信息不完整，无法保存菜单权限。`,
         })
         return
       }
@@ -1899,7 +1899,7 @@ async function confirmDeleteEditingRole() {
 
   if (!roleUuid) {
     toast.error("角色删除失败", {
-      description: `${role.name} 缺少角色 Uuid，无法提交删除。`,
+      description: `${role.name} 的角色信息不完整，无法提交删除。`,
     })
     return
   }
@@ -2002,7 +2002,7 @@ async function submitEditMember() {
 
   if (!member.uuid) {
     toast.error("成员信息更新失败", {
-      description: `${member.name} 缺少用户 UUID，无法提交更新。`,
+      description: `${member.name} 的信息不完整，无法提交更新。`,
     })
     return
   }
@@ -2153,7 +2153,7 @@ async function confirmDeleteEditingMember() {
     } else {
       if (!member.uuid) {
         toast.error("成员删除失败", {
-          description: `${member.name} 缺少 Uuid，无法提交删除请求。`,
+          description: `${member.name} 的信息不完整，无法提交删除请求。`,
         })
         return
       }

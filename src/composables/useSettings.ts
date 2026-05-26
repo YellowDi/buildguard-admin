@@ -381,21 +381,21 @@ function setActiveKey(nextKey: SettingsCategoryKey) {
 
 function runAction(actionKey: SettingsActionKey) {
   if (actionKey === "open-members-directory") {
-    toast("成员名册待接入", {
-      description: "入口已预留，后续可直接连到成员列表或权限页。",
+    toast("成员名册暂不可用", {
+      description: "该功能暂不可用，请稍后再试。",
     })
     return
   }
 
   if (actionKey === "review-member-invites") {
-    toast("邀请审批面板待接入", {
-      description: "当前先保留交互入口，后续可接真实邀请流。",
+    toast("邀请审批暂不可用", {
+      description: "该功能暂不可用，请稍后再试。",
     })
     return
   }
 
   toast.error("操作未开放", {
-    description: "该操作入口已预留，接入前端确认流后再启用。",
+    description: "该操作暂不可用，请稍后再试。",
   })
 }
 

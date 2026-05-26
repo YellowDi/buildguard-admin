@@ -403,14 +403,14 @@ function handleTableMoreActionSelect(action: TableMoreActionKey) {
   }
 
   const actionLabel = tableMoreActions.find(item => item.key === action)?.label ?? "该功能"
-  toast.info(`${actionLabel}暂未接入`, {
-    description: "当前仅保留入口，后续会补齐实际能力。",
+  toast.info(`${actionLabel}暂不可用`, {
+    description: "该功能暂不可用，请稍后再试。",
   })
 }
 
 function handlePlaceholderBulkAction(actionLabel: string) {
-  toast.info(`${actionLabel}暂未接入`, {
-    description: "当前仅保留批量操作入口，后续会补齐实际能力。",
+  toast.info(`${actionLabel}暂不可用`, {
+    description: "该功能暂不可用，请稍后再试。",
   })
 }
 

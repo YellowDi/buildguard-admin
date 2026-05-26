@@ -211,17 +211,17 @@ async function handleSubmit() {
       FirstTime: firstTime,
       EndTime: endTime,
     }
-    const result = isEditMode.value
-      ? await updateInspectionPlan({
-          Uuid: editingPlanUuid.value,
-          ...payload,
-        })
-      : await createInspectionPlan(payload)
+    if (isEditMode.value) {
+      await updateInspectionPlan({
+        Uuid: editingPlanUuid.value,
+        ...payload,
+      })
+    } else {
+      await createInspectionPlan(payload)
+    }
 
     toast.success(isEditMode.value ? "检测计划已更新" : "检测计划已创建", {
-      description: result.Uuid
-        ? `计划 UUID：${result.Uuid}`
-        : `${selectedCustomerName.value || "当前客户"}的${selectedServiceName.value || "检测"}计划已提交到接口。`,
+      description: `${selectedCustomerName.value || "当前客户"}的${selectedServiceName.value || "检测"}计划已保存。`,
     })
 
     await router.push({ name: "inspection-plans" })

@@ -833,9 +833,7 @@ async function handleSubmit() {
       })
 
       toast.success("检测服务已更新", {
-        description: result.Uuid
-          ? `服务 UUID：${result.Uuid}`
-          : `${selectedCustomerName.value || "当前客户"}的检测服务信息已保存。`,
+        description: `${selectedCustomerName.value || "当前客户"}的检测服务信息已保存。`,
       })
 
       await router.push({
@@ -845,12 +843,10 @@ async function handleSubmit() {
       return
     }
 
-    const result = await createInspectionService(payload)
+    await createInspectionService(payload)
 
     toast.success("检测服务已创建", {
-      description: result.Uuid
-        ? `服务 UUID：${result.Uuid}`
-        : `${selectedCustomerName.value || "当前客户"}的检测服务已创建成功。`,
+      description: `${selectedCustomerName.value || "当前客户"}的检测服务已创建成功。`,
     })
 
     await router.push({ name: "inspection-services" })

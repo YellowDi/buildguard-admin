@@ -437,22 +437,24 @@ function normalizeMemberRoleItems(value: unknown): MemberDetailRole[] {
     return []
   }
 
-  return value
-    .map((item) => {
-      const record = asRecord(item)
+  const roles: MemberDetailRole[] = []
 
-      if (!record) {
-        return null
-      }
+  value.forEach((item) => {
+    const record = asRecord(item)
 
-      return {
-        ...record,
-        RoleId: normalizeResponseNumber(record.RoleId),
-        RoleName: normalizeResponseString(record.RoleName),
-        RoleUuid: normalizeResponseString(record.RoleUuid),
-      }
+    if (!record) {
+      return
+    }
+
+    roles.push({
+      ...record,
+      RoleId: normalizeResponseNumber(record.RoleId),
+      RoleName: normalizeResponseString(record.RoleName),
+      RoleUuid: normalizeResponseString(record.RoleUuid),
     })
-    .filter((item): item is MemberDetailRole => item !== null)
+  })
+
+  return roles
 }
 
 function normalizeResponseUserTypes(value: unknown): MemberUserTypeValue | undefined {
@@ -460,14 +462,17 @@ function normalizeResponseUserTypes(value: unknown): MemberUserTypeValue | undef
     return undefined
   }
 
-  const normalized = Array.from(new Set(
-    value
-      .map((item) => {
-        const parsed = Number(item)
-        return parsed === 1 || parsed === 2 || parsed === 3 ? parsed : null
-      })
-      .filter((item): item is number => item !== null),
-  ))
+  const normalized: MemberUserTypeValue = []
+  const seen = new Set<number>()
+
+  value.forEach((item) => {
+    const parsed = Number(item)
+
+    if ((parsed === 1 || parsed === 2 || parsed === 3) && !seen.has(parsed)) {
+      seen.add(parsed)
+      normalized.push(parsed)
+    }
+  })
 
   return normalized.length ? normalized : undefined
 }

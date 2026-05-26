@@ -191,19 +191,17 @@ async function handleSubmit() {
       Longitude: getOptionalText(form.longitude),
       Address: getOptionalText(form.address),
     }
-    const result = isEditMode.value
-      ? await updatePark({
-          Uuid: parkUuid.value,
-          ...payload,
-        })
-      : await createPark(payload)
+    if (isEditMode.value) {
+      await updatePark({
+        Uuid: parkUuid.value,
+        ...payload,
+      })
+    } else {
+      await createPark(payload)
+    }
 
     toast.success(isEditMode.value ? "园区信息已更新" : "园区已创建", {
-      description: result.Uuid
-        ? `园区 UUID：${result.Uuid}`
-        : isEditMode.value
-          ? "园区信息已更新。"
-          : "园区信息已提交到接口。",
+      description: "园区信息已保存。",
     })
 
     await router.push({

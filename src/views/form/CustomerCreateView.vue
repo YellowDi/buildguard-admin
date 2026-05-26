@@ -381,7 +381,7 @@ async function handleSubmit() {
       }
 
       toast.success("客户信息已更新", {
-        description: editCustomerUuid.value ? `客户 UUID：${editCustomerUuid.value}` : "客户资料已更新。",
+        description: "客户资料已更新。",
       })
 
       await router.push({
@@ -394,7 +394,7 @@ async function handleSubmit() {
     const result = await createCustomer(payload)
 
     toast.success("客户已创建", {
-      description: result.Uuid ? `客户 UUID：${result.Uuid}` : "客户信息已提交到接口。",
+      description: "客户信息已保存。",
     })
 
     if (result.Uuid) {

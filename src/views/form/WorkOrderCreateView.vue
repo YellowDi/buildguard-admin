@@ -465,7 +465,7 @@ async function handleSubmit() {
 
 async function handleInspectionEditSubmit() {
   if (!normalizeText(workOrderUuid.value)) {
-    toast.error("工单 Uuid 缺失")
+    toast.error("工单信息不完整")
     return
   }
 
@@ -476,12 +476,10 @@ async function handleInspectionEditSubmit() {
       Uuid: normalizeText(workOrderUuid.value),
       Remark: getOptionalText(form.remark),
     }
-    const result = await updateWorkOrder(payload)
+    await updateWorkOrder(payload)
 
     toast.success("工单备注已更新", {
-      description: result.Uuid
-        ? `工单 UUID：${result.Uuid}`
-        : "工单备注已提交到接口。",
+      description: "工单备注已保存。",
     })
 
     if (queryReturnTo.value === "inspection-work-orders") {
@@ -549,12 +547,10 @@ async function handleInspectionCreateSubmit() {
       Status: parseIntegerField(form.status) ?? Number(DEFAULT_INSPECTION_STATUS),
       Remark: getOptionalText(form.remark),
     }
-    const result = await createWorkOrder(payload)
+    await createWorkOrder(payload)
 
     toast.success("工单已创建", {
-      description: result.Uuid
-        ? `工单 UUID：${result.Uuid}`
-        : "工单信息已提交到接口。",
+      description: "工单信息已保存。",
     })
 
     if (queryReturnTo.value === "inspection-work-orders") {
@@ -654,12 +650,10 @@ async function handleRepairCreateSubmit() {
   submitting.value = true
 
   try {
-    const result = await createRepairWorkOrder(payload)
+    await createRepairWorkOrder(payload)
 
     toast.success("报修工单已创建", {
-      description: result.Uuid
-        ? `工单 UUID：${result.Uuid}`
-        : "报修工单信息已提交到接口。",
+      description: "报修工单信息已保存。",
     })
 
     if (queryReturnTo.value === "repair-work-orders") {
@@ -682,7 +676,7 @@ async function handleRepairUpdateSubmit() {
   const uuid = normalizeText(workOrderUuid.value)
 
   if (!uuid) {
-    toast.error("报修工单 Uuid 缺失")
+    toast.error("报修工单信息不完整")
     return
   }
 

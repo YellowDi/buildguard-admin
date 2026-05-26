@@ -110,7 +110,7 @@ const schema: TablePageSchema<InspectionServiceRecord> = {
   },
   onQuickAction: row => {
     if (!row.uuid) {
-      toast.error("当前检测服务缺少 Uuid，无法打开侧边详情")
+      toast.error("检测服务信息不完整，无法打开详情")
       return
     }
 
@@ -442,7 +442,7 @@ function jumpToCustomerDetail(row: Record<string, unknown>) {
   const nextCustomerUuid = typeof row.customerUuid === "string" ? row.customerUuid : ""
 
   if (!nextCustomerUuid) {
-    toast.error("当前检测服务缺少客户 Uuid，无法跳转客户详情")
+    toast.error("检测服务关联客户信息不完整，无法跳转客户详情")
     return
   }
 
@@ -456,7 +456,7 @@ function jumpToParkDetail(row: Record<string, unknown>) {
   const customerUuid = typeof row.customerUuid === "string" ? row.customerUuid : ""
 
   if (!parkUuid) {
-    toast.error("当前检测服务缺少园区 Uuid，无法打开园区详情")
+    toast.error("检测服务关联园区信息不完整，无法打开园区详情")
     return
   }
 

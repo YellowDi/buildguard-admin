@@ -520,7 +520,7 @@ function buildPageFilterText(row: WorkOrderRecord) {
 
 function handleViewDetail(row: WorkOrderRecord) {
   if (!row.uuid) {
-    toast.error("当前工单缺少 Uuid，无法查看详情")
+    toast.error("工单信息不完整，无法查看详情")
     return
   }
 
@@ -536,7 +536,7 @@ function handleViewDetail(row: WorkOrderRecord) {
 
 async function handleAssign(row: WorkOrderRecord) {
   if (!row.uuid) {
-    toast.error("当前工单缺少 Uuid，无法指派")
+    toast.error("工单信息不完整，无法指派")
     return
   }
 
@@ -557,7 +557,7 @@ async function handleAssign(row: WorkOrderRecord) {
 
 function handleOpenPreviewSheet(row: WorkOrderRecord) {
   if (!row.uuid) {
-    toast.error("当前工单缺少 Uuid，无法打开侧边预览")
+    toast.error("工单信息不完整，无法打开预览")
     return
   }
 
@@ -624,7 +624,7 @@ async function submitAssign() {
   const currentTarget = assignTargetWorkOrder.value
 
   if (!currentTarget?.uuid) {
-    toast.error("当前工单缺少 Uuid，无法指派")
+    toast.error("工单信息不完整，无法指派")
     return
   }
 
@@ -1372,7 +1372,7 @@ function jumpToCustomerDetail(row: Record<string, unknown>) {
   const nextCustomerUuid = typeof row.customerUuid === "string" ? row.customerUuid : ""
 
   if (!nextCustomerUuid) {
-    toast.error("当前工单缺少客户 Uuid，无法跳转客户详情")
+    toast.error("工单关联客户信息不完整，无法跳转客户详情")
     return
   }
 

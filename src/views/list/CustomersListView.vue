@@ -90,7 +90,7 @@ const schema: TablePageSchema<CustomerRecord> = {
       label: "查看详情",
       onClick: (row) => {
         if (!row.detailId) {
-          toast.error("当前客户缺少 Uuid，无法打开详情")
+          toast.error("客户信息不完整，无法打开详情")
           return
         }
 
@@ -100,7 +100,7 @@ const schema: TablePageSchema<CustomerRecord> = {
   ],
   onRowClick: row => {
     if (!row.detailId) {
-      toast.error("当前客户缺少 Uuid，无法打开详情")
+      toast.error("客户信息不完整，无法打开详情")
       return
     }
 
@@ -108,7 +108,7 @@ const schema: TablePageSchema<CustomerRecord> = {
   },
   onQuickAction: row => {
     if (!row.detailId) {
-      toast.error("当前客户缺少 Uuid，无法打开侧边详情")
+      toast.error("客户信息不完整，无法打开详情")
       return
     }
 

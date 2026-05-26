@@ -697,14 +697,14 @@ async function handleApiImportFileChange(event: Event) {
 
   try {
     await importSystemApi(file)
-    toast.success("API 导入成功", {
+    toast.success("权限资源导入成功", {
       description: `${file.name} 已导入并刷新列表。`,
     })
     await loadApis()
   } catch (error) {
     handleApiError(error, {
-      title: "API 导入失败",
-      fallback: "API 导入失败，请稍后重试。",
+      title: "权限资源导入失败",
+      fallback: "权限资源导入失败，请稍后重试。",
     })
   } finally {
     importSubmitting.value = false
@@ -1130,7 +1130,7 @@ async function submitMenu() {
 
     if (menuDialogMode.value === "edit") {
       if (!editingMenuUuid.value) {
-        toast.error("缺少菜单 Uuid，无法保存修改")
+        toast.error("菜单信息不完整，无法保存修改")
         return
       }
 
@@ -1141,14 +1141,14 @@ async function submitMenu() {
 
       closeMenuDialog()
       toast.success("菜单已更新", {
-        description: `${menuForm.value.name.trim() || "当前菜单"} 已更新${toText(result.Uuid) ? `，Uuid：${toText(result.Uuid)}` : ""}。`,
+        description: `${menuForm.value.name.trim() || "当前菜单"} 已更新。`,
       })
     } else {
       const result = await requestMenuCreate(payload)
 
       closeMenuDialog()
       toast.success("菜单已创建", {
-        description: `${menuForm.value.name.trim() || "菜单"} 已创建${toText(result.Uuid) ? `，Uuid：${toText(result.Uuid)}` : ""}。`,
+        description: `${menuForm.value.name.trim() || "菜单"} 已创建。`,
       })
     }
 
@@ -1168,7 +1168,7 @@ async function submitMenu() {
 
 async function confirmDeleteMenu() {
   if (!editingMenuUuid.value) {
-    toast.error("缺少菜单 Uuid，无法删除")
+    toast.error("菜单信息不完整，无法删除")
     return
   }
 
@@ -1219,14 +1219,14 @@ async function submitButton() {
 
       closeButtonDialog()
       toast.success("按钮已更新", {
-        description: `${buttonForm.value.name.trim() || "当前按钮"} 已更新${toText(result.Uuid) ? `，Uuid：${toText(result.Uuid)}` : ""}。`,
+        description: `${buttonForm.value.name.trim() || "当前按钮"} 已更新。`,
       })
     } else {
       const result = await requestButtonCreate(payload)
 
       closeButtonDialog()
       toast.success("按钮已创建", {
-        description: `${buttonForm.value.name.trim() || "按钮"} 已创建${toText(result.Uuid) ? `，Uuid：${toText(result.Uuid)}` : ""}。`,
+        description: `${buttonForm.value.name.trim() || "按钮"} 已创建。`,
       })
     }
 
@@ -1243,7 +1243,7 @@ async function submitButton() {
 
 async function confirmDeleteButton() {
   if (!editingButtonUuid.value && editingButtonId.value === null) {
-    toast.error("缺少按钮标识，无法删除")
+    toast.error("按钮信息不完整，无法删除")
     return
   }
 

@@ -2193,7 +2193,7 @@ function goToNextWorkOrderPage() {
 
 function handleViewWorkOrder(row: CustomerWorkOrderRow) {
   if (!row.uuid) {
-    toast.error("当前工单缺少 Uuid，无法查看详情")
+    toast.error("工单信息不完整，无法查看详情")
     return
   }
 
@@ -2204,7 +2204,7 @@ function handleViewWorkOrder(row: CustomerWorkOrderRow) {
 
 function handleOverviewWorkOrderDetail(row: MaintenanceRecordRow) {
   if (!row.uuid) {
-    toast.error("当前工单缺少 Uuid，无法查看详情")
+    toast.error("工单信息不完整，无法查看详情")
     return
   }
 
@@ -2215,7 +2215,7 @@ function handleOverviewWorkOrderDetail(row: MaintenanceRecordRow) {
 
 async function handleAssignWorkOrder(row: CustomerWorkOrderRow) {
   if (!row.uuid) {
-    toast.error("当前工单缺少 Uuid，无法指派")
+    toast.error("工单信息不完整，无法指派")
     return
   }
 
@@ -2293,12 +2293,12 @@ async function submitCustomerWorkOrderAssign() {
   const cid = customerUuid.value
 
   if (!currentTarget?.uuid) {
-    toast.error("当前工单缺少 Uuid，无法指派")
+    toast.error("工单信息不完整，无法指派")
     return
   }
 
   if (!cid) {
-    toast.error("客户 Uuid 缺失，无法刷新列表")
+    toast.error("客户信息不完整，无法刷新列表")
     return
   }
 
@@ -2342,15 +2342,15 @@ async function submitCustomerWorkOrderAssign() {
 }
 
 function handleAddMonitoring() {
-  toast.info("添加监控页面暂未接入")
+  toast.info("监控添加功能暂不可用")
 }
 
 function handleEditMonitoring(row: MonitoringRow) {
-  toast.info(`编辑监控「${row.deviceName}」页面暂未接入`)
+  toast.info(`监控「${row.deviceName}」编辑功能暂不可用`)
 }
 
 function handleViewMonitoring(row: MonitoringRow) {
-  toast.info(`查看监控「${row.deviceName}」页面暂未接入`)
+  toast.info(`监控「${row.deviceName}」详情暂不可查看`)
 }
 
 function handleAddSubAccount() {
@@ -2364,7 +2364,7 @@ function handleAddSubAccount() {
 
 function handleOpenSubAccountPasswordResetDialog(row: SubAccountRow) {
   if (!row.uuid) {
-    toast.error("子账号 UUID 缺失，无法重置密码")
+    toast.error("子账号信息不完整，无法重置密码")
     return
   }
 
@@ -2399,7 +2399,7 @@ async function submitSubAccountPasswordReset() {
   const newPassword = normalizeDialogText(subAccountPasswordResetPassword.value)
 
   if (!targetUuid) {
-    toast.error("子账号 UUID 缺失，无法提交")
+    toast.error("子账号信息不完整，无法提交")
     return
   }
 
@@ -2430,7 +2430,7 @@ async function submitSubAccountPasswordReset() {
 
 function handleOpenSubAccountEditDialog(row: SubAccountRow) {
   if (!row.uuid) {
-    toast.error("子账号 UUID 缺失，无法编辑")
+    toast.error("子账号信息不完整，无法编辑")
     return
   }
 
@@ -2471,7 +2471,7 @@ async function submitSubAccountEdit() {
   }
 
   if (!payload.Uuid) {
-    toast.error("子账号 UUID 缺失，无法提交")
+    toast.error("子账号信息不完整，无法提交")
     return
   }
 
@@ -2575,9 +2575,7 @@ async function submitSubAccountCreate() {
     await loadSubAccounts(payload.CustomerUuid)
 
     toast.success("子账号已创建", {
-      description: result.Uuid
-        ? `子账号 UUID：${result.Uuid}`
-        : "子账号信息已提交到接口。",
+      description: "子账号信息已保存。",
     })
 
     closeSubAccountCreateDialog(true)
@@ -2592,7 +2590,7 @@ async function submitSubAccountCreate() {
 }
 
 function handleContractDownload() {
-  toast.info("合同下载接口暂未接入")
+  toast.info("合同下载暂不可用")
 }
 
 function ensurePageSortRule(page: {

@@ -417,7 +417,7 @@ function openEditDialog() {
   }
 
   if (!selectedRelease.value?.uuid) {
-    toast.error("当前版本缺少 Uuid，无法编辑")
+    toast.error("版本信息不完整，无法编辑")
     return
   }
 
@@ -433,7 +433,7 @@ function openDeleteDialog() {
   }
 
   if (!selectedRelease.value?.uuid) {
-    toast.error("当前版本缺少 Uuid，无法删除")
+    toast.error("版本信息不完整，无法删除")
     return
   }
 
@@ -442,7 +442,7 @@ function openDeleteDialog() {
 
 async function handleApkFiles(files: File[]) {
   if (!canUploadAppVersionApk.value) {
-    toast.error("无权上传 APK")
+    toast.error("无权上传应用安装包")
     return
   }
 
@@ -453,7 +453,7 @@ async function handleApkFiles(files: File[]) {
   }
 
   if (!isApkFile(file)) {
-    toast.error("请上传 APK 安装包")
+    toast.error("请上传应用安装包")
     return
   }
 
@@ -468,9 +468,9 @@ async function handleApkFiles(files: File[]) {
 
     releaseForm.downloadUrl = result.url
     releaseApkFileName.value = file.name
-    toast.success("APK 安装包已上传")
+    toast.success("应用安装包已上传")
   } catch (error) {
-    toast.error("APK 上传失败", {
+    toast.error("应用安装包上传失败", {
       description: getApiErrorMessage(error, "请稍后重试。"),
     })
   } finally {
@@ -502,7 +502,7 @@ async function submitRelease() {
   }
 
   if (uploadingApkFile.value) {
-    toast.error("APK 正在上传，请稍后保存")
+    toast.error("应用安装包正在上传，请稍后保存")
     return
   }
 
@@ -524,7 +524,7 @@ async function submitRelease() {
   }
 
   if (releaseForm.platform === "android" && !url) {
-    toast.error("请上传 APK 安装包")
+    toast.error("请上传应用安装包")
     return
   }
 
@@ -579,7 +579,7 @@ async function confirmDeleteRelease() {
   const uuid = selectedRelease.value?.uuid
 
   if (!uuid) {
-    toast.error("当前版本缺少 Uuid，无法删除")
+    toast.error("版本信息不完整，无法删除")
     return
   }
 

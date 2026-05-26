@@ -243,7 +243,7 @@ async function confirmDelete() {
 
 function goToCustomerDetail() {
   if (!customerUuid.value) {
-    toast.error("当前检测计划缺少客户 Uuid，无法跳转客户详情")
+    toast.error("检测计划关联客户信息不完整，无法跳转客户详情")
     return
   }
 
@@ -254,7 +254,7 @@ function goToCustomerDetail() {
 
 function goToServiceDetail() {
   if (!serviceUuid.value) {
-    toast.error("当前检测计划缺少服务 Uuid，无法跳转检测服务详情")
+    toast.error("检测计划关联服务信息不完整，无法跳转检测服务详情")
     return
   }
 
@@ -283,7 +283,7 @@ function handleWorkOrderPreviewSheetOpenChange(open: boolean) {
 
 function openWorkOrderPreview(row: InspectionPlanWorkOrderRow) {
   if (!row.uuid) {
-    toast.error("当前工单缺少 Uuid，无法查看详情")
+    toast.error("工单信息不完整，无法查看详情")
     return
   }
 
@@ -294,7 +294,7 @@ function openWorkOrderPreview(row: InspectionPlanWorkOrderRow) {
 
 function goToWorkOrderDetail(row: InspectionPlanWorkOrderRow) {
   if (!row.uuid) {
-    toast.error("当前工单缺少 Uuid，无法跳转详情")
+    toast.error("工单信息不完整，无法跳转详情")
     return
   }
 

@@ -97,7 +97,7 @@ const schema: TablePageSchema<InspectionPlanRecord> = {
   onRowClick: row => handleViewDetail(row as InspectionPlanRecord),
   onQuickAction: row => {
     if (!row.uuid) {
-      toast.error("当前检测计划缺少 Uuid，无法打开侧边详情")
+      toast.error("检测计划信息不完整，无法打开详情")
       return
     }
 
@@ -410,7 +410,7 @@ function handleCreateInspectionPlan() {
 
 function handleViewDetail(row: InspectionPlanRecord) {
   if (!row.uuid || row.uuid === "-") {
-    toast.error("当前检测计划缺少 Uuid，无法查看详情")
+    toast.error("检测计划信息不完整，无法查看详情")
     return
   }
 
@@ -422,7 +422,7 @@ function handleViewDetail(row: InspectionPlanRecord) {
 
 function jumpToCustomerDetail(row: InspectionPlanRecord) {
   if (!row.customerUuid) {
-    toast.error("当前检测计划缺少客户 Uuid，无法跳转客户详情")
+    toast.error("检测计划关联客户信息不完整，无法跳转客户详情")
     return
   }
 
@@ -433,7 +433,7 @@ function jumpToCustomerDetail(row: InspectionPlanRecord) {
 
 function jumpToServiceDetail(row: InspectionPlanRecord) {
   if (!row.serviceUuid) {
-    toast.error("当前检测计划缺少服务 Uuid，无法跳转检测服务详情")
+    toast.error("检测计划关联服务信息不完整，无法跳转检测服务详情")
     return
   }
 

@@ -201,19 +201,17 @@ async function handleSubmit() {
       Longitude: getOptionalText(form.longitude),
       Address: getOptionalText(form.address),
     }
-    const result = isEditMode.value
-      ? await updateBuilding({
-          Uuid: normalizeText(buildingUuid.value),
-          ...payload,
-        })
-      : await createBuilding(payload)
+    if (isEditMode.value) {
+      await updateBuilding({
+        Uuid: normalizeText(buildingUuid.value),
+        ...payload,
+      })
+    } else {
+      await createBuilding(payload)
+    }
 
     toast.success(isEditMode.value ? "建筑信息已更新" : "建筑已创建", {
-      description: isEditMode.value
-        ? "建筑信息已保存。"
-        : result.Uuid
-          ? `建筑 UUID：${result.Uuid}`
-          : `已提交到接口，所属园区：${selectedParkName.value || "当前园区"}`,
+      description: "建筑信息已保存。",
     })
 
     await router.push({

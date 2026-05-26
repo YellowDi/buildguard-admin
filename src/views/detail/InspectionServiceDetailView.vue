@@ -287,7 +287,7 @@ function goBack() {
 
 function goToCustomerDetail() {
   if (!customerUuid.value) {
-    toast.error("当前检测服务缺少客户 Uuid，无法跳转客户详情")
+    toast.error("检测服务关联客户信息不完整，无法跳转客户详情")
     return
   }
 
@@ -406,7 +406,7 @@ function openUploadContractDialog() {
   }
 
   if (!inspectionServiceUuid.value) {
-    toast.error("当前检测服务缺少 Uuid，无法上传合同")
+    toast.error("检测服务信息不完整，无法上传合同")
     return
   }
 
@@ -459,7 +459,7 @@ async function submitUploadContract() {
   }
 
   if (!inspectionServiceUuid.value) {
-    toast.error("当前检测服务缺少 Uuid，无法上传合同")
+    toast.error("检测服务信息不完整，无法上传合同")
     return
   }
 

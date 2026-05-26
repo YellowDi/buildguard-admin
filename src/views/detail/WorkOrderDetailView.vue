@@ -481,7 +481,7 @@ function openRepairEditPage() {
   const uuid = workOrderUuid.value
 
   if (!uuid) {
-    toast.error("当前报修工单缺少 Uuid，无法编辑")
+    toast.error("报修工单信息不完整，无法编辑")
     return
   }
 
@@ -1475,12 +1475,12 @@ async function submitReportGeneration() {
   const targetWorkOrderUuid = toText(currentWorkOrder.Uuid, workOrderUuid.value)
 
   if (!buildUuid) {
-    toast.error("当前建筑缺少 Uuid，无法生成报告")
+    toast.error("建筑信息不完整，无法生成报告")
     return
   }
 
   if (!targetWorkOrderUuid) {
-    toast.error("当前检测工单缺少 Uuid，无法生成报告")
+    toast.error("检测工单信息不完整，无法生成报告")
     return
   }
 
@@ -1803,7 +1803,7 @@ async function submitAssign() {
   const uuid = workOrderUuid.value
 
   if (!uuid) {
-    toast.error("当前工单缺少 Uuid，无法指派")
+    toast.error("工单信息不完整，无法指派")
     return
   }
 
