@@ -75,7 +75,7 @@ import {
   updateRole as requestRoleUpdate,
 } from "@/lib/roles-api"
 import { PERMISSION_CODES } from "@/lib/permission-codes"
-import { fetchSystemButtons, type SystemResourceRecord } from "@/lib/system-resources-api"
+import { fetchSystemApisWithPayload, fetchSystemButtons, type SystemResourceRecord } from "@/lib/system-resources-api"
 import SettingsTable from "@/components/settings/SettingsTable.vue"
 import type { TableColumn, TablePageEmptyState, TableRowAction } from "@/components/table-page/types"
 
@@ -127,6 +127,7 @@ type ManualMemberForm = {
 type RoleForm = {
   name: string
   remark: string
+  selectedApiUuids: string[]
   selectedMenuUuids: string[]
   selectedButtonUuids: string[]
 }
@@ -164,6 +165,14 @@ type PermissionButtonRow = {
   code: string
   menuUuid: string
   menuName: string
+}
+
+type PermissionApiRow = {
+  id: string
+  uuid: string
+  name: string
+  path: string
+  method: string
 }
 
 type PermissionPanelButtonRow = PermissionButtonRow
@@ -236,6 +245,7 @@ const searchExpanded = ref(false)
 const searchQuery = ref("")
 const permissionMenuRows = ref<PermissionMenuRow[]>([])
 const permissionButtonRows = ref<PermissionButtonRow[]>([])
+const permissionApiRows = ref<PermissionApiRow[]>([])
 const rolePermissionResourcesLoading = ref(false)
 const rolePermissionResourcesLoaded = ref(false)
 const rolePermissionResourcesErrorMessage = ref("")
@@ -511,6 +521,7 @@ const currentErrorMessage = computed(() => (
 
 const selectedMenuSet = computed(() => new Set(roleForm.value.selectedMenuUuids))
 const selectedButtonSet = computed(() => new Set(selectedButtonUuids.value))
+const selectedApiSet = computed(() => new Set(selectedApiUuids.value))
 
 const menuRowsByUuid = computed(() => new Map(permissionMenuRows.value.map(row => [row.uuid, row])))
 
@@ -576,6 +587,7 @@ const menuPermissionGroups = computed(() => {
 const configurablePermissionMenuRows = computed(() => menuPermissionGroups.value.flatMap(group => group.visibleRows))
 const configurablePermissionMenuUuidSet = computed(() => new Set(configurablePermissionMenuRows.value.map(row => row.uuid)))
 const allPermissionButtonRows = computed<PermissionPanelButtonRow[]>(() => permissionButtonRows.value)
+const configurablePermissionApiUuidSet = computed(() => new Set(permissionApiRows.value.map(row => row.uuid)))
 
 const selectedPermissionMenus = computed(() => permissionMenuRows.value
   .filter(row => row.uuid && selectedMenuSet.value.has(row.uuid))
@@ -654,12 +666,26 @@ const selectedConfigurableMenuUuids = computed(() => uniqueUuids(roleForm.value.
 const selectedMenuCount = computed(() => selectedConfigurableMenuUuids.value.length)
 const selectedButtonUuids = computed(() => uniqueUuids(roleForm.value.selectedButtonUuids))
 const selectedButtonCount = computed(() => selectedButtonUuids.value.length)
+const selectedApiUuids = computed(() => uniqueUuids(roleForm.value.selectedApiUuids)
+  .filter(uuid => configurablePermissionApiUuidSet.value.has(uuid)))
+const selectedApiCount = computed(() => selectedApiUuids.value.length)
 const menuSelectionState = computed<boolean | "indeterminate">(() => {
   if (configurablePermissionMenuRows.value.length === 0 || selectedMenuCount.value === 0) {
     return false
   }
 
   if (selectedMenuCount.value >= configurablePermissionMenuRows.value.length) {
+    return true
+  }
+
+  return "indeterminate"
+})
+const apiSelectionState = computed<boolean | "indeterminate">(() => {
+  if (permissionApiRows.value.length === 0 || selectedApiCount.value === 0) {
+    return false
+  }
+
+  if (selectedApiCount.value >= permissionApiRows.value.length) {
     return true
   }
 
@@ -731,7 +757,7 @@ async function ensureRolePermissionResources(options?: { force?: boolean }) {
   rolePermissionResourcesErrorMessage.value = ""
 
   rolePermissionResourcesPromise = (async () => {
-    const [menusResult, buttonsResult] = await Promise.allSettled([
+    const [menusResult, buttonsResult, apisResult] = await Promise.allSettled([
       fetchMenus({
         Name: "",
         Status: 0,
@@ -740,6 +766,11 @@ async function ensureRolePermissionResources(options?: { force?: boolean }) {
       }),
       fetchSystemButtons({
         Name: "",
+        PageNum: 0,
+        PageSize: 0,
+      }),
+      fetchSystemApisWithPayload({
+        IsBindButton: 2,
         PageNum: 0,
         PageSize: 0,
       }),
@@ -769,6 +800,19 @@ async function ensureRolePermissionResources(options?: { force?: boolean }) {
         handleApiError(buttonsResult.reason, {
           mode: "silent",
           fallback: "按钮权限列表加载失败，请稍后重试。",
+        }),
+      ]
+    }
+
+    if (apisResult.status === "fulfilled") {
+      permissionApiRows.value = apisResult.value.list.map((item, index) => normalizePermissionApi(item, index))
+    } else {
+      permissionApiRows.value = []
+      errorMessages = [
+        ...errorMessages,
+        handleApiError(apisResult.reason, {
+          mode: "silent",
+          fallback: "独立 API 权限列表加载失败，请稍后重试。",
         }),
       ]
     }
@@ -881,6 +925,20 @@ function normalizePermissionButton(raw: SystemResourceRecord, index: number): Pe
     code: toText(record.Code, record.code, "-"),
     menuUuid: toText(record.MenuUuid, record.menuUuid),
     menuName: toText(record.MenuName, record.menuName, "未绑定页面"),
+  }
+}
+
+function normalizePermissionApi(raw: SystemResourceRecord, index: number): PermissionApiRow {
+  const record = raw as Record<string, unknown>
+  const numericId = toNumber(record.Id, record.id, index + 1)
+  const uuid = toText(record.Uuid, record.uuid, record.ApiUuid, record.apiUuid)
+
+  return {
+    id: toText(uuid, record.Id, record.id, `permission-api-${numericId}`),
+    uuid,
+    name: toText(record.Name, record.name, record.ApiName, record.apiName, `API ${numericId}`),
+    path: toText(record.Path, record.path, "-"),
+    method: toText(record.Method, record.method, "-"),
   }
 }
 
@@ -1062,6 +1120,29 @@ function getRoleButtonUuids(value: unknown): string[] | null {
   return normalizeRoleButtonUuids(record[buttonKey])
 }
 
+function getRoleApiUuids(value: unknown): string[] | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null
+  }
+
+  const record = value as Record<string, unknown>
+  const apiUuidKeys = ["ApiUuids", "apiUuids"]
+  const apiUuidKey = apiUuidKeys.find(key => Object.prototype.hasOwnProperty.call(record, key))
+
+  if (apiUuidKey) {
+    return normalizeRoleApiUuids(record[apiUuidKey])
+  }
+
+  const apiListKeys = ["Apis", "apis", "ApiList", "apiList"]
+  const apiListKey = apiListKeys.find(key => Object.prototype.hasOwnProperty.call(record, key))
+
+  if (!apiListKey) {
+    return null
+  }
+
+  return normalizeRoleApiItems(record[apiListKey])
+}
+
 function normalizeRoleButtonUuids(value: unknown) {
   if (Array.isArray(value)) {
     return value
@@ -1083,9 +1164,55 @@ function normalizeRoleButtonUuids(value: unknown) {
   return []
 }
 
+function normalizeRoleApiUuids(value: unknown) {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => {
+        if (typeof item === "string") {
+          return item.trim()
+        }
+
+        if (item && typeof item === "object") {
+          const record = item as Record<string, unknown>
+          return toText(record.Uuid, record.ApiUuid, record.uuid, record.apiUuid)
+        }
+
+        return ""
+      })
+      .filter(Boolean)
+  }
+
+  return []
+}
+
+function normalizeRoleApiItems(value: unknown) {
+  if (!Array.isArray(value)) {
+    return []
+  }
+
+  return value
+    .map((item) => {
+      if (!item || typeof item !== "object") {
+        return ""
+      }
+
+      const record = item as Record<string, unknown>
+      const hasBindFlag = Object.prototype.hasOwnProperty.call(record, "IsBind")
+        || Object.prototype.hasOwnProperty.call(record, "isBind")
+
+      if (hasBindFlag && !normalizeBoolean(record.IsBind ?? record.isBind)) {
+        return ""
+      }
+
+      return toText(record.Uuid, record.ApiUuid, record.uuid, record.apiUuid)
+    })
+    .filter(Boolean)
+}
+
 function getBoundRolePermissionUuids(nodes: RoleMenuButtonNode[]) {
   const menuUuids = new Set<string>()
   const buttonUuids = new Set<string>()
+  const apiUuids = new Set<string>()
 
   function visit(node: RoleMenuButtonNode) {
     const record = node as Record<string, unknown>
@@ -1098,7 +1225,15 @@ function getBoundRolePermissionUuids(nodes: RoleMenuButtonNode[]) {
         menuUuids.add(uuid)
       } else if (type === "button") {
         buttonUuids.add(uuid)
+      } else if (type === "api") {
+        apiUuids.add(uuid)
       }
+    }
+
+    const directApiUuids = getRoleApiUuids(record)
+
+    if (directApiUuids) {
+      directApiUuids.forEach(apiUuid => apiUuids.add(apiUuid))
     }
 
     const childNodes = [
@@ -1106,6 +1241,10 @@ function getBoundRolePermissionUuids(nodes: RoleMenuButtonNode[]) {
       ...(Array.isArray(record.children) ? record.children : []),
       ...(Array.isArray(record.Buttons) ? record.Buttons : []),
       ...(Array.isArray(record.buttons) ? record.buttons : []),
+      ...(Array.isArray(record.Apis) ? record.Apis : []),
+      ...(Array.isArray(record.apis) ? record.apis : []),
+      ...(Array.isArray(record.ApiList) ? record.ApiList : []),
+      ...(Array.isArray(record.apiList) ? record.apiList : []),
     ]
 
     childNodes.forEach(child => visit(child as RoleMenuButtonNode))
@@ -1114,6 +1253,7 @@ function getBoundRolePermissionUuids(nodes: RoleMenuButtonNode[]) {
   nodes.forEach(node => visit(node))
 
   return {
+    apiUuids: Array.from(apiUuids),
     menuUuids: Array.from(menuUuids),
     buttonUuids: Array.from(buttonUuids),
   }
@@ -1208,6 +1348,11 @@ function normalizeConfigurableMenuUuids(menuUuids: string[]) {
   return Array.from(normalizedUuids)
 }
 
+function normalizeConfigurableApiUuids(apiUuids: string[]) {
+  const visibleUuidSet = configurablePermissionApiUuidSet.value
+  return uniqueUuids(apiUuids).filter(uuid => visibleUuidSet.has(uuid))
+}
+
 function getMenuUuidsWithAncestors(menuUuids: string[]) {
   const normalizedUuids = uniqueUuids(menuUuids)
   const uuidsForSave = new Set(normalizedUuids)
@@ -1259,6 +1404,18 @@ function updateRoleButtonSelection(buttonUuid: string, checked: boolean) {
   roleForm.value.selectedButtonUuids = filterButtonUuidsForMenuUuids(Array.from(nextSelectedButtons), roleForm.value.selectedMenuUuids)
 }
 
+function updateRoleApiSelection(apiUuid: string, checked: boolean) {
+  const nextSelectedApis = new Set(roleForm.value.selectedApiUuids)
+
+  if (checked) {
+    nextSelectedApis.add(apiUuid)
+  } else {
+    nextSelectedApis.delete(apiUuid)
+  }
+
+  roleForm.value.selectedApiUuids = normalizeConfigurableApiUuids(Array.from(nextSelectedApis))
+}
+
 function getPermissionGroupSelectionState(group: PermissionMenuGroup): boolean | "indeterminate" {
   if (group.visibleRows.length === 0) {
     return false
@@ -1304,6 +1461,12 @@ function toggleAllMenus(checked: boolean) {
     : []
   roleForm.value.selectedButtonUuids = checked
     ? getButtonUuidsForMenuUuids(roleForm.value.selectedMenuUuids)
+    : []
+}
+
+function toggleAllApis(checked: boolean) {
+  roleForm.value.selectedApiUuids = checked
+    ? permissionApiRows.value.map(row => row.uuid).filter(Boolean)
     : []
 }
 
@@ -1518,6 +1681,7 @@ function createRoleForm(): RoleForm {
   return {
     name: "",
     remark: "",
+    selectedApiUuids: [],
     selectedMenuUuids: [],
     selectedButtonUuids: [],
   }
@@ -1527,6 +1691,7 @@ function cloneRoleForm(form: RoleForm): RoleForm {
   return {
     name: form.name,
     remark: form.remark,
+    selectedApiUuids: [...form.selectedApiUuids],
     selectedMenuUuids: [...form.selectedMenuUuids],
     selectedButtonUuids: [...form.selectedButtonUuids],
   }
@@ -1557,6 +1722,7 @@ function hasRoleBasicChanges() {
 function hasRolePermissionChanges() {
   return !isSameUuidSet(selectedConfigurableMenuUuids.value, normalizeConfigurableMenuUuids(roleFormSnapshot.value.selectedMenuUuids))
     || !isSameUuidSet(selectedButtonUuids.value, filterButtonUuidsForMenuUuids(roleFormSnapshot.value.selectedButtonUuids, roleFormSnapshot.value.selectedMenuUuids))
+    || !isSameUuidSet(selectedApiUuids.value, normalizeConfigurableApiUuids(roleFormSnapshot.value.selectedApiUuids))
 }
 
 function createEditMemberForm(): EditMemberForm {
@@ -1707,9 +1873,10 @@ async function submitRole() {
 
   const isEditingRole = editingRoleId.value !== null
   const selectedMenuUuidsForSave = getMenuUuidsWithAncestors(selectedConfigurableMenuUuids.value)
+  const selectedApiUuidsForSave = selectedApiUuids.value
   const basicChanged = !isEditingRole || hasRoleBasicChanges()
   const permissionChanged = !isEditingRole
-    ? selectedMenuUuidsForSave.length > 0 || selectedButtonUuids.value.length > 0
+    ? selectedMenuUuidsForSave.length > 0 || selectedButtonUuids.value.length > 0 || selectedApiUuidsForSave.length > 0
     : hasRolePermissionChanges()
 
   if (isEditingRole && !basicChanged && !permissionChanged) {
@@ -1730,7 +1897,7 @@ async function submitRole() {
   }
 
   if (permissionChanged && !canBindRolePermission.value) {
-    toast.error("无权绑定权限组菜单和按钮")
+    toast.error("无权绑定权限组菜单、按钮和 API")
     return
   }
 
@@ -1768,6 +1935,7 @@ async function submitRole() {
           RoleUuid: savedRoleUuid,
           MenuUuids: selectedMenuUuidsForSave,
           ButtonUuids: selectedButtonUuids.value,
+          ApiUuids: selectedApiUuidsForSave,
         })
       }
 
@@ -1775,10 +1943,10 @@ async function submitRole() {
       roleForm.value = createRoleForm()
       toast.success("角色已更新", {
         description: basicChanged && permissionChanged
-          ? `${name} 的信息和权限已保存。`
+            ? `${name} 的信息和权限已保存。`
           : basicChanged
             ? `${name} 的基础信息已保存。`
-            : `${name} 的菜单和按钮权限已保存。`,
+            : `${name} 的菜单、按钮和 API 权限已保存。`,
       })
     } else {
       const result = await requestRoleCreate({
@@ -1804,6 +1972,7 @@ async function submitRole() {
           RoleUuid: savedRoleUuid,
           MenuUuids: selectedMenuUuidsForSave,
           ButtonUuids: selectedButtonUuids.value,
+          ApiUuids: selectedApiUuidsForSave,
         })
       }
 
@@ -1811,7 +1980,7 @@ async function submitRole() {
       roleForm.value = createRoleForm()
       toast.success("角色已创建", {
         description: permissionChanged
-          ? `${name} 已创建并完成菜单和按钮权限分配。`
+          ? `${name} 已创建并完成菜单、按钮和 API 权限分配。`
           : `${name} 已创建。`,
       })
     }
@@ -1878,6 +2047,7 @@ function applyRoleSnapshot(role: RoleRow) {
   roleForm.value = {
     name: role.name,
     remark: role.remark === "-" ? "" : role.remark,
+    selectedApiUuids: selectedApiUuids.value,
     selectedMenuUuids: selectedConfigurableMenuUuids.value,
     selectedButtonUuids: roleForm.value.selectedButtonUuids,
   }
@@ -1911,9 +2081,14 @@ async function loadEditRoleDetail(role: RoleRow) {
     editingRoleUuid.value = role.uuid
 
     const boundPermissions = getBoundRolePermissionUuids(permissionResult.Nodes)
+    const detailApiUuids = getRoleApiUuids(detail as Record<string, unknown>) ?? []
 
     roleForm.value.selectedMenuUuids = normalizeConfigurableMenuUuids(boundPermissions.menuUuids)
     roleForm.value.selectedButtonUuids = boundPermissions.buttonUuids
+    roleForm.value.selectedApiUuids = normalizeConfigurableApiUuids([
+      ...boundPermissions.apiUuids,
+      ...detailApiUuids,
+    ])
     applyRoleSnapshot(role)
   } catch (error) {
     handleApiError(error, {
@@ -2428,7 +2603,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
         <DialogHeader class="border-b border-border/70 p-4">
           <DialogTitle>{{ editingRoleId === null ? "添加权限组" : "编辑权限组" }}</DialogTitle>
           <DialogDescription>
-            {{ editingRoleId === null ? "填写基础信息，并预配置页面访问和操作按钮的可见范围。" : "调整权限组基础信息，并预览后续接入权限接口后的页面与按钮控制范围。" }}
+            {{ editingRoleId === null ? "填写基础信息，并预配置页面访问、操作按钮和独立 API 的可见范围。" : "调整权限组基础信息，并预览页面、按钮和独立 API 控制范围。" }}
           </DialogDescription>
         </DialogHeader>
 
@@ -2439,7 +2614,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
                 <div class="space-y-1">
                   <h3 class="text-sm font-semibold text-foreground">基础信息</h3>
                   <p class="text-xs leading-5 text-muted-foreground">
-                    保存时会提交权限组基础信息，并将已选菜单和按钮同步分配给当前权限组。
+                    保存时会提交权限组基础信息，并将已选菜单、按钮和独立 API 同步分配给当前权限组。
                   </p>
                 </div>
 
@@ -2468,7 +2643,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
                 <div class="space-y-1">
                   <h3 class="text-sm font-semibold text-foreground">权限概览</h3>
                   <p class="text-xs leading-5 text-muted-foreground">
-                    按钮权限按已选菜单展示，可在右侧单独勾选。
+                    按钮权限按已选菜单展示，独立 API 可在右侧单独勾选。
                   </p>
                 </div>
 
@@ -2483,9 +2658,14 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
                     <span class="font-medium text-foreground">{{ selectedButtonCount }} / {{ permissionButtonRows.length }}</span>
                   </div>
 
+                  <div class="flex items-center justify-between gap-3 border-b border-border/60 py-2">
+                    <span class="text-muted-foreground">已选 API</span>
+                    <span class="font-medium text-foreground">{{ selectedApiCount }} / {{ permissionApiRows.length }}</span>
+                  </div>
+
                   <div class="pt-1">
                     <p class="text-xs leading-5 text-muted-foreground">
-                      修改基础信息、菜单权限和按钮权限时会分别调用对应接口保存。
+                      修改基础信息、菜单权限、按钮权限和 API 权限时会分别调用对应接口保存。
                     </p>
                   </div>
                 </div>
@@ -2599,83 +2779,127 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
             <div class="md:relative md:flex md:min-h-0 md:flex-col md:overflow-hidden md:px-5 md:pt-4 md:pb-0">
               <div class="space-y-2 pb-3">
                 <div class="flex min-w-0 items-center gap-2 whitespace-nowrap">
-                  <h3 class="text-sm font-semibold text-foreground">按钮权限</h3>
+                  <h3 class="text-sm font-semibold text-foreground">按钮与 API 权限</h3>
                   <span class="text-xs text-muted-foreground">勾选菜单后可逐个调整按钮</span>
                 </div>
               </div>
 
               <Separator class="bg-border/70" />
 
-              <div v-if="selectedMenuPermissionGroups.length === 0" class="py-6 text-sm text-muted-foreground">
+              <div v-if="selectedMenuPermissionGroups.length === 0 && permissionApiRows.length === 0" class="py-6 text-sm text-muted-foreground">
                 先从中间列选择页面，右侧才会显示对应页面及按钮。
               </div>
 
               <div v-else class="min-h-0 flex-1 overflow-y-auto pr-5 md:mr-[-20px] [scrollbar-gutter:stable]">
                 <div class="space-y-3 py-3 md:pr-4">
-                  <div
-                    v-for="group in selectedMenuPermissionGroups"
-                    :key="group.key"
-                    class="border-b border-dashed border-border/70 pb-2 last:border-b-0"
-                  >
-                    <div class="mb-1 flex items-center gap-2 py-1">
-                      <span class="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
-                        {{ group.title }}
-                        <span class="ml-1 text-[11px] font-normal text-muted-foreground">{{ group.path || "顶级导航分组" }}</span>
-                      </span>
-                      <span class="text-xs text-muted-foreground">{{ group.visiblePanels.length }} 页</span>
-                    </div>
+                  <div v-if="selectedMenuPermissionGroups.length === 0" class="py-3 text-sm text-muted-foreground">
+                    先从中间列选择页面，右侧才会显示对应页面及按钮。
+                  </div>
 
-                    <div class="grid gap-1">
-                      <template v-for="menu in group.visiblePanels" :key="menu.uuid || menu.id">
-                        <label
-                          class="flex items-center gap-2 py-1.5"
-                          :style="{ paddingLeft: `${menu.depth * 18}px` }"
-                        >
-                          <i
-                            v-if="menu.depth > 0"
-                            class="ri-corner-down-right-line shrink-0 text-[12px] text-muted-foreground"
-                          />
-                          <span v-else class="w-3 shrink-0" />
-                          <span class="w-4 shrink-0" />
-                          <span class="min-w-0 flex flex-1 items-center gap-2 overflow-hidden leading-none">
-                            <Tooltip>
-                              <TooltipTrigger as-child>
-                                <span :class="menu.depth === 0 ? 'font-medium text-foreground' : 'text-foreground'" class="truncate text-sm">
-                                  {{ menu.name }}
-                                </span>
-                              </TooltipTrigger>
-                              <TooltipContent>{{ menu.path }}</TooltipContent>
-                            </Tooltip>
-                          </span>
-                          <span class="text-[11px] text-muted-foreground">
-                            {{ menu.buttons.filter(button => selectedButtonSet.has(button.uuid)).length }}/{{ menu.buttons.length }} 个按钮
-                          </span>
-                        </label>
+                  <template v-else>
+                    <div
+                      v-for="group in selectedMenuPermissionGroups"
+                      :key="group.key"
+                      class="border-b border-dashed border-border/70 pb-2 last:border-b-0"
+                    >
+                      <div class="mb-1 flex items-center gap-2 py-1">
+                        <span class="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
+                          {{ group.title }}
+                          <span class="ml-1 text-[11px] font-normal text-muted-foreground">{{ group.path || "顶级导航分组" }}</span>
+                        </span>
+                        <span class="text-xs text-muted-foreground">{{ group.visiblePanels.length }} 页</span>
+                      </div>
 
-                        <div v-if="menu.buttons.length > 0" class="grid gap-1">
+                      <div class="grid gap-1">
+                        <template v-for="menu in group.visiblePanels" :key="menu.uuid || menu.id">
                           <label
-                            v-for="button in menu.buttons"
-                            :key="button.id"
                             class="flex items-center gap-2 py-1.5"
-                            :style="{ paddingLeft: `${(menu.depth + 1) * 18}px` }"
+                            :style="{ paddingLeft: `${menu.depth * 18}px` }"
                           >
-                            <i class="ri-corner-down-right-line shrink-0 text-[12px] text-muted-foreground" />
-                            <Checkbox
-                              :model-value="selectedButtonSet.has(button.uuid)"
-                              :disabled="!canBindRolePermission"
-                              @update:model-value="updateRoleButtonSelection(button.uuid, $event === true)"
+                            <i
+                              v-if="menu.depth > 0"
+                              class="ri-corner-down-right-line shrink-0 text-[12px] text-muted-foreground"
                             />
+                            <span v-else class="w-3 shrink-0" />
+                            <span class="w-4 shrink-0" />
                             <span class="min-w-0 flex flex-1 items-center gap-2 overflow-hidden leading-none">
                               <Tooltip>
                                 <TooltipTrigger as-child>
-                                  <span class="truncate text-sm text-foreground">{{ button.name }}</span>
+                                  <span :class="menu.depth === 0 ? 'font-medium text-foreground' : 'text-foreground'" class="truncate text-sm">
+                                    {{ menu.name }}
+                                  </span>
                                 </TooltipTrigger>
-                                <TooltipContent>{{ button.code }}</TooltipContent>
+                                <TooltipContent>{{ menu.path }}</TooltipContent>
                               </Tooltip>
                             </span>
+                            <span class="text-[11px] text-muted-foreground">
+                              {{ menu.buttons.filter(button => selectedButtonSet.has(button.uuid)).length }}/{{ menu.buttons.length }} 个按钮
+                            </span>
                           </label>
-                        </div>
-                      </template>
+
+                          <div v-if="menu.buttons.length > 0" class="grid gap-1">
+                            <label
+                              v-for="button in menu.buttons"
+                              :key="button.id"
+                              class="flex items-center gap-2 py-1.5"
+                              :style="{ paddingLeft: `${(menu.depth + 1) * 18}px` }"
+                            >
+                              <i class="ri-corner-down-right-line shrink-0 text-[12px] text-muted-foreground" />
+                              <Checkbox
+                                :model-value="selectedButtonSet.has(button.uuid)"
+                                :disabled="!canBindRolePermission"
+                                @update:model-value="updateRoleButtonSelection(button.uuid, $event === true)"
+                              />
+                              <span class="min-w-0 flex flex-1 items-center gap-2 overflow-hidden leading-none">
+                                <Tooltip>
+                                  <TooltipTrigger as-child>
+                                    <span class="truncate text-sm text-foreground">{{ button.name }}</span>
+                                  </TooltipTrigger>
+                                  <TooltipContent>{{ button.code }}</TooltipContent>
+                                </Tooltip>
+                              </span>
+                            </label>
+                          </div>
+                        </template>
+                      </div>
+                    </div>
+                  </template>
+
+                  <div
+                    v-if="permissionApiRows.length > 0"
+                    class="border-b border-dashed border-border/70 pb-2 last:border-b-0"
+                  >
+                    <div class="mb-1 flex items-center gap-2 py-1">
+                      <Checkbox
+                        :model-value="apiSelectionState"
+                        :disabled="!canBindRolePermission"
+                        @update:model-value="toggleAllApis($event === true)"
+                      />
+                      <span class="min-w-0 flex-1 truncate text-sm font-medium text-foreground">独立 API</span>
+                      <span class="text-xs text-muted-foreground">{{ selectedApiCount }}/{{ permissionApiRows.length }}</span>
+                    </div>
+
+                    <div class="grid gap-1">
+                      <label
+                        v-for="api in permissionApiRows"
+                        :key="api.id"
+                        class="flex items-center gap-2 py-1.5 pl-[18px]"
+                      >
+                        <i class="ri-corner-down-right-line shrink-0 text-[12px] text-muted-foreground" />
+                        <Checkbox
+                          :model-value="selectedApiSet.has(api.uuid)"
+                          :disabled="!canBindRolePermission"
+                          @update:model-value="updateRoleApiSelection(api.uuid, $event === true)"
+                        />
+                        <span class="min-w-0 flex flex-1 items-center gap-2 overflow-hidden leading-none">
+                          <Tooltip>
+                            <TooltipTrigger as-child>
+                              <span class="truncate text-sm text-foreground">{{ api.name }}</span>
+                            </TooltipTrigger>
+                            <TooltipContent>{{ api.method }} {{ api.path }}</TooltipContent>
+                          </Tooltip>
+                        </span>
+                      </label>
                     </div>
                   </div>
                 </div>

@@ -63,6 +63,7 @@ export type BindRoleMenusPayload = {
   RoleUuid: string
   MenuUuids?: string[]
   ButtonUuids?: string[]
+  ApiUuids?: string[]
 }
 
 export type RoleMenuButtonListPayload = {
@@ -71,9 +72,11 @@ export type RoleMenuButtonListPayload = {
 }
 
 export type RoleMenuButtonNode = {
+  Apis?: RoleMenuButtonNode[]
   Buttons?: RoleMenuButtonNode[]
   Children?: RoleMenuButtonNode[]
   IsBind?: boolean
+  Method?: string
   Name?: string
   Path?: string
   Type?: string
@@ -224,6 +227,7 @@ export async function bindRoleMenus(payload: BindRoleMenusPayload) {
     RoleUuid: getRequiredString(payload.RoleUuid, "RoleUuid"),
     MenuUuids: getStringArray(payload.MenuUuids, "MenuUuids"),
     ButtonUuids: getStringArray(payload.ButtonUuids, "ButtonUuids"),
+    ApiUuids: getStringArray(payload.ApiUuids, "ApiUuids"),
   }
 
   const response = await fetch(ROLE_MENU_BIND_API_URL, {
