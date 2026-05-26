@@ -4759,12 +4759,12 @@ function toDisplayText(value: unknown, fallback = "未填写") {
         </div>
       </template>
 
-      <div v-else class="space-y-5 pb-5">
+      <div v-else class="pb-5">
         <CustomerDetailContentLoading v-if="loading" variant="basic-info-primary" />
         <template v-else-if="customer">
           <DetailFieldSections :sections="fieldSections" use-title-block />
           <div class="h-px bg-border/80" />
-          <section class="min-w-0">
+          <section class="detail-field-section detail-field-section--after-separator min-w-0">
             <TitleBlock
               variant="section"
               title="检测服务信息"
