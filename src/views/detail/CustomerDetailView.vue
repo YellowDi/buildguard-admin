@@ -141,8 +141,8 @@ type MaintenanceRecordRow = {
   uuid: string
   workOrderKind: "inspection" | "repair"
   customerUuid: string
+  orderNo: string
   status: "pending" | "processing" | "completed"
-  serviceName: string
   serviceTooltip: string
   result: string
   location: string
@@ -892,7 +892,7 @@ const maintenanceModule = computed<DetailRelationModuleSchema<MaintenanceRecordR
       },
       rowKey: "id",
       columns: [
-        { key: "serviceName", label: "检测服务", slot: "inspection-overview-service-cell" },
+        { key: "orderNo", label: "检测工单", slot: "inspection-overview-service-cell" },
         {
           key: "result",
           label: "检测结果",
@@ -915,9 +915,9 @@ const maintenanceModule = computed<DetailRelationModuleSchema<MaintenanceRecordR
       ],
       groups: [],
       rowAction: row => handleOverviewWorkOrderDetail(row),
-      mobileMinWidth: "42rem",
-      columnTemplateMobile: "minmax(9rem,1fr) 6.5rem minmax(12rem,1.5fr) 8rem 2.75rem",
-      columnTemplateDesktop: "minmax(9rem,1fr) 6.5rem minmax(12rem,1.5fr) 8rem 2.75rem",
+      mobileMinWidth: "44rem",
+      columnTemplateMobile: "minmax(11rem,1.2fr) 6.5rem minmax(12rem,1.5fr) 8rem 2.75rem",
+      columnTemplateDesktop: "minmax(11rem,1.2fr) 6.5rem minmax(12rem,1.5fr) 8rem 2.75rem",
       columnGapMobile: "0.75rem",
       columnGapDesktop: "1rem",
     }
@@ -933,7 +933,7 @@ const maintenanceModule = computed<DetailRelationModuleSchema<MaintenanceRecordR
     },
     rowKey: "id",
     columns: [
-      { key: "serviceName", label: "检测服务", slot: "inspection-overview-service-cell" },
+      { key: "orderNo", label: "检测工单", slot: "inspection-overview-service-cell" },
       {
         key: "result",
         label: "检测结果",
@@ -956,9 +956,9 @@ const maintenanceModule = computed<DetailRelationModuleSchema<MaintenanceRecordR
     ],
     groups: buildMaintenanceGroups(maintenanceRecords.value),
     rowAction: row => handleOverviewWorkOrderDetail(row),
-    mobileMinWidth: "42rem",
-    columnTemplateMobile: "minmax(9rem,1fr) 6.5rem minmax(12rem,1.5fr) 8rem 2.75rem",
-    columnTemplateDesktop: "minmax(9rem,1fr) 6.5rem minmax(12rem,1.5fr) 8rem 2.75rem",
+    mobileMinWidth: "44rem",
+    columnTemplateMobile: "minmax(11rem,1.2fr) 6.5rem minmax(12rem,1.5fr) 8rem 2.75rem",
+    columnTemplateDesktop: "minmax(11rem,1.2fr) 6.5rem minmax(12rem,1.5fr) 8rem 2.75rem",
     columnGapMobile: "0.75rem",
     columnGapDesktop: "1rem",
   }
@@ -3680,9 +3680,12 @@ function mapMaintenanceRecordRow(row: CustomerWorkOrderRow): MaintenanceRecordRo
     uuid: row.uuid,
     workOrderKind: row.workOrderKind,
     customerUuid: row.customerUuid,
+    orderNo: row.orderNo,
     status: mapMaintenanceStatus(row),
-    serviceName: row.packageName !== "-" ? row.packageName : "未设置",
-    serviceTooltip: row.planName !== "-" ? row.planName : "未关联计划",
+    serviceTooltip: [
+      row.packageName !== "-" ? row.packageName : "未设置检测服务",
+      row.planName !== "-" ? row.planName : "未关联计划",
+    ].join(" / "),
     result: row.resultLabel,
     location,
     parkName: row.parkName !== "-" ? row.parkName : "未关联园区",
@@ -3705,8 +3708,8 @@ function mapRepairOverviewRecordRow(row: CustomerWorkOrderRow): MaintenanceRecor
     uuid: row.uuid,
     workOrderKind: row.workOrderKind,
     customerUuid: row.customerUuid,
+    orderNo: row.orderNo,
     status: mapMaintenanceStatus(row),
-    serviceName: "-",
     serviceTooltip: "-",
     result: "-",
     location,
@@ -3770,6 +3773,22 @@ function formatDateOnly(value: string) {
 
   const [datePart] = normalized.split(/[ T]/)
   return datePart || normalized
+}
+
+function formatShortOrderNo(value: unknown) {
+  const normalized = toDisplayText(value, "")
+
+  if (!normalized || normalized === "-") {
+    return "-"
+  }
+
+  const compact = normalized.replace(/[\s_-]+/g, "")
+  return compact.length > 8 ? compact.slice(-8) : compact
+}
+
+function formatInspectionWorkOrderTitle(row: { parkName?: unknown }) {
+  const parkName = toDisplayText(row.parkName, "")
+  return parkName && parkName !== "-" ? parkName : "未关联园区"
 }
 
 function hasExplicitTime(value: string | undefined) {
@@ -5058,10 +5077,10 @@ function toDisplayText(value: unknown, fallback = "未填写") {
 
                 <template #inspection-overview-service-cell="{ row }">
                   <div class="flex min-w-0 items-center gap-2 text-foreground">
-                        <i
-                          :class="[
-                            'text-[18px]',
-                            row.status === 'pending'
+                    <i
+                      :class="[
+                        'text-[18px]',
+                        row.status === 'pending'
                           ? 'ri-time-fill text-warning'
                           : row.status === 'processing'
                             ? 'ri-loader-4-line text-link'
@@ -5070,7 +5089,10 @@ function toDisplayText(value: unknown, fallback = "未填写") {
                     />
                     <Tooltip>
                       <TooltipTrigger as-child>
-                        <span class="truncate cursor-default">{{ row.serviceName }}</span>
+                        <span class="inline-flex min-w-0 max-w-full cursor-default items-baseline gap-1.5">
+                          <span class="truncate text-foreground">{{ formatInspectionWorkOrderTitle(row) }}</span>
+                          <span class="shrink-0 text-muted-foreground">#{{ formatShortOrderNo(row.orderNo) }}</span>
+                        </span>
                       </TooltipTrigger>
                       <TooltipContent side="top" align="start" class="rounded-lg px-3 py-1.5 text-xs">
                         {{ row.serviceTooltip }}
