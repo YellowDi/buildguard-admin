@@ -206,6 +206,7 @@ type SelectedPermissionMenuGroup = {
 const MEMBERS_LOAD_ERROR_MESSAGE = "成员列表加载失败，请稍后重试。"
 const MEMBER_STATUS_UPDATE_ERROR_MESSAGE = "成员状态更新失败，请稍后重试。"
 const MEMBER_UPDATE_ERROR_MESSAGE = "成员信息更新失败，请稍后重试。"
+const MEMBERS_PAGE_SIZE = 200
 const MEMBER_USER_TYPE_OPTIONS = [
   { label: "后台", value: 1 },
   { label: "检修", value: 2 },
@@ -690,7 +691,10 @@ async function loadMembers() {
   errorMessage.value = ""
 
   try {
-    const result = await fetchMembers()
+    const result = await fetchMembers({
+      PageNum: 1,
+      PageSize: MEMBERS_PAGE_SIZE,
+    })
     const nextRows = result.list.map((item, index) => normalizeMemberRow(item, index))
 
     rows.value = nextRows

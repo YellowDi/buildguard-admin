@@ -10,21 +10,22 @@ type MembersListEnvelope = {
 }
 
 export type MembersListResult = {
-  list: unknown[]
+  list: MemberDetailResult[]
   total: number
 }
 
 export type MemberUserTypeValue = number[]
 
 export type ListMembersPayload = {
-  DepartmentUuid?: string
+  DepartmentName?: string
+  IsRepair?: number
   Name?: string
   PageNum?: number
   PageSize?: number
   Phone?: string
   Position?: string
+  RoleUuids?: string[]
   Status?: number
-  UserType?: MemberUserTypeValue
   [property: string]: unknown
 }
 
@@ -125,14 +126,15 @@ const MEMBER_DELETE_ERROR_MESSAGE = "成员删除失败，请稍后重试。"
 
 export async function fetchMembers(payload: ListMembersPayload = {}): Promise<MembersListResult> {
   const normalizedPayload = {
-    DepartmentUuid: getOptionalString(payload.DepartmentUuid),
+    DepartmentName: getOptionalString(payload.DepartmentName),
+    IsRepair: getOptionalIsRepair(payload.IsRepair, "IsRepair"),
     Name: getOptionalString(payload.Name),
     PageNum: getOptionalNumber(payload.PageNum, "PageNum"),
     PageSize: getOptionalNumber(payload.PageSize, "PageSize"),
     Phone: getOptionalString(payload.Phone),
     Position: getOptionalString(payload.Position),
+    RoleUuids: getOptionalStringArray(payload.RoleUuids, "RoleUuids"),
     Status: getOptionalStatus(payload.Status, "Status"),
-    UserType: getOptionalUserType(payload.UserType, "UserType"),
   }
 
   const response = await fetch(MEMBERS_API_URL, {
@@ -148,7 +150,7 @@ export async function fetchMembers(payload: ListMembersPayload = {}): Promise<Me
     throw createHttpError(response, responsePayload, MEMBERS_LOAD_ERROR_MESSAGE)
   }
 
-  const list = extractList(responsePayload)
+  const list = extractList(responsePayload).map(item => normalizeMemberDetailRecord(item))
 
   return {
     list,
@@ -203,7 +205,7 @@ export async function getMemberDetail(payload: MemberDetailPayload): Promise<Mem
     throw createHttpError(response, responseBody, MEMBER_DETAIL_ERROR_MESSAGE)
   }
 
-  return extractDetailRecord(responseBody)
+  return normalizeMemberDetailRecord(extractDetailRecord(responseBody))
 }
 
 export async function updateMember(payload: UpdateMemberPayload) {
@@ -405,6 +407,93 @@ function extractCreateResult(payload: unknown): CreateMemberResult {
   return directRecord as CreateMemberResult
 }
 
+function normalizeMemberDetailRecord(value: unknown): MemberDetailResult {
+  const record = asRecord(value)
+
+  if (!record) {
+    return {}
+  }
+
+  const hasRoles = Array.isArray(record.Roles)
+
+  return {
+    ...record,
+    DepartmentId: normalizeResponseNumber(record.DepartmentId),
+    DepartmentName: normalizeResponseString(record.DepartmentName),
+    DepartmentUuid: normalizeResponseString(record.DepartmentUuid),
+    Id: normalizeResponseNumber(record.Id),
+    Name: normalizeResponseString(record.Name),
+    Phone: normalizeResponseString(record.Phone),
+    Position: normalizeResponseString(record.Position),
+    Roles: hasRoles ? normalizeMemberRoleItems(record.Roles) : undefined,
+    Status: normalizeResponseNumber(record.Status),
+    UserType: normalizeResponseUserTypes(record.UserType),
+    Uuid: normalizeResponseString(record.Uuid),
+  }
+}
+
+function normalizeMemberRoleItems(value: unknown): MemberDetailRole[] {
+  if (!Array.isArray(value)) {
+    return []
+  }
+
+  return value
+    .map((item) => {
+      const record = asRecord(item)
+
+      if (!record) {
+        return null
+      }
+
+      return {
+        ...record,
+        RoleId: normalizeResponseNumber(record.RoleId),
+        RoleName: normalizeResponseString(record.RoleName),
+        RoleUuid: normalizeResponseString(record.RoleUuid),
+      }
+    })
+    .filter((item): item is MemberDetailRole => item !== null)
+}
+
+function normalizeResponseUserTypes(value: unknown): MemberUserTypeValue | undefined {
+  if (!Array.isArray(value)) {
+    return undefined
+  }
+
+  const normalized = Array.from(new Set(
+    value
+      .map((item) => {
+        const parsed = Number(item)
+        return parsed === 1 || parsed === 2 || parsed === 3 ? parsed : null
+      })
+      .filter((item): item is number => item !== null),
+  ))
+
+  return normalized.length ? normalized : undefined
+}
+
+function normalizeResponseString(value: unknown) {
+  if (typeof value === "string") {
+    const normalized = value.trim()
+    return normalized || undefined
+  }
+
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return String(value)
+  }
+
+  return undefined
+}
+
+function normalizeResponseNumber(value: unknown) {
+  if (value === undefined || value === null || value === "") {
+    return undefined
+  }
+
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : undefined
+}
+
 function getRequiredString(value: unknown, field: string) {
   if (typeof value === "string" && value.trim()) {
     return value.trim()
@@ -499,6 +588,20 @@ function getOptionalStringArray(value: unknown, field: string) {
 }
 
 function getOptionalStatus(value: unknown, field: string) {
+  const normalized = getOptionalNumber(value, field)
+
+  if (normalized === undefined) {
+    return undefined
+  }
+
+  if (normalized === 1 || normalized === 2) {
+    return normalized
+  }
+
+  throw new ApiError(`请求参数校验失败：${field} 仅支持 1 或 2。`)
+}
+
+function getOptionalIsRepair(value: unknown, field: string) {
   const normalized = getOptionalNumber(value, field)
 
   if (normalized === undefined) {
