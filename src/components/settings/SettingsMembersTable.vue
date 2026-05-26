@@ -2599,7 +2599,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
     </Dialog>
 
     <Dialog :open="roleDialogOpen" @update:open="($event ? (roleDialogOpen = true) : closeRoleDialog())">
-      <DialogContent stack-above-sticky-header class="flex h-[90vh] max-h-[90vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-[1120px]">
+      <DialogContent stack-above-sticky-header class="flex h-[90vh] max-h-[90vh] flex-col gap-0 overflow-hidden p-0 sm:max-w-[1320px]">
         <DialogHeader class="border-b border-border/70 p-4">
           <DialogTitle>{{ editingRoleId === null ? "添加权限组" : "编辑权限组" }}</DialogTitle>
           <DialogDescription>
@@ -2608,7 +2608,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
         </DialogHeader>
 
         <form class="flex min-h-0 flex-1 flex-col" @submit.prevent="submitRole">
-          <div class="grid min-h-0 flex-1 gap-4 overflow-y-auto px-5 py-4 md:grid-cols-[280px_minmax(0,0.95fr)_minmax(0,1.25fr)] md:gap-0 md:overflow-hidden md:divide-x md:divide-border/70 md:px-0 md:py-0">
+          <div class="grid min-h-0 flex-1 gap-4 overflow-y-auto px-5 py-4 md:grid-cols-[260px_minmax(0,0.9fr)_minmax(0,1fr)_minmax(0,0.95fr)] md:gap-0 md:overflow-hidden md:divide-x md:divide-border/70 md:px-0 md:py-0">
             <div class="space-y-4 md:relative md:min-h-0 md:overflow-hidden md:px-5 md:pt-4 md:pb-0">
               <section class="space-y-3">
                 <div class="space-y-1">
@@ -2643,7 +2643,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
                 <div class="space-y-1">
                   <h3 class="text-sm font-semibold text-foreground">权限概览</h3>
                   <p class="text-xs leading-5 text-muted-foreground">
-                    按钮权限按已选菜单展示，独立 API 可在右侧单独勾选。
+                    按钮权限按已选菜单展示，独立 API 独立成列，可单独勾选。
                   </p>
                 </div>
 
@@ -2779,129 +2779,133 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
             <div class="md:relative md:flex md:min-h-0 md:flex-col md:overflow-hidden md:px-5 md:pt-4 md:pb-0">
               <div class="space-y-2 pb-3">
                 <div class="flex min-w-0 items-center gap-2 whitespace-nowrap">
-                  <h3 class="text-sm font-semibold text-foreground">按钮与 API 权限</h3>
+                  <h3 class="text-sm font-semibold text-foreground">按钮权限</h3>
                   <span class="text-xs text-muted-foreground">勾选菜单后可逐个调整按钮</span>
                 </div>
               </div>
 
               <Separator class="bg-border/70" />
 
-              <div v-if="selectedMenuPermissionGroups.length === 0 && permissionApiRows.length === 0" class="py-6 text-sm text-muted-foreground">
-                先从中间列选择页面，右侧才会显示对应页面及按钮。
+              <div v-if="selectedMenuPermissionGroups.length === 0" class="py-6 text-sm text-muted-foreground">
+                先从待选页面勾选页面，这里才会显示对应页面及按钮。
               </div>
 
               <div v-else class="min-h-0 flex-1 overflow-y-auto pr-5 md:mr-[-20px] [scrollbar-gutter:stable]">
                 <div class="space-y-3 py-3 md:pr-4">
-                  <div v-if="selectedMenuPermissionGroups.length === 0" class="py-3 text-sm text-muted-foreground">
-                    先从中间列选择页面，右侧才会显示对应页面及按钮。
-                  </div>
-
-                  <template v-else>
-                    <div
-                      v-for="group in selectedMenuPermissionGroups"
-                      :key="group.key"
-                      class="border-b border-dashed border-border/70 pb-2 last:border-b-0"
-                    >
-                      <div class="mb-1 flex items-center gap-2 py-1">
-                        <span class="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
-                          {{ group.title }}
-                          <span class="ml-1 text-[11px] font-normal text-muted-foreground">{{ group.path || "顶级导航分组" }}</span>
-                        </span>
-                        <span class="text-xs text-muted-foreground">{{ group.visiblePanels.length }} 页</span>
-                      </div>
-
-                      <div class="grid gap-1">
-                        <template v-for="menu in group.visiblePanels" :key="menu.uuid || menu.id">
-                          <label
-                            class="flex items-center gap-2 py-1.5"
-                            :style="{ paddingLeft: `${menu.depth * 18}px` }"
-                          >
-                            <i
-                              v-if="menu.depth > 0"
-                              class="ri-corner-down-right-line shrink-0 text-[12px] text-muted-foreground"
-                            />
-                            <span v-else class="w-3 shrink-0" />
-                            <span class="w-4 shrink-0" />
-                            <span class="min-w-0 flex flex-1 items-center gap-2 overflow-hidden leading-none">
-                              <Tooltip>
-                                <TooltipTrigger as-child>
-                                  <span :class="menu.depth === 0 ? 'font-medium text-foreground' : 'text-foreground'" class="truncate text-sm">
-                                    {{ menu.name }}
-                                  </span>
-                                </TooltipTrigger>
-                                <TooltipContent>{{ menu.path }}</TooltipContent>
-                              </Tooltip>
-                            </span>
-                            <span class="text-[11px] text-muted-foreground">
-                              {{ menu.buttons.filter(button => selectedButtonSet.has(button.uuid)).length }}/{{ menu.buttons.length }} 个按钮
-                            </span>
-                          </label>
-
-                          <div v-if="menu.buttons.length > 0" class="grid gap-1">
-                            <label
-                              v-for="button in menu.buttons"
-                              :key="button.id"
-                              class="flex items-center gap-2 py-1.5"
-                              :style="{ paddingLeft: `${(menu.depth + 1) * 18}px` }"
-                            >
-                              <i class="ri-corner-down-right-line shrink-0 text-[12px] text-muted-foreground" />
-                              <Checkbox
-                                :model-value="selectedButtonSet.has(button.uuid)"
-                                :disabled="!canBindRolePermission"
-                                @update:model-value="updateRoleButtonSelection(button.uuid, $event === true)"
-                              />
-                              <span class="min-w-0 flex flex-1 items-center gap-2 overflow-hidden leading-none">
-                                <Tooltip>
-                                  <TooltipTrigger as-child>
-                                    <span class="truncate text-sm text-foreground">{{ button.name }}</span>
-                                  </TooltipTrigger>
-                                  <TooltipContent>{{ button.code }}</TooltipContent>
-                                </Tooltip>
-                              </span>
-                            </label>
-                          </div>
-                        </template>
-                      </div>
-                    </div>
-                  </template>
-
                   <div
-                    v-if="permissionApiRows.length > 0"
+                    v-for="group in selectedMenuPermissionGroups"
+                    :key="group.key"
                     class="border-b border-dashed border-border/70 pb-2 last:border-b-0"
                   >
                     <div class="mb-1 flex items-center gap-2 py-1">
-                      <Checkbox
-                        :model-value="apiSelectionState"
-                        :disabled="!canBindRolePermission"
-                        @update:model-value="toggleAllApis($event === true)"
-                      />
-                      <span class="min-w-0 flex-1 truncate text-sm font-medium text-foreground">独立 API</span>
-                      <span class="text-xs text-muted-foreground">{{ selectedApiCount }}/{{ permissionApiRows.length }}</span>
+                      <span class="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
+                        {{ group.title }}
+                        <span class="ml-1 text-[11px] font-normal text-muted-foreground">{{ group.path || "顶级导航分组" }}</span>
+                      </span>
+                      <span class="text-xs text-muted-foreground">{{ group.visiblePanels.length }} 页</span>
                     </div>
 
                     <div class="grid gap-1">
-                      <label
-                        v-for="api in permissionApiRows"
-                        :key="api.id"
-                        class="flex items-center gap-2 py-1.5 pl-[18px]"
-                      >
-                        <i class="ri-corner-down-right-line shrink-0 text-[12px] text-muted-foreground" />
-                        <Checkbox
-                          :model-value="selectedApiSet.has(api.uuid)"
-                          :disabled="!canBindRolePermission"
-                          @update:model-value="updateRoleApiSelection(api.uuid, $event === true)"
-                        />
-                        <span class="min-w-0 flex flex-1 items-center gap-2 overflow-hidden leading-none">
-                          <Tooltip>
-                            <TooltipTrigger as-child>
-                              <span class="truncate text-sm text-foreground">{{ api.name }}</span>
-                            </TooltipTrigger>
-                            <TooltipContent>{{ api.method }} {{ api.path }}</TooltipContent>
-                          </Tooltip>
-                        </span>
-                      </label>
+                      <template v-for="menu in group.visiblePanels" :key="menu.uuid || menu.id">
+                        <label
+                          class="flex items-center gap-2 py-1.5"
+                          :style="{ paddingLeft: `${menu.depth * 18}px` }"
+                        >
+                          <i
+                            v-if="menu.depth > 0"
+                            class="ri-corner-down-right-line shrink-0 text-[12px] text-muted-foreground"
+                          />
+                          <span v-else class="w-3 shrink-0" />
+                          <span class="w-4 shrink-0" />
+                          <span class="min-w-0 flex flex-1 items-center gap-2 overflow-hidden leading-none">
+                            <Tooltip>
+                              <TooltipTrigger as-child>
+                                <span :class="menu.depth === 0 ? 'font-medium text-foreground' : 'text-foreground'" class="truncate text-sm">
+                                  {{ menu.name }}
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>{{ menu.path }}</TooltipContent>
+                            </Tooltip>
+                          </span>
+                          <span class="text-[11px] text-muted-foreground">
+                            {{ menu.buttons.filter(button => selectedButtonSet.has(button.uuid)).length }}/{{ menu.buttons.length }} 个按钮
+                          </span>
+                        </label>
+
+                        <div v-if="menu.buttons.length > 0" class="grid gap-1">
+                          <label
+                            v-for="button in menu.buttons"
+                            :key="button.id"
+                            class="flex items-center gap-2 py-1.5"
+                            :style="{ paddingLeft: `${(menu.depth + 1) * 18}px` }"
+                          >
+                            <i class="ri-corner-down-right-line shrink-0 text-[12px] text-muted-foreground" />
+                            <Checkbox
+                              :model-value="selectedButtonSet.has(button.uuid)"
+                              :disabled="!canBindRolePermission"
+                              @update:model-value="updateRoleButtonSelection(button.uuid, $event === true)"
+                            />
+                            <span class="min-w-0 flex flex-1 items-center gap-2 overflow-hidden leading-none">
+                              <Tooltip>
+                                <TooltipTrigger as-child>
+                                  <span class="truncate text-sm text-foreground">{{ button.name }}</span>
+                                </TooltipTrigger>
+                                <TooltipContent>{{ button.code }}</TooltipContent>
+                              </Tooltip>
+                            </span>
+                          </label>
+                        </div>
+                      </template>
                     </div>
                   </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="md:relative md:flex md:min-h-0 md:flex-col md:overflow-hidden md:px-5 md:pt-4 md:pb-0">
+              <div class="space-y-2 pb-3">
+                <div class="flex min-w-0 items-center gap-2 whitespace-nowrap">
+                  <h3 class="text-sm font-semibold text-foreground">独立 API</h3>
+                  <span class="text-xs text-muted-foreground">{{ selectedApiCount }}/{{ permissionApiRows.length }}</span>
+                </div>
+
+                <label class="inline-flex items-center gap-2 text-sm text-foreground">
+                  <Checkbox
+                    :model-value="apiSelectionState"
+                    :disabled="permissionApiRows.length === 0 || !canBindRolePermission"
+                    @update:model-value="toggleAllApis($event === true)"
+                  />
+                  <span>全选 API</span>
+                </label>
+              </div>
+
+              <Separator class="bg-border/70" />
+
+              <div v-if="permissionApiRows.length === 0 && !rolePermissionResourcesLoading" class="py-6 text-sm text-muted-foreground">
+                暂无独立 API。
+              </div>
+
+              <div v-else class="min-h-0 flex-1 overflow-y-auto pr-5 md:mr-[-20px] [scrollbar-gutter:stable]">
+                <div class="grid gap-1 py-3 md:pr-4">
+                  <label
+                    v-for="api in permissionApiRows"
+                    :key="api.id"
+                    class="flex items-center gap-2 py-1.5"
+                  >
+                    <Checkbox
+                      :model-value="selectedApiSet.has(api.uuid)"
+                      :disabled="!canBindRolePermission"
+                      @update:model-value="updateRoleApiSelection(api.uuid, $event === true)"
+                    />
+                    <span class="min-w-0 flex flex-1 items-center gap-2 overflow-hidden leading-none">
+                      <Tooltip>
+                        <TooltipTrigger as-child>
+                          <span class="truncate text-sm text-foreground">{{ api.name }}</span>
+                        </TooltipTrigger>
+                        <TooltipContent>{{ api.method }} {{ api.path }}</TooltipContent>
+                      </Tooltip>
+                    </span>
+                  </label>
                 </div>
               </div>
             </div>
