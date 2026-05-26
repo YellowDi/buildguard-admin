@@ -71,12 +71,18 @@ export type RoleMenuButtonListPayload = {
   Uuid?: string
 }
 
+export type RoleMenuButtonApiItem = {
+  Method?: string
+  Name?: string
+  Path?: string
+  Uuid?: string
+  [property: string]: unknown
+}
+
 export type RoleMenuButtonNode = {
-  Apis?: RoleMenuButtonNode[]
   Buttons?: RoleMenuButtonNode[]
   Children?: RoleMenuButtonNode[]
   IsBind?: boolean
-  Method?: string
   Name?: string
   Path?: string
   Type?: string
@@ -85,6 +91,7 @@ export type RoleMenuButtonNode = {
 }
 
 export type RoleMenuButtonListResult = {
+  Apis: RoleMenuButtonApiItem[]
   Nodes: RoleMenuButtonNode[]
 }
 
@@ -266,6 +273,7 @@ export async function fetchRoleMenuButtonList(payload: RoleMenuButtonListPayload
   assertApiSuccess(responsePayload, ROLE_MENU_BUTTON_LIST_ERROR_MESSAGE)
 
   return {
+    Apis: extractRoleMenuButtonApis(responsePayload),
     Nodes: extractRoleMenuButtonNodes(responsePayload),
   }
 }
@@ -395,6 +403,26 @@ function extractRoleMenuButtonNodes(payload: unknown): RoleMenuButtonNode[] {
 
   if (nestedRecord && Array.isArray(nestedRecord.Nodes)) {
     return nestedRecord.Nodes as RoleMenuButtonNode[]
+  }
+
+  return []
+}
+
+function extractRoleMenuButtonApis(payload: unknown): RoleMenuButtonApiItem[] {
+  const directRecord = asRecord(payload)
+
+  if (!directRecord) {
+    return []
+  }
+
+  if (Array.isArray(directRecord.Apis)) {
+    return directRecord.Apis as RoleMenuButtonApiItem[]
+  }
+
+  const nestedRecord = asRecord(directRecord.data)
+
+  if (nestedRecord && Array.isArray(nestedRecord.Apis)) {
+    return nestedRecord.Apis as RoleMenuButtonApiItem[]
   }
 
   return []

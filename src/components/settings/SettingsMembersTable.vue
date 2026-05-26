@@ -2081,11 +2081,13 @@ async function loadEditRoleDetail(role: RoleRow) {
     editingRoleUuid.value = role.uuid
 
     const boundPermissions = getBoundRolePermissionUuids(permissionResult.Nodes)
+    const directApiUuids = normalizeRoleApiItems(permissionResult.Apis)
     const detailApiUuids = getRoleApiUuids(detail as Record<string, unknown>) ?? []
 
     roleForm.value.selectedMenuUuids = normalizeConfigurableMenuUuids(boundPermissions.menuUuids)
     roleForm.value.selectedButtonUuids = boundPermissions.buttonUuids
     roleForm.value.selectedApiUuids = normalizeConfigurableApiUuids([
+      ...directApiUuids,
       ...boundPermissions.apiUuids,
       ...detailApiUuids,
     ])
