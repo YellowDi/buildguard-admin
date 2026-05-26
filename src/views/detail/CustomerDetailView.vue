@@ -251,13 +251,11 @@ type CustomerInspectionServiceCard = {
   startTime: string
   contractEndTime: string
   remainingHint: string
+  contractFile: string
   managerName: string
   managerPhone: string
-  templateName: string
   buildingCount: number
   inspectionItemCount: number
-  totalInspectionCount: number | null
-  remainingInspectionCount: number | null
   remark: string
 }
 
@@ -3465,8 +3463,6 @@ function mapInspectionServiceCard(item: InspectionServiceListItem, index: number
   const statusValue = resolveInspectionServiceStatusValue(item.Status, item.ServiceStatus)
   const contractEndTime = toDisplayText(item.ContractEndTime, "-")
   const inspectionItemCount = resolveInspectionServiceInspectionCount(item)
-  const totalInspectionCount = readInspectionServiceNumber(item, ["TotalInspectionCount", "InspectionCount", "InspectionTimes"])
-  const remainingInspectionCount = readInspectionServiceNumber(item, ["RemainInspectionCount", "RemainingInspectionCount", "RemainTimes"])
 
   return {
     key: uuid || `${fallbackCustomerUuid}-inspection-service-${index + 1}`,
@@ -3479,13 +3475,11 @@ function mapInspectionServiceCard(item: InspectionServiceListItem, index: number
     startTime: toDisplayText(item.StartTime, "-"),
     contractEndTime,
     remainingHint: getInspectionServiceRemainingHint(contractEndTime),
+    contractFile: toDisplayText(item.ContractFile, ""),
     managerName: toDisplayText(item.ManagerName, "未填写"),
     managerPhone: toDisplayText(item.ManagerPhone, "-"),
-    templateName: toDisplayText(item.TemplateName, "-"),
     buildingCount: resolveInspectionServiceBuildingCount(item),
     inspectionItemCount,
-    totalInspectionCount,
-    remainingInspectionCount,
     remark: toDisplayText(item.Remark, ""),
   }
 }
@@ -3600,20 +3594,6 @@ function resolveInspectionServiceInspectionCount(item: InspectionServiceListItem
   return extractInspectionServiceDetailInspectionUuids(item).length
 }
 
-function readInspectionServiceNumber(item: InspectionServiceListItem, keys: string[]) {
-  const record = item as Record<string, unknown>
-
-  for (const key of keys) {
-    const parsed = toNullableNumberLike(record[key])
-
-    if (parsed !== null) {
-      return parsed
-    }
-  }
-
-  return null
-}
-
 function toNullableNumberLike(value: unknown) {
   if (typeof value === "number" && Number.isFinite(value)) {
     return value
@@ -3652,20 +3632,8 @@ function formatInspectionServiceScope(service: CustomerInspectionServiceCard) {
   return scopes.length ? scopes.join(" / ") : "-"
 }
 
-function formatInspectionServiceQuota(service: CustomerInspectionServiceCard) {
-  if (service.remainingInspectionCount !== null && service.totalInspectionCount !== null) {
-    return `剩余 ${service.remainingInspectionCount} / 共 ${service.totalInspectionCount} 次`
-  }
-
-  if (service.remainingInspectionCount !== null) {
-    return `剩余 ${service.remainingInspectionCount} 次`
-  }
-
-  if (service.totalInspectionCount !== null) {
-    return `共 ${service.totalInspectionCount} 次`
-  }
-
-  return "-"
+function formatInspectionServiceContractFile(service: CustomerInspectionServiceCard) {
+  return service.contractFile ? "已上传" : "未上传"
 }
 
 function formatInspectionServiceManager(service: CustomerInspectionServiceCard) {
@@ -4962,7 +4930,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
                       </span>
                     </div>
                     <p class="mt-1 truncate text-xs text-muted-foreground">
-                      {{ service.templateName }} · {{ service.level }}
+                      套餐等级：{{ service.level }}
                     </p>
                   </div>
 
@@ -4994,8 +4962,8 @@ function toDisplayText(value: unknown, fallback = "未填写") {
                     <div class="mt-0.5 break-words font-medium text-foreground">{{ formatInspectionServiceScope(service) }}</div>
                   </div>
                   <div class="min-w-0 rounded-md bg-muted/45 px-2.5 py-2">
-                    <div class="text-xs text-muted-foreground">检测次数</div>
-                    <div class="mt-0.5 truncate font-medium text-foreground">{{ formatInspectionServiceQuota(service) }}</div>
+                    <div class="text-xs text-muted-foreground">合同文件</div>
+                    <div class="mt-0.5 truncate font-medium text-foreground">{{ formatInspectionServiceContractFile(service) }}</div>
                   </div>
                 </div>
 

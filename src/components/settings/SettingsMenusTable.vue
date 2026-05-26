@@ -61,6 +61,7 @@ import {
   fetchSystemApis,
   fetchSystemButtons,
   importSystemApi,
+  redistributeSystemPermissions,
   type SystemResourceRecord,
 } from "@/lib/system-resources-api"
 import { PERMISSION_CODES } from "@/lib/permission-codes"
@@ -193,6 +194,7 @@ const buttonForm = ref(createButtonForm())
 const apiRows = ref<ApiRow[]>([])
 const buttonApiSearchQuery = ref("")
 const importSubmitting = ref(false)
+const redistributeSubmitting = ref(false)
 const apiImportInput = useTemplateRef<HTMLInputElement>("apiImportInput")
 
 const availableMenuRows = computed(() => (menuOptionRows.value.length > 0 ? menuOptionRows.value : rows.value))
@@ -758,6 +760,32 @@ async function handleApiImportFileChange(event: Event) {
     if (input) {
       input.value = ""
     }
+  }
+}
+
+async function handleRedistributePermissions() {
+  if (redistributeSubmitting.value) {
+    return
+  }
+
+  redistributeSubmitting.value = true
+
+  try {
+    await redistributeSystemPermissions()
+    toast.success("权限已重新分发", {
+      description: "权限资源已重新分发并刷新列表。",
+    })
+    await Promise.allSettled([
+      loadApis(),
+      loadButtons({ manageLoading: false }),
+    ])
+  } catch (error) {
+    handleApiError(error, {
+      title: "权限重新分发失败",
+      fallback: "权限重新分发失败，请稍后重试。",
+    })
+  } finally {
+    redistributeSubmitting.value = false
   }
 }
 
@@ -1493,6 +1521,17 @@ function formatBooleanLabel(value: boolean) {
               <span>刷新列表</span>
             </Button>
           </SettingsToolbarRefreshSlot>
+
+          <Button
+            v-if="activeView === 'apis' && canButton(PERMISSION_CODES.developerApiImport)"
+            variant="outline"
+            class="h-8 gap-1 rounded-md px-3 text-[14px]"
+            :disabled="redistributeSubmitting"
+            @click="handleRedistributePermissions"
+          >
+            <i :class="redistributeSubmitting ? 'ri-loader-4-line animate-spin text-base' : 'ri-shuffle-line text-base'" />
+            <span>{{ redistributeSubmitting ? "分发中..." : "重新分发权限" }}</span>
+          </Button>
 
           <Button
             v-if="activeView === 'apis' && canButton(PERMISSION_CODES.developerApiImport)"

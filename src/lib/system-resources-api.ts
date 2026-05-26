@@ -40,9 +40,11 @@ export type ListSystemButtonsPayload = {
 const SYSTEM_BUTTONS_API_URL = buildApiUrl(API_PATHS.systemButtonsList)
 const SYSTEM_APIS_API_URL = buildApiUrl(API_PATHS.systemApisList)
 const SYSTEM_APIS_IMPORT_API_URL = buildApiUrl(API_PATHS.systemApisImport)
+const SYSTEM_PERMISSION_REDISTRIBUTE_API_URL = buildApiUrl(API_PATHS.systemPermissionRedistribute)
 const BUTTONS_LOAD_ERROR_MESSAGE = "按钮列表加载失败，请稍后重试。"
 const APIS_LOAD_ERROR_MESSAGE = "API 列表加载失败，请稍后重试。"
 const API_IMPORT_ERROR_MESSAGE = "API 导入失败，请稍后重试。"
+const PERMISSION_REDISTRIBUTE_ERROR_MESSAGE = "权限重新分发失败，请稍后重试。"
 
 export async function fetchSystemButtons(payload: ListSystemButtonsPayload = {}): Promise<SystemResourceListResult> {
   const normalizedPayload = {
@@ -125,6 +127,21 @@ export async function importSystemApi(file: File) {
   }
 
   assertApiSuccess(responsePayload, API_IMPORT_ERROR_MESSAGE)
+  return responsePayload
+}
+
+export async function redistributeSystemPermissions() {
+  const response = await fetch(SYSTEM_PERMISSION_REDISTRIBUTE_API_URL, {
+    method: "GET",
+    headers: buildApiHeaders(),
+  })
+  const responsePayload = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responsePayload, PERMISSION_REDISTRIBUTE_ERROR_MESSAGE)
+  }
+
+  assertApiSuccess(responsePayload, PERMISSION_REDISTRIBUTE_ERROR_MESSAGE)
   return responsePayload
 }
 

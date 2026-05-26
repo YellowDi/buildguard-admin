@@ -74,6 +74,7 @@ export const API_PATHS = {
   systemButtonDelete: "/bqi/sys/button/del",
   systemApisList: "/bqi/sys/api/list",
   systemApisImport: "/bqi/sys/api/import",
+  systemPermissionRedistribute: "/bqi/sys/permission/redistribute",
   currentUserInfo: "/bqi/user/info",
   inspectionItemsList: "/bqi/inspection/list",
   inspectionCategoriesList: "/bqi/sys/category/list",
