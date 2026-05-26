@@ -1,5 +1,3 @@
-import inspectionServicesMockData from "@/mocks/inspection-services.json"
-
 import { assertApiSuccess, createHttpError, readResponseBody } from "@/lib/api-errors"
 import { API_PATHS, buildApiHeaders, buildApiRequestUrl, buildApiUrl } from "@/lib/api"
 
@@ -168,16 +166,10 @@ const INSPECTION_SERVICE_DETAIL_ERROR_MESSAGE = "检测服务详情加载失败�
 const INSPECTION_SERVICE_DELETE_ERROR_MESSAGE = "检测服务删除失败，请稍后重试。"
 const INSPECTION_SERVICE_CATEGORY_WEIGHT_MIN = 1
 const INSPECTION_SERVICE_CATEGORY_WEIGHT_MAX = 10
-const USE_INSPECTION_SERVICES_LIST_MOCK = false
-const USE_INSPECTION_SERVICE_DETAIL_MOCK = false
 
 export async function fetchInspectionServices(
   payload: ListInspectionServicesPayload = {},
 ): Promise<InspectionServicesListResult> {
-  if (USE_INSPECTION_SERVICES_LIST_MOCK) {
-    return listMockInspectionServices(payload)
-  }
-
   const normalizedPayload = {
     BuildUuids: Array.isArray(payload.BuildUuids)
       ? payload.BuildUuids.map(item => getOptionalString(item)).filter((item): item is string => Boolean(item))
@@ -310,10 +302,6 @@ export async function updateInspectionServiceContract(
 export async function fetchInspectionServiceDetail(
   payload: InspectionServiceDetailPayload,
 ): Promise<InspectionServiceListItem> {
-  if (USE_INSPECTION_SERVICE_DETAIL_MOCK) {
-    return getMockInspectionServiceDetail(payload)
-  }
-
   const url = buildApiRequestUrl(API_PATHS.inspectionServiceDetail)
   const uuid = getRequiredString(payload.Uuid, "Uuid")
 
@@ -369,53 +357,6 @@ export function extractInspectionServiceDetailInspectionUuids(
         : (Array.isArray(detail?.Builds) ? detail.Builds : []),
     ),
   ])
-}
-
-function listMockInspectionServices(
-  payload: ListInspectionServicesPayload,
-): InspectionServicesListResult {
-  const name = getOptionalString(payload.Name)?.toLowerCase()
-  const customerUuid = getOptionalString(payload.CustomerUuid)
-  const templateUuid = getOptionalString(payload.TemplateUuid)
-  const pageNum = getOptionalNumber(payload.PageNum, "PageNum") ?? 1
-  const pageSize = getOptionalNumber(payload.PageSize, "PageSize") ?? (getMockInspectionServices().length || 10)
-
-  const filtered = getMockInspectionServices().filter((item) => {
-    if (name && !getOptionalString(item.Name)?.toLowerCase().includes(name)) {
-      return false
-    }
-
-    if (customerUuid && getOptionalString(item.CustomerUuid) !== customerUuid) {
-      return false
-    }
-
-    if (templateUuid && getOptionalString(item.TemplateUuid) !== templateUuid) {
-      return false
-    }
-
-    return true
-  })
-
-  const start = Math.max(pageNum - 1, 0) * Math.max(pageSize, 1)
-  const end = start + Math.max(pageSize, 1)
-
-  return {
-    list: filtered.slice(start, end).map(item => normalizeInspectionServiceListItem(item)),
-    total: filtered.length,
-  }
-}
-
-function getMockInspectionServiceDetail(
-  payload: InspectionServiceDetailPayload,
-): InspectionServiceListItem {
-  const uuid = getRequiredString(payload.Uuid, "Uuid")
-  const item = getMockInspectionServices().find(candidate => getIdentity(candidate) === uuid)
-
-  if (!item) {
-    throw new Error(INSPECTION_SERVICE_DETAIL_ERROR_MESSAGE)
-  }
-
-  return normalizeInspectionServiceListItem(item)
 }
 
 function extractList(payload: InspectionServicesListEnvelope | unknown[]) {
@@ -927,12 +868,4 @@ function normalizeOptionalInspectionServiceCategoryWeight(value: unknown) {
 function resolveValidInspectionServiceCategoryWeight(weight: unknown, score: unknown) {
   return normalizeOptionalInspectionServiceCategoryWeight(weight)
     ?? normalizeOptionalInspectionServiceCategoryWeight(score)
-}
-
-function getMockInspectionServices() {
-  return inspectionServicesMockData as InspectionServiceListItem[]
-}
-
-function getIdentity(item: InspectionServiceListItem) {
-  return getOptionalString(item.Uuid) ?? getOptionalString(item.Id) ?? ""
 }

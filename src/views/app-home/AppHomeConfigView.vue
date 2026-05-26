@@ -30,7 +30,7 @@ import {
   type AppHomeVideoCategory,
   type AppHomeVideoModule,
   type AppHomeVideoSource,
-} from "@/lib/app-home-mock"
+} from "@/lib/app-home-types"
 import {
   createMediaContent,
   deleteMediaContent,
