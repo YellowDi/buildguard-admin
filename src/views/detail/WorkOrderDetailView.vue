@@ -33,6 +33,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Spinner } from "@/components/ui/spinner"
 import { Textarea } from "@/components/ui/textarea"
 import { detailBreadcrumbTitle } from "@/composables/useDetailBreadcrumbTitle"
+import { useCurrentUserPermissions } from "@/composables/useCurrentUserPermissions"
 import DetailLayout from "@/layouts/DetailLayout.vue"
 import { handleApiError } from "@/lib/api-errors"
 import { fetchCustomerDetail, type CustomerDetailResult } from "@/lib/customers-api"
@@ -145,6 +146,7 @@ const props = withDefaults(defineProps<{
 
 const route = useRoute()
 const router = useRouter()
+const { canButton } = useCurrentUserPermissions()
 
 const inspectionWorkOrder = ref<WorkOrderDetailResult | null>(null)
 const repairWorkOrder = ref<RepairWorkOrderDetailResult | null>(null)
@@ -386,7 +388,8 @@ const assignPermissionCode = computed(() => props.kind === "repair"
   : PERMISSION_CODES.inspectionWorkOrderAssign)
 const deletePermissionCode = computed(() => props.kind === "repair"
   ? PERMISSION_CODES.repairWorkOrderDelete
-  : PERMISSION_CODES.inspectionWorkOrderEdit)
+  : PERMISSION_CODES.inspectionWorkOrderDelete)
+const canGenerateInspectionReport = computed(() => canButton(PERMISSION_CODES.inspectionWorkOrderReportGenerate))
 const deleteDialogTitle = computed(() => props.kind === "repair" ? "确认删除当前报修工单？" : "确认删除当前检测工单？")
 const deleteDialogDescription = computed(() => (
   props.kind === "repair"
@@ -1259,6 +1262,10 @@ function toNumber(value: unknown) {
 }
 
 function openReportDialog(buildingKey: string) {
+  if (!canGenerateInspectionReport.value) {
+    return
+  }
+
   const currentWorkOrder = resolvedInspectionWorkOrder.value
 
   if (!currentWorkOrder) {
@@ -1912,7 +1919,7 @@ async function submitAssign() {
           编辑
         </Button>
       </PermissionGate>
-      <PermissionGate :code="PERMISSION_CODES.repairWorkOrderEdit">
+      <PermissionGate :code="PERMISSION_CODES.repairWorkOrderReview">
         <Dialog :open="repairReviewDialogOpen" @update:open="handleRepairReviewDialogOpenChange">
           <Button
             v-if="showRepairReviewAction"
@@ -1991,7 +1998,7 @@ async function submitAssign() {
             empty-title="暂无建筑检测项"
             empty-description="当前工单还没有返回建筑与检测项数据。"
             show-expert-advice
-            show-report-action
+            :show-report-action="canGenerateInspectionReport"
             @generate-report="openReportDialog"
           />
         </div>

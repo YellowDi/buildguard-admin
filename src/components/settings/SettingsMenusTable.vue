@@ -191,6 +191,7 @@ const editingButtonId = ref<number | null>(null)
 const editingButtonUpdatedAt = ref("-")
 const buttonForm = ref(createButtonForm())
 const apiRows = ref<ApiRow[]>([])
+const buttonApiSearchQuery = ref("")
 const importSubmitting = ref(false)
 const apiImportInput = useTemplateRef<HTMLInputElement>("apiImportInput")
 
@@ -212,7 +213,7 @@ const buttonMenuOptions = computed(() => availableMenuRows.value
 
 const buttonApiOptions = computed(() => [...apiRows.value]
   .filter(row => row.uuid)
-  .sort((left, right) => left.name.localeCompare(right.name, "zh-Hans-CN") || left.path.localeCompare(right.path, "zh-Hans-CN"))
+  .sort(compareApiOptionRows)
   .map(row => ({
     uuid: row.uuid,
     label: row.path && row.path !== "-"
@@ -221,6 +222,20 @@ const buttonApiOptions = computed(() => [...apiRows.value]
     method: row.method,
     path: row.path,
   })))
+
+const filteredButtonApiOptions = computed(() => {
+  const query = buttonApiSearchQuery.value.trim().toLowerCase()
+
+  if (!query) {
+    return buttonApiOptions.value
+  }
+
+  return buttonApiOptions.value.filter(option => [
+    option.label,
+    option.method,
+    option.path,
+  ].some(field => field.toLowerCase().includes(query)))
+})
 
 const boundButtonApiUuidSet = computed(() => new Set(buttonRows.value.flatMap(row => row.apiUuids)))
 const apiTableRows = computed<ApiTableRow[]>(() => apiRows.value.map((row) => {
@@ -373,7 +388,7 @@ const currentSearchPlaceholder = computed(() => {
   }
 
   if (activeView.value === "apis") {
-    return "搜索 API 名称、标识或分组"
+    return "搜索 API 名称、路径或 Method"
   }
 
   return "搜索菜单名称、Path、上级菜单或 Uuid"
@@ -834,6 +849,18 @@ function compareMenuRows(left: MenuRow, right: MenuRow) {
     || left.id - right.id
 }
 
+function compareApiOptionRows(left: ApiRow, right: ApiRow) {
+  return normalizeApiSortPath(left.path).localeCompare(normalizeApiSortPath(right.path), "zh-Hans-CN")
+    || left.method.localeCompare(right.method, "zh-Hans-CN")
+    || left.name.localeCompare(right.name, "zh-Hans-CN")
+    || left.uuid.localeCompare(right.uuid, "zh-Hans-CN")
+}
+
+function normalizeApiSortPath(path: string) {
+  const normalizedPath = path.trim()
+  return normalizedPath && normalizedPath !== "-" ? normalizedPath : "~"
+}
+
 function normalizeButton(item: SystemResourceRecord, index: number): ButtonRow {
   const uuid = toText(item.Uuid)
   const numericId = toOptionalNumber(item.Id) ?? null
@@ -1013,6 +1040,7 @@ async function openCreateButtonDialog() {
   editingButtonUuid.value = ""
   editingButtonId.value = null
   editingButtonUpdatedAt.value = "-"
+  buttonApiSearchQuery.value = ""
   buttonForm.value = createButtonForm()
   buttonDialogOpen.value = true
 }
@@ -1074,6 +1102,7 @@ async function openEditButtonDialog(row: ButtonRow) {
   editingButtonUuid.value = row.uuid
   editingButtonId.value = row.numericId
   editingButtonUpdatedAt.value = row.updatedAt || "-"
+  buttonApiSearchQuery.value = ""
   buttonForm.value = {
     name: row.name,
     code: row.code === "-" ? "" : row.code,
@@ -1145,6 +1174,7 @@ function closeButtonDialog() {
   editingButtonUuid.value = ""
   editingButtonId.value = null
   editingButtonUpdatedAt.value = "-"
+  buttonApiSearchQuery.value = ""
   buttonForm.value = createButtonForm()
 }
 
@@ -1693,8 +1723,18 @@ function formatBooleanLabel(value: boolean) {
                     <SelectValue :placeholder="buttonApiOptions.length ? '选择关联 API，可多选' : '暂无可绑定 API'" />
                   </SelectTrigger>
                   <SelectContent class="max-h-[360px]">
+                    <div class="sticky top-0 z-10 border-b bg-popover p-2">
+                      <Input
+                        v-model="buttonApiSearchQuery"
+                        class="h-8"
+                        placeholder="搜索 API 名称、路径或 Method"
+                        @click.stop
+                        @keydown.stop
+                        @pointerdown.stop
+                      />
+                    </div>
                     <SelectItem
-                      v-for="option in buttonApiOptions"
+                      v-for="option in filteredButtonApiOptions"
                       :key="option.uuid"
                       :value="option.uuid"
                       :class="buttonForm.apiUuids.includes(option.uuid) ? 'bg-accent text-accent-foreground font-medium' : ''"
@@ -1715,6 +1755,12 @@ function formatBooleanLabel(value: boolean) {
                         </span>
                       </span>
                     </SelectItem>
+                    <div
+                      v-if="!filteredButtonApiOptions.length"
+                      class="px-3 py-6 text-center text-sm text-muted-foreground"
+                    >
+                      未找到匹配 API
+                    </div>
                   </SelectContent>
                 </Select>
               </div>

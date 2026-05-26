@@ -1665,7 +1665,7 @@ const subAccountsSchema: TablePageSchema<SubAccountRow> = {
     {
       key: "edit",
       label: "编辑",
-      permissionCode: PERMISSION_CODES.customerSubAccountPasswordReset,
+      permissionCode: PERMISSION_CODES.customerSubAccountEdit,
       onClick: row => handleOpenSubAccountEditDialog(row as SubAccountRow),
     },
   ],
