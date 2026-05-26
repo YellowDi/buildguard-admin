@@ -35,11 +35,9 @@ import {
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
@@ -147,15 +145,6 @@ type RoleOption = {
   label: string
   value: string
 }
-
-type MemberActionKey =
-  | "manual"
-  | "import-excel"
-  | "sync-directory"
-  | "create-role"
-  | "view"
-  | "invite"
-  | "disable"
 
 type PermissionMenuRow = {
   id: string
@@ -1496,64 +1485,22 @@ async function updateMemberStatus(member: MemberRow, nextStatus: number) {
   }
 }
 
-function handleMemberAction(actionKey: MemberActionKey, member?: MemberRow) {
-  if (actionKey === "manual") {
-    if (!canCreateMember.value) {
-      return
-    }
-
-    openManualMemberDialog()
-    return
-  }
-
-  if (actionKey === "import-excel") {
-    toast("导入功能暂不可用", {
-      description: "成员导入功能暂不可用，请稍后再试。",
-    })
-    return
-  }
-
-  if (actionKey === "sync-directory") {
-    toast("组织架构同步暂不可用", {
-      description: "组织架构同步暂不可用，请稍后再试。",
-    })
-    return
-  }
-
-  if (actionKey === "create-role") {
+function handlePrimaryAction() {
+  if (activeView.value === "roles") {
     if (!canCreateRole.value) {
       return
     }
 
     void openRoleDialog()
-    return
   }
-
-  if (!member) {
-    return
-  }
-
-  if (actionKey === "view") {
-    toast("成员详情暂不可用", {
-      description: `${member.name} 的详情暂不可查看。`,
-    })
-    return
-  }
-
-  if (actionKey === "invite") {
-    toast.success("已重新发送邀请", {
-      description: `${member.name} 的邀请通知已重新触发。`,
-    })
-    return
-  }
-
-  void updateMemberStatus(member, 2)
 }
 
-function handlePrimaryAction() {
-  if (activeView.value === "roles") {
-    handleMemberAction("create-role")
+function handleAddMemberClick() {
+  if (!canCreateMember.value) {
+    return
   }
+
+  openManualMemberDialog()
 }
 
 function createManualMemberForm(): ManualMemberForm {
@@ -2242,40 +2189,10 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
           </SettingsToolbarRefreshSlot>
 
           <div v-if="activeView === 'members' && canCreateMember" class="inline-flex items-center">
-            <Button class="h-8 gap-1 rounded-r-none pr-2.5 pl-3 text-[14px]" @click="handleMemberAction('manual')">
+            <Button class="h-8 gap-1 rounded-md px-3 text-[14px]" @click="handleAddMemberClick">
               <i class="ri-user-add-line text-base" />
               <span>添加成员</span>
             </Button>
-            <DropdownMenu>
-              <Tooltip>
-                <TooltipTrigger as-child>
-                  <DropdownMenuTrigger as-child>
-                    <Button
-                      class="h-8 w-8 rounded-l-none border-l border-border/60 px-0 text-[14px]"
-                      aria-label="打开成员操作菜单"
-                    >
-                      <i class="ri-arrow-down-s-line text-base" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                </TooltipTrigger>
-                <TooltipContent>打开成员操作菜单</TooltipContent>
-              </Tooltip>
-              <DropdownMenuContent align="end" class="w-[220px] rounded-xl p-1.5">
-                <DropdownMenuLabel class="px-2 pb-1 text-xs font-medium text-muted-foreground">
-                  成员操作
-                </DropdownMenuLabel>
-                <DropdownMenuItem class="rounded-lg px-2.5 py-2" @select="handleMemberAction('manual')">
-                  手动添加成员
-                </DropdownMenuItem>
-                <DropdownMenuItem class="rounded-lg px-2.5 py-2" @select="handleMemberAction('import-excel')">
-                  导入数据
-                </DropdownMenuItem>
-                <DropdownMenuSeparator class="my-1" />
-                <DropdownMenuItem class="rounded-lg px-2.5 py-2" @select="handleMemberAction('sync-directory')">
-                  从组织架构同步
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
           </div>
 
           <Button
