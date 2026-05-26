@@ -94,6 +94,11 @@ import {
   type CustomerDetailResult,
 } from "@/lib/customers-api"
 import {
+  extractInspectionServiceDetailInspectionUuids,
+  fetchInspectionServices,
+  type InspectionServiceListItem,
+} from "@/lib/inspection-services-api"
+import {
   dispatchRepairWorkOrder,
   dispatchWorkOrder,
   fetchRepairWorkOrderDetail,
@@ -105,7 +110,6 @@ import {
   type WorkOrderDetailResult,
   type WorkOrderListItem,
 } from "@/lib/work-orders-api"
-import customersData from "@/mocks/customers.json"
 import { fetchParkDetail, fetchParks, type ParkDetailResult } from "@/lib/parks-api"
 
 type BuildingRow = {
@@ -236,29 +240,25 @@ type CustomerSubAccountEditFormState = {
   account: string
 }
 
-type CustomerPackageMockRecord = {
-  name: string
-  packageName: string
-  packageCode: string
-  remainingDays: number
-  remainingFunds: number
-  inspectionTimes: number
-  inspectionCycle: string
-}
-
-type CustomerInspectionServiceMockSeed = {
-  name: string
-  remainingDays: number
-  balance: number
-  inspectionTimes: number
-  inspectionCycle: string
-  contractLabel?: string
-}
-
-type CustomerInspectionServiceMockRecord = CustomerInspectionServiceMockSeed & {
+type CustomerInspectionServiceCard = {
   key: string
-  expireAt: string
-  contractLabel: string
+  uuid: string
+  customerUuid: string
+  name: string
+  level: string
+  statusValue: number | null
+  statusLabel: string
+  startTime: string
+  contractEndTime: string
+  remainingHint: string
+  managerName: string
+  managerPhone: string
+  templateName: string
+  buildingCount: number
+  inspectionItemCount: number
+  totalInspectionCount: number | null
+  remainingInspectionCount: number | null
+  remark: string
 }
 
 type CustomerDetailTab = "basic-info" | "building-assets" | "work-orders" | "monitoring" | "sub-accounts"
@@ -279,72 +279,6 @@ const router = useRouter()
 const { canButton } = useCurrentUserPermissions()
 const customerDetailTabIds = ["basic-info", "building-assets", "work-orders", "monitoring", "sub-accounts"] as const
 const DETAIL_TABLE_PAGE_SIZE = 10
-const EXTRA_CUSTOMER_INSPECTION_SERVICE_MOCKS: Record<string, CustomerInspectionServiceMockSeed[]> = {
-  上海临港产业园运营集团: [
-    {
-      name: "高风险楼栋复核检测服务",
-      remainingDays: 156,
-      balance: 42,
-      inspectionTimes: 8,
-      inspectionCycle: "每月 1 次，高风险楼栋加检",
-      contractLabel: "专项复核合同",
-    },
-    {
-      name: "节假日前专项巡检服务",
-      remainingDays: 64,
-      balance: 18,
-      inspectionTimes: 4,
-      inspectionCycle: "节假日前 1 次",
-      contractLabel: "节前巡检合同",
-    },
-  ],
-  苏州高新区城建发展有限公司: [
-    {
-      name: "城市更新结构安全检测服务",
-      remainingDays: 218,
-      balance: 35,
-      inspectionTimes: 6,
-      inspectionCycle: "每季度 1 次",
-      contractLabel: "结构安全合同",
-    },
-  ],
-  杭州钱江智慧园区管理有限公司: [
-    {
-      name: "智慧园区设备联动检测服务",
-      remainingDays: 188,
-      balance: 52,
-      inspectionTimes: 10,
-      inspectionCycle: "每月 1 次，设备异常加检",
-      contractLabel: "设备联动合同",
-    },
-    {
-      name: "地下空间专项检测服务",
-      remainingDays: 93,
-      balance: 24,
-      inspectionTimes: 3,
-      inspectionCycle: "每季度 1 次",
-      contractLabel: "地下空间合同",
-    },
-  ],
-}
-const DEFAULT_INSPECTION_SERVICE_MOCKS: CustomerInspectionServiceMockSeed[] = [
-  {
-    name: "建筑安全标准检测服务",
-    remainingDays: 126,
-    balance: 32,
-    inspectionTimes: 6,
-    inspectionCycle: "每月 1 次",
-    contractLabel: "标准检测合同",
-  },
-  {
-    name: "重点区域专项检测服务",
-    remainingDays: 58,
-    balance: 14,
-    inspectionTimes: 3,
-    inspectionCycle: "每季度 1 次，异常加检",
-    contractLabel: "专项检测合同",
-  },
-]
 
 const customer = ref<CustomerDetailResult | null>(null)
 const loading = ref(false)
@@ -362,6 +296,9 @@ const buildingAssetsPageNum = ref(1)
 const buildingAssetsPageSize = ref(DETAIL_TABLE_PAGE_SIZE)
 const buildingAssetsQuery = ref("")
 const buildingAssetsSortDirection = ref<"asc" | "desc">("desc")
+const inspectionServices = ref<CustomerInspectionServiceCard[]>([])
+const inspectionServicesLoading = ref(false)
+const inspectionServicesErrorMessage = ref("")
 const maintenanceRecords = ref<MaintenanceRecordRow[]>([])
 const maintenanceRecordsLoading = ref(false)
 const maintenanceRecordsErrorMessage = ref("")
@@ -442,6 +379,7 @@ const activeBuildingParkUuid = ref("")
 let latestRequestId = 0
 let latestRelationsRequestId = 0
 let latestBuildingAssetsRequestId = 0
+let latestInspectionServicesRequestId = 0
 let latestInspectionWorkOrdersRequestId = 0
 let latestRepairWorkOrdersRequestId = 0
 let latestSubAccountsRequestId = 0
@@ -929,11 +867,7 @@ const fieldSections = computed<DetailFieldSection[]>(() => {
   ]
 })
 
-const inspectionServiceCards = computed<CustomerInspectionServiceMockRecord[]>(() => {
-  const current = customer.value
-
-  return current ? buildCustomerInspectionServiceCards(current) : []
-})
+const inspectionServiceCards = computed<CustomerInspectionServiceCard[]>(() => inspectionServices.value)
 
 const parkBuildingAccordion = computed(() => ({
   key: "customer-buildings",
@@ -2024,6 +1958,8 @@ watch(customerUuid, (uuid) => {
   buildingListRaw.value = []
   buildingAssetsErrorMessage.value = ""
   buildingAssetsPageNum.value = 1
+  inspectionServices.value = []
+  inspectionServicesErrorMessage.value = ""
   maintenanceRecords.value = []
   maintenanceRecordsErrorMessage.value = ""
   repairOverviewRecords.value = []
@@ -2043,6 +1979,7 @@ watch(customerUuid, (uuid) => {
   handleWorkOrderDetailSheetOpenChange(false)
   void loadCustomerDetail(uuid)
   void loadBuildingAssets(uuid)
+  void loadCustomerInspectionServices(uuid)
   void loadMaintenanceRecords(uuid)
   void loadRepairOverviewRecords(uuid)
   void loadInspectionWorkOrders(uuid)
@@ -2589,8 +2526,17 @@ async function submitSubAccountCreate() {
   }
 }
 
-function handleContractDownload() {
-  toast.info("合同下载暂不可用")
+function goToInspectionServiceDetail(service: CustomerInspectionServiceCard) {
+  if (!service.uuid) {
+    toast.error("检测服务信息不完整，无法查看详情")
+    return
+  }
+
+  router.push({
+    name: "inspection-service-detail",
+    params: { id: service.uuid },
+    query: service.customerUuid ? { customerUuid: service.customerUuid } : undefined,
+  })
 }
 
 function ensurePageSortRule(page: {
@@ -3147,6 +3093,44 @@ async function loadBuildingAssets(uuid: string) {
   }
 }
 
+async function loadCustomerInspectionServices(uuid: string) {
+  const requestId = ++latestInspectionServicesRequestId
+
+  if (!uuid) {
+    inspectionServices.value = []
+    inspectionServicesLoading.value = false
+    inspectionServicesErrorMessage.value = "客户 Uuid 缺失，无法加载检测服务信息。"
+    return
+  }
+
+  inspectionServicesLoading.value = true
+  inspectionServicesErrorMessage.value = ""
+
+  try {
+    const list = await fetchAllCustomerInspectionServices(uuid)
+
+    if (requestId !== latestInspectionServicesRequestId) {
+      return
+    }
+
+    inspectionServices.value = list.map((item, index) => mapInspectionServiceCard(item, index, uuid))
+  } catch (error) {
+    if (requestId !== latestInspectionServicesRequestId) {
+      return
+    }
+
+    inspectionServices.value = []
+    inspectionServicesErrorMessage.value = handleApiError(error, {
+      mode: "silent",
+      fallback: "检测服务信息加载失败，请稍后重试。",
+    })
+  } finally {
+    if (requestId === latestInspectionServicesRequestId) {
+      inspectionServicesLoading.value = false
+    }
+  }
+}
+
 async function loadInspectionWorkOrders(uuid: string) {
   const requestId = ++latestInspectionWorkOrdersRequestId
 
@@ -3401,6 +3385,35 @@ async function fetchAllBuildingAssets(uuid: string) {
   return allItems
 }
 
+async function fetchAllCustomerInspectionServices(uuid: string) {
+  const pageSize = 200
+  const allItems: InspectionServiceListItem[] = []
+  let pageNum = 1
+  let total = 0
+
+  while (pageNum <= 20) {
+    const result = await fetchInspectionServices({
+      CustomerUuid: uuid,
+      PageNum: pageNum,
+      PageSize: pageSize,
+    })
+
+    if (pageNum === 1) {
+      total = result.total
+    }
+
+    allItems.push(...result.list)
+
+    if (!result.list.length || (total > 0 && allItems.length >= total)) {
+      break
+    }
+
+    pageNum += 1
+  }
+
+  return allItems
+}
+
 
 function resolveContactRole(isMain: unknown, index: number) {
   if (Number(isMain) === 1) {
@@ -3447,85 +3460,224 @@ function buildContactValue(name: string, phone?: string): DetailContactValue {
   }
 }
 
-function getCustomerPackageMockRecord(detail: CustomerDetailResult): CustomerPackageMockRecord | null {
-  const customerName = typeof detail.CorpName === "string" ? detail.CorpName.trim() : ""
+function mapInspectionServiceCard(item: InspectionServiceListItem, index: number, fallbackCustomerUuid: string): CustomerInspectionServiceCard {
+  const uuid = toDisplayText(item.Uuid, toDisplayText(item.Id, `inspection-service-${index + 1}`))
+  const statusValue = resolveInspectionServiceStatusValue(item.Status, item.ServiceStatus)
+  const contractEndTime = toDisplayText(item.ContractEndTime, "-")
+  const inspectionItemCount = resolveInspectionServiceInspectionCount(item)
+  const totalInspectionCount = readInspectionServiceNumber(item, ["TotalInspectionCount", "InspectionCount", "InspectionTimes"])
+  const remainingInspectionCount = readInspectionServiceNumber(item, ["RemainInspectionCount", "RemainingInspectionCount", "RemainTimes"])
 
-  if (!customerName) {
-    return null
-  }
-
-  const record = (customersData as CustomerPackageMockRecord[]).find(item => item.name.trim() === customerName)
-  return record ?? null
-}
-
-function buildCustomerInspectionServiceCards(detail: CustomerDetailResult): CustomerInspectionServiceMockRecord[] {
-  const customerName = toDisplayText(detail.CorpName, "")
-  const packageRecord = getCustomerPackageMockRecord(detail)
-  const serviceSeeds = [
-    ...(packageRecord ? [buildPrimaryInspectionServiceSeed(packageRecord)] : []),
-    ...(EXTRA_CUSTOMER_INSPECTION_SERVICE_MOCKS[customerName] ?? []),
-  ]
-  const resolvedSeeds = serviceSeeds.length ? serviceSeeds : DEFAULT_INSPECTION_SERVICE_MOCKS
-
-  return resolvedSeeds.map((seed, index) => ({
-    ...seed,
-    key: `${customerName || "customer"}-${index + 1}-${seed.name}`,
-    expireAt: formatExpireDate(seed.remainingDays),
-    contractLabel: seed.contractLabel ?? "服务合同",
-  }))
-}
-
-function buildPrimaryInspectionServiceSeed(record: CustomerPackageMockRecord): CustomerInspectionServiceMockSeed {
   return {
-    name: normalizeInspectionServiceName(record.packageName),
-    remainingDays: record.remainingDays,
-    balance: record.remainingFunds,
-    inspectionTimes: record.inspectionTimes,
-    inspectionCycle: record.inspectionCycle,
-    contractLabel: record.packageCode ? `主合同 ${record.packageCode}` : "主服务合同",
+    key: uuid || `${fallbackCustomerUuid}-inspection-service-${index + 1}`,
+    uuid,
+    customerUuid: toDisplayText(item.CustomerUuid, fallbackCustomerUuid),
+    name: toDisplayText(item.Name, "未命名检测服务"),
+    level: toDisplayText(item.Level, "-"),
+    statusValue,
+    statusLabel: formatInspectionServiceStatus(item.Status, item.ServiceStatus),
+    startTime: toDisplayText(item.StartTime, "-"),
+    contractEndTime,
+    remainingHint: getInspectionServiceRemainingHint(contractEndTime),
+    managerName: toDisplayText(item.ManagerName, "未填写"),
+    managerPhone: toDisplayText(item.ManagerPhone, "-"),
+    templateName: toDisplayText(item.TemplateName, "-"),
+    buildingCount: resolveInspectionServiceBuildingCount(item),
+    inspectionItemCount,
+    totalInspectionCount,
+    remainingInspectionCount,
+    remark: toDisplayText(item.Remark, ""),
   }
 }
 
-function normalizeInspectionServiceName(name: string) {
-  const normalized = name.trim() || "未命名检测服务"
+function resolveInspectionServiceStatusValue(status: unknown, fallbackStatus: unknown) {
+  const normalized = toNullableNumberLike(status)
 
-  return normalized.includes("检测服务") ? normalized : `${normalized}检测服务`
-}
-
-function formatInspectionServiceTitle(service: CustomerInspectionServiceMockRecord) {
-  return `${normalizeInspectionServiceName(service.name)}剩余 ${service.remainingDays} 天`
-}
-
-function formatFunds(value: number | null) {
-  if (value === null) {
-    return "—"
+  if (normalized !== null) {
+    return normalized
   }
 
-  return `${value} 万`
-}
+  const fallbackLabel = toDisplayText(fallbackStatus, "")
 
-function formatExpireDate(remainingDays: number | null) {
-  if (remainingDays === null) {
-    return "—"
+  if (fallbackLabel === "待签署" || fallbackLabel === "已签署") {
+    return 1
   }
 
-  if (remainingDays < 0) {
-    return "已过期"
+  if (fallbackLabel === "进行中") {
+    return 2
   }
 
-  const expireDate = new Date()
-  expireDate.setHours(0, 0, 0, 0)
-  expireDate.setDate(expireDate.getDate() + remainingDays)
+  if (fallbackLabel === "已逾期") {
+    return 3
+  }
 
-  const year = expireDate.getFullYear()
-  const month = String(expireDate.getMonth() + 1).padStart(2, "0")
-  const day = String(expireDate.getDate()).padStart(2, "0")
+  if (fallbackLabel === "已结单") {
+    return 4
+  }
 
-  return `${year}-${month}-${day}`
+  return null
 }
 
-function formatInspectionQuota(service: CustomerInspectionServiceMockRecord) {
-  return `${service.inspectionTimes} 次巡检，${service.inspectionCycle}`
+function formatInspectionServiceStatus(status: unknown, fallbackStatus: unknown) {
+  const normalized = toNullableNumberLike(status)
+
+  switch (normalized) {
+    case 1:
+      return "待签署"
+    case 2:
+      return "进行中"
+    case 3:
+      return "已逾期"
+    case 4:
+      return "已结单"
+    default:
+      return toDisplayText(fallbackStatus, "未知状态")
+  }
+}
+
+function formatInspectionServiceTitle(service: CustomerInspectionServiceCard) {
+  return service.remainingHint ? `${service.name}${service.remainingHint}` : service.name
+}
+
+function getInspectionServiceStatusClass(status: number | null) {
+  if (status === 1) {
+    return "border-warning/30 bg-warning/10 text-warning"
+  }
+
+  if (status === 2) {
+    return "border-link/25 bg-link/10 text-link"
+  }
+
+  if (status === 3) {
+    return "border-destructive/25 bg-destructive/10 text-destructive"
+  }
+
+  if (status === 4) {
+    return "border-border bg-muted text-muted-foreground"
+  }
+
+  return "border-border bg-muted text-muted-foreground"
+}
+
+function getInspectionServiceRemainingHint(value: string) {
+  const normalized = value.trim()
+
+  if (!normalized || normalized === "-" || normalized === "—") {
+    return ""
+  }
+
+  const expireDate = new Date(normalized.includes("T") ? normalized : normalized.replace(" ", "T"))
+
+  if (Number.isNaN(expireDate.getTime())) {
+    return ""
+  }
+
+  const now = new Date()
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()
+  const startOfExpireDay = new Date(expireDate.getFullYear(), expireDate.getMonth(), expireDate.getDate()).getTime()
+  const diffDays = Math.floor((startOfExpireDay - startOfToday) / (1000 * 60 * 60 * 24))
+
+  if (diffDays < 0) {
+    return `逾期 ${Math.abs(diffDays)} 天`
+  }
+
+  return `剩余 ${diffDays} 天`
+}
+
+function resolveInspectionServiceBuildingCount(item: InspectionServiceListItem) {
+  const buildInfos = Array.isArray(item.BuildInfos) ? item.BuildInfos : []
+  const keys = buildInfos.map((build, index) => (
+    toDisplayText(build.BuildUuid, "")
+    || toDisplayText(build.BuildId, "")
+    || toDisplayText(build.BuildName, "")
+    || `build-${index + 1}`
+  ))
+
+  return new Set(keys).size
+}
+
+function resolveInspectionServiceInspectionCount(item: InspectionServiceListItem) {
+  return extractInspectionServiceDetailInspectionUuids(item).length
+}
+
+function readInspectionServiceNumber(item: InspectionServiceListItem, keys: string[]) {
+  const record = item as Record<string, unknown>
+
+  for (const key of keys) {
+    const parsed = toNullableNumberLike(record[key])
+
+    if (parsed !== null) {
+      return parsed
+    }
+  }
+
+  return null
+}
+
+function toNullableNumberLike(value: unknown) {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value
+  }
+
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value.trim())
+    return Number.isFinite(parsed) ? parsed : null
+  }
+
+  return null
+}
+
+function formatInspectionServiceContractPeriod(service: CustomerInspectionServiceCard) {
+  const startTime = service.startTime && service.startTime !== "-" ? formatDateOnly(service.startTime) : "-"
+  const endTime = service.contractEndTime && service.contractEndTime !== "-" ? formatDateOnly(service.contractEndTime) : "-"
+
+  if (startTime === "-" && endTime === "-") {
+    return "-"
+  }
+
+  return `${startTime} 至 ${endTime}`
+}
+
+function formatInspectionServiceScope(service: CustomerInspectionServiceCard) {
+  const scopes: string[] = []
+
+  if (service.buildingCount > 0) {
+    scopes.push(`${service.buildingCount} 栋建筑`)
+  }
+
+  if (service.inspectionItemCount > 0) {
+    scopes.push(`${service.inspectionItemCount} 个检测项`)
+  }
+
+  return scopes.length ? scopes.join(" / ") : "-"
+}
+
+function formatInspectionServiceQuota(service: CustomerInspectionServiceCard) {
+  if (service.remainingInspectionCount !== null && service.totalInspectionCount !== null) {
+    return `剩余 ${service.remainingInspectionCount} / 共 ${service.totalInspectionCount} 次`
+  }
+
+  if (service.remainingInspectionCount !== null) {
+    return `剩余 ${service.remainingInspectionCount} 次`
+  }
+
+  if (service.totalInspectionCount !== null) {
+    return `共 ${service.totalInspectionCount} 次`
+  }
+
+  return "-"
+}
+
+function formatInspectionServiceManager(service: CustomerInspectionServiceCard) {
+  if (!service.managerName || service.managerName === "未填写") {
+    return service.managerPhone && service.managerPhone !== "-" ? service.managerPhone : "未填写"
+  }
+
+  if (!service.managerPhone || service.managerPhone === "-") {
+    return service.managerName
+  }
+
+  return `${service.managerName} / ${service.managerPhone}`
 }
 
 function buildMaintenanceGroups(records: MaintenanceRecordRow[]) {
@@ -4777,7 +4929,20 @@ function toDisplayText(value: unknown, fallback = "未填写") {
               </template>
             </TitleBlock>
 
-            <div v-if="inspectionServiceCards.length" class="detail-section-inset space-y-3 pt-2">
+            <div v-if="inspectionServicesErrorMessage || inspectionServicesLoading" class="detail-section-inset pt-2">
+              <Alert v-if="inspectionServicesErrorMessage" variant="destructive" class="mb-3">
+                <AlertTitle>检测服务接口加载失败</AlertTitle>
+                <AlertDescription>{{ inspectionServicesErrorMessage }}</AlertDescription>
+              </Alert>
+
+              <DetailFieldsSkeleton
+                v-if="inspectionServicesLoading"
+                :sections="1"
+                :rows-per-section="3"
+              />
+            </div>
+
+            <div v-if="!inspectionServicesLoading && inspectionServiceCards.length" class="detail-section-inset space-y-3 pt-2">
               <article
                 v-for="service in inspectionServiceCards"
                 :key="service.key"
@@ -4785,11 +4950,19 @@ function toDisplayText(value: unknown, fallback = "未填写") {
               >
                 <div class="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                   <div class="min-w-0">
-                    <h3 class="break-words text-[14px] font-semibold leading-5 text-foreground">
-                      {{ formatInspectionServiceTitle(service) }}
-                    </h3>
+                    <div class="flex min-w-0 flex-wrap items-center gap-2">
+                      <h3 class="break-words text-[14px] font-semibold leading-5 text-foreground">
+                        {{ formatInspectionServiceTitle(service) }}
+                      </h3>
+                      <span
+                        class="inline-flex shrink-0 items-center rounded-md border px-1.5 py-0.5 text-[11px] font-medium leading-none"
+                        :class="getInspectionServiceStatusClass(service.statusValue)"
+                      >
+                        {{ service.statusLabel }}
+                      </span>
+                    </div>
                     <p class="mt-1 truncate text-xs text-muted-foreground">
-                      {{ service.contractLabel }}
+                      {{ service.templateName }} · {{ service.level }}
                     </p>
                   </div>
 
@@ -4798,31 +4971,41 @@ function toDisplayText(value: unknown, fallback = "未填写") {
                     size="sm"
                     type="button"
                     class="h-7 shrink-0 self-start rounded-md px-2.5 text-xs leading-5"
-                    @click="handleContractDownload"
+                    @click="goToInspectionServiceDetail(service)"
                   >
-                    <i class="ri-download-line text-sm" />
-                    下载合同
+                    <i class="ri-arrow-right-up-line text-sm" />
+                    查看详情
                   </Button>
                 </div>
 
                 <div class="mt-3 grid gap-2 text-[13px] leading-5 sm:grid-cols-2">
                   <div class="min-w-0 rounded-md bg-muted/45 px-2.5 py-2">
-                    <div class="text-xs text-muted-foreground">到期时间</div>
-                    <div class="mt-0.5 truncate font-medium text-foreground">{{ service.expireAt }}</div>
+                    <div class="text-xs text-muted-foreground">合同周期</div>
+                    <div class="mt-0.5 break-words font-medium text-foreground">
+                      {{ formatInspectionServiceContractPeriod(service) }}
+                    </div>
                   </div>
                   <div class="min-w-0 rounded-md bg-muted/45 px-2.5 py-2">
-                    <div class="text-xs text-muted-foreground">资金余额</div>
-                    <div class="mt-0.5 truncate font-medium text-foreground">{{ formatFunds(service.balance) }}</div>
+                    <div class="text-xs text-muted-foreground">负责人</div>
+                    <div class="mt-0.5 truncate font-medium text-foreground">{{ formatInspectionServiceManager(service) }}</div>
                   </div>
-                  <div class="min-w-0 rounded-md bg-muted/45 px-2.5 py-2 sm:col-span-2">
-                    <div class="text-xs text-muted-foreground">剩余服务</div>
-                    <div class="mt-0.5 break-words font-medium text-foreground">{{ formatInspectionQuota(service) }}</div>
+                  <div class="min-w-0 rounded-md bg-muted/45 px-2.5 py-2">
+                    <div class="text-xs text-muted-foreground">服务范围</div>
+                    <div class="mt-0.5 break-words font-medium text-foreground">{{ formatInspectionServiceScope(service) }}</div>
+                  </div>
+                  <div class="min-w-0 rounded-md bg-muted/45 px-2.5 py-2">
+                    <div class="text-xs text-muted-foreground">检测次数</div>
+                    <div class="mt-0.5 truncate font-medium text-foreground">{{ formatInspectionServiceQuota(service) }}</div>
                   </div>
                 </div>
+
+                <p v-if="service.remark" class="mt-2 line-clamp-2 text-xs leading-5 text-muted-foreground">
+                  {{ service.remark }}
+                </p>
               </article>
             </div>
 
-            <div v-else class="detail-section-inset pt-2">
+            <div v-else-if="!inspectionServicesLoading" class="detail-section-inset pt-2">
               <div class="flex min-h-24 items-center justify-center rounded-md border border-dashed border-border bg-muted/30 px-4 text-sm text-muted-foreground">
                 暂无检测服务
               </div>
