@@ -19,6 +19,7 @@ export type SystemResourceListResult = {
 }
 
 export type ListSystemApisPayload = {
+  IsBindButton?: number
   Path?: string
   Method?: string
   Name?: string
@@ -79,6 +80,7 @@ export async function fetchSystemApis(): Promise<SystemResourceListResult> {
 
 export async function fetchSystemApisWithPayload(payload: ListSystemApisPayload = {}): Promise<SystemResourceListResult> {
   const normalizedPayload = {
+    IsBindButton: Number.isFinite(Number(payload.IsBindButton)) ? Number(payload.IsBindButton) : undefined,
     Path: typeof payload.Path === "string" ? payload.Path.trim() : "",
     Method: typeof payload.Method === "string" ? payload.Method.trim() : "",
     Name: typeof payload.Name === "string" ? payload.Name.trim() : "",

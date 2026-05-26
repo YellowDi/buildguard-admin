@@ -133,6 +133,11 @@ type ApiRow = {
   updatedAt: string
 }
 
+type ApiTableRow = ApiRow & {
+  isBindButton: boolean
+  isBindButtonLabel: string
+}
+
 type ButtonApiSummary = {
   uuid: string
   name: string
@@ -216,6 +221,17 @@ const buttonApiOptions = computed(() => [...apiRows.value]
     method: row.method,
     path: row.path,
   })))
+
+const boundButtonApiUuidSet = computed(() => new Set(buttonRows.value.flatMap(row => row.apiUuids)))
+const apiTableRows = computed<ApiTableRow[]>(() => apiRows.value.map((row) => {
+  const isBindButton = Boolean(row.uuid && boundButtonApiUuidSet.value.has(row.uuid))
+
+  return {
+    ...row,
+    isBindButton,
+    isBindButtonLabel: formatBooleanLabel(isBindButton),
+  }
+}))
 
 const columns: TableColumn[] = [
   {
@@ -320,6 +336,14 @@ const apiColumns: TableColumn[] = [
     tone: "muted",
   },
   {
+    key: "isBindButtonLabel",
+    label: "是否绑定按钮",
+    filterType: "tag",
+    tone: "muted",
+    headerClass: "text-center",
+    cellClass: "text-center",
+  },
+  {
     key: "updatedAt",
     label: "更新时间",
     filterType: "text",
@@ -409,13 +433,14 @@ const filteredApiRows = computed(() => {
   const query = searchQuery.value.trim().toLowerCase()
 
   if (!query) {
-    return apiRows.value
+    return apiTableRows.value
   }
 
-  return apiRows.value.filter(row => [
+  return apiTableRows.value.filter(row => [
     row.name,
     row.path,
     row.method,
+    row.isBindButtonLabel,
     row.description,
     row.updatedAt,
   ].some(field => field.toLowerCase().includes(query)))
@@ -551,8 +576,11 @@ watch(activeView, (value) => {
     return
   }
 
-  if (value === "apis" && apiRows.value.length === 0) {
-    void loadApis()
+  if (value === "apis" && (apiRows.value.length === 0 || buttonRows.value.length === 0)) {
+    void Promise.allSettled([
+      apiRows.value.length === 0 ? loadApis() : Promise.resolve(),
+      buttonRows.value.length === 0 ? loadButtons({ manageLoading: false }) : Promise.resolve(),
+    ])
   }
 })
 
@@ -665,7 +693,10 @@ function handleRefresh() {
     return
   }
 
-  void loadApis()
+  void Promise.allSettled([
+    loadApis(),
+    loadButtons({ manageLoading: false }),
+  ])
 }
 
 function handlePrimaryAction() {
@@ -842,6 +873,17 @@ function normalizeButtonApis(item: SystemResourceRecord): ButtonApiSummary[] {
     return dedupeButtonApis(apis)
   }
 
+  const legacyUuids = toTextArray(item.ApiUuids, item.apiUuids)
+
+  if (legacyUuids.length > 0) {
+    return dedupeButtonApis(legacyUuids.map(uuid => ({
+      uuid,
+      name: getApiNameByUuid(uuid) || uuid,
+      path: "",
+      method: "",
+    })))
+  }
+
   const legacyUuid = toText(item.ApiUuid, item.apiUuid)
 
   if (!legacyUuid) {
@@ -850,7 +892,7 @@ function normalizeButtonApis(item: SystemResourceRecord): ButtonApiSummary[] {
 
   return [{
     uuid: legacyUuid,
-    name: toText(item.ApiName, item.apiName, legacyUuid),
+    name: toText(item.ApiName, item.apiName, getApiNameByUuid(legacyUuid), legacyUuid),
     path: "",
     method: "",
   }]
@@ -895,6 +937,10 @@ function formatButtonApiName(api: ButtonApiSummary) {
   }
 
   return api.name || api.path || api.uuid
+}
+
+function getApiNameByUuid(uuid: string) {
+  return apiRows.value.find(row => row.uuid === uuid)?.name ?? ""
 }
 
 function normalizeApi(item: SystemResourceRecord, index: number): ApiRow {
@@ -1282,6 +1328,10 @@ function asButtonRow(row: Record<string, unknown>) {
   return row as ButtonRow
 }
 
+function asApiTableRow(row: Record<string, unknown>) {
+  return row as ApiTableRow
+}
+
 function handleMenuRowClick(row: Record<string, unknown>) {
   openEditDialog(asMenuRow(row))
 }
@@ -1316,6 +1366,33 @@ function toText(...values: unknown[]) {
   return ""
 }
 
+function toTextArray(...values: unknown[]) {
+  for (const value of values) {
+    if (Array.isArray(value)) {
+      const items = value
+        .map(item => toText(item))
+        .filter(Boolean)
+
+      if (items.length > 0) {
+        return items
+      }
+    }
+
+    if (typeof value === "string" && value.trim()) {
+      const items = value
+        .split(/[,\uff0c]/)
+        .map(item => item.trim())
+        .filter(Boolean)
+
+      if (items.length > 0) {
+        return items
+      }
+    }
+  }
+
+  return []
+}
+
 function toNumber(value: unknown, fallback = 0) {
   const parsed = Number(value)
   return Number.isFinite(parsed) ? parsed : fallback
@@ -1338,6 +1415,10 @@ function formatDateTime(...values: unknown[]) {
   }
 
   return text.replace("T", " ").slice(0, 19)
+}
+
+function formatBooleanLabel(value: boolean) {
+  return value ? "是" : "否"
 }
 </script>
 
@@ -1424,7 +1505,19 @@ function formatDateTime(...values: unknown[]) {
       :row-actions="currentRowActions"
       :on-row-click="activeView === 'menus' ? handleMenuRowClick : (activeView === 'buttons' ? handleButtonRowClick : undefined)"
       :empty-state="tableEmptyState"
-    />
+    >
+      <template #cell-isBindButtonLabel="{ row: rawRow }">
+        <span
+          class="inline-flex items-center justify-center"
+          :aria-label="asApiTableRow(rawRow).isBindButton ? '是' : '否'"
+        >
+          <i
+            :class="asApiTableRow(rawRow).isBindButton ? 'ri-check-line' : 'ri-close-line'"
+            class="text-[17px] leading-none text-muted-foreground"
+          />
+        </span>
+      </template>
+    </SettingsTable>
 
     <Dialog :open="menuDialogOpen" @update:open="($event ? (menuDialogOpen = true) : closeMenuDialog())">
       <DialogContent stack-above-sticky-header class="sm:max-w-[560px]">
