@@ -1331,16 +1331,6 @@ function togglePermissionGroup(groupKey: string) {
   collapsedPermissionGroupKeys.value = [...collapsedPermissionGroupKeys.value, groupKey]
 }
 
-function getDepartmentMatch(departmentName: string) {
-  const normalizedName = departmentName.trim()
-
-  if (!normalizedName) {
-    return null
-  }
-
-  return rows.value.find(row => row.departmentName === normalizedName) ?? null
-}
-
 function toggleSearch() {
   if (searchExpanded.value) {
     searchQuery.value = ""
@@ -1711,15 +1701,6 @@ async function submitManualMember() {
   }
 
   const departmentName = manualMemberForm.value.departmentName.trim()
-  const departmentMatch = getDepartmentMatch(departmentName)
-
-  if (departmentName && (!departmentMatch || !departmentMatch.departmentUuid)) {
-    toast.error("成员创建失败", {
-      description: "当前部门无法映射到 DepartmentUuid，请填写已存在的部门名称。",
-    })
-    return
-  }
-
   const userTypes = getUserTypeValues(manualMemberForm.value.userTypes)
 
   if (userTypes.length === 0) {
@@ -1732,20 +1713,19 @@ async function submitManualMember() {
   manualSubmitting.value = true
 
   try {
+    const selectedRoleUuid = normalizeRoleSelectionValue(manualMemberForm.value.roleUuid)
     const result = await requestMemberCreate({
-      DepartmentUuid: departmentMatch?.departmentUuid || undefined,
+      DepartmentName: departmentName || undefined,
       Name: name,
       Phone: manualMemberForm.value.phone.trim() || undefined,
       Position: manualMemberForm.value.position.trim() || undefined,
-      UserType: userTypes,
+      RoleUuids: selectedRoleUuid ? [selectedRoleUuid] : undefined,
     })
 
-    const selectedRoleUuid = normalizeRoleSelectionValue(manualMemberForm.value.roleUuid)
-
-    if (selectedRoleUuid && result.Uuid) {
-      await bindMemberRoles({
+    if (result.Uuid) {
+      await updateMemberUserType({
         Uuid: result.Uuid,
-        RoleUuids: [selectedRoleUuid],
+        UserType: userTypes,
       })
     }
 

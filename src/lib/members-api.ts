@@ -30,11 +30,11 @@ export type ListMembersPayload = {
 }
 
 export type CreateMemberPayload = {
-  DepartmentUuid?: string
+  DepartmentName?: string
   Name?: string
   Phone?: string
   Position?: string
-  UserType?: MemberUserTypeValue
+  RoleUuids?: string[]
   [property: string]: unknown
 }
 
@@ -160,11 +160,11 @@ export async function fetchMembers(payload: ListMembersPayload = {}): Promise<Me
 
 export async function createMember(payload: CreateMemberPayload): Promise<CreateMemberResult> {
   const normalizedPayload = {
-    DepartmentUuid: getOptionalString(payload.DepartmentUuid),
+    DepartmentName: getOptionalString(payload.DepartmentName),
     Name: getRequiredString(payload.Name, "Name"),
     Phone: getOptionalString(payload.Phone),
     Position: getOptionalString(payload.Position),
-    UserType: getOptionalUserType(payload.UserType, "UserType"),
+    RoleUuids: getOptionalStringArray(payload.RoleUuids, "RoleUuids"),
   }
 
   const response = await fetch(MEMBER_CREATE_API_URL, {
