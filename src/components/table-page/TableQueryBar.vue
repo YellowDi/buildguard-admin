@@ -508,7 +508,7 @@ function setDateTriggerRef(key: string, value: HTMLElement | null) {
                 <Button
                   :ref="value => setDateTriggerRef(control.key, value as HTMLElement | null)"
                   variant="ghost"
-                  class="h-full w-full justify-start rounded-none border-0 bg-transparent px-2 pr-9 text-left font-normal shadow-none hover:bg-transparent"
+                  class="h-full w-full justify-start rounded-full border-0 bg-transparent px-2 pr-9 text-left font-normal shadow-none hover:bg-transparent"
                 >
                   <AnimatedText
                     as="span"
@@ -546,7 +546,7 @@ function setDateTriggerRef(key: string, value: HTMLElement | null) {
               <SelectTrigger
                 :ref="value => setSelectTriggerRef(control.key, value as HTMLElement | null)"
                 :data-query-select-trigger="control.key"
-                class="h-full w-full rounded-none border-0 bg-transparent px-2 pr-9 shadow-none focus-visible:border-0 focus-visible:ring-0 data-[state=open]:border-0 data-[state=open]:ring-0"
+                class="h-full w-full rounded-full border-0 bg-transparent px-2 pr-9 shadow-none focus-visible:border-0 focus-visible:ring-0 data-[state=open]:border-0 data-[state=open]:ring-0"
               >
                 <AnimatedText
                   as="span"
