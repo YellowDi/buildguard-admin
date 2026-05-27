@@ -975,7 +975,7 @@ watch(
       :enter-active-class="`transition-[max-height,opacity,transform] duration-200 ease-out ${hasSelectedRows ? 'overflow-visible' : 'overflow-hidden'}`"
       enter-from-class="max-h-0 opacity-0 -translate-y-1"
       enter-to-class="max-h-16 opacity-100 translate-y-0"
-      :leave-active-class="`transition-[max-height,opacity,transform] duration-150 ease-in ${hasSelectedRows ? 'overflow-visible' : 'overflow-hidden'}`"
+      :leave-active-class="`transition-[max-height,opacity,transform] duration-150 ease-out ${hasSelectedRows ? 'overflow-visible' : 'overflow-hidden'}`"
       leave-from-class="max-h-16 opacity-100 translate-y-0"
       leave-to-class="max-h-0 opacity-0 -translate-y-1"
     >

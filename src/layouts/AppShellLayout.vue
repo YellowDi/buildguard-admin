@@ -78,13 +78,22 @@ function closeMobileSidebar() {
       :mobile-open="mobileSidebarOpen"
       @close-mobile="closeMobileSidebar"
     />
-    <button
-      v-if="mobileSidebarOpen"
-      type="button"
-      class="fixed inset-0 z-20 hidden bg-background/28 opacity-100 backdrop-blur-[2px] max-[999px]:block max-[999px]:touch-none"
-      aria-label="关闭侧边栏"
-      @click="closeMobileSidebar"
-    />
+    <Transition
+      enter-active-class="transition-opacity duration-200 ease-out"
+      enter-from-class="opacity-0"
+      enter-to-class="opacity-100"
+      leave-active-class="transition-opacity duration-150 ease-out"
+      leave-from-class="opacity-100"
+      leave-to-class="opacity-0"
+    >
+      <button
+        v-if="mobileSidebarOpen"
+        type="button"
+        class="fixed inset-0 z-20 hidden bg-background/28 backdrop-blur-[2px] max-[999px]:block max-[999px]:touch-none"
+        aria-label="关闭侧边栏"
+        @click="closeMobileSidebar"
+      />
+    </Transition>
     <div
       class="relative z-10 flex h-svh min-w-0 flex-1 flex-col overflow-hidden bg-background transition-transform duration-300 ease-[cubic-bezier(0.2,0,0,1)]"
       :class="mobileSidebarOpen ? 'max-[999px]:translate-x-[255px] max-[999px]:pointer-events-none' : ''"

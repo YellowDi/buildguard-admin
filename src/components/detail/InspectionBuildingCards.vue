@@ -276,7 +276,7 @@ function handleExpandBeforeLeave(element: Element) {
 
 function handleExpandLeave(element: Element) {
   const target = element as HTMLElement
-  target.style.transition = "height 180ms cubic-bezier(0.4, 0, 1, 1), opacity 140ms ease-in"
+  target.style.transition = "height 180ms cubic-bezier(0.4, 0, 1, 1), opacity 140ms ease-out"
   void target.offsetHeight
   target.style.height = "0"
   target.style.opacity = "0"
