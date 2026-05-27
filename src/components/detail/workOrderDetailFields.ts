@@ -103,14 +103,6 @@ export function buildWorkOrderSecondarySections(workOrder: WorkOrderDetailResult
         { key: "build-results", label: "建筑结果", value: formatBuildResults(workOrder.Builds) },
         { key: "build-scores", label: "建筑分数", value: formatBuildScores(workOrder.Builds) },
         {
-          key: "build-reports",
-          label: "报告文件",
-          value: formatBuildReports(workOrder.Builds),
-          truncate: false,
-          valueClass: "leading-6 break-all",
-        },
-        { key: "build-versions", label: "版本号", value: formatBuildVersions(workOrder.Builds) },
-        {
           key: "remark",
           label: "备注",
           value: toText(workOrder.Remark, "-"),
@@ -266,14 +258,6 @@ function formatBuildResults(value: WorkOrderBuildInfo[] | undefined) {
 
 function formatBuildScores(value: WorkOrderBuildInfo[] | undefined) {
   return formatBuildValues(value, build => formatWorkOrderScore(build.Score))
-}
-
-function formatBuildReports(value: WorkOrderBuildInfo[] | undefined) {
-  return formatBuildValues(value, build => toText(build.ReportUrl, ""))
-}
-
-function formatBuildVersions(value: WorkOrderBuildInfo[] | undefined) {
-  return formatBuildValues(value, build => toText(build.Version, ""))
 }
 
 function formatBuildValues(value: WorkOrderBuildInfo[] | undefined, resolveValue: (build: WorkOrderBuildInfo) => string) {
