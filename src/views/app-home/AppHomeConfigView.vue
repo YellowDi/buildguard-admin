@@ -120,6 +120,12 @@ const submitting = ref(false)
 const sortingSubmitting = ref(false)
 const moduleDeleteConfirmOpen = ref(false)
 const deletingModuleId = ref("")
+const categoryDeleteConfirmOpen = ref(false)
+const deletingCategoryId = ref("")
+const deletingCategoryModuleId = ref("")
+const sourceDeleteConfirmOpen = ref(false)
+const deletingSourceId = ref("")
+const deletingSourceCategoryId = ref("")
 const persistedModuleIds = ref(new Set<string>())
 const persistedCategoryIds = ref(new Set<string>())
 const articleCategoryIds = ref(new Map<string, string>())
@@ -384,7 +390,7 @@ function addVideoCategory(module: AppHomeVideoModule) {
   activePreviewCategoryIds[module.id] = nextCategory.id
 }
 
-function deleteVideoCategory(module: AppHomeVideoModule, categoryId: string) {
+function requestDeleteCategory(module: AppHomeVideoModule, categoryId: string) {
   if (!canDeleteAppHomeCategory.value) {
     return
   }
@@ -394,11 +400,28 @@ function deleteVideoCategory(module: AppHomeVideoModule, categoryId: string) {
     return
   }
 
+  deletingCategoryModuleId.value = module.id
+  deletingCategoryId.value = categoryId
+  categoryDeleteConfirmOpen.value = true
+}
+
+function confirmDeleteCategory() {
+  const module = modules.value.find(m => m.id === deletingCategoryModuleId.value) as AppHomeVideoModule | undefined
+  const categoryId = deletingCategoryId.value
+
+  if (!module || !categoryId) {
+    return
+  }
+
   module.categories = normalizeCategoryOrders(module.categories.filter(category => category.id !== categoryId))
   delete videoSourceForms[categoryId]
   if (activePreviewCategoryIds[module.id] === categoryId) {
     activePreviewCategoryIds[module.id] = module.categories[0]?.id ?? ""
   }
+
+  categoryDeleteConfirmOpen.value = false
+  deletingCategoryId.value = ""
+  deletingCategoryModuleId.value = ""
 }
 
 function addSourceToCategory(category: AppHomeVideoCategory) {
@@ -446,8 +469,21 @@ function addSourceToCategory(category: AppHomeVideoCategory) {
   form.videoIds = []
 }
 
-function deleteSource(category: AppHomeVideoCategory, sourceId: string) {
+function requestDeleteSource(category: AppHomeVideoCategory, sourceId: string) {
   if (!canRemoveAppHomeSource.value) {
+    return
+  }
+
+  deletingSourceCategoryId.value = category.id
+  deletingSourceId.value = sourceId
+  sourceDeleteConfirmOpen.value = true
+}
+
+function confirmDeleteSource() {
+  const category = selectedVideoModule.value?.categories.find(c => c.id === deletingSourceCategoryId.value)
+  const sourceId = deletingSourceId.value
+
+  if (!category || !sourceId) {
     return
   }
 
@@ -459,6 +495,10 @@ function deleteSource(category: AppHomeVideoCategory, sourceId: string) {
       form.videoIds = form.videoIds.filter(videoId => videoId !== source.videoId)
     }
   }
+
+  sourceDeleteConfirmOpen.value = false
+  deletingSourceId.value = ""
+  deletingSourceCategoryId.value = ""
 }
 
 async function saveConfig() {
@@ -1328,12 +1368,12 @@ function hashText(value: string) {
         <span class="app-home-phone-button app-home-phone-button--volume-down" aria-hidden="true" />
         <span class="app-home-phone-button app-home-phone-button--power" aria-hidden="true" />
 
-        <div class="app-home-device-screen flex min-h-0 flex-1 flex-col overflow-hidden bg-[#f4f4f4]">
+        <div class="app-home-device-screen flex min-h-0 flex-1 flex-col overflow-hidden bg-surface-secondary">
           <div class="app-home-preview-reserved app-home-preview-reserved--top shrink-0">
             <span>顶部导航栏</span>
           </div>
 
-          <div class="app-home-preview-scroll min-h-0 flex-1 overflow-y-auto bg-[#f4f4f4] px-4 py-4">
+          <div class="app-home-preview-scroll min-h-0 flex-1 overflow-y-auto bg-surface-secondary px-4 py-4">
             <div v-if="showInitialSkeleton" class="space-y-6">
               <section class="min-w-0 border-b border-dashed border-zinc-300/90 pb-4">
                 <Skeleton class="h-[18px] w-24 bg-zinc-300/90" />
@@ -1557,7 +1597,7 @@ function hashText(value: string) {
                         <i class="ri-draggable text-[17px]" />
                       </button>
                       <Input v-model="category.title" class="min-w-0 flex-1" placeholder="客户端分类名称" />
-                      <Button v-if="canDeleteAppHomeCategory" variant="ghost" size="icon-sm" class="h-9 w-9 rounded-md text-muted-foreground" @click="deleteVideoCategory(selectedVideoModule, category.id)">
+                      <Button v-if="canDeleteAppHomeCategory" variant="ghost" size="icon-sm" class="size-9 rounded-md text-muted-foreground" @click="requestDeleteCategory(selectedVideoModule, category.id)">
                         <i class="ri-delete-bin-line text-base" />
                         <span class="sr-only">删除分类</span>
                       </Button>
@@ -1571,7 +1611,7 @@ function hashText(value: string) {
                       >
                         <i :class="[source.kind === 'category' ? 'ri-folder-video-line' : 'ri-movie-line', 'text-base text-muted-foreground']" />
                         <span class="min-w-0 flex-1 truncate">{{ getSourceLabel(source) }}</span>
-                        <Button v-if="canRemoveAppHomeSource" variant="ghost" size="icon-sm" class="h-8 w-8 rounded-md text-muted-foreground" @click="deleteSource(category, source.id)">
+                        <Button v-if="canRemoveAppHomeSource" variant="ghost" size="icon-sm" class="size-8 rounded-md text-muted-foreground" @click="requestDeleteSource(category, source.id)">
                           <i class="ri-close-line text-base" />
                           <span class="sr-only">移除来源</span>
                         </Button>
@@ -1739,6 +1779,48 @@ function hashText(value: string) {
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
+
+    <AlertDialog v-model:open="categoryDeleteConfirmOpen">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>删除这个分类？</AlertDialogTitle>
+          <AlertDialogDescription>
+            删除后，该分类及其下的所有内容来源将被移除。相关媒体库内容不会被删除。
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>取消</AlertDialogCancel>
+          <AlertDialogAction
+            class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            @click.prevent="confirmDeleteCategory"
+          >
+            <i class="ri-delete-bin-line text-sm" />
+            <span>确认删除</span>
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
+    <AlertDialog v-model:open="sourceDeleteConfirmOpen">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>移除这个内容来源？</AlertDialogTitle>
+          <AlertDialogDescription>
+            移除后，该来源将不再展示在 App 首页的对应分类中。相关媒体库内容不会被删除。
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>取消</AlertDialogCancel>
+          <AlertDialogAction
+            class="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            @click.prevent="confirmDeleteSource"
+          >
+            <i class="ri-delete-bin-line text-sm" />
+            <span>确认移除</span>
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   </section>
 </template>
 
@@ -1887,8 +1969,8 @@ function hashText(value: string) {
   border-style: solid;
   border-image: linear-gradient(94deg, rgba(255, 255, 255, 0.4) -31%, rgba(255, 255, 255, 0.0001) 40%, rgba(255, 255, 255, 0.0001) 80%, rgba(255, 255, 255, 0.1) 164%) 1.5 0 0 0;
   box-sizing: border-box;
-  -webkit-backdrop-filter: blur(100px) saturate(100%);
-  backdrop-filter: blur(100px) saturate(100%);
+  -webkit-backdrop-filter: blur(16px) saturate(100%);
+  backdrop-filter: blur(16px) saturate(100%);
 }
 
 .article-editor-list {

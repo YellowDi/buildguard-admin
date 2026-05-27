@@ -14,7 +14,7 @@ const emit = defineEmits<{
 }>()
 
 const iconButtonClass =
-  "top-tab-switch-icon-button flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:text-foreground"
+  "top-tab-switch-icon-button flex size-8 items-center justify-center rounded-full text-muted-foreground hover:text-foreground"
 
 /**
  * 展开 / 收起共用同一套时长与曲线，反向操作更「可逆」、更符合直觉。

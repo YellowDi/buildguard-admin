@@ -52,8 +52,8 @@ import { Spinner } from "@/components/ui/spinner"
       />
       <div class="absolute inset-10 bg-background/12 backdrop-blur-sm" />
       <Skeleton class="absolute left-10 top-10 h-12 w-40 bg-background/30" />
-      <Skeleton class="absolute bottom-16 left-16 h-48 w-48 rounded-full bg-background/20" />
-      <Skeleton class="absolute right-16 top-24 h-56 w-56 rounded-full bg-background/20" />
+      <Skeleton class="absolute bottom-16 left-16 size-48 rounded-full bg-background/20" />
+      <Skeleton class="absolute right-16 top-24 size-56 rounded-full bg-background/20" />
     </div>
   </div>
 </template>

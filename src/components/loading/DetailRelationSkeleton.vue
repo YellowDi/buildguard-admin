@@ -41,7 +41,7 @@ withDefaults(defineProps<{
               <template v-if="twoDataColumns">
                 <Skeleton class="h-4 w-5/6 max-w-full" />
                 <Skeleton class="h-4 w-4/5 max-w-full" />
-                <Skeleton class="h-4 w-4 shrink-0 justify-self-end" />
+                <Skeleton class="size-4 shrink-0 justify-self-end" />
               </template>
               <template v-else>
                 <Skeleton class="h-4 w-4/5 max-w-full" />

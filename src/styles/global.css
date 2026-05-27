@@ -435,21 +435,22 @@
   }
 
   #app {
-    @apply min-h-screen;
+    @apply min-h-dvh;
   }
 }
 
 @layer components {
   .dialog-panel-float {
     transform-origin: center center;
-    will-change: transform, opacity;
   }
 
   .dialog-panel-float[data-state="open"] {
+    will-change: transform, opacity;
     animation: dialog-panel-float-in 360ms cubic-bezier(0.16, 1, 0.3, 1) both;
   }
 
   .dialog-panel-float[data-state="closed"] {
+    will-change: transform, opacity;
     animation: dialog-panel-float-out 220ms cubic-bezier(0.4, 0, 0.7, 0.2) both;
   }
 
@@ -483,7 +484,6 @@
 
   .sheet-panel-right {
     transform-origin: right center;
-    will-change: transform, opacity;
     box-shadow: var(--shadow-deep);
   }
 
@@ -509,10 +509,12 @@
   }
 
   .sheet-panel-right[data-state="open"] {
+    will-change: transform, opacity;
     animation: sheet-panel-right-in 360ms cubic-bezier(0.16, 1, 0.3, 1) both;
   }
 
   .sheet-panel-right[data-state="closed"] {
+    will-change: transform, opacity;
     animation: sheet-panel-right-out 220ms cubic-bezier(0.4, 0, 0.7, 0.2) both;
   }
 
@@ -546,13 +548,13 @@
 
   .sidebar-mode-panel {
     min-height: 0;
-    will-change: transform, opacity, filter;
   }
 
   .sidebar-mode-forward-enter-active,
   .sidebar-mode-forward-leave-active,
   .sidebar-mode-backward-enter-active,
   .sidebar-mode-backward-leave-active {
+    will-change: transform, opacity, filter;
     transition:
       transform 280ms cubic-bezier(0.2, 0, 0, 1),
       opacity 220ms ease-out,
@@ -663,11 +665,11 @@
     transition:
       opacity 120ms ease-out,
       transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
-    will-change: opacity, transform;
   }
 
   .top-tab-switch-icon-button:hover::before,
   .top-tab-switch-icon-button:focus-visible::before {
+    will-change: opacity, transform;
     opacity: 1;
     transform: scale(1);
   }

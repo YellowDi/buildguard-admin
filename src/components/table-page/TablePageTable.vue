@@ -1049,7 +1049,7 @@ function getEdgeGutterStyle(size: number) {
 
 function getLoadingCellWidthClass(column: TableColumn, columnIndex: number, rowIndex: number) {
   if (isSelectionColumn(columnIndex)) {
-    return "h-4 w-4 rounded-sm"
+    return "size-4 rounded-sm"
   }
 
   if (isRightAlignedColumn(column) && !isSelectionColumn(columnIndex)) {
@@ -1832,7 +1832,7 @@ onBeforeUnmount(() => {
                         v-if="isSelectionColumn(columnIndex)"
                         :class="tableTheme.indexInline.prefix"
                       >
-                        <Skeleton class="h-4 w-4 rounded-sm" />
+                        <Skeleton class="size-4 rounded-sm" />
                       </div>
                       <div :class="cn(isSelectionColumn(columnIndex) ? tableTheme.indexInline.content : 'min-w-0', 'flex min-w-0 items-center')">
                         <Skeleton :class="getLoadingPrimaryLineClass(rowIndex)" />

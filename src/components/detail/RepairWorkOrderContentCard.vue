@@ -127,7 +127,7 @@ function toText(value: unknown, fallback = "") {
         <div v-else class="detail-section-inset space-y-4 pb-4 pt-2">
           <article class="rounded-[8px] bg-surface-secondary p-3">
             <div class="mb-2 flex min-w-0 items-center gap-2">
-              <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] bg-background text-muted-foreground shadow-(--shadow-border)">
+              <div class="flex size-8 shrink-0 items-center justify-center rounded-[8px] bg-background text-muted-foreground shadow-(--shadow-border)">
                 <i class="ri-file-text-line text-[16px]" />
               </div>
               <div class="truncate text-[14px] font-semibold text-foreground">维修内容</div>
@@ -151,7 +151,7 @@ function toText(value: unknown, fallback = "") {
               <div class="mb-3 flex min-w-0 items-center gap-2.5">
                 <div
                   :class="[
-                    'flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] ring-1',
+                    'flex size-8 shrink-0 items-center justify-center rounded-[8px] ring-1',
                     mediaGroupIconClass(group),
                   ]"
                 >
@@ -195,7 +195,7 @@ function toText(value: unknown, fallback = "") {
                   >
                   <span
                     v-if="isVideo(file)"
-                    class="pointer-events-none absolute left-1/2 top-1/2 flex h-9 w-9 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-white shadow-[0_8px_18px_rgba(0,0,0,0.18)] backdrop-blur-sm transition-transform duration-200 ease-out group-hover:scale-105"
+                    class="pointer-events-none absolute left-1/2 top-1/2 flex size-9 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-white shadow-[0_8px_18px_rgba(0,0,0,0.18)] backdrop-blur-sm transition-transform duration-200 ease-out group-hover:scale-105"
                   >
                     <i class="ri-play-fill translate-x-px text-[20px]" />
                   </span>

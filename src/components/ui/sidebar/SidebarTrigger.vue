@@ -19,7 +19,7 @@ const { toggleSidebar } = useSidebar()
       variant="ghost"
       size="icon"
       aria-label="切换侧边栏"
-      :class="cn('h-7 w-7', props.class)"
+      :class="cn('size-7', props.class)"
       @click="toggleSidebar"
     >
       <i class="ri-layout-column-fill text-lg leading-none text-muted-foreground" />

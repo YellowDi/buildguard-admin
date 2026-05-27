@@ -1978,7 +1978,7 @@ function escapeHtml(value: string) {
               :key="view.id"
               variant="ghost"
               size="icon-sm"
-              class="h-8 w-8 rounded-md text-muted-foreground"
+              class="size-8 rounded-md text-muted-foreground"
               :class="currentView === view.id ? 'bg-accent text-foreground' : ''"
               :aria-label="view.label"
               :title="view.label"

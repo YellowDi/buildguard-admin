@@ -23,7 +23,7 @@ const isDisabled = computed(() => Boolean(context?.disabled.value))
     :data-active="isActive ? 'true' : undefined"
     :data-disabled="isDisabled ? 'true' : undefined"
     :class="cn(
-      'relative flex h-11 w-11 items-center justify-center border-y border-r border-input bg-background text-lg font-semibold tabular-nums shadow-xs transition-[border-color,box-shadow,color] duration-180 first:rounded-l-md first:border-l last:rounded-r-md',
+      'relative flex size-11 items-center justify-center border-y border-r border-input bg-background text-lg font-semibold tabular-nums shadow-xs transition-[border-color,box-shadow,color] duration-180 first:rounded-l-md first:border-l last:rounded-r-md',
       isActive && 'z-10 border-ring ring-ring/50 ring-[3px]',
       isDisabled && 'opacity-50',
       props.class,

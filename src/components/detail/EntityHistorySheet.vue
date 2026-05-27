@@ -314,7 +314,7 @@ function resolveEntryStatusBadgeIcon(entry: HistoryEntry) {
                             >
                             <span
                               v-if="isVideoMedia(image)"
-                              class="pointer-events-none absolute left-1/2 top-1/2 flex h-11 w-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-white shadow-[0_10px_24px_rgba(0,0,0,0.22)] backdrop-blur-sm transition-[opacity,transform,filter] duration-200 ease-out group-hover:scale-105"
+                              class="pointer-events-none absolute left-1/2 top-1/2 flex size-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-white shadow-[0_10px_24px_rgba(0,0,0,0.22)] backdrop-blur-sm transition-[opacity,transform,filter] duration-200 ease-out group-hover:scale-105"
                             >
                               <i class="ri-play-fill translate-x-px text-[24px]" />
                             </span>

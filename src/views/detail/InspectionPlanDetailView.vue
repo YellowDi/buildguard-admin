@@ -740,7 +740,7 @@ function getRemainingDaysHint(value: unknown) {
             <Button
               variant="ghost"
               size="icon-sm"
-              class="h-7 w-7 rounded-md text-muted-foreground hover:text-foreground"
+              class="size-7 rounded-md text-muted-foreground hover:text-foreground"
               :disabled="!row.uuid"
               @click="goToWorkOrderDetail(row)"
             >

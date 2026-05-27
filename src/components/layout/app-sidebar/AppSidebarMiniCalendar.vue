@@ -88,7 +88,7 @@ function getEventDotClass(date: AppSidebarCalendarDate) {
   const isOutsideView = !isSameMonthValue(date, placeholder.value)
 
   return cn(
-    "absolute bottom-1.5 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full",
+    "absolute bottom-1.5 left-1/2 size-1 -translate-x-1/2 rounded-full",
     isTodayCell ? "bg-date-today-foreground/95" : isOutsideView ? "bg-muted-foreground/35" : "bg-foreground/35",
   )
 }

@@ -951,12 +951,12 @@ function dedupeSelectOptions(options: SelectOption[]) {
                             variant="ghost"
                             size="sm"
                             type="button"
-                            class="h-8 w-8 shrink-0 p-0 text-muted-foreground hover:text-destructive"
+                            class="size-8 shrink-0 p-0 text-muted-foreground hover:text-destructive"
                             @click="removePrincipal(principal.id)"
                           >
                             <i class="ri-close-line text-base" />
                           </Button>
-                          <span v-else class="inline-block h-8 w-8 shrink-0" aria-hidden="true" />
+                          <span v-else class="inline-block size-8 shrink-0" aria-hidden="true" />
                         </td>
                       </tr>
                     </tbody>

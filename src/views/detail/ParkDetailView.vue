@@ -347,7 +347,8 @@ function buildContactValue(name: string | null, phone?: string | null): DetailCo
             <Button
               variant="ghost"
               size="icon-sm"
-              class="h-7 w-7 rounded-md text-muted-foreground hover:text-foreground"
+              class="size-7 rounded-md text-muted-foreground hover:text-foreground"
+              aria-label="查看建筑详情"
               @click="goToBuildingDetail(row.id)"
             >
               <i class="ri-more-2-line text-[18px]" />

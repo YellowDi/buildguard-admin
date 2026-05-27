@@ -4501,7 +4501,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
               </PopoverContent>
             </Popover>
 
-            <button type="button" :class="detailToolbarButtonClass">
+            <button type="button" :class="detailToolbarButtonClass" aria-label="更多操作">
               <i class="ri-more-2-line text-base" />
             </button>
 
@@ -5049,7 +5049,8 @@ function toDisplayText(value: unknown, fallback = "未填写") {
                       <Button
                         variant="ghost"
                         size="icon-sm"
-                        class="h-7 w-7 rounded-md text-muted-foreground hover:text-foreground"
+                        class="size-7 rounded-md text-muted-foreground hover:text-foreground"
+                        aria-label="查看建筑详情"
                         @click="goToBuildingDetail(getRowUuid(row), getRowParkUuid(row))"
                       >
                         <i class="ri-more-2-line text-[18px]" />
@@ -5112,7 +5113,8 @@ function toDisplayText(value: unknown, fallback = "未填写") {
                   <Button
                     variant="ghost"
                     size="icon-sm"
-                    class="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground"
+                    class="size-8 rounded-lg text-muted-foreground hover:text-foreground"
+                    aria-label="查看工单详情"
                     @click="handleOverviewWorkOrderDetail(row)"
                   >
                     <i class="ri-more-2-line text-[18px]" />
@@ -5178,7 +5180,8 @@ function toDisplayText(value: unknown, fallback = "未填写") {
                   <Button
                     variant="ghost"
                     size="icon-sm"
-                    class="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground"
+                    class="size-8 rounded-lg text-muted-foreground hover:text-foreground"
+                    aria-label="查看工单详情"
                     @click="handleOverviewWorkOrderDetail(row)"
                   >
                     <i class="ri-more-2-line text-[18px]" />

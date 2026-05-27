@@ -341,7 +341,7 @@ function scorePillClass(score: number) {
                 <TooltipTrigger as-child>
                   <button
                     type="button"
-                    class="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-border bg-card text-[10px] font-semibold text-muted-foreground transition hover:bg-accent hover:text-foreground"
+                    class="inline-flex size-5 shrink-0 items-center justify-center rounded-full border border-border bg-card text-[10px] font-semibold text-muted-foreground transition hover:bg-accent hover:text-foreground"
                     aria-label="得分说明"
                   >
                     i

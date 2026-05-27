@@ -185,7 +185,7 @@ function buildImageMediaItem(row: DetailFieldRow): DetailFieldMediaFile {
                       >
                       <span
                         v-if="isVideoMedia(file)"
-                        class="pointer-events-none absolute left-1/2 top-1/2 flex h-8 w-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-white shadow-[0_8px_18px_rgba(0,0,0,0.18)] backdrop-blur-sm transition-transform duration-200 ease-out group-hover:scale-105"
+                        class="pointer-events-none absolute left-1/2 top-1/2 flex size-8 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-black/45 text-white shadow-[0_8px_18px_rgba(0,0,0,0.18)] backdrop-blur-sm transition-transform duration-200 ease-out group-hover:scale-105"
                       >
                         <i class="ri-play-fill translate-x-px text-[18px]" />
                       </span>

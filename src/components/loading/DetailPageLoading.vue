@@ -59,7 +59,7 @@ import { Skeleton } from "@/components/ui/skeleton"
                 >
                   <Skeleton class="h-4 w-5/6" />
                   <Skeleton class="h-4 w-4/5" />
-                  <Skeleton class="h-4 w-4" />
+                  <Skeleton class="size-4" />
                 </div>
               </div>
             </div>

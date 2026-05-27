@@ -54,7 +54,7 @@ const emit = defineEmits<{
       <TooltipWrap content="搜索">
         <button
           type="button"
-          class="top-tab-switch-icon-button ml-auto flex h-10 w-10 items-center justify-center rounded-full text-sidebar-foreground/52 hover:text-sidebar-accent-foreground"
+          class="top-tab-switch-icon-button ml-auto flex size-10 items-center justify-center rounded-full text-sidebar-foreground/52 hover:text-sidebar-accent-foreground"
           aria-label="搜索"
           @click="emit('search')"
         >

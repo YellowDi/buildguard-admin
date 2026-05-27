@@ -346,7 +346,7 @@ function handleExpandAfterLeave(element: Element) {
                     <div class="flex min-w-0 items-center gap-2.5">
                       <div
                         :class="[
-                          'flex h-7 w-7 shrink-0 items-center justify-center rounded-[10px] transition-colors duration-180',
+                          'flex size-7 shrink-0 items-center justify-center rounded-[10px] transition-colors duration-180',
                           resolveStatusIconWrapClass(building.status),
                         ]"
                       >

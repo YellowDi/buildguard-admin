@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { nextTick, onBeforeUnmount, ref } from "vue"
+import { nextTick, onBeforeUnmount, ref, shallowRef } from "vue"
 import { FLOATING_OVERLAY_SURFACE_CLASS } from "@/components/ui/overlay"
 
 export type MediaLightboxItem = {
@@ -22,14 +22,25 @@ type ActiveMedia = MediaLightboxItem & {
 }
 
 const activeMedia = ref<ActiveMedia | null>(null)
-const frameStyle = ref<Record<string, string>>({})
+const frameBaseStyle = ref<Record<string, string>>({})
+const frameTransform = ref("")
 const backdropVisible = ref(false)
 const closing = ref(false)
 const mediaRatio = ref<number | null>(null)
+const isReducedMotion = shallowRef(false)
 let sourceRect: DOMRect | null = null
 let closeTimer: number | null = null
 let suppressOpenUntil = 0
 let previousBodyOverflow = ""
+let reducedMotionQuery: MediaQueryList | null = null
+
+if (typeof window !== "undefined" && typeof window.matchMedia === "function") {
+  reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)")
+  isReducedMotion.value = reducedMotionQuery.matches
+  reducedMotionQuery.addEventListener("change", (e) => {
+    isReducedMotion.value = e.matches
+  })
+}
 
 defineSlots<{
   default(props: {
@@ -61,7 +72,11 @@ function open(item: MediaLightboxItem, title: string, event: MouseEvent) {
   }
   backdropVisible.value = false
   closing.value = false
-  frameStyle.value = buildFrameStyle(sourceRect, false, 12)
+
+  const targetRect = resolveTargetRect(sourceRect, mediaRatio.value)
+  frameBaseStyle.value = buildFrameBaseStyle(targetRect, 18)
+  frameTransform.value = isReducedMotion.value ? "" : computeTransform(sourceRect, targetRect)
+
   lockBodyScroll()
   window.addEventListener("keydown", handleKeydown)
 
@@ -72,7 +87,11 @@ function open(item: MediaLightboxItem, title: string, event: MouseEvent) {
       }
 
       backdropVisible.value = true
-      frameStyle.value = buildFrameStyle(resolveTargetRect(sourceRect, mediaRatio.value), true, 18)
+
+      if (!isReducedMotion.value) {
+        void document.body.offsetHeight
+        frameTransform.value = ""
+      }
     })
   })
 }
@@ -92,10 +111,18 @@ function close(immediate = false) {
 
   closing.value = true
   backdropVisible.value = false
-  frameStyle.value = buildFrameStyle(sourceRect, true, 12)
-  closeTimer = window.setTimeout(() => {
-    reset()
-  }, LIGHTBOX_TRANSITION_MS)
+
+  if (isReducedMotion.value) {
+    closeTimer = window.setTimeout(() => {
+      reset()
+    }, 150)
+  } else {
+    const targetRect = resolveTargetRect(sourceRect, mediaRatio.value)
+    frameTransform.value = computeTransform(sourceRect, targetRect)
+    closeTimer = window.setTimeout(() => {
+      reset()
+    }, LIGHTBOX_TRANSITION_MS)
+  }
 }
 
 function reset() {
@@ -105,7 +132,8 @@ function reset() {
   closing.value = false
   mediaRatio.value = null
   sourceRect = null
-  frameStyle.value = {}
+  frameBaseStyle.value = {}
+  frameTransform.value = ""
   unlockBodyScroll()
   window.removeEventListener("keydown", handleKeydown)
 }
@@ -141,20 +169,26 @@ function handleMediaLoaded(event: Event) {
   }
 
   mediaRatio.value = nextRatio
-  frameStyle.value = buildFrameStyle(resolveTargetRect(sourceRect, nextRatio), true, 18)
+  const newTargetRect = resolveTargetRect(sourceRect, nextRatio)
+  frameBaseStyle.value = buildFrameBaseStyle(newTargetRect, 18)
 }
 
-function buildFrameStyle(rect: DOMRect | LightboxRect, animated: boolean, borderRadius: number) {
+function buildFrameBaseStyle(targetRect: LightboxRect, borderRadius: number) {
   return {
-    left: `${rect.left}px`,
-    top: `${rect.top}px`,
-    width: `${rect.width}px`,
-    height: `${rect.height}px`,
+    left: `${targetRect.left}px`,
+    top: `${targetRect.top}px`,
+    width: `${targetRect.width}px`,
+    height: `${targetRect.height}px`,
     borderRadius: `${borderRadius}px`,
-    transitionProperty: animated ? "left, top, width, height, border-radius, box-shadow" : "none",
-    transitionDuration: animated ? `${LIGHTBOX_TRANSITION_MS}ms` : "0ms",
-    transitionTimingFunction: animated ? "cubic-bezier(0.22, 1, 0.36, 1)" : "linear",
   }
+}
+
+function computeTransform(source: DOMRect | LightboxRect, target: LightboxRect) {
+  const sx = source.width / target.width
+  const sy = source.height / target.height
+  const tx = source.left - target.left
+  const ty = source.top - target.top
+  return `translate(${tx}px, ${ty}px) scale(${sx}, ${sy})`
 }
 
 type LightboxRect = {
@@ -239,7 +273,8 @@ onBeforeUnmount(() => {
     <div
       v-if="activeMedia"
       data-media-lightbox
-      class="pointer-events-auto fixed inset-0 isolate z-[2147483647]"
+      class="pointer-events-auto fixed inset-0 isolate z-[9999]"
+      style="padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)"
       aria-modal="true"
       role="dialog"
       @click.self.prevent.stop="close()"
@@ -253,9 +288,12 @@ onBeforeUnmount(() => {
       />
 
       <div
-        class="fixed overflow-hidden bg-black shadow-[0_30px_80px_rgba(0,0,0,0.42),0_10px_30px_rgba(0,0,0,0.28)]"
-        :class="closing ? 'shadow-[0_8px_24px_rgba(0,0,0,0.22)]' : ''"
-        :style="frameStyle"
+        class="fixed overflow-hidden bg-black shadow-[0_30px_80px_rgba(0,0,0,0.42),0_10px_30px_rgba(0,0,0,0.28)] will-change-transform origin-top-left"
+        :class="[
+          closing ? 'shadow-[0_8px_24px_rgba(0,0,0,0.22)]' : '',
+          frameTransform ? 'transition-[transform,border-radius,box-shadow] duration-260 ease-[cubic-bezier(0.22,1,0.36,1)]' : 'transition-[box-shadow] duration-200 ease-out',
+        ]"
+        :style="{ ...frameBaseStyle, transform: frameTransform }"
         @click.stop
         @pointerup.stop
         @pointerdown.stop
@@ -280,7 +318,8 @@ onBeforeUnmount(() => {
 
       <button
         type="button"
-        class="fixed right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/92 text-[#1c1d20] shadow-[0_12px_30px_rgba(0,0,0,0.18)] transition-[opacity,transform] duration-150 ease-out hover:scale-[1.03] active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+        class="fixed right-4 flex size-10 items-center justify-center rounded-full bg-white/92 text-[#1c1d20] shadow-[0_12px_30px_rgba(0,0,0,0.18)] transition-[opacity,transform] duration-150 ease-out hover:scale-[1.03] active:scale-[0.96] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+        style="top: calc(1rem + env(safe-area-inset-top))"
         :class="backdropVisible ? 'translate-y-0 opacity-100' : '-translate-y-1 opacity-0'"
         aria-label="关闭附件预览"
         @click.prevent.stop="close()"

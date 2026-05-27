@@ -131,7 +131,7 @@ const tableConfig = computed(() => {
         <div class="detail-section-inset flex items-center gap-3 py-4">
           <div class="min-w-0 flex-1">
             <div class="flex min-w-0 items-center gap-2">
-              <Skeleton class="h-4 w-4" />
+              <Skeleton class="size-4" />
               <Skeleton class="h-4 w-28" />
               <Skeleton class="h-4 w-16" />
             </div>
@@ -177,7 +177,7 @@ const tableConfig = computed(() => {
                   >
                     <Skeleton class="h-4 w-5/6" />
                     <Skeleton class="h-4 w-3/4" />
-                    <Skeleton class="h-4 w-4" />
+                    <Skeleton class="size-4" />
                   </div>
                 </div>
               </div>
@@ -230,7 +230,7 @@ const tableConfig = computed(() => {
               <Skeleton class="h-4 w-3/4" />
               <Skeleton class="h-4 w-2/3" />
               <Skeleton class="h-4 w-3/4" />
-              <Skeleton class="h-4 w-4" />
+              <Skeleton class="size-4" />
             </div>
           </div>
         </div>

@@ -10,7 +10,7 @@
       />
       <div class="pointer-events-none absolute inset-0 flex items-center justify-center">
         <div
-          class="h-8 w-8 animate-spin rounded-full border-2 border-muted-foreground/20 border-t-primary"
+          class="size-8 animate-spin rounded-full border-2 border-muted-foreground/20 border-t-primary"
           role="status"
         />
         <span class="sr-only">雷达图加载中</span>

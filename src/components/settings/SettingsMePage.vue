@@ -183,6 +183,7 @@ function handleLogout() {
                     variant="ghost"
                     size="icon"
                     class="size-8 shrink-0"
+                    aria-label="复制用户 ID"
                     @click="handleCopyUserId"
                   >
                     <i class="ri-file-copy-line" />

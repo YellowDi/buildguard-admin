@@ -795,7 +795,7 @@ function hashText(value: string) {
         <Card :class="statsCardClass">
           <CardContent class="flex h-[132px] flex-col justify-between px-4 py-3">
             <div class="space-y-1.5">
-              <div class="text-[1.75rem] font-semibold tracking-tight text-foreground sm:text-[1.875rem]">
+              <div class="text-[1.75rem] font-semibold tabular-nums tracking-tight text-foreground sm:text-[1.875rem]">
                 {{ stat.value }}
                 <span class="ml-1 text-[1rem] font-medium text-muted-foreground sm:text-[1.125rem]">
                   {{ stat.unit }}
@@ -826,7 +826,7 @@ function hashText(value: string) {
               <div class="flex items-center gap-3 text-xs text-muted-foreground">
                 <div class="flex items-center gap-1.5">
                   <span
-                    class="h-2.5 w-2.5 rounded-sm"
+                    class="size-2.5 rounded-sm"
                     :style="{ backgroundColor: workOrderHistoryChartConfig.inspectionTotal.color }"
                   />
                   <span>{{ workOrderHistoryChartConfig.inspectionTotal.label }}</span>
@@ -834,7 +834,7 @@ function hashText(value: string) {
 
                 <div class="flex items-center gap-1.5">
                   <span
-                    class="h-2.5 w-2.5 rounded-sm"
+                    class="size-2.5 rounded-sm"
                     :style="{ backgroundColor: workOrderHistoryChartConfig.repairTotal.color }"
                   />
                   <span>{{ workOrderHistoryChartConfig.repairTotal.label }}</span>
@@ -890,7 +890,7 @@ function hashText(value: string) {
                     <div class="text-[11px] text-muted-foreground">
                       工单总数
                     </div>
-                    <div class="mt-1 text-lg font-semibold tracking-tight text-foreground">
+                    <div class="mt-1 text-lg font-semibold tabular-nums tracking-tight text-foreground">
                       {{ numberFormatter.format(workOrderOverview.summary.total) }}
                     </div>
                   </div>
@@ -898,7 +898,7 @@ function hashText(value: string) {
                     <div class="text-[11px] text-muted-foreground">
                       检测工单
                     </div>
-                    <div class="mt-1 text-lg font-semibold tracking-tight text-foreground">
+                    <div class="mt-1 text-lg font-semibold tabular-nums tracking-tight text-foreground">
                       {{ numberFormatter.format(workOrderOverview.summary.inspectionTotal) }}
                     </div>
                   </div>
@@ -906,7 +906,7 @@ function hashText(value: string) {
                     <div class="text-[11px] text-muted-foreground">
                       报修工单
                     </div>
-                    <div class="mt-1 text-lg font-semibold tracking-tight text-foreground">
+                    <div class="mt-1 text-lg font-semibold tabular-nums tracking-tight text-foreground">
                       {{ numberFormatter.format(workOrderOverview.summary.repairTotal) }}
                     </div>
                   </div>
@@ -914,7 +914,7 @@ function hashText(value: string) {
                     <div class="text-[11px] text-muted-foreground">
                       检测已完成
                     </div>
-                    <div class="mt-1 text-lg font-semibold tracking-tight text-foreground">
+                    <div class="mt-1 text-lg font-semibold tabular-nums tracking-tight text-foreground">
                       {{ numberFormatter.format(workOrderOverview.summary.inspectionCompleted) }}
                     </div>
                   </div>
@@ -922,7 +922,7 @@ function hashText(value: string) {
                     <div class="text-[11px] text-muted-foreground">
                       报修已完成
                     </div>
-                    <div class="mt-1 text-lg font-semibold tracking-tight text-foreground">
+                    <div class="mt-1 text-lg font-semibold tabular-nums tracking-tight text-foreground">
                       {{ numberFormatter.format(workOrderOverview.summary.repairCompleted) }}
                     </div>
                   </div>
@@ -1069,7 +1069,7 @@ function hashText(value: string) {
                       :class="`${buildingRankingRowClass} dashboard-card-hover-surface group flex w-full items-center gap-2.5 border-b border-dashed border-border/70 pl-1 pr-3 text-left transition-[background-color,border-color] duration-150 last:border-b-0`"
                       @click="goToBuildingDetail(building)"
                     >
-                      <div class="dashboard-card-surface flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold text-foreground transition-colors">
+                      <div class="dashboard-card-surface flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold text-foreground transition-colors">
                         {{ index + 1 }}
                       </div>
 
@@ -1086,7 +1086,7 @@ function hashText(value: string) {
 
                           <div class="flex shrink-0 items-center gap-1.5">
                             <div class="text-right leading-none">
-                              <div class="text-base font-semibold tracking-tight text-foreground">
+                              <div class="text-base font-semibold tabular-nums tracking-tight text-foreground">
                                 {{ building.score }}
                               </div>
                               <div class="mt-0.5 text-[10px] text-muted-foreground">
