@@ -63,6 +63,15 @@ function shouldTruncateValueContainer(row: DetailFieldRow) {
 function isVideoMedia(file: DetailFieldMediaFile) {
   return file.type === "video" || /\.(mp4|mov|m4v|webm|ogg)(\?|#|$)/i.test(file.src)
 }
+
+function buildImageMediaItem(row: DetailFieldRow): DetailFieldMediaFile {
+  return {
+    key: `${row.key}-image`,
+    src: row.imageUrl ?? "",
+    type: "image",
+    alt: row.label,
+  }
+}
 </script>
 
 <template>
@@ -134,13 +143,20 @@ function isVideoMedia(file: DetailFieldMediaFile) {
                 <TableStatusChip :value="row.value.value" :renderer="row.value.renderer" />
               </template>
               <template v-else-if="row.imageUrl">
-                <div class="detail-field-row__image-frame">
-                  <img
-                    :src="row.imageUrl"
-                    :alt="row.label"
-                    class="detail-field-row__image object-contain"
+                <MediaLightbox v-slot="{ open: openMediaLightbox }">
+                  <button
+                    type="button"
+                    class="detail-field-row__image-frame detail-field-row__image-frame--interactive"
+                    :aria-label="`预览图片：${row.label}`"
+                    @click="openMediaLightbox(buildImageMediaItem(row), row.label, $event)"
                   >
-                </div>
+                    <img
+                      :src="row.imageUrl"
+                      :alt="row.label"
+                      class="detail-field-row__image object-contain"
+                    >
+                  </button>
+                </MediaLightbox>
               </template>
               <template v-else-if="row.mediaFiles?.length">
                 <MediaLightbox v-slot="{ open: openMediaLightbox }">
