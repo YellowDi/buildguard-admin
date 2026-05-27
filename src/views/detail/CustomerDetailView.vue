@@ -4918,7 +4918,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
               <article
                 v-for="service in inspectionServiceCards"
                 :key="service.key"
-                class="rounded-lg border border-border bg-card p-3 text-card-foreground"
+                class="rounded-lg border-0 bg-card p-3 text-card-foreground shadow-(--shadow-border) transition-shadow duration-200 hover:shadow-(--shadow-border-hover)"
               >
                 <div class="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                   <div class="min-w-0">
@@ -4951,22 +4951,34 @@ function toDisplayText(value: unknown, fallback = "未填写") {
                 </div>
 
                 <div class="mt-3 grid gap-2 text-[13px] leading-5 sm:grid-cols-2">
-                  <div class="min-w-0 rounded-md bg-muted/45 px-2.5 py-2">
-                    <div class="text-xs text-muted-foreground">合同周期</div>
+                  <div class="min-w-0 rounded-md bg-[var(--dashboard-card-background)] px-3 py-2.5">
+                    <div class="flex items-center gap-1 text-xs text-muted-foreground">
+                      <i class="ri-calendar-line text-[13px]" />
+                      <span>合同周期</span>
+                    </div>
                     <div class="mt-0.5 break-words font-medium text-foreground">
                       {{ formatInspectionServiceContractPeriod(service) }}
                     </div>
                   </div>
-                  <div class="min-w-0 rounded-md bg-muted/45 px-2.5 py-2">
-                    <div class="text-xs text-muted-foreground">负责人</div>
+                  <div class="min-w-0 rounded-md bg-[var(--dashboard-card-background)] px-3 py-2.5">
+                    <div class="flex items-center gap-1 text-xs text-muted-foreground">
+                      <i class="ri-user-line text-[13px]" />
+                      <span>负责人</span>
+                    </div>
                     <div class="mt-0.5 truncate font-medium text-foreground">{{ formatInspectionServiceManager(service) }}</div>
                   </div>
-                  <div class="min-w-0 rounded-md bg-muted/45 px-2.5 py-2">
-                    <div class="text-xs text-muted-foreground">服务范围</div>
+                  <div class="min-w-0 rounded-md bg-[var(--dashboard-card-background)] px-3 py-2.5">
+                    <div class="flex items-center gap-1 text-xs text-muted-foreground">
+                      <i class="ri-building-line text-[13px]" />
+                      <span>服务范围</span>
+                    </div>
                     <div class="mt-0.5 break-words font-medium text-foreground">{{ formatInspectionServiceScope(service) }}</div>
                   </div>
-                  <div class="min-w-0 rounded-md bg-muted/45 px-2.5 py-2">
-                    <div class="text-xs text-muted-foreground">合同文件</div>
+                  <div class="min-w-0 rounded-md bg-[var(--dashboard-card-background)] px-3 py-2.5">
+                    <div class="flex items-center gap-1 text-xs text-muted-foreground">
+                      <i class="ri-file-text-line text-[13px]" />
+                      <span>合同文件</span>
+                    </div>
                     <div class="mt-0.5 truncate font-medium text-foreground">{{ formatInspectionServiceContractFile(service) }}</div>
                   </div>
                 </div>
