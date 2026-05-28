@@ -76,7 +76,7 @@ export function formatRepairDictionaryLabel(
   const normalizedValue = toNumericValue(value)
 
   if (normalizedValue === null) {
-    return normalizedText ? `${fallbackPrefix} ${normalizedText}` : "-"
+    return normalizedText || "-"
   }
 
   return options.find(option => option.numericValue === normalizedValue)?.label
