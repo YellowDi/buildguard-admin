@@ -963,7 +963,7 @@ const repairOverviewModule = computed<DetailRelationModuleSchema<MaintenanceReco
       },
       rowKey: "id",
       columns: [
-        { key: "location", label: "位置", slot: "repair-overview-location-cell" },
+        { key: "location", label: "报修工单", slot: "repair-overview-location-cell" },
         {
           key: "item",
           label: "报修类型",
@@ -987,9 +987,9 @@ const repairOverviewModule = computed<DetailRelationModuleSchema<MaintenanceReco
       ],
       groups: [],
       rowAction: row => handleOverviewWorkOrderDetail(row),
-      mobileMinWidth: "42rem",
-      columnTemplateMobile: "minmax(9rem,1fr) 6.5rem minmax(12rem,1.5fr) 8rem 2.75rem",
-      columnTemplateDesktop: "minmax(9rem,1fr) 6.5rem minmax(12rem,1.5fr) 8rem 2.75rem",
+      mobileMinWidth: "46rem",
+      columnTemplateMobile: "minmax(14rem,1.4fr) 6.5rem minmax(10rem,1.2fr) 8rem 2.75rem",
+      columnTemplateDesktop: "minmax(14rem,1.4fr) 6.5rem minmax(10rem,1.2fr) 8rem 2.75rem",
       columnGapMobile: "0.75rem",
       columnGapDesktop: "1rem",
     }
@@ -1005,7 +1005,7 @@ const repairOverviewModule = computed<DetailRelationModuleSchema<MaintenanceReco
     },
     rowKey: "id",
     columns: [
-      { key: "location", label: "位置", slot: "repair-overview-location-cell" },
+      { key: "location", label: "报修工单", slot: "repair-overview-location-cell" },
       {
         key: "item",
         label: "报修类型",
@@ -1029,9 +1029,9 @@ const repairOverviewModule = computed<DetailRelationModuleSchema<MaintenanceReco
     ],
     groups: buildMaintenanceGroups(repairOverviewRecords.value),
     rowAction: row => handleOverviewWorkOrderDetail(row),
-    mobileMinWidth: "42rem",
-    columnTemplateMobile: "minmax(9rem,1fr) 6.5rem minmax(12rem,1.5fr) 8rem 2.75rem",
-    columnTemplateDesktop: "minmax(9rem,1fr) 6.5rem minmax(12rem,1.5fr) 8rem 2.75rem",
+    mobileMinWidth: "46rem",
+    columnTemplateMobile: "minmax(14rem,1.4fr) 6.5rem minmax(10rem,1.2fr) 8rem 2.75rem",
+    columnTemplateDesktop: "minmax(14rem,1.4fr) 6.5rem minmax(10rem,1.2fr) 8rem 2.75rem",
     columnGapMobile: "0.75rem",
     columnGapDesktop: "1rem",
   }
@@ -5145,7 +5145,10 @@ function toDisplayText(value: unknown, fallback = "未填写") {
                     />
                     <Tooltip>
                       <TooltipTrigger as-child>
-                        <span class="truncate cursor-default">{{ row.location }}</span>
+                        <span class="inline-flex min-w-0 max-w-full cursor-default items-baseline gap-1.5">
+                          <span class="truncate text-foreground">{{ row.location }}</span>
+                          <span class="shrink-0 text-muted-foreground">#{{ formatShortOrderNo(row.orderNo) }}</span>
+                        </span>
                       </TooltipTrigger>
                       <TooltipContent side="top" align="start" class="rounded-lg px-3 py-1.5 text-xs">
                         {{ row.parkName }}
