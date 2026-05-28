@@ -105,7 +105,6 @@ const selectedStatus = ref("")
 const selectedImportant = ref("")
 const selectedCustomerUuid = ref("")
 const selectedPlanUuid = ref("")
-const selectedResult = ref("")
 const sortDirection = ref<"asc" | "desc">("desc")
 const route = useRoute()
 let latestRequestId = 0
@@ -128,11 +127,6 @@ const inspectionPlanOptionsLoading = ref(false)
 const repairImportanceOptions = ref<RepairDictionaryOption[]>([])
 const repairTypeOptions = ref<RepairDictionaryOption[]>([])
 const repairDictionariesLoading = ref(false)
-const inspectionResultOptions = [
-  { value: "1", label: "正常" },
-  { value: "2", label: "轻微风险" },
-  { value: "3", label: "存在隐患" },
-]
 const pageTitle = computed(() => props.kind === "inspection" ? "检测工单" : "报修工单")
 const pageEmptyStateTitle = computed(() => `暂无${pageTitle.value}数据`)
 const pageEmptyStateDescription = computed(() => props.kind === "inspection"
@@ -308,18 +302,6 @@ const queryBar = computed<TableQueryBarConfig>(() => ({
           expandedWidth: 248,
           collapsedMaxWidth: 248,
         },
-        {
-          type: "select" as const,
-          key: "result",
-          queryKey: "result",
-          label: "检测结果",
-          icon: "ri-price-tag-3-line",
-          value: selectedResult.value,
-          options: inspectionResultOptions,
-          placeholder: "请选择检测结果",
-          expandedWidth: 248,
-          collapsedMaxWidth: 248,
-        },
       ]
     : [
         {
@@ -380,10 +362,9 @@ const queryBar = computed<TableQueryBarConfig>(() => ({
     createdAt: props.kind === "repair" ? createdAtQuery.value : "",
     important: props.kind === "repair" ? selectedImportant.value : "",
     status: selectedStatus.value,
-    result: props.kind === "inspection" ? selectedResult.value : "",
   },
   canClear: props.kind === "inspection"
-    ? Boolean(orderNoQuery.value || selectedCustomerUuid.value || selectedPlanUuid.value || serviceNameQuery.value || executorQuery.value || deadlineQuery.value || selectedStatus.value || selectedResult.value)
+    ? Boolean(orderNoQuery.value || selectedCustomerUuid.value || selectedPlanUuid.value || serviceNameQuery.value || executorQuery.value || deadlineQuery.value || selectedStatus.value)
     : Boolean(orderNoQuery.value || createdAtQuery.value || selectedImportant.value || selectedStatus.value),
 }))
 
@@ -405,7 +386,6 @@ watch(
         normalizeQueryValue(route.query.executor),
         normalizeQueryValue(route.query.deadline),
         normalizeQueryValue(route.query.status),
-        normalizeQueryValue(route.query.result),
       ] as const
     : [
         normalizeQueryValue(route.query.q),
@@ -431,7 +411,6 @@ watch(
       executorQuery.value = nextValue[4] ?? ""
       deadlineQuery.value = nextValue[5] ?? ""
       selectedStatus.value = nextValue[6] ?? ""
-      selectedResult.value = nextValue[7] ?? ""
     } else {
       createdAtQuery.value = nextValue[1] ?? ""
       selectedImportant.value = nextValue[2] ?? ""
@@ -682,7 +661,6 @@ async function loadWorkOrders() {
           Executor: executorQuery.value || undefined,
           Deadline: deadlineQuery.value || undefined,
           Status: toApiStatus(selectedStatus.value),
-          Result: toApiStatus(selectedResult.value),
           PageNum: pageNum.value,
           PageSize: pageSize.value,
         })
@@ -1285,10 +1263,6 @@ function handleQueryChange(payload: { key: string; value: string | string[] }) {
     selectedImportant.value = typeof payload.value === "string" ? payload.value.trim() : ""
   }
 
-  if (payload.key === "result") {
-    selectedResult.value = typeof payload.value === "string" ? payload.value.trim() : ""
-  }
-
   void syncRouteQueryAndReload()
 }
 
@@ -1302,7 +1276,6 @@ function handleQueryClear() {
         || executorQuery.value
         || deadlineQuery.value
         || selectedStatus.value
-        || selectedResult.value,
       )
     : Boolean(orderNoQuery.value || createdAtQuery.value || selectedImportant.value || selectedStatus.value)
 
@@ -1319,7 +1292,6 @@ function handleQueryClear() {
   executorQuery.value = ""
   selectedStatus.value = ""
   selectedImportant.value = ""
-  selectedResult.value = ""
   void syncRouteQueryAndReload()
 }
 
@@ -1337,7 +1309,6 @@ async function syncRouteQueryAndReload() {
       executor: props.kind === "inspection" ? executorQuery.value || undefined : undefined,
       deadline: props.kind === "inspection" ? deadlineQuery.value || undefined : undefined,
       status: selectedStatus.value || undefined,
-      result: props.kind === "inspection" ? selectedResult.value || undefined : undefined,
     },
   })
 
