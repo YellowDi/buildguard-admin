@@ -400,7 +400,7 @@ const canSubmitRepairReview = computed(() => {
     return false
   }
 
-  return repairReviewDecision.value === "in-progress" || Boolean(repairReviewVideoUrl.value)
+  return true
 })
 const repairReviewSubmitLabel = computed(() => {
   if (repairReviewSubmitting.value) {
@@ -664,15 +664,10 @@ async function submitRepairReview() {
     return
   }
 
-  if (decision === "completed" && !repairReviewVideoUrl.value) {
-    toast.error("请先上传复核视频")
-    return
-  }
-
   repairReviewSubmitting.value = true
 
   try {
-    if (decision === "completed" && !repairReviewVideoRecordSaved.value) {
+    if (decision === "completed" && repairReviewVideoUrl.value && !repairReviewVideoRecordSaved.value) {
       await uploadRepairWorkOrderVideo({
         Uuid: uuid,
         Url: repairReviewVideoUrl.value,
@@ -2107,7 +2102,7 @@ async function submitAssign() {
             <DialogHeader>
               <DialogTitle>复核报修工单</DialogTitle>
               <DialogDescription>
-                选择复核结果；设为已完成时需要上传复核视频。
+                选择复核结果；设为已完成时可按需上传复核视频。
               </DialogDescription>
             </DialogHeader>
             <div class="space-y-5">
@@ -2129,7 +2124,7 @@ async function submitAssign() {
                     设为已完成
                   </span>
                   <span class="mt-2 text-xs leading-5 text-muted-foreground">
-                    复核通过，补充视频后关闭工单。
+                    复核通过，关闭工单；视频可作为补充记录上传。
                   </span>
                 </button>
 
@@ -2163,9 +2158,9 @@ async function submitAssign() {
                   accept="video/*"
                   :disabled="repairReviewSubmitting"
                   :loading="repairReviewVideoUploading"
-                  title="复核视频"
-                  description="支持 MP4、MOV、WEBM 等视频文件。"
-                  :selected-label="repairReviewVideoFileName || repairReviewVideoUrl || '暂未上传视频'"
+                  title="复核视频（可选）"
+                  description="支持 MP4、MOV、WEBM 等视频文件，可按需上传。"
+                  :selected-label="repairReviewVideoFileName || repairReviewVideoUrl || '未上传视频'"
                   button-label="上传视频"
                   loading-label="上传中..."
                   icon="ri-video-upload-line"
