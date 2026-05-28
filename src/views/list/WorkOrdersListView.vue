@@ -59,6 +59,8 @@ type WorkOrderRecord = {
   orderNo: string
   customerName: string
   parkName: string
+  buildUuid: string
+  buildName: string
   packageName: string
   planName: string
   executor: string
@@ -731,6 +733,8 @@ function normalizeInspectionWorkOrderRecord(item: WorkOrderListItem, index: numb
     orderNo,
     customerName: toText(item.CorpName || item.CustomerName, "-"),
     parkName: toText(item.ParkName, "-"),
+    buildUuid: "",
+    buildName: toText(item.BuildName, "-"),
     packageName,
     planName: toText(item.PlanName, "-"),
     executor: formatInspectionExecutors(item.Executors, item.Executor),
@@ -810,6 +814,8 @@ function normalizeRepairWorkOrderRecord(item: RepairWorkOrderListItem, index: nu
     orderNo: toText(item.OrderNo, `RP-${fallbackId}`),
     customerName: toText(item.CorpName || item.CustomerName, "-"),
     parkName: toText(item.ParkName, "-"),
+    buildUuid: toText(item.BuildUuid),
+    buildName: toText(item.BuildName, "-"),
     packageName: "-",
     planName: "-",
     executor: formatInspectionExecutors(item.Executors, "未指派"),
@@ -1039,6 +1045,27 @@ function createRepairColumns(): TablePageSchema<WorkOrderRecord>["columns"] {
       sort: true,
     },
     {
+      key: "customerName",
+      label: "客户名称",
+      filterType: "text",
+      slot: "cell-customerName",
+      filter: {
+        type: "text",
+        placeholder: "输入客户名称",
+      },
+      sort: true,
+    },
+    {
+      key: "parkName",
+      label: "园区名称",
+      filterType: "text",
+      filter: {
+        type: "text",
+        placeholder: "输入园区名称",
+      },
+      sort: true,
+    },
+    {
       key: "reportTypeLabel",
       label: "报修类型",
       filterType: "tag",
@@ -1086,6 +1113,16 @@ function createRepairColumns(): TablePageSchema<WorkOrderRecord>["columns"] {
       },
     },
     {
+      key: "buildName",
+      label: "建筑名称",
+      filterType: "text",
+      filter: {
+        type: "text",
+        placeholder: "输入建筑名称",
+      },
+      sort: true,
+    },
+    {
       key: "executor",
       label: "执行人",
       filterType: "text",
@@ -1106,27 +1143,6 @@ function createRepairColumns(): TablePageSchema<WorkOrderRecord>["columns"] {
         type: "text",
         placeholder: "输入内容说明",
       },
-    },
-    {
-      key: "customerName",
-      label: "客户名称",
-      filterType: "text",
-      slot: "cell-customerName",
-      filter: {
-        type: "text",
-        placeholder: "输入客户名称",
-      },
-      sort: true,
-    },
-    {
-      key: "parkName",
-      label: "园区名称",
-      filterType: "text",
-      filter: {
-        type: "text",
-        placeholder: "输入园区名称",
-      },
-      sort: true,
     },
     {
       key: "createdAt",

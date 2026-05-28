@@ -88,6 +88,11 @@ export function buildRepairWorkOrderPrimarySections(
             : {}),
         },
         {
+          key: "build-name",
+          label: "建筑名称",
+          value: toText(workOrder.BuildName, "-"),
+        },
+        {
           key: "address",
           label: "地址",
           value: toText(customer?.Address, "-"),

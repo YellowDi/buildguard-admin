@@ -493,6 +493,8 @@ function openRepairEditPage() {
     params: { id: uuid },
     query: {
       customerUuid: customerUuid.value,
+      buildUuid: toRepairWorkOrderText(repairWorkOrder.value?.BuildUuid) || undefined,
+      buildName: toRepairWorkOrderText(repairWorkOrder.value?.BuildName) || undefined,
       returnTo: queryReturnTo.value || "repair-work-orders",
     },
   })
