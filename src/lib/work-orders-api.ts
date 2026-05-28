@@ -120,6 +120,14 @@ export type UpdateRepairWorkOrderStatusPayload = {
   Status: number
 }
 
+export type UploadRepairWorkOrderVideoPayload = {
+  Abstract?: string
+  Title?: string
+  Url?: string
+  Uuid?: string
+  [property: string]: unknown
+}
+
 export type UpdateWorkOrderPayload = {
   Uuid: string
   Remark?: string
@@ -305,6 +313,7 @@ const REPAIR_WORK_ORDER_CREATE_API_URL = buildApiUrl(API_PATHS.workOrderRepairCr
 const REPAIR_WORK_ORDER_UPDATE_API_URL = buildApiUrl(API_PATHS.workOrderRepairUpdate)
 const REPAIR_WORK_ORDER_DELETE_API_URL = API_PATHS.workOrderRepairDelete
 const REPAIR_WORK_ORDER_STATUS_UPDATE_API_URL = buildApiUrl(API_PATHS.workOrderRepairStatusUpdate)
+const REPAIR_WORK_ORDER_VIDEO_UPLOAD_API_URL = buildApiUrl(API_PATHS.workOrderRepairVideoUpload)
 const WORK_ORDER_CREATE_API_URL = buildApiUrl(API_PATHS.workOrderCreate)
 const WORK_ORDER_DETAIL_API_URL = API_PATHS.workOrderDetail
 const WORK_ORDER_DELETE_API_URL = API_PATHS.workOrderDelete
@@ -320,6 +329,7 @@ const WORK_ORDER_CREATE_ERROR_MESSAGE = "工单创建失败，请稍后重试。
 const REPAIR_WORK_ORDER_CREATE_ERROR_MESSAGE = "报修工单创建失败，请稍后重试。"
 const REPAIR_WORK_ORDER_UPDATE_ERROR_MESSAGE = "报修工单更新失败，请稍后重试。"
 const REPAIR_WORK_ORDER_STATUS_UPDATE_ERROR_MESSAGE = "报修工单状态更新失败，请稍后重试。"
+const REPAIR_WORK_ORDER_VIDEO_UPLOAD_ERROR_MESSAGE = "报修工单视频保存失败，请稍后重试。"
 const REPAIR_WORK_ORDER_DELETE_ERROR_MESSAGE = "报修工单删除失败，请稍后重试。"
 const WORK_ORDER_DELETE_ERROR_MESSAGE = "检测工单删除失败，请稍后重试。"
 const WORK_ORDER_DETAIL_ERROR_MESSAGE = "工单详情加载失败，请稍后重试。"
@@ -484,6 +494,32 @@ export async function updateRepairWorkOrderStatus(payload: UpdateRepairWorkOrder
   }
 
   assertApiSuccess(responseBody, REPAIR_WORK_ORDER_STATUS_UPDATE_ERROR_MESSAGE)
+
+  return extractCreateResult(responseBody)
+}
+
+export async function uploadRepairWorkOrderVideo(payload: UploadRepairWorkOrderVideoPayload): Promise<CreateWorkOrderResult> {
+  const normalizedPayload: UploadRepairWorkOrderVideoPayload = {
+    Uuid: getRequiredString(payload.Uuid, "Uuid"),
+    Url: getRequiredString(payload.Url, "Url"),
+    Title: getOptionalString(payload.Title),
+    Abstract: getOptionalString(payload.Abstract),
+  }
+
+  const response = await fetch(REPAIR_WORK_ORDER_VIDEO_UPLOAD_API_URL, {
+    method: "POST",
+    headers: buildApiHeaders({
+      "Content-Type": "application/json",
+    }),
+    body: JSON.stringify(normalizedPayload),
+  })
+  const responseBody = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responseBody, REPAIR_WORK_ORDER_VIDEO_UPLOAD_ERROR_MESSAGE)
+  }
+
+  assertApiSuccess(responseBody, REPAIR_WORK_ORDER_VIDEO_UPLOAD_ERROR_MESSAGE)
 
   return extractCreateResult(responseBody)
 }

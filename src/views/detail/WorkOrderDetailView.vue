@@ -9,6 +9,7 @@ import InspectionReportDocument from "@/components/report/InspectionReportDocume
 import LinkedEntityDetailSheet from "@/components/detail/LinkedEntityDetailSheet.vue"
 import PermissionGate from "@/components/permissions/PermissionGate.vue"
 import RepairWorkOrderContentCard from "@/components/detail/RepairWorkOrderContentCard.vue"
+import FileUploadField from "@/components/upload/FileUploadField.vue"
 import DetailFieldsSkeleton from "@/components/loading/DetailFieldsSkeleton.vue"
 import DetailRelationSkeleton from "@/components/loading/DetailRelationSkeleton.vue"
 import DetailFieldSections from "@/components/detail/DetailFieldSections.vue"
@@ -28,6 +29,7 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
 import { Progress } from "@/components/ui/progress"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Spinner } from "@/components/ui/spinner"
@@ -62,6 +64,7 @@ import {
   fetchWorkOrderReportList,
   generateWorkOrderGnReport,
   updateRepairWorkOrderStatus,
+  uploadRepairWorkOrderVideo,
   uploadWorkOrderReport,
   type WorkOrderInspectionHistoryDetailItem,
   type WorkOrderBuildInspectionItem,
@@ -74,6 +77,7 @@ import {
 type WorkOrderDetailKind = "inspection" | "repair"
 type LinkedDetailSheetKind = "customer" | "service" | "plan" | "park"
 type ReportGenerationStage = "生成报告" | "生成 PDF" | "上传 PDF" | "保存地址"
+type RepairReviewDecision = "" | "completed" | "in-progress"
 const REPAIR_STATUS_IN_PROGRESS = 2
 const REPAIR_STATUS_REVIEWING = 3
 const REPAIR_STATUS_COMPLETED = 4
@@ -177,6 +181,13 @@ const deleteConfirmOpen = ref(false)
 const deleteSubmitting = ref(false)
 const repairReviewDialogOpen = ref(false)
 const repairReviewSubmitting = ref(false)
+const repairReviewDecision = ref<RepairReviewDecision>("")
+const repairReviewVideoUploading = ref(false)
+const repairReviewVideoUrl = ref("")
+const repairReviewVideoFileName = ref("")
+const repairReviewVideoTitle = ref("")
+const repairReviewVideoAbstract = ref("")
+const repairReviewVideoRecordSaved = ref(false)
 const linkedDetailSheetOpen = ref(false)
 const linkedDetailSheetKind = ref<LinkedDetailSheetKind | null>(null)
 const linkedDetailSheetUuid = ref("")
@@ -383,6 +394,25 @@ const showRepairReviewAction = computed(() => (
   && Boolean(workOrderUuid.value)
   && repairWorkOrder.value?.Status === REPAIR_STATUS_REVIEWING
 ))
+const repairReviewBusy = computed(() => repairReviewSubmitting.value || repairReviewVideoUploading.value)
+const canSubmitRepairReview = computed(() => {
+  if (repairReviewBusy.value || !repairReviewDecision.value) {
+    return false
+  }
+
+  return repairReviewDecision.value === "in-progress" || Boolean(repairReviewVideoUrl.value)
+})
+const repairReviewSubmitLabel = computed(() => {
+  if (repairReviewSubmitting.value) {
+    return "提交中..."
+  }
+
+  if (repairReviewDecision.value === "in-progress") {
+    return "退回进行中"
+  }
+
+  return "设为已完成"
+})
 const assignPermissionCode = computed(() => props.kind === "repair"
   ? PERMISSION_CODES.repairWorkOrderAssign
   : PERMISSION_CODES.inspectionWorkOrderAssign)
@@ -447,6 +477,7 @@ watch(workOrderUuid, (uuid) => {
   reportBuilding.value = null
   resetReportListState()
   reportDialogOpen.value = false
+  resetRepairReviewForm()
   resetInspectionHistorySheet()
   void loadWorkOrderDetail(uuid)
 }, { immediate: true })
@@ -529,11 +560,15 @@ async function confirmDeleteWorkOrder() {
 }
 
 function handleRepairReviewDialogOpenChange(open: boolean) {
-  if (repairReviewSubmitting.value) {
+  if (repairReviewBusy.value) {
     return
   }
 
   repairReviewDialogOpen.value = open
+
+  if (!open) {
+    resetRepairReviewForm()
+  }
 }
 
 function openRepairReviewDialog() {
@@ -542,34 +577,168 @@ function openRepairReviewDialog() {
     return
   }
 
+  resetRepairReviewForm()
   repairReviewDialogOpen.value = true
 }
 
-async function submitRepairReviewStatus(status: typeof REPAIR_STATUS_IN_PROGRESS | typeof REPAIR_STATUS_COMPLETED) {
+function selectRepairReviewDecision(decision: Exclude<RepairReviewDecision, "">) {
+  if (repairReviewBusy.value) {
+    return
+  }
+
+  repairReviewDecision.value = decision
+}
+
+function resetRepairReviewForm() {
+  repairReviewDecision.value = ""
+  repairReviewVideoUploading.value = false
+  repairReviewVideoUrl.value = ""
+  repairReviewVideoFileName.value = ""
+  repairReviewVideoTitle.value = createRepairReviewDefaultVideoTitle()
+  repairReviewVideoAbstract.value = ""
+  repairReviewVideoRecordSaved.value = false
+}
+
+function clearRepairReviewVideo() {
+  if (repairReviewBusy.value) {
+    return
+  }
+
+  repairReviewVideoUrl.value = ""
+  repairReviewVideoFileName.value = ""
+  repairReviewVideoRecordSaved.value = false
+}
+
+async function handleRepairReviewVideoFiles(files: File[]) {
+  const file = files[0]
+
+  if (!file || repairReviewVideoUploading.value) {
+    return
+  }
+
+  if (!isVideoFile(file)) {
+    toast.error("请上传视频文件")
+    return
+  }
+
+  repairReviewVideoUploading.value = true
+
+  try {
+    const uploadResult = await uploadTencentCosFile({
+      file,
+      key: createRepairReviewVideoObjectKey(file),
+      contentType: file.type || undefined,
+    })
+
+    repairReviewVideoUrl.value = uploadResult.url
+    repairReviewVideoFileName.value = file.name
+    repairReviewVideoRecordSaved.value = false
+
+    if (!repairReviewVideoTitle.value.trim()) {
+      repairReviewVideoTitle.value = getFileNameWithoutExtension(file.name) || createRepairReviewDefaultVideoTitle()
+    }
+
+    toast.success("复核视频已上传")
+  } catch (error) {
+    toast.error("复核视频上传失败", {
+      description: handleApiError(error, {
+        mode: "silent",
+        fallback: "请稍后重试。",
+      }),
+    })
+  } finally {
+    repairReviewVideoUploading.value = false
+  }
+}
+
+async function submitRepairReview() {
   const uuid = workOrderUuid.value
+  const decision = repairReviewDecision.value
 
   if (!uuid || repairReviewSubmitting.value) {
+    return
+  }
+
+  if (!decision) {
+    toast.error("请选择复核结果")
+    return
+  }
+
+  if (decision === "completed" && !repairReviewVideoUrl.value) {
+    toast.error("请先上传复核视频")
     return
   }
 
   repairReviewSubmitting.value = true
 
   try {
+    if (decision === "completed" && !repairReviewVideoRecordSaved.value) {
+      await uploadRepairWorkOrderVideo({
+        Uuid: uuid,
+        Url: repairReviewVideoUrl.value,
+        Title: repairReviewVideoTitle.value.trim() || createRepairReviewDefaultVideoTitle(),
+        Abstract: repairReviewVideoAbstract.value.trim(),
+      })
+      repairReviewVideoRecordSaved.value = true
+    }
+
+    const status = decision === "completed" ? REPAIR_STATUS_COMPLETED : REPAIR_STATUS_IN_PROGRESS
+
     await updateRepairWorkOrderStatus({
       Uuid: uuid,
       Status: status,
     })
+
     repairReviewDialogOpen.value = false
-    toast.success(status === REPAIR_STATUS_COMPLETED ? "报修工单已完成" : "报修工单已退回进行中")
+    toast.success(decision === "completed" ? "报修工单已完成" : "报修工单已退回进行中")
+    resetRepairReviewForm()
     await loadWorkOrderDetail(uuid)
   } catch (error) {
     toast.error(handleApiError(error, {
       mode: "silent",
-      fallback: "报修工单状态更新失败，请稍后重试。",
+      fallback: "报修工单复核提交失败，请稍后重试。",
     }))
   } finally {
     repairReviewSubmitting.value = false
   }
+}
+
+function createRepairReviewDefaultVideoTitle() {
+  const orderNo = toRepairWorkOrderText(repairWorkOrder.value?.OrderNo, "")
+  return orderNo && orderNo !== "-" ? `${orderNo}复核视频` : "报修工单复核视频"
+}
+
+function createRepairReviewVideoObjectKey(file: File) {
+  const now = new Date()
+  const datePrefix = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, "0")}${String(now.getDate()).padStart(2, "0")}`
+  const random = Math.random().toString(36).slice(2, 10)
+  const extension = getObjectKeyFileExtension(file.name)
+  const baseName = sanitizeObjectKeyFileName(getFileNameWithoutExtension(file.name) || "video")
+
+  return [
+    "repair-videos",
+    datePrefix,
+    sanitizeObjectKeySegment(workOrderUuid.value || "unknown"),
+    `${Date.now()}-${random}-${baseName}${extension}`,
+  ].join("/")
+}
+
+function isVideoFile(file: File) {
+  return file.type.startsWith("video/") || /\.(mp4|mov|m4v|webm|avi|mkv)$/i.test(file.name)
+}
+
+function getFileNameWithoutExtension(value: string) {
+  const fileName = value.trim().split("?")[0] ?? ""
+  const lastDotIndex = fileName.lastIndexOf(".")
+
+  return lastDotIndex > 0 ? fileName.slice(0, lastDotIndex) : fileName
+}
+
+function getObjectKeyFileExtension(value: string) {
+  const fileName = value.trim().split("?")[0] ?? ""
+  const lastDotIndex = fileName.lastIndexOf(".")
+
+  return lastDotIndex > -1 ? fileName.slice(lastDotIndex).toLowerCase() : ""
 }
 
 async function loadWorkOrderDetail(uuid: string) {
@@ -1934,28 +2103,135 @@ async function submitAssign() {
             <i class="ri-check-double-line text-base" />
             复核
           </Button>
-          <DialogContent>
+          <DialogContent class="sm:max-w-[580px]">
             <DialogHeader>
               <DialogTitle>复核报修工单</DialogTitle>
               <DialogDescription>
-                根据复核结果，将当前报修工单更新为已完成，或退回进行中继续处理。
+                选择复核结果；设为已完成时需要上传复核视频。
               </DialogDescription>
             </DialogHeader>
+            <div class="space-y-5">
+              <div class="grid gap-3 sm:grid-cols-2">
+                <button
+                  type="button"
+                  :disabled="repairReviewBusy"
+                  :class="[
+                    'flex min-h-[96px] min-w-0 flex-col rounded-lg border px-4 py-3 text-left transition-[border-color,background-color,box-shadow] duration-180',
+                    repairReviewDecision === 'completed'
+                      ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
+                      : 'border-border bg-background hover:border-ring/55 hover:bg-muted/30',
+                    repairReviewBusy ? 'cursor-not-allowed opacity-70' : 'cursor-pointer',
+                  ]"
+                  @click="selectRepairReviewDecision('completed')"
+                >
+                  <span class="flex items-center gap-2 text-sm font-semibold text-foreground">
+                    <i class="ri-checkbox-circle-line text-[18px] text-success" />
+                    设为已完成
+                  </span>
+                  <span class="mt-2 text-xs leading-5 text-muted-foreground">
+                    复核通过，补充视频后关闭工单。
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  :disabled="repairReviewBusy"
+                  :class="[
+                    'flex min-h-[96px] min-w-0 flex-col rounded-lg border px-4 py-3 text-left transition-[border-color,background-color,box-shadow] duration-180',
+                    repairReviewDecision === 'in-progress'
+                      ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
+                      : 'border-border bg-background hover:border-ring/55 hover:bg-muted/30',
+                    repairReviewBusy ? 'cursor-not-allowed opacity-70' : 'cursor-pointer',
+                  ]"
+                  @click="selectRepairReviewDecision('in-progress')"
+                >
+                  <span class="flex items-center gap-2 text-sm font-semibold text-foreground">
+                    <i class="ri-arrow-go-back-line text-[18px] text-warning" />
+                    退回进行中
+                  </span>
+                  <span class="mt-2 text-xs leading-5 text-muted-foreground">
+                    复核未通过，返回维修人员继续处理。
+                  </span>
+                </button>
+              </div>
+
+              <div
+                v-if="repairReviewDecision === 'completed'"
+                class="space-y-4 border-t border-border pt-4"
+              >
+                <FileUploadField
+                  accept="video/*"
+                  :disabled="repairReviewSubmitting"
+                  :loading="repairReviewVideoUploading"
+                  title="复核视频"
+                  description="支持 MP4、MOV、WEBM 等视频文件。"
+                  :selected-label="repairReviewVideoFileName || repairReviewVideoUrl || '暂未上传视频'"
+                  button-label="上传视频"
+                  loading-label="上传中..."
+                  icon="ri-video-upload-line"
+                  compact
+                  :show-supplement="Boolean(repairReviewVideoUrl)"
+                  @files-selected="files => { void handleRepairReviewVideoFiles(files) }"
+                >
+                  <template v-if="repairReviewVideoUrl" #preview>
+                    <div class="flex min-w-0 items-center justify-between gap-3 rounded-md bg-background px-3 py-2">
+                      <div class="min-w-0">
+                        <p class="truncate text-xs font-medium text-foreground">
+                          {{ repairReviewVideoFileName || "复核视频" }}
+                        </p>
+                        <p class="mt-0.5 truncate text-xs text-muted-foreground">
+                          {{ repairReviewVideoUrl }}
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        class="h-7 shrink-0 px-2 text-xs"
+                        :disabled="repairReviewBusy"
+                        @click="clearRepairReviewVideo"
+                      >
+                        移除
+                      </Button>
+                    </div>
+                  </template>
+                </FileUploadField>
+
+                <label class="block min-w-0 space-y-1.5">
+                  <span class="text-sm font-medium text-foreground">视频标题</span>
+                  <Input
+                    v-model="repairReviewVideoTitle"
+                    :disabled="repairReviewBusy"
+                    placeholder="输入视频标题"
+                  />
+                </label>
+
+                <label class="block min-w-0 space-y-1.5">
+                  <span class="text-sm font-medium text-foreground">摘要</span>
+                  <Textarea
+                    v-model="repairReviewVideoAbstract"
+                    :disabled="repairReviewBusy"
+                    placeholder="输入视频摘要"
+                    class="min-h-20 resize-none"
+                  />
+                </label>
+              </div>
+            </div>
             <DialogFooter>
               <Button
                 type="button"
                 variant="outline"
-                :disabled="repairReviewSubmitting"
-                @click="submitRepairReviewStatus(REPAIR_STATUS_IN_PROGRESS)"
+                :disabled="repairReviewBusy"
+                @click="handleRepairReviewDialogOpenChange(false)"
               >
-                退回进行中
+                取消
               </Button>
               <Button
                 type="button"
-                :disabled="repairReviewSubmitting"
-                @click="submitRepairReviewStatus(REPAIR_STATUS_COMPLETED)"
+                :disabled="!canSubmitRepairReview"
+                @click="submitRepairReview"
               >
-                {{ repairReviewSubmitting ? "更新中..." : "设为已完成" }}
+                {{ repairReviewSubmitLabel }}
               </Button>
             </DialogFooter>
           </DialogContent>
