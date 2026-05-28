@@ -965,12 +965,6 @@ const repairOverviewModule = computed<DetailRelationModuleSchema<MaintenanceReco
       columns: [
         { key: "location", label: "报修工单", slot: "repair-overview-location-cell" },
         {
-          key: "item",
-          label: "报修类型",
-          headerClass: "text-center",
-          cellClass: "flex min-w-0 items-center justify-center overflow-hidden text-center whitespace-nowrap text-muted-foreground",
-        },
-        {
           key: "executor",
           label: "执行人",
           headerClass: "text-center",
@@ -987,9 +981,9 @@ const repairOverviewModule = computed<DetailRelationModuleSchema<MaintenanceReco
       ],
       groups: [],
       rowAction: row => handleOverviewWorkOrderDetail(row),
-      mobileMinWidth: "46rem",
-      columnTemplateMobile: "minmax(14rem,1.4fr) 6.5rem minmax(10rem,1.2fr) 8rem 2.75rem",
-      columnTemplateDesktop: "minmax(14rem,1.4fr) 6.5rem minmax(10rem,1.2fr) 8rem 2.75rem",
+      mobileMinWidth: "38rem",
+      columnTemplateMobile: "minmax(14rem,1.5fr) minmax(10rem,1fr) 8rem 2.75rem",
+      columnTemplateDesktop: "minmax(14rem,1.5fr) minmax(10rem,1fr) 8rem 2.75rem",
       columnGapMobile: "0.75rem",
       columnGapDesktop: "1rem",
     }
@@ -1007,12 +1001,6 @@ const repairOverviewModule = computed<DetailRelationModuleSchema<MaintenanceReco
     columns: [
       { key: "location", label: "报修工单", slot: "repair-overview-location-cell" },
       {
-        key: "item",
-        label: "报修类型",
-        headerClass: "text-center",
-        cellClass: "flex min-w-0 items-center justify-center overflow-hidden text-center whitespace-nowrap text-muted-foreground",
-      },
-      {
         key: "executor",
         label: "执行人",
         headerClass: "text-center",
@@ -1029,9 +1017,9 @@ const repairOverviewModule = computed<DetailRelationModuleSchema<MaintenanceReco
     ],
     groups: buildMaintenanceGroups(repairOverviewRecords.value),
     rowAction: row => handleOverviewWorkOrderDetail(row),
-    mobileMinWidth: "46rem",
-    columnTemplateMobile: "minmax(14rem,1.4fr) 6.5rem minmax(10rem,1.2fr) 8rem 2.75rem",
-    columnTemplateDesktop: "minmax(14rem,1.4fr) 6.5rem minmax(10rem,1.2fr) 8rem 2.75rem",
+    mobileMinWidth: "38rem",
+    columnTemplateMobile: "minmax(14rem,1.5fr) minmax(10rem,1fr) 8rem 2.75rem",
+    columnTemplateDesktop: "minmax(14rem,1.5fr) minmax(10rem,1fr) 8rem 2.75rem",
     columnGapMobile: "0.75rem",
     columnGapDesktop: "1rem",
   }
