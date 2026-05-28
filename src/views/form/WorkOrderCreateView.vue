@@ -23,6 +23,7 @@ import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
 import { getApiErrorMessage, handleApiError } from "@/lib/api-errors"
+import { fetchBuildings, type BuildingListItem } from "@/lib/buildings-api"
 import { fetchCustomerDetail, fetchCustomers, type CustomerListItem } from "@/lib/customers-api"
 import type { InspectionItemOption } from "@/lib/inspection-item-options"
 import { fetchInspectionPlans, type InspectionPlanListItem } from "@/lib/inspection-plans-api"
@@ -64,6 +65,7 @@ type WorkOrderFormState = {
   status: string
   remark: string
   parkUuid: string
+  buildUuid: string
   reportType: string
   important: string
   content: string
@@ -97,6 +99,11 @@ type ServiceOption = {
 }
 
 type ParkOption = {
+  uuid: string
+  name: string
+}
+
+type BuildOption = {
   uuid: string
   name: string
 }
@@ -150,6 +157,7 @@ function createEmptyForm(): WorkOrderFormState {
     status: DEFAULT_INSPECTION_STATUS,
     remark: "",
     parkUuid: "",
+    buildUuid: "",
     reportType: "",
     important: "",
     content: "",
@@ -172,11 +180,14 @@ const customerOptions = ref<CustomerOption[]>([])
 const planOptions = ref<PlanOption[]>([])
 const serviceOptions = ref<ServiceOption[]>([])
 const parkOptions = ref<ParkOption[]>([])
+const buildingOptions = ref<BuildOption[]>([])
 const repairImportanceOptions = ref<RepairDictionaryOption[]>([])
 const repairTypeOptions = ref<RepairDictionaryOption[]>([])
 const repairInspectionWorkOrderOptions = ref<RepairInspectionWorkOrderOption[]>([])
 const repairInspectionItemOptions = ref<RepairInspectionItemOption[]>([])
 const repairDictionariesLoading = ref(false)
+const repairBuildingsLoading = ref(false)
+const repairBuildingsError = ref("")
 const repairInspectionWorkOrdersLoading = ref(false)
 const repairInspectionWorkOrdersError = ref("")
 const repairInspectionItemsLoading = ref(false)
@@ -192,6 +203,7 @@ let observerActive = false
 let suppressCustomerWatch = false
 let suppressRepairParkWatch = false
 let suppressRepairInspectionWorkOrderWatch = false
+let latestRepairBuildingsRequestId = 0
 let latestRepairInspectionWorkOrdersRequestId = 0
 let latestRepairInspectionItemsRequestId = 0
 
@@ -217,6 +229,8 @@ const queryDeadline = computed(() => typeof route.query.deadline === "string" ? 
 const queryRemark = computed(() => typeof route.query.remark === "string" ? route.query.remark : "")
 const queryParkUuid = computed(() => typeof route.query.parkUuid === "string" ? route.query.parkUuid.trim() : "")
 const queryParkName = computed(() => typeof route.query.parkName === "string" ? route.query.parkName.trim() : "")
+const queryBuildUuid = computed(() => typeof route.query.buildUuid === "string" ? route.query.buildUuid.trim() : "")
+const queryBuildName = computed(() => typeof route.query.buildName === "string" ? route.query.buildName.trim() : "")
 const queryReportType = computed(() => typeof route.query.reportType === "string" ? route.query.reportType.trim() : "")
 const queryImportant = computed(() => typeof route.query.important === "string" ? route.query.important.trim() : "")
 const primaryActionPermissionCode = computed(() => {
@@ -365,6 +379,7 @@ const canSubmit = computed(() => {
       &&
       normalizeText(form.customerUuid)
       && normalizeText(form.parkUuid)
+      && (!buildingOptions.value.length || normalizeText(form.buildUuid))
       && normalizeText(form.reportType)
       && normalizeText(form.important)
       && (hasSelectedRepairInspectionItems.value || normalizeText(form.content))
@@ -372,6 +387,7 @@ const canSubmit = computed(() => {
       && !customerLoading.value
       && !relatedOptionsLoading.value
       && !repairDictionariesLoading.value
+      && !repairBuildingsLoading.value
       && !repairFilesUploading.value
     )
   }
@@ -584,6 +600,11 @@ function buildRepairWorkOrderPayload() {
     return null
   }
 
+  if (buildingOptions.value.length && !normalizeText(form.buildUuid)) {
+    toast.error("请选择建筑")
+    return null
+  }
+
   const reportType = resolveRepairDictionarySubmitText(form.reportType, repairTypeOptions.value)
 
   if (!reportType) {
@@ -615,6 +636,7 @@ function buildRepairWorkOrderPayload() {
   return {
     CustomerUuid: normalizeText(form.customerUuid),
     ParkUuid: normalizeText(form.parkUuid),
+    BuildUuid: getOptionalText(form.buildUuid),
     ReportType: reportType,
     Important: important,
     Content: content,
@@ -693,6 +715,7 @@ async function handleRepairUpdateSubmit() {
       Uuid: uuid,
       CustomerUuid: payload.CustomerUuid,
       ParkUuid: payload.ParkUuid,
+      BuildUuid: payload.BuildUuid,
       ReportType: payload.ReportType,
       Important: payload.Important,
       Content: payload.Content,
@@ -799,6 +822,8 @@ async function loadFormContext() {
   planOptions.value = []
   serviceOptions.value = []
   parkOptions.value = []
+  buildingOptions.value = []
+  repairBuildingsError.value = ""
   repairInspectionWorkOrderOptions.value = []
   repairInspectionItemOptions.value = []
 
@@ -881,12 +906,14 @@ async function loadRepairEditContext() {
     const detail = await fetchRepairWorkOrderDetail({ Uuid: uuid })
     const customerUuid = normalizeText(detail.CustomerUuid) || normalizeRouteField(queryCustomerUuid.value)
     const parkUuid = normalizeText(detail.ParkUuid) || normalizeRouteField(queryParkUuid.value)
+    const buildUuid = normalizeText(detail.BuildUuid) || normalizeRouteField(queryBuildUuid.value)
     const selectedInspectionItemUuids = normalizeTextArray(detail.WorkOrderInspectionBuildUuid)
     const status = toNumber(detail.Status)
     const nextForm = {
       ...createEmptyForm(),
       customerUuid,
       parkUuid,
+      buildUuid,
       status: status === null ? DEFAULT_INSPECTION_STATUS : String(status),
       reportType: normalizeText(detail.ReportType),
       important: normalizeText(detail.Important),
@@ -905,6 +932,12 @@ async function loadRepairEditContext() {
       if (!parkOptions.value.some(item => item.uuid === nextForm.parkUuid)) {
         nextForm.parkUuid = parkOptions.value[0]?.uuid ?? nextForm.parkUuid
       }
+
+      await loadBuildingsForPark(customerUuid, nextForm.parkUuid, {
+        preferredBuildUuid: nextForm.buildUuid,
+        preferredBuildName: normalizeText(detail.BuildName) || queryBuildName.value,
+        autoSelectFirst: false,
+      })
     }
 
     suppressRepairParkWatch = true
@@ -939,8 +972,19 @@ async function loadFixedCustomerContext(customerUuid: string) {
     if (isRepairKind.value) {
       await ensureRepairDictionaries()
       await loadParksForCustomer(customerUuid)
-      applyRepairPrefill()
-      await loadRepairInspectionWorkOrdersForSelection(customerUuid, form.parkUuid)
+      suppressRepairParkWatch = true
+      try {
+        applyRepairPrefill()
+        await loadBuildingsForPark(customerUuid, form.parkUuid, {
+          preferredBuildUuid: form.buildUuid,
+          preferredBuildName: queryBuildName.value,
+        })
+        await loadRepairInspectionWorkOrdersForSelection(customerUuid, form.parkUuid)
+      } finally {
+        void nextTick(() => {
+          suppressRepairParkWatch = false
+        })
+      }
     } else {
       await loadRelatedOptionsForCustomer(customerUuid)
     }
@@ -972,6 +1016,7 @@ async function loadSelectableCustomerContext() {
     form.serviceUuid = ""
     form.packageName = ""
     form.parkUuid = ""
+    form.buildUuid = ""
     form.inspectionWorkOrderUuid = ""
     form.workOrderInspectionBuildUuid = []
     suppressCustomerWatch = false
@@ -996,8 +1041,19 @@ async function loadSelectableCustomerContext() {
 async function loadRelatedOptionsForCustomer(customerUuid: string, useRoutePrefill = false) {
   if (isRepairKind.value) {
     await loadParksForCustomer(customerUuid)
-    applyRepairPrefill(useRoutePrefill)
-    await loadRepairInspectionWorkOrdersForSelection(customerUuid, form.parkUuid)
+    suppressRepairParkWatch = true
+    try {
+      applyRepairPrefill(useRoutePrefill)
+      await loadBuildingsForPark(customerUuid, form.parkUuid, {
+        preferredBuildUuid: useRoutePrefill ? queryBuildUuid.value : form.buildUuid,
+        preferredBuildName: useRoutePrefill ? queryBuildName.value : "",
+      })
+      await loadRepairInspectionWorkOrdersForSelection(customerUuid, form.parkUuid)
+    } finally {
+      void nextTick(() => {
+        suppressRepairParkWatch = false
+      })
+    }
     return
   }
 
@@ -1042,6 +1098,9 @@ async function loadParksForCustomer(customerUuid: string) {
 
   parkOptions.value = []
   form.parkUuid = ""
+  buildingOptions.value = []
+  repairBuildingsError.value = ""
+  form.buildUuid = ""
 
   if (!normalizedCustomerUuid) {
     return
@@ -1097,9 +1156,94 @@ function applyRepairPrefill(useRoutePrefill = false) {
   }
 
   if (useRoutePrefill) {
+    form.buildUuid = normalizeRouteField(queryBuildUuid.value)
     form.reportType = normalizeRouteField(queryReportType.value)
     form.important = normalizeRouteField(queryImportant.value)
     form.content = normalizeRouteField(queryContent.value)
+  }
+}
+
+async function loadBuildingsForPark(
+  customerUuid: string,
+  parkUuid: string,
+  options: {
+    preferredBuildUuid?: string
+    preferredBuildName?: string
+    autoSelectFirst?: boolean
+  } = {},
+) {
+  const normalizedCustomerUuid = normalizeText(customerUuid)
+  const normalizedParkUuid = normalizeText(parkUuid)
+  const preferredBuildUuid = normalizeText(options.preferredBuildUuid)
+  const preferredBuildName = normalizeText(options.preferredBuildName)
+  const autoSelectFirst = options.autoSelectFirst ?? true
+  const requestId = ++latestRepairBuildingsRequestId
+
+  buildingOptions.value = []
+  repairBuildingsError.value = ""
+  repairBuildingsLoading.value = false
+  form.buildUuid = preferredBuildUuid || ""
+
+  if (!isRepairKind.value || !normalizedParkUuid) {
+    form.buildUuid = ""
+    return
+  }
+
+  repairBuildingsLoading.value = true
+
+  try {
+    const buildings = await fetchAllBuildingsForPark(normalizedCustomerUuid, normalizedParkUuid)
+
+    if (requestId !== latestRepairBuildingsRequestId) {
+      return
+    }
+
+    const nextOptions = buildings
+      .map(mapBuildOption)
+      .filter(item => item.uuid)
+
+    if (preferredBuildUuid && !nextOptions.some(item => item.uuid === preferredBuildUuid)) {
+      nextOptions.unshift({
+        uuid: preferredBuildUuid,
+        name: preferredBuildName || preferredBuildUuid,
+      })
+    }
+
+    buildingOptions.value = nextOptions
+
+    if (preferredBuildUuid && nextOptions.some(item => item.uuid === preferredBuildUuid)) {
+      form.buildUuid = preferredBuildUuid
+      return
+    }
+
+    if (form.buildUuid && nextOptions.some(item => item.uuid === form.buildUuid)) {
+      return
+    }
+
+    form.buildUuid = autoSelectFirst ? nextOptions[0]?.uuid ?? "" : ""
+  } catch (error) {
+    if (requestId !== latestRepairBuildingsRequestId) {
+      return
+    }
+
+    if (preferredBuildUuid) {
+      buildingOptions.value = [{
+        uuid: preferredBuildUuid,
+        name: preferredBuildName || preferredBuildUuid,
+      }]
+      form.buildUuid = preferredBuildUuid
+    } else {
+      form.buildUuid = ""
+    }
+
+    repairBuildingsError.value = handleApiError(error, {
+      mode: "silent",
+      fallback: "建筑列表加载失败，请稍后重试。",
+    })
+  } finally {
+    if (requestId === latestRepairBuildingsRequestId) {
+      repairBuildingsLoading.value = false
+    }
   }
 }
 
@@ -1500,6 +1644,42 @@ async function fetchAllParks(customerUuid: string) {
   return dedupeParks(allItems)
 }
 
+async function fetchAllBuildingsForPark(customerUuid: string, parkUuid: string) {
+  const pageSize = 200
+  const normalizedCustomerUuid = normalizeText(customerUuid)
+  const normalizedParkUuid = normalizeText(parkUuid)
+  const allItems: BuildingListItem[] = []
+  let pageNum = 1
+  let total = 0
+
+  while (pageNum <= 20) {
+    const result = await fetchBuildings({
+      CustomerUuid: normalizedCustomerUuid || undefined,
+      ParkUuid: normalizedParkUuid,
+      PageNum: pageNum,
+      PageSize: pageSize,
+    })
+
+    if (pageNum === 1) {
+      total = result.total
+    }
+
+    const matchedItems = result.list.filter((item) => {
+      const itemParkUuid = normalizeText(item.ParkUuid)
+      return !itemParkUuid || itemParkUuid === normalizedParkUuid
+    })
+    allItems.push(...matchedItems)
+
+    if (!result.list.length || (total > 0 && pageNum * pageSize >= total)) {
+      break
+    }
+
+    pageNum += 1
+  }
+
+  return dedupeBuildings(allItems)
+}
+
 async function fetchAllCustomers() {
   const pageSize = 200
   const allItems: CustomerListItem[] = []
@@ -1573,6 +1753,21 @@ function dedupeServices(items: InspectionServiceListItem[]) {
   })
 }
 
+function dedupeBuildings(items: BuildingListItem[]) {
+  const seen = new Set<string>()
+
+  return items.filter((item) => {
+    const uuid = normalizeText(item.Uuid)
+
+    if (!uuid || seen.has(uuid)) {
+      return false
+    }
+
+    seen.add(uuid)
+    return true
+  })
+}
+
 function dedupeCustomers(items: CustomerListItem[]) {
   const seen = new Set<string>()
 
@@ -1608,6 +1803,13 @@ function mapParkOption(item: ParkListItem): ParkOption {
   return {
     uuid: normalizeText(item.Uuid),
     name: normalizeText(item.Name) || `园区 ${normalizeText(item.Id) || "-"}`,
+  }
+}
+
+function mapBuildOption(item: BuildingListItem): BuildOption {
+  return {
+    uuid: normalizeText(item.Uuid),
+    name: normalizeText(item.Name) || `建筑 ${normalizeText(item.Id) || "-"}`,
   }
 }
 
@@ -1789,6 +1991,8 @@ function resetLocalStateForRoute() {
   planOptions.value = []
   serviceOptions.value = []
   parkOptions.value = []
+  buildingOptions.value = []
+  repairBuildingsError.value = ""
   repairInspectionWorkOrderOptions.value = []
   repairInspectionItemOptions.value = []
   repairInspectionWorkOrdersError.value = ""
@@ -1881,6 +2085,8 @@ watch(
       planOptions.value = []
       serviceOptions.value = []
       parkOptions.value = []
+      buildingOptions.value = []
+      repairBuildingsError.value = ""
       repairInspectionWorkOrderOptions.value = []
       repairInspectionItemOptions.value = []
       repairInspectionWorkOrdersError.value = ""
@@ -1890,6 +2096,7 @@ watch(
       form.serviceUuid = ""
       form.packageName = ""
       form.parkUuid = ""
+      form.buildUuid = ""
       form.inspectionWorkOrderUuid = ""
       form.workOrderInspectionBuildUuid = []
       form.repairFiles = []
@@ -1918,6 +2125,7 @@ watch(
     }
 
     void loadRepairInspectionWorkOrdersForSelection(form.customerUuid, nextParkUuid)
+    void loadBuildingsForPark(form.customerUuid, nextParkUuid)
   },
 )
 
@@ -2076,6 +2284,28 @@ watch(
                   </SelectItem>
                 </SelectContent>
               </Select>
+            </FormFieldSection>
+
+            <FormFieldSection
+              id="section-building"
+              quick-nav-label="所属建筑"
+              label="所属建筑"
+              label-for="work-order-building"
+              layout="vertical"
+            >
+              <Select v-model="form.buildUuid" :disabled="repairBuildingsLoading || !form.parkUuid || !buildingOptions.length">
+                <SelectTrigger id="work-order-building" class="w-full" @focus="handleFocus('section-building')">
+                  <SelectValue :placeholder="!form.parkUuid ? '请先选择所属园区' : repairBuildingsLoading ? '正在加载建筑...' : buildingOptions.length ? '请选择所属建筑' : '当前园区暂无建筑'" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem v-for="building in buildingOptions" :key="building.uuid" :value="building.uuid">
+                    {{ building.name }}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <p v-if="repairBuildingsError" class="mt-1 text-xs text-destructive">
+                {{ repairBuildingsError }}
+              </p>
             </FormFieldSection>
 
             <FormFieldSection

@@ -96,6 +96,7 @@ export type CreateWorkOrderResult = {
 export type CreateRepairWorkOrderPayload = {
   CustomerUuid: string
   ParkUuid: string
+  BuildUuid?: string
   ReportType: string
   Important: string
   Content?: string
@@ -107,6 +108,7 @@ export type UpdateRepairWorkOrderPayload = {
   Uuid: string
   CustomerUuid?: string
   ParkUuid?: string
+  BuildUuid?: string
   ReportType?: string
   Important?: string
   Content?: string
@@ -228,6 +230,8 @@ export type RepairWorkOrderDetailResult = {
   CustomerName?: string
   ParkUuid?: string
   ParkName?: string
+  BuildUuid?: string
+  BuildName?: string
   PlanName?: string
   UserUuid?: string
   UserName?: string
@@ -404,6 +408,7 @@ export async function createRepairWorkOrder(payload: CreateRepairWorkOrderPayloa
   const normalizedPayload = {
     CustomerUuid: getRequiredString(payload.CustomerUuid, "CustomerUuid"),
     ParkUuid: getRequiredString(payload.ParkUuid, "ParkUuid"),
+    BuildUuid: getOptionalString(payload.BuildUuid),
     ReportType: getRequiredString(payload.ReportType, "ReportType"),
     Important: getRequiredString(payload.Important, "Important"),
     Content: getOptionalString(payload.Content) ?? "",
@@ -434,6 +439,7 @@ export async function updateRepairWorkOrder(payload: UpdateRepairWorkOrderPayloa
     Uuid: getOptionalString(payload.Uuid),
     CustomerUuid: getOptionalString(payload.CustomerUuid),
     ParkUuid: getOptionalString(payload.ParkUuid),
+    BuildUuid: getOptionalString(payload.BuildUuid),
     ReportType: getOptionalString(payload.ReportType),
     Important: getOptionalString(payload.Important),
     Content: getOptionalString(payload.Content),
@@ -917,8 +923,9 @@ function normalizeRepairWorkOrderListItem(value: unknown): RepairWorkOrderListIt
     CustomerName: getFirstText(record, ["CustomerName", "customerName", "CorpName", "corpName"]),
     ParkUuid: getFirstText(record, ["ParkUuid", "parkUuid"]),
     ParkName: getFirstText(record, ["ParkName", "parkName"]),
-    PlanName: getFirstText(record, ["PlanName", "planName"]),
+    BuildUuid: getFirstText(record, ["BuildUuid", "buildUuid", "BuildingUuid", "buildingUuid"]),
     BuildName: getFirstText(record, ["BuildName", "buildName", "BuildingName", "buildingName"]),
+    PlanName: getFirstText(record, ["PlanName", "planName"]),
     UserUuid: getFirstText(record, ["UserUuid", "userUuid"]),
     UserName: getFirstText(record, ["UserName", "userName"]),
     Executors: normalizeWorkOrderExecutors(record.Executors ?? record.executors),
