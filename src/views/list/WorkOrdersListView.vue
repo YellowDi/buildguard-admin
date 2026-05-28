@@ -465,6 +465,24 @@ function formatInspectionWorkOrderTitle(row: { parkName?: unknown }) {
   return parkName && parkName !== "-" ? parkName : "未关联园区"
 }
 
+function formatRepairWorkOrderTitle(row: { buildName?: unknown, customerName?: unknown, parkName?: unknown }) {
+  const buildName = toText(row.buildName, "")
+
+  if (buildName && buildName !== "-") {
+    return buildName
+  }
+
+  const customerName = toText(row.customerName, "")
+
+  if (customerName && customerName !== "-") {
+    return customerName
+  }
+
+  const parkName = toText(row.parkName, "")
+
+  return parkName && parkName !== "-" ? parkName : "未关联建筑"
+}
+
 function buildPageFilterText(row: WorkOrderRecord) {
   if (props.kind === "repair") {
     return [
@@ -1479,10 +1497,10 @@ async function ensureRepairDictionaries() {
       <template #cell-orderNo="{ row }">
         <div class="inline-flex max-w-full items-baseline gap-1.5">
           <span class="truncate text-foreground">
-            {{ props.kind === "inspection" ? formatInspectionWorkOrderTitle(row) : toText(row.customerName, "-") }}
+            {{ props.kind === "inspection" ? formatInspectionWorkOrderTitle(row) : formatRepairWorkOrderTitle(row) }}
           </span>
           <span class="shrink-0 text-muted-foreground">
-            #{{ props.kind === "inspection" ? formatShortOrderNo(row.orderNo) : toText(row.orderNo, "-") }}
+            #{{ formatShortOrderNo(row.orderNo) }}
           </span>
         </div>
       </template>
