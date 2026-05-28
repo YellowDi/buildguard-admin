@@ -1084,6 +1084,36 @@ function createRepairColumns(): TablePageSchema<WorkOrderRecord>["columns"] {
       sort: true,
     },
     {
+      key: "statusLabel",
+      label: "状态",
+      filterType: "tag",
+      cellRenderer: {
+        kind: "status",
+        map: repairWorkOrderStatusMap,
+        fallback: { tone: "gray", icon: "dot" },
+      },
+      filter: {
+        type: "tag",
+        defaultVisible: true,
+      },
+      sort: {
+        label: "状态",
+        kind: "metric",
+        value: row => row.statusValue ?? -1,
+      },
+    },
+    {
+      key: "executor",
+      label: "执行人",
+      filterType: "text",
+      slot: "cell-executor",
+      filter: {
+        type: "text",
+        placeholder: "输入执行人",
+      },
+      sort: true,
+    },
+    {
       key: "reportTypeLabel",
       label: "报修类型",
       filterType: "tag",
@@ -1112,42 +1142,12 @@ function createRepairColumns(): TablePageSchema<WorkOrderRecord>["columns"] {
       },
     },
     {
-      key: "statusLabel",
-      label: "状态",
-      filterType: "tag",
-      cellRenderer: {
-        kind: "status",
-        map: repairWorkOrderStatusMap,
-        fallback: { tone: "gray", icon: "dot" },
-      },
-      filter: {
-        type: "tag",
-        defaultVisible: true,
-      },
-      sort: {
-        label: "状态",
-        kind: "metric",
-        value: row => row.statusValue ?? -1,
-      },
-    },
-    {
       key: "buildName",
       label: "建筑名称",
       filterType: "text",
       filter: {
         type: "text",
         placeholder: "输入建筑名称",
-      },
-      sort: true,
-    },
-    {
-      key: "executor",
-      label: "执行人",
-      filterType: "text",
-      slot: "cell-executor",
-      filter: {
-        type: "text",
-        placeholder: "输入执行人",
       },
       sort: true,
     },
