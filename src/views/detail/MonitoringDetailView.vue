@@ -281,25 +281,12 @@ function copyActiveStreamUrl() {
 
     <template #secondary>
       <aside v-if="device" class="space-y-4 pb-6">
-        <section class="overflow-hidden rounded-md border border-border bg-card">
-          <div class="flex items-center justify-between gap-3 border-b border-border px-4 py-3">
-            <div class="min-w-0">
-              <h2 class="truncate text-sm font-semibold text-foreground">监控设备</h2>
-              <p class="mt-0.5 truncate text-xs text-muted-foreground">{{ device.deviceId }}</p>
-            </div>
-            <StatusBadge
-              :label="deviceStatusBadge.label"
-              :tone="deviceStatusBadge.tone"
-              :icon="deviceStatusBadge.icon"
-            />
-          </div>
-          <DetailFieldSections
-            :sections="detailSections"
-            compact
-            label-width-mobile="5.5rem"
-            label-width-desktop="6rem"
-          />
-        </section>
+        <DetailFieldSections
+          :sections="detailSections"
+          compact
+          label-width-mobile="5.5rem"
+          label-width-desktop="6rem"
+        />
       </aside>
     </template>
   </DetailLayout>
