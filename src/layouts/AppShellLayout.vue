@@ -107,7 +107,7 @@ function closeMobileSidebar() {
         :class="[
           'flex min-w-0 min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4',
           usesFlushStickyPageHeader ? 'pt-0' : (useCompactMainTopPadding ? 'pt-2' : 'pt-0'),
-          usesStableScrollbarGutter ? '[scrollbar-gutter:stable]' : '',
+          usesStableScrollbarGutter ? 'scrollbar-gutter-stable' : '',
         ]"
         :style="{ '--app-page-bottom-gap': usesFlushPageEdges ? '0px' : '1rem' }"
       >

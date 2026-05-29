@@ -2712,7 +2712,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
                 暂无可配置页面。
               </div>
 
-              <div v-else class="min-h-0 flex-1 overflow-y-auto pr-5 md:mr-[-20px] [scrollbar-gutter:stable]">
+              <div v-else class="min-h-0 flex-1 overflow-y-auto pr-5 md:mr-[-20px] scrollbar-gutter-stable">
                 <div class="space-y-4 py-3 md:pr-4">
                   <div
                     v-for="group in menuPermissionGroups"
@@ -2792,7 +2792,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
                 先从待选页面勾选页面，这里才会显示对应页面及按钮。
               </div>
 
-              <div v-else class="min-h-0 flex-1 overflow-y-auto pr-5 md:mr-[-20px] [scrollbar-gutter:stable]">
+              <div v-else class="min-h-0 flex-1 overflow-y-auto pr-5 md:mr-[-20px] scrollbar-gutter-stable">
                 <div class="space-y-3 py-3 md:pr-4">
                   <div
                     v-for="group in selectedMenuPermissionGroups"
@@ -2887,7 +2887,7 @@ function handleCurrentRowClick(row: Record<string, unknown>) {
                 暂无独立 API。
               </div>
 
-              <div v-else class="min-h-0 flex-1 overflow-y-auto pr-5 md:mr-[-20px] [scrollbar-gutter:stable]">
+              <div v-else class="min-h-0 flex-1 overflow-y-auto pr-5 md:mr-[-20px] scrollbar-gutter-stable">
                 <div class="grid gap-1 py-3 md:pr-4">
                   <label
                     v-for="api in permissionApiRows"
