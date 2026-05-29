@@ -29,6 +29,7 @@ const errorMessage = ref("")
 const playerStatus = ref<PlayerStatus>("idle")
 const activeStreamUrl = ref("")
 const activeStreamIsFallback = ref(false)
+const isWidePlayerLayout = ref(false)
 let latestRequestId = 0
 
 const deviceId = computed(() => {
@@ -56,6 +57,7 @@ const playerStatusLabel = computed(() => {
 })
 const activeSourceLabel = computed(() => activeStreamIsFallback.value ? "备用测试流" : "主测试流")
 const deviceStatusBadge = computed(() => getDeviceStatusBadge(device.value?.status ?? "offline"))
+const layoutToggleLabel = computed(() => isWidePlayerLayout.value ? "恢复左右布局" : "宽屏播放")
 const detailSections = computed<DetailFieldSection[]>(() => {
   const current = device.value
   if (!current) {
@@ -171,6 +173,10 @@ function retryPlayer() {
   playerRef.value?.retryPrimaryStream()
 }
 
+function togglePlayerLayout() {
+  isWidePlayerLayout.value = !isWidePlayerLayout.value
+}
+
 function goToEdit() {
   const current = device.value
   if (!current) {
@@ -224,10 +230,22 @@ function copyActiveStreamUrl() {
     :subtitle="pageSubtitle"
     :empty="!loading && !device"
     :empty-text="errorMessage || '未找到监控设备'"
+    :full-width="isWidePlayerLayout"
+    :secondary-visible="!isWidePlayerLayout"
     @back="handleBack"
   >
     <template #headerActions>
       <template v-if="device">
+        <Button
+          variant="outline"
+          size="sm"
+          class="h-8 gap-1 px-3 text-[14px] font-medium"
+          type="button"
+          @click="togglePlayerLayout"
+        >
+          <i :class="[isWidePlayerLayout ? 'ri-layout-column-line' : 'ri-layout-row-line', 'text-base']" />
+          {{ layoutToggleLabel }}
+        </Button>
         <Button
           variant="outline"
           size="sm"
@@ -271,7 +289,13 @@ function copyActiveStreamUrl() {
     </template>
 
     <template #primary>
-      <div v-if="device" class="flex min-h-0 min-w-0 flex-col gap-4 py-4">
+      <div
+        v-if="device"
+        :class="[
+          'flex min-h-0 min-w-0 flex-col gap-4 py-4',
+          isWidePlayerLayout ? 'mx-auto w-full max-w-[1680px]' : '',
+        ]"
+      >
         <MonitoringPlayer
           ref="playerRef"
           :src="device.streamUrl"
@@ -280,6 +304,27 @@ function copyActiveStreamUrl() {
           @status-change="handleStatusChange"
           @source-change="handleSourceChange"
         />
+
+        <div
+          v-if="isWidePlayerLayout"
+          class="grid min-w-0 gap-0 border-y border-border/80 lg:grid-cols-3"
+        >
+          <section
+            v-for="(section, index) in detailSections"
+            :key="section.key"
+            :class="[
+              'min-w-0',
+              index > 0 ? 'border-t border-border/80 lg:border-l lg:border-t-0' : '',
+            ]"
+          >
+            <DetailFieldSections
+              :sections="[section]"
+              use-title-block
+              label-width-mobile="5.5rem"
+              label-width-desktop="5.5rem"
+            />
+          </section>
+        </div>
 
         <section class="rounded-md border border-brand-border bg-brand-surface px-4 py-3 text-sm leading-6 text-foreground">
           当前画面使用公开 HLS 测试流验证前端播放流程；后续后端接入客户平台后，页面只需要替换设备流地址来源。
