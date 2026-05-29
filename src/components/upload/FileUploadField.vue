@@ -94,7 +94,7 @@ function handleDrop(event: DragEvent) {
 <template>
   <div
     :class="cn(
-      'relative flex w-full min-w-0 flex-col gap-3 rounded-lg border border-dashed border-input bg-background/92 transition-[background-color,border-color,color] duration-180 ease-out',
+      'relative flex w-full min-w-0 max-w-full flex-col gap-3 rounded-lg border border-dashed border-input bg-background/92 transition-[background-color,border-color,color] duration-180 ease-out',
       compact ? 'px-3 py-3' : 'px-4 py-4',
       isInteractive ? 'hover:border-ring/55 hover:bg-[var(--form-control-hover-background)]' : 'cursor-not-allowed opacity-75',
       props.class,
@@ -151,8 +151,8 @@ function handleDrop(event: DragEvent) {
       </div>
     </div>
 
-    <div v-if="hasSupplement" class="min-w-0 border-t border-dashed border-border pt-3">
-      <div v-if="hasPreview" class="min-w-0">
+    <div v-if="hasSupplement" class="min-w-0 max-w-full overflow-hidden border-t border-dashed border-border pt-3">
+      <div v-if="hasPreview" class="min-w-0 max-w-full overflow-hidden">
         <slot name="preview" :open="openFileDialog" />
       </div>
       <slot :open="openFileDialog" />

@@ -402,6 +402,17 @@ const canSubmitRepairReview = computed(() => {
 
   return true
 })
+const repairReviewVideoSelectedLabel = computed(() => {
+  if (repairReviewVideoFileName.value) {
+    return formatCompactText(repairReviewVideoFileName.value)
+  }
+
+  if (repairReviewVideoUrl.value) {
+    return "视频已上传"
+  }
+
+  return "未上传视频"
+})
 const repairReviewSubmitLabel = computed(() => {
   if (repairReviewSubmitting.value) {
     return "提交中..."
@@ -734,6 +745,19 @@ function getObjectKeyFileExtension(value: string) {
   const lastDotIndex = fileName.lastIndexOf(".")
 
   return lastDotIndex > -1 ? fileName.slice(lastDotIndex).toLowerCase() : ""
+}
+
+function formatCompactText(value: string, maxLength = 42) {
+  const normalized = value.trim()
+
+  if (normalized.length <= maxLength) {
+    return normalized
+  }
+
+  const headLength = Math.max(12, Math.floor((maxLength - 1) * 0.6))
+  const tailLength = Math.max(8, maxLength - headLength - 1)
+
+  return `${normalized.slice(0, headLength)}…${normalized.slice(-tailLength)}`
 }
 
 async function loadWorkOrderDetail(uuid: string) {
@@ -2098,15 +2122,15 @@ async function submitAssign() {
             <i class="ri-check-double-line text-base" />
             复核
           </Button>
-          <DialogContent class="sm:max-w-[580px]">
+          <DialogContent class="min-w-0 sm:max-w-[580px]">
             <DialogHeader>
               <DialogTitle>复核报修工单</DialogTitle>
               <DialogDescription>
                 选择复核结果；设为已完成时可按需上传复核视频。
               </DialogDescription>
             </DialogHeader>
-            <div class="space-y-5">
-              <div class="grid gap-3 sm:grid-cols-2">
+            <div class="min-w-0 max-w-full space-y-5">
+              <div class="grid min-w-0 max-w-full gap-3 sm:grid-cols-2">
                 <button
                   type="button"
                   :disabled="repairReviewBusy"
@@ -2152,7 +2176,7 @@ async function submitAssign() {
 
               <div
                 v-if="repairReviewDecision === 'completed'"
-                class="space-y-4 border-t border-border pt-4"
+                class="min-w-0 max-w-full space-y-4 border-t border-border pt-4"
               >
                 <FileUploadField
                   accept="video/*"
@@ -2160,7 +2184,7 @@ async function submitAssign() {
                   :loading="repairReviewVideoUploading"
                   title="复核视频（可选）"
                   description="支持 MP4、MOV、WEBM 等视频文件，可按需上传。"
-                  :selected-label="repairReviewVideoFileName || repairReviewVideoUrl || '未上传视频'"
+                  :selected-label="repairReviewVideoSelectedLabel"
                   button-label="上传视频"
                   loading-label="上传中..."
                   icon="ri-video-upload-line"
@@ -2171,11 +2195,14 @@ async function submitAssign() {
                   <template v-if="repairReviewVideoUrl" #preview>
                     <div class="flex w-full min-w-0 max-w-full items-center justify-between gap-3 overflow-hidden rounded-md bg-background px-3 py-2">
                       <div class="min-w-0 flex-1 overflow-hidden">
-                        <p class="block min-w-0 max-w-full truncate text-xs font-medium text-foreground">
-                          {{ repairReviewVideoFileName || "复核视频" }}
+                        <p
+                          class="block min-w-0 max-w-full truncate text-xs font-medium text-foreground"
+                          :title="repairReviewVideoFileName || '复核视频'"
+                        >
+                          {{ formatCompactText(repairReviewVideoFileName || "复核视频") }}
                         </p>
                         <p class="mt-0.5 block min-w-0 max-w-full truncate text-xs text-muted-foreground">
-                          {{ repairReviewVideoUrl }}
+                          视频已上传
                         </p>
                       </div>
                       <Button
