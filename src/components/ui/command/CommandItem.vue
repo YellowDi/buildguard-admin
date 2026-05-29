@@ -3,7 +3,7 @@ import type { ListboxItemEmits, ListboxItemProps } from "reka-ui"
 import type { HTMLAttributes } from "vue"
 import { reactiveOmit, useCurrentElement } from "@vueuse/core"
 import { ListboxItem, useForwardPropsEmits, useId } from "reka-ui"
-import { computed, onMounted, onUnmounted, ref } from "vue"
+import { computed, onMounted, onUnmounted, ref, watch } from "vue"
 import { cn } from "@/lib/utils"
 import { useCommand, useCommandGroup } from "."
 
@@ -37,12 +37,28 @@ const isRender = computed(() => {
 
 const itemRef = ref()
 const currentElement = useCurrentElement(itemRef)
+
+function resolveSearchText() {
+  const propValue = props.value
+  const explicitValue = propValue === undefined || propValue === null
+    ? ""
+    : `${propValue}`.trim()
+  const element = currentElement.value
+  const textContent = element instanceof Element ? element.textContent : ""
+
+  return explicitValue || textContent || ""
+}
+
+function syncSearchText() {
+  allItems.value.set(id, resolveSearchText())
+}
+
 onMounted(() => {
   if (!(currentElement.value instanceof HTMLElement))
     return
 
-  // textValue to perform filter
-  allItems.value.set(id, currentElement.value.textContent ?? (props.value?.toString() ?? ""))
+  // Prefer the explicit command value so hidden keywords and dynamic labels can participate in filtering.
+  syncSearchText()
 
   const groupId = groupContext?.id
   if (groupId) {
@@ -56,6 +72,12 @@ onMounted(() => {
 })
 onUnmounted(() => {
   allItems.value.delete(id)
+})
+
+watch(() => props.value, () => {
+  if (currentElement.value instanceof Element) {
+    syncSearchText()
+  }
 })
 </script>
 

@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue"
-import { useRouter } from "vue-router"
+import { computed, onMounted, ref, watch } from "vue"
+import { useRoute, useRouter } from "vue-router"
 
 import TablePage from "@/components/table-page/TablePage.vue"
 import { createTablePageDefinition, useTablePage } from "@/components/table-page/useTablePage"
@@ -17,10 +17,11 @@ import {
 } from "@/lib/monitoring-mock"
 
 const router = useRouter()
+const route = useRoute()
 const monitoringRows = ref<MonitoringDeviceRecord[]>([])
 const loading = ref(false)
 const errorMessage = ref("")
-const searchQuery = ref("")
+const searchQuery = ref(normalizeQueryValue(route.query.q))
 const selectedPlatforms = ref<string[]>([])
 const selectedStatuses = ref<string[]>([])
 let latestRequestId = 0
@@ -221,6 +222,15 @@ onMounted(() => {
   void loadMonitoringAssets()
 })
 
+watch(
+  () => normalizeQueryValue(route.query.q),
+  (nextQuery) => {
+    if (nextQuery !== searchQuery.value) {
+      searchQuery.value = nextQuery
+    }
+  },
+)
+
 async function loadMonitoringAssets() {
   const requestId = ++latestRequestId
   loading.value = true
@@ -313,7 +323,7 @@ function jumpToBuildingDetail(row: Record<string, unknown>) {
 
 function handleQueryChange(payload: { key: string; value: string | string[] }) {
   if (payload.key === "q") {
-    searchQuery.value = typeof payload.value === "string" ? payload.value.trim() : ""
+    updateSearchQuery(typeof payload.value === "string" ? payload.value : "")
     return
   }
 
@@ -328,9 +338,38 @@ function handleQueryChange(payload: { key: string; value: string | string[] }) {
 }
 
 function handleQueryClear() {
-  searchQuery.value = ""
+  updateSearchQuery("")
   selectedPlatforms.value = []
   selectedStatuses.value = []
+}
+
+function updateSearchQuery(value: string) {
+  const normalizedValue = value.trim()
+  searchQuery.value = normalizedValue
+  syncSearchQueryToRoute(normalizedValue)
+}
+
+function syncSearchQueryToRoute(value: string) {
+  const currentValue = normalizeQueryValue(route.query.q)
+
+  if (currentValue === value) {
+    return
+  }
+
+  void router.replace({
+    query: {
+      ...route.query,
+      q: value || undefined,
+    },
+  })
+}
+
+function normalizeQueryValue(value: unknown) {
+  if (Array.isArray(value)) {
+    return normalizeQueryValue(value[0])
+  }
+
+  return typeof value === "string" ? value.trim() : ""
 }
 
 </script>

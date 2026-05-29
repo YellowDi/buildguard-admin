@@ -52,11 +52,11 @@ const emit = defineEmits<{
         @update:model-value="emit('update:modelValue', $event)"
       />
 
-      <TooltipWrap content="搜索">
+      <TooltipWrap content="全局搜索">
         <button
           type="button"
-          class="top-tab-switch-icon-button ml-auto flex size-10 items-center justify-center rounded-full text-sidebar-foreground/52 hover:text-sidebar-accent-foreground"
-          aria-label="搜索"
+          class="top-tab-switch-icon-button ml-auto flex size-10 items-center justify-center rounded-full text-sidebar-foreground/52 transition-transform active:scale-[0.96] hover:text-sidebar-accent-foreground"
+          aria-label="打开全局搜索"
           @click="emit('search')"
         >
           <i class="ri-search-line relative z-10 text-[17px] leading-none" />

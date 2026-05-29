@@ -66,7 +66,11 @@ function filterItems() {
 }
 
 watch(
-  () => [filterState.search, allItems.value.size, allGroups.value.size],
+  () => [
+    filterState.search,
+    Array.from(allItems.value.entries()).map(([id, value]) => `${id}:${value}`).join("\u0000"),
+    Array.from(allGroups.value.entries()).map(([id, group]) => `${id}:${group.size}`).join("\u0000"),
+  ],
   () => {
     filterItems()
   },

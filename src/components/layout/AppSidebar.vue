@@ -251,6 +251,10 @@ function handleSearch() {
   isSearchDialogOpen.value = true
 }
 
+function handleCommandTopTabSelect(tabId: AppSidebarTopTabId) {
+  selectedTopTab.value = tabId
+}
+
 function handleGlobalKeydown(event: KeyboardEvent) {
   const isCommandShortcut = (event.metaKey || event.ctrlKey)
     && !event.altKey
@@ -416,5 +420,12 @@ watch(isSettingsRoute, (nextValue, previousValue) => {
     <SidebarRail />
   </Sidebar>
 
-  <GlobalCommand v-if="isSearchDialogOpen" v-model:open="isSearchDialogOpen" />
+  <GlobalCommand
+    v-if="isSearchDialogOpen"
+    v-model:open="isSearchDialogOpen"
+    :navigation-items="visibleBusinessItems"
+    :settings-categories="visibleSettingsCategories"
+    :top-tabs="topTabs"
+    @select-top-tab="handleCommandTopTabSelect"
+  />
 </template>
