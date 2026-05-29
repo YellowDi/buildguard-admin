@@ -47,6 +47,7 @@ const emit = defineEmits<{
       <TopTabSwitch
         :tabs="props.tabs"
         :model-value="props.modelValue"
+        fill-active-icon
         aria-label="侧边栏顶部导航"
         @update:model-value="emit('update:modelValue', $event)"
       />

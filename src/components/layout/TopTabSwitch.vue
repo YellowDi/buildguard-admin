@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { ComponentPublicInstance } from "vue"
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue"
+import RemixIconSwap from "@/components/ui/RemixIconSwap.vue"
 
 type TopTabSwitchItem = {
   id: string
@@ -15,10 +16,12 @@ const props = withDefaults(defineProps<{
   ariaLabel?: string
   collapseInactive?: boolean
   tone?: "sidebar" | "default"
+  fillActiveIcon?: boolean
 }>(), {
   ariaLabel: "切换视图",
   collapseInactive: true,
   tone: "sidebar",
+  fillActiveIcon: false,
 })
 
 const emit = defineEmits<{
@@ -227,7 +230,12 @@ onBeforeUnmount(() => {
             </span>
           </template>
           <template v-else>
-            <i v-if="tab.icon" :class="[tab.icon, 'shrink-0 text-[17px] leading-none']" />
+            <RemixIconSwap
+              v-if="tab.icon"
+              :icon="tab.icon"
+              :active="props.fillActiveIcon && props.modelValue === tab.id"
+              class="shrink-0 text-[17px] leading-none"
+            />
             <span :class="[tab.icon ? 'ml-2' : '', 'flex items-center whitespace-nowrap']">
               <span class="leading-4">{{ tab.label }}</span>
               <span
@@ -247,9 +255,10 @@ onBeforeUnmount(() => {
           v-if="tab.icon"
           class="absolute top-1/2 left-[7.5px] z-10 flex w-[17px] -translate-y-1/2 items-center justify-center"
         >
-          <i
+          <RemixIconSwap
+            :icon="tab.icon"
+            :active="props.fillActiveIcon && props.modelValue === tab.id"
             :class="[
-              tab.icon,
               'shrink-0 text-[17px] leading-none transition-colors duration-160 ease-out',
               getLabelClass(tab.id),
             ]"
@@ -297,10 +306,11 @@ onBeforeUnmount(() => {
         v-else
         class="relative z-10 inline-flex h-full items-center gap-2 whitespace-nowrap px-2.5"
       >
-        <i
+        <RemixIconSwap
           v-if="tab.icon"
+          :icon="tab.icon"
+          :active="props.fillActiveIcon && props.modelValue === tab.id"
           :class="[
-            tab.icon,
             'shrink-0 text-[17px] leading-none transition-colors duration-160 ease-out',
             getLabelClass(tab.id),
           ]"

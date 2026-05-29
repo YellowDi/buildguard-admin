@@ -4,6 +4,7 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
 } from "@/components/ui/sidebar"
+import RemixIconSwap from "@/components/ui/RemixIconSwap.vue"
 import type { AppSidebarNavItem } from "@/components/layout/app-sidebar/types"
 
 const props = defineProps<{
@@ -28,6 +29,15 @@ function isActive(item: AppSidebarNavItem): boolean {
 
   return props.activePath === item.path || props.activePath.startsWith(`${item.path}/`)
 }
+
+function hasActiveChild(item: AppSidebarNavItem): boolean {
+  return item.children?.some(child => isActive(child) || hasActiveChild(child)) ?? false
+}
+
+function isIconActive(item: AppSidebarNavItem) {
+  return isActive(item) || hasActiveChild(item)
+}
+
 </script>
 
 <template>
@@ -57,9 +67,11 @@ function isActive(item: AppSidebarNavItem): boolean {
         ]"
         @click="emit('toggle-item', item)"
       >
-        <i
+        <RemixIconSwap
           v-if="item.icon"
-          :class="[item.icon, 'text-lg leading-none transition-colors', isActive(item) ? 'text-link' : '']"
+          :icon="item.icon"
+          :active="isIconActive(item)"
+          :class="['text-lg leading-none transition-colors', isIconActive(item) ? 'text-link' : '']"
         />
         <span class="flex-1 truncate">{{ item.label }}</span>
         <i

@@ -3,6 +3,7 @@ import { computed } from "vue"
 import type { HTMLAttributes } from "vue"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import RemixIconSwap from "@/components/ui/RemixIconSwap.vue"
 import { cn } from "@/lib/utils"
 import type {
   SettingsCategory,
@@ -87,8 +88,10 @@ const groupedCategories = computed(() =>
                 <span class="text-[9px] font-semibold">{{ category.avatarFallback }}</span>
               </AvatarFallback>
             </Avatar>
-            <span
+            <RemixIconSwap
               v-else
+              :icon="category.icon"
+              :active="activeKey === category.key"
               :class="
                 cn(
                   'inline-flex size-5 shrink-0 items-center justify-center text-lg leading-none transition-colors',
@@ -97,9 +100,7 @@ const groupedCategories = computed(() =>
                     : '',
                 )
               "
-            >
-              <i :class="category.icon" />
-            </span>
+            />
             <span class="min-w-0 truncate">
               {{ category.label }}
             </span>
