@@ -140,6 +140,20 @@ const router = createRouter({
           } satisfies RouteMetaConfig,
         },
         {
+          path: "monitoring/:id",
+          name: "monitoring-detail",
+          component: () => import("@/views/detail/MonitoringDetailView.vue"),
+          meta: {
+            title: "监控详情",
+            loading: "detail",
+            navActivePath: "/monitoring",
+            breadcrumb: [
+              { title: "监控", to: "monitoring" },
+              { title: "查看监控" },
+            ] satisfies BreadcrumbMetaItem[],
+          } satisfies RouteMetaConfig,
+        },
+        {
           path: "customers/:id/parks/create",
           name: "customer-park-create",
           component: () => import("@/views/form/ParkCreateView.vue"),
