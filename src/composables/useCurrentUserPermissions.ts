@@ -90,8 +90,12 @@ export function clearCurrentUserPermissions() {
 export function canMenu(path: string) {
   const normalizedPath = normalizePath(path)
 
-  if (!normalizedPath || !hasLoaded.value || !hasMenuPermissions.value) {
+  if (!normalizedPath) {
     return true
+  }
+
+  if (!hasLoaded.value || !hasMenuPermissions.value) {
+    return false
   }
 
   return permissions.value.menuPaths.has(normalizedPath)
@@ -100,8 +104,12 @@ export function canMenu(path: string) {
 export function canButton(code: string) {
   const normalizedCode = code.trim()
 
-  if (!normalizedCode || !hasLoaded.value || !hasButtonPermissions.value) {
+  if (!normalizedCode) {
     return true
+  }
+
+  if (!hasLoaded.value || !hasButtonPermissions.value) {
+    return false
   }
 
   return permissions.value.buttonCodes.has(normalizedCode)
@@ -121,8 +129,9 @@ async function loadPermissionSnapshot(userUuid: string, options: LoadPermissions
     loadedUserUuid = userUuid
     hasLoaded.value = true
   } catch (requestError) {
-    error.value = getApiErrorMessage(requestError, "用户权限加载失败，请稍后重试。")
+    const message = getApiErrorMessage(requestError, "用户权限加载失败，请稍后重试。")
     clearCurrentUserPermissions()
+    error.value = message
 
     if (options.throwOnError) {
       throw requestError

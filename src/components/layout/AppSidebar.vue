@@ -42,7 +42,7 @@ const route = useRoute()
 const router = useRouter()
 const { categories } = useSettings()
 const { settingsBackTarget } = useSettingsNavigation()
-const { canMenu, hasLoaded: permissionsLoaded } = useCurrentUserPermissions()
+const { canMenu } = useCurrentUserPermissions()
 
 const topTabs: Array<{ id: AppSidebarTopTabId, label: string, icon: string }> = [
   {
@@ -157,10 +157,6 @@ const activePath = computed(() => {
 })
 
 const visibleBusinessItems = computed(() => {
-  if (!permissionsLoaded.value) {
-    return businessItems
-  }
-
   return businessItems
     .map((item) => {
       if (!item.children?.length) {
@@ -176,10 +172,6 @@ const visibleBusinessItems = computed(() => {
 })
 
 const visibleSettingsCategories = computed(() => {
-  if (!permissionsLoaded.value) {
-    return categories.value
-  }
-
   return categories.value.filter(category => canMenu(`/settings/${category.key}`))
 })
 

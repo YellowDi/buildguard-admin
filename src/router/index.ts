@@ -704,8 +704,33 @@ router.beforeEach(async (to, from) => {
     return
   }
 
+  if (to.name === "forbidden" || to.name === "not-found") {
+    beginRouteLoading(resolveRouteLoadingKind(to.meta.loading))
+    return
+  }
+
   const currentUserPermissions = useCurrentUserPermissions()
-  await currentUserPermissions.loadCurrentUserPermissions()
+  try {
+    await currentUserPermissions.loadCurrentUserPermissions({
+      throwOnError: true,
+    })
+  } catch (error) {
+    if (isAuthError(error)) {
+      return {
+        name: "login",
+        query: {
+          redirect: to.fullPath,
+        },
+      }
+    }
+
+    return {
+      name: "forbidden",
+      query: {
+        redirect: to.fullPath,
+      },
+    }
+  }
 
   const requiredPermissionPath = resolveRoutePermissionPath(to)
 

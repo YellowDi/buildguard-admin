@@ -11,9 +11,9 @@ const props = withDefaults(defineProps<{
   mode: "hide",
 })
 
-const { canButton, hasLoaded } = useCurrentUserPermissions()
+const { canButton } = useCurrentUserPermissions()
 
-const allowed = computed(() => !props.code || !hasLoaded.value || canButton(props.code))
+const allowed = computed(() => !props.code || canButton(props.code))
 </script>
 
 <template>
