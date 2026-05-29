@@ -31,7 +31,7 @@ import { fetchInspectionServices, type InspectionServiceListItem } from "@/lib/i
 import { fetchParks, type ParkListItem } from "@/lib/parks-api"
 import { PERMISSION_CODES } from "@/lib/permission-codes"
 import { fetchRepairWorkOrderDictionaries, type RepairDictionaryOption } from "@/lib/repair-work-order-dictionaries"
-import { uploadTencentCosFile } from "@/lib/tencent-cos-sdk"
+import { uploadTencentCosFile } from "@/lib/tencent-cos-upload"
 import { cn } from "@/lib/utils"
 import {
   createRepairWorkOrder,

@@ -1,11 +1,12 @@
 <script setup lang="ts">
-import Hls from "hls.js"
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from "vue"
 
 import { Button } from "@/components/ui/button"
 
 type PlayerStatus = "idle" | "loading" | "playing" | "error"
 type SourceMode = "primary" | "fallback"
+type HlsConstructor = typeof import("hls.js").default
+type HlsInstance = InstanceType<HlsConstructor>
 
 const props = withDefaults(defineProps<{
   src: string
@@ -26,7 +27,9 @@ const status = ref<PlayerStatus>("idle")
 const message = ref("等待连接监控流")
 const sourceMode = ref<SourceMode>("primary")
 const videoAspectRatio = ref("16 / 9")
-let hls: Hls | null = null
+let hls: HlsInstance | null = null
+let hlsConstructorPromise: Promise<HlsConstructor> | null = null
+let streamLoadToken = 0
 
 const activeSrc = computed(() => (
   sourceMode.value === "fallback" && props.fallbackSrc ? props.fallbackSrc : props.src
@@ -51,6 +54,14 @@ function setStatus(nextStatus: PlayerStatus, nextMessage?: string) {
   emit("status-change", nextStatus)
 }
 
+async function getHlsConstructor() {
+  if (!hlsConstructorPromise) {
+    hlsConstructorPromise = import("hls.js").then(module => module.default)
+  }
+
+  return hlsConstructorPromise
+}
+
 function destroyHls() {
   hls?.destroy()
   hls = null
@@ -67,16 +78,23 @@ function clearVideoSource() {
   video.load()
 }
 
-function cleanupPlayer() {
+function resetPlayer() {
   destroyHls()
   clearVideoSource()
+}
+
+function cleanupPlayer() {
+  streamLoadToken += 1
+  resetPlayer()
 }
 
 function handleSourceFailure(nextMessage = "当前监控流无法播放，请稍后重试。") {
   if (sourceMode.value === "primary" && canUseFallback.value) {
     sourceMode.value = "fallback"
     setStatus("loading", "主测试流暂不可用，正在切换备用测试流。")
-    void nextTick(() => loadStream())
+    void nextTick(() => {
+      void loadStream()
+    })
     return
   }
 
@@ -104,7 +122,7 @@ function loadNativeHls(video: HTMLVideoElement, source: string) {
   void requestPlayback()
 }
 
-function loadHlsJs(video: HTMLVideoElement, source: string) {
+function loadHlsJs(video: HTMLVideoElement, source: string, Hls: HlsConstructor) {
   hls = new Hls({
     enableWorker: true,
     lowLatencyMode: true,
@@ -118,7 +136,7 @@ function loadHlsJs(video: HTMLVideoElement, source: string) {
   hls.on(Hls.Events.MANIFEST_PARSED, () => {
     void requestPlayback()
   })
-  hls.on(Hls.Events.ERROR, (_event, data) => {
+  hls.on(Hls.Events.ERROR, (_event: unknown, data) => {
     if (!data.fatal) {
       return
     }
@@ -138,10 +156,11 @@ function loadHlsJs(video: HTMLVideoElement, source: string) {
   hls.attachMedia(video)
 }
 
-function loadStream() {
+async function loadStream() {
+  const loadToken = ++streamLoadToken
   const video = videoRef.value
   const source = activeSrc.value.trim()
-  cleanupPlayer()
+  resetPlayer()
   videoAspectRatio.value = "16 / 9"
 
   if (!video) {
@@ -164,8 +183,24 @@ function loadStream() {
     return
   }
 
+  let Hls: HlsConstructor
+
+  try {
+    Hls = await getHlsConstructor()
+  }
+  catch {
+    if (loadToken === streamLoadToken) {
+      setStatus("error", "监控播放器加载失败，请刷新后重试。")
+    }
+    return
+  }
+
+  if (loadToken !== streamLoadToken || video !== videoRef.value) {
+    return
+  }
+
   if (Hls.isSupported()) {
-    loadHlsJs(video, source)
+    loadHlsJs(video, source, Hls)
     return
   }
 
@@ -174,11 +209,11 @@ function loadStream() {
 
 function retryPrimaryStream() {
   sourceMode.value = "primary"
-  loadStream()
+  void loadStream()
 }
 
 function retryCurrentStream() {
-  loadStream()
+  void loadStream()
 }
 
 function handleVideoError() {
@@ -201,7 +236,7 @@ function syncVideoDimensions() {
 }
 
 onMounted(() => {
-  loadStream()
+  void loadStream()
 })
 
 onBeforeUnmount(() => {
@@ -212,7 +247,7 @@ watch(
   () => [props.src, props.fallbackSrc],
   () => {
     sourceMode.value = "primary"
-    loadStream()
+    void loadStream()
   },
 )
 

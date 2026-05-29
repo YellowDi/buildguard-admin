@@ -52,7 +52,7 @@ import { fetchMembers } from "@/lib/members-api"
 import { fetchRepairWorkOrderDictionaries, formatRepairDictionaryLabel, type RepairDictionaryOption } from "@/lib/repair-work-order-dictionaries"
 import { fetchInspectionServiceDetail, type InspectionServiceListItem } from "@/lib/inspection-services-api"
 import { PERMISSION_CODES } from "@/lib/permission-codes"
-import { uploadTencentCosFile } from "@/lib/tencent-cos-sdk"
+import { uploadTencentCosFile } from "@/lib/tencent-cos-upload"
 import {
   deleteRepairWorkOrder,
   deleteWorkOrder,

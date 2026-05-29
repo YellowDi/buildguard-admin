@@ -81,7 +81,7 @@ import {
 } from "@/lib/media-videos-api"
 import { PERMISSION_CODES } from "@/lib/permission-codes"
 import { sanitizeRichTextHtml } from "@/lib/sanitize-html"
-import { uploadTencentCosFile } from "@/lib/tencent-cos-sdk"
+import { uploadTencentCosFile } from "@/lib/tencent-cos-upload"
 
 type SheetMode = "preview" | "edit" | "create"
 type SheetEntityKind = "video" | "article"

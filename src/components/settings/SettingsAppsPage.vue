@@ -58,7 +58,7 @@ import {
   type AppVersionDetail,
 } from "@/lib/app-versions-api"
 import { PERMISSION_CODES } from "@/lib/permission-codes"
-import { uploadTencentCosFile } from "@/lib/tencent-cos-sdk"
+import { uploadTencentCosFile } from "@/lib/tencent-cos-upload"
 
 const props = defineProps<{
   state: SettingsState

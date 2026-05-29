@@ -46,7 +46,7 @@ import {
   type InspectionServiceListItem,
   updateInspectionServiceContract,
 } from "@/lib/inspection-services-api"
-import { uploadTencentCosFile } from "@/lib/tencent-cos-sdk"
+import { uploadTencentCosFile } from "@/lib/tencent-cos-upload"
 
 type InspectionServiceInspectionTableRow = {
   id: string

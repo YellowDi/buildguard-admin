@@ -18,7 +18,7 @@ import { createCustomer, fetchCustomerDetail, updateCustomer, updateCustomerStat
 import { handleApiError } from "@/lib/api-errors"
 import { fetchBusinessPresetEntryOptions, type BusinessPresetEntryOption } from "@/lib/business-preset-options"
 import { PERMISSION_CODES } from "@/lib/permission-codes"
-import { uploadTencentCosFile } from "@/lib/tencent-cos-sdk"
+import { uploadTencentCosFile } from "@/lib/tencent-cos-upload"
 
 type CustomerFormState = {
   corpName: string
