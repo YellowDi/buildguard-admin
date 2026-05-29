@@ -214,19 +214,38 @@ function copyActiveStreamUrl() {
     :empty-text="errorMessage || '未找到监控设备'"
     @back="handleBack"
   >
-    <template v-if="device" #actions>
-      <Button variant="outline" type="button" @click="copyDeviceId(device)">
-        <i class="ri-file-copy-line" />
-        复制编号
-      </Button>
-      <Button variant="outline" type="button" @click="copyActiveStreamUrl">
-        <i class="ri-link" />
-        复制流地址
-      </Button>
-      <Button type="button" @click="retryPlayer">
-        <i class="ri-refresh-line" />
-        重试播放
-      </Button>
+    <template #headerActions>
+      <template v-if="device">
+        <Button
+          variant="outline"
+          size="sm"
+          class="h-8 gap-1 px-3 text-[14px] font-medium"
+          type="button"
+          @click="copyDeviceId(device)"
+        >
+          <i class="ri-file-copy-line text-base" />
+          复制编号
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          class="h-8 gap-1 px-3 text-[14px] font-medium"
+          type="button"
+          @click="copyActiveStreamUrl"
+        >
+          <i class="ri-link text-base" />
+          复制流地址
+        </Button>
+        <Button
+          size="sm"
+          class="h-8 gap-1 px-3 text-[14px] font-medium"
+          type="button"
+          @click="retryPlayer"
+        >
+          <i class="ri-refresh-line text-base" />
+          重试播放
+        </Button>
+      </template>
     </template>
 
     <template #primary>
