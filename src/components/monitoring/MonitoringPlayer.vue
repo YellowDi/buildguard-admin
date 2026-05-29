@@ -25,6 +25,7 @@ const videoRef = ref<HTMLVideoElement | null>(null)
 const status = ref<PlayerStatus>("idle")
 const message = ref("等待连接监控流")
 const sourceMode = ref<SourceMode>("primary")
+const videoAspectRatio = ref("16 / 9")
 let hls: Hls | null = null
 
 const activeSrc = computed(() => (
@@ -32,6 +33,9 @@ const activeSrc = computed(() => (
 ))
 const isUsingFallback = computed(() => sourceMode.value === "fallback")
 const canUseFallback = computed(() => Boolean(props.fallbackSrc && props.fallbackSrc !== props.src))
+const playerFrameStyle = computed(() => ({
+  aspectRatio: videoAspectRatio.value,
+}))
 const statusLabel = computed(() => {
   if (status.value === "playing") return "正在播放"
   if (status.value === "loading") return "连接中"
@@ -138,6 +142,7 @@ function loadStream() {
   const video = videoRef.value
   const source = activeSrc.value.trim()
   cleanupPlayer()
+  videoAspectRatio.value = "16 / 9"
 
   if (!video) {
     return
@@ -184,6 +189,15 @@ function handleWaiting() {
   if (status.value === "playing") {
     setStatus("loading", "监控流缓冲中...")
   }
+}
+
+function syncVideoDimensions() {
+  const video = videoRef.value
+  if (!video || video.videoWidth <= 0 || video.videoHeight <= 0) {
+    return
+  }
+
+  videoAspectRatio.value = `${video.videoWidth} / ${video.videoHeight}`
 }
 
 onMounted(() => {
@@ -233,16 +247,22 @@ defineExpose({
       </div>
     </div>
 
-    <div class="relative aspect-video bg-black">
+    <div
+      class="relative w-full bg-black transition-[height] duration-200 ease-out"
+      :style="playerFrameStyle"
+    >
       <video
         ref="videoRef"
-        class="h-full w-full bg-black object-contain"
+        class="h-full w-full bg-black object-cover"
         controls
         muted
         playsinline
         preload="metadata"
         @error="handleVideoError"
+        @loadeddata="syncVideoDimensions"
+        @loadedmetadata="syncVideoDimensions"
         @playing="setStatus('playing', '监控流已连接。')"
+        @resize="syncVideoDimensions"
         @waiting="handleWaiting"
       />
 
