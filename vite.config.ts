@@ -10,6 +10,7 @@ export default defineConfig({
   base: "/admin/",
   plugins: [vue(), tailwindcss()],
   build: {
+    chunkSizeWarningLimit: 600,
     rollupOptions: {
       output: {
         manualChunks(id) {
