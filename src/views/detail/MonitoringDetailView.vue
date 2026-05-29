@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from "vue"
+import { computed, onMounted, ref, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { toast } from "vue-sonner"
 
@@ -9,6 +9,8 @@ import MonitoringPlayer from "@/components/monitoring/MonitoringPlayer.vue"
 import { Button } from "@/components/ui/button"
 import { StatusBadge, type StatusBadgeIcon, type StatusBadgeTone } from "@/components/ui/status-badge"
 import DetailLayout from "@/layouts/DetailLayout.vue"
+import { handleApiError } from "@/lib/api-errors"
+import { fetchMonitoringAssetDevices } from "@/lib/monitoring-assets-api"
 import {
   getMonitoringDeviceById,
   monitoringStatusRenderer,
@@ -21,15 +23,22 @@ type PlayerStatus = "idle" | "loading" | "playing" | "error"
 const route = useRoute()
 const router = useRouter()
 const playerRef = ref<InstanceType<typeof MonitoringPlayer> | null>(null)
+const monitoringRows = ref<MonitoringDeviceRecord[]>([])
+const loading = ref(false)
+const errorMessage = ref("")
 const playerStatus = ref<PlayerStatus>("idle")
 const activeStreamUrl = ref("")
 const activeStreamIsFallback = ref(false)
+let latestRequestId = 0
 
 const deviceId = computed(() => {
   const rawId = route.params.id
   return Array.isArray(rawId) ? rawId[0] ?? "" : rawId ?? ""
 })
-const device = computed(() => getMonitoringDeviceById(deviceId.value))
+const device = computed(() => (
+  monitoringRows.value.find(item => item.id === deviceId.value)
+  ?? getMonitoringDeviceById(deviceId.value)
+))
 const pageTitle = computed(() => device.value?.deviceName ?? "监控详情")
 const pageSubtitle = computed(() => {
   const current = device.value
@@ -93,6 +102,45 @@ const detailSections = computed<DetailFieldSection[]>(() => {
     },
   ]
 })
+
+onMounted(() => {
+  void loadMonitoringDevice()
+})
+
+watch(deviceId, () => {
+  void loadMonitoringDevice()
+})
+
+async function loadMonitoringDevice() {
+  const requestId = ++latestRequestId
+  loading.value = true
+  errorMessage.value = ""
+
+  try {
+    const devices = await fetchMonitoringAssetDevices()
+
+    if (requestId !== latestRequestId) {
+      return
+    }
+
+    monitoringRows.value = devices
+  }
+  catch (error) {
+    if (requestId !== latestRequestId) {
+      return
+    }
+
+    errorMessage.value = handleApiError(error, {
+      title: "监控资产加载失败",
+      fallback: "监控资产加载失败，请稍后重试。",
+    })
+  }
+  finally {
+    if (requestId === latestRequestId) {
+      loading.value = false
+    }
+  }
+}
 
 function getDeviceStatusBadge(status: MonitoringDeviceStatus): { label: string; tone: StatusBadgeTone; icon: StatusBadgeIcon } {
   if (status === "online") {
@@ -162,8 +210,8 @@ function copyActiveStreamUrl() {
   <DetailLayout
     :title="pageTitle"
     :subtitle="pageSubtitle"
-    :empty="!device"
-    empty-text="未找到监控设备"
+    :empty="!loading && !device"
+    :empty-text="errorMessage || '未找到监控设备'"
     @back="handleBack"
   >
     <template v-if="device" #actions>
@@ -225,6 +273,9 @@ function copyActiveStreamUrl() {
         <section class="rounded-md border border-brand-border bg-brand-surface px-4 py-3 text-sm leading-6 text-foreground">
           当前画面使用公开 HLS 测试流验证前端播放流程；后续后端接入客户平台后，页面只需要替换设备流地址来源。
         </section>
+      </div>
+      <div v-else-if="loading" class="flex min-h-[280px] items-center justify-center text-sm text-muted-foreground">
+        正在加载监控资产...
       </div>
     </template>
 

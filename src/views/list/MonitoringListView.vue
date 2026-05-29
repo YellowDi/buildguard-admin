@@ -1,32 +1,43 @@
 <script setup lang="ts">
-import { computed, ref } from "vue"
+import { computed, onMounted, ref } from "vue"
 import { useRouter } from "vue-router"
 
 import TablePage from "@/components/table-page/TablePage.vue"
 import { createTablePageDefinition, useTablePage } from "@/components/table-page/useTablePage"
 import type { TablePageSchema, TableQueryBarConfig } from "@/components/table-page/types"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { Button } from "@/components/ui/button"
+import { handleApiError } from "@/lib/api-errors"
+import { fetchMonitoringAssetDevices } from "@/lib/monitoring-assets-api"
 import {
   buildMonitoringSearchText,
-  monitoringDevices,
-  monitoringPlatformOptions,
   monitoringStatusOptions,
   monitoringStatusRenderer,
   type MonitoringDeviceRecord,
 } from "@/lib/monitoring-mock"
 
 const router = useRouter()
+const monitoringRows = ref<MonitoringDeviceRecord[]>([])
+const loading = ref(false)
+const errorMessage = ref("")
 const searchQuery = ref("")
 const selectedPlatforms = ref<string[]>([])
 const selectedStatuses = ref<string[]>([])
+let latestRequestId = 0
 
 const canClearQuery = computed(() => Boolean(
   searchQuery.value || selectedPlatforms.value.length || selectedStatuses.value.length,
+))
+const monitoringPlatformOptions = computed(() => (
+  Array.from(new Set(monitoringRows.value.map(device => device.platform)))
+    .filter(Boolean)
+    .map(platform => ({ value: platform, label: platform }))
 ))
 
 const filteredMonitoringDevices = computed(() => {
   const query = searchQuery.value.trim().toLowerCase()
 
-  return monitoringDevices.filter((device) => {
+  return monitoringRows.value.filter((device) => {
     if (query && !buildMonitoringSearchText(device).includes(query)) {
       return false
     }
@@ -63,7 +74,7 @@ const queryBar = computed<TableQueryBarConfig>(() => ({
       label: "平台",
       icon: "ri-base-station-line",
       multiple: true,
-      options: monitoringPlatformOptions,
+      options: monitoringPlatformOptions.value,
       value: [...selectedPlatforms.value],
       placeholder: "选择平台",
       expandedWidth: 220,
@@ -98,6 +109,7 @@ const schema: TablePageSchema<MonitoringDeviceRecord> = {
   data: [],
   showIndex: true,
   stickyHeader: true,
+  tableClass: "whitespace-nowrap",
   emptyState: {
     title: "暂无监控设备",
     description: "当前筛选条件下没有可展示的监控设备。",
@@ -116,15 +128,20 @@ const schema: TablePageSchema<MonitoringDeviceRecord> = {
   columns: [
     {
       key: "deviceName",
-      label: "设备",
+      label: "设备名称",
       filterType: "text",
       emphasis: "strong",
       tone: "primary",
-      cellRenderer: {
-        kind: "dual-stack",
-        primaryKey: "deviceName",
-        secondaryKey: "deviceId",
-      },
+      cellClass: "whitespace-nowrap",
+      sort: true,
+    },
+    {
+      key: "deviceId",
+      label: "设备编号",
+      filterType: "text",
+      tone: "muted",
+      format: "numeric",
+      cellClass: "whitespace-nowrap",
       sort: true,
     },
     {
@@ -132,30 +149,38 @@ const schema: TablePageSchema<MonitoringDeviceRecord> = {
       label: "状态",
       filterType: "tag",
       cellRenderer: monitoringStatusRenderer,
+      cellClass: "whitespace-nowrap",
       sort: true,
     },
     {
       key: "platform",
       label: "平台",
       filterType: "tag",
+      cellClass: "whitespace-nowrap",
       sort: true,
     },
     {
       key: "customerName",
       label: "客户",
       filterType: "text",
+      slot: "cell-customerName",
+      cellClass: "whitespace-nowrap",
       sort: true,
     },
     {
       key: "parkName",
       label: "园区",
       filterType: "text",
+      slot: "cell-parkName",
+      cellClass: "whitespace-nowrap",
       sort: true,
     },
     {
       key: "buildingName",
-      label: "位置",
+      label: "建筑",
       filterType: "text",
+      slot: "cell-buildingName",
+      cellClass: "whitespace-nowrap",
       sort: true,
     },
     {
@@ -164,6 +189,7 @@ const schema: TablePageSchema<MonitoringDeviceRecord> = {
       filterType: "time",
       tone: "muted",
       format: "numeric",
+      cellClass: "whitespace-nowrap",
       sort: true,
     },
   ],
@@ -184,10 +210,86 @@ const page = useTablePage({
 })
 page.showControls.value = true
 
+onMounted(() => {
+  void loadMonitoringAssets()
+})
+
+async function loadMonitoringAssets() {
+  const requestId = ++latestRequestId
+  loading.value = true
+  errorMessage.value = ""
+
+  try {
+    const devices = await fetchMonitoringAssetDevices()
+
+    if (requestId !== latestRequestId) {
+      return
+    }
+
+    monitoringRows.value = devices
+  }
+  catch (error) {
+    if (requestId !== latestRequestId) {
+      return
+    }
+
+    monitoringRows.value = []
+    errorMessage.value = handleApiError(error, {
+      title: "监控资产加载失败",
+      fallback: "监控资产加载失败，请稍后重试。",
+    })
+  }
+  finally {
+    if (requestId === latestRequestId) {
+      loading.value = false
+    }
+  }
+}
+
 function openMonitoringDetail(row: MonitoringDeviceRecord) {
   void router.push({
     name: "monitoring-detail",
     params: { id: row.id },
+  })
+}
+
+function jumpToCustomerDetail(row: Record<string, unknown>) {
+  const currentRow = row as MonitoringDeviceRecord
+  if (!currentRow.customerUuid) {
+    return
+  }
+
+  void router.push({
+    name: "customer-detail",
+    params: { id: currentRow.customerUuid },
+  })
+}
+
+function jumpToParkDetail(row: Record<string, unknown>) {
+  const currentRow = row as MonitoringDeviceRecord
+  if (!currentRow.parkUuid) {
+    return
+  }
+
+  void router.push({
+    name: "park-detail",
+    params: { id: currentRow.parkUuid },
+  })
+}
+
+function jumpToBuildingDetail(row: Record<string, unknown>) {
+  const currentRow = row as MonitoringDeviceRecord
+  if (!currentRow.buildingUuid) {
+    return
+  }
+
+  void router.push({
+    name: "building-detail",
+    params: { id: currentRow.buildingUuid },
+    query: {
+      parkUuid: currentRow.parkUuid || undefined,
+      customerUuid: currentRow.customerUuid || undefined,
+    },
   })
 }
 
@@ -212,16 +314,71 @@ function handleQueryClear() {
   selectedPlatforms.value = []
   selectedStatuses.value = []
 }
+
 </script>
 
 <template>
   <section class="flex min-h-0 flex-1 flex-col">
+    <div v-if="errorMessage" class="px-4 pb-3 pt-3">
+      <Alert variant="destructive">
+        <AlertTitle>监控资产加载失败</AlertTitle>
+        <AlertDescription class="flex flex-wrap items-center gap-3">
+          <span>{{ errorMessage }}</span>
+          <Button size="sm" variant="outline" class="gap-2" @click="loadMonitoringAssets">
+            <i class="ri-refresh-line text-sm" />
+            重试
+          </Button>
+        </AlertDescription>
+      </Alert>
+    </div>
+
     <TablePage
       :page="page"
+      :loading="loading"
       :query-bar="queryBar"
       fill-available-height
+      @refresh-action="loadMonitoringAssets"
       @query-change="handleQueryChange"
       @query-clear="handleQueryClear"
-    />
+    >
+      <template #cell-customerName="{ row }">
+        <button
+          v-if="row.customerUuid"
+          type="button"
+          class="inline-flex max-w-full items-center gap-1 text-left text-link transition-colors hover:text-link-hover"
+          @click.stop="jumpToCustomerDetail(row)"
+        >
+          <span class="truncate">{{ row.customerName }}</span>
+          <i class="ri-arrow-right-up-line shrink-0 text-sm" />
+        </button>
+        <span v-else class="truncate text-muted-foreground">{{ row.customerName }}</span>
+      </template>
+
+      <template #cell-parkName="{ row }">
+        <button
+          v-if="row.parkUuid"
+          type="button"
+          class="inline-flex max-w-full items-center gap-1 text-left text-link transition-colors hover:text-link-hover"
+          @click.stop="jumpToParkDetail(row)"
+        >
+          <span class="truncate">{{ row.parkName }}</span>
+          <i class="ri-arrow-right-up-line shrink-0 text-sm" />
+        </button>
+        <span v-else class="truncate text-muted-foreground">{{ row.parkName }}</span>
+      </template>
+
+      <template #cell-buildingName="{ row }">
+        <button
+          v-if="row.buildingUuid"
+          type="button"
+          class="inline-flex max-w-full items-center gap-1 text-left text-link transition-colors hover:text-link-hover"
+          @click.stop="jumpToBuildingDetail(row)"
+        >
+          <span class="truncate">{{ row.buildingName }}</span>
+          <i class="ri-arrow-right-up-line shrink-0 text-sm" />
+        </button>
+        <span v-else class="truncate text-muted-foreground">{{ row.buildingName }}</span>
+      </template>
+    </TablePage>
   </section>
 </template>
