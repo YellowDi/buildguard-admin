@@ -43,15 +43,15 @@ watch(() => props.modelValue, (value) => {
 <template>
   <div
     data-slot="command-input-wrapper"
-    class="flex h-9 items-center gap-2 border-b px-3"
+    class="flex h-12 items-center gap-3 border-b px-4"
   >
-    <i class="ri-search-line shrink-0 text-base leading-none opacity-50" />
+    <i class="ri-search-line shrink-0 text-lg leading-none opacity-50" />
     <ListboxFilter
       v-bind="{ ...forwardedProps, ...$attrs }"
       v-model="searchValue"
       data-slot="command-input"
       auto-focus
-      :class="cn('placeholder:text-muted-foreground flex h-10 w-full rounded-md bg-transparent py-3 text-sm outline-hidden disabled:cursor-not-allowed disabled:opacity-50', props.class)"
+      :class="cn('placeholder:text-muted-foreground flex h-12 w-full rounded-md bg-transparent py-3 text-[15px] outline-hidden disabled:cursor-not-allowed disabled:opacity-50', props.class)"
     />
   </div>
 </template>
