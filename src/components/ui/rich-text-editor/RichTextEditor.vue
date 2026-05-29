@@ -4,6 +4,11 @@ import { computed, nextTick, ref, watch } from "vue"
 
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select"
+import {
+  isSafeRichTextImageUrl,
+  isSafeRichTextLinkUrl,
+  sanitizeRichTextHtml,
+} from "@/lib/sanitize-html"
 import { cn } from "@/lib/utils"
 
 type UploadImageHandler = (file: File) => Promise<string> | string
@@ -37,50 +42,24 @@ const blockOptions = [
   { value: "h6", label: "Heading 6", icon: "ri-h-6" },
 ]
 const selectedBlockOption = computed(() => blockOptions.find((option) => option.value === selectedBlock.value) ?? blockOptions[0])
-const allowedPasteTags = new Set([
-  "A",
-  "B",
-  "BLOCKQUOTE",
-  "BR",
-  "CODE",
-  "DIV",
-  "EM",
-  "H1",
-  "H2",
-  "H3",
-  "H4",
-  "H5",
-  "H6",
-  "I",
-  "IMG",
-  "LI",
-  "OL",
-  "P",
-  "PRE",
-  "S",
-  "SPAN",
-  "STRONG",
-  "U",
-  "UL",
-])
-const removedPasteTags = new Set(["IFRAME", "LINK", "META", "OBJECT", "SCRIPT", "STYLE", "SVG"])
-
 watch(
   () => props.modelValue,
   async (value) => {
     await nextTick()
     const editor = editorRef.value
-    if (!editor || focused.value || editor.innerHTML === value) {
+    const sanitizedValue = sanitizeRichTextHtml(value || "")
+
+    if (!editor || focused.value || editor.innerHTML === sanitizedValue) {
       return
     }
 
-    editor.innerHTML = value || ""
+    editor.innerHTML = sanitizedValue
   },
   { immediate: true },
 )
 
 function syncValue() {
-  emit("update:modelValue", editorRef.value?.innerHTML ?? "")
+  emit("update:modelValue", sanitizeRichTextHtml(editorRef.value?.innerHTML ?? ""))
 }
 
 function focusEditor() {
@@ -151,11 +130,13 @@ function applyBlock(value: string | number | bigint | boolean | Record<string, u
 
 function applyLink() {
   const url = window.prompt("输入链接地址")
-  if (!url?.trim()) {
+  const normalizedUrl = url?.trim() ?? ""
+
+  if (!normalizedUrl || !isSafeRichTextLinkUrl(normalizedUrl)) {
     return
   }
 
-  runCommand("createLink", url.trim())
+  runCommand("createLink", normalizedUrl)
 }
 
 function triggerImageSelect() {
@@ -200,17 +181,17 @@ async function handlePaste(event: ClipboardEvent) {
   const text = event.clipboardData?.getData("text/plain") ?? ""
 
   if (looksLikeHtml(text) && (!looksLikeHtml(html) || html.includes("&lt;"))) {
-    insertHtml(sanitizePastedHtml(text))
+    insertHtml(sanitizeRichTextHtml(text))
     return
   }
 
   if (html.trim()) {
-    insertHtml(sanitizePastedHtml(html))
+    insertHtml(sanitizeRichTextHtml(html))
     return
   }
 
   if (looksLikeHtml(text)) {
-    insertHtml(sanitizePastedHtml(text))
+    insertHtml(sanitizeRichTextHtml(text))
     return
   }
 
@@ -227,8 +208,9 @@ async function insertUploadedImage(file: File) {
 
   try {
     const imageUrl = await props.uploadImage(file)
-    if (imageUrl.trim()) {
-      runCommand("insertImage", imageUrl.trim())
+    const normalizedImageUrl = imageUrl.trim()
+    if (normalizedImageUrl && isSafeRichTextImageUrl(normalizedImageUrl)) {
+      runCommand("insertImage", normalizedImageUrl)
     }
   } catch (error) {
     console.error(error)
@@ -242,83 +224,14 @@ function insertHtml(html: string) {
     return
   }
 
-  document.execCommand("insertHTML", false, html)
+  document.execCommand("insertHTML", false, sanitizeRichTextHtml(html))
   syncValue()
-}
-
-function sanitizePastedHtml(html: string) {
-  const template = document.createElement("template")
-  template.innerHTML = html
-  sanitizePastedNode(template.content)
-  return template.innerHTML
-}
-
-function sanitizePastedNode(parent: ParentNode) {
-  for (const node of Array.from(parent.childNodes)) {
-    if (!(node instanceof HTMLElement)) {
-      continue
-    }
-
-    const tagName = node.tagName
-    if (removedPasteTags.has(tagName)) {
-      node.remove()
-      continue
-    }
-
-    if (!allowedPasteTags.has(tagName)) {
-      node.replaceWith(...Array.from(node.childNodes))
-      sanitizePastedNode(parent)
-      continue
-    }
-
-    sanitizePastedElement(node)
-    sanitizePastedNode(node)
-  }
-}
-
-function sanitizePastedElement(element: HTMLElement) {
-  const href = element instanceof HTMLAnchorElement ? element.getAttribute("href") ?? "" : ""
-  const src = element instanceof HTMLImageElement ? element.getAttribute("src") ?? "" : ""
-
-  for (const attribute of Array.from(element.attributes)) {
-    element.removeAttribute(attribute.name)
-  }
-
-  if (element instanceof HTMLAnchorElement) {
-    if (isSafeUrl(href)) {
-      element.setAttribute("href", href)
-      element.setAttribute("target", "_blank")
-      element.setAttribute("rel", "noopener noreferrer")
-    }
-  }
-
-  if (element instanceof HTMLImageElement) {
-    if (isSafeImageSrc(src)) {
-      element.setAttribute("src", src)
-      element.setAttribute("alt", "")
-    } else {
-      element.remove()
-    }
-  }
 }
 
 function looksLikeHtml(value: string) {
   return /<\/?(p|h[1-6]|blockquote|ul|ol|li|strong|em|b|i|u|s|a|pre|code|div|span|br|img)\b/i.test(value)
 }
 
-function isSafeUrl(value: string) {
-  const normalized = value.trim().toLowerCase()
-  return Boolean(normalized)
-    && !normalized.startsWith("javascript:")
-    && !normalized.startsWith("data:")
-    && !normalized.startsWith("vbscript:")
-}
-
-function isSafeImageSrc(value: string) {
-  const normalized = value.trim().toLowerCase()
-  return normalized.startsWith("http://")
-    || normalized.startsWith("https://")
-}
 </script>
 
 <template>

@@ -80,6 +80,7 @@ import {
   updateMediaVideo,
 } from "@/lib/media-videos-api"
 import { PERMISSION_CODES } from "@/lib/permission-codes"
+import { sanitizeRichTextHtml } from "@/lib/sanitize-html"
 import { uploadTencentCosFile } from "@/lib/tencent-cos-sdk"
 
 type SheetMode = "preview" | "edit" | "create"
@@ -1926,14 +1927,14 @@ function renderArticleContentHtml(value: string) {
   }
 
   if (looksLikeHtml(normalized)) {
-    return normalized
+    return sanitizeRichTextHtml(normalized) || "<p>暂无正文。</p>"
   }
 
-  return renderPlainTextContent(normalized)
+  return sanitizeRichTextHtml(renderPlainTextContent(normalized)) || "<p>暂无正文。</p>"
 }
 
 function normalizeRichTextContent(value: string) {
-  const normalized = value.trim()
+  const normalized = sanitizeRichTextHtml(value)
   return normalized || "<p>暂无正文。</p>"
 }
 
