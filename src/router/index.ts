@@ -140,6 +140,34 @@ const router = createRouter({
           } satisfies RouteMetaConfig,
         },
         {
+          path: "monitoring/create",
+          name: "monitoring-create",
+          component: () => import("@/views/form/MonitoringDeviceFormView.vue"),
+          meta: {
+            title: "添加监控设备",
+            loading: "form",
+            navActivePath: "/monitoring",
+            breadcrumb: [
+              { title: "监控", to: "monitoring" },
+              { title: "添加监控设备" },
+            ] satisfies BreadcrumbMetaItem[],
+          } satisfies RouteMetaConfig,
+        },
+        {
+          path: "monitoring/:id/edit",
+          name: "monitoring-edit",
+          component: () => import("@/views/form/MonitoringDeviceFormView.vue"),
+          meta: {
+            title: "编辑监控设备",
+            loading: "form",
+            navActivePath: "/monitoring",
+            breadcrumb: [
+              { title: "监控", to: "monitoring" },
+              { title: "编辑监控设备" },
+            ] satisfies BreadcrumbMetaItem[],
+          } satisfies RouteMetaConfig,
+        },
+        {
           path: "monitoring/:id",
           name: "monitoring-detail",
           component: () => import("@/views/detail/MonitoringDetailView.vue"),

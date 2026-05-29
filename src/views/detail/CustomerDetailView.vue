@@ -2252,7 +2252,17 @@ async function submitCustomerWorkOrderAssign() {
 }
 
 function handleAddMonitoring() {
-  toast.info("监控添加功能暂不可用")
+  if (!customerUuid.value) {
+    return
+  }
+
+  void router.push({
+    name: "monitoring-create",
+    query: {
+      customerUuid: customerUuid.value,
+      customerName: toDisplayText(customer.value?.CorpName, "当前客户"),
+    },
+  })
 }
 
 function handleEditMonitoring(row: MonitoringRow) {

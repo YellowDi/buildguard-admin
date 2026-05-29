@@ -18,6 +18,7 @@ export type MonitoringDeviceRecord = {
   streamUrl: string
   fallbackStreamUrl: string
   lastOnlineAt: string
+  remark?: string
 }
 
 export type MonitoringLinkedAsset = {
@@ -171,7 +172,37 @@ export const monitoringStatusOptions = [
 ]
 
 export function getMonitoringDeviceById(id: string) {
-  return monitoringDevices.find(device => device.id === id) ?? null
+  return readMonitoringLocalDevices().find(device => device.id === id)
+    ?? monitoringDevices.find(device => device.id === id)
+    ?? null
+}
+
+export function mergeMonitoringLocalDevices(devices: MonitoringDeviceRecord[]) {
+  const deviceMap = new Map(devices.map(device => [device.id, device]))
+
+  for (const device of readMonitoringLocalDevices()) {
+    deviceMap.set(device.id, device)
+  }
+
+  return Array.from(deviceMap.values())
+}
+
+export function saveMonitoringLocalDevice(device: MonitoringDeviceRecord) {
+  const devices = readMonitoringLocalDevices()
+  const nextDevice = normalizeMonitoringDeviceRecord(device)
+  const existingIndex = devices.findIndex(item => item.id === nextDevice.id)
+
+  if (existingIndex >= 0) {
+    devices.splice(existingIndex, 1, nextDevice)
+  } else {
+    devices.push(nextDevice)
+  }
+
+  writeMonitoringLocalDevices(devices)
+}
+
+export function createMonitoringLocalDeviceId() {
+  return `mon-local-${Date.now().toString(36)}`
 }
 
 export function buildMonitoringDevicesFromLinkedAssets(assets: MonitoringLinkedAsset[]): MonitoringDeviceRecord[] {
@@ -216,4 +247,89 @@ export function buildMonitoringSearchText(device: MonitoringDeviceRecord) {
 function getMockLastOnlineAt(index: number) {
   const minute = Math.max(0, 20 - (index * 7) % 58)
   return `2026-05-29 ${String(14 - (index % 4)).padStart(2, "0")}:${String(minute).padStart(2, "0")}`
+}
+
+const MONITORING_LOCAL_STORAGE_KEY = "buildguard.monitoring.local-devices"
+
+function readMonitoringLocalDevices(): MonitoringDeviceRecord[] {
+  if (typeof window === "undefined") {
+    return []
+  }
+
+  try {
+    const rawValue = window.localStorage.getItem(MONITORING_LOCAL_STORAGE_KEY)
+    const parsedValue = rawValue ? JSON.parse(rawValue) : []
+
+    if (!Array.isArray(parsedValue)) {
+      return []
+    }
+
+    return parsedValue
+      .map(item => normalizeMonitoringDeviceRecord(item))
+      .filter(device => device.id && device.deviceName && device.deviceId)
+  } catch {
+    return []
+  }
+}
+
+function writeMonitoringLocalDevices(devices: MonitoringDeviceRecord[]) {
+  if (typeof window === "undefined") {
+    return
+  }
+
+  window.localStorage.setItem(MONITORING_LOCAL_STORAGE_KEY, JSON.stringify(devices))
+}
+
+function normalizeMonitoringDeviceRecord(value: unknown): MonitoringDeviceRecord {
+  const source: Record<string, unknown> = isRecord(value) ? value : {}
+  const status = normalizeMonitoringDeviceStatus(source.status)
+
+  return {
+    id: normalizeText(source.id),
+    deviceName: normalizeText(source.deviceName),
+    platform: normalizeText(source.platform),
+    deviceId: normalizeText(source.deviceId),
+    customerUuid: normalizeText(source.customerUuid),
+    customerName: normalizeText(source.customerName, "未关联客户"),
+    parkUuid: normalizeText(source.parkUuid),
+    parkName: normalizeText(source.parkName, "未关联园区"),
+    buildingUuid: normalizeText(source.buildingUuid),
+    buildingName: normalizeText(source.buildingName, "未关联建筑"),
+    status,
+    statusLabel: getMonitoringStatusLabel(status),
+    streamUrl: normalizeText(source.streamUrl, MONITORING_PRIMARY_STREAM_URL),
+    fallbackStreamUrl: normalizeText(source.fallbackStreamUrl, MONITORING_FALLBACK_STREAM_URL),
+    lastOnlineAt: normalizeText(source.lastOnlineAt, "-"),
+    remark: normalizeText(source.remark),
+  }
+}
+
+function normalizeMonitoringDeviceStatus(value: unknown): MonitoringDeviceStatus {
+  if (value === "online" || value === "unstable" || value === "offline") {
+    return value
+  }
+
+  return "online"
+}
+
+function getMonitoringStatusLabel(status: MonitoringDeviceStatus) {
+  if (status === "online") return "在线"
+  if (status === "unstable") return "波动"
+  return "离线"
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === "object")
+}
+
+function normalizeText(value: unknown, fallback = "") {
+  if (typeof value === "string") {
+    return value.trim() || fallback
+  }
+
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return String(value)
+  }
+
+  return fallback
 }

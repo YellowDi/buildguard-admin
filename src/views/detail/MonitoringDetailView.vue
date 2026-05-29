@@ -171,6 +171,18 @@ function retryPlayer() {
   playerRef.value?.retryPrimaryStream()
 }
 
+function goToEdit() {
+  const current = device.value
+  if (!current) {
+    return
+  }
+
+  void router.push({
+    name: "monitoring-edit",
+    params: { id: current.id },
+  })
+}
+
 async function copyText(value: string, label: string) {
   const normalized = value.trim()
   if (!normalized) {
@@ -216,6 +228,16 @@ function copyActiveStreamUrl() {
   >
     <template #headerActions>
       <template v-if="device">
+        <Button
+          variant="outline"
+          size="sm"
+          class="h-8 gap-1 px-3 text-[14px] font-medium"
+          type="button"
+          @click="goToEdit"
+        >
+          <i class="ri-edit-line text-base" />
+          编辑
+        </Button>
         <Button
           variant="outline"
           size="sm"

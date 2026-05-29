@@ -107,6 +107,7 @@ const schema: TablePageSchema<MonitoringDeviceRecord> = {
   description: "查看监控设备清单，先用公开测试流完成前端播放和查看流程。",
   rowKey: "id",
   data: [],
+  primaryActionLabel: "添加监控",
   showIndex: true,
   stickyHeader: true,
   tableClass: "whitespace-nowrap",
@@ -116,6 +117,12 @@ const schema: TablePageSchema<MonitoringDeviceRecord> = {
     icon: "ri-webcam-line",
   },
   rowActions: [
+    {
+      key: "edit-monitoring",
+      label: "编辑",
+      icon: "ri-edit-line",
+      onClick: row => openMonitoringEdit(row as MonitoringDeviceRecord),
+    },
     {
       key: "view-monitoring",
       label: "查看",
@@ -253,6 +260,17 @@ function openMonitoringDetail(row: MonitoringDeviceRecord) {
   })
 }
 
+function openMonitoringEdit(row: MonitoringDeviceRecord) {
+  void router.push({
+    name: "monitoring-edit",
+    params: { id: row.id },
+  })
+}
+
+function handleCreateMonitoring() {
+  void router.push({ name: "monitoring-create" })
+}
+
 function jumpToCustomerDetail(row: Record<string, unknown>) {
   const currentRow = row as MonitoringDeviceRecord
   if (!currentRow.customerUuid) {
@@ -338,6 +356,7 @@ function handleQueryClear() {
       :query-bar="queryBar"
       fill-available-height
       @refresh-action="loadMonitoringAssets"
+      @primary-action="handleCreateMonitoring"
       @query-change="handleQueryChange"
       @query-clear="handleQueryClear"
     >

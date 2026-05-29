@@ -1,6 +1,11 @@
 import { fetchBuildings, type BuildingListItem } from "@/lib/buildings-api"
 import { fetchCustomers, type CustomerListItem } from "@/lib/customers-api"
-import { buildMonitoringDevicesFromLinkedAssets, type MonitoringDeviceRecord, type MonitoringLinkedAsset } from "@/lib/monitoring-mock"
+import {
+  buildMonitoringDevicesFromLinkedAssets,
+  mergeMonitoringLocalDevices,
+  type MonitoringDeviceRecord,
+  type MonitoringLinkedAsset,
+} from "@/lib/monitoring-mock"
 import { fetchParks, type ParkListItem } from "@/lib/parks-api"
 
 const MONITORING_ASSET_PAGE_SIZE = 500
@@ -16,11 +21,13 @@ export async function fetchMonitoringAssetDevices(): Promise<MonitoringDeviceRec
     throw buildingsResult.reason
   }
 
-  return buildMonitoringDevicesFromLinkedAssets(
-    buildMonitoringLinkedAssets(
-      buildingsResult.value.list,
-      parksResult.status === "fulfilled" ? parksResult.value.list : [],
-      customersResult.status === "fulfilled" ? customersResult.value.list : [],
+  return mergeMonitoringLocalDevices(
+    buildMonitoringDevicesFromLinkedAssets(
+      buildMonitoringLinkedAssets(
+        buildingsResult.value.list,
+        parksResult.status === "fulfilled" ? parksResult.value.list : [],
+        customersResult.status === "fulfilled" ? customersResult.value.list : [],
+      ),
     ),
   )
 }
