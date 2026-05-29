@@ -42,7 +42,7 @@ const emit = defineEmits<{
     </RouterLink>
   </div>
 
-  <div class="p-2">
+  <div class="py-2 pr-2 pl-[13px]">
     <div class="flex items-center gap-1">
       <TopTabSwitch
         :tabs="props.tabs"
