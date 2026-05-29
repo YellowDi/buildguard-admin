@@ -83,7 +83,7 @@ const detailSections = computed<DetailFieldSection[]>(() => {
     },
     {
       key: "location",
-      title: "关联位置",
+      title: "客户信息",
       rows: [
         { key: "customerName", label: "客户", value: current.customerName },
         { key: "parkName", label: "园区", value: current.parkName },
@@ -253,7 +253,7 @@ function copyActiveStreamUrl() {
       <aside v-if="device" class="space-y-4 pb-6">
         <DetailFieldSections
           :sections="detailSections"
-          compact
+          use-title-block
           label-width-mobile="5.5rem"
           label-width-desktop="6rem"
         />
