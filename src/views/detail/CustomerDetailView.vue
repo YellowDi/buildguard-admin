@@ -2488,7 +2488,6 @@ async function submitSubAccountCreate() {
       id: result.Uuid?.trim() || `${payload.CustomerUuid}-sub-account-${Date.now()}`,
       username: payload.Name,
       account: payload.Account,
-      password: payload.Password,
       phone: payload.Phone,
     })
 

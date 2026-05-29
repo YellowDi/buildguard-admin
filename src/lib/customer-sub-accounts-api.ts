@@ -50,7 +50,6 @@ export type CustomerSubAccountLocalRecord = {
   id: string
   username: string
   account: string
-  password: string
   phone: string
 }
 
@@ -253,9 +252,17 @@ function readStorageRecord() {
 
   try {
     const parsed = JSON.parse(rawValue) as unknown
-    return isStorageRecord(parsed)
-      ? parsed
-      : {} as Record<string, CustomerSubAccountLocalRecord[]>
+    if (!isStorageRecord(parsed)) {
+      return {} as Record<string, CustomerSubAccountLocalRecord[]>
+    }
+
+    const sanitizedStorage = sanitizeStorageRecord(parsed)
+
+    if (hasLegacyPasswordField(parsed)) {
+      window.sessionStorage.setItem(CUSTOMER_SUB_ACCOUNT_STORAGE_KEY, JSON.stringify(sanitizedStorage))
+    }
+
+    return sanitizedStorage
   } catch {
     return {} as Record<string, CustomerSubAccountLocalRecord[]>
   }
@@ -392,7 +399,28 @@ function isCustomerSubAccountLocalRecord(value: unknown): value is CustomerSubAc
 
   const record = value as Record<string, unknown>
 
-  return ["id", "username", "account", "password", "phone"].every(key =>
+  return ["id", "username", "account", "phone"].every(key =>
     typeof record[key] === "string",
+  )
+}
+
+function sanitizeStorageRecord(value: Record<string, CustomerSubAccountLocalRecord[]>) {
+  const sanitized: Record<string, CustomerSubAccountLocalRecord[]> = {}
+
+  for (const [customerUuid, records] of Object.entries(value)) {
+    sanitized[customerUuid] = records.filter(isCustomerSubAccountLocalRecord).map(record => ({
+      id: record.id,
+      username: record.username,
+      account: record.account,
+      phone: record.phone,
+    }))
+  }
+
+  return sanitized
+}
+
+function hasLegacyPasswordField(value: Record<string, CustomerSubAccountLocalRecord[]>) {
+  return Object.values(value).some(records =>
+    records.some(record => "password" in record),
   )
 }

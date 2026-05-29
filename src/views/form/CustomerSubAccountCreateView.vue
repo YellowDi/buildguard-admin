@@ -153,7 +153,6 @@ async function handleSubmit() {
       id: result.Uuid?.trim() || `${payload.CustomerUuid}-sub-account-${Date.now()}`,
       username: payload.Name,
       account: payload.Account,
-      password: payload.Password,
       phone: payload.Phone,
     })
 
@@ -377,6 +376,8 @@ watch(
               id="sub-account-password"
               v-model="form.password"
               required
+              type="password"
+              autocomplete="new-password"
               placeholder="请输入密码"
               class="w-full"
               @focus="handleFocus('section-password')"
