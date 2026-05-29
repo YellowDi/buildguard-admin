@@ -240,36 +240,6 @@ function copyActiveStreamUrl() {
           @source-change="handleSourceChange"
         />
 
-        <div class="grid gap-3 sm:grid-cols-3">
-          <section class="rounded-md border border-border bg-surface-tertiary p-3">
-            <div class="flex items-center gap-2 text-xs text-muted-foreground">
-              <i class="ri-base-station-line text-sm" />
-              平台
-            </div>
-            <p class="mt-2 truncate text-sm font-medium text-foreground">{{ device.platform }}</p>
-          </section>
-          <section class="rounded-md border border-border bg-surface-tertiary p-3">
-            <div class="flex items-center gap-2 text-xs text-muted-foreground">
-              <i class="ri-pulse-line text-sm" />
-              状态
-            </div>
-            <div class="mt-2">
-              <StatusBadge
-                :label="deviceStatusBadge.label"
-                :tone="deviceStatusBadge.tone"
-                :icon="deviceStatusBadge.icon"
-              />
-            </div>
-          </section>
-          <section class="rounded-md border border-border bg-surface-tertiary p-3">
-            <div class="flex items-center gap-2 text-xs text-muted-foreground">
-              <i class="ri-route-line text-sm" />
-              当前源
-            </div>
-            <p class="mt-2 truncate text-sm font-medium text-foreground">{{ activeSourceLabel }}</p>
-          </section>
-        </div>
-
         <section class="rounded-md border border-brand-border bg-brand-surface px-4 py-3 text-sm leading-6 text-foreground">
           当前画面使用公开 HLS 测试流验证前端播放流程；后续后端接入客户平台后，页面只需要替换设备流地址来源。
         </section>
