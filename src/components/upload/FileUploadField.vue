@@ -113,12 +113,12 @@ function handleDrop(event: DragEvent) {
       @change="handleInputChange"
     >
 
-    <div class="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-      <div class="flex min-w-0 gap-3">
+    <div class="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+      <div class="flex min-w-0 flex-1 gap-3 overflow-hidden">
         <div class="flex size-10 shrink-0 items-center justify-center rounded-md border border-border/70 bg-muted/35 text-muted-foreground">
           <i :class="cn(resolvedIcon, 'text-[20px]')" />
         </div>
-        <div class="min-w-0 pt-0.5">
+        <div class="min-w-0 flex-1 pt-0.5">
           <p class="text-sm font-medium text-foreground">
             {{ title }}
           </p>
@@ -127,7 +127,7 @@ function handleDrop(event: DragEvent) {
           </p>
           <p
             v-if="selectedLabel"
-            class="mt-1 min-w-0 truncate text-xs leading-5 text-muted-foreground"
+            class="mt-1 block min-w-0 max-w-full truncate text-xs leading-5 text-muted-foreground"
             :title="selectedLabel"
           >
             {{ selectedLabel }}

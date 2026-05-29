@@ -2169,12 +2169,12 @@ async function submitAssign() {
                   @files-selected="files => { void handleRepairReviewVideoFiles(files) }"
                 >
                   <template v-if="repairReviewVideoUrl" #preview>
-                    <div class="flex min-w-0 items-center justify-between gap-3 rounded-md bg-background px-3 py-2">
-                      <div class="min-w-0">
-                        <p class="truncate text-xs font-medium text-foreground">
+                    <div class="flex w-full min-w-0 max-w-full items-center justify-between gap-3 overflow-hidden rounded-md bg-background px-3 py-2">
+                      <div class="min-w-0 flex-1 overflow-hidden">
+                        <p class="block min-w-0 max-w-full truncate text-xs font-medium text-foreground">
                           {{ repairReviewVideoFileName || "复核视频" }}
                         </p>
-                        <p class="mt-0.5 truncate text-xs text-muted-foreground">
+                        <p class="mt-0.5 block min-w-0 max-w-full truncate text-xs text-muted-foreground">
                           {{ repairReviewVideoUrl }}
                         </p>
                       </div>
