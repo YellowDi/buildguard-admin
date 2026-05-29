@@ -91,6 +91,7 @@ type NewVideoSourceForm = {
   categoryId: string
   videoIds: string[]
 }
+type AppHomeMediaOptionKind = "video" | "article"
 
 const MEDIA_OPTION_PAGE_SIZE = 500
 const MEDIA_CONTENT_PAGE_SIZE = 500
@@ -111,6 +112,14 @@ const mediaState = reactive<{
   articleCategories: [],
   videoItems: [],
   articleItems: [],
+})
+const mediaOptionsLoaded = reactive<Record<AppHomeMediaOptionKind, boolean>>({
+  video: false,
+  article: false,
+})
+const mediaOptionsLoading = reactive<Record<AppHomeMediaOptionKind, boolean>>({
+  video: false,
+  article: false,
 })
 const modules = ref<AppHomeModule[]>([])
 const selectedModuleId = ref(modules.value[0]?.id ?? "")
@@ -134,6 +143,7 @@ const draggingId = ref("")
 const draggingTarget = ref<DragTarget | "">("")
 const dragOverId = ref("")
 const videoSourceForms = reactive<Record<string, NewVideoSourceForm>>({})
+const mediaOptionLoadPromises: Partial<Record<AppHomeMediaOptionKind, Promise<void>>> = {}
 
 const orderedModules = computed(() => [...modules.value].sort(compareBySortOrder))
 const enabledModules = computed(() => orderedModules.value.filter(module => module.enabled))
@@ -222,6 +232,10 @@ watch(selectedVideoModule, (module) => {
   }
 }, { immediate: true })
 
+watch(selectedModule, (module) => {
+  void ensureMediaOptionsForModule(module)
+}, { immediate: true })
+
 watch(selectedVideoCategories, (categories) => {
   for (const category of categories) {
     ensureVideoSourceForm(category.id)
@@ -231,30 +245,15 @@ watch(selectedVideoCategories, (categories) => {
 async function loadInitialData(options: { silent?: boolean } = {}) {
   loading.value = true
   try {
-    const [
-      videoCategoryResult,
-      articleCategoryResult,
-      videoResult,
-      articleResult,
-      contentResult,
-    ] = await Promise.all([
-      fetchMediaTypes({ Type: 1, PageNum: 1, PageSize: MEDIA_OPTION_PAGE_SIZE }),
-      fetchMediaTypes({ Type: 2, PageNum: 1, PageSize: MEDIA_OPTION_PAGE_SIZE }),
-      fetchMediaVideos({ PageNum: 1, PageSize: MEDIA_OPTION_PAGE_SIZE }),
-      fetchMediaArticles({ PageNum: 1, PageSize: MEDIA_OPTION_PAGE_SIZE }),
-      fetchMediaContents({ PageNum: 1, PageSize: MEDIA_CONTENT_PAGE_SIZE }),
-    ])
+    const contentResult = await fetchMediaContents({ PageNum: 1, PageSize: MEDIA_CONTENT_PAGE_SIZE })
 
-    mediaState.videoCategories = normalizeMediaCategoryTree(videoCategoryResult.list)
-    mediaState.articleCategories = normalizeMediaCategoryTree(articleCategoryResult.list)
-    mediaState.videoItems = videoResult.list.map((item, index) => normalizeMediaVideo(item, index))
-    mediaState.articleItems = articleResult.list.map((item, index) => normalizeMediaArticle(item, index))
     persistedModuleIds.value = new Set()
     persistedCategoryIds.value = new Set()
     articleCategoryIds.value = new Map()
     clearVideoSourceForms()
     modules.value = normalizeModuleOrders(contentResult.list.map(normalizeMediaContent).filter((item): item is AppHomeModule => item !== null))
     selectedModuleId.value = selectedModule.value?.id ?? modules.value[0]?.id ?? ""
+    await ensureMediaOptionsForModule(selectedModule.value)
     syncMediaOptionDefaults()
     syncHomeMediaReferences()
     return true
@@ -272,12 +271,73 @@ async function loadInitialData(options: { silent?: boolean } = {}) {
   }
 }
 
+async function ensureMediaOptionsForModule(module: AppHomeModule | null) {
+  if (!module) {
+    return
+  }
+
+  await ensureMediaOptions(module.type)
+}
+
+async function ensureMediaOptions(kind: AppHomeMediaOptionKind) {
+  if (mediaOptionsLoaded[kind]) {
+    return
+  }
+
+  if (mediaOptionLoadPromises[kind]) {
+    return mediaOptionLoadPromises[kind]
+  }
+
+  const promise = loadMediaOptions(kind).finally(() => {
+    delete mediaOptionLoadPromises[kind]
+  })
+  mediaOptionLoadPromises[kind] = promise
+
+  return promise
+}
+
+async function loadMediaOptions(kind: AppHomeMediaOptionKind) {
+  mediaOptionsLoading[kind] = true
+
+  try {
+    if (kind === "video") {
+      const [categoryResult, videoResult] = await Promise.all([
+        fetchMediaTypes({ Type: 1, PageNum: 1, PageSize: MEDIA_OPTION_PAGE_SIZE }),
+        fetchMediaVideos({ PageNum: 1, PageSize: MEDIA_OPTION_PAGE_SIZE }),
+      ])
+
+      mediaState.videoCategories = normalizeMediaCategoryTree(categoryResult.list)
+      mediaState.videoItems = videoResult.list.map((item, index) => normalizeMediaVideo(item, index))
+    } else {
+      const [categoryResult, articleResult] = await Promise.all([
+        fetchMediaTypes({ Type: 2, PageNum: 1, PageSize: MEDIA_OPTION_PAGE_SIZE }),
+        fetchMediaArticles({ PageNum: 1, PageSize: MEDIA_OPTION_PAGE_SIZE }),
+      ])
+
+      mediaState.articleCategories = normalizeMediaCategoryTree(categoryResult.list)
+      mediaState.articleItems = articleResult.list.map((item, index) => normalizeMediaArticle(item, index))
+    }
+
+    mediaOptionsLoaded[kind] = true
+    syncMediaOptionDefaults()
+    syncHomeMediaReferences()
+  } catch (error) {
+    handleApiError(error, {
+      title: kind === "video" ? "视频选项加载失败" : "文章选项加载失败",
+      fallback: kind === "video" ? "视频选项加载失败，请稍后重试。" : "文章选项加载失败，请稍后重试。",
+    })
+  } finally {
+    mediaOptionsLoading[kind] = false
+  }
+}
+
 function openModule(moduleId: string) {
   selectedModuleId.value = moduleId
   sheetOpen.value = true
+  void ensureMediaOptionsForModule(selectedModule.value)
 }
 
-function addModule(type: AppHomeModuleType) {
+async function addModule(type: AppHomeModuleType) {
   if (type === "video" && !canAddAppHomeVideoModule.value) {
     return
   }
@@ -286,6 +346,7 @@ function addModule(type: AppHomeModuleType) {
     return
   }
 
+  await ensureMediaOptions(type)
   const nextSortOrder = getNextSortOrder(modules.value)
   const nextModule = type === "video"
     ? createVideoModule(nextSortOrder)
@@ -639,6 +700,10 @@ function getCoverSrc(value: string) {
 }
 
 function syncMediaOptionDefaults() {
+  if (!mediaOptionsLoaded.video) {
+    return
+  }
+
   for (const form of Object.values(videoSourceForms)) {
     syncVideoSourceFormDefaults(form)
   }
@@ -717,15 +782,25 @@ function syncHomeMediaReferences() {
   const articleIds = new Set(articleOptions.value.map(item => item.id))
   const fallbackCategoryId = videoCategoryOptions.value[0]?.id ?? ""
   const fallbackArticleId = articleOptions.value[0]?.id ?? ""
+  const shouldSyncVideoReferences = mediaOptionsLoaded.video
+  const shouldSyncArticleReferences = mediaOptionsLoaded.article
 
   modules.value = modules.value.map((module) => {
     if (module.type === "article") {
+      if (!shouldSyncArticleReferences) {
+        return module
+      }
+
       return articleIds.has(module.articleId)
         ? module
         : {
             ...module,
             articleId: fallbackArticleId,
           }
+    }
+
+    if (!shouldSyncVideoReferences) {
+      return module
     }
 
     return {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, defineAsyncComponent, onUnmounted, ref, watch, type Ref } from "vue"
+import { computed, defineAsyncComponent, onUnmounted, reactive, ref, watch, type Ref } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { toast } from "vue-sonner"
 
@@ -259,6 +259,7 @@ type CustomerInspectionServiceCard = {
 }
 
 type CustomerDetailTab = "basic-info" | "building-assets" | "work-orders" | "monitoring" | "sub-accounts"
+type CustomerDetailLazyDataKey = "basicInfo" | "buildingAssets" | "inspectionWorkOrders" | "repairWorkOrders" | "subAccounts"
 type CustomerDetailTabActions = {
   deleteCustomer: boolean
   addPark: boolean
@@ -384,6 +385,13 @@ let latestMaintenanceRecordsRequestId = 0
 let latestRepairOverviewRecordsRequestId = 0
 let latestParkDetailRequestId = 0
 let latestWorkOrderDetailRequestId = 0
+const loadedCustomerDetailDataUuids = reactive<Record<CustomerDetailLazyDataKey, string>>({
+  basicInfo: "",
+  buildingAssets: "",
+  inspectionWorkOrders: "",
+  repairWorkOrders: "",
+  subAccounts: "",
+})
 
 const customerUuid = computed(() => {
   const value = route.params.id
@@ -1926,7 +1934,104 @@ watch(customer, current => {
   detailBreadcrumbTitle.value = current ? "客户详情" : null
 })
 
+function resetLoadedCustomerDetailData() {
+  loadedCustomerDetailDataUuids.basicInfo = ""
+  loadedCustomerDetailDataUuids.buildingAssets = ""
+  loadedCustomerDetailDataUuids.inspectionWorkOrders = ""
+  loadedCustomerDetailDataUuids.repairWorkOrders = ""
+  loadedCustomerDetailDataUuids.subAccounts = ""
+}
+
+function invalidateCustomerDetailRequests() {
+  latestRequestId += 1
+  latestRelationsRequestId += 1
+  latestBuildingAssetsRequestId += 1
+  latestInspectionServicesRequestId += 1
+  latestInspectionWorkOrdersRequestId += 1
+  latestRepairWorkOrdersRequestId += 1
+  latestSubAccountsRequestId += 1
+  latestMaintenanceRecordsRequestId += 1
+  latestRepairOverviewRecordsRequestId += 1
+}
+
+function loadBasicCustomerDetailData(uuid: string) {
+  if (!uuid || loadedCustomerDetailDataUuids.basicInfo === uuid) {
+    return
+  }
+
+  loadedCustomerDetailDataUuids.basicInfo = uuid
+  void loadCustomerDetail(uuid)
+  void loadCustomerInspectionServices(uuid)
+  void loadMaintenanceRecords(uuid)
+  void loadRepairOverviewRecords(uuid)
+  void loadParkBuildings(uuid)
+}
+
+function loadCustomerBuildingAssetsData(uuid: string) {
+  if (!uuid || loadedCustomerDetailDataUuids.buildingAssets === uuid) {
+    return
+  }
+
+  loadedCustomerDetailDataUuids.buildingAssets = uuid
+  void loadBuildingAssets(uuid)
+}
+
+function loadCustomerInspectionWorkOrdersData(uuid: string) {
+  if (!uuid || loadedCustomerDetailDataUuids.inspectionWorkOrders === uuid) {
+    return
+  }
+
+  loadedCustomerDetailDataUuids.inspectionWorkOrders = uuid
+  void loadInspectionWorkOrders(uuid)
+}
+
+function loadCustomerRepairWorkOrdersData(uuid: string) {
+  if (!uuid || loadedCustomerDetailDataUuids.repairWorkOrders === uuid) {
+    return
+  }
+
+  loadedCustomerDetailDataUuids.repairWorkOrders = uuid
+  void loadRepairWorkOrders(uuid)
+}
+
+function loadCustomerSubAccountsData(uuid: string) {
+  if (!uuid || loadedCustomerDetailDataUuids.subAccounts === uuid) {
+    return
+  }
+
+  loadedCustomerDetailDataUuids.subAccounts = uuid
+  void loadSubAccounts(uuid)
+}
+
+function loadActiveCustomerTabData(uuid: string) {
+  if (!uuid) {
+    return
+  }
+
+  if (activeTab.value === "basic-info") {
+    loadBasicCustomerDetailData(uuid)
+    return
+  }
+
+  if (activeTab.value === "building-assets") {
+    loadCustomerBuildingAssetsData(uuid)
+    return
+  }
+
+  if (activeTab.value === "work-orders") {
+    loadCustomerInspectionWorkOrdersData(uuid)
+    loadCustomerRepairWorkOrdersData(uuid)
+    return
+  }
+
+  if (activeTab.value === "sub-accounts") {
+    loadCustomerSubAccountsData(uuid)
+  }
+}
+
 watch(customerUuid, (uuid) => {
+  invalidateCustomerDetailRequests()
+  resetLoadedCustomerDetailData()
   buildingAssets.value = []
   buildingListRaw.value = []
   buildingAssetsErrorMessage.value = ""
@@ -1950,16 +2055,18 @@ watch(customerUuid, (uuid) => {
   monitoringPageNum.value = 1
   subAccountsPageNum.value = 1
   handleWorkOrderDetailSheetOpenChange(false)
-  void loadCustomerDetail(uuid)
-  void loadBuildingAssets(uuid)
-  void loadCustomerInspectionServices(uuid)
-  void loadMaintenanceRecords(uuid)
-  void loadRepairOverviewRecords(uuid)
-  void loadInspectionWorkOrders(uuid)
-  void loadRepairWorkOrders(uuid)
-  void loadSubAccounts(uuid)
-  void loadParkBuildings(uuid)
+  if (!uuid) {
+    void loadCustomerDetail(uuid)
+    return
+  }
+
+  loadBasicCustomerDetailData(uuid)
+  loadActiveCustomerTabData(uuid)
 }, { immediate: true })
+
+watch(activeTab, () => {
+  loadActiveCustomerTabData(customerUuid.value)
+})
 
 watch(inspectionWorkOrdersPageSize, () => {
   inspectionWorkOrdersPageNum.value = 1
@@ -1982,18 +2089,20 @@ watch(subAccountsPageSize, () => {
 })
 
 watch([inspectionWorkOrdersPageNum, inspectionWorkOrdersPageSize], () => {
-  if (!customerUuid.value) {
+  if (!customerUuid.value || activeTab.value !== "work-orders") {
     return
   }
 
+  loadedCustomerDetailDataUuids.inspectionWorkOrders = customerUuid.value
   void loadInspectionWorkOrders(customerUuid.value)
 })
 
 watch([repairWorkOrdersPageNum, repairWorkOrdersPageSize], () => {
-  if (!customerUuid.value) {
+  if (!customerUuid.value || activeTab.value !== "work-orders") {
     return
   }
 
+  loadedCustomerDetailDataUuids.repairWorkOrders = customerUuid.value
   void loadRepairWorkOrders(customerUuid.value)
 })
 

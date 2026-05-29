@@ -230,6 +230,10 @@ const categoryErrorMessages = reactive<Record<MediaModuleKey, string>>({
   videos: "",
   articles: "",
 })
+const loadedMediaModules = reactive<Record<MediaModuleKey, boolean>>({
+  videos: false,
+  articles: false,
+})
 const videoListLoading = ref(false)
 const videoListErrorMessage = ref("")
 const videoDetailLoading = ref(false)
@@ -258,6 +262,7 @@ const categoryEditSubmitting = ref(false)
 const categoryDeleteSubmitting = ref(false)
 const categoryDetailLoading = ref(false)
 const mediaCategoryTagLoading = ref(false)
+const mediaCategoryTagOptionsLoaded = ref(false)
 const categoryCreateModule = ref<MediaModuleKey>("videos")
 const categoryEditModule = ref<MediaModuleKey>("videos")
 const categoryDeleteModule = ref<MediaModuleKey>("videos")
@@ -476,10 +481,7 @@ const previewArticleContentHtml = computed(() => {
 })
 
 onMounted(() => {
-  void loadAllMediaCategories()
-  void loadMediaCategoryTagOptions()
-  void loadMediaVideos()
-  void loadMediaArticles()
+  void ensureMediaModuleLoaded(activeModule.value)
 })
 
 const videoPreviewSections = computed<DetailFieldSection[]>(() => {
@@ -519,12 +521,18 @@ watch(activeModule, () => {
   searchQuery.value = ""
   searchExpanded.value = false
   sheetOpen.value = false
+  void ensureMediaModuleLoaded(activeModule.value)
 })
 
-async function loadAllMediaCategories() {
+async function ensureMediaModuleLoaded(module: MediaModuleKey) {
+  if (loadedMediaModules[module]) {
+    return
+  }
+
+  loadedMediaModules[module] = true
   await Promise.all([
-    loadMediaCategories("videos"),
-    loadMediaCategories("articles"),
+    loadMediaCategories(module),
+    module === "videos" ? loadMediaVideos() : loadMediaArticles(),
   ])
 }
 
@@ -559,6 +567,7 @@ async function loadMediaCategoryTagOptions() {
   try {
     const options = await fetchBusinessPresetEntryOptions(["mediaCategory"])
     mediaCategoryTagEntries.value = options.mediaCategory ?? []
+    mediaCategoryTagOptionsLoaded.value = true
   } catch (error) {
     mediaCategoryTagEntries.value = []
     handleApiError(error, {
@@ -568,6 +577,14 @@ async function loadMediaCategoryTagOptions() {
   } finally {
     mediaCategoryTagLoading.value = false
   }
+}
+
+function ensureMediaCategoryTagOptions() {
+  if (mediaCategoryTagOptionsLoaded.value || mediaCategoryTagLoading.value) {
+    return
+  }
+
+  void loadMediaCategoryTagOptions()
 }
 
 function refreshCurrentCategories() {
@@ -668,6 +685,7 @@ function openCreateCategoryDialog(module: MediaModuleKey, parentUuid: string) {
     return
   }
 
+  ensureMediaCategoryTagOptions()
   categoryCreateModule.value = module
   Object.assign(categoryCreateForm, createEmptyCategoryForm({
     parentUuid,
@@ -740,6 +758,7 @@ async function openEditCategoryDialog(module: MediaModuleKey, id: string) {
     return
   }
 
+  ensureMediaCategoryTagOptions()
   categoryEditModule.value = module
   editingCategoryId.value = id
   Object.assign(categoryEditForm, createEmptyCategoryForm({
