@@ -10,7 +10,7 @@ import { clearCurrentUser } from "./composables/useCurrentUser"
 import { clearCurrentUserPermissions } from "./composables/useCurrentUserPermissions"
 import "./styles/global.css"
 import "./styles/detail-layout.css"
-import "remixicon/fonts/remixicon.css"
+import "./styles/remixicon-woff2.css"
 import "vue-sonner/style.css"
 
 const startupError = getStartupErrorMessage()
