@@ -9,6 +9,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import TablePage from "@/components/table-page/TablePage.vue"
+import type { TableExportRowsResolverPayload } from "@/components/table-page/export-utils"
 import { TooltipWrap } from "@/components/ui/tooltip"
 import { repairWorkOrderStatusMap, workOrderStatusMap } from "@/components/table-page/statusPresets"
 import { createTablePageDefinition, useTablePage } from "@/components/table-page/useTablePage"
@@ -17,6 +18,7 @@ import { handleApiError } from "@/lib/api-errors"
 import { fetchCustomers } from "@/lib/customers-api"
 import { fetchInspectionPlans } from "@/lib/inspection-plans-api"
 import { fetchMembers } from "@/lib/members-api"
+import { fetchAllPaginatedListItems } from "@/lib/paginated-list-export"
 import { PERMISSION_CODES } from "@/lib/permission-codes"
 import { fetchRepairWorkOrderDictionaries, formatRepairDictionaryLabel, type RepairDictionaryOption } from "@/lib/repair-work-order-dictionaries"
 import {
@@ -218,6 +220,7 @@ const page = useTablePage({
 })
 page.showControls.value = true
 page.customSortEnabled.value = false
+const exportFilteredRowsCount = computed(() => page.selectedTab.value === "all" ? total.value : page.filteredRowsCount.value)
 
 const queryBar = computed<TableQueryBarConfig>(() => ({
   controls: props.kind === "inspection"
@@ -723,6 +726,43 @@ async function loadWorkOrders() {
       loading.value = false
     }
   }
+}
+
+async function resolveExportRows(payload: TableExportRowsResolverPayload) {
+  if (payload.scope !== "filtered") {
+    return payload.defaultRows
+  }
+
+  if (props.kind === "repair") {
+    await ensureRepairDictionaries()
+  }
+
+  const items = props.kind === "inspection"
+    ? await fetchAllPaginatedListItems<WorkOrderListItem | RepairWorkOrderListItem>(({ PageNum, PageSize }) => fetchWorkOrders({
+        OrderNo: orderNoQuery.value || undefined,
+        CustomerUuid: selectedCustomerUuid.value || undefined,
+        PlanUuid: selectedPlanUuid.value || undefined,
+        ServiceName: serviceNameQuery.value || undefined,
+        Executor: executorQuery.value || undefined,
+        Deadline: deadlineQuery.value || undefined,
+        Status: toApiStatus(selectedStatus.value),
+        PageNum,
+        PageSize,
+      }))
+    : await fetchAllPaginatedListItems<WorkOrderListItem | RepairWorkOrderListItem>(({ PageNum, PageSize }) => fetchRepairWorkOrders({
+        OrderNo: orderNoQuery.value || undefined,
+        CreatedStartAt: createdAtQuery.value || undefined,
+        CreatedEndAt: createdAtQuery.value || undefined,
+        Important: selectedImportant.value || undefined,
+        Status: toApiStatus(selectedStatus.value),
+        PageNum,
+        PageSize,
+      }))
+
+  const rows = items.map((item, index) => normalizeWorkOrderRecord(item, index)).sort((left, right) => compareWorkOrderRows(left, right, sortDirection.value, props.kind))
+  const activeTab = page.selectedTab.value
+
+  return activeTab === "all" ? rows : rows.filter(row => row.statusLabel === activeTab)
 }
 
 function normalizeWorkOrderRecord(item: WorkOrderListItem | RepairWorkOrderListItem, index: number): WorkOrderRecord {
@@ -1485,6 +1525,9 @@ async function ensureRepairDictionaries() {
       :page="page"
       :loading="loading"
       :query-bar="queryBar"
+      :export-rows-resolver="resolveExportRows"
+      :export-filtered-rows-count="exportFilteredRowsCount"
+      :export-total-rows-count="total"
       toolbar-sort-behavior="toggle"
       :toolbar-sort-direction="sortDirection"
       fill-available-height

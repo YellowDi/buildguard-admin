@@ -9,11 +9,13 @@ import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import TableStatusChip from "@/components/table-page/TableStatusChip.vue"
 import TablePage from "@/components/table-page/TablePage.vue"
+import type { TableExportRowsResolverPayload } from "@/components/table-page/export-utils"
 import { createTablePageDefinition, useTablePage } from "@/components/table-page/useTablePage"
 import type { TablePageSchema, TableQueryBarConfig } from "@/components/table-page/types"
 import { handleApiError } from "@/lib/api-errors"
 import { fetchCustomers } from "@/lib/customers-api"
 import { fetchInspectionServices, type InspectionServiceListItem } from "@/lib/inspection-services-api"
+import { fetchAllPaginatedListItems } from "@/lib/paginated-list-export"
 import { PERMISSION_CODES } from "@/lib/permission-codes"
 import {
   Tooltip,
@@ -407,6 +409,22 @@ async function loadInspectionServices() {
   }
 }
 
+async function resolveExportRows(payload: TableExportRowsResolverPayload) {
+  if (payload.scope !== "filtered") {
+    return payload.defaultRows
+  }
+
+  const items = await fetchAllPaginatedListItems(({ PageNum, PageSize }) => fetchInspectionServices({
+    Name: serviceNameQuery.value || undefined,
+    CustomerUuid: selectedCustomerUuid.value || undefined,
+    Status: getServiceStatusCodeByLabel(page.selectedTab.value),
+    PageNum,
+    PageSize,
+  }))
+
+  return items.map((item, index) => normalizeInspectionServiceRecord(item, index)).sort((left, right) => compareInspectionServiceRows(left, right, sortDirection.value))
+}
+
 function normalizeInspectionServiceRecord(item: InspectionServiceListItem, index: number): InspectionServiceRecord {
   const uuid = toText(item.Uuid)
   const fallbackId = toText(item.Id, `${pageNum.value}-${index + 1}`)
@@ -764,6 +782,9 @@ async function syncRouteQueryAndReload() {
         :page="page"
         :loading="loading"
         :query-bar="queryBar"
+        :export-rows-resolver="resolveExportRows"
+        :export-filtered-rows-count="total"
+        :export-total-rows-count="total"
         toolbar-sort-behavior="toggle"
         :toolbar-sort-direction="sortDirection"
         fill-available-height

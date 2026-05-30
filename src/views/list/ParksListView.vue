@@ -5,6 +5,7 @@ import { toast } from "vue-sonner"
 
 import LinkedEntityDetailSheet from "@/components/detail/LinkedEntityDetailSheet.vue"
 import TablePage from "@/components/table-page/TablePage.vue"
+import type { TableExportRowsResolverPayload } from "@/components/table-page/export-utils"
 import { createTablePageDefinition, useTablePage } from "@/components/table-page/useTablePage"
 import type { TablePageSchema, TableQueryBarConfig } from "@/components/table-page/types"
 import {
@@ -21,6 +22,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { handleApiError } from "@/lib/api-errors"
 import { fetchCustomers } from "@/lib/customers-api"
+import { fetchAllPaginatedListItems } from "@/lib/paginated-list-export"
 import { PERMISSION_CODES } from "@/lib/permission-codes"
 import { fetchParks } from "@/lib/parks-api"
 
@@ -222,16 +224,7 @@ const schema: TablePageSchema<ParkRecord> = {
 }
 
 const sortedParks = computed(() => {
-  return [...parks.value].sort((left, right) => {
-    const leftValue = Date.parse(left.updatedAt)
-    const rightValue = Date.parse(right.updatedAt)
-
-    if (Number.isFinite(leftValue) && Number.isFinite(rightValue) && leftValue !== rightValue) {
-      return sortDirection.value === "asc" ? leftValue - rightValue : rightValue - leftValue
-    }
-
-    return left.parkName.localeCompare(right.parkName, "zh-CN")
-  })
+  return [...parks.value].sort(compareParkRows)
 })
 
 const page = useTablePage({
@@ -398,25 +391,7 @@ async function loadParks() {
     }
 
     total.value = parksResult.total
-    parks.value = parksResult.list.map((item, index) => {
-      const uuid = toText(item.Uuid, `park-${index + 1}`)
-      const buildingCountValue = getFirstNumber(item, ["BuildNum", "BuildingNum", "BuildCount", "BuildingCount", "buildingCount"])
-
-      return {
-        id: uuid,
-        uuid,
-        customerUuid: toText(item.CustomerUuid),
-        customerName: toText(item.CorpName, "未关联客户"),
-        parkName: toText(item.Name, "未命名园区"),
-        buildingCount: buildingCountValue === null ? "-" : String(buildingCountValue),
-        buildingCountValue,
-        builtTime: toText(item.BuiltTime, "-"),
-        operationTime: toText(item.OperationTime, "-"),
-        contactName: toText(item.Contact, "未填写"),
-        contactPhone: toText(item.ContactPhone, "-"),
-        updatedAt: toText(item.UpdatedAt || item.CreatedAt, "-"),
-      }
-    })
+    parks.value = parksResult.list.map((item, index) => normalizeParkRecord(item, index))
 
     const maxPage = Math.max(1, Math.ceil((parksResult.total || 0) / pageSize.value))
 
@@ -438,6 +413,41 @@ async function loadParks() {
     if (requestId === latestRequestId) {
       loading.value = false
     }
+  }
+}
+
+async function resolveExportRows(payload: TableExportRowsResolverPayload) {
+  if (payload.scope !== "filtered") {
+    return payload.defaultRows
+  }
+
+  const items = await fetchAllPaginatedListItems(({ PageNum, PageSize }) => fetchParks({
+    Name: parkNameQuery.value || undefined,
+    CustomerUuid: selectedCustomerUuid.value || undefined,
+    PageNum,
+    PageSize,
+  }))
+
+  return items.map((item, index) => normalizeParkRecord(item, index)).sort(compareParkRows)
+}
+
+function normalizeParkRecord(item: Record<string, unknown>, index: number): ParkRecord {
+  const uuid = toText(item.Uuid, `park-${index + 1}`)
+  const buildingCountValue = getFirstNumber(item, ["BuildNum", "BuildingNum", "BuildCount", "BuildingCount", "buildingCount"])
+
+  return {
+    id: uuid,
+    uuid,
+    customerUuid: toText(item.CustomerUuid),
+    customerName: toText(item.CorpName, "未关联客户"),
+    parkName: toText(item.Name, "未命名园区"),
+    buildingCount: buildingCountValue === null ? "-" : String(buildingCountValue),
+    buildingCountValue,
+    builtTime: toText(item.BuiltTime, "-"),
+    operationTime: toText(item.OperationTime, "-"),
+    contactName: toText(item.Contact, "未填写"),
+    contactPhone: toText(item.ContactPhone, "-"),
+    updatedAt: toText(item.UpdatedAt || item.CreatedAt, "-"),
   }
 }
 
@@ -503,6 +513,17 @@ function getFirstNumber(record: Record<string, unknown>, keys: string[]) {
   return null
 }
 
+function compareParkRows(left: ParkRecord, right: ParkRecord) {
+  const leftValue = Date.parse(left.updatedAt)
+  const rightValue = Date.parse(right.updatedAt)
+
+  if (Number.isFinite(leftValue) && Number.isFinite(rightValue) && leftValue !== rightValue) {
+    return sortDirection.value === "asc" ? leftValue - rightValue : rightValue - leftValue
+  }
+
+  return left.parkName.localeCompare(right.parkName, "zh-CN")
+}
+
 function toText(value: unknown, fallback = "") {
   if (typeof value === "string" && value.trim()) {
     return value.trim()
@@ -543,6 +564,9 @@ function normalizeQueryValue(value: unknown) {
       :page="page"
       :loading="loading"
       :query-bar="queryBar"
+      :export-rows-resolver="resolveExportRows"
+      :export-filtered-rows-count="total"
+      :export-total-rows-count="total"
       toolbar-sort-behavior="toggle"
       :toolbar-sort-direction="sortDirection"
       fill-available-height

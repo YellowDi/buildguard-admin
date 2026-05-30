@@ -5,6 +5,7 @@ import { toast } from "vue-sonner"
 
 import LinkedEntityDetailSheet from "@/components/detail/LinkedEntityDetailSheet.vue"
 import TablePage from "@/components/table-page/TablePage.vue"
+import type { TableExportRowsResolverPayload } from "@/components/table-page/export-utils"
 import { customerStatusMap } from "@/components/table-page/statusPresets"
 import { createTablePageDefinition, useTablePage } from "@/components/table-page/useTablePage"
 import type { TablePageSchema, TableQueryBarConfig } from "@/components/table-page/types"
@@ -23,6 +24,7 @@ import { Button } from "@/components/ui/button"
 import { handleApiError } from "@/lib/api-errors"
 import { fetchBusinessPresetEntryOptions } from "@/lib/business-preset-options"
 import { fetchCustomers, type CustomerListItem } from "@/lib/customers-api"
+import { fetchAllPaginatedListItems } from "@/lib/paginated-list-export"
 import { PERMISSION_CODES } from "@/lib/permission-codes"
 
 type CustomerRecord = {
@@ -275,16 +277,7 @@ const schema: TablePageSchema<CustomerRecord> = {
 }
 
 const sortedCustomers = computed(() => {
-  return [...customers.value].sort((left, right) => {
-    const leftValue = toTimestamp(left.createdAt) ?? 0
-    const rightValue = toTimestamp(right.createdAt) ?? 0
-
-    if (leftValue === rightValue) {
-      return left.customerName.localeCompare(right.customerName, "zh-CN")
-    }
-
-    return sortDirection.value === "asc" ? leftValue - rightValue : rightValue - leftValue
-  })
+  return [...customers.value].sort(compareCustomerRows)
 })
 
 const page = useTablePage({
@@ -295,6 +288,7 @@ const page = useTablePage({
 })
 const route = useRoute()
 const router = useRouter()
+const exportFilteredRowsCount = computed(() => page.selectedTab.value === "all" ? total.value : page.filteredRowsCount.value)
 page.showControls.value = true
 page.customSortEnabled.value = false
 
@@ -465,6 +459,26 @@ async function loadCustomers() {
   }
 }
 
+async function resolveExportRows(payload: TableExportRowsResolverPayload) {
+  if (payload.scope !== "filtered") {
+    return payload.defaultRows
+  }
+
+  const items = await fetchAllPaginatedListItems(({ PageNum, PageSize }) => fetchCustomers({
+    CorpName: corpNameQuery.value || undefined,
+    CustomerName: customerNameQuery.value || undefined,
+    CustomerPhone: customerPhoneQuery.value || undefined,
+    Status: selectedStatus.value || undefined,
+    PageNum,
+    PageSize,
+  }))
+
+  const rows = items.map((item, index) => normalizeCustomerRecord(item, index)).sort(compareCustomerRows)
+  const activeTab = page.selectedTab.value
+
+  return activeTab === "all" ? rows : rows.filter(row => row.levelLabel === activeTab)
+}
+
 async function loadCustomerLevelTabOptions() {
   try {
     const result = await fetchBusinessPresetEntryOptions(["customerLevel"])
@@ -615,6 +629,17 @@ function toTimestamp(value: unknown) {
   return Number.isFinite(timestamp) ? timestamp : null
 }
 
+function compareCustomerRows(left: CustomerRecord, right: CustomerRecord) {
+  const leftValue = toTimestamp(left.createdAt) ?? 0
+  const rightValue = toTimestamp(right.createdAt) ?? 0
+
+  if (leftValue === rightValue) {
+    return left.customerName.localeCompare(right.customerName, "zh-CN")
+  }
+
+  return sortDirection.value === "asc" ? leftValue - rightValue : rightValue - leftValue
+}
+
 function handleCreateCustomer() {
   router.push({ name: "customer-create" })
 }
@@ -715,6 +740,9 @@ function handleLinkedDetailSheetOpenChange(open: boolean) {
       :page="page"
       :loading="loading"
       :query-bar="queryBar"
+      :export-rows-resolver="resolveExportRows"
+      :export-filtered-rows-count="exportFilteredRowsCount"
+      :export-total-rows-count="total"
       toolbar-sort-behavior="toggle"
       :toolbar-sort-direction="sortDirection"
       fill-available-height

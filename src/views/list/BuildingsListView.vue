@@ -6,6 +6,7 @@ import { toast } from "vue-sonner"
 import BuildingDetailSheet from "@/components/detail/BuildingDetailSheet.vue"
 import LinkedEntityDetailSheet from "@/components/detail/LinkedEntityDetailSheet.vue"
 import TablePage from "@/components/table-page/TablePage.vue"
+import type { TableExportRowsResolverPayload } from "@/components/table-page/export-utils"
 import { createTablePageDefinition, useTablePage } from "@/components/table-page/useTablePage"
 import type { TablePageSchema, TableQueryBarConfig } from "@/components/table-page/types"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -581,6 +582,29 @@ async function loadBuildings() {
   }
 }
 
+async function resolveExportRows(payload: TableExportRowsResolverPayload) {
+  if (payload.scope !== "filtered") {
+    return payload.defaultRows
+  }
+
+  const name = appliedName.value || undefined
+  const customerUuids = [...selectedCustomerUuids.value]
+  const parkUuids = [...selectedParkUuids.value]
+  const rawItems = usesClientSideAggregation.value
+    ? await fetchAllBuildingsForMultiFilters({ name, customerUuids, parkUuids })
+    : await fetchAllBuildingsByPayload({
+        Name: name,
+        CustomerUuid: customerUuids[0],
+        ParkUuid: parkUuids[0],
+      })
+  const hydratedRows = await hydrateBuildingRows(normalizeBuildingRows(rawItems))
+
+  return filterBuildingRows(hydratedRows, {
+    customerUuids,
+    parkUuids,
+  }).sort(compareBuildingRows)
+}
+
 async function fetchBuildingsForCurrentFilters() {
   const name = appliedName.value || undefined
   const customerUuids = [...selectedCustomerUuids.value]
@@ -975,6 +999,9 @@ function toText(value: unknown, fallback = "") {
       :page="page"
       :loading="loading"
       :query-bar="queryBar"
+      :export-rows-resolver="resolveExportRows"
+      :export-filtered-rows-count="total"
+      :export-total-rows-count="total"
       toolbar-sort-behavior="toggle"
       :toolbar-sort-direction="sortDirection"
       fill-available-height

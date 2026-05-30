@@ -9,6 +9,7 @@ import {
   exportTableData,
   SUPPORTED_TABLE_EXPORT_FORMATS,
   type TableExportFormat,
+  type TableExportRowsResolver,
   type TableExportScope,
 } from "@/components/table-page/export-utils"
 import type { SortFieldOption, SortRule } from "@/components/table-page/sort.types"
@@ -76,6 +77,7 @@ const props = withDefaults(defineProps<{
   toolbarSortBehavior?: "default" | "toggle"
   toolbarSortDirection?: "asc" | "desc"
   queryBar?: TableQueryBarConfig | null
+  exportRowsResolver?: TableExportRowsResolver
 }>(), {
   showToolbarActions: true,
   listLevelTable: true,
@@ -86,6 +88,7 @@ const props = withDefaults(defineProps<{
   toolbarSortBehavior: "default",
   toolbarSortDirection: "desc",
   queryBar: null,
+  exportRowsResolver: undefined,
 })
 
 const emit = defineEmits<{
@@ -115,13 +118,17 @@ const exportDialogOpen = ref(false)
 const isExporting = ref(false)
 const availableExportFormats = [...SUPPORTED_TABLE_EXPORT_FORMATS]
 const currentPageRowsCount = computed(() => props.rows.length)
+const exportFiltersSummary = computed(() => [
+  ...(props.currentFiltersSummary ?? []),
+  ...buildQueryBarSummary(props.queryBar),
+])
 
 function handleOpenExportDialog() {
   exportDialogOpen.value = true
   emit("export-action")
 }
 
-function resolveExportRows(scope: TableExportScope) {
+function getDefaultExportRows(scope: TableExportScope) {
   if (scope === "selected") {
     return props.selectedRows ?? []
   }
@@ -131,6 +138,20 @@ function resolveExportRows(scope: TableExportScope) {
   }
 
   return props.filteredRows ?? props.rows
+}
+
+async function resolveExportRows(scope: TableExportScope, format: TableExportFormat) {
+  const defaultRows = getDefaultExportRows(scope)
+
+  if (!props.exportRowsResolver) {
+    return defaultRows
+  }
+
+  return props.exportRowsResolver({
+    scope,
+    format,
+    defaultRows,
+  })
 }
 
 function getExportEmptyMessage(scope: TableExportScope) {
@@ -150,7 +171,7 @@ async function handleExportConfirm(payload: { scope: TableExportScope; format: T
     return
   }
 
-  const exportRows = resolveExportRows(payload.scope)
+  const exportRows = await resolveExportRows(payload.scope, payload.format)
 
   if (!exportRows.length) {
     toast.error(getExportEmptyMessage(payload.scope))
@@ -179,6 +200,41 @@ async function handleExportConfirm(payload: { scope: TableExportScope; format: T
   finally {
     isExporting.value = false
   }
+}
+
+function buildQueryBarSummary(queryBar: TableQueryBarConfig | null | undefined) {
+  if (!queryBar) {
+    return []
+  }
+
+  return queryBar.controls.flatMap((control) => {
+    const value = queryBar.values[control.key] ?? control.value
+
+    if (Array.isArray(value)) {
+      const labels = value
+        .map(item => resolveQueryControlValueLabel(control, item))
+        .filter(Boolean)
+
+      return labels.length ? [`${control.label} ${labels.join("、")}`] : []
+    }
+
+    const label = resolveQueryControlValueLabel(control, value)
+    return label ? [`${control.label} ${label}`] : []
+  })
+}
+
+function resolveQueryControlValueLabel(control: TableQueryBarConfig["controls"][number], value: unknown) {
+  if (typeof value !== "string" || !value.trim()) {
+    return ""
+  }
+
+  const normalizedValue = value.trim()
+
+  if (control.type !== "select") {
+    return normalizedValue
+  }
+
+  return control.options.find(option => option.value === normalizedValue)?.label ?? normalizedValue
 }
 </script>
 
@@ -339,7 +395,7 @@ async function handleExportConfirm(payload: { scope: TableExportScope; format: T
       :current-page-rows-count="currentPageRowsCount"
       :filtered-rows-count="props.filteredRowsCount ?? props.rows.length"
       :total-rows-count="props.totalRowsCount ?? props.rows.length"
-      :current-filters-summary="props.currentFiltersSummary ?? []"
+      :current-filters-summary="exportFiltersSummary"
       :available-formats="availableExportFormats"
       :is-exporting="isExporting"
       @update:open="exportDialogOpen = $event"

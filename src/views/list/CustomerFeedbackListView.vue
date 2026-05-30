@@ -3,6 +3,7 @@ import { computed, ref, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
 
 import TablePage from "@/components/table-page/TablePage.vue"
+import type { TableExportRowsResolverPayload } from "@/components/table-page/export-utils"
 import { createTablePageDefinition, useTablePage } from "@/components/table-page/useTablePage"
 import type { TablePageSchema, TableQueryBarConfig } from "@/components/table-page/types"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -22,6 +23,7 @@ import {
   fetchCustomerFeedback,
   type CustomerFeedbackListItem,
 } from "@/lib/customer-feedback-api"
+import { fetchAllPaginatedListItems } from "@/lib/paginated-list-export"
 
 type CustomerFeedbackRecord = {
   id: string
@@ -121,16 +123,7 @@ const schema: TablePageSchema<CustomerFeedbackRecord> = {
 }
 
 const sortedFeedbackRows = computed(() => {
-  return [...feedbackRows.value].sort((left, right) => {
-    const leftValue = toTimestamp(left.createdAt) ?? 0
-    const rightValue = toTimestamp(right.createdAt) ?? 0
-
-    if (leftValue === rightValue) {
-      return left.customerName.localeCompare(right.customerName, "zh-CN")
-    }
-
-    return sortDirection.value === "asc" ? leftValue - rightValue : rightValue - leftValue
-  })
+  return [...feedbackRows.value].sort(compareFeedbackRows)
 })
 
 const visibleFeedbackRows = computed(() => {
@@ -150,6 +143,7 @@ const page = useTablePage({
 const route = useRoute()
 const router = useRouter()
 const customerUuid = computed(() => normalizeQueryValue(route.query.customerUuid))
+const exportFilteredRowsCount = computed(() => keywordQuery.value ? page.filteredRowsCount.value : total.value)
 page.showControls.value = true
 page.customSortEnabled.value = false
 
@@ -265,6 +259,26 @@ async function loadFeedback() {
   }
 }
 
+async function resolveExportRows(payload: TableExportRowsResolverPayload) {
+  if (payload.scope !== "filtered") {
+    return payload.defaultRows
+  }
+
+  const normalizedKeyword = keywordQuery.value.trim().toLowerCase()
+  const items = await fetchAllPaginatedListItems(({ PageNum, PageSize }) => fetchCustomerFeedback({
+    CustomerUuid: customerUuid.value || undefined,
+    PageNum,
+    PageSize,
+  }))
+  const rows = items.map((item, index) => normalizeFeedbackRecord(item, index)).sort(compareFeedbackRows)
+
+  if (!normalizedKeyword) {
+    return rows
+  }
+
+  return rows.filter(row => buildPageFilterText(row).toLowerCase().includes(normalizedKeyword))
+}
+
 function normalizeFeedbackRecord(
   item: CustomerFeedbackListItem,
   index: number,
@@ -320,6 +334,17 @@ function toTimestamp(value: unknown) {
 
   const timestamp = new Date(text.replace(" ", "T")).getTime()
   return Number.isFinite(timestamp) ? timestamp : null
+}
+
+function compareFeedbackRows(left: CustomerFeedbackRecord, right: CustomerFeedbackRecord) {
+  const leftValue = toTimestamp(left.createdAt) ?? 0
+  const rightValue = toTimestamp(right.createdAt) ?? 0
+
+  if (leftValue === rightValue) {
+    return left.customerName.localeCompare(right.customerName, "zh-CN")
+  }
+
+  return sortDirection.value === "asc" ? leftValue - rightValue : rightValue - leftValue
 }
 
 function handleToolbarSortToggle() {
@@ -395,6 +420,9 @@ function normalizeQueryValue(value: unknown) {
       :page="page"
       :loading="loading"
       :query-bar="queryBar"
+      :export-rows-resolver="resolveExportRows"
+      :export-filtered-rows-count="exportFilteredRowsCount"
+      :export-total-rows-count="total"
       toolbar-sort-behavior="toggle"
       :toolbar-sort-direction="sortDirection"
       fill-available-height

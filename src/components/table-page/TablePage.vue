@@ -3,6 +3,7 @@ import type { PropType } from "vue"
 import { useSlots } from "vue"
 
 import Page from "@/components/table-page/TablePageShell.vue"
+import type { TableExportRowsResolver } from "@/components/table-page/export-utils"
 import type { TablePageController } from "@/components/table-page/useTablePage"
 import type { TableQueryBarConfig } from "@/components/table-page/types"
 
@@ -48,6 +49,18 @@ const props = defineProps({
     type: Object as PropType<TableQueryBarConfig | null>,
     default: null,
   },
+  exportRowsResolver: {
+    type: Function as PropType<TableExportRowsResolver>,
+    default: undefined,
+  },
+  exportFilteredRowsCount: {
+    type: Number,
+    default: undefined,
+  },
+  exportTotalRowsCount: {
+    type: Number,
+    default: undefined,
+  },
 })
 
 const emit = defineEmits<{
@@ -92,8 +105,8 @@ const slots = useSlots()
     :row-key="page.rowKey"
     :selected-row-keys="page.selectedRowKeys.value"
     :selected-rows-count="page.selectedRowsCount.value"
-    :filtered-rows-count="page.filteredRowsCount.value"
-    :total-rows-count="page.totalRowsCount.value"
+    :filtered-rows-count="props.exportFilteredRowsCount ?? page.filteredRowsCount.value"
+    :total-rows-count="props.exportTotalRowsCount ?? page.totalRowsCount.value"
     :current-filters-summary="page.activeFilterSummary.value"
     :summary="page.summary"
     :show-index="page.showIndex"
@@ -110,6 +123,7 @@ const slots = useSlots()
     :toolbar-sort-behavior="props.toolbarSortBehavior"
     :toolbar-sort-direction="props.toolbarSortDirection"
     :query-bar="props.queryBar"
+    :export-rows-resolver="props.exportRowsResolver"
     @tab-click="page.handleTabClick"
     @add-filter="page.handleAddFilter"
     @replace-filter="page.handleReplaceFilter"

@@ -2731,7 +2731,9 @@ function handleActiveTableExportConfirm(payload: { scope: TableExportScope; form
 
   const exportRows: Record<string, unknown>[] = payload.scope === "selected"
     ? page.selectedRows.value
-    : page.filteredRows.value
+    : payload.scope === "page"
+      ? page.currentPageRows.value
+      : page.filteredRows.value
 
   if (!exportRows.length) {
     return

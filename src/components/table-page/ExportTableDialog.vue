@@ -2,7 +2,6 @@
 import { computed, ref, watch } from "vue"
 
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -15,7 +14,7 @@ import {
 import { Label } from "@/components/ui/label"
 import { Spinner } from "@/components/ui/spinner"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import type { TableExportFormat, TableExportScope } from "@/components/table-page/export-utils"
+import { SUPPORTED_TABLE_EXPORT_FORMATS, type TableExportFormat, type TableExportScope } from "@/components/table-page/export-utils"
 
 const props = withDefaults(defineProps<{
   open: boolean
@@ -28,7 +27,7 @@ const props = withDefaults(defineProps<{
   isExporting: boolean
   availableFormats?: readonly TableExportFormat[]
 }>(), {
-  availableFormats: () => ["csv"],
+  availableFormats: () => [...SUPPORTED_TABLE_EXPORT_FORMATS],
 })
 
 const emit = defineEmits<{
@@ -37,7 +36,7 @@ const emit = defineEmits<{
 }>()
 
 const exportScope = ref<TableExportScope>("filtered")
-const exportFormat = ref<TableExportFormat>(props.availableFormats[0] ?? "csv")
+const exportFormat = ref<TableExportFormat>(props.availableFormats[0] ?? "xlsx")
 
 const scopeOptions = computed(() => [
   {
@@ -48,10 +47,17 @@ const scopeOptions = computed(() => [
     disabled: props.selectedRowsCount === 0,
   },
   {
+    value: "page" as const,
+    title: "当前页",
+    count: props.currentPageRowsCount,
+    description: "仅导出当前表格页正在展示的数据。",
+    disabled: props.currentPageRowsCount === 0,
+  },
+  {
     value: "filtered" as const,
     title: "当前筛选结果",
     count: props.filteredRowsCount,
-    description: "导出当前筛选与排序后的结果集合。",
+    description: "导出当前查询、筛选与排序后的结果集合。",
     disabled: props.filteredRowsCount === 0,
   },
 ])
@@ -69,21 +75,18 @@ const filtersInlineText = computed(() => {
 })
 const canConfirm = computed(() => !props.isExporting && exportCount.value > 0)
 const showEmptyAlert = computed(() => exportCount.value === 0)
-const formatOptions = computed(() => [
-  {
-    value: "csv" as const,
-    label: "CSV",
-    disabled: false,
-  },
-  {
-    value: "xlsx" as const,
-    label: "XLSX",
-    disabled: !props.availableFormats.includes("xlsx"),
-  },
-])
+const formatOptions = computed(() => SUPPORTED_TABLE_EXPORT_FORMATS.map(format => ({
+  value: format,
+  label: format.toUpperCase(),
+  disabled: !props.availableFormats.includes(format),
+})))
 const emptyStateMessage = computed(() => {
   if (exportScope.value === "selected") {
     return "当前没有已选记录，请先勾选后再导出。"
+  }
+
+  if (exportScope.value === "page") {
+    return "当前页没有可导出的记录。"
   }
 
   return "当前筛选结果为空，请调整筛选条件后重试。"
@@ -93,7 +96,22 @@ const exportRangeText = computed(() => {
     return "当前勾选记录"
   }
 
+  if (exportScope.value === "page") {
+    return "当前页记录"
+  }
+
   return props.currentFiltersSummary.length > 0 ? "当前筛选结果" : "当前全部表格数据"
+})
+const totalRowsText = computed(() => {
+  if (props.totalRowsCount <= 0) {
+    return "暂无原始记录。"
+  }
+
+  if (props.currentFiltersSummary.length > 0 && props.filteredRowsCount !== props.totalRowsCount) {
+    return `当前条件命中 ${props.filteredRowsCount} 条，表格总计 ${props.totalRowsCount} 条。`
+  }
+
+  return `表格总计 ${props.totalRowsCount} 条。`
 })
 
 watch(() => props.open, (isOpen) => {
@@ -102,7 +120,7 @@ watch(() => props.open, (isOpen) => {
   }
 
   exportScope.value = getDefaultScope()
-  exportFormat.value = props.availableFormats[0] ?? "csv"
+  exportFormat.value = props.availableFormats[0] ?? "xlsx"
 })
 
 watch(scopeOptions, (options) => {
@@ -110,6 +128,14 @@ watch(scopeOptions, (options) => {
 
   if (!activeOption || activeOption.disabled) {
     exportScope.value = options.find(option => !option.disabled)?.value ?? "filtered"
+  }
+})
+
+watch(formatOptions, (options) => {
+  const activeOption = options.find(option => option.value === exportFormat.value)
+
+  if (!activeOption || activeOption.disabled) {
+    exportFormat.value = options.find(option => !option.disabled)?.value ?? "xlsx"
   }
 })
 
@@ -140,7 +166,7 @@ function handleScopeSelect(nextScope: TableExportScope) {
 }
 
 function handleScopeChange(nextScope: string | number) {
-  if (nextScope !== "selected" && nextScope !== "filtered") {
+  if (nextScope !== "selected" && nextScope !== "page" && nextScope !== "filtered") {
     return
   }
 
@@ -180,9 +206,9 @@ function handleConfirm() {
       :show-close-button="!isExporting"
     >
       <DialogHeader class="px-4 pt-4 pb-0">
-        <DialogTitle>导出数据</DialogTitle>
+        <DialogTitle>导出{{ tableTitle }}</DialogTitle>
         <DialogDescription>
-          导出当前表格中的记录，可选择已选数据或当前筛选结果。
+          选择导出范围和文件格式后生成下载文件。
         </DialogDescription>
       </DialogHeader>
 
@@ -191,13 +217,13 @@ function handleConfirm() {
           <section class="min-w-fit flex-none space-y-2">
             <Label class="text-sm font-medium text-foreground">导出范围</Label>
             <Tabs :model-value="exportScope" class="w-fit" @update:model-value="handleScopeChange">
-              <TabsList class="h-9 w-fit justify-start gap-1 rounded-md bg-muted p-1">
+              <TabsList class="grid h-auto w-full grid-cols-1 justify-start gap-1 rounded-md bg-muted p-1 sm:w-fit sm:grid-cols-3">
                 <TabsTrigger
                   v-for="option in scopeOptions"
                   :key="option.value"
                   :value="option.value"
                   :disabled="option.disabled"
-                  class="h-7 min-w-[104px] gap-1.5 rounded-[calc(var(--radius)_-_6px)] px-3 text-[13px] font-medium data-[state=active]:shadow-sm"
+                  class="h-7 min-w-[112px] gap-1.5 rounded-[calc(var(--radius)_-_6px)] px-3 text-[13px] font-medium data-[state=active]:shadow-sm"
                 >
                   <span>{{ option.title }}</span>
                   <span class="text-[11px] font-normal text-muted-foreground">{{ option.count }}</span>
@@ -214,7 +240,7 @@ function handleConfirm() {
             <Label class="text-sm font-medium text-foreground">文件格式</Label>
 
             <Tabs :model-value="exportFormat" class="w-fit" @update:model-value="handleFormatChange">
-              <TabsList class="h-9 w-fit justify-start gap-1 rounded-md bg-muted p-1">
+              <TabsList class="grid h-auto w-full grid-cols-2 justify-start gap-1 rounded-md bg-muted p-1 sm:w-fit">
                 <TabsTrigger
                   v-for="format in formatOptions"
                   :key="format.value"
@@ -236,6 +262,11 @@ function handleConfirm() {
         </div>
 
         <section class="space-y-1.5 rounded-md bg-muted px-4 py-3">
+          <p class="text-[13px] leading-5 text-muted-foreground">
+            <span class="font-medium text-foreground">数据范围：</span>
+            当前页 {{ currentPageRowsCount }} 条。{{ totalRowsText }}
+          </p>
+
           <p class="text-[13px] leading-5 text-muted-foreground">
             <span class="font-medium text-foreground">导出摘要：</span>
             预计导出 {{ exportCount }} 条记录，范围为{{ exportRangeText }}。

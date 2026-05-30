@@ -5,6 +5,7 @@ import { toast } from "vue-sonner"
 
 import LinkedEntityDetailSheet from "@/components/detail/LinkedEntityDetailSheet.vue"
 import TablePage from "@/components/table-page/TablePage.vue"
+import type { TableExportRowsResolverPayload } from "@/components/table-page/export-utils"
 import { createTablePageDefinition, useTablePage } from "@/components/table-page/useTablePage"
 import type { TablePageSchema, TableQueryBarConfig } from "@/components/table-page/types"
 import {
@@ -29,6 +30,7 @@ import {
 import { handleApiError } from "@/lib/api-errors"
 import { fetchCustomers } from "@/lib/customers-api"
 import { fetchInspectionPlans, type InspectionPlanListItem } from "@/lib/inspection-plans-api"
+import { fetchAllPaginatedListItems } from "@/lib/paginated-list-export"
 import { PERMISSION_CODES } from "@/lib/permission-codes"
 
 type InspectionPlanRecord = {
@@ -402,6 +404,25 @@ async function loadInspectionPlans() {
       loading.value = false
     }
   }
+}
+
+async function resolveExportRows(payload: TableExportRowsResolverPayload) {
+  if (payload.scope !== "filtered") {
+    return payload.defaultRows
+  }
+
+  const items = await fetchAllPaginatedListItems(({ PageNum, PageSize }) => fetchInspectionPlans({
+    Code: planNameQuery.value || undefined,
+    CustomerUuid: selectedCustomerUuid.value || undefined,
+    CreatedStartAt: createdAtQuery.value || undefined,
+    CreatedEndAt: createdAtQuery.value || undefined,
+    NextStartTime: nextExecutionAtQuery.value || undefined,
+    NextEndTime: nextExecutionAtQuery.value || undefined,
+    PageNum,
+    PageSize,
+  }))
+
+  return items.map((item, index) => normalizeInspectionPlanRecord(item, index)).sort((left, right) => compareInspectionPlanRows(left, right, sortDirection.value))
 }
 
 function handleCreateInspectionPlan() {
@@ -824,6 +845,9 @@ async function syncRouteQueryAndReload() {
         :page="page"
         :loading="loading"
         :query-bar="queryBar"
+        :export-rows-resolver="resolveExportRows"
+        :export-filtered-rows-count="total"
+        :export-total-rows-count="total"
         toolbar-sort-behavior="toggle"
         :toolbar-sort-direction="sortDirection"
         fill-available-height
