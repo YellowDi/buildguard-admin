@@ -322,10 +322,8 @@
 
 @theme inline {
   --font-sans:
-    -apple-system, BlinkMacSystemFont, "PingFang SC", "DFPKingGothicGB-Regular",
-    "Segoe UI", "Hiragino Sans GB", "Microsoft YaHei",
-    "Helvetica Neue", Helvetica, "Source Han Sans SC", "Noto Sans CJK SC", "WenQuanYi Micro Hei",
-    Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+    "PingFang SC", "DFPKingGothicGB-Regular", "Helvetica Neue", "Microsoft YaHei",
+    sans-serif;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -406,6 +404,14 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
+@media (-webkit-max-device-pixel-ratio: 1) {
+  :root {
+    --font-sans:
+      -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial,
+      "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  }
+}
+
 @layer base {
   * {
     @apply border-border;
@@ -413,7 +419,7 @@
 
   body {
     @apply bg-background text-foreground;
-    font-family: var(--font-sans);
+    font-family: var(--font-sans) !important;
     text-rendering: optimizeLegibility;
   }
 
