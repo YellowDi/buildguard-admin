@@ -205,28 +205,28 @@ function handleConfirm() {
       class="max-w-[min(96vw,52rem)] gap-0 overflow-hidden p-0"
       :show-close-button="!isExporting"
     >
-      <DialogHeader class="px-4 pt-4 pb-0">
+      <DialogHeader class="min-w-0 px-4 pt-4 pb-0">
         <DialogTitle>导出{{ tableTitle }}</DialogTitle>
         <DialogDescription>
           选择导出范围和文件格式后生成下载文件。
         </DialogDescription>
       </DialogHeader>
 
-      <div class="space-y-4 px-4 pt-4 pb-0">
-        <div class="flex flex-wrap items-start justify-between gap-x-4 gap-y-3 sm:flex-nowrap">
-          <section class="min-w-fit flex-none space-y-2">
+      <div class="min-w-0 space-y-4 px-4 pt-4 pb-0">
+        <div class="grid min-w-0 gap-4">
+          <section class="min-w-0 space-y-2">
             <Label class="text-sm font-medium text-foreground">导出范围</Label>
-            <Tabs :model-value="exportScope" class="w-fit" @update:model-value="handleScopeChange">
-              <TabsList class="grid h-auto w-full grid-cols-1 justify-start gap-1 rounded-md bg-muted p-1 sm:w-fit sm:grid-cols-3">
+            <Tabs :model-value="exportScope" class="w-full" @update:model-value="handleScopeChange">
+              <TabsList class="grid h-auto w-full grid-cols-3 justify-start gap-1 rounded-md bg-muted p-1">
                 <TabsTrigger
                   v-for="option in scopeOptions"
                   :key="option.value"
                   :value="option.value"
                   :disabled="option.disabled"
-                  class="h-7 min-w-[112px] gap-1.5 rounded-[calc(var(--radius)_-_6px)] px-3 text-[13px] font-medium data-[state=active]:shadow-sm"
+                  class="h-7 min-w-0 gap-1.5 rounded-[calc(var(--radius)_-_6px)] px-2 text-[13px] font-medium data-[state=active]:shadow-sm sm:px-3"
                 >
-                  <span>{{ option.title }}</span>
-                  <span class="text-[11px] font-normal text-muted-foreground">{{ option.count }}</span>
+                  <span class="min-w-0 truncate">{{ option.title }}</span>
+                  <span class="shrink-0 text-[11px] font-normal tabular-nums text-muted-foreground">{{ option.count }}</span>
                 </TabsTrigger>
               </TabsList>
             </Tabs>
@@ -236,17 +236,17 @@ function handleConfirm() {
             </p>
           </section>
 
-          <section class="min-w-fit flex-none space-y-2">
+          <section class="min-w-0 space-y-2">
             <Label class="text-sm font-medium text-foreground">文件格式</Label>
 
-            <Tabs :model-value="exportFormat" class="w-fit" @update:model-value="handleFormatChange">
-              <TabsList class="grid h-auto w-full grid-cols-2 justify-start gap-1 rounded-md bg-muted p-1 sm:w-fit">
+            <Tabs :model-value="exportFormat" class="w-full" @update:model-value="handleFormatChange">
+              <TabsList class="grid h-auto w-full grid-cols-2 justify-start gap-1 rounded-md bg-muted p-1">
                 <TabsTrigger
                   v-for="format in formatOptions"
                   :key="format.value"
                   :value="format.value"
                   :disabled="format.disabled"
-                  class="h-7 min-w-[96px] gap-1.5 rounded-[calc(var(--radius)_-_6px)] px-3 text-[13px] font-medium data-[state=active]:shadow-sm"
+                  class="h-7 min-w-0 gap-1.5 rounded-[calc(var(--radius)_-_6px)] px-3 text-[13px] font-medium data-[state=active]:shadow-sm"
                 >
                   <span>{{ format.label }}</span>
                   <span
