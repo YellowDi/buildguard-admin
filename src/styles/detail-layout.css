@@ -225,6 +225,7 @@
 @container detail-layout (min-width: 68rem) {
   .detail-layout__content {
     grid-template-columns: minmax(0, 0.88fr) 1px minmax(0, 1.12fr);
+    grid-template-rows: minmax(0, 1fr);
   }
 
   .detail-layout__primary {
@@ -233,6 +234,10 @@
 
   .detail-layout__divider {
     display: block;
+  }
+
+  .detail-layout__stack-divider {
+    display: none;
   }
 
   .detail-layout__secondary {
@@ -249,6 +254,7 @@
   }
 
   .detail-layout--single-column .detail-layout__divider,
+  .detail-layout--single-column .detail-layout__stack-divider,
   .detail-layout--single-column .detail-layout__secondary {
     display: none;
   }
