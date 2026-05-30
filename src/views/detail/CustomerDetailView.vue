@@ -5110,7 +5110,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
                 </template>
               </TitleBlock>
 
-              <div v-if="inspectionServicesErrorMessage || inspectionServicesLoading" class="detail-section-inset pt-2">
+              <div v-if="inspectionServicesErrorMessage || inspectionServicesLoading" class="detail-section-inset detail-section-inset--flush-right pt-2">
                 <Alert v-if="inspectionServicesErrorMessage" variant="destructive" class="mb-3">
                   <AlertTitle>检测服务接口加载失败</AlertTitle>
                   <AlertDescription>{{ inspectionServicesErrorMessage }}</AlertDescription>
@@ -5123,11 +5123,11 @@ function toDisplayText(value: unknown, fallback = "未填写") {
                 />
               </div>
 
-              <div v-if="!inspectionServicesLoading && inspectionServiceCards.length" class="detail-section-inset space-y-3 pt-2">
+              <div v-if="!inspectionServicesLoading && inspectionServiceCards.length" class="detail-section-inset detail-section-inset--flush-right space-y-3 pt-2">
                 <article
                   v-for="service in inspectionServiceCards"
                   :key="service.key"
-                  class="rounded-lg border-0 bg-card p-3 text-card-foreground shadow-(--shadow-border) transition-shadow duration-200 hover:shadow-(--shadow-border-hover)"
+                  class="space-y-3 text-card-foreground"
                 >
                   <div class="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
                     <div class="min-w-0">
@@ -5159,7 +5159,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
                     </Button>
                   </div>
 
-                  <div class="mt-3 grid gap-2 text-[13px] leading-5 sm:grid-cols-2">
+                  <div class="grid gap-2 text-[13px] leading-5 sm:grid-cols-2">
                     <div class="min-w-0 rounded-md bg-card-background px-3 py-2.5">
                       <div class="flex items-center gap-1 text-xs text-muted-foreground">
                         <i class="ri-calendar-line text-[13px]" />
@@ -5198,7 +5198,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
                 </article>
               </div>
 
-              <div v-else-if="!inspectionServicesLoading" class="detail-section-inset pt-2">
+              <div v-else-if="!inspectionServicesLoading" class="detail-section-inset detail-section-inset--flush-right pt-2">
                 <div class="flex min-h-24 items-center justify-center rounded-md border border-dashed border-border bg-muted/30 px-4 text-sm text-muted-foreground">
                   暂无检测服务
                 </div>
