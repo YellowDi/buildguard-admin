@@ -4935,112 +4935,153 @@ function toDisplayText(value: unknown, fallback = "未填写") {
         <template v-else-if="customer">
           <DetailFieldSections :sections="fieldSections" use-title-block />
           <div class="h-px bg-border/80" />
-          <section class="detail-field-section detail-field-section--after-separator min-w-0">
-            <TitleBlock
-              variant="section"
-              title="检测服务信息"
-              :sticky="true"
-              sticky-top="var(--detail-layout-sticky-offset, 0px)"
-              class="detail-section-inset pt-4 pb-1"
-            >
-              <template #append>
-                <span class="inline-flex min-w-6 items-center justify-center rounded-md bg-secondary px-1.5 py-0.5 text-[12px] font-medium leading-none text-secondary-foreground">
-                  {{ inspectionServiceCards.length }}
-                </span>
-              </template>
-            </TitleBlock>
+          <Alert v-if="relationErrorMessage" variant="destructive" class="mt-4 mb-3">
+            <AlertTitle>园区/建筑接口加载失败</AlertTitle>
+            <AlertDescription>{{ relationErrorMessage }}</AlertDescription>
+          </Alert>
 
-            <div v-if="inspectionServicesErrorMessage || inspectionServicesLoading" class="detail-section-inset pt-2">
-              <Alert v-if="inspectionServicesErrorMessage" variant="destructive" class="mb-3">
-                <AlertTitle>检测服务接口加载失败</AlertTitle>
-                <AlertDescription>{{ inspectionServicesErrorMessage }}</AlertDescription>
-              </Alert>
+          <section class="detail-relation-module w-full min-w-0 max-w-full">
+            <div class="detail-table-scroll">
+              <div class="detail-table-frame detail-relation-frame">
+                <TitleBlock
+                  variant="section"
+                  title="园区 / 建筑列表概览"
+                  class="detail-section-inset pt-4 pb-3"
+                >
+                  <template #append>
+                    <Badge
+                      variant="secondary"
+                      class="min-w-6 justify-center rounded-md px-1.5 py-0.5 text-[12px] font-medium leading-none"
+                    >
+                      {{ parkBuildingGroupCount }}
+                    </Badge>
+                  </template>
+                </TitleBlock>
 
-              <DetailFieldsSkeleton
-                v-if="inspectionServicesLoading"
-                :sections="1"
-                :rows-per-section="3"
-              />
-            </div>
+                <div v-if="relationsLoading" class="detail-section-inset pt-2">
+                  <DetailFieldsSkeleton
+                    :sections="1"
+                    :rows-per-section="3"
+                  />
+                </div>
 
-            <div v-if="!inspectionServicesLoading && inspectionServiceCards.length" class="detail-section-inset space-y-3 pt-2">
-              <article
-                v-for="service in inspectionServiceCards"
-                :key="service.key"
-                class="rounded-lg border-0 bg-card p-3 text-card-foreground shadow-(--shadow-border) transition-shadow duration-200 hover:shadow-(--shadow-border-hover)"
-              >
-                <div class="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                  <div class="min-w-0">
-                    <div class="flex min-w-0 flex-wrap items-center gap-2">
-                      <h3 class="break-words text-[14px] font-semibold leading-5 text-foreground">
-                        {{ formatInspectionServiceTitle(service) }}
-                      </h3>
-                      <span
-                        class="inline-flex shrink-0 items-center rounded-md border px-1.5 py-0.5 text-[11px] font-medium leading-none"
-                        :class="getInspectionServiceStatusClass(service.statusValue)"
-                      >
-                        {{ service.statusLabel }}
-                      </span>
-                    </div>
-                    <p class="mt-1 truncate text-xs text-muted-foreground">
-                      套餐等级：{{ service.level }}
-                    </p>
-                  </div>
+                <div
+                  v-else-if="!parkBuildingGroups.length"
+                  class="flex min-h-[min(160px,30vh)] w-full min-w-0 flex-col items-center justify-center px-4 py-12"
+                >
+                  <Empty class="w-full max-w-md flex-none border-0 bg-transparent p-6! shadow-none md:p-8!">
+                    <EmptyHeader class="max-w-md">
+                      <EmptyMedia variant="icon">
+                        <i class="ri-building-2-line text-[18px]" />
+                      </EmptyMedia>
+                      <EmptyTitle>暂无园区和建筑数据</EmptyTitle>
+                      <EmptyDescription>当前客户下暂无可展示的园区和建筑。</EmptyDescription>
+                    </EmptyHeader>
+                  </Empty>
+                </div>
 
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    type="button"
-                    class="h-7 shrink-0 self-start rounded-md px-2.5 text-xs leading-5"
-                    @click="goToInspectionServiceDetail(service)"
+                <div v-else class="detail-group-stack space-y-4 pb-2">
+                  <article
+                    v-for="group in parkBuildingGroups"
+                    :key="group.key"
+                    class="overflow-hidden rounded-[20px] border border-border/60 bg-card-background text-foreground"
                   >
-                    <i class="ri-arrow-right-up-line text-sm" />
-                    查看详情
-                  </Button>
+                    <div
+                      role="button"
+                      tabindex="0"
+                      class="block w-full rounded-[16px] bg-card px-4 py-3 text-left shadow-(--shadow-border)"
+                      :aria-expanded="isParkBuildingGroupExpanded(group.key)"
+                      :aria-label="`${group.title}，${isParkBuildingGroupExpanded(group.key) ? '收起建筑列表' : '展开建筑列表'}`"
+                      @click="handleParkBuildingCardClick(group.key)"
+                      @keydown="handleParkBuildingCardKeydown($event, group.key)"
+                    >
+                      <div class="flex min-w-0 items-center justify-between gap-3">
+                        <div class="flex min-w-0 items-center gap-2.5">
+                          <div class="flex size-7 shrink-0 items-center justify-center rounded-[10px] bg-brand-surface text-link ring-1 ring-brand-border">
+                            <i class="ri-community-line text-[15px]" />
+                          </div>
+                          <div class="min-w-0">
+                            <div class="truncate whitespace-nowrap text-[18px] font-semibold text-foreground">
+                              {{ group.title }}
+                            </div>
+                          </div>
+                        </div>
+
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          class="h-8 shrink-0 rounded-md px-2.5"
+                          :disabled="!group.parkUuid"
+                          @click.stop="goToParkDetail(group.parkUuid)"
+                        >
+                          查看详情
+                        </Button>
+                      </div>
+                    </div>
+
+                    <Transition
+                      @before-enter="handleParkBuildingExpandBeforeEnter"
+                      @enter="handleParkBuildingExpandEnter"
+                      @after-enter="handleParkBuildingExpandAfterEnter"
+                      @before-leave="handleParkBuildingExpandBeforeLeave"
+                      @leave="handleParkBuildingExpandLeave"
+                      @after-leave="handleParkBuildingExpandAfterLeave"
+                    >
+                      <div
+                        v-if="isParkBuildingGroupExpanded(group.key)"
+                        class="bg-transparent pb-0 pt-3"
+                      >
+                        <div
+                          v-if="!group.buildings.length"
+                          class="mx-4 mb-1 rounded-md border border-dashed border-border bg-card px-3 py-3 text-sm text-muted-foreground"
+                        >
+                          当前园区暂无建筑。
+                        </div>
+
+                        <div
+                          v-else
+                          class="overflow-hidden pb-1"
+                        >
+                          <div
+                            v-for="building in group.buildings"
+                            :key="building.key"
+                            role="button"
+                            tabindex="0"
+                            class="flex min-h-11 w-full cursor-pointer items-center gap-2.5 border-b border-border/60 px-4 py-2.5 text-left transition-colors duration-180 ease-out last:border-b-0 hover:bg-interactive-hover"
+                            :aria-label="`查看${building.name}详情`"
+                            @click="goToBuildingDetail(building.uuid, building.parkUuid)"
+                            @keydown.enter.prevent="goToBuildingDetail(building.uuid, building.parkUuid)"
+                            @keydown.space.prevent="goToBuildingDetail(building.uuid, building.parkUuid)"
+                          >
+                            <div class="min-w-0 flex-1 truncate whitespace-nowrap text-[14px] font-medium text-foreground">
+                              {{ building.name }}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </Transition>
+
+                    <div class="flex items-center justify-between gap-3 px-4 py-2.5">
+                      <button
+                        type="button"
+                        class="inline-flex items-center gap-1.5 whitespace-nowrap text-[12px] font-medium text-muted-foreground transition-colors duration-180 hover:text-foreground"
+                        :aria-expanded="isParkBuildingGroupExpanded(group.key)"
+                        @click="toggleParkBuildingGroup(group.key)"
+                      >
+                        {{ isParkBuildingGroupExpanded(group.key) ? "收起建筑" : "查看建筑" }}
+                        <i
+                          :class="isParkBuildingGroupExpanded(group.key) ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line'"
+                          class="text-[15px]"
+                        />
+                      </button>
+
+                      <div class="shrink-0 whitespace-nowrap text-[12px] tabular-nums text-muted-foreground">
+                        {{ group.meta }}
+                      </div>
+                    </div>
+                  </article>
                 </div>
-
-                <div class="mt-3 grid gap-2 text-[13px] leading-5 sm:grid-cols-2">
-                  <div class="min-w-0 rounded-md bg-card-background px-3 py-2.5">
-                    <div class="flex items-center gap-1 text-xs text-muted-foreground">
-                      <i class="ri-calendar-line text-[13px]" />
-                      <span>合同周期</span>
-                    </div>
-                    <div class="mt-0.5 break-words font-medium text-foreground">
-                      {{ formatInspectionServiceContractPeriod(service) }}
-                    </div>
-                  </div>
-                  <div class="min-w-0 rounded-md bg-card-background px-3 py-2.5">
-                    <div class="flex items-center gap-1 text-xs text-muted-foreground">
-                      <i class="ri-user-line text-[13px]" />
-                      <span>负责人</span>
-                    </div>
-                    <div class="mt-0.5 truncate font-medium text-foreground">{{ formatInspectionServiceManager(service) }}</div>
-                  </div>
-                  <div class="min-w-0 rounded-md bg-card-background px-3 py-2.5">
-                    <div class="flex items-center gap-1 text-xs text-muted-foreground">
-                      <i class="ri-building-line text-[13px]" />
-                      <span>服务范围</span>
-                    </div>
-                    <div class="mt-0.5 break-words font-medium text-foreground">{{ formatInspectionServiceScope(service) }}</div>
-                  </div>
-                  <div class="min-w-0 rounded-md bg-card-background px-3 py-2.5">
-                    <div class="flex items-center gap-1 text-xs text-muted-foreground">
-                      <i class="ri-file-text-line text-[13px]" />
-                      <span>合同文件</span>
-                    </div>
-                    <div class="mt-0.5 truncate font-medium text-foreground">{{ formatInspectionServiceContractFile(service) }}</div>
-                  </div>
-                </div>
-
-                <p v-if="service.remark" class="mt-2 line-clamp-2 text-xs leading-5 text-muted-foreground">
-                  {{ service.remark }}
-                </p>
-              </article>
-            </div>
-
-            <div v-else-if="!inspectionServicesLoading" class="detail-section-inset pt-2">
-              <div class="flex min-h-24 items-center justify-center rounded-md border border-dashed border-border bg-muted/30 px-4 text-sm text-muted-foreground">
-                暂无检测服务
               </div>
             </div>
           </section>
@@ -5051,149 +5092,115 @@ function toDisplayText(value: unknown, fallback = "未填写") {
     <template #secondary>
       <template v-if="activeTab === 'basic-info' && (loading || customer)">
         <div class="pb-5">
-          <Alert v-if="relationErrorMessage" variant="destructive" class="mb-5">
-            <AlertTitle>园区/建筑接口加载失败</AlertTitle>
-            <AlertDescription>{{ relationErrorMessage }}</AlertDescription>
-          </Alert>
-
-          <CustomerDetailContentLoading v-if="loading || relationsLoading" variant="basic-info-secondary" />
+          <CustomerDetailContentLoading v-if="loading" variant="basic-info-secondary" />
 
           <template v-else-if="customer">
-            <section class="detail-relation-module w-full min-w-0 max-w-full">
-              <div class="detail-table-scroll">
-                <div class="detail-table-frame detail-relation-frame">
-                  <TitleBlock
-                    variant="section"
-                    title="园区 / 建筑列表概览"
-                    class="detail-section-inset pt-4 pb-3"
-                  >
-                    <template #append>
-                      <Badge
-                        variant="secondary"
-                        class="min-w-6 justify-center rounded-md px-1.5 py-0.5 text-[12px] font-medium leading-none"
-                      >
-                        {{ parkBuildingGroupCount }}
-                      </Badge>
-                    </template>
-                  </TitleBlock>
+            <section class="detail-field-section detail-field-section--after-separator min-w-0">
+              <TitleBlock
+                variant="section"
+                title="检测服务信息"
+                :sticky="true"
+                sticky-top="var(--detail-layout-sticky-offset, 0px)"
+                class="detail-section-inset pt-4 pb-1"
+              >
+                <template #append>
+                  <span class="inline-flex min-w-6 items-center justify-center rounded-md bg-secondary px-1.5 py-0.5 text-[12px] font-medium leading-none text-secondary-foreground">
+                    {{ inspectionServiceCards.length }}
+                  </span>
+                </template>
+              </TitleBlock>
 
-                  <div
-                    v-if="!parkBuildingGroups.length"
-                    class="flex min-h-[min(160px,30vh)] w-full min-w-0 flex-col items-center justify-center px-4 py-12"
-                  >
-                    <Empty class="w-full max-w-md flex-none border-0 bg-transparent p-6! shadow-none md:p-8!">
-                      <EmptyHeader class="max-w-md">
-                        <EmptyMedia variant="icon">
-                          <i class="ri-building-2-line text-[18px]" />
-                        </EmptyMedia>
-                        <EmptyTitle>暂无园区和建筑数据</EmptyTitle>
-                        <EmptyDescription>当前客户下暂无可展示的园区和建筑。</EmptyDescription>
-                      </EmptyHeader>
-                    </Empty>
-                  </div>
+              <div v-if="inspectionServicesErrorMessage || inspectionServicesLoading" class="detail-section-inset pt-2">
+                <Alert v-if="inspectionServicesErrorMessage" variant="destructive" class="mb-3">
+                  <AlertTitle>检测服务接口加载失败</AlertTitle>
+                  <AlertDescription>{{ inspectionServicesErrorMessage }}</AlertDescription>
+                </Alert>
 
-                  <div v-else class="detail-group-stack space-y-4 pb-2">
-                    <article
-                      v-for="group in parkBuildingGroups"
-                      :key="group.key"
-                      class="overflow-hidden rounded-[20px] border border-border/60 bg-card-background text-foreground"
+                <DetailFieldsSkeleton
+                  v-if="inspectionServicesLoading"
+                  :sections="1"
+                  :rows-per-section="3"
+                />
+              </div>
+
+              <div v-if="!inspectionServicesLoading && inspectionServiceCards.length" class="detail-section-inset space-y-3 pt-2">
+                <article
+                  v-for="service in inspectionServiceCards"
+                  :key="service.key"
+                  class="rounded-lg border-0 bg-card p-3 text-card-foreground shadow-(--shadow-border) transition-shadow duration-200 hover:shadow-(--shadow-border-hover)"
+                >
+                  <div class="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+                    <div class="min-w-0">
+                      <div class="flex min-w-0 flex-wrap items-center gap-2">
+                        <h3 class="break-words text-[14px] font-semibold leading-5 text-foreground">
+                          {{ formatInspectionServiceTitle(service) }}
+                        </h3>
+                        <span
+                          class="inline-flex shrink-0 items-center rounded-md border px-1.5 py-0.5 text-[11px] font-medium leading-none"
+                          :class="getInspectionServiceStatusClass(service.statusValue)"
+                        >
+                          {{ service.statusLabel }}
+                        </span>
+                      </div>
+                      <p class="mt-1 truncate text-xs text-muted-foreground">
+                        套餐等级：{{ service.level }}
+                      </p>
+                    </div>
+
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      type="button"
+                      class="h-7 shrink-0 self-start rounded-md px-2.5 text-xs leading-5"
+                      @click="goToInspectionServiceDetail(service)"
                     >
-                      <div
-                        role="button"
-                        tabindex="0"
-                        class="block w-full rounded-[16px] bg-card px-4 py-3 text-left shadow-(--shadow-border)"
-                        :aria-expanded="isParkBuildingGroupExpanded(group.key)"
-                        :aria-label="`${group.title}，${isParkBuildingGroupExpanded(group.key) ? '收起建筑列表' : '展开建筑列表'}`"
-                        @click="handleParkBuildingCardClick(group.key)"
-                        @keydown="handleParkBuildingCardKeydown($event, group.key)"
-                      >
-                        <div class="flex min-w-0 items-center justify-between gap-3">
-                          <div class="flex min-w-0 items-center gap-2.5">
-                            <div class="flex size-7 shrink-0 items-center justify-center rounded-[10px] bg-brand-surface text-link ring-1 ring-brand-border">
-                              <i class="ri-community-line text-[15px]" />
-                            </div>
-                            <div class="min-w-0">
-                              <div class="truncate whitespace-nowrap text-[18px] font-semibold text-foreground">
-                                {{ group.title }}
-                              </div>
-                            </div>
-                          </div>
-
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            class="h-8 shrink-0 rounded-md px-2.5"
-                            :disabled="!group.parkUuid"
-                            @click.stop="goToParkDetail(group.parkUuid)"
-                          >
-                            查看详情
-                          </Button>
-                        </div>
-                      </div>
-
-                      <Transition
-                        @before-enter="handleParkBuildingExpandBeforeEnter"
-                        @enter="handleParkBuildingExpandEnter"
-                        @after-enter="handleParkBuildingExpandAfterEnter"
-                        @before-leave="handleParkBuildingExpandBeforeLeave"
-                        @leave="handleParkBuildingExpandLeave"
-                        @after-leave="handleParkBuildingExpandAfterLeave"
-                      >
-                        <div
-                          v-if="isParkBuildingGroupExpanded(group.key)"
-                          class="bg-transparent pb-0 pt-3"
-                        >
-                          <div
-                            v-if="!group.buildings.length"
-                            class="mx-4 mb-1 rounded-md border border-dashed border-border bg-card px-3 py-3 text-sm text-muted-foreground"
-                          >
-                            当前园区暂无建筑。
-                          </div>
-
-                          <div
-                            v-else
-                            class="overflow-hidden pb-1"
-                          >
-                            <div
-                              v-for="building in group.buildings"
-                              :key="building.key"
-                              role="button"
-                              tabindex="0"
-                              class="flex min-h-11 w-full cursor-pointer items-center gap-2.5 border-b border-border/60 px-4 py-2.5 text-left transition-colors duration-180 ease-out last:border-b-0 hover:bg-interactive-hover"
-                              :aria-label="`查看${building.name}详情`"
-                              @click="goToBuildingDetail(building.uuid, building.parkUuid)"
-                              @keydown.enter.prevent="goToBuildingDetail(building.uuid, building.parkUuid)"
-                              @keydown.space.prevent="goToBuildingDetail(building.uuid, building.parkUuid)"
-                            >
-                              <div class="min-w-0 flex-1 truncate whitespace-nowrap text-[14px] font-medium text-foreground">
-                                {{ building.name }}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </Transition>
-
-                      <div class="flex items-center justify-between gap-3 px-4 py-2.5">
-                        <button
-                          type="button"
-                          class="inline-flex items-center gap-1.5 whitespace-nowrap text-[12px] font-medium text-muted-foreground transition-colors duration-180 hover:text-foreground"
-                          :aria-expanded="isParkBuildingGroupExpanded(group.key)"
-                          @click="toggleParkBuildingGroup(group.key)"
-                        >
-                          {{ isParkBuildingGroupExpanded(group.key) ? "收起建筑" : "查看建筑" }}
-                          <i
-                            :class="isParkBuildingGroupExpanded(group.key) ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line'"
-                            class="text-[15px]"
-                          />
-                        </button>
-
-                        <div class="shrink-0 whitespace-nowrap text-[12px] tabular-nums text-muted-foreground">
-                          {{ group.meta }}
-                        </div>
-                      </div>
-                    </article>
+                      <i class="ri-arrow-right-up-line text-sm" />
+                      查看详情
+                    </Button>
                   </div>
+
+                  <div class="mt-3 grid gap-2 text-[13px] leading-5 sm:grid-cols-2">
+                    <div class="min-w-0 rounded-md bg-card-background px-3 py-2.5">
+                      <div class="flex items-center gap-1 text-xs text-muted-foreground">
+                        <i class="ri-calendar-line text-[13px]" />
+                        <span>合同周期</span>
+                      </div>
+                      <div class="mt-0.5 break-words font-medium text-foreground">
+                        {{ formatInspectionServiceContractPeriod(service) }}
+                      </div>
+                    </div>
+                    <div class="min-w-0 rounded-md bg-card-background px-3 py-2.5">
+                      <div class="flex items-center gap-1 text-xs text-muted-foreground">
+                        <i class="ri-user-line text-[13px]" />
+                        <span>负责人</span>
+                      </div>
+                      <div class="mt-0.5 truncate font-medium text-foreground">{{ formatInspectionServiceManager(service) }}</div>
+                    </div>
+                    <div class="min-w-0 rounded-md bg-card-background px-3 py-2.5">
+                      <div class="flex items-center gap-1 text-xs text-muted-foreground">
+                        <i class="ri-building-line text-[13px]" />
+                        <span>服务范围</span>
+                      </div>
+                      <div class="mt-0.5 break-words font-medium text-foreground">{{ formatInspectionServiceScope(service) }}</div>
+                    </div>
+                    <div class="min-w-0 rounded-md bg-card-background px-3 py-2.5">
+                      <div class="flex items-center gap-1 text-xs text-muted-foreground">
+                        <i class="ri-file-text-line text-[13px]" />
+                        <span>合同文件</span>
+                      </div>
+                      <div class="mt-0.5 truncate font-medium text-foreground">{{ formatInspectionServiceContractFile(service) }}</div>
+                    </div>
+                  </div>
+
+                  <p v-if="service.remark" class="mt-2 line-clamp-2 text-xs leading-5 text-muted-foreground">
+                    {{ service.remark }}
+                  </p>
+                </article>
+              </div>
+
+              <div v-else-if="!inspectionServicesLoading" class="detail-section-inset pt-2">
+                <div class="flex min-h-24 items-center justify-center rounded-md border border-dashed border-border bg-muted/30 px-4 text-sm text-muted-foreground">
+                  暂无检测服务
                 </div>
               </div>
             </section>
