@@ -132,10 +132,11 @@ const tableMoreActions: Array<{
   { key: "export-records", label: "导出记录", iconClass: "ri-download-line" },
 ]
 const placeholderBulkActions = [
-  { label: "批量修改", iconClass: "ri-edit-line", danger: false },
-  { label: "导出", iconClass: "ri-download-line", danger: false },
-  { label: "删除", iconClass: "ri-delete-bin-line", danger: true },
+  { key: "edit", label: "批量修改", iconClass: "ri-edit-line", danger: false },
+  { key: "export", label: "导出", iconClass: "ri-download-line", danger: false },
+  { key: "delete", label: "删除", iconClass: "ri-delete-bin-line", danger: true },
 ] as const
+type PlaceholderBulkActionKey = typeof placeholderBulkActions[number]["key"]
 
 const sortFields = computed(() => props.queryBar ? [] : props.fields.filter(field => field.kind === "sort"))
 const activeFilterFields = computed(() => props.queryBar ? [] : props.fields.filter(field => field.kind !== "sort" && field.accent))
@@ -408,7 +409,13 @@ function handleTableMoreActionSelect(action: TableMoreActionKey) {
   })
 }
 
-function handlePlaceholderBulkAction(actionLabel: string) {
+function handlePlaceholderBulkAction(actionKey: PlaceholderBulkActionKey) {
+  if (actionKey === "export") {
+    emit("export-action")
+    return
+  }
+
+  const actionLabel = placeholderBulkActions.find(action => action.key === actionKey)?.label ?? "该功能"
   toast.info(`${actionLabel}暂不可用`, {
     description: "该功能暂不可用，请稍后再试。",
   })
@@ -1019,7 +1026,7 @@ watch(
                         'h-8 gap-1 px-3 text-[14px] leading-none whitespace-nowrap',
                         action.danger ? 'text-destructive hover:text-destructive' : '',
                       ]"
-                      @click="handlePlaceholderBulkAction(action.label)"
+                      @click="handlePlaceholderBulkAction(action.key)"
                     >
                       <i :class="[action.iconClass, 'text-base']" />
                       {{ action.label }}
