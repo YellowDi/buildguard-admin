@@ -404,14 +404,6 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
-@media (-webkit-max-device-pixel-ratio: 1) {
-  :root {
-    --font-sans:
-      -apple-system, BlinkMacSystemFont, "Helvetica Neue", Helvetica, Arial,
-      "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
-  }
-}
-
 @layer base {
   * {
     @apply border-border;
