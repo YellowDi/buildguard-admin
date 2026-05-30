@@ -5129,8 +5129,8 @@ function toDisplayText(value: unknown, fallback = "未填写") {
                   :key="service.key"
                   class="space-y-3 text-card-foreground"
                 >
-                  <div class="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                    <div class="min-w-0">
+                  <div class="flex min-w-0 items-start justify-between gap-2">
+                    <div class="min-w-0 flex-1">
                       <div class="flex min-w-0 flex-wrap items-center gap-2">
                         <h3 class="break-words text-[14px] font-semibold leading-5 text-foreground">
                           {{ formatInspectionServiceTitle(service) }}
@@ -5151,7 +5151,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
                       variant="outline"
                       size="sm"
                       type="button"
-                      class="h-7 shrink-0 self-start rounded-md px-2.5 text-xs leading-5"
+                      class="h-7 shrink-0 whitespace-nowrap rounded-md px-2.5 text-xs leading-5"
                       @click="goToInspectionServiceDetail(service)"
                     >
                       <i class="ri-arrow-right-up-line text-sm" />
