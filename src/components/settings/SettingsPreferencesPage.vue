@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import type { CSSProperties } from "vue"
+
 import SettingsPageHeader from "@/components/settings/SettingsPageHeader.vue"
 import SettingsSection from "@/components/settings/SettingsSection.vue"
 import {
@@ -22,6 +24,7 @@ import type {
   SettingsActionKey,
   SettingsCategory,
   SettingsInputItem,
+  SettingsSelectOption,
   SettingsSelectItem,
   SettingsState,
   StringSettingsKey,
@@ -60,6 +63,31 @@ function getStringValue(key: keyof SettingsState) {
 
 function getBooleanValue(key: keyof SettingsState) {
   return Boolean(props.state[key])
+}
+
+function getSelectedOption(item: SettingsSelectItem) {
+  const value = getStringValue(item.modelKey)
+  return item.options.find(option => option.value === value)
+}
+
+function getSelectedOptionLabel(item: SettingsSelectItem) {
+  return getSelectedOption(item)?.label ?? getStringValue(item.modelKey)
+}
+
+function getColorSwatchStyle(option: SettingsSelectOption): CSSProperties | undefined {
+  if (!option.color) {
+    return undefined
+  }
+
+  return {
+    "--settings-color-swatch": option.color,
+    "--settings-color-swatch-dark": option.darkColor ?? option.color,
+  } as CSSProperties
+}
+
+function getSelectedColorSwatchStyle(item: SettingsSelectItem) {
+  const option = getSelectedOption(item)
+  return option ? getColorSwatchStyle(option) : undefined
 }
 
 function isItemDisabled(key: string) {
@@ -131,7 +159,23 @@ function isItemDisabled(key: string) {
                       :disabled="isItemDisabled(item.key)"
                       class="h-9 w-full min-w-0 rounded-md bg-background text-sm"
                     >
-                      <SelectValue :placeholder="item.label" />
+                      <SelectValue
+                        v-if="getSelectedOption(item)?.color"
+                        :placeholder="item.label"
+                      >
+                        <span class="inline-flex min-w-0 items-center gap-2">
+                          <span
+                            class="size-3 shrink-0 rounded-sm border border-border/70 bg-[var(--settings-color-swatch)] shadow-xs dark:bg-[var(--settings-color-swatch-dark)]"
+                            :style="getSelectedColorSwatchStyle(item)"
+                            aria-hidden="true"
+                          />
+                          <span class="truncate">{{ getSelectedOptionLabel(item) }}</span>
+                        </span>
+                      </SelectValue>
+                      <SelectValue
+                        v-else
+                        :placeholder="item.label"
+                      />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem
@@ -139,7 +183,13 @@ function isItemDisabled(key: string) {
                         :key="option.value"
                         :value="option.value"
                       >
-                        {{ option.label }}
+                        <span
+                          v-if="option.color"
+                          class="size-3 shrink-0 rounded-sm border border-border/70 bg-[var(--settings-color-swatch)] shadow-xs dark:bg-[var(--settings-color-swatch-dark)]"
+                          :style="getColorSwatchStyle(option)"
+                          aria-hidden="true"
+                        />
+                        <span>{{ option.label }}</span>
                       </SelectItem>
                     </SelectContent>
                   </Select>

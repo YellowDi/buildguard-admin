@@ -101,10 +101,17 @@ export type SettingsInputItem = BaseSettingsItem & {
   placeholder?: string
 }
 
+export type SettingsSelectOption = {
+  label: string
+  value: string
+  color?: string
+  darkColor?: string
+}
+
 export type SettingsSelectItem = BaseSettingsItem & {
   type: "select"
   modelKey: StringSettingsKey
-  options: Array<{ label: string, value: string }>
+  options: SettingsSelectOption[]
 }
 
 export type SettingsButtonItem = BaseSettingsItem & {

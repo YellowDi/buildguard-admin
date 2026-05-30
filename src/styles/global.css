@@ -233,28 +233,28 @@
 }
 
 :root[data-sidebar-color="mauve"] {
-  --sidebar-background: var(--color-mauve-100);
+  --sidebar-background: var(--color-mauve-50);
   --dashboard-card-background: var(--color-mauve-50);
   --dashboard-card-shell-hover-background: var(--color-mauve-50);
   --dashboard-card-hover-background: var(--card);
 }
 
 :root[data-sidebar-color="olive"] {
-  --sidebar-background: var(--color-olive-100);
+  --sidebar-background: var(--color-olive-50);
   --dashboard-card-background: var(--color-olive-50);
   --dashboard-card-shell-hover-background: var(--color-olive-50);
   --dashboard-card-hover-background: var(--card);
 }
 
 :root[data-sidebar-color="mist"] {
-  --sidebar-background: var(--color-mist-100);
+  --sidebar-background: var(--color-mist-50);
   --dashboard-card-background: var(--color-mist-50);
   --dashboard-card-shell-hover-background: var(--color-mist-50);
   --dashboard-card-hover-background: var(--card);
 }
 
 :root[data-sidebar-color="taupe"] {
-  --sidebar-background: var(--color-taupe-100);
+  --sidebar-background: var(--color-taupe-50);
   --dashboard-card-background: var(--color-taupe-50);
   --dashboard-card-shell-hover-background: var(--color-taupe-50);
   --dashboard-card-hover-background: var(--card);

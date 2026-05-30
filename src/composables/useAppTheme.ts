@@ -3,6 +3,12 @@ import { usePreferredDark, useStorage } from "@vueuse/core"
 
 export type ThemeMode = "system" | "light" | "dark"
 export type SidebarColor = "neutral" | "stone" | "mauve" | "olive" | "mist" | "taupe"
+export type SidebarColorOption = {
+  value: SidebarColor
+  label: string
+  color: string
+  darkColor: string
+}
 
 export const THEME_OPTIONS: Array<{ value: ThemeMode, label: string, icon: string }> = [
   { value: "system", label: "系统", icon: "ri-computer-line" },
@@ -10,13 +16,13 @@ export const THEME_OPTIONS: Array<{ value: ThemeMode, label: string, icon: strin
   { value: "dark", label: "深色", icon: "ri-moon-line" },
 ]
 
-export const SIDEBAR_COLOR_OPTIONS: Array<{ value: SidebarColor, label: string }> = [
-  { value: "neutral", label: "Neutral" },
-  { value: "stone", label: "Stone" },
-  { value: "mauve", label: "Mauve" },
-  { value: "olive", label: "Olive" },
-  { value: "mist", label: "Mist" },
-  { value: "taupe", label: "Taupe" },
+export const SIDEBAR_COLOR_OPTIONS: SidebarColorOption[] = [
+  { value: "neutral", label: "Neutral", color: "var(--color-neutral-50)", darkColor: "var(--color-neutral-800)" },
+  { value: "stone", label: "Stone", color: "var(--color-stone-50)", darkColor: "var(--color-stone-800)" },
+  { value: "mauve", label: "Mauve", color: "var(--color-mauve-50)", darkColor: "var(--color-mauve-800)" },
+  { value: "olive", label: "Olive", color: "var(--color-olive-50)", darkColor: "var(--color-olive-800)" },
+  { value: "mist", label: "Mist", color: "var(--color-mist-50)", darkColor: "var(--color-mist-800)" },
+  { value: "taupe", label: "Taupe", color: "var(--color-taupe-50)", darkColor: "var(--color-taupe-800)" },
 ]
 
 const THEME_STORAGE_KEY = "app-theme"
