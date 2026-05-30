@@ -15,6 +15,7 @@ const props = defineProps<{
   schema: DetailRelationModuleSchema<any>
   useTitleBlock?: boolean
   hideTitleBlock?: boolean
+  flushRight?: boolean
 }>()
 
 const slots = useSlots()
@@ -132,7 +133,13 @@ function handleRowKeydown(event: KeyboardEvent, row: RelationRow) {
 </script>
 
 <template>
-  <section class="detail-relation-module w-full min-w-0 max-w-full" :style="moduleStyle">
+  <section
+    :class="[
+      'detail-relation-module w-full min-w-0 max-w-full',
+      props.flushRight ? 'detail-relation-module--flush-right' : '',
+    ]"
+    :style="moduleStyle"
+  >
     <div class="detail-table-scroll">
       <div class="detail-table-frame detail-relation-frame">
         <TableTitleBlock

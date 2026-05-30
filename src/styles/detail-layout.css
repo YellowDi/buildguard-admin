@@ -44,6 +44,11 @@
   padding-right: 0.5rem;
 }
 
+.detail-section-inset--flush-right,
+.detail-relation-module--flush-right .detail-section-inset {
+  padding-right: 0;
+}
+
 .detail-section-heading-row {
   display: flex;
   min-height: 38px;
@@ -255,6 +260,11 @@
     padding-right: 1.25rem;
   }
 
+  .detail-section-inset--flush-right,
+  .detail-relation-module--flush-right .detail-section-inset {
+    padding-right: 0;
+  }
+
   .detail-section-heading-row {
     padding-left: 0.75rem;
     padding-right: 1.25rem;
@@ -288,5 +298,10 @@
 
   .detail-relation-frame {
     min-width: var(--detail-relation-min-width-desktop, var(--detail-relation-min-width-mobile, 100%));
+  }
+
+  .detail-relation-module--flush-right,
+  .detail-relation-module--flush-right .detail-table-scroll {
+    overflow-x: visible;
   }
 }

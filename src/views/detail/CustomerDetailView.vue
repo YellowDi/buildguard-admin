@@ -5122,7 +5122,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
           <CustomerDetailContentLoading v-if="loading || relationsLoading" variant="basic-info-secondary" />
 
           <template v-else-if="customer">
-            <DetailAccordionModule :schema="parkBuildingAccordion" use-title-block>
+            <DetailAccordionModule :schema="parkBuildingAccordion" use-title-block flush-right-actions>
               <template #item-actions="{ item }">
                 <div class="flex items-center gap-2">
                   <Button
@@ -5178,7 +5178,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
             <div class="w-full min-w-0">
               <div class="h-px bg-border/80" />
 
-              <DetailRelationModule :schema="maintenanceModule" use-title-block class="pb-4">
+              <DetailRelationModule :schema="maintenanceModule" use-title-block flush-right class="pb-4">
                 <template #actions-header>
                   <Button variant="outline" size="sm" class="h-8 px-3 text-sm" @click="showInspectionWorkOrdersTab">
                     查看更多
@@ -5236,7 +5236,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
 
               <div class="h-px bg-border/80" />
 
-              <DetailRelationModule :schema="repairOverviewModule" use-title-block>
+              <DetailRelationModule :schema="repairOverviewModule" use-title-block flush-right>
                 <template #actions-header>
                   <Button variant="outline" size="sm" class="h-8 px-3 text-sm" @click="showRepairWorkOrdersTab">
                     查看更多
