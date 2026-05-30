@@ -5,13 +5,26 @@
 
 @font-face {
   font-family: "DFPKingGothicGB-Regular";
-  src:
-    local("DFPKingGothicGB-Regular"),
-    local("DFP King Gothic GB"),
-    url("../assets/fonts/DFPKingGothicGB-Regular.woff2") format("woff2");
+  src: url("../assets/fonts/DFPKingGothicGB-Regular.woff2") format("woff2");
   font-display: swap;
   font-style: normal;
   font-weight: 400;
+}
+
+@font-face {
+  font-family: "DFPKingGothicGB-Regular";
+  src: url("../assets/fonts/DFPKingGothicGB-Medium.woff2") format("woff2");
+  font-display: swap;
+  font-style: normal;
+  font-weight: 500;
+}
+
+@font-face {
+  font-family: "DFPKingGothicGB-Regular";
+  src: url("../assets/fonts/DFPKingGothicGB-Semibold.woff2") format("woff2");
+  font-display: swap;
+  font-style: normal;
+  font-weight: 600;
 }
 
 :root {
