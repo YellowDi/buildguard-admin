@@ -160,6 +160,7 @@ export type DetailRelationModuleSchema<Row extends Record<string, unknown> = Rec
   rowKey: DetailRelationRowKey<Row>
   rowAction?: DetailRelationRowAction<Row>
   mobileMinWidth?: string
+  desktopMinWidth?: string
   columnTemplateMobile: string
   columnTemplateDesktop?: string
   columnGapMobile?: string

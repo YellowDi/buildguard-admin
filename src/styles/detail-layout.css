@@ -180,7 +180,7 @@
   box-sizing: border-box;
   width: 100%;
   max-width: 100%;
-  min-width: 0;
+  min-width: var(--detail-relation-min-width-mobile, 100%);
 }
 
 .detail-relation-grid {
@@ -284,5 +284,9 @@
   .detail-relation-grid {
     grid-template-columns: var(--detail-relation-columns-desktop, var(--detail-relation-columns-mobile));
     column-gap: var(--detail-relation-grid-gap-desktop, var(--detail-relation-grid-gap-mobile, 1rem));
+  }
+
+  .detail-relation-frame {
+    min-width: var(--detail-relation-min-width-desktop, var(--detail-relation-min-width-mobile, 100%));
   }
 }

@@ -20,6 +20,8 @@ const props = defineProps<{
 const slots = useSlots()
 
 const moduleStyle = computed(() => ({
+  "--detail-relation-min-width-mobile": props.schema.mobileMinWidth ?? "100%",
+  "--detail-relation-min-width-desktop": props.schema.desktopMinWidth ?? props.schema.mobileMinWidth ?? "100%",
   "--detail-relation-columns-mobile": props.schema.columnTemplateMobile,
   "--detail-relation-columns-desktop": props.schema.columnTemplateDesktop ?? props.schema.columnTemplateMobile,
   "--detail-relation-grid-gap-mobile": props.schema.columnGapMobile ?? "0.75rem",
@@ -132,7 +134,7 @@ function handleRowKeydown(event: KeyboardEvent, row: RelationRow) {
 <template>
   <section class="detail-relation-module w-full min-w-0 max-w-full" :style="moduleStyle">
     <div class="detail-table-scroll">
-      <div class="detail-table-frame detail-relation-frame" :style="{ minWidth: props.schema.mobileMinWidth ?? '100%' }">
+      <div class="detail-table-frame detail-relation-frame">
         <TableTitleBlock
           v-if="!props.hideTitleBlock"
           :module-key="schema.key"

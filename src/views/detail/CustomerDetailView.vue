@@ -917,10 +917,11 @@ const maintenanceModule = computed<DetailRelationModuleSchema<MaintenanceRecordR
       groups: [],
       rowAction: row => handleOverviewWorkOrderDetail(row),
       mobileMinWidth: "42rem",
+      desktopMinWidth: "100%",
       columnTemplateMobile: "minmax(16rem,2fr) minmax(12rem,1fr) 8rem 2.75rem",
-      columnTemplateDesktop: "minmax(16rem,2fr) minmax(12rem,1fr) 8rem 2.75rem",
+      columnTemplateDesktop: "minmax(0,1.55fr) minmax(4.5rem,0.7fr) 6.25rem 5rem",
       columnGapMobile: "0.75rem",
-      columnGapDesktop: "1rem",
+      columnGapDesktop: "0.5rem",
     }
   }
 
@@ -952,10 +953,11 @@ const maintenanceModule = computed<DetailRelationModuleSchema<MaintenanceRecordR
     groups: buildMaintenanceGroups(maintenanceRecords.value),
     rowAction: row => handleOverviewWorkOrderDetail(row),
     mobileMinWidth: "42rem",
+    desktopMinWidth: "100%",
     columnTemplateMobile: "minmax(16rem,2fr) minmax(12rem,1fr) 8rem 2.75rem",
-    columnTemplateDesktop: "minmax(16rem,2fr) minmax(12rem,1fr) 8rem 2.75rem",
+    columnTemplateDesktop: "minmax(0,1.55fr) minmax(4.5rem,0.7fr) 6.25rem 5rem",
     columnGapMobile: "0.75rem",
-    columnGapDesktop: "1rem",
+    columnGapDesktop: "0.5rem",
   }
 })
 
@@ -990,10 +992,11 @@ const repairOverviewModule = computed<DetailRelationModuleSchema<MaintenanceReco
       groups: [],
       rowAction: row => handleOverviewWorkOrderDetail(row),
       mobileMinWidth: "38rem",
+      desktopMinWidth: "100%",
       columnTemplateMobile: "minmax(14rem,1.5fr) minmax(10rem,1fr) 8rem 2.75rem",
-      columnTemplateDesktop: "minmax(14rem,1.5fr) minmax(10rem,1fr) 8rem 2.75rem",
+      columnTemplateDesktop: "minmax(0,1.5fr) minmax(4.5rem,0.7fr) 6rem 5rem",
       columnGapMobile: "0.75rem",
-      columnGapDesktop: "1rem",
+      columnGapDesktop: "0.5rem",
     }
   }
 
@@ -1026,10 +1029,11 @@ const repairOverviewModule = computed<DetailRelationModuleSchema<MaintenanceReco
     groups: buildMaintenanceGroups(repairOverviewRecords.value),
     rowAction: row => handleOverviewWorkOrderDetail(row),
     mobileMinWidth: "38rem",
+    desktopMinWidth: "100%",
     columnTemplateMobile: "minmax(14rem,1.5fr) minmax(10rem,1fr) 8rem 2.75rem",
-    columnTemplateDesktop: "minmax(14rem,1.5fr) minmax(10rem,1fr) 8rem 2.75rem",
+    columnTemplateDesktop: "minmax(0,1.5fr) minmax(4.5rem,0.7fr) 6rem 5rem",
     columnGapMobile: "0.75rem",
-    columnGapDesktop: "1rem",
+    columnGapDesktop: "0.5rem",
   }
 })
 
