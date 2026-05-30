@@ -98,7 +98,7 @@ const hasExpandedContent = computed(() => Boolean(slots["expanded-content"]))
         :value="`${item.key}`"
         :class="cn(
           'border-b-0 transition-colors duration-150',
-          props.expandedItemCard && 'data-[state=open]:rounded-md data-[state=open]:border data-[state=open]:border-border/60 data-[state=open]:bg-[var(--detail-expanded-card-background)]',
+          props.expandedItemCard && 'data-[state=open]:rounded-md data-[state=open]:border data-[state=open]:border-border/60 data-[state=open]:bg-card-background',
         )"
       >
         <div :class="['detail-section-inset flex items-center gap-3', props.flushRightActions ? 'detail-section-inset--flush-right' : '']">

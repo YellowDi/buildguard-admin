@@ -1443,12 +1443,12 @@ function hashText(value: string) {
         <span class="app-home-phone-button app-home-phone-button--volume-down" aria-hidden="true" />
         <span class="app-home-phone-button app-home-phone-button--power" aria-hidden="true" />
 
-        <div class="app-home-device-screen flex min-h-0 flex-1 flex-col overflow-hidden bg-surface-secondary">
+        <div class="app-home-device-screen flex min-h-0 flex-1 flex-col overflow-hidden bg-card-background">
           <div class="app-home-preview-reserved app-home-preview-reserved--top shrink-0">
             <span>顶部导航栏</span>
           </div>
 
-          <div class="app-home-preview-scroll min-h-0 flex-1 overflow-y-auto bg-surface-secondary px-4 py-4">
+          <div class="app-home-preview-scroll min-h-0 flex-1 overflow-y-auto bg-card-background px-4 py-4">
             <div v-if="showInitialSkeleton" class="space-y-6">
               <section class="min-w-0 border-b border-dashed border-zinc-300/90 pb-4">
                 <Skeleton class="h-[18px] w-24 bg-zinc-300/90" />

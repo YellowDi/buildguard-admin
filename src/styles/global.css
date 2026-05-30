@@ -63,7 +63,6 @@
   --info-border: rgb(33 49 131 / 0.12);
   --radius: 0.65rem;
   --surface-primary: #ffffff;
-  --surface-secondary: #f6f5f4;
   --surface-tertiary: #fbfaf8;
   --surface-warm: #f6f5f4;
   --surface-hover-subtle: rgb(0 0 0 / 0.028);
@@ -88,10 +87,8 @@
   --sidebar-accent-foreground: #31302e;
   --sidebar-border: rgb(0 0 0 / 0.08);
   --sidebar-ring: #097fe8;
-  --dashboard-card-background: var(--surface-tertiary);
-  --dashboard-card-shell-hover-background: var(--surface-tertiary);
+  --card-background: var(--color-neutral-100);
   --dashboard-card-hover-background: var(--card);
-  --detail-expanded-card-background: var(--color-neutral-100);
   --interactive-active-surface: #ffffff;
   --border-whisper: rgb(0 0 0 / 0.1);
   --shadow-soft:
@@ -174,7 +171,6 @@
   --info-surface: #1f282d;
   --info-border: rgb(104 120 200 / 0.26);
   --surface-primary: #191919;
-  --surface-secondary: #1e1e1e;
   --surface-tertiary: #252525;
   --surface-warm: #1e1e1e;
   --surface-hover-subtle: rgb(255 255 255 / 0.05);
@@ -199,10 +195,8 @@
   --sidebar-accent-foreground: #e8e8e8;
   --sidebar-border: rgb(255 255 255 / 0.1);
   --sidebar-ring: #5aacf5;
-  --dashboard-card-background: var(--color-neutral-900);
-  --dashboard-card-shell-hover-background: var(--color-neutral-900);
+  --card-background: var(--color-neutral-800);
   --dashboard-card-hover-background: var(--card);
-  --detail-expanded-card-background: var(--color-neutral-800);
   --interactive-active-surface: rgb(255 255 255 / 0.08);
   --border-whisper: rgb(255 255 255 / 0.1);
   --shadow-soft:
@@ -246,105 +240,81 @@
 :root[data-sidebar-color="neutral"],
 :root[data-sidebar-color="default"] {
   --sidebar-background: var(--color-neutral-50);
-  --dashboard-card-background: var(--color-neutral-50);
-  --dashboard-card-shell-hover-background: var(--color-neutral-50);
+  --card-background: var(--color-neutral-100);
   --dashboard-card-hover-background: var(--card);
-  --detail-expanded-card-background: var(--color-neutral-100);
 }
 
 :root[data-sidebar-color="stone"] {
   --sidebar-background: var(--color-stone-50);
-  --dashboard-card-background: var(--color-stone-50);
-  --dashboard-card-shell-hover-background: var(--color-stone-50);
+  --card-background: var(--color-stone-100);
   --dashboard-card-hover-background: var(--card);
-  --detail-expanded-card-background: var(--color-stone-100);
 }
 
 :root[data-sidebar-color="mauve"] {
   --sidebar-background: var(--color-mauve-50);
-  --dashboard-card-background: var(--color-mauve-50);
-  --dashboard-card-shell-hover-background: var(--color-mauve-50);
+  --card-background: var(--color-mauve-100);
   --dashboard-card-hover-background: var(--card);
-  --detail-expanded-card-background: var(--color-mauve-100);
 }
 
 :root[data-sidebar-color="olive"] {
   --sidebar-background: var(--color-olive-50);
-  --dashboard-card-background: var(--color-olive-50);
-  --dashboard-card-shell-hover-background: var(--color-olive-50);
+  --card-background: var(--color-olive-100);
   --dashboard-card-hover-background: var(--card);
-  --detail-expanded-card-background: var(--color-olive-100);
 }
 
 :root[data-sidebar-color="mist"] {
   --sidebar-background: var(--color-mist-50);
-  --dashboard-card-background: var(--color-mist-50);
-  --dashboard-card-shell-hover-background: var(--color-mist-50);
+  --card-background: var(--color-mist-100);
   --dashboard-card-hover-background: var(--card);
-  --detail-expanded-card-background: var(--color-mist-100);
 }
 
 :root[data-sidebar-color="taupe"] {
   --sidebar-background: var(--color-taupe-50);
-  --dashboard-card-background: var(--color-taupe-50);
-  --dashboard-card-shell-hover-background: var(--color-taupe-50);
+  --card-background: var(--color-taupe-100);
   --dashboard-card-hover-background: var(--card);
-  --detail-expanded-card-background: var(--color-taupe-100);
 }
 
 :root.dark[data-sidebar-color="neutral"],
 :root.dark[data-sidebar-color="default"] {
   --background: var(--color-neutral-900);
   --sidebar-background: var(--color-neutral-800);
-  --dashboard-card-background: var(--color-neutral-900);
-  --dashboard-card-shell-hover-background: var(--color-neutral-900);
+  --card-background: var(--color-neutral-800);
   --dashboard-card-hover-background: var(--card);
-  --detail-expanded-card-background: var(--color-neutral-800);
 }
 
 :root.dark[data-sidebar-color="stone"] {
   --background: var(--color-stone-900);
   --sidebar-background: var(--color-stone-800);
-  --dashboard-card-background: var(--color-stone-900);
-  --dashboard-card-shell-hover-background: var(--color-stone-900);
+  --card-background: var(--color-stone-800);
   --dashboard-card-hover-background: var(--card);
-  --detail-expanded-card-background: var(--color-stone-800);
 }
 
 :root.dark[data-sidebar-color="mauve"] {
   --background: var(--color-mauve-900);
   --sidebar-background: var(--color-mauve-800);
-  --dashboard-card-background: var(--color-mauve-900);
-  --dashboard-card-shell-hover-background: var(--color-mauve-900);
+  --card-background: var(--color-mauve-800);
   --dashboard-card-hover-background: var(--card);
-  --detail-expanded-card-background: var(--color-mauve-800);
 }
 
 :root.dark[data-sidebar-color="olive"] {
   --background: var(--color-olive-900);
   --sidebar-background: var(--color-olive-800);
-  --dashboard-card-background: var(--color-olive-900);
-  --dashboard-card-shell-hover-background: var(--color-olive-900);
+  --card-background: var(--color-olive-800);
   --dashboard-card-hover-background: var(--card);
-  --detail-expanded-card-background: var(--color-olive-800);
 }
 
 :root.dark[data-sidebar-color="mist"] {
   --background: var(--color-mist-900);
   --sidebar-background: var(--color-mist-800);
-  --dashboard-card-background: var(--color-mist-900);
-  --dashboard-card-shell-hover-background: var(--color-mist-900);
+  --card-background: var(--color-mist-800);
   --dashboard-card-hover-background: var(--card);
-  --detail-expanded-card-background: var(--color-mist-800);
 }
 
 :root.dark[data-sidebar-color="taupe"] {
   --background: var(--color-taupe-900);
   --sidebar-background: var(--color-taupe-800);
-  --dashboard-card-background: var(--color-taupe-900);
-  --dashboard-card-shell-hover-background: var(--color-taupe-900);
+  --card-background: var(--color-taupe-800);
   --dashboard-card-hover-background: var(--card);
-  --detail-expanded-card-background: var(--color-taupe-800);
 }
 
 @theme inline {
@@ -381,8 +351,8 @@
   --color-info: var(--info);
   --color-info-surface: var(--info-surface);
   --color-info-border: var(--info-border);
+  --color-card-background: var(--card-background);
   --color-surface-primary: var(--surface-primary);
-  --color-surface-secondary: var(--surface-secondary);
   --color-surface-tertiary: var(--surface-tertiary);
   --color-surface-warm: var(--surface-warm);
   --color-surface-hover-subtle: var(--surface-hover-subtle);
@@ -825,15 +795,15 @@
 
 @layer utilities {
   .dashboard-card-surface {
-    background-color: var(--dashboard-card-background);
+    background-color: var(--card-background);
   }
 
   [data-slot="card"].dashboard-card-surface {
-    background-color: var(--dashboard-card-background);
+    background-color: var(--card-background);
   }
 
   .dashboard-card-shell-hover-surface:hover {
-    background-color: var(--dashboard-card-shell-hover-background);
+    background-color: var(--card-background);
   }
 
   .dashboard-card-hover-surface:hover {

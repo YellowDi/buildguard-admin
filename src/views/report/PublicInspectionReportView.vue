@@ -46,7 +46,7 @@ function downloadPdf() {
 </script>
 
 <template>
-  <main class="min-h-svh bg-surface-secondary text-foreground">
+  <main class="min-h-svh bg-card-background text-foreground">
     <section v-if="!report" class="mx-auto flex min-h-svh w-full max-w-lg items-center px-4">
       <div class="w-full rounded-xl bg-background p-6 text-center shadow-(--shadow-card)">
         <div class="mx-auto mb-4 inline-flex size-12 items-center justify-center rounded-lg bg-muted text-muted-foreground">

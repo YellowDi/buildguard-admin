@@ -112,9 +112,9 @@ const { canButton } = useCurrentUserPermissions()
 const openPopover = ref<string | null>(null)
 const sortPopoverSource = ref<"toolbar" | "chip">("toolbar")
 const ghostIconButtonClass =
-  "inline-flex size-8 items-center justify-center rounded-md bg-transparent text-muted-foreground transition-colors hover:bg-interactive-hover hover:text-foreground active:bg-surface-secondary"
+  "inline-flex size-8 items-center justify-center rounded-md bg-transparent text-muted-foreground transition-colors hover:bg-interactive-hover hover:text-foreground active:bg-card-background"
 const ghostIconButtonActiveClass =
-  "bg-transparent text-link hover:bg-interactive-hover active:bg-surface-secondary"
+  "bg-transparent text-link hover:bg-interactive-hover active:bg-card-background"
 const tableMoreActions: Array<{
   key: TableMoreActionKey
   label: string

@@ -63,7 +63,7 @@ function isMobileItemActive(item: DetailTabActionMenuItem) {
         :aria-label="item.label"
         :disabled="item.disabled"
         :class="[
-          'inline-flex size-8 items-center justify-center rounded-md bg-transparent text-muted-foreground transition-colors hover:bg-surface-tertiary hover:text-foreground active:bg-surface-secondary disabled:pointer-events-none disabled:opacity-50',
+          'inline-flex size-8 items-center justify-center rounded-md bg-transparent text-muted-foreground transition-colors hover:bg-surface-tertiary hover:text-foreground active:bg-card-background disabled:pointer-events-none disabled:opacity-50',
           isMobileItemActive(item) ? 'text-link' : '',
         ]"
         @click="emit('select', item.key)"

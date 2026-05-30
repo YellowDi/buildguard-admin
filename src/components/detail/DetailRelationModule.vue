@@ -210,7 +210,7 @@ function handleRowKeydown(event: KeyboardEvent, row: RelationRow) {
               :key="`${group.key}-${getRowKey(row, rowIndex)}`"
               :class="cn(
                 'detail-relation-row detail-table-grid detail-relation-grid detail-section-inset items-center text-[14px] transition-colors hover:bg-surface-hover-strong',
-                hasRowAction && 'cursor-pointer active:bg-surface-secondary/80',
+                hasRowAction && 'cursor-pointer active:bg-card-background/80',
               )"
               :tabindex="hasRowAction ? 0 : undefined"
               :role="hasRowAction ? 'button' : undefined"

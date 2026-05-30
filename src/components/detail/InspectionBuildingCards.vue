@@ -330,7 +330,7 @@ function handleExpandAfterLeave(element: Element) {
           <article
             v-for="building in props.buildings"
             :key="building.key"
-            class="overflow-hidden rounded-[20px] border border-border/60 bg-surface-secondary text-foreground"
+            class="overflow-hidden rounded-[20px] border border-border/60 bg-card-background text-foreground"
           >
             <div
               role="button"

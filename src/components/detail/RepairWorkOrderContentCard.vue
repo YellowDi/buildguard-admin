@@ -125,7 +125,7 @@ function toText(value: unknown, fallback = "") {
         </div>
 
         <div v-else class="detail-section-inset space-y-4 pb-4 pt-2">
-          <article class="rounded-[8px] bg-surface-secondary p-3">
+          <article class="rounded-[8px] bg-card-background p-3">
             <div class="mb-2 flex min-w-0 items-center gap-2">
               <div class="flex size-8 shrink-0 items-center justify-center rounded-[8px] bg-background text-muted-foreground shadow-(--shadow-border)">
                 <i class="ri-file-text-line text-[16px]" />
@@ -146,7 +146,7 @@ function toText(value: unknown, fallback = "") {
             <article
               v-for="group in mediaGroups"
               :key="group.key"
-              class="min-w-0 rounded-[8px] bg-surface-secondary p-3"
+              class="min-w-0 rounded-[8px] bg-card-background p-3"
             >
               <div class="mb-3 flex min-w-0 items-center gap-2.5">
                 <div
