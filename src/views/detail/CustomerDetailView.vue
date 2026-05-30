@@ -5,7 +5,6 @@ import { toast } from "vue-sonner"
 
 import BuildingDetailSheet from "@/components/detail/BuildingDetailSheet.vue"
 import MapLocationDialog from "@/components/map/MapLocationDialog.vue"
-import DetailAccordionModule from "@/components/detail/DetailAccordionModule.vue"
 import DetailTabActionsGroup from "@/components/detail/DetailTabActionsGroup.vue"
 import DetailFieldSections from "@/components/detail/DetailFieldSections.vue"
 import DetailRelationModule from "@/components/detail/DetailRelationModule.vue"
@@ -28,8 +27,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import CustomerDetailContentLoading from "@/components/loading/CustomerDetailContentLoading.vue"
@@ -117,21 +118,13 @@ type BuildingRow = {
   uuid: string
   parkUuid: string
   name: string
-  address: string
-  contactName: string
-  contactPhone: string
-  contactDisplay: string
-  operationTime: string
-  updatedAt: string
-  status: "一切正常" | "需重点关注" | "存在风险"
 }
 
 type ParkBuildingGroup = {
   key: string
   title: string
   meta: string
-  details: DetailFieldSection[]
-  buildingModule: DetailRelationModuleSchema<BuildingRow>
+  buildings: BuildingRow[]
   parkUuid: string
   customerUuid: string
 }
@@ -286,6 +279,7 @@ const deleteConfirmOpen = ref(false)
 const relationsLoading = ref(false)
 const relationErrorMessage = ref("")
 const parkBuildingGroups = ref<ParkBuildingGroup[]>([])
+const expandedParkBuildingGroupKeys = ref<string[]>([])
 const buildingAssets = ref<CustomerBuildingAssetRow[]>([])
 const buildingListRaw = ref<BuildingListItem[]>([])
 const buildingAssetsLoading = ref(false)
@@ -873,19 +867,7 @@ const fieldSections = computed<DetailFieldSection[]>(() => {
 })
 
 const inspectionServiceCards = computed<CustomerInspectionServiceCard[]>(() => inspectionServices.value)
-
-const parkBuildingAccordion = computed(() => ({
-  key: "customer-buildings",
-  title: "园区 / 建筑列表概览",
-  count: parkBuildingGroups.value.length,
-  emptyText: "暂无园区和建筑数据。",
-  emptyState: {
-    title: "暂无园区和建筑数据",
-    description: "当前客户下暂无可展示的园区和建筑。",
-    icon: "ri-building-2-line",
-  },
-  items: parkBuildingGroups.value,
-}))
+const parkBuildingGroupCount = computed(() => parkBuildingGroups.value.length)
 
 const maintenanceModule = computed<DetailRelationModuleSchema<MaintenanceRecordRow>>(() => {
   if (!customer.value) {
@@ -1937,6 +1919,16 @@ const workOrderDetailSecondarySections = computed<DetailFieldSection[]>(() => {
 watch(customer, current => {
   detailBreadcrumbTitle.value = current ? "客户详情" : null
 })
+
+watch(parkBuildingGroups, groups => {
+  if (!groups.length) {
+    expandedParkBuildingGroupKeys.value = []
+    return
+  }
+
+  const validKeys = new Set(groups.map(group => group.key))
+  expandedParkBuildingGroupKeys.value = expandedParkBuildingGroupKeys.value.filter(key => validKeys.has(key))
+}, { immediate: true })
 
 function resetLoadedCustomerDetailData() {
   loadedCustomerDetailDataUuids.basicInfo = ""
@@ -2990,49 +2982,79 @@ function goToWorkOrderFullDetail() {
   })
 }
 
-function getGroupParkUuid(group: unknown) {
-  if (group && typeof group === "object" && "parkUuid" in group) {
-    const value = (group as { parkUuid?: unknown }).parkUuid
-    return typeof value === "string" ? value : ""
-  }
-
-  return ""
+function toggleParkBuildingGroup(groupKey: string) {
+  expandedParkBuildingGroupKeys.value = expandedParkBuildingGroupKeys.value.includes(groupKey)
+    ? expandedParkBuildingGroupKeys.value.filter(key => key !== groupKey)
+    : [...expandedParkBuildingGroupKeys.value, groupKey]
 }
 
-function getItemDetails(item: unknown): DetailFieldSection[] {
-  if (item && typeof item === "object" && "details" in item) {
-    const value = (item as { details?: unknown }).details
-    return Array.isArray(value) ? value as DetailFieldSection[] : []
-  }
-
-  return []
+function isParkBuildingGroupExpanded(groupKey: string) {
+  return expandedParkBuildingGroupKeys.value.includes(groupKey)
 }
 
-function getItemBuildingModule(item: unknown): DetailRelationModuleSchema<BuildingRow> | null {
-  if (item && typeof item === "object" && "buildingModule" in item) {
-    const value = (item as { buildingModule?: unknown }).buildingModule
-    return value && typeof value === "object" ? value as DetailRelationModuleSchema<BuildingRow> : null
+function handleParkBuildingCardClick(groupKey: string) {
+  if (typeof window !== "undefined") {
+    const selectedText = window.getSelection?.()?.toString().trim() ?? ""
+    if (selectedText) {
+      return
+    }
   }
 
-  return null
+  toggleParkBuildingGroup(groupKey)
 }
 
-function getRowUuid(row: unknown) {
-  if (row && typeof row === "object" && "uuid" in row) {
-    const value = (row as { uuid?: unknown }).uuid
-    return typeof value === "string" ? value : ""
+function handleParkBuildingCardKeydown(event: KeyboardEvent, groupKey: string) {
+  if (event.key !== "Enter" && event.key !== " ") {
+    return
   }
 
-  return ""
+  event.preventDefault()
+  toggleParkBuildingGroup(groupKey)
 }
 
-function getRowParkUuid(row: unknown) {
-  if (row && typeof row === "object" && "parkUuid" in row) {
-    const value = (row as { parkUuid?: unknown }).parkUuid
-    return typeof value === "string" ? value : ""
-  }
+function handleParkBuildingExpandBeforeEnter(element: Element) {
+  const target = element as HTMLElement
+  target.style.height = "0"
+  target.style.opacity = "0"
+  target.style.overflow = "hidden"
+}
 
-  return ""
+function handleParkBuildingExpandEnter(element: Element) {
+  const target = element as HTMLElement
+  target.style.transition = "height 220ms cubic-bezier(0.2, 0, 0, 1), opacity 180ms ease-out"
+  target.style.height = `${target.scrollHeight}px`
+  target.style.opacity = "1"
+}
+
+function handleParkBuildingExpandAfterEnter(element: Element) {
+  const target = element as HTMLElement
+  target.style.height = "auto"
+  target.style.opacity = "1"
+  target.style.overflow = ""
+  target.style.transition = ""
+}
+
+function handleParkBuildingExpandBeforeLeave(element: Element) {
+  const target = element as HTMLElement
+  target.style.height = `${target.scrollHeight}px`
+  target.style.opacity = "1"
+  target.style.overflow = "hidden"
+}
+
+function handleParkBuildingExpandLeave(element: Element) {
+  const target = element as HTMLElement
+  target.style.transition = "height 180ms cubic-bezier(0.4, 0, 1, 1), opacity 140ms ease-out"
+  void target.offsetHeight
+  target.style.height = "0"
+  target.style.opacity = "0"
+}
+
+function handleParkBuildingExpandAfterLeave(element: Element) {
+  const target = element as HTMLElement
+  target.style.height = ""
+  target.style.opacity = ""
+  target.style.overflow = ""
+  target.style.transition = ""
 }
 
 function goToBuildingDetail(buildingUuid: string, parkUuid: string) {
@@ -4429,40 +4451,17 @@ function mapParkBuildingGroup(
   buildings: BuildingListItem[],
 ): ParkBuildingGroup {
   const parkUuid = toDisplayText(park.Uuid, "")
+  const buildingRows = buildings.map((building, buildingIndex) => normalizeBuildingRow(building, park, buildingIndex))
+  const buildCount = toOptionalNumber(park.BuildNum) ?? buildingRows.length
 
   return {
     key: parkUuid || `park-${index + 1}`,
     title: toDisplayText(park.Name, "未命名园区"),
-    meta: buildParkMeta(park, buildings),
-    details: buildParkFieldSections(park),
-    buildingModule: buildParkBuildingModule(park, buildings),
+    meta: `建筑 ${formatParkCount(buildCount, "栋")}`,
+    buildings: buildingRows,
     parkUuid,
     customerUuid: customerUuidValue,
   }
-}
-
-function buildParkFieldSections(park: ParkDetailResult): DetailFieldSection[] {
-  return [
-    {
-      key: "park-fields",
-      title: "",
-      rows: [
-        { key: "build-num", label: "建筑数量", value: formatParkCount(park.BuildNum, "栋") },
-        { key: "build-area", label: "建筑面积", value: toDisplayText(park.BuildArea, "-") },
-        { key: "built-time", label: "建成时间", value: toDisplayText(park.BuiltTime, "-") },
-        { key: "operation-time", label: "投入运营时间", value: toDisplayText(park.OperationTime, "-") },
-        { key: "contact", label: "联系人", value: toDisplayText(park.Contact, "-") },
-        { key: "contact-phone", label: "联系方式", value: toDisplayText(park.ContactPhone, "-") },
-        { key: "address", label: "地址", value: toDisplayText(park.Address, "-"), truncate: false, valueClass: "leading-6" },
-        { key: "updated-at", label: "更新时间", value: toDisplayText(park.UpdatedAt, "-") },
-      ],
-    },
-  ]
-}
-
-function buildParkMeta(park: ParkDetailResult, buildings: BuildingListItem[]) {
-  const buildCount = toOptionalNumber(park.BuildNum) ?? buildings.length
-  return `建筑 ${formatParkCount(buildCount, "栋")}`
 }
 
 function formatParkCount(value: unknown, unit: string) {
@@ -4478,68 +4477,6 @@ function normalizeBuildingRow(building: BuildingListItem, park: ParkDetailResult
     uuid: toDisplayText(building.Uuid, `${parkUuid}-${index + 1}`),
     parkUuid,
     name: toDisplayText(building.Name, "未命名建筑"),
-    address: toDisplayText(building.Address, "-"),
-    contactName: toDisplayText(building.Contact ?? building.ContactPerson, "-"),
-    contactPhone: toDisplayText(building.ContactPhone, "-"),
-    contactDisplay: buildBuildingContactDisplay(building),
-    operationTime: formatDateOnly(toDisplayText(building.OperationTime, "-")),
-    updatedAt: formatDateOnly(toDisplayText(building.UpdatedAt, "-")),
-    // 建筑风险状态当前不在园区详情接口中，继续按默认状态展示明细。
-    status: "一切正常",
-  }
-}
-
-function buildBuildingContactDisplay(building: BuildingListItem) {
-  const contactName = toDisplayText(building.Contact ?? building.ContactPerson, "")
-  const contactPhone = toDisplayText(building.ContactPhone, "")
-
-  return [contactName, contactPhone].filter(Boolean).join(" ") || "-"
-}
-
-function buildBuildingStatusGroups(buildings: BuildingListItem[], park: ParkDetailResult) {
-  const rows = buildings.map((building, index) => normalizeBuildingRow(building, park, index))
-
-  return [
-    {
-      key: "normal",
-      title: "一切正常",
-      rows: rows.filter(row => row.status === "一切正常"),
-    },
-    {
-      key: "attention",
-      title: "需重点关注",
-      rows: rows.filter(row => row.status === "需重点关注"),
-    },
-    {
-      key: "risk",
-      title: "存在风险",
-      rows: rows.filter(row => row.status === "存在风险"),
-    },
-  ].filter(group => group.rows.length)
-}
-
-function buildParkBuildingModule(park: ParkDetailResult, buildings: BuildingListItem[]): DetailRelationModuleSchema<BuildingRow> {
-  const groups = buildBuildingStatusGroups(buildings, park)
-
-  return {
-    key: `park-buildings-${toDisplayText(park.Uuid, "park")}`,
-    title: "建筑列表",
-    count: groups.reduce((sum, group) => sum + group.rows.length, 0),
-    rowKey: "key",
-    columns: [
-      { key: "name", label: "名称", slot: "building-status-cell" },
-      { key: "contactDisplay", label: "联系人", cellClass: "truncate text-muted-foreground" },
-      { key: "operationTime", label: "投入运营时间", cellClass: "truncate text-muted-foreground" },
-      { key: "updatedAt", label: "更新时间", cellClass: "truncate text-muted-foreground" },
-      { key: "actions", label: "", slot: "building-action-cell", cellClass: "flex justify-end" },
-    ],
-    groups,
-    rowAction: row => goToBuildingDetail(row.uuid, row.parkUuid),
-    mobileMinWidth: "46rem",
-    columnTemplateMobile: "minmax(10rem,1.4fr) minmax(9rem,1fr) minmax(8rem,0.9fr) minmax(8rem,0.9fr) 3rem",
-    columnTemplateDesktop: "minmax(10rem,1.4fr) minmax(9rem,1fr) minmax(8rem,0.9fr) minmax(8rem,0.9fr) 3rem",
-    columnGapMobile: "0.75rem",
-    columnGapDesktop: "1rem",
   }
 }
 
@@ -5122,56 +5059,144 @@ function toDisplayText(value: unknown, fallback = "未填写") {
           <CustomerDetailContentLoading v-if="loading || relationsLoading" variant="basic-info-secondary" />
 
           <template v-else-if="customer">
-            <DetailAccordionModule :schema="parkBuildingAccordion" use-title-block flush-right-actions expanded-item-card>
-              <template #item-actions="{ item }">
-                <div class="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    class="h-8 rounded-md"
-                    @click="goToParkDetail(getGroupParkUuid(item))"
+            <section class="detail-relation-module w-full min-w-0 max-w-full">
+              <div class="detail-table-scroll">
+                <div class="detail-table-frame detail-relation-frame">
+                  <TitleBlock
+                    variant="section"
+                    title="园区 / 建筑列表概览"
+                    class="detail-section-inset pt-4 pb-3"
                   >
-                    查看详情
-                  </Button>
-                </div>
-              </template>
-
-              <template #expanded-content="{ item }">
-                <DetailFieldSections :sections="getItemDetails(item)" compact />
-
-                <div v-if="getItemBuildingModule(item)">
-                  <DetailRelationModule :schema="getItemBuildingModule(item)!">
-                    <template #building-status-cell="{ row }">
-                      <div class="flex min-w-0 items-center gap-2 text-foreground">
-                        <i
-                          :class="[
-                            'text-[18px]',
-                            row.status === '存在风险'
-                              ? 'ri-close-circle-fill text-destructive'
-                              : row.status === '需重点关注'
-                                ? 'ri-time-fill text-warning'
-                                : 'ri-checkbox-circle-fill text-success',
-                          ]"
-                        />
-                        <span class="truncate">{{ row.name }}</span>
-                      </div>
-                    </template>
-
-                    <template #building-action-cell="{ row }">
-                      <Button
-                        variant="ghost"
-                        size="icon-sm"
-                        class="size-7 rounded-md text-muted-foreground hover:text-foreground"
-                        aria-label="查看建筑详情"
-                        @click="goToBuildingDetail(getRowUuid(row), getRowParkUuid(row))"
+                    <template #append>
+                      <Badge
+                        variant="secondary"
+                        class="min-w-6 justify-center rounded-md px-1.5 py-0.5 text-[12px] font-medium leading-none"
                       >
-                        <i class="ri-more-2-line text-[18px]" />
-                      </Button>
+                        {{ parkBuildingGroupCount }}
+                      </Badge>
                     </template>
-                  </DetailRelationModule>
+                  </TitleBlock>
+
+                  <div
+                    v-if="!parkBuildingGroups.length"
+                    class="flex min-h-[min(160px,30vh)] w-full min-w-0 flex-col items-center justify-center px-4 py-12"
+                  >
+                    <Empty class="w-full max-w-md flex-none border-0 bg-transparent p-6! shadow-none md:p-8!">
+                      <EmptyHeader class="max-w-md">
+                        <EmptyMedia variant="icon">
+                          <i class="ri-building-2-line text-[18px]" />
+                        </EmptyMedia>
+                        <EmptyTitle>暂无园区和建筑数据</EmptyTitle>
+                        <EmptyDescription>当前客户下暂无可展示的园区和建筑。</EmptyDescription>
+                      </EmptyHeader>
+                    </Empty>
+                  </div>
+
+                  <div v-else class="detail-group-stack space-y-4 pb-2">
+                    <article
+                      v-for="group in parkBuildingGroups"
+                      :key="group.key"
+                      class="overflow-hidden rounded-[20px] border border-border/60 bg-card-background text-foreground"
+                    >
+                      <div
+                        role="button"
+                        tabindex="0"
+                        class="block w-full rounded-[16px] bg-card px-4 py-3 text-left shadow-(--shadow-border)"
+                        :aria-expanded="isParkBuildingGroupExpanded(group.key)"
+                        :aria-label="`${group.title}，${isParkBuildingGroupExpanded(group.key) ? '收起建筑列表' : '展开建筑列表'}`"
+                        @click="handleParkBuildingCardClick(group.key)"
+                        @keydown="handleParkBuildingCardKeydown($event, group.key)"
+                      >
+                        <div class="flex min-w-0 items-center justify-between gap-3">
+                          <div class="flex min-w-0 items-center gap-2.5">
+                            <div class="flex size-7 shrink-0 items-center justify-center rounded-[10px] bg-brand-surface text-link ring-1 ring-brand-border">
+                              <i class="ri-community-line text-[15px]" />
+                            </div>
+                            <div class="min-w-0">
+                              <div class="truncate whitespace-nowrap text-[18px] font-semibold text-foreground">
+                                {{ group.title }}
+                              </div>
+                            </div>
+                          </div>
+
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            class="h-8 shrink-0 rounded-md px-2.5"
+                            :disabled="!group.parkUuid"
+                            @click.stop="goToParkDetail(group.parkUuid)"
+                          >
+                            查看详情
+                          </Button>
+                        </div>
+                      </div>
+
+                      <Transition
+                        @before-enter="handleParkBuildingExpandBeforeEnter"
+                        @enter="handleParkBuildingExpandEnter"
+                        @after-enter="handleParkBuildingExpandAfterEnter"
+                        @before-leave="handleParkBuildingExpandBeforeLeave"
+                        @leave="handleParkBuildingExpandLeave"
+                        @after-leave="handleParkBuildingExpandAfterLeave"
+                      >
+                        <div
+                          v-if="isParkBuildingGroupExpanded(group.key)"
+                          class="bg-transparent pb-0 pt-3"
+                        >
+                          <div
+                            v-if="!group.buildings.length"
+                            class="mx-4 mb-1 rounded-md border border-dashed border-border bg-card px-3 py-3 text-sm text-muted-foreground"
+                          >
+                            当前园区暂无建筑。
+                          </div>
+
+                          <div
+                            v-else
+                            class="overflow-hidden pb-1"
+                          >
+                            <div
+                              v-for="building in group.buildings"
+                              :key="building.key"
+                              role="button"
+                              tabindex="0"
+                              class="flex min-h-11 w-full cursor-pointer items-center gap-2.5 border-b border-border/60 px-4 py-2.5 text-left transition-colors duration-180 ease-out last:border-b-0 hover:bg-interactive-hover"
+                              :aria-label="`查看${building.name}详情`"
+                              @click="goToBuildingDetail(building.uuid, building.parkUuid)"
+                              @keydown.enter.prevent="goToBuildingDetail(building.uuid, building.parkUuid)"
+                              @keydown.space.prevent="goToBuildingDetail(building.uuid, building.parkUuid)"
+                            >
+                              <div class="min-w-0 flex-1 truncate whitespace-nowrap text-[14px] font-medium text-foreground">
+                                {{ building.name }}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </Transition>
+
+                      <div class="flex items-center justify-between gap-3 px-4 py-2.5">
+                        <button
+                          type="button"
+                          class="inline-flex items-center gap-1.5 whitespace-nowrap text-[12px] font-medium text-muted-foreground transition-colors duration-180 hover:text-foreground"
+                          :aria-expanded="isParkBuildingGroupExpanded(group.key)"
+                          @click="toggleParkBuildingGroup(group.key)"
+                        >
+                          {{ isParkBuildingGroupExpanded(group.key) ? "收起建筑" : "查看建筑" }}
+                          <i
+                            :class="isParkBuildingGroupExpanded(group.key) ? 'ri-arrow-up-s-line' : 'ri-arrow-down-s-line'"
+                            class="text-[15px]"
+                          />
+                        </button>
+
+                        <div class="shrink-0 whitespace-nowrap text-[12px] tabular-nums text-muted-foreground">
+                          {{ group.meta }}
+                        </div>
+                      </div>
+                    </article>
+                  </div>
                 </div>
-              </template>
-            </DetailAccordionModule>
+              </div>
+            </section>
           </template>
 
           <TooltipProvider v-if="customer">
