@@ -91,6 +91,7 @@
   --dashboard-card-background: var(--surface-tertiary);
   --dashboard-card-shell-hover-background: var(--surface-tertiary);
   --dashboard-card-hover-background: var(--card);
+  --detail-expanded-card-background: var(--color-neutral-100);
   --interactive-active-surface: #ffffff;
   --border-whisper: rgb(0 0 0 / 0.1);
   --shadow-soft:
@@ -201,6 +202,7 @@
   --dashboard-card-background: var(--color-neutral-900);
   --dashboard-card-shell-hover-background: var(--color-neutral-900);
   --dashboard-card-hover-background: var(--card);
+  --detail-expanded-card-background: var(--color-neutral-800);
   --interactive-active-surface: rgb(255 255 255 / 0.08);
   --border-whisper: rgb(255 255 255 / 0.1);
   --shadow-soft:
@@ -247,6 +249,7 @@
   --dashboard-card-background: var(--color-neutral-50);
   --dashboard-card-shell-hover-background: var(--color-neutral-50);
   --dashboard-card-hover-background: var(--card);
+  --detail-expanded-card-background: var(--color-neutral-100);
 }
 
 :root[data-sidebar-color="stone"] {
@@ -254,6 +257,7 @@
   --dashboard-card-background: var(--color-stone-50);
   --dashboard-card-shell-hover-background: var(--color-stone-50);
   --dashboard-card-hover-background: var(--card);
+  --detail-expanded-card-background: var(--color-stone-100);
 }
 
 :root[data-sidebar-color="mauve"] {
@@ -261,6 +265,7 @@
   --dashboard-card-background: var(--color-mauve-50);
   --dashboard-card-shell-hover-background: var(--color-mauve-50);
   --dashboard-card-hover-background: var(--card);
+  --detail-expanded-card-background: var(--color-mauve-100);
 }
 
 :root[data-sidebar-color="olive"] {
@@ -268,6 +273,7 @@
   --dashboard-card-background: var(--color-olive-50);
   --dashboard-card-shell-hover-background: var(--color-olive-50);
   --dashboard-card-hover-background: var(--card);
+  --detail-expanded-card-background: var(--color-olive-100);
 }
 
 :root[data-sidebar-color="mist"] {
@@ -275,6 +281,7 @@
   --dashboard-card-background: var(--color-mist-50);
   --dashboard-card-shell-hover-background: var(--color-mist-50);
   --dashboard-card-hover-background: var(--card);
+  --detail-expanded-card-background: var(--color-mist-100);
 }
 
 :root[data-sidebar-color="taupe"] {
@@ -282,6 +289,7 @@
   --dashboard-card-background: var(--color-taupe-50);
   --dashboard-card-shell-hover-background: var(--color-taupe-50);
   --dashboard-card-hover-background: var(--card);
+  --detail-expanded-card-background: var(--color-taupe-100);
 }
 
 :root.dark[data-sidebar-color="neutral"],
@@ -291,6 +299,7 @@
   --dashboard-card-background: var(--color-neutral-900);
   --dashboard-card-shell-hover-background: var(--color-neutral-900);
   --dashboard-card-hover-background: var(--card);
+  --detail-expanded-card-background: var(--color-neutral-800);
 }
 
 :root.dark[data-sidebar-color="stone"] {
@@ -299,6 +308,7 @@
   --dashboard-card-background: var(--color-stone-900);
   --dashboard-card-shell-hover-background: var(--color-stone-900);
   --dashboard-card-hover-background: var(--card);
+  --detail-expanded-card-background: var(--color-stone-800);
 }
 
 :root.dark[data-sidebar-color="mauve"] {
@@ -307,6 +317,7 @@
   --dashboard-card-background: var(--color-mauve-900);
   --dashboard-card-shell-hover-background: var(--color-mauve-900);
   --dashboard-card-hover-background: var(--card);
+  --detail-expanded-card-background: var(--color-mauve-800);
 }
 
 :root.dark[data-sidebar-color="olive"] {
@@ -315,6 +326,7 @@
   --dashboard-card-background: var(--color-olive-900);
   --dashboard-card-shell-hover-background: var(--color-olive-900);
   --dashboard-card-hover-background: var(--card);
+  --detail-expanded-card-background: var(--color-olive-800);
 }
 
 :root.dark[data-sidebar-color="mist"] {
@@ -323,6 +335,7 @@
   --dashboard-card-background: var(--color-mist-900);
   --dashboard-card-shell-hover-background: var(--color-mist-900);
   --dashboard-card-hover-background: var(--card);
+  --detail-expanded-card-background: var(--color-mist-800);
 }
 
 :root.dark[data-sidebar-color="taupe"] {
@@ -331,6 +344,7 @@
   --dashboard-card-background: var(--color-taupe-900);
   --dashboard-card-shell-hover-background: var(--color-taupe-900);
   --dashboard-card-hover-background: var(--card);
+  --detail-expanded-card-background: var(--color-taupe-800);
 }
 
 @theme inline {

@@ -5,6 +5,7 @@ import TitleBlock from "@/components/layout/TitleBlock.vue"
 import { Badge } from "@/components/ui/badge"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
+import { cn } from "@/lib/utils"
 
 type AccordionColumn = {
   key: string
@@ -36,6 +37,7 @@ const props = withDefaults(defineProps<{
   }
   useTitleBlock?: boolean
   flushRightActions?: boolean
+  expandedItemCard?: boolean
 }>(), {
   schema: () => ({
     key: "accordion-module",
@@ -47,6 +49,7 @@ const props = withDefaults(defineProps<{
   }),
   useTitleBlock: false,
   flushRightActions: false,
+  expandedItemCard: false,
 })
 
 const slots = useSlots()
@@ -93,7 +96,10 @@ const hasExpandedContent = computed(() => Boolean(slots["expanded-content"]))
         v-for="(item, index) in schema.items"
         :key="`${schema.key}-${item.key}`"
         :value="`${item.key}`"
-        class="border-b-0"
+        :class="cn(
+          'border-b-0 transition-colors duration-150',
+          props.expandedItemCard && 'data-[state=open]:rounded-md data-[state=open]:border data-[state=open]:border-border/60 data-[state=open]:bg-[var(--detail-expanded-card-background)]',
+        )"
       >
         <div :class="['detail-section-inset flex items-center gap-3', props.flushRightActions ? 'detail-section-inset--flush-right' : '']">
           <AccordionTrigger class="min-w-0 flex-1 justify-start py-4 text-left hover:no-underline [&>svg]:order-first [&>svg]:mr-2 [&>svg]:ml-0">

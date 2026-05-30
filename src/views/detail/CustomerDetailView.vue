@@ -5122,7 +5122,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
           <CustomerDetailContentLoading v-if="loading || relationsLoading" variant="basic-info-secondary" />
 
           <template v-else-if="customer">
-            <DetailAccordionModule :schema="parkBuildingAccordion" use-title-block flush-right-actions>
+            <DetailAccordionModule :schema="parkBuildingAccordion" use-title-block flush-right-actions expanded-item-card>
               <template #item-actions="{ item }">
                 <div class="flex items-center gap-2">
                   <Button
