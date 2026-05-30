@@ -617,7 +617,7 @@ function maybeShowHorizontalScrollHint() {
   toast.info(HORIZONTAL_SCROLL_HINT_MESSAGE, {
     id: horizontalScrollHintId.value,
     duration: 5200,
-    position: "top-center",
+    position: "bottom-center",
   })
 }
 
