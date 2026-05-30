@@ -5001,7 +5001,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
                             <i class="ri-community-line text-[15px]" />
                           </div>
                           <div class="min-w-0">
-                            <div class="truncate whitespace-nowrap text-[18px] font-semibold text-foreground">
+                            <div class="truncate whitespace-nowrap text-[14px] font-semibold leading-5 text-foreground">
                               {{ group.title }}
                             </div>
                           </div>
