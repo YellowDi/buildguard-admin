@@ -254,6 +254,7 @@ export type RepairWorkOrderDetailResult = {
   AfterRepairFile?: WorkOrderFile[]
   BeforeRepairFile?: WorkOrderFile[]
   RepairFile?: WorkOrderFile[]
+  ReviewVideoFile?: WorkOrderFile[]
   RepairContent?: string
   CategoryContent?: string
   CategoryName?: string
@@ -978,6 +979,18 @@ function normalizeRepairWorkOrderListItem(value: unknown): RepairWorkOrderListIt
     AfterRepairFile: getFirstWorkOrderFiles(record, ["AfterRepairFile", "afterRepairFile"]),
     BeforeRepairFile: getFirstWorkOrderFiles(record, ["BeforeRepairFile", "beforeRepairFile"]),
     RepairFile: getFirstWorkOrderFiles(record, ["RepairFile", "repairFile"]),
+    ReviewVideoFile: getFirstWorkOrderFiles(record, [
+      "ReviewVideoFile",
+      "reviewVideoFile",
+      "ReviewVideo",
+      "reviewVideo",
+      "ReviewVideos",
+      "reviewVideos",
+      "RepairReviewVideoFile",
+      "repairReviewVideoFile",
+      "RepairReviewVideos",
+      "repairReviewVideos",
+    ]),
     RepairContent: getFirstText(record, ["RepairContent", "repairContent"]),
     CategoryContent: getFirstText(record, ["CategoryContent", "categoryContent"]),
     CategoryName: getFirstText(record, ["CategoryName", "categoryName"]),
