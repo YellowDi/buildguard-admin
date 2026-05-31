@@ -669,7 +669,7 @@ const filteredInspectionWorkOrders = computed(() => {
       return true
     }
 
-    return [row.orderNo, row.packageName, row.planName, row.executor, row.remark].join(" ").toLowerCase().includes(query)
+    return [row.orderNo, row.parkName, row.packageName, row.planName, row.executor, row.remark, row.createdAt, row.updatedAt].join(" ").toLowerCase().includes(query)
   })
 
   return [...rows].sort((left, right) => compareDateStrings(left.createdAt, right.createdAt, inspectionWorkOrdersSortDirection.value, left.orderNo, right.orderNo))
@@ -686,7 +686,7 @@ const filteredRepairWorkOrders = computed(() => {
       return true
     }
 
-    return [row.orderNo, row.parkName, row.executor, row.remark].join(" ").toLowerCase().includes(query)
+    return [row.orderNo, row.parkName, row.buildingName, row.executor, row.importantLabel, row.reportTypeLabel, row.remark, row.createdAt].join(" ").toLowerCase().includes(query)
   })
 
   return [...rows].sort((left, right) => compareDateStrings(left.createdAt, right.createdAt, repairWorkOrdersSortDirection.value, left.orderNo, right.orderNo))
@@ -1183,34 +1183,22 @@ const inspectionWorkOrdersSchema: TablePageSchema<CustomerWorkOrderRow> = {
   onRowClick: row => handleViewWorkOrder(row as CustomerWorkOrderRow),
   columns: [
     {
-      key: "packageName",
-      label: "检测服务名称",
+      key: "orderNo",
+      label: "检测工单",
       filterType: "text",
+      slot: "cell-orderNo",
+      emphasis: "default",
+      tone: "muted",
       filter: {
         type: "text",
-        placeholder: "输入检测服务名称",
+        placeholder: "输入工单编号",
+        defaultVisible: true,
       },
-      sort: true,
-    },
-    {
-      key: "planName",
-      label: "检测计划名称",
-      filterType: "text",
-      filter: {
-        type: "text",
-        placeholder: "输入检测计划名称",
+      sort: {
+        label: "检测工单",
+        kind: "text",
+        value: row => `${formatInspectionWorkOrderTitle(row)} ${formatShortOrderNo(row.orderNo)}`,
       },
-      sort: true,
-    },
-    {
-      key: "executor",
-      label: "执行人",
-      filterType: "text",
-      filter: {
-        type: "text",
-        placeholder: "输入执行人",
-      },
-      sort: true,
     },
     {
       key: "statusLabel",
@@ -1232,34 +1220,14 @@ const inspectionWorkOrdersSchema: TablePageSchema<CustomerWorkOrderRow> = {
       },
     },
     {
-      key: "resultLabel",
-      label: "检测结果",
-      filterType: "tag",
+      key: "executor",
+      label: "执行人",
+      filterType: "text",
       filter: {
-        type: "tag",
-        defaultVisible: true,
+        type: "text",
+        placeholder: "输入执行人",
       },
-      sort: {
-        label: "结果",
-        kind: "metric",
-        value: row => row.resultValue ?? -1,
-      },
-    },
-    {
-      key: "scoreLabel",
-      label: "评分",
-      filterType: "number",
-      format: "numeric",
-      filter: {
-        type: "number",
-        defaultVisible: true,
-        value: row => row.score ?? -1,
-      },
-      sort: {
-        label: "评分",
-        kind: "metric",
-        value: row => row.score ?? -1,
-      },
+      sort: true,
     },
     {
       key: "deadline",
@@ -1274,6 +1242,36 @@ const inspectionWorkOrdersSchema: TablePageSchema<CustomerWorkOrderRow> = {
       sort: true,
     },
     {
+      key: "packageName",
+      label: "检测服务名称",
+      filterType: "text",
+      filter: {
+        type: "text",
+        placeholder: "输入检测服务名称",
+      },
+      sort: true,
+    },
+    {
+      key: "planName",
+      label: "检测计划名称",
+      filterType: "text",
+      filter: {
+        type: "text",
+        placeholder: "输入检测计划名称",
+      },
+      sort: true,
+    },
+    {
+      key: "parkName",
+      label: "园区",
+      filterType: "text",
+      filter: {
+        type: "text",
+        placeholder: "输入园区名称",
+      },
+      sort: true,
+    },
+    {
       key: "remark",
       label: "备注",
       filterType: "text",
@@ -1284,26 +1282,26 @@ const inspectionWorkOrdersSchema: TablePageSchema<CustomerWorkOrderRow> = {
       },
     },
     {
-      key: "createdStartAt",
-      label: "创建开始时间",
+      key: "createdAt",
+      label: "创建时间",
       filterType: "time",
       tone: "muted",
       format: "numeric",
       filter: {
         type: "date",
-        value: row => extractDatePart(row.createdStartAt),
+        value: row => extractDatePart(row.createdAt),
       },
       sort: true,
     },
     {
-      key: "createdEndAt",
-      label: "创建结束时间",
+      key: "updatedAt",
+      label: "更新时间",
       filterType: "time",
       tone: "muted",
       format: "numeric",
       filter: {
         type: "date",
-        value: row => extractDatePart(row.createdEndAt),
+        value: row => extractDatePart(row.updatedAt),
       },
       sort: true,
     },
@@ -1347,6 +1345,20 @@ const repairWorkOrdersSchema: TablePageSchema<CustomerWorkOrderRow> = {
   onRowClick: row => handleViewWorkOrder(row as CustomerWorkOrderRow),
   columns: [
     {
+      key: "orderNo",
+      label: "报修工单",
+      filterType: "text",
+      slot: "cell-orderNo",
+      emphasis: "default",
+      tone: "muted",
+      filter: {
+        type: "text",
+        placeholder: "输入工单编号",
+        defaultVisible: true,
+      },
+      sort: true,
+    },
+    {
       key: "parkName",
       label: "园区名称",
       filterType: "text",
@@ -1355,44 +1367,6 @@ const repairWorkOrdersSchema: TablePageSchema<CustomerWorkOrderRow> = {
         placeholder: "输入园区名称",
       },
       sort: true,
-    },
-    {
-      key: "executor",
-      label: "执行人",
-      filterType: "text",
-      filter: {
-        type: "text",
-        placeholder: "输入执行人",
-      },
-      sort: true,
-    },
-    {
-      key: "importantLabel",
-      label: "重要程度",
-      filterType: "tag",
-      filter: {
-        type: "tag",
-        defaultVisible: true,
-      },
-      sort: {
-        label: "重要程度",
-        kind: "text",
-        value: row => row.importantLabel,
-      },
-    },
-    {
-      key: "reportTypeLabel",
-      label: "报修类型",
-      filterType: "tag",
-      filter: {
-        type: "tag",
-        defaultVisible: true,
-      },
-      sort: {
-        label: "报修类型",
-        kind: "text",
-        value: row => row.reportTypeLabel,
-      },
     },
     {
       key: "statusLabel",
@@ -1414,9 +1388,59 @@ const repairWorkOrdersSchema: TablePageSchema<CustomerWorkOrderRow> = {
       },
     },
     {
+      key: "executor",
+      label: "执行人",
+      filterType: "text",
+      slot: "cell-executor",
+      filter: {
+        type: "text",
+        placeholder: "输入执行人",
+      },
+      sort: true,
+    },
+    {
+      key: "reportTypeLabel",
+      label: "报修类型",
+      filterType: "tag",
+      filter: {
+        type: "tag",
+        defaultVisible: true,
+      },
+      sort: {
+        label: "报修类型",
+        kind: "text",
+        value: row => row.reportTypeLabel,
+      },
+    },
+    {
+      key: "importantLabel",
+      label: "重要程度",
+      filterType: "tag",
+      filter: {
+        type: "tag",
+        defaultVisible: true,
+      },
+      sort: {
+        label: "重要程度",
+        kind: "text",
+        value: row => row.importantLabel,
+      },
+    },
+    {
+      key: "buildingName",
+      label: "建筑名称",
+      filterType: "text",
+      filter: {
+        type: "text",
+        placeholder: "输入建筑名称",
+      },
+      sort: true,
+    },
+    {
       key: "remark",
       label: "内容说明",
       filterType: "text",
+      slot: "cell-repairRemark",
       format: "note",
       filter: {
         type: "text",
@@ -3910,6 +3934,21 @@ function formatInspectionWorkOrderTitle(row: { parkName?: unknown }) {
   return parkName && parkName !== "-" ? parkName : "未关联园区"
 }
 
+function formatRepairWorkOrderTitle(row: { buildingName?: unknown, parkName?: unknown }) {
+  const buildingName = toDisplayText(row.buildingName, "")
+
+  if (buildingName && buildingName !== "-") {
+    return buildingName
+  }
+
+  const parkName = toDisplayText(row.parkName, "")
+  return parkName && parkName !== "-" ? parkName : "未关联建筑"
+}
+
+function shouldShowRepairRemarkTooltip(value: unknown) {
+  return toDisplayText(value, "").length > 12
+}
+
 function hasExplicitTime(value: string | undefined) {
   if (!value) {
     return false
@@ -3946,36 +3985,29 @@ function buildBuildingAssetsFilterText(row: CustomerBuildingAssetRow) {
 function buildInspectionWorkOrdersFilterText(row: CustomerWorkOrderRow) {
   return [
     row.orderNo,
-    row.customerName,
+    row.parkName,
     row.packageName,
     row.planName,
     row.executor,
     row.statusLabel,
-    row.resultLabel,
-    row.scoreLabel,
     row.createdAt,
     row.updatedAt,
     row.deadline,
     row.remark,
-    row.createdStartAt,
-    row.createdEndAt,
   ].join(" ")
 }
 
 function buildRepairWorkOrdersFilterText(row: CustomerWorkOrderRow) {
   return [
     row.orderNo,
-    row.customerName,
     row.parkName,
+    row.buildingName,
     row.executor,
     row.importantLabel,
     row.reportTypeLabel,
     row.statusLabel,
     row.remark,
     row.createdAt,
-    row.updatedAt,
-    row.createdStartAt,
-    row.createdEndAt,
   ].join(" ")
 }
 
@@ -4145,7 +4177,7 @@ function mapRepairWorkOrderRow(item: RepairWorkOrderListItem, index: number): Cu
   const reportTypeLabel = formatRepairReportTypeLabel(reportTypeValue)
   const createdAt = toDisplayText(item.CreatedAt, "-")
   const updatedAt = toDisplayText(item.UpdatedAt, "-")
-  const executors = normalizeExecutors(item.Executors)
+  const executors = normalizeExecutors(item.Executors, "未指派")
 
   return {
     id: uuid || fallbackId,
@@ -4781,6 +4813,36 @@ function toDisplayText(value: unknown, fallback = "未填写") {
                 />
                 <div class="h-5 w-px shrink-0 bg-border" aria-hidden="true" />
               </div>
+            </template>
+
+            <template #cell-orderNo="{ row }">
+              <div class="inline-flex max-w-full items-baseline gap-1.5">
+                <span class="truncate text-foreground">
+                  {{ activeWorkOrderTableTab === "inspection" ? formatInspectionWorkOrderTitle(row) : formatRepairWorkOrderTitle(row) }}
+                </span>
+                <span class="shrink-0 text-muted-foreground">
+                  #{{ formatShortOrderNo(row.orderNo) }}
+                </span>
+              </div>
+            </template>
+
+            <template #cell-executor="{ row }">
+              <span :class="activeWorkOrderTableTab === 'repair' && row.executor === '未指派' ? 'text-muted-foreground' : undefined">
+                {{ row.executor }}
+              </span>
+            </template>
+
+            <template #cell-repairRemark="{ row }">
+              <TooltipWrap
+                :content="toDisplayText(row.remark, '-')"
+                :disabled="!shouldShowRepairRemarkTooltip(row.remark)"
+                align="start"
+                class="w-auto max-w-xs whitespace-normal text-left leading-5 [overflow-wrap:anywhere] [text-wrap:wrap]"
+              >
+                <span class="block max-w-[min(34rem,42vw)] cursor-default truncate text-foreground">
+                  {{ toDisplayText(row.remark, "-") }}
+                </span>
+              </TooltipWrap>
             </template>
 
             <template #footer>
