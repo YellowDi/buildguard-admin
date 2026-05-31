@@ -409,7 +409,11 @@
   body {
     @apply bg-background text-foreground;
     font-family: var(--font-sans) !important;
-    text-rendering: optimizeLegibility;
+    text-rendering: auto;
+    -webkit-font-smoothing: auto;
+    -moz-osx-font-smoothing: auto;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
   }
 
   h1,
