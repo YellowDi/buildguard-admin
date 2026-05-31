@@ -253,7 +253,7 @@ async function loadInitialData(options: { silent?: boolean } = {}) {
     clearVideoSourceForms()
     modules.value = normalizeModuleOrders(contentResult.list.map(normalizeMediaContent).filter((item): item is AppHomeModule => item !== null))
     selectedModuleId.value = selectedModule.value?.id ?? modules.value[0]?.id ?? ""
-    await ensureMediaOptionsForModule(selectedModule.value)
+    await ensureMediaOptionsForModules(modules.value)
     syncMediaOptionDefaults()
     syncHomeMediaReferences()
     return true
@@ -277,6 +277,11 @@ async function ensureMediaOptionsForModule(module: AppHomeModule | null) {
   }
 
   await ensureMediaOptions(module.type)
+}
+
+async function ensureMediaOptionsForModules(items: AppHomeModule[]) {
+  const types = [...new Set(items.map(module => module.type))]
+  await Promise.all(types.map(type => ensureMediaOptions(type)))
 }
 
 async function ensureMediaOptions(kind: AppHomeMediaOptionKind) {
