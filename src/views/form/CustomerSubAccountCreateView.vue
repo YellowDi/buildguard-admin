@@ -9,6 +9,7 @@ import FormQuickNav from "@/components/form/FormQuickNav.vue"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { useFormRequiredValidation } from "@/composables/useFormRequiredValidation"
 import { handleApiError } from "@/lib/api-errors"
 import {
   appendCustomerSubAccountLocalRecord,
@@ -56,16 +57,17 @@ let observerActive = false
 
 const routeCustomerUuid = computed(() => typeof route.params.id === "string" ? route.params.id.trim() : "")
 const queryCustomerName = computed(() => typeof route.query.customerName === "string" ? route.query.customerName.trim() : "")
-const canSubmit = computed(() =>
-  Boolean(
-    normalizeText(form.customerUuid)
-    && normalizeText(form.name)
-    && normalizeText(form.account)
-    && normalizeText(form.password)
-    && normalizeText(form.phone)
-    && !submitting.value,
-  ),
-)
+const {
+  isRequiredFieldInvalid,
+  validateRequiredFields,
+} = useFormRequiredValidation(() => [
+  { id: "section-customer", isComplete: () => Boolean(normalizeText(form.customerUuid)) },
+  { id: "section-name", isComplete: () => Boolean(normalizeText(form.name)) },
+  { id: "section-account", isComplete: () => Boolean(normalizeText(form.account)) },
+  { id: "section-password", isComplete: () => Boolean(normalizeText(form.password)) },
+  { id: "section-phone", isComplete: () => Boolean(normalizeText(form.phone)) },
+])
+const isSubmitLocked = computed(() => submitting.value)
 const submitButtonLabel = computed(() => submitting.value ? "提交中..." : "添加子账号")
 
 function handleFocus(sectionId: string) {
@@ -112,6 +114,15 @@ function scrollToSection(id: string) {
 }
 
 async function handleSubmit() {
+  if (!validateRequiredFields()) {
+    toast.error("请补全必填信息")
+    return
+  }
+
+  if (isSubmitLocked.value) {
+    return
+  }
+
   if (!normalizeText(form.customerUuid)) {
     toast.error("所属客户信息缺失")
     return
@@ -297,7 +308,7 @@ watch(
   <section class="mx-auto flex w-full max-w-4xl min-w-0 flex-col gap-6 pb-8">
     <FormHeader
       title="添加子账号"
-      :primary-action="{ label: submitButtonLabel, icon: 'ri-user-add-line', disabled: !canSubmit, permissionCode: PERMISSION_CODES.customerSubAccountAdd }"
+      :primary-action="{ label: submitButtonLabel, icon: 'ri-user-add-line', disabled: isSubmitLocked, permissionCode: PERMISSION_CODES.customerSubAccountAdd }"
       :secondary-actions="[{ key: 'reset', label: '重置表单' }]"
       :reset-dialog="{ description: '当前已填写的子账号信息都会被清空，此操作不可撤销。' }"
       @back="goBack"
@@ -325,6 +336,7 @@ watch(
             label="所属客户"
             label-for="sub-account-customer"
             required
+            :invalid="isRequiredFieldInvalid('section-customer')"
           >
             <Input
               id="sub-account-customer"
@@ -341,6 +353,7 @@ watch(
             label="用户名"
             label-for="sub-account-name"
             required
+            :invalid="isRequiredFieldInvalid('section-name')"
           >
             <Input
               id="sub-account-name"
@@ -358,6 +371,7 @@ watch(
             label="账号"
             label-for="sub-account-account"
             required
+            :invalid="isRequiredFieldInvalid('section-account')"
           >
             <Input
               id="sub-account-account"
@@ -375,6 +389,7 @@ watch(
             label="密码"
             label-for="sub-account-password"
             required
+            :invalid="isRequiredFieldInvalid('section-password')"
           >
             <Input
               id="sub-account-password"
@@ -395,6 +410,7 @@ watch(
             label-for="sub-account-phone"
             last
             required
+            :invalid="isRequiredFieldInvalid('section-phone')"
           >
             <Input
               id="sub-account-phone"

@@ -22,6 +22,7 @@ import {
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
+import { useFormRequiredValidation } from "@/composables/useFormRequiredValidation"
 import { getApiErrorMessage, handleApiError } from "@/lib/api-errors"
 import { fetchBuildings, type BuildingListItem } from "@/lib/buildings-api"
 import { fetchCustomerDetail, fetchCustomers, type CustomerListItem } from "@/lib/customers-api"
@@ -368,38 +369,49 @@ const optionalRepairInspectionWorkOrderUuid = computed({
     form.inspectionWorkOrderUuid = value === NO_REPAIR_INSPECTION_WORK_ORDER_VALUE ? "" : value
   },
 })
-const canSubmit = computed(() => {
+const {
+  isRequiredFieldInvalid,
+  validateRequiredFields,
+} = useFormRequiredValidation(() => {
   if (isInspectionEditMode.value) {
-    return Boolean(normalizeText(workOrderUuid.value) && !submitting.value)
+    return []
+  }
+
+  if (isRepairFormMode.value) {
+    return [
+      { id: "section-customer", isComplete: () => Boolean(normalizeText(form.customerUuid)) },
+      { id: "section-park", isComplete: () => Boolean(normalizeText(form.parkUuid)) },
+      { id: "section-building", isComplete: () => Boolean(normalizeText(form.buildUuid)), enabled: () => buildingOptions.value.length > 0 },
+      { id: "section-report-type", isComplete: () => Boolean(normalizeText(form.reportType)) },
+      { id: "section-important", isComplete: () => Boolean(normalizeText(form.important)) },
+      { id: "section-content", isComplete: () => Boolean(normalizeText(form.content)), enabled: () => !hasSelectedRepairInspectionItems.value },
+    ]
+  }
+
+  return [
+    { id: "section-customer", isComplete: () => Boolean(normalizeText(form.customerUuid)) },
+    { id: "section-plan", isComplete: () => Boolean(normalizeText(form.planUuid)) },
+    { id: "section-package", isComplete: () => Boolean(normalizeText(form.serviceUuid)) },
+    { id: "section-deadline", isComplete: () => Boolean(normalizeText(form.deadline)) },
+  ]
+})
+const isSubmitLocked = computed(() => {
+  if (isInspectionEditMode.value) {
+    return submitting.value
   }
 
   if (isRepairFormMode.value) {
     return Boolean(
-      (!isRepairEditMode.value || normalizeText(workOrderUuid.value))
-      &&
-      normalizeText(form.customerUuid)
-      && normalizeText(form.parkUuid)
-      && (!buildingOptions.value.length || normalizeText(form.buildUuid))
-      && normalizeText(form.reportType)
-      && normalizeText(form.important)
-      && (hasSelectedRepairInspectionItems.value || normalizeText(form.content))
-      && !submitting.value
-      && !customerLoading.value
-      && !relatedOptionsLoading.value
-      && !repairDictionariesLoading.value
-      && !repairBuildingsLoading.value
-      && !repairFilesUploading.value
+      submitting.value
+      || customerLoading.value
+      || relatedOptionsLoading.value
+      || repairDictionariesLoading.value
+      || repairBuildingsLoading.value
+      || repairFilesUploading.value,
     )
   }
 
-  return Boolean(
-    normalizeText(form.customerUuid)
-    && normalizeText(form.planUuid)
-    && normalizeText(form.serviceUuid)
-    && normalizeText(form.deadline)
-    && !submitting.value
-    && !relatedOptionsLoading.value,
-  )
+  return Boolean(submitting.value || relatedOptionsLoading.value)
 })
 const submitButtonLabel = computed(() => {
   if (submitting.value) {
@@ -461,6 +473,15 @@ function scrollToSection(id: string) {
 }
 
 async function handleSubmit() {
+  if (!validateRequiredFields()) {
+    toast.error("请补全必填信息")
+    return
+  }
+
+  if (isSubmitLocked.value) {
+    return
+  }
+
   if (isInspectionEditMode.value) {
     await handleInspectionEditSubmit()
     return
@@ -2204,7 +2225,7 @@ watch(
   >
     <FormHeader
       :title="pageTitle"
-      :primary-action="{ label: submitButtonLabel, icon: 'ri-file-add-line', disabled: !canSubmit, permissionCode: primaryActionPermissionCode }"
+      :primary-action="{ label: submitButtonLabel, icon: 'ri-file-add-line', disabled: isSubmitLocked, permissionCode: primaryActionPermissionCode }"
       :secondary-actions="[{ key: 'reset', label: '重置表单' }]"
       :reset-dialog="{ description: resetDialogDescription }"
       @back="goBack"
@@ -2246,6 +2267,7 @@ watch(
             label-for="work-order-customer"
             :layout="isRepairFormMode ? 'vertical' : 'responsive'"
             required
+            :invalid="isRequiredFieldInvalid('section-customer')"
           >
             <Input
               v-if="routeCustomerUuid || isEditMode"
@@ -2275,6 +2297,7 @@ watch(
               label-for="work-order-park"
               layout="vertical"
               required
+              :invalid="isRequiredFieldInvalid('section-park')"
             >
               <Select v-model="form.parkUuid" :disabled="relatedOptionsLoading || !form.customerUuid || !parkOptions.length">
                 <SelectTrigger id="work-order-park" class="w-full" @focus="handleFocus('section-park')">
@@ -2295,6 +2318,7 @@ watch(
               label-for="work-order-building"
               layout="vertical"
               :required="buildingOptions.length > 0"
+              :invalid="isRequiredFieldInvalid('section-building')"
             >
               <Select v-model="form.buildUuid" :disabled="repairBuildingsLoading || !form.parkUuid || !buildingOptions.length">
                 <SelectTrigger id="work-order-building" class="w-full" @focus="handleFocus('section-building')">
@@ -2352,6 +2376,7 @@ watch(
               label-for="work-order-report-type"
               layout="vertical"
               required
+              :invalid="isRequiredFieldInvalid('section-report-type')"
             >
               <Select v-model="form.reportType" :multiple="false" :disabled="repairDictionariesLoading || !repairTypeOptions.length">
                 <SelectTrigger id="work-order-report-type" class="w-full" @focus="handleFocus('section-report-type')">
@@ -2372,6 +2397,7 @@ watch(
               label-for="work-order-important"
               layout="vertical"
               required
+              :invalid="isRequiredFieldInvalid('section-important')"
             >
               <Select v-model="form.important" :multiple="false" :disabled="repairDictionariesLoading || !repairImportanceOptions.length">
                 <SelectTrigger id="work-order-important" class="w-full" @focus="handleFocus('section-important')">
@@ -2452,6 +2478,7 @@ watch(
               layout="vertical"
               last
               :required="!hasSelectedRepairInspectionItems"
+              :invalid="isRequiredFieldInvalid('section-content')"
             >
               <Textarea
                 id="work-order-content"
@@ -2470,6 +2497,7 @@ watch(
               quick-nav-label="检测计划"
               label="检测计划"
               required
+              :invalid="isRequiredFieldInvalid('section-plan')"
             >
               <Input
                 v-if="isEditMode"
@@ -2496,6 +2524,7 @@ watch(
               quick-nav-label="检测服务名称"
               label="检测服务名称"
               required
+              :invalid="isRequiredFieldInvalid('section-package')"
             >
               <Input
                 v-if="isEditMode"
@@ -2523,6 +2552,7 @@ watch(
               label="截止时间"
               label-for="work-order-deadline"
               required
+              :invalid="isRequiredFieldInvalid('section-deadline')"
             >
               <FormDatePicker
                 id="work-order-deadline"

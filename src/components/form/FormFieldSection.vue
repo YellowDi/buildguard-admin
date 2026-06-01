@@ -13,6 +13,7 @@ const props = withDefaults(defineProps<{
   label?: string
   labelFor?: string
   required?: boolean
+  invalid?: boolean
   description?: string
   layout?: "responsive" | "horizontal" | "vertical"
   align?: "center" | "start"
@@ -22,6 +23,7 @@ const props = withDefaults(defineProps<{
   label: "",
   labelFor: undefined,
   required: false,
+  invalid: false,
   description: "",
   layout: "responsive",
   align: "center",
@@ -58,6 +60,14 @@ const contentClass = computed(() => {
   return "w-full min-w-0 md:w-[360px] md:shrink-0"
 })
 
+const invalidContentClass = [
+  "data-[invalid=true]:rounded-md data-[invalid=true]:ring-2 data-[invalid=true]:ring-destructive/25 data-[invalid=true]:ring-offset-2 data-[invalid=true]:ring-offset-background",
+  "data-[invalid=true]:[&_[data-slot=input]]:border-destructive data-[invalid=true]:[&_[data-slot=input]]:ring-[3px] data-[invalid=true]:[&_[data-slot=input]]:ring-destructive/20 dark:data-[invalid=true]:[&_[data-slot=input]]:ring-destructive/40",
+  "data-[invalid=true]:[&_[data-slot=select-trigger]]:border-destructive data-[invalid=true]:[&_[data-slot=select-trigger]]:ring-[3px] data-[invalid=true]:[&_[data-slot=select-trigger]]:ring-destructive/20 dark:data-[invalid=true]:[&_[data-slot=select-trigger]]:ring-destructive/40",
+  "data-[invalid=true]:[&_[data-slot=date-picker-trigger]]:border-destructive data-[invalid=true]:[&_[data-slot=date-picker-trigger]]:ring-[3px] data-[invalid=true]:[&_[data-slot=date-picker-trigger]]:ring-destructive/20 dark:data-[invalid=true]:[&_[data-slot=date-picker-trigger]]:ring-destructive/40",
+  "data-[invalid=true]:[&_[data-slot=textarea]]:border-destructive data-[invalid=true]:[&_[data-slot=textarea]]:ring-[3px] data-[invalid=true]:[&_[data-slot=textarea]]:ring-destructive/20 dark:data-[invalid=true]:[&_[data-slot=textarea]]:ring-destructive/40",
+].join(" ")
+
 const hasLabelColumn = computed(() =>
   Boolean(props.label)
     || Boolean(props.description)
@@ -82,7 +92,7 @@ const hasLabelColumn = computed(() =>
         </FieldDescription>
       </div>
 
-      <FieldContent :class="contentClass">
+      <FieldContent :data-invalid="invalid ? 'true' : undefined" :class="cn(contentClass, invalidContentClass)">
         <slot />
       </FieldContent>
     </Field>

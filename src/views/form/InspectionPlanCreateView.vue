@@ -17,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { useFormRequiredValidation } from "@/composables/useFormRequiredValidation"
 import { handleApiError } from "@/lib/api-errors"
 import { fetchCustomers, type CustomerListItem } from "@/lib/customers-api"
 import { createInspectionPlan, fetchInspectionPlanDetail, updateInspectionPlan } from "@/lib/inspection-plans-api"
@@ -96,19 +97,18 @@ const selectedCustomerName = computed(() =>
 const selectedServiceName = computed(() =>
   serviceOptions.value.find(item => item.uuid === form.serviceUuid)?.name ?? "",
 )
-const canSubmit = computed(() =>
-  Boolean(
-    normalizeText(form.customerUuid)
-    && normalizeText(form.serviceUuid)
-    && normalizeText(form.name)
-    && parsePositiveInteger(form.duration) !== null
-    && parsePositiveInteger(form.workOrderDuration) !== null
-    && normalizeText(form.firstTime)
-    && !submitting.value
-    && !customerLoading.value
-    && !serviceLoading.value,
-  ),
-)
+const {
+  isRequiredFieldInvalid,
+  validateRequiredFields,
+} = useFormRequiredValidation(() => [
+  { id: "section-customer", isComplete: () => Boolean(normalizeText(form.customerUuid)) },
+  { id: "section-service", isComplete: () => Boolean(normalizeText(form.serviceUuid)) },
+  { id: "section-name", isComplete: () => Boolean(normalizeText(form.name)) },
+  { id: "section-duration", isComplete: () => parsePositiveInteger(form.duration) !== null },
+  { id: "section-work-order-duration", isComplete: () => parsePositiveInteger(form.workOrderDuration) !== null },
+  { id: "section-first-time", isComplete: () => Boolean(normalizeText(form.firstTime)) },
+])
+const isSubmitLocked = computed(() => submitting.value || customerLoading.value || serviceLoading.value)
 const submitButtonLabel = computed(() => {
   if (submitting.value) {
     return isEditMode.value ? "保存中..." : "提交中..."
@@ -161,6 +161,15 @@ function scrollToSection(id: string) {
 }
 
 async function handleSubmit() {
+  if (!validateRequiredFields()) {
+    toast.error("请补全必填信息")
+    return
+  }
+
+  if (isSubmitLocked.value) {
+    return
+  }
+
   if (!normalizeText(form.customerUuid)) {
     toast.error("请选择客户")
     return
@@ -608,7 +617,7 @@ watch(
   <section class="mx-auto flex w-full max-w-4xl min-w-0 flex-col gap-6 pb-8">
     <FormHeader
       :title="formHeaderTitle"
-      :primary-action="{ label: submitButtonLabel, icon: isEditMode ? 'ri-save-line' : 'ri-add-line', disabled: !canSubmit, permissionCode: isEditMode ? PERMISSION_CODES.inspectionPlanEdit : PERMISSION_CODES.inspectionPlanAdd }"
+      :primary-action="{ label: submitButtonLabel, icon: isEditMode ? 'ri-save-line' : 'ri-add-line', disabled: isSubmitLocked, permissionCode: isEditMode ? PERMISSION_CODES.inspectionPlanEdit : PERMISSION_CODES.inspectionPlanAdd }"
       :secondary-actions="[{ key: 'reset', label: '重置表单' }]"
       :reset-dialog="{ description: '当前已填写的检测计划信息都会被清空，此操作不可撤销。' }"
       @back="goBack"
@@ -635,6 +644,7 @@ watch(
             quick-nav-label="所属客户"
             label="所属客户"
             required
+            :invalid="isRequiredFieldInvalid('section-customer')"
           >
             <Select v-model="form.customerUuid" :disabled="customerLoading || !customerOptions.length">
               <SelectTrigger id="inspection-plan-customer" class="w-full" @focus="handleFocus('section-customer')">
@@ -653,6 +663,7 @@ watch(
             quick-nav-label="关联服务"
             label="关联服务"
             required
+            :invalid="isRequiredFieldInvalid('section-service')"
           >
             <Select v-model="form.serviceUuid" :disabled="serviceLoading || !serviceOptions.length">
               <SelectTrigger id="inspection-plan-service" class="w-full" @focus="handleFocus('section-service')">
@@ -672,6 +683,7 @@ watch(
             label="计划名称"
             label-for="inspection-plan-name"
             required
+            :invalid="isRequiredFieldInvalid('section-name')"
           >
             <Input
               id="inspection-plan-name"
@@ -690,6 +702,7 @@ watch(
             description="请输入执行频率天数（正整数）。"
             label-for="inspection-plan-duration"
             required
+            :invalid="isRequiredFieldInvalid('section-duration')"
           >
             <Input
               id="inspection-plan-duration"
@@ -711,6 +724,7 @@ watch(
             description="请设定工单持续多少天（正整数）。"
             label-for="inspection-plan-work-order-duration"
             required
+            :invalid="isRequiredFieldInvalid('section-work-order-duration')"
           >
             <Input
               id="inspection-plan-work-order-duration"
@@ -731,6 +745,7 @@ watch(
             label="首次执行时间"
             label-for="inspection-plan-first-time"
             required
+            :invalid="isRequiredFieldInvalid('section-first-time')"
           >
             <FormDatePicker
               id="inspection-plan-first-time"

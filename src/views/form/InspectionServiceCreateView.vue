@@ -36,6 +36,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Textarea } from "@/components/ui/textarea"
 import { TooltipWrap } from "@/components/ui/tooltip"
 import { useCurrentUserPermissions } from "@/composables/useCurrentUserPermissions"
+import { useFormRequiredValidation } from "@/composables/useFormRequiredValidation"
 import { handleApiError } from "@/lib/api-errors"
 import { fetchBuildings, type BuildingListItem } from "@/lib/buildings-api"
 import { fetchCustomers, type CustomerListItem } from "@/lib/customers-api"
@@ -405,21 +406,17 @@ type InspectionCategoryDraftOption = {
 }
 
 const isInteractionLocked = computed(() => loadingDetail.value)
-const canSubmit = computed(() =>
-  Boolean(
-    normalizeText(form.customerUuid)
-    && normalizeText(form.name)
-    && normalizeText(form.level)
-    && normalizeText(form.managerName)
-    && normalizeText(form.managerPhone)
-    && buildingConfigs.value.length > 0
-    && selectedInspectionUuidsForSubmit.value.length > 0
-    && !submitting.value
-    && !loadingDetail.value
-    && !customerLoading.value
-    && !relatedOptionsLoading.value,
-  ),
-)
+const {
+  isRequiredFieldInvalid,
+  requiredValidationTriggered,
+  validateRequiredFields,
+} = useFormRequiredValidation(() => [
+  { id: "section-customer", isComplete: () => Boolean(normalizeText(form.customerUuid)) },
+  { id: "section-service", isComplete: () => Boolean(normalizeText(form.name) && normalizeText(form.level)) },
+  { id: "section-manager", isComplete: () => Boolean(normalizeText(form.managerName) && normalizeText(form.managerPhone)) },
+  { id: "section-builds", isComplete: () => Boolean(buildingConfigs.value.length > 0 && selectedInspectionUuidsForSubmit.value.length > 0) },
+])
+const isSubmitLocked = computed(() => submitting.value || loadingDetail.value || customerLoading.value || relatedOptionsLoading.value)
 const submitButtonLabel = computed(() => {
   if (loadingDetail.value) {
     return "加载中..."
@@ -778,6 +775,15 @@ function closeScoreLimitPopover() {
 
 async function handleSubmit() {
   if (loadingDetail.value) {
+    return
+  }
+
+  if (!validateRequiredFields()) {
+    toast.error("请补全必填信息")
+    return
+  }
+
+  if (isSubmitLocked.value) {
     return
   }
 
@@ -1792,7 +1798,7 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
   <section class="mx-auto flex w-full max-w-[1021px] min-w-0 flex-col gap-6 pb-8">
     <FormHeader
       :title="pageTitle"
-      :primary-action="{ label: submitButtonLabel, icon: isEditMode ? 'ri-save-line' : 'ri-add-line', disabled: !canSubmit, permissionCode: isEditMode ? PERMISSION_CODES.inspectionServiceEdit : PERMISSION_CODES.inspectionServiceAdd }"
+      :primary-action="{ label: submitButtonLabel, icon: isEditMode ? 'ri-save-line' : 'ri-add-line', disabled: isSubmitLocked, permissionCode: isEditMode ? PERMISSION_CODES.inspectionServiceEdit : PERMISSION_CODES.inspectionServiceAdd }"
       :secondary-actions="[{ key: 'reset', label: '重置表单' }]"
       :reset-dialog="{ description: isEditMode ? '当前已修改的检测服务信息将恢复为最近一次加载的内容，此操作不可撤销。' : '当前已填写的检测服务信息都会被清空，此操作不可撤销。' }"
       @back="goBack"
@@ -1817,6 +1823,7 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
           id="section-customer"
           quick-nav-label="所属客户"
           layout="vertical"
+          :invalid="isRequiredFieldInvalid('section-customer')"
         >
           <label class="grid gap-3">
             <span class="text-sm font-medium text-foreground">所属客户</span>
@@ -1847,6 +1854,7 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
                 required
                 placeholder="请输入服务名称"
                 class="w-full"
+                :aria-invalid="requiredValidationTriggered && !normalizeText(form.name) ? 'true' : undefined"
                 :disabled="isInteractionLocked"
               />
             </label>
@@ -1854,7 +1862,11 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
             <label class="grid gap-3 sm:col-span-3">
               <span class="text-sm font-medium text-foreground">服务等级</span>
               <Select v-model="form.level" :disabled="isInteractionLocked || serviceLevelOptionsLoading || !serviceLevelOptions.length">
-                <SelectTrigger id="inspection-service-level" class="w-full">
+                <SelectTrigger
+                  id="inspection-service-level"
+                  class="w-full"
+                  :aria-invalid="requiredValidationTriggered && !normalizeText(form.level) ? 'true' : undefined"
+                >
                   <SelectValue :placeholder="serviceLevelOptionsLoading ? '正在加载服务等级...' : '请选择服务等级'" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1880,6 +1892,7 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
                 required
                 placeholder="请输入负责人姓名"
                 class="w-full"
+                :aria-invalid="requiredValidationTriggered && !normalizeText(form.managerName) ? 'true' : undefined"
                 :disabled="isInteractionLocked"
               />
             </label>
@@ -1892,6 +1905,7 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
                 inputmode="tel"
                 placeholder="请输入负责人电话"
                 class="w-full"
+                :aria-invalid="requiredValidationTriggered && !normalizeText(form.managerPhone) ? 'true' : undefined"
                 :disabled="isInteractionLocked"
               />
             </label>
@@ -1939,6 +1953,7 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
           description="直接展开园区并勾选建筑；右侧会按园区归类展示已选建筑，便于跨园区配置。"
           layout="vertical"
           required
+          :invalid="isRequiredFieldInvalid('section-builds')"
         >
           <div v-if="!groupedBuildingParks.length" class="border border-dashed border-border/60 px-4 py-6 text-sm text-muted-foreground">
             当前客户下暂无可选建筑。

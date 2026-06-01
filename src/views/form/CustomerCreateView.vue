@@ -14,11 +14,13 @@ import { Input } from "@/components/ui/input"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { useFormRequiredValidation } from "@/composables/useFormRequiredValidation"
 import { createCustomer, fetchCustomerDetail, updateCustomer, updateCustomerStatus, type CustomerDetailResult } from "@/lib/customers-api"
 import { handleApiError } from "@/lib/api-errors"
 import { fetchBusinessPresetEntryOptions, type BusinessPresetEntryOption } from "@/lib/business-preset-options"
 import { PERMISSION_CODES } from "@/lib/permission-codes"
 import { uploadTencentCosFile } from "@/lib/tencent-cos-upload"
+import { cn } from "@/lib/utils"
 
 type CustomerFormState = {
   corpName: string
@@ -110,9 +112,17 @@ const pageTitle = computed(() => isEditMode.value ? "修改客户信息" : "添�
 const hasValidPrincipal = computed(() =>
   principals.value.some(principal => normalizeText(principal.name) && normalizeText(principal.phone)),
 )
-const canSubmit = computed(() =>
-  Boolean(normalizeText(form.corpName) && hasValidPrincipal.value && !submitting.value && !businessLicenseUploading.value && !loadingDetail.value),
-)
+const {
+  isRequiredFieldInvalid,
+  validateRequiredFields,
+} = useFormRequiredValidation(() => [
+  { id: "section-name", isComplete: () => Boolean(normalizeText(form.corpName)) },
+  { id: "section-business", isComplete: () => Boolean(normalizeText(form.business)) },
+  { id: "section-status", isComplete: () => Boolean(normalizeText(form.status)), enabled: () => isEditMode.value },
+  { id: "section-level", isComplete: () => Boolean(normalizeText(form.level)) },
+  { id: "section-principals", isComplete: () => hasValidPrincipal.value },
+])
+const isSubmitLocked = computed(() => submitting.value || businessLicenseUploading.value || loadingDetail.value)
 const primaryActionLabel = computed(() => {
   if (loadingDetail.value) {
     return "加载中..."
@@ -296,6 +306,15 @@ function removeBusinessLicenseFile() {
 
 async function handleSubmit() {
   if (loadingDetail.value) {
+    return
+  }
+
+  if (!validateRequiredFields()) {
+    toast.error("请补全必填信息")
+    return
+  }
+
+  if (isSubmitLocked.value) {
     return
   }
 
@@ -694,7 +713,7 @@ function dedupeSelectOptions(options: SelectOption[]) {
   <section class="mx-auto flex w-full max-w-4xl min-w-0 flex-col gap-6 pb-8">
     <FormHeader
       :title="pageTitle"
-      :primary-action="{ label: primaryActionLabel, icon: isEditMode ? 'ri-save-line' : 'ri-add-line', disabled: !canSubmit, permissionCode: isEditMode ? PERMISSION_CODES.customerEdit : PERMISSION_CODES.customerAdd }"
+      :primary-action="{ label: primaryActionLabel, icon: isEditMode ? 'ri-save-line' : 'ri-add-line', disabled: isSubmitLocked, permissionCode: isEditMode ? PERMISSION_CODES.customerEdit : PERMISSION_CODES.customerAdd }"
       :secondary-actions="[{ key: 'reset', label: '重置表单' }]"
       :reset-dialog="{ description: resetDialogDescription }"
       @back="goBack"
@@ -721,6 +740,7 @@ function dedupeSelectOptions(options: SelectOption[]) {
             label="公司名称"
             label-for="customer-corp-name"
             required
+            :invalid="isRequiredFieldInvalid('section-name')"
           >
             <Input
               id="customer-corp-name"
@@ -738,6 +758,7 @@ function dedupeSelectOptions(options: SelectOption[]) {
             label="行业"
             label-for="customer-business"
             required
+            :invalid="isRequiredFieldInvalid('section-business')"
           >
             <Select v-model="businessSelectValue" :disabled="businessPresetLoading || !industryOptions.length">
               <SelectTrigger id="customer-business" class="w-full" @focus="handleFocus('section-business')">
@@ -758,6 +779,7 @@ function dedupeSelectOptions(options: SelectOption[]) {
             label="客户状态"
             label-for="customer-status"
             required
+            :invalid="isRequiredFieldInvalid('section-status')"
           >
             <Select v-model="form.status">
               <SelectTrigger id="customer-status" class="w-full" @focus="handleFocus('section-status')">
@@ -783,6 +805,7 @@ function dedupeSelectOptions(options: SelectOption[]) {
             label="客户等级"
             label-for="customer-level"
             required
+            :invalid="isRequiredFieldInvalid('section-level')"
           >
             <Select v-model="customerLevelSelectValue" :disabled="businessPresetLoading || !customerLevelOptions.length">
               <SelectTrigger id="customer-level" class="w-full" @focus="handleFocus('section-level')">
@@ -894,7 +917,14 @@ function dedupeSelectOptions(options: SelectOption[]) {
             />
           </FormFieldSection>
 
-          <div id="section-principals" data-quick-nav-label="责任人" class="scroll-mt-28 py-5">
+          <div
+            id="section-principals"
+            data-quick-nav-label="责任人"
+            :class="cn(
+              'scroll-mt-28 py-5',
+              isRequiredFieldInvalid('section-principals') && 'rounded-md ring-2 ring-destructive/25 ring-offset-2 ring-offset-background',
+            )"
+          >
             <FieldSet>
               <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
                 <FieldGroup class="min-w-0 flex-1 gap-1">
@@ -936,6 +966,7 @@ function dedupeSelectOptions(options: SelectOption[]) {
                             v-model="principal.name"
                             placeholder="姓名"
                             class="h-9 min-w-0"
+                            :aria-invalid="isRequiredFieldInvalid('section-principals') ? 'true' : undefined"
                             @focus="handleFocus('section-principals')"
                           />
                         </td>
@@ -946,6 +977,7 @@ function dedupeSelectOptions(options: SelectOption[]) {
                             inputmode="numeric"
                             placeholder="联系电话"
                             class="h-9 min-w-0"
+                            :aria-invalid="isRequiredFieldInvalid('section-principals') ? 'true' : undefined"
                             @focus="handleFocus('section-principals')"
                           />
                         </td>

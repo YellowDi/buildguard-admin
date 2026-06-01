@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { useFormRequiredValidation } from "@/composables/useFormRequiredValidation"
 import { handleApiError } from "@/lib/api-errors"
 import { hasValidLatLng } from "@/lib/map-coordinates"
 import { fetchCustomers } from "@/lib/customers-api"
@@ -104,9 +105,14 @@ const resetDialogDescription = computed(() =>
     : "当前已填写的园区信息都会被清空，此操作不可撤销。",
 )
 
-const canSubmit = computed(() =>
-  Boolean(normalizeText(form.customerUuid) && normalizeText(form.name) && !submitting.value),
-)
+const {
+  isRequiredFieldInvalid,
+  validateRequiredFields,
+} = useFormRequiredValidation(() => [
+  { id: "section-customer", isComplete: () => Boolean(normalizeText(form.customerUuid)) },
+  { id: "section-name", isComplete: () => Boolean(normalizeText(form.name)) },
+])
+const isSubmitLocked = computed(() => submitting.value)
 const selectedCustomerName = computed(() => {
   if (routeCustomerUuid.value || isEditMode.value) {
     return customerName.value || "当前客户"
@@ -166,6 +172,15 @@ function scrollToSection(id: string) {
 }
 
 async function handleSubmit() {
+  if (!validateRequiredFields()) {
+    toast.error("请补全必填信息")
+    return
+  }
+
+  if (isSubmitLocked.value) {
+    return
+  }
+
   if (!normalizeText(form.customerUuid)) {
     toast.error("所属客户信息缺失")
     return
@@ -408,7 +423,7 @@ watch(
   <section class="mx-auto flex w-full max-w-4xl min-w-0 flex-col gap-6 pb-8">
     <FormHeader
       :title="pageTitle"
-      :primary-action="{ label: submitButtonLabel, icon: isEditMode ? 'ri-save-line' : 'ri-add-line', disabled: !canSubmit, permissionCode: isEditMode ? PERMISSION_CODES.parkEdit : PERMISSION_CODES.parkAdd }"
+      :primary-action="{ label: submitButtonLabel, icon: isEditMode ? 'ri-save-line' : 'ri-add-line', disabled: isSubmitLocked, permissionCode: isEditMode ? PERMISSION_CODES.parkEdit : PERMISSION_CODES.parkAdd }"
       :secondary-actions="[{ key: 'reset', label: '重置表单' }]"
       :reset-dialog="{ description: resetDialogDescription }"
       @back="goBack"
@@ -436,6 +451,7 @@ watch(
             label="所属客户"
             label-for="park-customer"
             required
+            :invalid="isRequiredFieldInvalid('section-customer')"
           >
             <Input
               v-if="routeCustomerUuid || isEditMode"
@@ -463,6 +479,7 @@ watch(
             label="园区名称"
             label-for="park-name"
             required
+            :invalid="isRequiredFieldInvalid('section-name')"
           >
             <Input
               id="park-name"

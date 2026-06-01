@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { useFormRequiredValidation } from "@/composables/useFormRequiredValidation"
 import { handleApiError } from "@/lib/api-errors"
 import { hasValidLatLng } from "@/lib/map-coordinates"
 import { createBuilding, fetchBuildings, updateBuilding } from "@/lib/buildings-api"
@@ -110,15 +111,15 @@ const submitButtonLabel = computed(() => {
   return isEditMode.value ? "保存建筑" : "添加建筑"
 })
 const selectedParkName = computed(() => parkOptions.value.find(item => item.uuid === form.parkUuid)?.name ?? "")
-const canSubmit = computed(() =>
-  Boolean(
-    normalizeText(form.customerUuid)
-    && normalizeText(form.parkUuid)
-    && normalizeText(form.name)
-    && !submitting.value
-    && !parkLoading.value,
-  ),
-)
+const {
+  isRequiredFieldInvalid,
+  validateRequiredFields,
+} = useFormRequiredValidation(() => [
+  { id: "section-customer", isComplete: () => Boolean(normalizeText(form.customerUuid)) },
+  { id: "section-park", isComplete: () => Boolean(normalizeText(form.parkUuid)) },
+  { id: "section-name", isComplete: () => Boolean(normalizeText(form.name)) },
+])
+const isSubmitLocked = computed(() => submitting.value || parkLoading.value)
 
 const buildingFormCoordinateLine = computed(() => {
   if (!hasValidLatLng(form.latitude, form.longitude)) {
@@ -171,6 +172,15 @@ function scrollToSection(id: string) {
 }
 
 async function handleSubmit() {
+  if (!validateRequiredFields()) {
+    toast.error("请补全必填信息")
+    return
+  }
+
+  if (isSubmitLocked.value) {
+    return
+  }
+
   if (!normalizeText(form.customerUuid)) {
     toast.error("所属客户信息缺失")
     return
@@ -556,7 +566,7 @@ watch(
   <section class="mx-auto flex w-full max-w-4xl min-w-0 flex-col gap-6 pb-8">
     <FormHeader
       :title="pageTitle"
-      :primary-action="{ label: submitButtonLabel, icon: isEditMode ? 'ri-save-line' : 'ri-add-line', disabled: !canSubmit, permissionCode: isEditMode ? PERMISSION_CODES.buildingEdit : PERMISSION_CODES.buildingAdd }"
+      :primary-action="{ label: submitButtonLabel, icon: isEditMode ? 'ri-save-line' : 'ri-add-line', disabled: isSubmitLocked, permissionCode: isEditMode ? PERMISSION_CODES.buildingEdit : PERMISSION_CODES.buildingAdd }"
       :secondary-actions="[{ key: 'reset', label: '重置表单' }]"
       :reset-dialog="{ description: isEditMode ? '当前已修改的建筑信息将恢复为最近一次加载的内容，此操作不可撤销。' : '当前已填写的建筑信息都会被清空，此操作不可撤销。' }"
       @back="goBack"
@@ -584,6 +594,7 @@ watch(
             label="所属客户"
             label-for="building-customer"
             required
+            :invalid="isRequiredFieldInvalid('section-customer')"
           >
             <Input
               v-if="routeCustomerUuid || isEditMode"
@@ -610,6 +621,7 @@ watch(
             quick-nav-label="所属园区"
             label="所属园区"
             required
+            :invalid="isRequiredFieldInvalid('section-park')"
           >
             <Select v-model="form.parkUuid" :disabled="parkLoading || !parkOptions.length">
               <SelectTrigger id="building-park" class="w-full" @focus="handleFocus('section-park')">
@@ -629,6 +641,7 @@ watch(
             label="建筑名称"
             label-for="building-name"
             required
+            :invalid="isRequiredFieldInvalid('section-name')"
           >
             <Input
               id="building-name"

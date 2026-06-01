@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
+import { useFormRequiredValidation } from "@/composables/useFormRequiredValidation"
 import { handleApiError } from "@/lib/api-errors"
 import { fetchBuildings, type BuildingListItem } from "@/lib/buildings-api"
 import { fetchCustomers, type CustomerListItem } from "@/lib/customers-api"
@@ -116,18 +117,20 @@ const buildingOptions = computed(() => (
     && (!form.parkUuid || building.parkUuid === form.parkUuid),
   )
 ))
-const canSubmit = computed(() => Boolean(
-  normalizeText(form.deviceName)
-  && normalizeText(form.deviceId)
-  && normalizeText(form.platform)
-  && normalizeText(form.status)
-  && normalizeText(form.customerUuid)
-  && normalizeText(form.parkUuid)
-  && normalizeText(form.buildingUuid)
-  && normalizeText(form.streamUrl)
-  && !loadingContext.value
-  && !submitting.value,
-))
+const {
+  isRequiredFieldInvalid,
+  validateRequiredFields,
+} = useFormRequiredValidation(() => [
+  { id: "section-device-name", isComplete: () => Boolean(normalizeText(form.deviceName)) },
+  { id: "section-device-id", isComplete: () => Boolean(normalizeText(form.deviceId)) },
+  { id: "section-platform", isComplete: () => Boolean(normalizeText(form.platform)) },
+  { id: "section-status", isComplete: () => Boolean(normalizeText(form.status)) },
+  { id: "section-customer", isComplete: () => Boolean(normalizeText(form.customerUuid)) },
+  { id: "section-park", isComplete: () => Boolean(normalizeText(form.parkUuid)) },
+  { id: "section-building", isComplete: () => Boolean(normalizeText(form.buildingUuid)) },
+  { id: "section-stream", isComplete: () => Boolean(normalizeText(form.streamUrl)) },
+])
+const isSubmitLocked = computed(() => loadingContext.value || submitting.value)
 
 onMounted(() => {
   void loadFormContext()
@@ -362,8 +365,12 @@ function handleTestPlay() {
 }
 
 async function handleSubmit() {
-  if (!canSubmit.value) {
+  if (!validateRequiredFields()) {
     toast.error("请补全必填信息")
+    return
+  }
+
+  if (isSubmitLocked.value) {
     return
   }
 
@@ -511,7 +518,7 @@ function normalizeText(value: unknown, fallback = "") {
   <section class="mx-auto flex w-full max-w-5xl min-w-0 flex-col gap-6 pb-8">
     <FormHeader
       :title="pageTitle"
-      :primary-action="{ label: submitButtonLabel, icon: isEditMode ? 'ri-save-3-line' : 'ri-radar-line', disabled: !canSubmit }"
+      :primary-action="{ label: submitButtonLabel, icon: isEditMode ? 'ri-save-3-line' : 'ri-radar-line', disabled: isSubmitLocked }"
       :secondary-actions="[
         { key: 'test-play', label: '测试播放', icon: 'ri-play-circle-line' },
         { key: 'reset', label: '重置表单' },
@@ -551,6 +558,7 @@ function normalizeText(value: unknown, fallback = "") {
             label-for="monitoring-device-name"
             description="用于列表和详情页展示，建议包含位置和摄像机类型。"
             required
+            :invalid="isRequiredFieldInvalid('section-device-name')"
           >
             <Input
               id="monitoring-device-name"
@@ -570,6 +578,7 @@ function normalizeText(value: unknown, fallback = "") {
             label-for="monitoring-device-id"
             description="前端先使用通用设备编号，不绑定具体厂商字段。"
             required
+            :invalid="isRequiredFieldInvalid('section-device-id')"
           >
             <Input
               id="monitoring-device-id"
@@ -589,6 +598,7 @@ function normalizeText(value: unknown, fallback = "") {
             label-for="monitoring-platform"
             description="先允许自由输入，后续可替换为客户平台字典。"
             required
+            :invalid="isRequiredFieldInvalid('section-platform')"
           >
             <Input
               id="monitoring-platform"
@@ -607,6 +617,7 @@ function normalizeText(value: unknown, fallback = "") {
             label="设备状态"
             label-for="monitoring-status"
             required
+            :invalid="isRequiredFieldInvalid('section-status')"
           >
             <Select v-model="form.status" :disabled="loadingContext">
               <SelectTrigger id="monitoring-status" class="w-full" @focus="handleFocus('section-status')">
@@ -627,6 +638,7 @@ function normalizeText(value: unknown, fallback = "") {
             label-for="monitoring-customer"
             description="使用现有真实客户数据，保存时记录客户 UUID 和名称。"
             required
+            :invalid="isRequiredFieldInvalid('section-customer')"
           >
             <Select v-model="form.customerUuid" :disabled="loadingContext || !customerOptions.length">
               <SelectTrigger id="monitoring-customer" class="w-full" @focus="handleFocus('section-customer')">
@@ -647,6 +659,7 @@ function normalizeText(value: unknown, fallback = "") {
             label-for="monitoring-park"
             description="选择客户后只展示该客户下的园区。"
             required
+            :invalid="isRequiredFieldInvalid('section-park')"
           >
             <Select v-model="form.parkUuid" :disabled="loadingContext || !form.customerUuid || !parkOptions.length">
               <SelectTrigger id="monitoring-park" class="w-full" @focus="handleFocus('section-park')">
@@ -667,6 +680,7 @@ function normalizeText(value: unknown, fallback = "") {
             label-for="monitoring-building"
             description="选择园区后只展示该园区下的建筑。"
             required
+            :invalid="isRequiredFieldInvalid('section-building')"
           >
             <Select v-model="form.buildingUuid" :disabled="loadingContext || !form.parkUuid || !buildingOptions.length">
               <SelectTrigger id="monitoring-building" class="w-full" @focus="handleFocus('section-building')">
@@ -688,6 +702,7 @@ function normalizeText(value: unknown, fallback = "") {
             description="支持 HLS .m3u8 地址，用于详情页播放器。"
             align="start"
             required
+            :invalid="isRequiredFieldInvalid('section-stream')"
           >
             <Input
               id="monitoring-stream"
