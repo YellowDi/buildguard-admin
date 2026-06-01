@@ -348,7 +348,7 @@ watch(
         </div>
       </div>
 
-      <div class="detail-layout__content grid min-h-0 min-w-0 flex-1 grid-cols-1 gap-0 px-0">
+      <div class="detail-layout__content grid min-h-0 min-w-0 grid-cols-1 gap-0 px-0">
         <div class="detail-layout__primary flex min-h-0 min-w-0 flex-col pr-0">
           <slot name="primary" />
         </div>
