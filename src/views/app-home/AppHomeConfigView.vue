@@ -1308,7 +1308,7 @@ function hashText(value: string) {
 
 <template>
   <section class="app-home-page relative flex flex-col overflow-visible bg-background">
-    <div class="sticky top-0 z-[6] shrink-0 bg-background px-3 pb-3 pt-4 sm:px-4">
+    <div class="sticky top-0 z-6 shrink-0 bg-background px-3 pb-3 pt-4 sm:px-4">
       <div class="app-home-header-row mx-auto flex w-full max-w-4xl items-end justify-between gap-3">
         <TitleBlock
           class="min-w-0 flex-1"
@@ -1515,7 +1515,7 @@ function hashText(value: string) {
                       class="absolute inset-0 h-full w-full object-cover object-center"
                     />
                     <div class="absolute inset-0 bg-black/5" />
-                    <div class="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/85 via-black/42 to-transparent" />
+                    <div class="absolute inset-x-0 bottom-0 h-1/2 bg-linear-to-t from-black/85 via-black/42 to-transparent" />
                     <h3 class="absolute inset-x-0 bottom-0 p-3 text-[14px] font-semibold leading-[1.35] text-white">
                       <span class="app-home-video-card-title">{{ item.title }}</span>
                     </h3>

@@ -1945,7 +1945,7 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
                   <Skeleton
                     v-for="slot in 4"
                     :key="`building-pick-skeleton-${slot}`"
-                    class="h-[4.75rem] w-full rounded-xl"
+                    class="h-19 w-full rounded-xl"
                   />
                 </div>
               </div>
@@ -1978,8 +1978,8 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
                       :class="cn(
                         'relative flex cursor-pointer items-start gap-3 rounded-md border px-3.5 py-3 shadow-xs transition-all duration-200',
                         isBuildSelected(build.uuid)
-                          ? 'border-[color:var(--theme-primary)]/50 bg-[color:var(--theme-primary)]/10 shadow-sm ring-1 ring-[color:var(--theme-primary)]/15'
-                          : 'border-border/55 bg-background hover:border-[color:var(--theme-primary)]/35 hover:bg-background hover:shadow-sm dark:bg-muted dark:hover:bg-muted/75',
+                          ? 'border-(--theme-primary)/50 bg-(--theme-primary)/10 shadow-sm ring-1 ring-(--theme-primary)/15'
+                          : 'border-border/55 bg-background hover:border-(--theme-primary)/35 hover:bg-background hover:shadow-sm dark:bg-muted dark:hover:bg-muted/75',
                       )"
                     >
                       <Checkbox
@@ -2042,7 +2042,7 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
               @click="handleUseBuildingTemplate"
             >
               <i class="ri-file-copy-line mr-1.5 text-sm" />
-              <span class="max-w-[10rem] truncate">
+              <span class="max-w-40 truncate">
                 {{ selectedBatchTemplateName ? `当前模板：${selectedBatchTemplateName}` : "使用模板" }}
               </span>
             </Button>
@@ -2277,7 +2277,7 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
                 :class="cn(
                   'overflow-hidden rounded-md border bg-background/95 shadow-xs',
                   template.uuid === batchTemplateUuid
-                    ? 'border-[color:var(--theme-primary)]/45 bg-[color:var(--theme-primary)]/8'
+                    ? 'border-(--theme-primary)/45 bg-(--theme-primary)/8'
                     : 'border-border/55',
                 )"
               >

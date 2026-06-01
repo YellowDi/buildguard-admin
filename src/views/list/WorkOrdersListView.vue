@@ -1559,7 +1559,7 @@ async function ensureRepairDictionaries() {
           :content="toText(row.remark, '-')"
           :disabled="!shouldShowRepairRemarkTooltip(row.remark)"
           align="start"
-          class="w-auto max-w-xs whitespace-normal text-left leading-5 [overflow-wrap:anywhere] [text-wrap:wrap]"
+          class="w-auto max-w-xs whitespace-normal text-left leading-5 wrap-anywhere text-wrap"
         >
           <span class="block max-w-[min(34rem,42vw)] cursor-default truncate text-foreground">
             {{ toText(row.remark, "-") }}

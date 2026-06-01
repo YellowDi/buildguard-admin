@@ -383,7 +383,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <div class="relative grid min-h-svh bg-[radial-gradient(circle_at_top_left,_rgba(0,117,222,0.08),_transparent_32%),linear-gradient(180deg,_rgba(255,255,255,0.98),_rgba(246,249,252,0.96))] text-foreground dark:bg-[radial-gradient(circle_at_top_left,_rgba(77,163,240,0.16),_transparent_34%),linear-gradient(180deg,_#191919,_#1e1e1e)] lg:grid-cols-2">
+  <div class="relative grid min-h-svh bg-[radial-gradient(circle_at_top_left,rgba(0,117,222,0.08),transparent_32%),linear-gradient(180deg,rgba(255,255,255,0.98),rgba(246,249,252,0.96))] text-foreground dark:bg-[radial-gradient(circle_at_top_left,rgba(77,163,240,0.16),transparent_34%),linear-gradient(180deg,#191919,#1e1e1e)] lg:grid-cols-2">
     <div class="absolute left-6 top-6 z-20 md:left-10 md:top-10">
       <RouterLink to="/login" class="flex items-center gap-2 rounded-xl px-2 py-1.5 font-medium transition-[background-color,color] duration-180 ease-out hover:bg-background/70">
         <BrandLogo
@@ -393,9 +393,9 @@ onBeforeUnmount(() => {
       </RouterLink>
     </div>
 
-    <div class="auth-animated-panel relative hidden overflow-hidden dark:!bg-[radial-gradient(circle_at_24%_18%,_rgba(77,163,240,0.14),_transparent_28%),linear-gradient(145deg,_#20242a_0%,_#1d2227_48%,_#181c21_100%)] lg:block">
-      <div class="auth-animated-glow auth-animated-glow-top dark:!bg-[rgba(77,163,240,0.14)]" aria-hidden="true" />
-      <div class="auth-animated-glow auth-animated-glow-bottom dark:!bg-[rgba(255,255,255,0.08)]" aria-hidden="true" />
+    <div class="auth-animated-panel relative hidden overflow-hidden dark:bg-[radial-gradient(circle_at_24%_18%,rgba(77,163,240,0.14),transparent_28%),linear-gradient(145deg,#20242a_0%,#1d2227_48%,#181c21_100%)]! lg:block">
+      <div class="auth-animated-glow auth-animated-glow-top dark:bg-[rgba(77,163,240,0.14)]!" aria-hidden="true" />
+      <div class="auth-animated-glow auth-animated-glow-bottom dark:bg-[rgba(255,255,255,0.08)]!" aria-hidden="true" />
       <div
         ref="sceneRef"
         class="auth-scene-wrapper"
@@ -452,7 +452,7 @@ onBeforeUnmount(() => {
     <div class="flex flex-col bg-white p-6 text-foreground dark:bg-background md:p-10">
       <div class="flex flex-1 items-center justify-center">
         <div class="w-full max-w-sm">
-          <Card class="rounded-none border-none bg-transparent py-0 !shadow-none">
+          <Card class="rounded-none border-none bg-transparent py-0 shadow-none!">
             <CardHeader class="px-6 pt-6 text-center">
               <CardTitle class="text-2xl tracking-tight text-foreground">
                 后台登录
@@ -471,7 +471,7 @@ onBeforeUnmount(() => {
                       v-model="form.account"
                       type="text"
                       inputmode="text"
-                      class="bg-background shadow-(--shadow-border) hover:shadow-(--shadow-border-hover) dark:border-border dark:bg-foreground/[0.06]"
+                      class="bg-background shadow-(--shadow-border) hover:shadow-(--shadow-border-hover) dark:border-border dark:bg-foreground/6"
                       placeholder="请输入手机号或用户名"
                       autocomplete="username"
                       required
@@ -487,7 +487,7 @@ onBeforeUnmount(() => {
                       id="password"
                       v-model="form.password"
                       type="password"
-                      class="bg-background shadow-(--shadow-border) hover:shadow-(--shadow-border-hover) dark:border-border dark:bg-foreground/[0.06]"
+                      class="bg-background shadow-(--shadow-border) hover:shadow-(--shadow-border-hover) dark:border-border dark:bg-foreground/6"
                       placeholder="请输入密码"
                       autocomplete="current-password"
                       required

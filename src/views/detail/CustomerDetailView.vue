@@ -4837,7 +4837,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
                 :content="toDisplayText(row.remark, '-')"
                 :disabled="!shouldShowRepairRemarkTooltip(row.remark)"
                 align="start"
-                class="w-auto max-w-xs whitespace-normal text-left leading-5 [overflow-wrap:anywhere] [text-wrap:wrap]"
+                class="w-auto max-w-xs whitespace-normal text-left leading-5 wrap-anywhere text-wrap"
               >
                 <span class="block max-w-[min(34rem,42vw)] cursor-default truncate text-foreground">
                   {{ toDisplayText(row.remark, "-") }}
@@ -5194,7 +5194,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
                   <div class="flex min-w-0 items-start justify-between gap-2">
                     <div class="min-w-0 flex-1">
                       <div class="flex min-w-0 flex-wrap items-center gap-2">
-                        <h3 class="break-words text-[14px] font-semibold leading-5 text-foreground">
+                        <h3 class="wrap-break-word text-[14px] font-semibold leading-5 text-foreground">
                           {{ formatInspectionServiceTitle(service) }}
                         </h3>
                         <span
@@ -5227,7 +5227,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
                         <i class="ri-calendar-line text-[13px]" />
                         <span>合同周期</span>
                       </div>
-                      <div class="mt-0.5 break-words font-medium text-foreground">
+                      <div class="mt-0.5 wrap-break-word font-medium text-foreground">
                         {{ formatInspectionServiceContractPeriod(service) }}
                       </div>
                     </div>
@@ -5243,7 +5243,7 @@ function toDisplayText(value: unknown, fallback = "未填写") {
                         <i class="ri-building-line text-[13px]" />
                         <span>服务范围</span>
                       </div>
-                      <div class="mt-0.5 break-words font-medium text-foreground">{{ formatInspectionServiceScope(service) }}</div>
+                      <div class="mt-0.5 wrap-break-word font-medium text-foreground">{{ formatInspectionServiceScope(service) }}</div>
                     </div>
                     <div class="min-w-0 rounded-md bg-card-background px-3 py-2.5">
                       <div class="flex items-center gap-1 text-xs text-muted-foreground">

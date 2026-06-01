@@ -2407,14 +2407,14 @@ watch(
                   <figure
                     v-for="file in form.repairFiles"
                     :key="file.id"
-                    class="group relative aspect-square overflow-hidden rounded-lg bg-muted shadow-(--shadow-border) transition-[background-color] duration-180 ease-out hover:bg-[var(--form-control-hover-background)]"
+                    class="group relative aspect-square overflow-hidden rounded-lg bg-muted shadow-(--shadow-border) transition-[background-color] duration-180 ease-out hover:bg-(--form-control-hover-background)"
                   >
                     <img
                       :src="file.url"
                       :alt="file.name || '需维修图片'"
-                      class="h-full w-full object-cover outline outline-1 -outline-offset-1 outline-black/5"
+                      class="h-full w-full object-cover outline -outline-offset-1 outline-black/5"
                     >
-                    <figcaption class="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/65 via-black/36 to-transparent px-2.5 pb-2 pt-8">
+                    <figcaption class="pointer-events-none absolute inset-x-0 bottom-0 bg-linear-to-t from-black/65 via-black/36 to-transparent px-2.5 pb-2 pt-8">
                       <p class="truncate text-[12px] font-medium leading-4 text-white">
                         {{ file.name || "需维修图片" }}
                       </p>
@@ -2559,7 +2559,7 @@ watch(
                 <Skeleton
                   v-for="slot in 5"
                   :key="`repair-inspection-skeleton-${slot}`"
-                  class="h-[4.75rem] w-full rounded-xl"
+                  class="h-19 w-full rounded-xl"
                 />
               </div>
             </div>

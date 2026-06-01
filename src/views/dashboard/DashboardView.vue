@@ -779,7 +779,7 @@ function hashText(value: string) {
 </script>
 
 <template>
-  <div class="mx-auto flex min-h-0 w-full max-w-[1360px] flex-1 flex-col gap-4 pb-[var(--app-page-bottom-gap)]">
+  <div class="mx-auto flex min-h-0 w-full max-w-[1360px] flex-1 flex-col gap-4 pb-(--app-page-bottom-gap)">
     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <div
         v-for="stat in statsCards"

@@ -2324,7 +2324,7 @@ async function submitAssign() {
       <div class="min-h-0 space-y-4 overflow-y-auto px-5 pt-4 pb-4">
         <Alert
           v-if="reportSubmitting"
-          class="border-link/15 bg-brand-surface text-foreground shadow-[inset_0_0_0_1px_rgb(0_117_222_/_0.08)]"
+          class="border-link/15 bg-brand-surface text-foreground shadow-[inset_0_0_0_1px_rgb(0_117_222/0.08)]"
         >
           <Spinner class="mt-0.5 size-4 text-link" label="报告生成中" />
           <div class="min-w-0 space-y-3">
@@ -2354,7 +2354,7 @@ async function submitAssign() {
 
         <section
           v-if="generatedReport && generatedReportUrl"
-          class="overflow-hidden rounded-lg bg-muted/35 shadow-[inset_0_0_0_1px_rgb(15_23_42_/_0.06)] dark:shadow-[inset_0_0_0_1px_rgb(255_255_255_/_0.08)]"
+          class="overflow-hidden rounded-lg bg-muted/35 shadow-[inset_0_0_0_1px_rgb(15_23_42/0.06)] dark:shadow-[inset_0_0_0_1px_rgb(255_255_255/0.08)]"
         >
           <div class="flex min-w-0 flex-col gap-3 p-3 sm:flex-row sm:items-start sm:justify-between">
             <div class="flex min-w-0 items-start gap-3">
@@ -2430,7 +2430,7 @@ async function submitAssign() {
 
           <div
             v-if="reportListLoading"
-            class="flex min-h-24 items-center justify-center gap-2 rounded-lg bg-muted/30 text-sm text-muted-foreground shadow-[inset_0_0_0_1px_rgb(15_23_42_/_0.06)] dark:shadow-[inset_0_0_0_1px_rgb(255_255_255_/_0.08)]"
+            class="flex min-h-24 items-center justify-center gap-2 rounded-lg bg-muted/30 text-sm text-muted-foreground shadow-[inset_0_0_0_1px_rgb(15_23_42/0.06)] dark:shadow-[inset_0_0_0_1px_rgb(255_255_255/0.08)]"
           >
             <Spinner class="size-4" label="报告列表加载中" />
             正在加载报告列表
@@ -2438,7 +2438,7 @@ async function submitAssign() {
 
           <div
             v-else-if="reportListError"
-            class="rounded-lg bg-destructive/5 p-3 text-sm text-destructive shadow-[inset_0_0_0_1px_rgb(220_38_38_/_0.18)]"
+            class="rounded-lg bg-destructive/5 p-3 text-sm text-destructive shadow-[inset_0_0_0_1px_rgb(220_38_38/0.18)]"
           >
             <div class="flex min-w-0 items-start gap-2">
               <i class="ri-error-warning-line mt-0.5 shrink-0 text-base" />
@@ -2448,7 +2448,7 @@ async function submitAssign() {
 
           <div
             v-else-if="!reportList.length"
-            class="flex min-h-24 flex-col items-center justify-center rounded-lg bg-muted/30 px-4 py-5 text-center shadow-[inset_0_0_0_1px_rgb(15_23_42_/_0.06)] dark:shadow-[inset_0_0_0_1px_rgb(255_255_255_/_0.08)]"
+            class="flex min-h-24 flex-col items-center justify-center rounded-lg bg-muted/30 px-4 py-5 text-center shadow-[inset_0_0_0_1px_rgb(15_23_42/0.06)] dark:shadow-[inset_0_0_0_1px_rgb(255_255_255/0.08)]"
           >
             <div class="inline-flex size-9 items-center justify-center rounded-md bg-background text-muted-foreground shadow-(--shadow-border)">
               <i class="ri-file-list-3-line text-lg" />
@@ -2459,7 +2459,7 @@ async function submitAssign() {
 
           <div
             v-else
-            class="max-h-56 space-y-2 overflow-y-auto rounded-lg bg-muted/25 p-1.5 shadow-[inset_0_0_0_1px_rgb(15_23_42_/_0.06)] dark:shadow-[inset_0_0_0_1px_rgb(255_255_255_/_0.08)]"
+            class="max-h-56 space-y-2 overflow-y-auto rounded-lg bg-muted/25 p-1.5 shadow-[inset_0_0_0_1px_rgb(15_23_42/0.06)] dark:shadow-[inset_0_0_0_1px_rgb(255_255_255/0.08)]"
           >
             <div
               v-for="(report, index) in reportList"

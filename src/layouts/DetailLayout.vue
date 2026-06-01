@@ -273,11 +273,11 @@ watch(
 
                 <div
                   v-if="mobileTabsOverflowLeft"
-                  class="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 bg-gradient-to-r from-background via-background/88 to-transparent"
+                  class="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 bg-linear-to-r from-background via-background/88 to-transparent"
                 />
                 <div
                   v-if="mobileTabsOverflowRight"
-                  class="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-background via-background/92 to-transparent"
+                  class="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-linear-to-l from-background via-background/92 to-transparent"
                 />
               </div>
 
@@ -324,11 +324,11 @@ watch(
 
                 <div
                   v-if="tabsOverflowLeft"
-                  class="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 bg-gradient-to-r from-background via-background/88 to-transparent"
+                  class="pointer-events-none absolute inset-y-0 left-0 z-10 w-8 bg-linear-to-r from-background via-background/88 to-transparent"
                 />
                 <div
                   v-if="tabsOverflowRight"
-                  class="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-background via-background/92 to-transparent"
+                  class="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-linear-to-l from-background via-background/92 to-transparent"
                 />
               </div>
 
