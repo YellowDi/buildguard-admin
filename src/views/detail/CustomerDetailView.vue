@@ -33,6 +33,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { StatusBadge, type StatusBadgeIcon, type StatusBadgeTone } from "@/components/ui/status-badge"
 import CustomerDetailContentLoading from "@/components/loading/CustomerDetailContentLoading.vue"
 import DetailFieldsSkeleton from "@/components/loading/DetailFieldsSkeleton.vue"
 import TopTabSwitch from "@/components/layout/TopTabSwitch.vue"
@@ -249,6 +250,11 @@ type CustomerInspectionServiceCard = {
   buildingCount: number
   inspectionItemCount: number
   remark: string
+}
+
+type InspectionServiceStatusBadgeConfig = {
+  tone: StatusBadgeTone
+  icon: StatusBadgeIcon
 }
 
 type CustomerDetailTab = "basic-info" | "building-assets" | "work-orders" | "monitoring" | "sub-accounts"
@@ -867,6 +873,18 @@ const fieldSections = computed<DetailFieldSection[]>(() => {
 })
 
 const inspectionServiceCards = computed<CustomerInspectionServiceCard[]>(() => inspectionServices.value)
+
+const inspectionServiceStatusBadgeMap: Record<number, InspectionServiceStatusBadgeConfig> = {
+  1: { tone: "yellow", icon: "clock" },
+  2: { tone: "blue", icon: "clock" },
+  3: { tone: "orange", icon: "alert" },
+  4: { tone: "gray", icon: "minus" },
+}
+
+const fallbackInspectionServiceStatusBadge = {
+  tone: "gray",
+  icon: "minus",
+} satisfies InspectionServiceStatusBadgeConfig
 const parkBuildingGroupCount = computed(() => parkBuildingGroups.value.length)
 
 const maintenanceModule = computed<DetailRelationModuleSchema<MaintenanceRecordRow>>(() => {
@@ -3678,24 +3696,12 @@ function formatInspectionServiceTitle(service: CustomerInspectionServiceCard) {
   return service.remainingHint ? `${service.name}${service.remainingHint}` : service.name
 }
 
-function getInspectionServiceStatusClass(status: number | null) {
-  if (status === 1) {
-    return "border-warning/30 bg-warning/10 text-warning"
+function getInspectionServiceStatusBadge(status: number | null) {
+  if (status === null) {
+    return fallbackInspectionServiceStatusBadge
   }
 
-  if (status === 2) {
-    return "border-link/25 bg-link/10 text-link"
-  }
-
-  if (status === 3) {
-    return "border-destructive/25 bg-destructive/10 text-destructive"
-  }
-
-  if (status === 4) {
-    return "border-border bg-muted text-muted-foreground"
-  }
-
-  return "border-border bg-muted text-muted-foreground"
+  return inspectionServiceStatusBadgeMap[status] ?? fallbackInspectionServiceStatusBadge
 }
 
 function getInspectionServiceRemainingHint(value: string) {
@@ -5197,12 +5203,12 @@ function toDisplayText(value: unknown, fallback = "未填写") {
                         <h3 class="wrap-break-word text-[14px] font-semibold leading-5 text-foreground">
                           {{ formatInspectionServiceTitle(service) }}
                         </h3>
-                        <span
-                          class="inline-flex shrink-0 items-center rounded-md border px-1.5 py-0.5 text-[11px] font-medium leading-none"
-                          :class="getInspectionServiceStatusClass(service.statusValue)"
-                        >
-                          {{ service.statusLabel }}
-                        </span>
+                        <StatusBadge
+                          :label="service.statusLabel"
+                          :tone="getInspectionServiceStatusBadge(service.statusValue).tone"
+                          :icon="getInspectionServiceStatusBadge(service.statusValue).icon"
+                          class="shrink-0"
+                        />
                       </div>
                       <p class="mt-1 truncate text-xs text-muted-foreground">
                         套餐等级：{{ service.level }}
