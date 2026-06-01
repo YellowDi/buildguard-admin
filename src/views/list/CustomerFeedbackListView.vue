@@ -178,13 +178,14 @@ watch([pageNum, pageSize], ([nextPageNum, nextPageSize], [previousPageNum, previ
 watch(
   () => [normalizeQueryValue(route.query.q), customerUuid.value] as const,
   ([nextKeyword, nextCustomerUuid], previousValue) => {
+    const isInitialRun = previousValue === undefined
     const [previousKeyword, previousCustomerUuid] = previousValue ?? ["", ""]
 
-    if (syncingRoute && nextKeyword !== previousKeyword && nextCustomerUuid === previousCustomerUuid) {
+    if (!isInitialRun && syncingRoute && nextKeyword !== previousKeyword && nextCustomerUuid === previousCustomerUuid) {
       return
     }
 
-    if (nextKeyword === previousKeyword && nextCustomerUuid === previousCustomerUuid) {
+    if (!isInitialRun && nextKeyword === previousKeyword && nextCustomerUuid === previousCustomerUuid) {
       return
     }
 
