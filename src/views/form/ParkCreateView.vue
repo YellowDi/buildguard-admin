@@ -435,6 +435,7 @@ watch(
             quick-nav-label="所属客户"
             label="所属客户"
             label-for="park-customer"
+            required
           >
             <Input
               v-if="routeCustomerUuid || isEditMode"
@@ -461,6 +462,7 @@ watch(
             quick-nav-label="园区名称"
             label="园区名称"
             label-for="park-name"
+            required
           >
             <Input
               id="park-name"

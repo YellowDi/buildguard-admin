@@ -550,6 +550,7 @@ function normalizeText(value: unknown, fallback = "") {
             label="设备名称"
             label-for="monitoring-device-name"
             description="用于列表和详情页展示，建议包含位置和摄像机类型。"
+            required
           >
             <Input
               id="monitoring-device-name"
@@ -568,6 +569,7 @@ function normalizeText(value: unknown, fallback = "") {
             label="设备编号"
             label-for="monitoring-device-id"
             description="前端先使用通用设备编号，不绑定具体厂商字段。"
+            required
           >
             <Input
               id="monitoring-device-id"
@@ -586,6 +588,7 @@ function normalizeText(value: unknown, fallback = "") {
             label="接入平台"
             label-for="monitoring-platform"
             description="先允许自由输入，后续可替换为客户平台字典。"
+            required
           >
             <Input
               id="monitoring-platform"
@@ -603,6 +606,7 @@ function normalizeText(value: unknown, fallback = "") {
             quick-nav-label="设备状态"
             label="设备状态"
             label-for="monitoring-status"
+            required
           >
             <Select v-model="form.status" :disabled="loadingContext">
               <SelectTrigger id="monitoring-status" class="w-full" @focus="handleFocus('section-status')">
@@ -622,6 +626,7 @@ function normalizeText(value: unknown, fallback = "") {
             label="客户"
             label-for="monitoring-customer"
             description="使用现有真实客户数据，保存时记录客户 UUID 和名称。"
+            required
           >
             <Select v-model="form.customerUuid" :disabled="loadingContext || !customerOptions.length">
               <SelectTrigger id="monitoring-customer" class="w-full" @focus="handleFocus('section-customer')">
@@ -641,6 +646,7 @@ function normalizeText(value: unknown, fallback = "") {
             label="园区"
             label-for="monitoring-park"
             description="选择客户后只展示该客户下的园区。"
+            required
           >
             <Select v-model="form.parkUuid" :disabled="loadingContext || !form.customerUuid || !parkOptions.length">
               <SelectTrigger id="monitoring-park" class="w-full" @focus="handleFocus('section-park')">
@@ -660,6 +666,7 @@ function normalizeText(value: unknown, fallback = "") {
             label="建筑"
             label-for="monitoring-building"
             description="选择园区后只展示该园区下的建筑。"
+            required
           >
             <Select v-model="form.buildingUuid" :disabled="loadingContext || !form.parkUuid || !buildingOptions.length">
               <SelectTrigger id="monitoring-building" class="w-full" @focus="handleFocus('section-building')">
@@ -680,6 +687,7 @@ function normalizeText(value: unknown, fallback = "") {
             label-for="monitoring-stream"
             description="支持 HLS .m3u8 地址，用于详情页播放器。"
             align="start"
+            required
           >
             <Input
               id="monitoring-stream"

@@ -634,6 +634,7 @@ watch(
             id="section-customer"
             quick-nav-label="所属客户"
             label="所属客户"
+            required
           >
             <Select v-model="form.customerUuid" :disabled="customerLoading || !customerOptions.length">
               <SelectTrigger id="inspection-plan-customer" class="w-full" @focus="handleFocus('section-customer')">
@@ -651,6 +652,7 @@ watch(
             id="section-service"
             quick-nav-label="关联服务"
             label="关联服务"
+            required
           >
             <Select v-model="form.serviceUuid" :disabled="serviceLoading || !serviceOptions.length">
               <SelectTrigger id="inspection-plan-service" class="w-full" @focus="handleFocus('section-service')">
@@ -669,6 +671,7 @@ watch(
             quick-nav-label="计划名称"
             label="计划名称"
             label-for="inspection-plan-name"
+            required
           >
             <Input
               id="inspection-plan-name"
@@ -686,6 +689,7 @@ watch(
             label="执行频率"
             description="请输入执行频率天数（正整数）。"
             label-for="inspection-plan-duration"
+            required
           >
             <Input
               id="inspection-plan-duration"
@@ -706,6 +710,7 @@ watch(
             label="工单时长"
             description="请设定工单持续多少天（正整数）。"
             label-for="inspection-plan-work-order-duration"
+            required
           >
             <Input
               id="inspection-plan-work-order-duration"
@@ -725,6 +730,7 @@ watch(
             quick-nav-label="首次执行时间"
             label="首次执行时间"
             label-for="inspection-plan-first-time"
+            required
           >
             <FormDatePicker
               id="inspection-plan-first-time"

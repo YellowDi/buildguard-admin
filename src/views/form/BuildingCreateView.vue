@@ -583,6 +583,7 @@ watch(
             quick-nav-label="所属客户"
             label="所属客户"
             label-for="building-customer"
+            required
           >
             <Input
               v-if="routeCustomerUuid || isEditMode"
@@ -608,6 +609,7 @@ watch(
             id="section-park"
             quick-nav-label="所属园区"
             label="所属园区"
+            required
           >
             <Select v-model="form.parkUuid" :disabled="parkLoading || !parkOptions.length">
               <SelectTrigger id="building-park" class="w-full" @focus="handleFocus('section-park')">
@@ -626,6 +628,7 @@ watch(
             quick-nav-label="建筑名称"
             label="建筑名称"
             label-for="building-name"
+            required
           >
             <Input
               id="building-name"

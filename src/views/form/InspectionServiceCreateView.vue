@@ -1905,7 +1905,10 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
         >
           <div class="grid gap-3 sm:grid-cols-2">
             <label class="grid gap-3">
-              <span class="text-sm font-medium text-foreground">合同开始时间</span>
+              <span class="text-sm font-medium text-foreground">
+                合同开始时间
+                <span class="ml-1 font-normal text-muted-foreground">(选填)</span>
+              </span>
               <FormDatePicker
                 id="inspection-service-start-time"
                 v-model="form.startTime"
@@ -1915,7 +1918,10 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
             </label>
 
             <label class="grid gap-3">
-              <span class="text-sm font-medium text-foreground">合同结束时间</span>
+              <span class="text-sm font-medium text-foreground">
+                合同结束时间
+                <span class="ml-1 font-normal text-muted-foreground">(选填)</span>
+              </span>
               <FormDatePicker
                 id="inspection-service-contract-end-time"
                 v-model="form.contractEndTime"
@@ -1932,6 +1938,7 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
           label="服务建筑"
           description="直接展开园区并勾选建筑；右侧会按园区归类展示已选建筑，便于跨园区配置。"
           layout="vertical"
+          required
         >
           <div v-if="!groupedBuildingParks.length" class="border border-dashed border-border/60 px-4 py-6 text-sm text-muted-foreground">
             当前客户下暂无可选建筑。
@@ -2009,7 +2016,10 @@ function resolveParkIdentity(parkUuid: unknown, parkName: unknown) {
           last
         >
           <label class="grid gap-3">
-            <span class="text-sm font-medium text-foreground">备注</span>
+            <span class="text-sm font-medium text-foreground">
+              备注
+              <span class="ml-1 font-normal text-muted-foreground">(选填)</span>
+            </span>
             <Textarea
               id="inspection-service-remark"
               v-model="form.remark"

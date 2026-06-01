@@ -12,6 +12,7 @@ const props = withDefaults(defineProps<{
   quickNavLabel: string
   label?: string
   labelFor?: string
+  required?: boolean
   description?: string
   layout?: "responsive" | "horizontal" | "vertical"
   align?: "center" | "start"
@@ -20,6 +21,7 @@ const props = withDefaults(defineProps<{
 }>(), {
   label: "",
   labelFor: undefined,
+  required: false,
   description: "",
   layout: "responsive",
   align: "center",
@@ -68,8 +70,12 @@ const hasLabelColumn = computed(() =>
   <div :id="id" :data-quick-nav-label="quickNavLabel" :class="sectionClass">
     <Field :class="layoutClass">
       <div v-if="hasLabelColumn" :class="labelWrapClass">
-        <FieldLabel v-if="$slots.label || label" :for="labelFor">
-          <slot name="label">{{ label }}</slot>
+        <FieldLabel v-if="$slots.label || label" :for="labelFor" class="inline-flex flex-wrap items-baseline gap-x-1">
+          <slot v-if="$slots.label" name="label" />
+          <template v-else>
+            <span>{{ label }}</span>
+            <span v-if="!required" class="font-normal text-muted-foreground">(选填)</span>
+          </template>
         </FieldLabel>
         <FieldDescription v-if="$slots.description || description">
           <slot name="description">{{ description }}</slot>

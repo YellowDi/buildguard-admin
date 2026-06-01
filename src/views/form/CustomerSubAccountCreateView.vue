@@ -324,6 +324,7 @@ watch(
             quick-nav-label="所属客户"
             label="所属客户"
             label-for="sub-account-customer"
+            required
           >
             <Input
               id="sub-account-customer"
@@ -339,6 +340,7 @@ watch(
             quick-nav-label="用户名"
             label="用户名"
             label-for="sub-account-name"
+            required
           >
             <Input
               id="sub-account-name"
@@ -355,6 +357,7 @@ watch(
             quick-nav-label="账号"
             label="账号"
             label-for="sub-account-account"
+            required
           >
             <Input
               id="sub-account-account"
@@ -371,6 +374,7 @@ watch(
             quick-nav-label="密码"
             label="密码"
             label-for="sub-account-password"
+            required
           >
             <Input
               id="sub-account-password"
@@ -390,6 +394,7 @@ watch(
             label="手机号"
             label-for="sub-account-phone"
             last
+            required
           >
             <Input
               id="sub-account-phone"

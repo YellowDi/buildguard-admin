@@ -2245,6 +2245,7 @@ watch(
             label="所属客户"
             label-for="work-order-customer"
             :layout="isRepairFormMode ? 'vertical' : 'responsive'"
+            required
           >
             <Input
               v-if="routeCustomerUuid || isEditMode"
@@ -2273,6 +2274,7 @@ watch(
               label="所属园区"
               label-for="work-order-park"
               layout="vertical"
+              required
             >
               <Select v-model="form.parkUuid" :disabled="relatedOptionsLoading || !form.customerUuid || !parkOptions.length">
                 <SelectTrigger id="work-order-park" class="w-full" @focus="handleFocus('section-park')">
@@ -2292,6 +2294,7 @@ watch(
               label="所属建筑"
               label-for="work-order-building"
               layout="vertical"
+              :required="buildingOptions.length > 0"
             >
               <Select v-model="form.buildUuid" :disabled="repairBuildingsLoading || !form.parkUuid || !buildingOptions.length">
                 <SelectTrigger id="work-order-building" class="w-full" @focus="handleFocus('section-building')">
@@ -2348,6 +2351,7 @@ watch(
               label="报修类型"
               label-for="work-order-report-type"
               layout="vertical"
+              required
             >
               <Select v-model="form.reportType" :multiple="false" :disabled="repairDictionariesLoading || !repairTypeOptions.length">
                 <SelectTrigger id="work-order-report-type" class="w-full" @focus="handleFocus('section-report-type')">
@@ -2367,6 +2371,7 @@ watch(
               label="重要程度"
               label-for="work-order-important"
               layout="vertical"
+              required
             >
               <Select v-model="form.important" :multiple="false" :disabled="repairDictionariesLoading || !repairImportanceOptions.length">
                 <SelectTrigger id="work-order-important" class="w-full" @focus="handleFocus('section-important')">
@@ -2446,6 +2451,7 @@ watch(
               align="start"
               layout="vertical"
               last
+              :required="!hasSelectedRepairInspectionItems"
             >
               <Textarea
                 id="work-order-content"
@@ -2463,6 +2469,7 @@ watch(
               id="section-plan"
               quick-nav-label="检测计划"
               label="检测计划"
+              required
             >
               <Input
                 v-if="isEditMode"
@@ -2488,6 +2495,7 @@ watch(
               id="section-package"
               quick-nav-label="检测服务名称"
               label="检测服务名称"
+              required
             >
               <Input
                 v-if="isEditMode"
@@ -2514,6 +2522,7 @@ watch(
               quick-nav-label="截止时间"
               label="截止时间"
               label-for="work-order-deadline"
+              required
             >
               <FormDatePicker
                 id="work-order-deadline"

@@ -720,6 +720,7 @@ function dedupeSelectOptions(options: SelectOption[]) {
             quick-nav-label="公司名称"
             label="公司名称"
             label-for="customer-corp-name"
+            required
           >
             <Input
               id="customer-corp-name"
@@ -736,6 +737,7 @@ function dedupeSelectOptions(options: SelectOption[]) {
             quick-nav-label="行业"
             label="行业"
             label-for="customer-business"
+            required
           >
             <Select v-model="businessSelectValue" :disabled="businessPresetLoading || !industryOptions.length">
               <SelectTrigger id="customer-business" class="w-full" @focus="handleFocus('section-business')">
@@ -755,6 +757,7 @@ function dedupeSelectOptions(options: SelectOption[]) {
             quick-nav-label="客户状态"
             label="客户状态"
             label-for="customer-status"
+            required
           >
             <Select v-model="form.status">
               <SelectTrigger id="customer-status" class="w-full" @focus="handleFocus('section-status')">
@@ -779,6 +782,7 @@ function dedupeSelectOptions(options: SelectOption[]) {
             quick-nav-label="客户等级"
             label="客户等级"
             label-for="customer-level"
+            required
           >
             <Select v-model="customerLevelSelectValue" :disabled="businessPresetLoading || !customerLevelOptions.length">
               <SelectTrigger id="customer-level" class="w-full" @focus="handleFocus('section-level')">
