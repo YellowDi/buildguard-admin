@@ -39,6 +39,7 @@ type InspectionBuildingCardV2Building = {
   progressLabel?: string
   deadlineText: string
   scoreText: string
+  reportActionLabel?: string
   groups: InspectionBuildingCardV2Group[]
 }
 
@@ -371,7 +372,7 @@ function handleExpandAfterLeave(element: Element) {
                       @click.stop="handleGenerateReport(building.key)"
                     >
                       <i class="ri-file-chart-line text-[15px]" />
-                      生成报告
+                      {{ building.reportActionLabel || "生成报告" }}
                     </Button>
                   </div>
 

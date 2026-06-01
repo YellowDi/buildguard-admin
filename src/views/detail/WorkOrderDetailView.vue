@@ -143,6 +143,7 @@ type InspectionBuildingCardV2Building = {
   progressLabel: string
   deadlineText: string
   scoreText: string
+  reportActionLabel?: string
   groups: InspectionBuildingCardV2Group[]
 }
 
@@ -1125,9 +1126,17 @@ function buildInspectionWorkOrderCards(
       progressLabel,
       deadlineText,
       scoreText: formatInspectionCardBuildingScore(groups),
+      reportActionLabel: hasGeneratedInspectionReport(build) ? "再次生成报告" : "生成报告",
       groups,
     }
   })
+}
+
+function hasGeneratedInspectionReport(build: WorkOrderBuildInfo) {
+  const currentWorkOrder = resolvedInspectionWorkOrder.value
+
+  return Boolean(toText(build.ReportUrl, ""))
+    || Boolean(currentWorkOrder && findLatestGeneratedInspectionReport(currentWorkOrder, build))
 }
 
 function buildInspectionCategoryGroups(
@@ -1885,6 +1894,7 @@ async function submitReportGeneration() {
       FileUrl: uploadResult.url,
       WorkOrderUuid: targetWorkOrderUuid,
     })
+    markInspectionBuildReportGenerated(buildUuid, uploadResult.url)
 
     const updatedRecord = saveInspectionReportRecord({
       ...record,
@@ -1907,6 +1917,30 @@ async function submitReportGeneration() {
     pdfRenderReport.value = null
     reportGenerationStage.value = ""
     reportSubmitting.value = false
+  }
+}
+
+function markInspectionBuildReportGenerated(buildUuid: string, reportUrl: string) {
+  const currentWorkOrder = inspectionWorkOrder.value
+
+  if (!currentWorkOrder || !Array.isArray(currentWorkOrder.Builds)) {
+    return
+  }
+
+  inspectionWorkOrder.value = {
+    ...currentWorkOrder,
+    Builds: currentWorkOrder.Builds.map((build) => (
+      toText(build.BuildUuid, "") === buildUuid
+        ? { ...build, ReportUrl: reportUrl }
+        : build
+    )),
+  }
+
+  if (reportBuilding.value && toText(reportBuilding.value.BuildUuid, "") === buildUuid) {
+    reportBuilding.value = {
+      ...reportBuilding.value,
+      ReportUrl: reportUrl,
+    }
   }
 }
 
