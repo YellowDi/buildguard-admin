@@ -174,6 +174,10 @@ function typeToPlatform(type: unknown): AppReleaseDraft["platform"] {
   return Number(type) === 2 ? "ios" : "android"
 }
 
+function isMustUpdate(value: unknown) {
+  return Number(value) === 1
+}
+
 function mapAppVersionToRelease(item: AppVersionDetail): AppReleaseEntry {
   const platform = typeToPlatform(item.Type)
   const versionName = toText(item.Version, "-")
@@ -190,7 +194,7 @@ function mapAppVersionToRelease(item: AppVersionDetail): AppReleaseEntry {
     versionName,
     title: versionName === "-" ? "应用更新" : `版本 ${versionName}`,
     description: log,
-    forceUpdate: false,
+    forceUpdate: isMustUpdate(item.IsMust),
     downloadUrl: platform === "android" ? url : "",
     appStoreUrl: platform === "ios" ? url : "",
     platform,
@@ -537,6 +541,7 @@ async function submitRelease() {
       Url: url || undefined,
       Version: versionName,
       VersionCode: versionCode,
+      IsMust: releaseForm.forceUpdate ? 1 : 2,
     }
 
     const result = releaseDialogMode.value === "edit"
@@ -754,6 +759,15 @@ async function confirmDeleteRelease() {
                   </dd>
                 </div>
 
+                <div class="flex min-w-0 items-center justify-between gap-4 border-b py-3">
+                  <dt class="shrink-0 text-sm text-muted-foreground">
+                    是否强制更新
+                  </dt>
+                  <dd class="min-w-0 truncate text-sm font-medium text-foreground">
+                    {{ selectedRelease.forceUpdate ? "是" : "否" }}
+                  </dd>
+                </div>
+
                 <div class="flex min-w-0 items-center justify-between gap-4 py-3">
                   <dt class="shrink-0 text-sm text-muted-foreground">
                     {{ distributionLabel }}
@@ -787,7 +801,7 @@ async function confirmDeleteRelease() {
         <DialogHeader>
           <DialogTitle>{{ releaseDialogMode === "edit" ? "编辑版本" : "新建版本" }}</DialogTitle>
           <DialogDescription>
-            填写版本号、版本码、更新日志和下载地址。
+            填写版本号、版本码、强制更新、更新日志和下载地址。
           </DialogDescription>
         </DialogHeader>
 
@@ -831,6 +845,26 @@ async function confirmDeleteRelease() {
                 inputmode="numeric"
                 placeholder="100"
               />
+            </Field>
+
+            <Field class="gap-2">
+              <FieldLabel for="release-force-update">是否强制更新</FieldLabel>
+              <Select
+                :model-value="releaseForm.forceUpdate ? '1' : '2'"
+                @update:model-value="updateReleaseForm('forceUpdate', String($event) === '1')"
+              >
+                <SelectTrigger id="release-force-update" class="h-9 w-full min-w-0 rounded-md bg-background text-sm">
+                  <SelectValue placeholder="请选择" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">
+                    是
+                  </SelectItem>
+                  <SelectItem value="2">
+                    否
+                  </SelectItem>
+                </SelectContent>
+              </Select>
             </Field>
           </div>
 

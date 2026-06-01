@@ -12,6 +12,7 @@ type AppVersionListEnvelope = {
 export type AppVersionDetail = {
   CreatedAt?: string
   Id?: number
+  IsMust?: number
   Log?: string
   Type?: number
   Url?: string
@@ -35,6 +36,7 @@ export type AppVersionDetailPayload = {
 }
 
 export type CreateAppVersionPayload = {
+  IsMust?: number
   Log?: string
   Type?: number
   Url?: string
@@ -180,6 +182,7 @@ export async function deleteAppVersion(payload: DeleteAppVersionPayload): Promis
 
 function normalizeMutationPayload(payload: CreateAppVersionPayload) {
   return {
+    IsMust: getOptionalIsMust(payload.IsMust),
     Log: getOptionalString(payload.Log),
     Type: getOptionalNumber(payload.Type, "Type"),
     Url: getOptionalString(payload.Url),
@@ -299,4 +302,14 @@ function getOptionalNumber(value: unknown, field: string) {
   }
 
   throw new ApiError(`请求参数校验失败：${field} 必须是有效数字。`)
+}
+
+function getOptionalIsMust(value: unknown) {
+  const parsed = getOptionalNumber(value, "IsMust")
+
+  if (parsed === undefined || parsed === 1 || parsed === 2) {
+    return parsed
+  }
+
+  throw new ApiError("请求参数校验失败：IsMust 只能是 1 或 2。")
 }
