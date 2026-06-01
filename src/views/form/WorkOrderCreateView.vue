@@ -146,6 +146,7 @@ const props = withDefaults(defineProps<{
 })
 
 const DEFAULT_INSPECTION_STATUS = "1"
+const DEFAULT_REPAIR_IMPORTANCE_LABEL = "一般"
 const NO_REPAIR_INSPECTION_WORK_ORDER_VALUE = "__no-repair-inspection-work-order__"
 
 function createEmptyForm(): WorkOrderFormState {
@@ -928,16 +929,20 @@ async function loadRepairEditContext() {
     const customerUuid = normalizeText(detail.CustomerUuid) || normalizeRouteField(queryCustomerUuid.value)
     const parkUuid = normalizeText(detail.ParkUuid) || normalizeRouteField(queryParkUuid.value)
     const buildUuid = normalizeText(detail.BuildUuid) || normalizeRouteField(queryBuildUuid.value)
+    const reportType = normalizeText(detail.ReportType)
+    const important = normalizeText(detail.Important)
     const selectedInspectionItemUuids = normalizeTextArray(detail.WorkOrderInspectionBuildUuid)
     const status = toNumber(detail.Status)
+
     const nextForm = {
       ...createEmptyForm(),
       customerUuid,
       parkUuid,
       buildUuid,
       status: status === null ? DEFAULT_INSPECTION_STATUS : String(status),
-      reportType: normalizeText(detail.ReportType),
-      important: normalizeText(detail.Important),
+      reportType: resolveRepairDictionaryFormValue(reportType, repairTypeOptions.value),
+      important: resolveRepairDictionaryFormValue(important, repairImportanceOptions.value)
+        || resolveDefaultRepairImportanceValue(repairImportanceOptions.value),
       content: normalizeText(detail.Content),
       workOrderInspectionBuildUuid: selectedInspectionItemUuids,
     }
@@ -1178,8 +1183,8 @@ function applyRepairPrefill(useRoutePrefill = false) {
 
   if (useRoutePrefill) {
     form.buildUuid = normalizeRouteField(queryBuildUuid.value)
-    form.reportType = normalizeRouteField(queryReportType.value)
-    form.important = normalizeRouteField(queryImportant.value)
+    form.reportType = resolveRepairDictionaryFormValue(normalizeRouteField(queryReportType.value), repairTypeOptions.value)
+    form.important = resolveRepairDictionaryFormValue(normalizeRouteField(queryImportant.value), repairImportanceOptions.value)
     form.content = normalizeRouteField(queryContent.value)
   }
 }
@@ -1282,6 +1287,37 @@ async function ensureRepairDictionaries() {
   } finally {
     repairDictionariesLoading.value = false
   }
+}
+
+function resolveRepairDictionaryFormValue(value: unknown, options: RepairDictionaryOption[]) {
+  const normalizedValue = normalizeText(value)
+
+  if (!normalizedValue) {
+    return ""
+  }
+
+  return findRepairDictionaryOption(normalizedValue, options)?.value ?? ""
+}
+
+function resolveDefaultRepairImportanceValue(options: RepairDictionaryOption[]) {
+  return options.find(option => normalizeText(option.label) === DEFAULT_REPAIR_IMPORTANCE_LABEL)?.value
+    ?? options.find(option => normalizeText(option.label).includes(DEFAULT_REPAIR_IMPORTANCE_LABEL))?.value
+    ?? ""
+}
+
+function findRepairDictionaryOption(value: unknown, options: RepairDictionaryOption[]) {
+  const normalizedValue = normalizeText(value)
+
+  if (!normalizedValue) {
+    return undefined
+  }
+
+  return options.find(option => (
+    normalizeText(option.value) === normalizedValue
+    || normalizeText(option.uuid) === normalizedValue
+    || normalizeText(option.label) === normalizedValue
+    || (option.numericValue !== null && String(option.numericValue) === normalizedValue)
+  ))
 }
 
 async function loadRepairInspectionWorkOrdersForSelection(

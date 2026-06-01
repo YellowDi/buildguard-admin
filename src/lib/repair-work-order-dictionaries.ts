@@ -31,14 +31,19 @@ const REPAIR_IMPORTANCE_TARGET = {
 
 const REPAIR_TYPE_TARGET = {
   codeAliases: [
+    "alarm_type",
+    "alert_type",
+    "warning_type",
     "repair_type",
+    "repair_alarm_type",
     "report_type",
+    "report_alarm_type",
     "repair_report_type",
     "repair_work_order_type",
     "work_order_repair_type",
     "maintenance_type",
   ],
-  nameAliases: ["报修类型"],
+  nameAliases: ["报修类型", "报警类型", "告警类型"],
 }
 
 let cachedDictionaries: Promise<RepairWorkOrderDictionaries> | null = null
