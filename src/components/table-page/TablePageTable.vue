@@ -193,11 +193,13 @@ const rowClickEnabled = computed(() => typeof props.onRowClick === "function")
 const inlineQuickActionEnabled = computed(() => (
   horizontalOverflow.value && typeof props.onQuickAction === "function"
 ))
-/**
- * 布局层只允许最后一个非操作列吃剩余宽度。
- * 这样前面列保持内容宽度，操作列也不会被中间列或表格余量挤到视口边缘。
- */
 const layoutFillColumnIndexes = computed(() => {
+  const explicitFillColumnIndexes = getExplicitFillColumnIndexes()
+
+  if (explicitFillColumnIndexes.length) {
+    return explicitFillColumnIndexes
+  }
+
   const autoFillColumnIndex = getAutoFillColumnIndex()
   return autoFillColumnIndex >= 0 ? [autoFillColumnIndex] : []
 })
@@ -1099,6 +1101,12 @@ function getFillColumnIndexes() {
   return layoutFillColumnIndexes.value
 }
 
+function getExplicitFillColumnIndexes() {
+  return props.columns.flatMap((column, index) => (
+    column.width === "fill" && !isActionLikeColumn(column) ? [index] : []
+  ))
+}
+
 function isActionLikeColumn(column: TableColumn) {
   const key = column.key.trim().toLowerCase()
   const slot = column.slot?.trim().toLowerCase() ?? ""
@@ -1148,7 +1156,7 @@ function getResolvedColumnHeaderClass(column: TableColumn, columnIndex: number) 
     props.rows.length === 0
       ? getEmptyColumnWidthClass(column, columnIndex)
       : getNoteColumnMinWidthClass(column),
-    fillActive ? "" : "w-px",
+    fillActive ? "w-full min-w-0 max-w-[0]" : "w-px",
     isActionLikeColumn(column) ? "overflow-visible" : "",
   ]
 }
@@ -1173,7 +1181,7 @@ function getResolvedColumnCellClass(column: TableColumn, columnIndex: number) {
     isActionLikeColumn(column) ? "overflow-visible" : "",
     layoutFillColumn
       ? fillActive
-        ? "max-w-none"
+        ? "w-full min-w-0 max-w-[0]"
         : "max-w-none whitespace-nowrap"
       : "",
   ]
@@ -1349,6 +1357,21 @@ function createMeasurementHost() {
   return measurementHost
 }
 
+function constrainClonedFillCell(cell: HTMLElement) {
+  cell.style.width = "0"
+  cell.style.minWidth = "0"
+  cell.style.maxWidth = "0"
+  cell.style.overflow = "hidden"
+  cell.style.whiteSpace = "nowrap"
+
+  for (const element of cell.querySelectorAll<HTMLElement>("*")) {
+    element.style.minWidth = "0"
+    element.style.maxWidth = "0"
+    element.style.overflow = "hidden"
+    element.style.whiteSpace = "nowrap"
+  }
+}
+
 function measureTableLayout(): TableLayoutMeasurement {
   if (!tableWrapperRef.value || !tableRef.value || typeof document === "undefined") {
     return {
@@ -1360,7 +1383,8 @@ function measureTableLayout(): TableLayoutMeasurement {
 
   const wrapperClientWidth = tableWrapperRef.value.clientWidth
   const measurementHost = createMeasurementHost()
-  const fillColumnIndexes = getFillColumnIndexes()
+  const explicitFillColumnIndexes = getExplicitFillColumnIndexes()
+  const fillColumnIndexes = explicitFillColumnIndexes.length ? explicitFillColumnIndexes : getFillColumnIndexes()
 
   // 离屏克隆用于测内容本征宽度，避免真实表格已补宽后的尺寸影响判断。
   const tableClone = tableRef.value.cloneNode(true) as HTMLTableElement
@@ -1380,6 +1404,11 @@ function measureTableLayout(): TableLayoutMeasurement {
         const cell = row.children.item(fillColumnIndex)
 
         if (cell instanceof HTMLElement) {
+          if (explicitFillColumnIndexes.length) {
+            constrainClonedFillCell(cell)
+            continue
+          }
+
           // fill 列先按内容宽度测量；只有表格整体放得下时才在真实表格中吃剩余空间。
           cell.style.width = "auto"
           cell.style.maxWidth = "none"

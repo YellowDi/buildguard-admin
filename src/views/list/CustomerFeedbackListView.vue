@@ -2,12 +2,16 @@
 import { computed, ref, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
 
+import DetailFieldSections from "@/components/detail/DetailFieldSections.vue"
+import type { DetailFieldSection } from "@/components/detail/types"
 import TablePage from "@/components/table-page/TablePage.vue"
 import type { TableExportRowsResolverPayload } from "@/components/table-page/export-utils"
 import { createTablePageDefinition, useTablePage } from "@/components/table-page/useTablePage"
 import type { TablePageSchema, TableQueryBarConfig } from "@/components/table-page/types"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
+import { ResponsiveRightSheet } from "@/components/ui/sheet"
+import { TooltipWrap } from "@/components/ui/tooltip"
 import {
   Pagination,
   PaginationContent,
@@ -41,6 +45,7 @@ const pageSize = ref(50)
 const total = ref(0)
 const keywordQuery = ref("")
 const sortDirection = ref<"asc" | "desc">("desc")
+const activeFeedbackRecord = ref<CustomerFeedbackRecord | null>(null)
 let latestRequestId = 0
 let syncingRoute = false
 
@@ -56,6 +61,13 @@ const schema: TablePageSchema<CustomerFeedbackRecord> = {
     description: "客户在 app 提交意见反馈后会展示在这里。",
     icon: "ri-feedback-line",
   },
+  rowActions: [
+    {
+      key: "view",
+      label: "查看",
+      onClick: row => openFeedbackDetail(row),
+    },
+  ],
   columns: [
     {
       key: "customerName",
@@ -67,19 +79,6 @@ const schema: TablePageSchema<CustomerFeedbackRecord> = {
         type: "text",
         label: "客户名称",
         placeholder: "输入客户名称",
-        defaultVisible: true,
-      },
-      sort: true,
-    },
-    {
-      key: "content",
-      label: "反馈内容",
-      filterType: "text",
-      slot: "cell-content",
-      filter: {
-        type: "text",
-        label: "反馈内容",
-        placeholder: "输入反馈内容",
         defaultVisible: true,
       },
       sort: true,
@@ -100,6 +99,20 @@ const schema: TablePageSchema<CustomerFeedbackRecord> = {
         kind: "metric",
         value: row => toTimestamp(row.createdAt) ?? -1,
       },
+    },
+    {
+      key: "content",
+      label: "反馈内容",
+      filterType: "text",
+      width: "fill",
+      slot: "cell-content",
+      filter: {
+        type: "text",
+        label: "反馈内容",
+        placeholder: "输入反馈内容",
+        defaultVisible: true,
+      },
+      sort: true,
     },
   ],
   filters: [
@@ -143,6 +156,40 @@ const page = useTablePage({
 const route = useRoute()
 const router = useRouter()
 const customerUuid = computed(() => normalizeQueryValue(route.query.customerUuid))
+const feedbackDetailOpen = computed(() => activeFeedbackRecord.value !== null)
+const feedbackDetailSections = computed<DetailFieldSection[]>(() => {
+  const record = activeFeedbackRecord.value
+
+  if (!record) {
+    return []
+  }
+
+  return [
+    {
+      key: "feedback",
+      title: "",
+      rows: [
+        {
+          key: "customerName",
+          label: "客户",
+          value: record.customerName,
+        },
+        {
+          key: "createdAt",
+          label: "时间",
+          value: record.createdAt,
+        },
+        {
+          key: "content",
+          label: "反馈内容",
+          value: record.content,
+          truncate: false,
+          valueClass: "whitespace-pre-wrap break-words leading-6 text-foreground",
+        },
+      ],
+    },
+  ]
+})
 const exportFilteredRowsCount = computed(() => keywordQuery.value ? page.filteredRowsCount.value : total.value)
 page.showControls.value = true
 page.customSortEnabled.value = false
@@ -352,6 +399,32 @@ function handleToolbarSortToggle() {
   sortDirection.value = sortDirection.value === "asc" ? "desc" : "asc"
 }
 
+function openFeedbackDetail(row: CustomerFeedbackRecord | Record<string, unknown>) {
+  activeFeedbackRecord.value = normalizeFeedbackRow(row)
+}
+
+function handleFeedbackDetailOpenChange(open: boolean) {
+  if (!open) {
+    activeFeedbackRecord.value = null
+  }
+}
+
+function normalizeFeedbackRow(row: CustomerFeedbackRecord | Record<string, unknown>): CustomerFeedbackRecord {
+  const record = row as Record<string, unknown>
+
+  return {
+    id: toText(record.id),
+    uuid: toText(record.uuid),
+    customerName: toText(record.customerName, "未命名客户"),
+    content: toText(record.content, "-"),
+    createdAt: toText(record.createdAt, "-"),
+  }
+}
+
+function getFeedbackContent(row: Record<string, unknown>) {
+  return toText(row.content, "-")
+}
+
 function handleQueryChange(payload: { key: string; value: string | string[] }) {
   if (payload.key !== "q") {
     return
@@ -433,8 +506,8 @@ function normalizeQueryValue(value: unknown) {
       @query-clear="handleQueryClear"
     >
       <template #cell-content="{ row }">
-        <p class="max-w-none whitespace-nowrap text-sm leading-5 text-muted-foreground">
-          {{ row.content }}
+        <p class="w-full min-w-0 truncate text-sm leading-5 text-muted-foreground" :title="getFeedbackContent(row)">
+          {{ getFeedbackContent(row) }}
         </p>
       </template>
 
@@ -472,5 +545,43 @@ function normalizeQueryValue(value: unknown) {
         </Pagination>
       </template>
     </TablePage>
+
+    <ResponsiveRightSheet
+      :open="feedbackDetailOpen"
+      title="反馈内容"
+      :show-primary="false"
+      sheet-content-class="flex min-h-0 flex-col overflow-hidden sm:max-w-xl"
+      @update:open="handleFeedbackDetailOpenChange"
+    >
+      <template #actions>
+        <div class="right-sheet-actions">
+          <div class="right-sheet-actions__primary">
+            <TooltipWrap content="关闭反馈内容" side="right">
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                class="right-sheet-icon-button"
+                @click="handleFeedbackDetailOpenChange(false)"
+              >
+                <i class="ri-close-line text-base" />
+                <span class="sr-only">关闭反馈内容</span>
+              </Button>
+            </TooltipWrap>
+          </div>
+          <div class="right-sheet-actions__secondary" />
+        </div>
+      </template>
+
+      <div class="min-h-0 flex-1 overflow-y-auto pb-6">
+        <DetailFieldSections
+          v-if="feedbackDetailSections.length"
+          :sections="feedbackDetailSections"
+          :show-section-titles="false"
+          label-width-mobile="5rem"
+          label-width-desktop="96px"
+        />
+      </div>
+    </ResponsiveRightSheet>
   </section>
 </template>
