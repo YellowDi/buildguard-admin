@@ -64,6 +64,8 @@ import {
   fetchWorkOrderReportList,
   generateWorkOrderGnReport,
   updateRepairWorkOrderStatus,
+  updateWorkOrder,
+  updateWorkOrderStatus,
   uploadRepairWorkOrderVideo,
   uploadWorkOrderReport,
   type WorkOrderInspectionHistoryDetailItem,
@@ -78,6 +80,8 @@ type WorkOrderDetailKind = "inspection" | "repair"
 type LinkedDetailSheetKind = "customer" | "service" | "plan" | "park"
 type ReportGenerationStage = "生成报告" | "生成 PDF" | "上传 PDF" | "保存地址"
 type RepairReviewDecision = "" | "completed" | "in-progress"
+const INSPECTION_STATUS_REPORT_GENERATING = 4
+const INSPECTION_STATUS_CLOSED = 5
 const REPAIR_STATUS_IN_PROGRESS = 2
 const REPAIR_STATUS_REVIEWING = 3
 const REPAIR_STATUS_COMPLETED = 4
@@ -179,6 +183,11 @@ const assignableUsersLoaded = ref(false)
 const assignSubmitting = ref(false)
 const deleteConfirmOpen = ref(false)
 const deleteSubmitting = ref(false)
+const inspectionRemarkDialogOpen = ref(false)
+const inspectionRemarkSubmitting = ref(false)
+const inspectionRemarkValue = ref("")
+const inspectionCompleteConfirmOpen = ref(false)
+const inspectionCompleteSubmitting = ref(false)
 const repairReviewDialogOpen = ref(false)
 const repairReviewSubmitting = ref(false)
 const repairReviewDecision = ref<RepairReviewDecision>("")
@@ -386,6 +395,14 @@ const hasWorkOrder = computed(() => (
 
 const showAssignAction = computed(() => !loading.value && hasWorkOrder.value && Boolean(workOrderUuid.value))
 const showDeleteAction = computed(() => !loading.value && hasWorkOrder.value && Boolean(workOrderUuid.value))
+const showInspectionEditAction = computed(() => props.kind === "inspection" && !loading.value && hasWorkOrder.value && Boolean(workOrderUuid.value))
+const showInspectionCompleteAction = computed(() => (
+  props.kind === "inspection"
+  && !loading.value
+  && hasWorkOrder.value
+  && Boolean(workOrderUuid.value)
+  && currentInspectionStatusValue.value === INSPECTION_STATUS_REPORT_GENERATING
+))
 const showRepairEditAction = computed(() => props.kind === "repair" && !loading.value && hasWorkOrder.value && Boolean(workOrderUuid.value))
 const showRepairReviewAction = computed(() => (
   props.kind === "repair"
@@ -393,6 +410,13 @@ const showRepairReviewAction = computed(() => (
   && hasWorkOrder.value
   && Boolean(workOrderUuid.value)
   && repairWorkOrder.value?.Status === REPAIR_STATUS_REVIEWING
+))
+const currentInspectionStatusValue = computed(() => toNumber(inspectionWorkOrder.value?.Status))
+const currentInspectionRemark = computed(() => toText(inspectionWorkOrder.value?.Remark, ""))
+const canSubmitInspectionRemarkUpdate = computed(() => (
+  Boolean(workOrderUuid.value)
+  && !inspectionRemarkSubmitting.value
+  && inspectionRemarkValue.value.trim() !== currentInspectionRemark.value.trim()
 ))
 const repairReviewBusy = computed(() => repairReviewSubmitting.value || repairReviewVideoUploading.value)
 const canSubmitRepairReview = computed(() => {
@@ -488,6 +512,8 @@ watch(workOrderUuid, (uuid) => {
   reportBuilding.value = null
   resetReportListState()
   reportDialogOpen.value = false
+  resetInspectionRemarkUpdateState()
+  resetInspectionCompleteState()
   resetRepairReviewForm()
   resetInspectionHistorySheet()
   void loadWorkOrderDetail(uuid)
@@ -540,6 +566,117 @@ function openRepairEditPage() {
       returnTo: queryReturnTo.value || "repair-work-orders",
     },
   })
+}
+
+function handleInspectionRemarkDialogOpenChange(open: boolean) {
+  if (inspectionRemarkSubmitting.value) {
+    return
+  }
+
+  inspectionRemarkDialogOpen.value = open
+
+  if (!open) {
+    inspectionRemarkValue.value = ""
+  }
+}
+
+function openInspectionRemarkUpdateDialog() {
+  if (!showInspectionEditAction.value) {
+    toast.error("当前检测工单无法编辑")
+    return
+  }
+
+  inspectionRemarkValue.value = currentInspectionRemark.value
+  inspectionRemarkDialogOpen.value = true
+}
+
+function resetInspectionRemarkUpdateState() {
+  inspectionRemarkDialogOpen.value = false
+  inspectionRemarkSubmitting.value = false
+  inspectionRemarkValue.value = ""
+}
+
+async function submitInspectionRemarkUpdate() {
+  const uuid = workOrderUuid.value
+
+  if (!uuid || inspectionRemarkSubmitting.value) {
+    return
+  }
+
+  inspectionRemarkSubmitting.value = true
+
+  try {
+    await updateWorkOrder({
+      Uuid: uuid,
+      Remark: inspectionRemarkValue.value,
+    })
+
+    inspectionRemarkDialogOpen.value = false
+    toast.success("检测工单备注已更新")
+    await loadWorkOrderDetail(uuid)
+  } catch (error) {
+    toast.error(handleApiError(error, {
+      mode: "silent",
+      fallback: "检测工单备注更新失败，请稍后重试。",
+    }))
+  } finally {
+    inspectionRemarkSubmitting.value = false
+  }
+}
+
+function handleInspectionCompleteConfirmOpenChange(open: boolean) {
+  if (inspectionCompleteSubmitting.value) {
+    return
+  }
+
+  inspectionCompleteConfirmOpen.value = open
+}
+
+function openInspectionCompleteConfirm() {
+  if (!showInspectionCompleteAction.value) {
+    toast.error("只有报告生成中的检测工单可以完成")
+    return
+  }
+
+  inspectionCompleteConfirmOpen.value = true
+}
+
+function resetInspectionCompleteState() {
+  inspectionCompleteConfirmOpen.value = false
+  inspectionCompleteSubmitting.value = false
+}
+
+async function submitInspectionComplete() {
+  const uuid = workOrderUuid.value
+
+  if (!uuid || inspectionCompleteSubmitting.value) {
+    return
+  }
+
+  if (currentInspectionStatusValue.value !== INSPECTION_STATUS_REPORT_GENERATING) {
+    toast.error("只有报告生成中的检测工单可以完成")
+    return
+  }
+
+  inspectionCompleteSubmitting.value = true
+
+  try {
+    await updateWorkOrderStatus({
+      Uuid: uuid,
+      Status: INSPECTION_STATUS_CLOSED,
+    })
+
+    inspectionCompleteConfirmOpen.value = false
+    toast.success("检测工单已结单")
+    await loadWorkOrderDetail(uuid)
+  } catch (error) {
+    toast.error(handleApiError(error, {
+      mode: "silent",
+      fallback: "检测工单完成失败，请稍后重试。",
+    }))
+  } finally {
+    inspectionCompleteSubmitting.value = false
+  }
 }
 
 async function confirmDeleteWorkOrder() {
@@ -2095,6 +2232,92 @@ async function submitAssign() {
           <i class="ri-user-shared-line text-base" />
           指派
         </Button>
+      </PermissionGate>
+      <PermissionGate :code="PERMISSION_CODES.inspectionWorkOrderEdit">
+        <Dialog :open="inspectionRemarkDialogOpen" @update:open="handleInspectionRemarkDialogOpenChange">
+          <Button
+            v-if="showInspectionEditAction"
+            type="button"
+            variant="outline"
+            size="sm"
+            class="h-8 gap-1 px-3 text-[14px] font-medium"
+            :disabled="inspectionRemarkSubmitting"
+            @click="openInspectionRemarkUpdateDialog"
+          >
+            <i class="ri-edit-line text-base" />
+            编辑
+          </Button>
+          <DialogContent class="sm:max-w-[520px]">
+            <DialogHeader>
+              <DialogTitle>编辑检测工单</DialogTitle>
+              <DialogDescription>
+                修改当前检测工单备注。
+              </DialogDescription>
+            </DialogHeader>
+
+            <label class="block space-y-2">
+              <span class="text-sm font-medium text-foreground">备注</span>
+              <Textarea
+                v-model="inspectionRemarkValue"
+                :disabled="inspectionRemarkSubmitting"
+                class="min-h-[140px] resize-y"
+                placeholder="请输入备注"
+              />
+            </label>
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                :disabled="inspectionRemarkSubmitting"
+                @click="handleInspectionRemarkDialogOpenChange(false)"
+              >
+                取消
+              </Button>
+              <Button
+                type="button"
+                :disabled="!canSubmitInspectionRemarkUpdate"
+                @click="submitInspectionRemarkUpdate"
+              >
+                {{ inspectionRemarkSubmitting ? "保存中..." : "保存" }}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </PermissionGate>
+      <PermissionGate :code="PERMISSION_CODES.inspectionWorkOrderEdit">
+        <AlertDialog :open="inspectionCompleteConfirmOpen" @update:open="handleInspectionCompleteConfirmOpenChange">
+          <Button
+            v-if="showInspectionCompleteAction"
+            type="button"
+            size="sm"
+            class="h-8 gap-1 px-3 text-[14px] font-medium"
+            :disabled="inspectionCompleteSubmitting"
+            @click="openInspectionCompleteConfirm"
+          >
+            <i class="ri-checkbox-circle-line text-base" />
+            完成工单
+          </Button>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>确认完成当前检测工单？</AlertDialogTitle>
+              <AlertDialogDescription>
+                请确保检测报告已全部生成。确认后工单状态将更新为“已结单”。
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel :disabled="inspectionCompleteSubmitting">
+                取消
+              </AlertDialogCancel>
+              <AlertDialogAction
+                :disabled="inspectionCompleteSubmitting"
+                @click="submitInspectionComplete"
+              >
+                {{ inspectionCompleteSubmitting ? "完成中..." : "确认完成" }}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </PermissionGate>
       <PermissionGate :code="PERMISSION_CODES.repairWorkOrderEdit">
         <Button

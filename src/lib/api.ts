@@ -44,6 +44,7 @@ export const API_PATHS = {
   workOrderDelete: "/bqi/work-order/del",
   workOrderInspectionHistoryDetail: "/bqi/work-order/inspection/history/detail",
   workOrderUpdate: "/bqi/work-order/update",
+  workOrderStatusUpdate: "/bqi/work-order/status/update",
   workOrderDispatch: "/bqi/work-order/dispatch",
   workOrderRepairDispatch: "/bqi/work-order/repair/dispatch",
   workOrderGnReport: "/bqi/work-order/report/gn",

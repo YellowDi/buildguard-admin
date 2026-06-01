@@ -133,6 +133,11 @@ export type UpdateWorkOrderPayload = {
   Remark?: string
 }
 
+export type UpdateWorkOrderStatusPayload = {
+  Uuid: string
+  Status: number
+}
+
 export type DispatchWorkOrderPayload = {
   Uuid: string
   UserUuid?: string
@@ -321,6 +326,7 @@ const WORK_ORDER_DETAIL_API_URL = API_PATHS.workOrderDetail
 const WORK_ORDER_DELETE_API_URL = API_PATHS.workOrderDelete
 const WORK_ORDER_INSPECTION_HISTORY_DETAIL_API_URL = API_PATHS.workOrderInspectionHistoryDetail
 const WORK_ORDER_UPDATE_API_URL = buildApiUrl(API_PATHS.workOrderUpdate)
+const WORK_ORDER_STATUS_UPDATE_API_URL = buildApiUrl(API_PATHS.workOrderStatusUpdate)
 const WORK_ORDER_DISPATCH_API_URL = buildApiUrl(API_PATHS.workOrderDispatch)
 const WORK_ORDER_REPAIR_DISPATCH_API_URL = buildApiUrl(API_PATHS.workOrderRepairDispatch)
 const WORK_ORDER_GN_REPORT_API_URL = buildApiUrl(API_PATHS.workOrderGnReport)
@@ -337,6 +343,7 @@ const WORK_ORDER_DELETE_ERROR_MESSAGE = "检测工单删除失败，请稍后重
 const WORK_ORDER_DETAIL_ERROR_MESSAGE = "工单详情加载失败，请稍后重试。"
 const WORK_ORDER_INSPECTION_HISTORY_DETAIL_ERROR_MESSAGE = "检测结果历史加载失败，请稍后重试。"
 const WORK_ORDER_UPDATE_ERROR_MESSAGE = "工单更新失败，请稍后重试。"
+const WORK_ORDER_STATUS_UPDATE_ERROR_MESSAGE = "检测工单状态更新失败，请稍后重试。"
 const WORK_ORDER_DISPATCH_ERROR_MESSAGE = "工单指派失败，请稍后重试。"
 const WORK_ORDER_GN_REPORT_ERROR_MESSAGE = "检测报告生成失败，请稍后重试。"
 const WORK_ORDER_REPORT_LIST_ERROR_MESSAGE = "报告列表加载失败，请稍后重试。"
@@ -715,7 +722,7 @@ export async function fetchWorkOrderReportList(payload: WorkOrderReportListPaylo
 export async function updateWorkOrder(payload: UpdateWorkOrderPayload): Promise<CreateWorkOrderResult> {
   const normalizedPayload = {
     Uuid: getRequiredString(payload.Uuid, "Uuid"),
-    Remark: getOptionalString(payload.Remark),
+    Remark: typeof payload.Remark === "string" ? payload.Remark.trim() : getOptionalString(payload.Remark),
   }
 
   const response = await fetch(WORK_ORDER_UPDATE_API_URL, {
@@ -732,6 +739,30 @@ export async function updateWorkOrder(payload: UpdateWorkOrderPayload): Promise<
   }
 
   assertApiSuccess(responseBody, WORK_ORDER_UPDATE_ERROR_MESSAGE)
+
+  return extractCreateResult(responseBody)
+}
+
+export async function updateWorkOrderStatus(payload: UpdateWorkOrderStatusPayload): Promise<CreateWorkOrderResult> {
+  const normalizedPayload = {
+    Uuid: getRequiredString(payload.Uuid, "Uuid"),
+    Status: getRequiredNumber(payload.Status, "Status"),
+  }
+
+  const response = await fetch(WORK_ORDER_STATUS_UPDATE_API_URL, {
+    method: "POST",
+    headers: buildApiHeaders({
+      "Content-Type": "application/json",
+    }),
+    body: JSON.stringify(normalizedPayload),
+  })
+  const responseBody = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responseBody, WORK_ORDER_STATUS_UPDATE_ERROR_MESSAGE)
+  }
+
+  assertApiSuccess(responseBody, WORK_ORDER_STATUS_UPDATE_ERROR_MESSAGE)
 
   return extractCreateResult(responseBody)
 }
