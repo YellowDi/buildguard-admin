@@ -23,6 +23,7 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination"
 import { handleApiError } from "@/lib/api-errors"
+import { fetchCustomers } from "@/lib/customers-api"
 import {
   fetchCustomerFeedback,
   type CustomerFeedbackListItem,
@@ -32,6 +33,7 @@ import { fetchAllPaginatedListItems } from "@/lib/paginated-list-export"
 type CustomerFeedbackRecord = {
   id: string
   uuid: string
+  customerUuid: string
   customerName: string
   content: string
   createdAt: string
@@ -44,6 +46,9 @@ const pageNum = ref(1)
 const pageSize = ref(50)
 const total = ref(0)
 const keywordQuery = ref("")
+const selectedCustomerUuid = ref("")
+const customerOptions = ref<Array<{ value: string; label: string }>>([])
+const customerOptionsLoading = ref(false)
 const sortDirection = ref<"asc" | "desc">("desc")
 const activeFeedbackRecord = ref<CustomerFeedbackRecord | null>(null)
 let latestRequestId = 0
@@ -75,6 +80,7 @@ const schema: TablePageSchema<CustomerFeedbackRecord> = {
       filterType: "text",
       emphasis: "strong",
       tone: "primary",
+      slot: "cell-customerName",
       filter: {
         type: "text",
         label: "客户名称",
@@ -155,7 +161,6 @@ const page = useTablePage({
 })
 const route = useRoute()
 const router = useRouter()
-const customerUuid = computed(() => normalizeQueryValue(route.query.customerUuid))
 const feedbackDetailOpen = computed(() => activeFeedbackRecord.value !== null)
 const feedbackDetailSections = computed<DetailFieldSection[]>(() => {
   const record = activeFeedbackRecord.value
@@ -191,6 +196,35 @@ const feedbackDetailSections = computed<DetailFieldSection[]>(() => {
   ]
 })
 const exportFilteredRowsCount = computed(() => keywordQuery.value ? page.filteredRowsCount.value : total.value)
+const customerUuidByName = computed(() => {
+  const customerMap = new Map<string, string>()
+
+  for (const option of customerOptions.value) {
+    if (option.label && option.value && !customerMap.has(option.label)) {
+      customerMap.set(option.label, option.value)
+    }
+  }
+
+  return customerMap
+})
+const customerSelectOptions = computed(() => {
+  const options = [...customerOptions.value]
+  const knownValues = new Set(options.map(option => option.value))
+
+  for (const row of feedbackRows.value) {
+    if (!row.customerUuid || knownValues.has(row.customerUuid)) {
+      continue
+    }
+
+    options.push({
+      value: row.customerUuid,
+      label: row.customerName || "未命名客户",
+    })
+    knownValues.add(row.customerUuid)
+  }
+
+  return options
+})
 page.showControls.value = true
 page.customSortEnabled.value = false
 
@@ -207,11 +241,25 @@ const queryBar = computed<TableQueryBarConfig>(() => ({
       expandedWidth: 280,
       collapsedMaxWidth: 280,
     },
+    {
+      type: "select",
+      key: "customerUuid",
+      queryKey: "customerUuid",
+      label: "客户",
+      icon: "ri-customer-service-2-line",
+      value: selectedCustomerUuid.value,
+      loading: customerOptionsLoading.value,
+      options: customerSelectOptions.value,
+      expandedWidth: 260,
+      collapsedMaxWidth: 260,
+      placeholder: customerOptionsLoading.value ? "正在加载客户..." : "请选择客户",
+    },
   ],
   values: {
     q: keywordQuery.value,
+    customerUuid: selectedCustomerUuid.value,
   },
-  canClear: Boolean(keywordQuery.value),
+  canClear: Boolean(keywordQuery.value || selectedCustomerUuid.value),
 }))
 
 watch([pageNum, pageSize], ([nextPageNum, nextPageSize], [previousPageNum, previousPageSize]) => {
@@ -223,12 +271,12 @@ watch([pageNum, pageSize], ([nextPageNum, nextPageSize], [previousPageNum, previ
 })
 
 watch(
-  () => [normalizeQueryValue(route.query.q), customerUuid.value] as const,
+  () => [normalizeQueryValue(route.query.q), normalizeQueryValue(route.query.customerUuid)] as const,
   ([nextKeyword, nextCustomerUuid], previousValue) => {
     const isInitialRun = previousValue === undefined
     const [previousKeyword, previousCustomerUuid] = previousValue ?? ["", ""]
 
-    if (!isInitialRun && syncingRoute && nextKeyword !== previousKeyword && nextCustomerUuid === previousCustomerUuid) {
+    if (!isInitialRun && syncingRoute) {
       return
     }
 
@@ -237,6 +285,7 @@ watch(
     }
 
     keywordQuery.value = nextKeyword
+    selectedCustomerUuid.value = nextCustomerUuid
 
     if (pageNum.value !== 1) {
       pageNum.value = 1
@@ -269,7 +318,7 @@ async function loadFeedback() {
 
   try {
     const result = await fetchCustomerFeedback({
-      CustomerUuid: customerUuid.value || undefined,
+      CustomerUuid: selectedCustomerUuid.value || undefined,
       PageNum: pageNum.value,
       PageSize: pageSize.value,
     })
@@ -314,7 +363,7 @@ async function resolveExportRows(payload: TableExportRowsResolverPayload) {
 
   const normalizedKeyword = keywordQuery.value.trim().toLowerCase()
   const items = await fetchAllPaginatedListItems(({ PageNum, PageSize }) => fetchCustomerFeedback({
-    CustomerUuid: customerUuid.value || undefined,
+    CustomerUuid: selectedCustomerUuid.value || undefined,
     PageNum,
     PageSize,
   }))
@@ -332,6 +381,7 @@ function normalizeFeedbackRecord(
   index: number,
 ): CustomerFeedbackRecord {
   const uuid = getFirstText(item, ["Uuid", "uuid"])
+  const customerUuid = getFirstText(item, ["CustomerUuid", "customerUuid"])
   const customerName = getFirstText(item, ["CorpName", "CustomerName"], "未命名客户")
   const content = getFirstText(item, ["Content"], "-")
   const createdAt = getFirstText(item, ["CreatedAt"], "-")
@@ -339,9 +389,34 @@ function normalizeFeedbackRecord(
   return {
     id: uuid || `${pageNum.value}-${index + 1}-${customerName}-${createdAt}`,
     uuid,
+    customerUuid,
     customerName,
     content,
     createdAt,
+  }
+}
+
+void loadCustomerOptions()
+
+async function loadCustomerOptions() {
+  customerOptionsLoading.value = true
+
+  try {
+    const result = await fetchCustomers({
+      PageNum: 1,
+      PageSize: 200,
+    })
+
+    customerOptions.value = result.list
+      .map(item => ({
+        value: toText(item.Uuid),
+        label: toText(item.CorpName, "未命名客户"),
+      }))
+      .filter(option => option.value)
+  } catch {
+    customerOptions.value = []
+  } finally {
+    customerOptionsLoading.value = false
   }
 }
 
@@ -415,10 +490,43 @@ function normalizeFeedbackRow(row: CustomerFeedbackRecord | Record<string, unkno
   return {
     id: toText(record.id),
     uuid: toText(record.uuid),
+    customerUuid: resolveFeedbackCustomerUuid(record),
     customerName: toText(record.customerName, "未命名客户"),
     content: toText(record.content, "-"),
     createdAt: toText(record.createdAt, "-"),
   }
+}
+
+function openCustomerDetail(row: CustomerFeedbackRecord | Record<string, unknown>) {
+  const record = normalizeFeedbackRow(row)
+
+  if (!record.customerUuid) {
+    return
+  }
+
+  void router.push({
+    name: "customer-detail",
+    params: { id: record.customerUuid },
+  })
+}
+
+function getFeedbackCustomerUuid(row: Record<string, unknown>) {
+  return resolveFeedbackCustomerUuid(row)
+}
+
+function getFeedbackCustomerName(row: Record<string, unknown>) {
+  return toText(row.customerName, "未命名客户")
+}
+
+function resolveFeedbackCustomerUuid(row: Record<string, unknown>) {
+  const explicitCustomerUuid = toText(row.customerUuid)
+
+  if (explicitCustomerUuid) {
+    return explicitCustomerUuid
+  }
+
+  const customerName = toText(row.customerName)
+  return customerName ? customerUuidByName.value.get(customerName) ?? "" : ""
 }
 
 function getFeedbackContent(row: Record<string, unknown>) {
@@ -426,20 +534,24 @@ function getFeedbackContent(row: Record<string, unknown>) {
 }
 
 function handleQueryChange(payload: { key: string; value: string | string[] }) {
-  if (payload.key !== "q") {
-    return
+  if (payload.key === "q") {
+    keywordQuery.value = typeof payload.value === "string" ? payload.value.trim() : ""
   }
 
-  keywordQuery.value = typeof payload.value === "string" ? payload.value.trim() : ""
+  if (payload.key === "customerUuid") {
+    selectedCustomerUuid.value = typeof payload.value === "string" ? payload.value.trim() : ""
+  }
+
   void syncRouteQueryAndReload()
 }
 
 function handleQueryClear() {
-  if (!keywordQuery.value) {
+  if (!keywordQuery.value && !selectedCustomerUuid.value) {
     return
   }
 
   keywordQuery.value = ""
+  selectedCustomerUuid.value = ""
   void syncRouteQueryAndReload()
 }
 
@@ -451,6 +563,7 @@ async function syncRouteQueryAndReload() {
       query: {
         ...route.query,
         q: keywordQuery.value || undefined,
+        customerUuid: selectedCustomerUuid.value || undefined,
       },
     })
   } finally {
@@ -505,6 +618,21 @@ function normalizeQueryValue(value: unknown) {
       @query-change="handleQueryChange"
       @query-clear="handleQueryClear"
     >
+      <template #cell-customerName="{ row }">
+        <button
+          v-if="getFeedbackCustomerUuid(row)"
+          type="button"
+          class="inline-flex max-w-full min-w-0 items-center gap-1 text-left text-link transition-colors hover:text-link-hover"
+          @click.stop="openCustomerDetail(row)"
+        >
+          <span class="truncate">{{ getFeedbackCustomerName(row) }}</span>
+          <i class="ri-arrow-right-up-line shrink-0 text-sm" />
+        </button>
+        <span v-else class="block truncate">
+          {{ getFeedbackCustomerName(row) }}
+        </span>
+      </template>
+
       <template #cell-content="{ row }">
         <p class="w-full min-w-0 truncate text-sm leading-5 text-muted-foreground" :title="getFeedbackContent(row)">
           {{ getFeedbackContent(row) }}
