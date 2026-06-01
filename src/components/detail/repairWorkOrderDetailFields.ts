@@ -131,6 +131,7 @@ export function buildRepairWorkOrderSecondarySections(workOrder: RepairWorkOrder
         },
         ...buildMediaFileRows(workOrder.BeforeRepairFile, "维修前图片", "before-repair-file"),
         ...buildMediaFileRows(workOrder.AfterRepairFile, "维修后图片", "after-repair-file"),
+        ...buildMediaFileRows(resolveReviewVideoFiles(workOrder), "复核视频", "review-video-file"),
       ],
     },
   ]
@@ -173,6 +174,27 @@ function buildMediaFileRows(value: unknown, label: string, key: string) {
     value: `${mediaFiles.length} 个附件`,
     mediaFiles,
   }]
+}
+
+function resolveReviewVideoFiles(workOrder: RepairWorkOrderDetailResult): WorkOrderFile[] {
+  const reviewFiles = normalizeReviewVideoWorkOrderFiles(workOrder.ReviewVideoFile)
+
+  if (reviewFiles.length) {
+    return reviewFiles
+  }
+
+  const videoUrl = toText(workOrder.VideoUrl)
+  return videoUrl ? [{ Url: videoUrl, Type: 2 }] : []
+}
+
+function normalizeReviewVideoWorkOrderFiles(value: unknown): WorkOrderFile[] {
+  if (!Array.isArray(value)) {
+    return []
+  }
+
+  return value
+    .filter((file): file is WorkOrderFile => Boolean(file && typeof file === "object" && toText((file as WorkOrderFile).Url)))
+    .map(file => ({ ...file, Type: 2 }))
 }
 
 function normalizeWorkOrderMediaFiles(value: unknown, keyPrefix: string, altPrefix: string): DetailFieldMediaFile[] {

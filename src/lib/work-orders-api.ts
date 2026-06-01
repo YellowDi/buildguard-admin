@@ -255,6 +255,7 @@ export type RepairWorkOrderDetailResult = {
   BeforeRepairFile?: WorkOrderFile[]
   RepairFile?: WorkOrderFile[]
   ReviewVideoFile?: WorkOrderFile[]
+  VideoUrl?: string
   RepairContent?: string
   CategoryContent?: string
   CategoryName?: string
@@ -979,7 +980,7 @@ function normalizeRepairWorkOrderListItem(value: unknown): RepairWorkOrderListIt
     AfterRepairFile: getFirstWorkOrderFiles(record, ["AfterRepairFile", "afterRepairFile"]),
     BeforeRepairFile: getFirstWorkOrderFiles(record, ["BeforeRepairFile", "beforeRepairFile"]),
     RepairFile: getFirstWorkOrderFiles(record, ["RepairFile", "repairFile"]),
-    ReviewVideoFile: getFirstWorkOrderFiles(record, [
+    ReviewVideoFile: getFirstWorkOrderVideoFiles(record, [
       "ReviewVideoFile",
       "reviewVideoFile",
       "ReviewVideo",
@@ -990,7 +991,16 @@ function normalizeRepairWorkOrderListItem(value: unknown): RepairWorkOrderListIt
       "repairReviewVideoFile",
       "RepairReviewVideos",
       "repairReviewVideos",
+      "VideoUrl",
+      "videoUrl",
+      "VideoURL",
+      "videoURL",
+      "ReviewVideoUrl",
+      "reviewVideoUrl",
+      "ReviewVideoURL",
+      "reviewVideoURL",
     ]),
+    VideoUrl: getFirstText(record, ["VideoUrl", "videoUrl", "VideoURL", "videoURL"]),
     RepairContent: getFirstText(record, ["RepairContent", "repairContent"]),
     CategoryContent: getFirstText(record, ["CategoryContent", "categoryContent"]),
     CategoryName: getFirstText(record, ["CategoryName", "categoryName"]),
@@ -1720,6 +1730,14 @@ function getFirstWorkOrderFiles(record: Record<string, unknown>, keys: string[])
   }
 
   return []
+}
+
+function getFirstWorkOrderVideoFiles(record: Record<string, unknown>, keys: string[]): WorkOrderFile[] {
+  return getFirstWorkOrderFiles(record, keys)
+    .map(file => ({
+      ...file,
+      Type: 2,
+    }))
 }
 
 function normalizeWorkOrderFiles(value: unknown): WorkOrderFile[] {

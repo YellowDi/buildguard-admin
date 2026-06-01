@@ -42,7 +42,18 @@ const mediaGroups = computed<RepairMediaGroup[]>(() => {
 })
 const hasContent = computed(() => Boolean(props.workOrder))
 const repairContentText = computed(() => toText(props.workOrder?.RepairContent))
-const reviewVideoFiles = computed(() => normalizeFiles(props.workOrder?.ReviewVideoFile).filter(isVideo))
+const reviewVideoFiles = computed(() => normalizeReviewVideoFiles(props.workOrder).filter(isVideo))
+
+function normalizeReviewVideoFiles(workOrder: RepairWorkOrderDetailResult | null) {
+  const reviewFiles = normalizeFiles(workOrder?.ReviewVideoFile)
+
+  if (reviewFiles.length) {
+    return reviewFiles.map(file => ({ ...file, Type: 2 }))
+  }
+
+  const videoUrl = toText(workOrder?.VideoUrl)
+  return videoUrl ? [{ Url: videoUrl, Type: 2 }] : []
+}
 
 function normalizeFiles(value: unknown) {
   return Array.isArray(value)
