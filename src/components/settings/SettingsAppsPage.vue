@@ -130,14 +130,14 @@ const selectedRelease = computed(() => {
 const distributionLabel = computed(() => {
   return selectedRelease.value?.platform === "ios" ? "App Store 地址" : "APK 安装包"
 })
-const distributionHint = computed(() => {
+const distributionUrl = computed(() => {
   if (!selectedRelease.value) {
-    return "-"
+    return ""
   }
 
   return selectedRelease.value.platform === "android"
-    ? selectedRelease.value.downloadUrl || "-"
-    : selectedRelease.value.appStoreUrl || "-"
+    ? selectedRelease.value.downloadUrl
+    : selectedRelease.value.appStoreUrl
 })
 const isAndroidReleaseForm = computed(() => releaseForm.platform === "android")
 
@@ -276,6 +276,38 @@ function toggleSearch() {
   if (!searchExpanded.value && versionQuery.value) {
     versionQuery.value = ""
   }
+}
+
+async function copyDistributionUrl() {
+  const url = distributionUrl.value.trim()
+
+  if (!url) {
+    toast.error(`暂无可复制的${distributionLabel.value}`)
+    return
+  }
+
+  if (!navigator.clipboard) {
+    toast.error("当前浏览器不支持复制")
+    return
+  }
+
+  try {
+    await navigator.clipboard.writeText(url)
+    toast.success(`${distributionLabel.value}已复制`)
+  } catch {
+    toast.error("复制失败，请手动复制链接")
+  }
+}
+
+function openDistributionUrl() {
+  const url = distributionUrl.value.trim()
+
+  if (!url) {
+    toast.error(`暂无可打开的${distributionLabel.value}`)
+    return
+  }
+
+  window.open(url, "_blank", "noopener,noreferrer")
 }
 
 async function refreshData() {
@@ -772,8 +804,27 @@ async function confirmDeleteRelease() {
                   <dt class="shrink-0 text-sm text-muted-foreground">
                     {{ distributionLabel }}
                   </dt>
-                  <dd class="min-w-0 truncate text-sm font-medium text-foreground">
-                    {{ distributionHint }}
+                  <dd class="flex shrink-0 items-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      class="h-8 rounded-md px-3"
+                      :disabled="!distributionUrl"
+                      @click="copyDistributionUrl"
+                    >
+                      <i class="ri-file-copy-line text-sm" />
+                      复制
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      class="h-8 rounded-md px-3"
+                      :disabled="!distributionUrl"
+                      @click="openDistributionUrl"
+                    >
+                      <i class="ri-external-link-line text-sm" />
+                      打开
+                    </Button>
                   </dd>
                 </div>
               </dl>
