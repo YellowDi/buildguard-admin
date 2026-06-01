@@ -98,6 +98,9 @@ function onFooterPrimary() {
       :aria-describedby="contentAriaDescribedBy"
     >
       <DrawerHeader class="shrink-0 border-b border-border/70 p-3">
+        <div v-if="$slots.actions" class="w-full">
+          <slot name="actions" />
+        </div>
         <DrawerTitle class="text-left text-base font-semibold leading-snug">
           <slot name="title">{{ title }}</slot>
         </DrawerTitle>
