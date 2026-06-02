@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue"
+import { computed, onMounted, ref, watch } from "vue"
 import { useRouter } from "vue-router"
 import { VisAxis, VisDonut, VisDonutSelectors, VisGroupedBar, VisSingleContainer, VisXYContainer } from "@unovis/vue"
 
@@ -135,7 +135,8 @@ const workOrderOverviewStates = ref<Record<WorkOrderOverviewKind, WorkOrderOverv
 const workOrderOverviewTimeRange = ref<TimeRange>("12m")
 const activeWorkOrderTableTab = ref<WorkOrderOverviewKind>("inspection")
 const activeWorkOrderStatusDistributionTab = ref<WorkOrderOverviewKind>("inspection")
-const activeDashboardCalendarTab = ref<AppSidebarCalendarItem["type"]>("inspection-plan")
+const dashboardCalendarTabOrder = ["work-order", "inspection-plan", "inspection-service"] as const satisfies AppSidebarCalendarItem["type"][]
+const activeDashboardCalendarTab = ref<AppSidebarCalendarItem["type"]>(dashboardCalendarTabOrder[0])
 const inspectionWorkOrderTableItems = ref<WorkOrderListItem[]>([])
 const repairWorkOrderTableItems = ref<RepairWorkOrderListItem[]>([])
 const {
@@ -345,16 +346,44 @@ const activeWorkOrderStatusDistributionChartConfig = computed<ChartConfig>(() =>
 ) as ChartConfig)
 const activeWorkOrderStatusDistributionTotal = computed(() => activeWorkOrderStatusDistributionSourceItems.value.length)
 const hasActiveWorkOrderStatusDistribution = computed(() => activeWorkOrderStatusDistributionItems.value.some(item => item.value > 0))
+const dashboardCalendarFutureEventsByType = computed<Record<AppSidebarCalendarItem["type"], AppSidebarCalendarItem[]>>(() => {
+  const todayKey = getTodayDateKey()
+  const eventsByType: Record<AppSidebarCalendarItem["type"], AppSidebarCalendarItem[]> = {
+    "work-order": [],
+    "inspection-plan": [],
+    "inspection-service": [],
+  }
+
+  for (const event of dashboardCalendarEvents.value) {
+    if (event.dateKey >= todayKey) {
+      eventsByType[event.type].push(event)
+    }
+  }
+
+  return eventsByType
+})
 const dashboardCalendarGroups = computed(() => {
   const todayKey = getTodayDateKey()
   return groupCalendarEventsByDate(
-    dashboardCalendarEvents.value.filter(event => (
-      event.type === activeDashboardCalendarTab.value
-      && event.dateKey >= todayKey
-    )),
+    dashboardCalendarFutureEventsByType.value[activeDashboardCalendarTab.value],
     todayKey,
   )
 })
+
+watch(
+  [dashboardCalendarLoading, dashboardCalendarFutureEventsByType, activeDashboardCalendarTab],
+  ([loading]) => {
+    if (loading) {
+      return
+    }
+
+    const nextTab = resolveDashboardCalendarTab(activeDashboardCalendarTab.value)
+    if (activeDashboardCalendarTab.value !== nextTab) {
+      activeDashboardCalendarTab.value = nextTab
+    }
+  },
+  { flush: "post" },
+)
 
 onMounted(() => {
   void loadDashboardStats()
@@ -434,6 +463,24 @@ function handleDashboardCalendarTabChange(value: string | number) {
   if (value === "work-order" || value === "inspection-plan" || value === "inspection-service") {
     activeDashboardCalendarTab.value = value
   }
+}
+
+function resolveDashboardCalendarTab(currentTab: AppSidebarCalendarItem["type"]) {
+  if (dashboardCalendarFutureEventsByType.value[currentTab].length) {
+    return currentTab
+  }
+
+  const currentIndex = dashboardCalendarTabOrder.indexOf(currentTab)
+  const startIndex = currentIndex >= 0 ? currentIndex : -1
+
+  for (let offset = 1; offset <= dashboardCalendarTabOrder.length; offset += 1) {
+    const candidate = dashboardCalendarTabOrder[(startIndex + offset) % dashboardCalendarTabOrder.length]
+    if (dashboardCalendarFutureEventsByType.value[candidate].length) {
+      return candidate
+    }
+  }
+
+  return dashboardCalendarTabOrder[0]
 }
 
 async function loadWorkOrderOverviews() {
