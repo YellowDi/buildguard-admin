@@ -216,7 +216,7 @@ const reportList = ref<WorkOrderReportItem[]>([])
 const reportListLoading = ref(false)
 const reportListError = ref("")
 const reportForm = ref({
-  remark: "",
+  expert: "",
 })
 
 const workOrderUuid = computed(() => typeof route.params.id === "string" ? route.params.id.trim() : "")
@@ -288,7 +288,6 @@ const inspectionBuildingCards = computed(() => (
     resolvedInspectionWorkOrder.value?.Deadline,
   )
 ))
-const inspectionExpertAdvice = computed(() => toText(resolvedInspectionWorkOrder.value?.Remark, ""))
 
 function openRepairCustomerDetail() {
   const targetCustomerUuid = toRepairWorkOrderText(repairWorkOrder.value?.CustomerUuid) || customerUuid.value
@@ -1617,7 +1616,7 @@ function openReportDialog(buildingKey: string) {
   }
 
   reportForm.value = {
-    remark: toText(currentWorkOrder.Remark, ""),
+    expert: "",
   }
   reportBuilding.value = currentBuilding
   setGeneratedReportState(findLatestGeneratedInspectionReport(currentWorkOrder, currentBuilding))
@@ -1841,7 +1840,7 @@ async function submitReportGeneration() {
     const reportResult = await generateWorkOrderGnReport({
       BuildUuid: buildUuid,
       WorkOrderUuid: targetWorkOrderUuid,
-      Expert: reportForm.value.remark,
+      Expert: reportForm.value.expert,
     })
     const version = resolveGeneratedReportVersion(reportResult, generatedReport.value)
     const record = createInspectionReportFromGnReport({
@@ -1853,7 +1852,6 @@ async function submitReportGeneration() {
         ...reportResult,
         BuildName: toText(reportResult.BuildName, toText(currentBuilding.BuildName, "当前建筑")),
         BuildUuid: toText(reportResult.BuildUuid, buildUuid),
-        Expert: toText(reportResult.Expert, reportForm.value.remark),
       },
       version,
       workOrderUuid: targetWorkOrderUuid,
@@ -2550,11 +2548,9 @@ async function submitAssign() {
         <div v-else-if="!loading && hasWorkOrder" class="pb-5">
           <InspectionBuildingCards
             :buildings="inspectionBuildingCards"
-            :expert-advice="inspectionExpertAdvice"
             title="建筑与检测项"
             empty-title="暂无建筑检测项"
             empty-description="当前工单还没有返回建筑与检测项数据。"
-            show-expert-advice
             :show-report-action="canGenerateInspectionReport"
             @generate-report="openReportDialog"
           />
@@ -2776,7 +2772,7 @@ async function submitAssign() {
               </span>
             </span>
             <Textarea
-              v-model="reportForm.remark"
+              v-model="reportForm.expert"
               :disabled="reportSubmitting"
               class="min-h-24 resize-none bg-background leading-6"
               placeholder="填写专家处理建议，可留空"

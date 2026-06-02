@@ -41,6 +41,13 @@ export function buildWorkOrderPrimarySections(
         { key: "end-time", label: "结束时间", value: formatDateOnly(toText(workOrder.EndTime, "-")) },
         { key: "created-at", label: "创建时间", value: toText(workOrder.CreatedAt, "-") },
         { key: "updated-at", label: "更新时间", value: toText(workOrder.UpdatedAt, "-") },
+        {
+          key: "remark",
+          label: "备注",
+          value: toText(workOrder.Remark, "-"),
+          truncate: false,
+          valueClass: "leading-6",
+        },
       ],
     },
     {
@@ -102,13 +109,6 @@ export function buildWorkOrderSecondarySections(workOrder: WorkOrderDetailResult
         { key: "inspection-progress", label: "检查进度", value: formatBuildInspectionProgress(workOrder.Builds) },
         { key: "build-results", label: "建筑结果", value: formatBuildResults(workOrder.Builds) },
         { key: "build-scores", label: "建筑分数", value: formatBuildScores(workOrder.Builds) },
-        {
-          key: "remark",
-          label: "备注",
-          value: toText(workOrder.Remark, "-"),
-          truncate: false,
-          valueClass: "leading-6",
-        },
       ],
     },
   ]
