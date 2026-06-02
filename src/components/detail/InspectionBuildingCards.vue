@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import { Progress } from "@/components/ui/progress"
-import { StatusBadge } from "@/components/ui/status-badge"
+import { StatusBadge, type StatusBadgeIcon, type StatusBadgeTone } from "@/components/ui/status-badge"
 
 type InspectionBuildingStatus = "pending" | "processing" | "completed"
 
@@ -179,70 +179,6 @@ function handleGenerateReport(buildingKey: string) {
   emit("generate-report", buildingKey)
 }
 
-function resolveStatusIcon(status: InspectionBuildingStatus) {
-  if (status === "completed") {
-    return "ri-checkbox-circle-fill"
-  }
-
-  if (status === "processing") {
-    return "ri-loader-4-line"
-  }
-
-  return "ri-time-line"
-}
-
-function resolveStatusIconWrapClass(status: InspectionBuildingStatus) {
-  if (status === "completed") {
-    return "bg-success-surface text-success ring-1 ring-success/15"
-  }
-
-  if (status === "processing") {
-    return "bg-brand-surface text-link ring-1 ring-brand-border"
-  }
-
-  return "bg-warning-surface text-warning ring-1 ring-warning/15"
-}
-
-function resolveBuildingResultIcon(resultLabel: string | undefined, status: InspectionBuildingStatus) {
-  if (resultLabel === "正常") {
-    return "ri-checkbox-circle-fill"
-  }
-
-  if (resultLabel === "轻微风险") {
-    return "ri-error-warning-fill"
-  }
-
-  if (resultLabel === "存在隐患") {
-    return "ri-close-circle-fill"
-  }
-
-  if (resultLabel === "未反馈") {
-    return "ri-time-line"
-  }
-
-  return resultLabel ? "ri-indeterminate-circle-fill" : resolveStatusIcon(status)
-}
-
-function resolveBuildingResultIconWrapClass(resultLabel: string | undefined, status: InspectionBuildingStatus) {
-  if (resultLabel === "正常") {
-    return "bg-success-surface text-success ring-1 ring-success/15"
-  }
-
-  if (resultLabel === "轻微风险") {
-    return "bg-warning-surface text-warning ring-1 ring-warning/15"
-  }
-
-  if (resultLabel === "存在隐患") {
-    return "bg-destructive-surface text-destructive ring-1 ring-destructive/15"
-  }
-
-  if (resultLabel) {
-    return "bg-muted text-muted-foreground ring-1 ring-border/70"
-  }
-
-  return resolveStatusIconWrapClass(status)
-}
-
 function resolveInspectionBuildingStatusText(status: InspectionBuildingStatus) {
   if (status === "completed") {
     return "已完成"
@@ -263,32 +199,36 @@ function resolveBuildingStatusLabel(resultLabel: string | undefined, status: Ins
   return resolveInspectionBuildingStatusText(status)
 }
 
-function resolveBuildingStatusTextClass(resultLabel: string | undefined, status: InspectionBuildingStatus) {
-  if (resultLabel === "正常") {
-    return "text-success"
-  }
-
-  if (resultLabel === "轻微风险") {
-    return "text-warning"
-  }
-
-  if (resultLabel === "存在隐患") {
-    return "text-destructive"
-  }
-
+function resolveBuildingStatusBadgeTone(resultLabel: string | undefined, status: InspectionBuildingStatus): StatusBadgeTone {
   if (resultLabel) {
-    return "text-muted-foreground"
+    return resolveItemResultBadgeTone(resultLabel)
   }
 
   if (status === "completed") {
-    return "text-success"
+    return "green"
   }
 
   if (status === "processing") {
-    return "text-link"
+    return "blue"
   }
 
-  return "text-warning"
+  return "gray"
+}
+
+function resolveBuildingStatusBadgeIcon(resultLabel: string | undefined, status: InspectionBuildingStatus): StatusBadgeIcon {
+  if (resultLabel) {
+    return resolveItemResultBadgeIcon(resultLabel)
+  }
+
+  if (status === "completed") {
+    return "check"
+  }
+
+  if (status === "processing") {
+    return "clock"
+  }
+
+  return "dot"
 }
 
 function resolveScoreTone(scoreValue: number | null) {
@@ -434,29 +374,12 @@ function handleExpandAfterLeave(element: Element) {
                 <div class="min-w-0 flex-1">
                   <div class="flex min-w-0 items-start justify-between gap-3">
                     <div class="flex min-w-0 items-center gap-2.5">
-                      <div
-                        :aria-label="resolveBuildingStatusLabel(building.resultLabel, building.status)"
-                        :class="[
-                          'flex size-7 shrink-0 items-center justify-center rounded-[10px] transition-colors duration-180',
-                          resolveBuildingResultIconWrapClass(building.resultLabel, building.status),
-                        ]"
-                      >
-                        <i
-                          :class="[
-                            resolveBuildingResultIcon(building.resultLabel, building.status),
-                            !building.resultLabel && building.status === 'processing' ? 'animate-spin' : '',
-                            'text-[15px]',
-                          ]"
-                        />
-                      </div>
-                      <div
-                        :class="[
-                          'shrink-0 whitespace-nowrap text-[12px] font-semibold leading-none',
-                          resolveBuildingStatusTextClass(building.resultLabel, building.status),
-                        ]"
-                      >
-                        {{ resolveBuildingStatusLabel(building.resultLabel, building.status) }}
-                      </div>
+                      <StatusBadge
+                        :label="resolveBuildingStatusLabel(building.resultLabel, building.status)"
+                        :tone="resolveBuildingStatusBadgeTone(building.resultLabel, building.status)"
+                        :icon="resolveBuildingStatusBadgeIcon(building.resultLabel, building.status)"
+                        class="h-7 shrink-0 rounded-[10px] pl-1.5 pr-2.5 text-[12px] font-semibold"
+                      />
                       <div class="truncate whitespace-nowrap text-[18px] font-semibold text-foreground">
                         {{ building.buildName }}
                       </div>
