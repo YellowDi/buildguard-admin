@@ -21,25 +21,25 @@ import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { fetchBuildings, type BuildingListItem } from "@/lib/buildings-api"
-import { fetchInspectionPlans, type InspectionPlanListItem } from "@/lib/inspection-plans-api"
+import { fetchCustomers } from "@/lib/customers-api"
+import { fetchInspectionPlans } from "@/lib/inspection-plans-api"
+import { fetchInspectionServices } from "@/lib/inspection-services-api"
+import { fetchParks } from "@/lib/parks-api"
 import { isCompletedRepairWorkOrderStatus, isCompletedWorkOrderStatus } from "@/lib/work-order-status"
 import { fetchRepairWorkOrders, fetchWorkOrders, type RepairWorkOrderListItem, type WorkOrderListItem } from "@/lib/work-orders-api"
 import { handleApiError } from "@/lib/api-errors"
-import customersData from "@/mocks/customers.json"
-import parksData from "@/mocks/parks.json"
 
 type TimeRange = "12m" | "6m" | "3m"
 type WorkOrderOverviewKind = "inspection" | "repair"
 
-type CustomerRecord = {
-  packageCode: string
-}
-
-type ParkRecord = {
-  buildingCount: number
-}
-
 type BuildingRiskTab = "high-risk" | "rectification" | "excellent"
+
+type DashboardStats = {
+  customerTotal: number | null
+  parkTotal: number | null
+  inspectionServiceTotal: number | null
+  inspectionPlanTotal: number | null
+}
 
 type BuildingRankingItem = {
   id: string
@@ -53,8 +53,6 @@ type BuildingRankingItem = {
   riskLabel: string
 }
 
-const customerRecords = customersData as CustomerRecord[]
-const parkRecords = parksData as ParkRecord[]
 const router = useRouter()
 
 type WorkOrderHistoryDatum = {
@@ -124,6 +122,13 @@ const activeBuildingRiskTab = ref<BuildingRiskTab>("high-risk")
 const buildingRankingItems = ref<BuildingRankingItem[]>([])
 const buildingRankingLoading = ref(false)
 const buildingRankingError = ref("")
+const dashboardStatsLoading = ref(true)
+const dashboardStats = ref<DashboardStats>({
+  customerTotal: null,
+  parkTotal: null,
+  inspectionServiceTotal: null,
+  inspectionPlanTotal: null,
+})
 
 const workOrderOverview = computed(() => {
   const inspectionState = workOrderOverviewStates.value.inspection
@@ -149,40 +154,35 @@ const workOrderOverview = computed(() => {
 })
 
 const numberFormatter = new Intl.NumberFormat("zh-CN")
-const totalParkCount = parkRecords.length
-const totalBuildingCount = parkRecords.reduce((sum, item) => sum + item.buildingCount, 0)
-const signedContractCount = customerRecords.filter(item => item.packageCode).length
-const totalInspectionPlanCount = ref(0)
-const activeInspectionPlanCount = ref(0)
 
 const statsCards = computed(() => [
   {
     title: "平台客户总数",
-    value: numberFormatter.format(customerRecords.length),
+    value: formatDashboardStat(dashboardStats.value.customerTotal),
     unit: "家",
-    detail: "当前平台已签约并接入的客户数量",
-    highlight: `${numberFormatter.format(customerRecords.length)} 家客户正常服务中`,
+    detail: "正在平台内服务的客户规模",
+    loading: dashboardStatsLoading.value,
   },
   {
     title: "空间覆盖",
-    value: numberFormatter.format(totalParkCount),
+    value: formatDashboardStat(dashboardStats.value.parkTotal),
     unit: "个园区",
-    detail: "当前平台已接入的园区与建筑空间范围",
-    highlight: `${numberFormatter.format(totalParkCount)} 个园区 / ${numberFormatter.format(totalBuildingCount)} 栋建筑`,
+    detail: "已纳入管理的园区范围",
+    loading: dashboardStatsLoading.value,
   },
   {
-    title: "签约合同总数",
-    value: numberFormatter.format(signedContractCount),
-    unit: "份",
-    detail: "按已签约客户检测服务统计合同总量",
-    highlight: `${numberFormatter.format(signedContractCount)} 份合同已完成签约归档`,
+    title: "检测服务",
+    value: formatDashboardStat(dashboardStats.value.inspectionServiceTotal),
+    unit: "项",
+    detail: "可执行的检测服务配置",
+    loading: dashboardStatsLoading.value,
   },
   {
-    title: "检测计划（执行中）",
-    value: numberFormatter.format(activeInspectionPlanCount.value),
+    title: "检测计划",
+    value: formatDashboardStat(dashboardStats.value.inspectionPlanTotal),
     unit: "个",
-    detail: "当前状态为进行中的检测计划数量",
-    highlight: `${numberFormatter.format(totalInspectionPlanCount.value)} 个检测计划已纳入排期`,
+    detail: "已安排的周期检测任务",
+    loading: dashboardStatsLoading.value,
   },
 ])
 
@@ -235,9 +235,9 @@ const buildingRankedGroups = computed(() => ({
 const activeBuildingList = computed(() => buildingRankedGroups.value[activeBuildingRiskTab.value] ?? [])
 
 onMounted(() => {
+  void loadDashboardStats()
   void loadWorkOrderOverviews()
   void loadBuildingRanking()
-  void loadInspectionPlanSummary()
 })
 
 function formatMonthLabel(date: number | Date, locale = "zh-CN") {
@@ -360,6 +360,34 @@ async function loadWorkOrderOverviews() {
   repairState.loading = false
 }
 
+async function loadDashboardStats() {
+  dashboardStatsLoading.value = true
+
+  const [
+    customerResult,
+    parkResult,
+    inspectionServiceResult,
+    inspectionPlanResult,
+  ] = await Promise.allSettled([
+    fetchCustomers({ PageNum: 1, PageSize: 1 }),
+    fetchParks({ PageNum: 1, PageSize: 1 }),
+    fetchInspectionServices({ PageNum: 1, PageSize: 1 }),
+    fetchInspectionPlans({ PageNum: 1, PageSize: 1 }),
+  ])
+
+  dashboardStats.value = {
+    customerTotal: customerResult.status === "fulfilled" ? customerResult.value.total : null,
+    parkTotal: parkResult.status === "fulfilled" ? parkResult.value.total : null,
+    inspectionServiceTotal: inspectionServiceResult.status === "fulfilled" ? inspectionServiceResult.value.total : null,
+    inspectionPlanTotal: inspectionPlanResult.status === "fulfilled" ? inspectionPlanResult.value.total : null,
+  }
+  dashboardStatsLoading.value = false
+}
+
+function formatDashboardStat(value: number | null) {
+  return typeof value === "number" ? numberFormatter.format(value) : "-"
+}
+
 async function fetchAllBuildings() {
   const pageSize = 200
   const allItems: BuildingListItem[] = []
@@ -424,45 +452,6 @@ async function fetchAllRepairWorkOrders() {
 
   while (pageNum <= 20) {
     const result = await fetchRepairWorkOrders({
-      PageNum: pageNum,
-      PageSize: pageSize,
-    })
-
-    if (pageNum === 1) {
-      total = result.total
-    }
-
-    allItems.push(...result.list)
-
-    if (!result.list.length || (total > 0 && allItems.length >= total)) {
-      break
-    }
-
-    pageNum += 1
-  }
-
-  return allItems
-}
-
-async function loadInspectionPlanSummary() {
-  try {
-    const plans = await fetchAllInspectionPlans()
-    totalInspectionPlanCount.value = plans.length
-    activeInspectionPlanCount.value = plans.filter(plan => toText(plan.PlanStatus) === "进行中").length
-  } catch {
-    totalInspectionPlanCount.value = 0
-    activeInspectionPlanCount.value = 0
-  }
-}
-
-async function fetchAllInspectionPlans() {
-  const pageSize = 200
-  const allItems: InspectionPlanListItem[] = []
-  let pageNum = 1
-  let total = 0
-
-  while (pageNum <= 20) {
-    const result = await fetchInspectionPlans({
       PageNum: pageNum,
       PageSize: pageSize,
     })
@@ -793,8 +782,13 @@ function hashText(value: string) {
         </CardHeader>
 
         <Card :class="statsCardClass">
-          <CardContent class="flex h-[132px] flex-col justify-between px-4 py-3">
-            <div class="space-y-1.5">
+          <CardContent class="flex flex-col px-4 py-3.5">
+            <div v-if="stat.loading" class="space-y-2">
+              <Skeleton class="h-9 w-24 rounded-md" />
+              <Skeleton class="h-5 w-44 rounded-md" />
+            </div>
+
+            <div v-else class="space-y-1.5">
               <div class="text-[1.75rem] font-semibold tabular-nums tracking-tight text-foreground sm:text-[1.875rem]">
                 {{ stat.value }}
                 <span class="ml-1 text-[1rem] font-medium text-muted-foreground sm:text-[1.125rem]">
@@ -804,10 +798,6 @@ function hashText(value: string) {
               <div class="text-sm text-muted-foreground">
                 {{ stat.detail }}
               </div>
-            </div>
-
-            <div class="text-sm font-medium text-foreground">
-              {{ stat.highlight }}
             </div>
           </CardContent>
         </Card>
