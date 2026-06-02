@@ -222,7 +222,7 @@
   min-width: 0;
 }
 
-@container detail-layout (min-width: 68rem) {
+@container detail-layout (min-width: 60rem) {
   .detail-layout__content {
     grid-template-columns: minmax(0, 0.88fr) 1px minmax(0, 1.12fr);
     grid-template-rows: minmax(0, 1fr);
