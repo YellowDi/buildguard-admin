@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue"
 import { useRouter } from "vue-router"
-import { VisAxis, VisGroupedBar, VisXYContainer } from "@unovis/vue"
+import { VisAxis, VisDonut, VisDonutSelectors, VisGroupedBar, VisSingleContainer, VisXYContainer } from "@unovis/vue"
 
 import type { ChartConfig } from "@/components/ui/chart"
 import {
@@ -30,7 +30,6 @@ import { StatusBadge, type StatusBadgeIcon, type StatusBadgeTone } from "@/compo
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { fetchBuildings, type BuildingListItem } from "@/lib/buildings-api"
 import { fetchCustomers } from "@/lib/customers-api"
 import { fetchInspectionPlans } from "@/lib/inspection-plans-api"
 import { fetchInspectionServices } from "@/lib/inspection-services-api"
@@ -47,8 +46,6 @@ import { handleApiError } from "@/lib/api-errors"
 type TimeRange = "12m" | "6m" | "3m"
 type WorkOrderOverviewKind = "inspection" | "repair"
 
-type BuildingRiskTab = "high-risk" | "rectification" | "excellent"
-
 type DashboardStats = {
   customerTotal: number | null
   parkTotal: number | null
@@ -56,16 +53,12 @@ type DashboardStats = {
   inspectionPlanTotal: number | null
 }
 
-type BuildingRankingItem = {
+type InspectionStatusDistributionItem = {
   id: string
-  uuid: string
-  parkUuid: string
-  name: string
-  customerName: string
-  parkName: string
-  score: number
-  riskTab: BuildingRiskTab
-  riskLabel: string
+  label: string
+  value: number
+  color: string
+  status: number | null
 }
 
 const router = useRouter()
@@ -152,10 +145,6 @@ const workOrderHistoryChartConfig = {
   },
 } satisfies ChartConfig
 
-const activeBuildingRiskTab = ref<BuildingRiskTab>("high-risk")
-const buildingRankingItems = ref<BuildingRankingItem[]>([])
-const buildingRankingLoading = ref(false)
-const buildingRankingError = ref("")
 const dashboardStatsLoading = ref(true)
 const dashboardStats = ref<DashboardStats>({
   customerTotal: null,
@@ -208,6 +197,7 @@ const dateFormatter = new Intl.DateTimeFormat("zh-CN", {
   month: "2-digit",
   day: "2-digit",
 })
+const inspectionStatusDistributionLimit = 100
 
 const statsCards = computed(() => [
   {
@@ -244,7 +234,7 @@ const dashboardCardBackgroundClass = "dashboard-card-surface"
 const dashboardCardShellHoverBackgroundClass = "dashboard-card-shell-hover-surface"
 const dashboardCardHoverBackgroundClass = "dashboard-card-hover-surface"
 const dashboardGroupHoverCardBackgroundClass = "dashboard-card-group-hover-surface"
-const chartCardClass = `flex h-full min-w-0 w-full flex-col gap-0 overflow-hidden border-border/60 ${dashboardCardBackgroundClass} py-0 shadow-none transition-[background-color,border-color,box-shadow] group-hover:border-transparent ${dashboardGroupHoverCardBackgroundClass} group-hover:shadow-(--shadow-card)`
+const chartCardClass = `flex min-w-0 w-full flex-col gap-0 overflow-hidden border-border/60 ${dashboardCardBackgroundClass} py-0 shadow-none transition-[background-color,border-color,box-shadow] group-hover:border-transparent ${dashboardGroupHoverCardBackgroundClass} group-hover:shadow-(--shadow-card)`
 const statsShellClass = `group flex min-w-0 w-full flex-col gap-2 rounded-xl p-0 transition-colors ${dashboardCardShellHoverBackgroundClass} sm:p-2`
 const statsCardClass = `flex min-w-0 w-full flex-col overflow-hidden border-border/60 ${dashboardCardBackgroundClass} py-0 shadow-none transition-[background-color,border-color,box-shadow] group-hover:border-transparent ${dashboardGroupHoverCardBackgroundClass} group-hover:shadow-(--shadow-card)`
 const chartHeaderClass = "flex items-center px-0 sm:min-h-8 sm:pl-2 sm:pr-0"
@@ -258,8 +248,7 @@ const dashboardPlaceholderCardClass = `flex h-full min-h-[160px] min-w-0 w-full 
 const dashboardSummaryCardClass = "dashboard-summary-card-surface rounded-lg border border-border/60 px-3 py-1.5 transition-colors"
 const dashboardTabsListClass = "rounded-[8px] bg-card-background p-0.5"
 const dashboardTabsTriggerClass = "rounded-[6px]"
-const buildingRankingPanelClass = "h-[520px] overflow-hidden"
-const buildingRankingRowClass = "h-[52px]"
+const inspectionStatusPanelClass = "overflow-hidden"
 const workOrderTimeRangeTabs = [
   { id: "12m", label: "12个月" },
   { id: "6m", label: "6个月" },
@@ -269,33 +258,74 @@ const workOrderTableTabs = [
   { id: "inspection", label: "检测工单" },
   { id: "repair", label: "报修工单" },
 ] satisfies Array<{ id: WorkOrderOverviewKind, label: string }>
-const buildingRiskTabs = [
-  { id: "high-risk", label: "高危" },
-  { id: "rectification", label: "整改" },
-  { id: "excellent", label: "优秀" },
-] satisfies Array<{ id: BuildingRiskTab, label: string }>
+const inspectionStatusColorById: Record<string, string> = {
+  "status-1": "var(--color-blue-300)",
+  "status-2": "var(--color-blue-400)",
+  "status-3": "var(--color-blue-500)",
+  "status-4": "var(--color-blue-600)",
+  "status-5": "var(--color-blue-700)",
+  "status-6": "var(--color-blue-800)",
+  unknown: "var(--color-blue-200)",
+}
+const inspectionStatusFallbackColors = [
+  "var(--color-blue-300)",
+  "var(--color-blue-400)",
+  "var(--color-blue-500)",
+  "var(--color-blue-600)",
+  "var(--color-blue-700)",
+] as const
 
-const buildingRankedGroups = computed(() => ({
-  "high-risk": buildingRankingItems.value
-    .filter(item => item.riskTab === "high-risk")
-    .sort((a, b) => a.score - b.score)
-    .slice(0, 10),
-  rectification: buildingRankingItems.value
-    .filter(item => item.riskTab === "rectification")
-    .sort((a, b) => a.score - b.score)
-    .slice(0, 10),
-  excellent: buildingRankingItems.value
-    .filter(item => item.riskTab === "excellent")
-    .sort((a, b) => b.score - a.score)
-    .slice(0, 10),
-}))
+const inspectionStatusDistributionState = computed(() => workOrderOverviewStates.value.inspection)
+const inspectionStatusDistributionSourceItems = computed(() => inspectionWorkOrderTableItems.value
+  .map((item, index) => ({
+    item,
+    index,
+    dateTime: resolveWorkOrderDate(item)?.getTime() ?? 0,
+  }))
+  .sort((left, right) => right.dateTime - left.dateTime || left.index - right.index)
+  .slice(0, inspectionStatusDistributionLimit)
+  .map(entry => entry.item))
 
-const activeBuildingList = computed(() => buildingRankedGroups.value[activeBuildingRiskTab.value] ?? [])
+const inspectionStatusDistributionItems = computed<InspectionStatusDistributionItem[]>(() => {
+  const counts = new Map<string, Omit<InspectionStatusDistributionItem, "color">>()
+
+  for (const item of inspectionStatusDistributionSourceItems.value) {
+    const status = toFiniteNumber(item.Status)
+    const id = status === null ? "unknown" : `status-${status}`
+    const current = counts.get(id) ?? {
+      id,
+      label: getWorkOrderStatusLabel(status),
+      value: 0,
+      status,
+    }
+
+    current.value += 1
+    counts.set(id, current)
+  }
+
+  return Array.from(counts.values())
+    .sort((left, right) => getInspectionStatusSortRank(left.status) - getInspectionStatusSortRank(right.status))
+    .map((item, index) => ({
+      ...item,
+      color: inspectionStatusColorById[item.id] ?? inspectionStatusFallbackColors[index % inspectionStatusFallbackColors.length],
+    }))
+})
+
+const inspectionStatusDistributionChartConfig = computed<ChartConfig>(() => Object.fromEntries(
+  inspectionStatusDistributionItems.value.map(item => [
+    item.id,
+    {
+      label: item.label,
+      color: item.color,
+    },
+  ]),
+) as ChartConfig)
+const inspectionStatusDistributionTotal = computed(() => inspectionStatusDistributionSourceItems.value.length)
+const hasInspectionStatusDistribution = computed(() => inspectionStatusDistributionItems.value.some(item => item.value > 0))
 
 onMounted(() => {
   void loadDashboardStats()
   void loadWorkOrderOverviews()
-  void loadBuildingRanking()
 })
 
 function formatMonthLabel(date: number | Date, locale = "zh-CN") {
@@ -357,24 +387,6 @@ function handleWorkOrderOverviewTimeRangeChange(value: unknown) {
 function handleWorkOrderTableTabChange(value: string | number) {
   if (value === "inspection" || value === "repair") {
     activeWorkOrderTableTab.value = value
-  }
-}
-
-async function loadBuildingRanking() {
-  buildingRankingLoading.value = true
-  buildingRankingError.value = ""
-
-  try {
-    const items = await fetchAllBuildings()
-    buildingRankingItems.value = items.map((item, index) => normalizeBuildingRankingItem(item, index))
-  } catch (error) {
-    buildingRankingItems.value = []
-    buildingRankingError.value = handleApiError(error, {
-      mode: "silent",
-      fallback: "建筑排行加载失败，请稍后重试。",
-    })
-  } finally {
-    buildingRankingLoading.value = false
   }
 }
 
@@ -454,34 +466,6 @@ async function loadDashboardStats() {
 
 function formatDashboardStat(value: number | null) {
   return typeof value === "number" ? numberFormatter.format(value) : "-"
-}
-
-async function fetchAllBuildings() {
-  const pageSize = 200
-  const allItems: BuildingListItem[] = []
-  let pageNum = 1
-  let total = 0
-
-  while (pageNum <= 20) {
-    const result = await fetchBuildings({
-      PageNum: pageNum,
-      PageSize: pageSize,
-    })
-
-    if (pageNum === 1) {
-      total = result.total
-    }
-
-    allItems.push(...result.list)
-
-    if (!result.list.length || (total > 0 && allItems.length >= total)) {
-      break
-    }
-
-    pageNum += 1
-  }
-
-  return allItems
 }
 
 async function fetchAllWorkOrders() {
@@ -822,115 +806,56 @@ function toMonthKey(date: Date) {
   return `${year}-${month}`
 }
 
-function normalizeBuildingRankingItem(item: BuildingListItem, index: number): BuildingRankingItem {
-  const uuid = toText(item.Uuid, toText(item.Id, `building-${index + 1}`))
-  const parkUuid = toText(item.ParkUuid, "")
-  const score = resolveBuildingScore(item, index)
-  const riskTab = resolveBuildingRiskTab(item, score)
-
-  return {
-    id: uuid,
-    uuid,
-    parkUuid,
-    name: toText(item.Name, "未命名建筑"),
-    customerName: resolveBuildingCustomerName(item),
-    parkName: toText(item.ParkName, "未命名园区"),
-    score,
-    riskTab,
-    riskLabel: formatRiskLabel(riskTab),
-  }
+function getInspectionStatusSortRank(status: number | null) {
+  return status ?? Number.MAX_SAFE_INTEGER
 }
 
-function resolveBuildingScore(item: BuildingListItem, index: number) {
-  const candidateKeys = [
-    "Score",
-    "score",
-    "TotalScore",
-    "totalScore",
-    "RiskScore",
-    "riskScore",
-    "SafetyScore",
-    "safetyScore",
-    "Rating",
-    "rating",
-  ] as const
+function formatInspectionStatusDistributionTooltip(value: unknown) {
+  const item = getInspectionStatusDistributionTooltipItem(value)
 
-  for (const key of candidateKeys) {
-    const value = toFiniteNumber(item[key])
-    if (value !== null) {
-      return clampScore(value)
-    }
+  if (!item) {
+    return ""
   }
 
-  return 55 + (Math.abs(hashText([
-    toText(item.Uuid, ""),
-    toText(item.Name, ""),
-    toText(item.ParkName, ""),
-    String(index),
-  ].join("|"))) % 45)
+  return `
+    <div class="border-border/50 bg-background grid min-w-[8rem] gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs shadow-xl">
+      <div class="flex items-center gap-2">
+        <span class="size-2.5 rounded-[2px]" style="background-color: ${item.color};"></span>
+        <span class="font-medium text-foreground">${item.label}</span>
+      </div>
+      <div class="flex items-center justify-between gap-4 text-muted-foreground">
+        <span>数量</span>
+        <span class="font-mono font-medium tabular-nums text-foreground">${numberFormatter.format(item.value)}</span>
+      </div>
+      <div class="flex items-center justify-between gap-4 text-muted-foreground">
+        <span>占比</span>
+        <span class="font-mono font-medium tabular-nums text-foreground">${formatInspectionStatusDistributionPercent(item.value)}</span>
+      </div>
+    </div>
+  `
 }
 
-function resolveBuildingRiskTab(item: BuildingListItem, score: number): BuildingRiskTab {
-  const riskText = [
-    toText(item.RiskLevel, ""),
-    toText(item.RiskStatus, ""),
-    toText(item.Level, ""),
-    toText(item.Status, ""),
-    toText(item.Tag, ""),
-  ].join(" ")
-
-  if (/(高危|高风险|严重|紧急)/.test(riskText)) {
-    return "high-risk"
+function getInspectionStatusDistributionTooltipItem(value: unknown) {
+  if (!value || typeof value !== "object") {
+    return null
   }
 
-  if (/(整改|待整改|复查|隐患)/.test(riskText)) {
-    return "rectification"
+  const record = value as { data?: unknown }
+  const item = (record.data && typeof record.data === "object" ? record.data : value) as Partial<InspectionStatusDistributionItem>
+
+  if (typeof item.label !== "string" || typeof item.value !== "number" || typeof item.color !== "string") {
+    return null
   }
 
-  if (/(优秀|良好|达标|低风险)/.test(riskText)) {
-    return "excellent"
-  }
-
-  if (score < 60) {
-    return "high-risk"
-  }
-
-  if (score < 85) {
-    return "rectification"
-  }
-
-  return "excellent"
+  return item as InspectionStatusDistributionItem
 }
 
-function goToBuildingDetail(item: BuildingRankingItem) {
-  if (!item.uuid || !item.parkUuid) {
-    return
+function formatInspectionStatusDistributionPercent(value: number) {
+  if (!inspectionStatusDistributionTotal.value) {
+    return "0%"
   }
 
-  void router.push({
-    name: "building-detail",
-    params: { id: item.uuid },
-    query: { parkUuid: item.parkUuid },
-  })
-}
-
-function formatRiskLabel(value: BuildingRiskTab) {
-  if (value === "high-risk") return "高危"
-  if (value === "rectification") return "整改"
-  return "优秀"
-}
-
-function handleBuildingRiskTabChange(value: string | number) {
-  if (value === "high-risk" || value === "rectification" || value === "excellent") {
-    activeBuildingRiskTab.value = value
-  }
-}
-
-function resolveBuildingCustomerName(item: BuildingListItem) {
-  return toText(
-    item.CustomerName,
-    toText(item.CompanyName, toText(item.Customer, "未命名客户")),
-  )
+  return `${Math.round((value / inspectionStatusDistributionTotal.value) * 100)}%`
 }
 
 function toText(value: unknown, fallback = "") {
@@ -960,20 +885,6 @@ function toFiniteNumber(value: unknown) {
   return null
 }
 
-function clampScore(value: number) {
-  return Math.max(0, Math.min(100, Math.round(value)))
-}
-
-function hashText(value: string) {
-  let hash = 0
-
-  for (const char of value) {
-    hash = ((hash << 5) - hash) + char.charCodeAt(0)
-    hash |= 0
-  }
-
-  return hash
-}
 </script>
 
 <template>
@@ -1325,112 +1236,94 @@ function hashText(value: string) {
 
       <div class="flex min-w-0 flex-col gap-4 xl:col-span-3">
         <div :class="dashboardTrendShellClass">
-          <CardHeader class="flex flex-col gap-3 px-0 sm:min-h-8 sm:flex-row sm:items-center sm:justify-between sm:pl-2 sm:pr-0">
-            <div class="flex items-center gap-3">
+          <CardHeader class="flex flex-col gap-2 px-0 sm:min-h-8 sm:flex-row sm:items-center sm:justify-between sm:pl-2 sm:pr-0">
+            <div class="flex flex-wrap items-center gap-3">
               <CardTitle :class="chartTitleClass">
-                风险排行
+                检测工单状态分布
               </CardTitle>
               <span class="text-xs text-muted-foreground">
-                按评分排序
+                最近 {{ inspectionStatusDistributionLimit }} 条
               </span>
-            </div>
-
-            <div class="w-fit shrink-0 self-start sm:self-auto">
-              <Tabs
-                :model-value="activeBuildingRiskTab"
-                aria-label="切换建筑风险排行"
-                @update:model-value="handleBuildingRiskTabChange"
-              >
-                <TabsList :class="dashboardTabsListClass">
-                  <TabsTrigger
-                    v-for="tab in buildingRiskTabs"
-                    :key="tab.id"
-                    :value="tab.id"
-                    :class="`${dashboardTabsTriggerClass} min-w-14 px-3 text-xs`"
-                  >
-                    {{ tab.label }}
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
             </div>
           </CardHeader>
 
           <div>
             <Card :class="`${chartCardClass} w-full`">
               <CardContent class="flex flex-col p-0">
-                <div :class="`flex flex-col ${buildingRankingPanelClass}`">
-                  <div v-if="buildingRankingError" class="flex h-full flex-col items-center justify-center gap-3 text-center">
+                <div :class="`flex flex-col ${inspectionStatusPanelClass}`">
+                  <div v-if="inspectionStatusDistributionState.error" class="flex min-h-[260px] flex-col items-center justify-center gap-3 px-4 text-center">
                     <div class="text-sm text-destructive">
-                      {{ buildingRankingError }}
+                      {{ inspectionStatusDistributionState.error }}
                     </div>
-                    <Button size="sm" variant="outline" class="gap-2" @click="loadBuildingRanking">
+                    <Button size="sm" variant="outline" class="gap-2" @click="loadWorkOrderOverviews">
                       <i class="ri-refresh-line text-sm" />
                       重试
                     </Button>
                   </div>
 
-                  <div v-else-if="buildingRankingLoading" class="flex h-full flex-col gap-0 p-0">
-                    <div
-                      v-for="rank in 10"
-                      :key="`building-rank-skeleton-${rank}`"
-                      :class="`${buildingRankingRowClass} flex w-full items-center gap-2.5 border-b border-dashed border-border/70 pl-1 pr-3 last:border-b-0`"
-                    >
-                      <Skeleton class="size-6 shrink-0 rounded-full" />
-                      <div class="min-w-0 flex-1 space-y-1.5">
-                        <Skeleton class="h-[13px] w-3/4 max-w-[16rem]" />
-                        <Skeleton class="h-3 w-1/2 max-w-48" />
-                      </div>
-                      <div class="flex shrink-0 items-center gap-1.5">
-                        <div class="space-y-0.5 text-right">
-                          <Skeleton class="ml-auto h-4 w-8" />
-                          <Skeleton class="ml-auto h-2.5 w-10" />
-                        </div>
-                        <Skeleton class="size-4 shrink-0 rounded-sm" />
-                      </div>
+                  <div v-else-if="inspectionStatusDistributionState.loading" class="flex min-h-[360px] flex-col items-center justify-center gap-6 p-6">
+                    <Skeleton class="size-52 rounded-full" />
+                    <div class="grid w-full gap-2">
+                      <Skeleton
+                        v-for="status in 5"
+                        :key="`inspection-status-distribution-skeleton-${status}`"
+                        class="h-8 w-full rounded-lg border border-border/60"
+                      />
                     </div>
                   </div>
 
-                  <div v-else-if="activeBuildingList.length" class="h-full">
-                    <button
-                      v-for="(building, index) in activeBuildingList"
-                      :key="building.id"
-                      type="button"
-                      :class="`${buildingRankingRowClass} dashboard-card-hover-surface group flex w-full items-center gap-2.5 border-b border-dashed border-border/70 pl-1 pr-3 text-left transition-[background-color,border-color] duration-150 last:border-b-0`"
-                      @click="goToBuildingDetail(building)"
-                    >
-                      <div class="dashboard-card-surface flex size-6 shrink-0 items-center justify-center rounded-full text-xs font-semibold text-foreground transition-colors">
-                        {{ index + 1 }}
+                  <ChartContainer
+                    v-else-if="hasInspectionStatusDistribution"
+                    :config="inspectionStatusDistributionChartConfig"
+                    :class="chartContainerClass"
+                    :style="{
+                      '--vis-donut-segment-stroke-width': '2px',
+                      '--vis-donut-segment-stroke-color': 'var(--card)',
+                    }"
+                  >
+                    <div class="flex min-w-0 flex-col items-center justify-center p-5">
+                      <div class="h-[320px] w-full max-w-[320px]">
+                        <VisSingleContainer
+                          :data="inspectionStatusDistributionItems"
+                          :margin="{ top: 10, right: 10, bottom: 10, left: 10 }"
+                          aria-label="检测工单状态分布饼图"
+                        >
+                          <VisDonut
+                            :value="(d: InspectionStatusDistributionItem) => d.value"
+                            :color="(d: InspectionStatusDistributionItem) => d.color"
+                            :arc-width="54"
+                            :pad-angle="0.01"
+                            :corner-radius="2"
+                            :show-background="false"
+                            :duration="0"
+                          />
+                          <ChartTooltip
+                            :triggers="{ [VisDonutSelectors.segment]: formatInspectionStatusDistributionTooltip }"
+                            :follow-cursor="true"
+                            :vertical-shift="8"
+                          />
+                        </VisSingleContainer>
                       </div>
-
-                      <div class="min-w-0 flex-1">
-                        <div class="flex items-center justify-between gap-2">
-                          <div class="min-w-0">
-                            <div class="truncate text-[13px] font-semibold leading-5 text-foreground">
-                              {{ building.name }}
-                            </div>
-                            <div class="truncate text-[11px] leading-4 text-muted-foreground">
-                              {{ building.customerName }} · {{ building.parkName }}
-                            </div>
-                          </div>
-
-                          <div class="flex shrink-0 items-center gap-1.5">
-                            <div class="text-right leading-none">
-                              <div class="text-base font-semibold tabular-nums tracking-tight text-foreground">
-                                {{ building.score }}
-                              </div>
-                              <div class="mt-0.5 text-[10px] text-muted-foreground">
-                                {{ building.riskLabel }}
-                              </div>
-                            </div>
-                            <i class="ri-arrow-right-s-line shrink-0 text-[16px] text-muted-foreground transition-colors group-hover:text-foreground" />
-                          </div>
+                      <div class="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
+                        <div
+                          v-for="item in inspectionStatusDistributionItems"
+                          :key="item.id"
+                          class="flex min-w-0 items-center gap-1.5"
+                        >
+                          <span
+                            class="size-2.5 shrink-0 rounded-sm"
+                            :style="{ backgroundColor: item.color }"
+                          />
+                          <span class="truncate">
+                            {{ item.label }}
+                          </span>
                         </div>
                       </div>
-                    </button>
-                  </div>
+                    </div>
+                  </ChartContainer>
 
-                  <div v-else class="flex h-full items-center justify-center text-sm text-muted-foreground">
-                    当前暂无可展示的建筑
+                  <div v-else class="flex min-h-[260px] items-center justify-center px-4 text-center text-sm text-muted-foreground">
+                    当前暂无检测工单状态数据
                   </div>
                 </div>
               </CardContent>
