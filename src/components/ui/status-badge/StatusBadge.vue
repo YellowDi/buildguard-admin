@@ -19,6 +19,7 @@ const iconClassMap: Record<Exclude<StatusBadgeIcon, "dot">, string> = {
   check: "ri-checkbox-circle-fill",
   clock: "ri-time-fill",
   alert: "ri-error-warning-fill",
+  close: "ri-close-circle-fill",
   minus: "ri-indeterminate-circle-fill",
 }
 
@@ -33,6 +34,18 @@ const badgeVars = computed(() => {
     "--status-badge-bg-dark": palette.dark.background,
     "--status-badge-icon-dark": palette.dark.icon,
   }
+})
+
+const resolvedIcon = computed<StatusBadgeIcon>(() => {
+  if (props.label === "轻微风险") {
+    return "alert"
+  }
+
+  if (props.label === "存在隐患") {
+    return "close"
+  }
+
+  return props.icon
 })
 
 function getIconClass(icon: StatusBadgeIcon) {
@@ -59,8 +72,8 @@ function getIconClass(icon: StatusBadgeIcon) {
         'text-(--status-badge-icon-light) dark:text-(--status-badge-icon-dark)',
       )"
     >
-      <span v-if="icon === 'dot'" class="size-1.5 rounded-full bg-current" />
-      <i v-else :class="cn('text-[14px] leading-none', getIconClass(icon))" />
+      <span v-if="resolvedIcon === 'dot'" class="size-1.5 rounded-full bg-current" />
+      <i v-else :class="cn('text-[14px] leading-none', getIconClass(resolvedIcon))" />
     </span>
     <span class="truncate">
       {{ label }}

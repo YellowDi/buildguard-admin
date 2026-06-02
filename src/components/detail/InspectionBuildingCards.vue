@@ -209,11 +209,11 @@ function resolveBuildingResultIcon(resultLabel: string | undefined, status: Insp
   }
 
   if (resultLabel === "轻微风险") {
-    return "ri-time-fill"
+    return "ri-error-warning-fill"
   }
 
   if (resultLabel === "存在隐患") {
-    return "ri-error-warning-fill"
+    return "ri-close-circle-fill"
   }
 
   if (resultLabel === "未反馈") {
@@ -325,11 +325,11 @@ function resolveItemResultBadgeIcon(resultLabel: string | undefined) {
   }
 
   if (resultLabel === "轻微风险") {
-    return "clock"
+    return "alert"
   }
 
   if (resultLabel === "存在隐患") {
-    return "alert"
+    return "close"
   }
 
   return "minus"

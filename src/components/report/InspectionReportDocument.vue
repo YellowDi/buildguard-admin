@@ -101,10 +101,14 @@ function getRiskLevelIcon(label: string) {
   }
 
   if (label === "轻微风险") {
-    return "ri-alert-line"
+    return "ri-error-warning-fill"
   }
 
-  if (label === "存在隐患" || label === "异常" || label === "已驳回") {
+  if (label === "存在隐患") {
+    return "ri-close-circle-fill"
+  }
+
+  if (label === "异常" || label === "已驳回") {
     return "ri-error-warning-line"
   }
 
