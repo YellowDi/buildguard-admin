@@ -33,6 +33,7 @@ type InspectionBuildingCardV2Building = {
   key: string
   buildName: string
   status: InspectionBuildingStatus
+  resultLabel?: string
   completedCount: number
   totalCount: number
   progressValue: number
@@ -202,6 +203,94 @@ function resolveStatusIconWrapClass(status: InspectionBuildingStatus) {
   return "bg-warning-surface text-warning ring-1 ring-warning/15"
 }
 
+function resolveBuildingResultIcon(resultLabel: string | undefined, status: InspectionBuildingStatus) {
+  if (resultLabel === "正常") {
+    return "ri-checkbox-circle-fill"
+  }
+
+  if (resultLabel === "轻微风险") {
+    return "ri-time-fill"
+  }
+
+  if (resultLabel === "存在隐患") {
+    return "ri-error-warning-fill"
+  }
+
+  if (resultLabel === "未反馈") {
+    return "ri-time-line"
+  }
+
+  return resultLabel ? "ri-indeterminate-circle-fill" : resolveStatusIcon(status)
+}
+
+function resolveBuildingResultIconWrapClass(resultLabel: string | undefined, status: InspectionBuildingStatus) {
+  if (resultLabel === "正常") {
+    return "bg-success-surface text-success ring-1 ring-success/15"
+  }
+
+  if (resultLabel === "轻微风险") {
+    return "bg-warning-surface text-warning ring-1 ring-warning/15"
+  }
+
+  if (resultLabel === "存在隐患") {
+    return "bg-destructive-surface text-destructive ring-1 ring-destructive/15"
+  }
+
+  if (resultLabel) {
+    return "bg-muted text-muted-foreground ring-1 ring-border/70"
+  }
+
+  return resolveStatusIconWrapClass(status)
+}
+
+function resolveInspectionBuildingStatusText(status: InspectionBuildingStatus) {
+  if (status === "completed") {
+    return "已完成"
+  }
+
+  if (status === "processing") {
+    return "进行中"
+  }
+
+  return "待处理"
+}
+
+function resolveBuildingStatusLabel(resultLabel: string | undefined, status: InspectionBuildingStatus) {
+  if (resultLabel) {
+    return resultLabel
+  }
+
+  return resolveInspectionBuildingStatusText(status)
+}
+
+function resolveBuildingStatusTextClass(resultLabel: string | undefined, status: InspectionBuildingStatus) {
+  if (resultLabel === "正常") {
+    return "text-success"
+  }
+
+  if (resultLabel === "轻微风险") {
+    return "text-warning"
+  }
+
+  if (resultLabel === "存在隐患") {
+    return "text-destructive"
+  }
+
+  if (resultLabel) {
+    return "text-muted-foreground"
+  }
+
+  if (status === "completed") {
+    return "text-success"
+  }
+
+  if (status === "processing") {
+    return "text-link"
+  }
+
+  return "text-warning"
+}
+
 function resolveScoreTone(scoreValue: number | null) {
   if (scoreValue === null) {
     return "text-foreground"
@@ -346,18 +435,27 @@ function handleExpandAfterLeave(element: Element) {
                   <div class="flex min-w-0 items-start justify-between gap-3">
                     <div class="flex min-w-0 items-center gap-2.5">
                       <div
+                        :aria-label="resolveBuildingStatusLabel(building.resultLabel, building.status)"
                         :class="[
                           'flex size-7 shrink-0 items-center justify-center rounded-[10px] transition-colors duration-180',
-                          resolveStatusIconWrapClass(building.status),
+                          resolveBuildingResultIconWrapClass(building.resultLabel, building.status),
                         ]"
                       >
                         <i
                           :class="[
-                            resolveStatusIcon(building.status),
-                            building.status === 'processing' ? 'animate-spin' : '',
+                            resolveBuildingResultIcon(building.resultLabel, building.status),
+                            !building.resultLabel && building.status === 'processing' ? 'animate-spin' : '',
                             'text-[15px]',
                           ]"
                         />
+                      </div>
+                      <div
+                        :class="[
+                          'shrink-0 whitespace-nowrap text-[12px] font-semibold leading-none',
+                          resolveBuildingStatusTextClass(building.resultLabel, building.status),
+                        ]"
+                      >
+                        {{ resolveBuildingStatusLabel(building.resultLabel, building.status) }}
                       </div>
                       <div class="truncate whitespace-nowrap text-[18px] font-semibold text-foreground">
                         {{ building.buildName }}

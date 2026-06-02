@@ -137,6 +137,7 @@ type InspectionBuildingCardV2Building = {
   key: string
   buildName: string
   status: InspectionBuildingCardV2Status
+  resultLabel: string
   completedCount: number
   totalCount: number
   progressValue: number
@@ -1119,6 +1120,7 @@ function buildInspectionWorkOrderCards(
       key: toText(build.BuildUuid, `work-order-build-${buildIndex + 1}`),
       buildName: toText(build.BuildName, `建筑 ${buildIndex + 1}`),
       status: resolveInspectionBuildStatus(build.Result, completedCount, totalCount),
+      resultLabel: resolveInspectionBuildResultLabel(inspectionItems),
       completedCount,
       totalCount,
       progressValue: totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0,
@@ -1524,6 +1526,20 @@ function resolveInspectionBuildStatus(
   }
 
   return "pending"
+}
+
+function resolveInspectionBuildResultLabel(items: WorkOrderBuildInspectionItem[]) {
+  let highestResult = 0
+
+  items.forEach((item) => {
+    const result = toNumber(item.Result)
+
+    if (result !== null && result >= 1 && result <= 3 && result > highestResult) {
+      highestResult = result
+    }
+  })
+
+  return formatInspectionResultLabel(highestResult)
 }
 
 function hasInspectionBuildPassCount(build: WorkOrderBuildInfo) {
