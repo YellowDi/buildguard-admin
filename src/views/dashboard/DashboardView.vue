@@ -30,6 +30,9 @@ import { StatusBadge, type StatusBadgeIcon, type StatusBadgeTone } from "@/compo
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import AppSidebarCalendarEventGroups from "@/components/layout/app-sidebar/AppSidebarCalendarEventGroups.vue"
+import type { AppSidebarCalendarItem } from "@/components/layout/app-sidebar/types"
+import { groupCalendarEventsByDate, useCalendarEvents } from "@/composables/useCalendarEvents"
 import { fetchCustomers } from "@/lib/customers-api"
 import { fetchInspectionPlans } from "@/lib/inspection-plans-api"
 import { fetchInspectionServices } from "@/lib/inspection-services-api"
@@ -132,8 +135,15 @@ const workOrderOverviewStates = ref<Record<WorkOrderOverviewKind, WorkOrderOverv
 const workOrderOverviewTimeRange = ref<TimeRange>("12m")
 const activeWorkOrderTableTab = ref<WorkOrderOverviewKind>("inspection")
 const activeWorkOrderStatusDistributionTab = ref<WorkOrderOverviewKind>("inspection")
+const activeDashboardCalendarTab = ref<AppSidebarCalendarItem["type"]>("inspection-plan")
 const inspectionWorkOrderTableItems = ref<WorkOrderListItem[]>([])
 const repairWorkOrderTableItems = ref<RepairWorkOrderListItem[]>([])
+const {
+  loading: dashboardCalendarLoading,
+  dataSources: dashboardCalendarDataSources,
+  allEvents: dashboardCalendarEvents,
+  refresh: refreshDashboardCalendarEvents,
+} = useCalendarEvents()
 
 const workOrderHistoryChartConfig = {
   inspectionTotal: {
@@ -245,7 +255,6 @@ const chartMainBodyClass = "h-[240px] min-w-0 w-full sm:h-[275px]"
 const dashboardTrendShellClass = `group flex min-w-0 w-full flex-col gap-2 rounded-xl p-0 transition-colors ${dashboardCardShellHoverBackgroundClass} sm:p-2`
 const dashboardTrendCardClass = `flex min-w-0 w-full flex-col gap-0 overflow-hidden border-border/60 ${dashboardCardBackgroundClass} py-0 shadow-none transition-[background-color,border-color,box-shadow] group-hover:border-transparent ${dashboardGroupHoverCardBackgroundClass} group-hover:shadow-(--shadow-card)`
 const dashboardTrendContentClass = "flex min-w-0 flex-col p-2 sm:p-4"
-const dashboardPlaceholderCardClass = `flex h-full min-h-[160px] min-w-0 w-full flex-col overflow-hidden border-border/60 ${dashboardCardBackgroundClass} py-0 shadow-none transition-[background-color,border-color,box-shadow] group-hover:border-transparent ${dashboardGroupHoverCardBackgroundClass} group-hover:shadow-(--shadow-card)`
 const dashboardSummaryCardClass = "dashboard-summary-card-surface rounded-lg border border-border/60 px-3 py-1.5 transition-colors"
 const dashboardTabsListClass = "rounded-[8px] bg-card-background p-0.5"
 const dashboardTabsTriggerClass = "rounded-[6px]"
@@ -336,10 +345,14 @@ const activeWorkOrderStatusDistributionChartConfig = computed<ChartConfig>(() =>
 ) as ChartConfig)
 const activeWorkOrderStatusDistributionTotal = computed(() => activeWorkOrderStatusDistributionSourceItems.value.length)
 const hasActiveWorkOrderStatusDistribution = computed(() => activeWorkOrderStatusDistributionItems.value.some(item => item.value > 0))
+const dashboardCalendarGroups = computed(() => groupCalendarEventsByDate(
+  dashboardCalendarEvents.value.filter(event => event.type === activeDashboardCalendarTab.value),
+))
 
 onMounted(() => {
   void loadDashboardStats()
   void loadWorkOrderOverviews()
+  void refreshDashboardCalendarEvents()
 })
 
 function formatMonthLabel(date: number | Date, locale = "zh-CN") {
@@ -407,6 +420,12 @@ function handleWorkOrderTableTabChange(value: string | number) {
 function handleWorkOrderStatusDistributionTabChange(value: string | number) {
   if (value === "inspection" || value === "repair") {
     activeWorkOrderStatusDistributionTab.value = value
+  }
+}
+
+function handleDashboardCalendarTabChange(value: string | number) {
+  if (value === "work-order" || value === "inspection-plan" || value === "inspection-service") {
+    activeDashboardCalendarTab.value = value
   }
 }
 
@@ -683,6 +702,22 @@ function goToWorkOrderDetail(row: WorkOrderTableRow) {
     name: row.kind === "repair" ? "repair-work-order-detail" : "inspection-work-order-detail",
     params: { id: row.uuid },
   })
+}
+
+function goToCalendarEventDetail(event: AppSidebarCalendarItem) {
+  if (!event.uuid) {
+    return
+  }
+
+  if (event.type === "work-order") {
+    void router.push({ name: "inspection-work-order-detail", params: { id: event.uuid } })
+  }
+  else if (event.type === "inspection-plan") {
+    void router.push({ name: "inspection-plan-detail", params: { id: event.uuid } })
+  }
+  else if (event.type === "inspection-service") {
+    void router.push({ name: "inspection-service-detail", params: { id: event.uuid } })
+  }
 }
 
 function buildWorkOrderHistory(
@@ -1367,9 +1402,44 @@ function toFiniteNumber(value: unknown) {
           </div>
         </div>
 
-        <div :class="`${dashboardTrendShellClass} min-h-[160px] xl:flex-1`" aria-hidden="true">
-          <Card :class="dashboardPlaceholderCardClass">
-            <CardContent class="min-h-0 flex-1 p-0" />
+        <div :class="`${dashboardTrendShellClass} min-h-[280px] xl:flex-1`">
+          <CardHeader class="flex flex-col gap-2 px-0 sm:min-h-8 sm:flex-row sm:items-center sm:justify-between sm:pl-2 sm:pr-0">
+            <div class="flex flex-wrap items-center gap-3">
+              <CardTitle :class="chartTitleClass">
+                日历
+              </CardTitle>
+            </div>
+
+            <div class="w-fit shrink-0 self-start sm:self-auto">
+              <Tabs
+                :model-value="activeDashboardCalendarTab"
+                aria-label="切换日历数据来源"
+                @update:model-value="handleDashboardCalendarTabChange"
+              >
+                <TabsList :class="dashboardTabsListClass">
+                  <TabsTrigger
+                    v-for="source in dashboardCalendarDataSources"
+                    :key="source.type"
+                    :value="source.type"
+                    :class="`${dashboardTabsTriggerClass} min-w-20 px-3 text-xs`"
+                  >
+                    {{ source.label }}
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+          </CardHeader>
+
+          <Card :class="`${dashboardTrendCardClass} h-[420px] min-h-[280px] xl:h-full`">
+            <CardContent class="flex min-h-0 flex-1 flex-col p-0">
+              <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-4">
+                <AppSidebarCalendarEventGroups
+                  :loading="dashboardCalendarLoading"
+                  :groups="dashboardCalendarGroups"
+                  @select-event="goToCalendarEventDetail"
+                />
+              </div>
+            </CardContent>
           </Card>
         </div>
       </div>

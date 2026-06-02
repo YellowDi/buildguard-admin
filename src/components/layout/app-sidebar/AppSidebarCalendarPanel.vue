@@ -5,7 +5,7 @@ import { getLocalTimeZone, today } from "@internationalized/date"
 import AppSidebarMiniCalendar from "@/components/layout/app-sidebar/AppSidebarMiniCalendar.vue"
 import AppSidebarCalendarSourceSheet from "@/components/layout/app-sidebar/AppSidebarCalendarSourceSheet.vue"
 import type { AppSidebarCalendarDate, AppSidebarCalendarItem } from "@/components/layout/app-sidebar/types"
-import { dateValueToKey, useCalendarEvents, type CalendarDataSourceEntry } from "@/composables/useCalendarEvents"
+import { dateValueToKey, groupCalendarEventsByDate, useCalendarEvents, type CalendarDataSourceEntry } from "@/composables/useCalendarEvents"
 
 /**
  * 与下方日程条目右上角徽章同一套色板。
@@ -47,42 +47,13 @@ onUnmounted(() => {
   document.documentElement.classList.remove("calendar-source-sheet-open")
 })
 
-function addDaysToDateKey(dateKey: string, delta: number): string {
-  const [y, m, d] = dateKey.split("-").map(Number)
-  const dt = new Date(y, m - 1, d)
-  dt.setDate(dt.getDate() + delta)
-  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`
-}
-
-function sectionLabelForDateKey(dateKey: string, todayKey: string): string {
-  if (dateKey === todayKey)
-    return "今天"
-  if (dateKey === addDaysToDateKey(todayKey, 1))
-    return "明天"
-  const [y, m, d] = dateKey.split("-").map(Number)
-  const dt = new Date(y, m - 1, d)
-  const w = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"][dt.getDay()]!
-  return `${m}月${d}日 ${w}`
-}
-
 const sourceSheetGroups = computed(() => {
   if (!selectedSourceType.value)
-    return [] as Array<{ sectionLabel: string, events: AppSidebarCalendarItem[] }>
+    return []
   const list = allEvents.value
     .filter(e => e.type === selectedSourceType.value)
-    .sort((a, b) => a.dateKey.localeCompare(b.dateKey) || a.time.localeCompare(b.time))
   const todayKey = dateValueToKey(getTodayDate())
-  const map = new Map<string, AppSidebarCalendarItem[]>()
-  for (const e of list) {
-    const arr = map.get(e.dateKey) ?? []
-    arr.push(e)
-    map.set(e.dateKey, arr)
-  }
-  const keys = [...map.keys()].sort()
-  return keys.map(k => ({
-    sectionLabel: sectionLabelForDateKey(k, todayKey),
-    events: map.get(k)!,
-  }))
+  return groupCalendarEventsByDate(list, todayKey)
 })
 
 const selectedSourceMeta = computed(() => {

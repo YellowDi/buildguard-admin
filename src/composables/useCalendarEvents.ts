@@ -33,6 +33,52 @@ export type CalendarDataSourceEntry = {
   count: number
 }
 
+export type CalendarEventGroup = {
+  sectionLabel: string
+  events: AppSidebarCalendarItem[]
+}
+
+function addDaysToDateKey(dateKey: string, delta: number): string {
+  const [y, m, d] = dateKey.split("-").map(Number)
+  const dt = new Date(y, m - 1, d)
+  dt.setDate(dt.getDate() + delta)
+  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`
+}
+
+export function getTodayDateKey(date = new Date()): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`
+}
+
+export function getCalendarSectionLabel(dateKey: string, todayKey = getTodayDateKey()): string {
+  if (dateKey === todayKey)
+    return "今天"
+  if (dateKey === addDaysToDateKey(todayKey, 1))
+    return "明天"
+  const [y, m, d] = dateKey.split("-").map(Number)
+  const dt = new Date(y, m - 1, d)
+  const w = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"][dt.getDay()]!
+  return `${m}月${d}日 ${w}`
+}
+
+export function groupCalendarEventsByDate(
+  events: AppSidebarCalendarItem[],
+  todayKey = getTodayDateKey(),
+): CalendarEventGroup[] {
+  const sortedList = [...events].sort((a, b) => a.dateKey.localeCompare(b.dateKey) || a.time.localeCompare(b.time))
+  const map = new Map<string, AppSidebarCalendarItem[]>()
+
+  for (const event of sortedList) {
+    const arr = map.get(event.dateKey) ?? []
+    arr.push(event)
+    map.set(event.dateKey, arr)
+  }
+
+  return [...map.entries()].map(([dateKey, groupedEvents]) => ({
+    sectionLabel: getCalendarSectionLabel(dateKey, todayKey),
+    events: groupedEvents,
+  }))
+}
+
 export function useCalendarEvents() {
   const loading = ref(false)
 
