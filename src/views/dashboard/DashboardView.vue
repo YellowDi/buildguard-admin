@@ -53,7 +53,7 @@ type DashboardStats = {
   inspectionPlanTotal: number | null
 }
 
-type InspectionStatusDistributionItem = {
+type WorkOrderStatusDistributionItem = {
   id: string
   label: string
   value: number
@@ -131,6 +131,7 @@ const workOrderOverviewStates = ref<Record<WorkOrderOverviewKind, WorkOrderOverv
 
 const workOrderOverviewTimeRange = ref<TimeRange>("12m")
 const activeWorkOrderTableTab = ref<WorkOrderOverviewKind>("inspection")
+const activeWorkOrderStatusDistributionTab = ref<WorkOrderOverviewKind>("inspection")
 const inspectionWorkOrderTableItems = ref<WorkOrderListItem[]>([])
 const repairWorkOrderTableItems = ref<RepairWorkOrderListItem[]>([])
 
@@ -197,7 +198,7 @@ const dateFormatter = new Intl.DateTimeFormat("zh-CN", {
   month: "2-digit",
   day: "2-digit",
 })
-const inspectionStatusDistributionLimit = 100
+const workOrderStatusDistributionLimit = 100
 
 const statsCards = computed(() => [
   {
@@ -248,7 +249,7 @@ const dashboardPlaceholderCardClass = `flex h-full min-h-[160px] min-w-0 w-full 
 const dashboardSummaryCardClass = "dashboard-summary-card-surface rounded-lg border border-border/60 px-3 py-1.5 transition-colors"
 const dashboardTabsListClass = "rounded-[8px] bg-card-background p-0.5"
 const dashboardTabsTriggerClass = "rounded-[6px]"
-const inspectionStatusPanelClass = "overflow-hidden"
+const workOrderStatusPanelClass = "overflow-hidden"
 const workOrderTimeRangeTabs = [
   { id: "12m", label: "12个月" },
   { id: "6m", label: "6个月" },
@@ -258,7 +259,7 @@ const workOrderTableTabs = [
   { id: "inspection", label: "检测工单" },
   { id: "repair", label: "报修工单" },
 ] satisfies Array<{ id: WorkOrderOverviewKind, label: string }>
-const inspectionStatusColorById: Record<string, string> = {
+const workOrderStatusColorById: Record<string, string> = {
   "status-1": "var(--color-blue-300)",
   "status-2": "var(--color-blue-400)",
   "status-3": "var(--color-blue-500)",
@@ -267,7 +268,7 @@ const inspectionStatusColorById: Record<string, string> = {
   "status-6": "var(--color-blue-800)",
   unknown: "var(--color-blue-200)",
 }
-const inspectionStatusFallbackColors = [
+const workOrderStatusFallbackColors = [
   "var(--color-blue-300)",
   "var(--color-blue-400)",
   "var(--color-blue-500)",
@@ -275,26 +276,39 @@ const inspectionStatusFallbackColors = [
   "var(--color-blue-700)",
 ] as const
 
-const inspectionStatusDistributionState = computed(() => workOrderOverviewStates.value.inspection)
-const inspectionStatusDistributionSourceItems = computed(() => inspectionWorkOrderTableItems.value
-  .map((item, index) => ({
-    item,
-    index,
-    dateTime: resolveWorkOrderDate(item)?.getTime() ?? 0,
-  }))
-  .sort((left, right) => right.dateTime - left.dateTime || left.index - right.index)
-  .slice(0, inspectionStatusDistributionLimit)
-  .map(entry => entry.item))
+const activeWorkOrderStatusDistributionState = computed(() => workOrderOverviewStates.value[activeWorkOrderStatusDistributionTab.value])
+const activeWorkOrderStatusDistributionLabel = computed(() => (
+  activeWorkOrderStatusDistributionTab.value === "repair" ? "报修工单" : "检测工单"
+))
+const activeWorkOrderStatusDistributionEmptyText = computed(() => `当前暂无${activeWorkOrderStatusDistributionLabel.value}状态数据`)
+const activeWorkOrderStatusDistributionSourceItems = computed<WorkOrderHistorySourceItem[]>(() => {
+  const sourceItems: WorkOrderHistorySourceItem[] = activeWorkOrderStatusDistributionTab.value === "repair"
+    ? repairWorkOrderTableItems.value
+    : inspectionWorkOrderTableItems.value
 
-const inspectionStatusDistributionItems = computed<InspectionStatusDistributionItem[]>(() => {
-  const counts = new Map<string, Omit<InspectionStatusDistributionItem, "color">>()
+  return sourceItems
+    .map((item, index) => ({
+      item,
+      index,
+      dateTime: resolveWorkOrderDate(item)?.getTime() ?? 0,
+    }))
+    .sort((left, right) => right.dateTime - left.dateTime || left.index - right.index)
+    .slice(0, workOrderStatusDistributionLimit)
+    .map(entry => entry.item)
+})
 
-  for (const item of inspectionStatusDistributionSourceItems.value) {
+const activeWorkOrderStatusDistributionItems = computed<WorkOrderStatusDistributionItem[]>(() => {
+  const counts = new Map<string, Omit<WorkOrderStatusDistributionItem, "color">>()
+  const labelFormatter = activeWorkOrderStatusDistributionTab.value === "repair"
+    ? getRepairWorkOrderStatusLabel
+    : getWorkOrderStatusLabel
+
+  for (const item of activeWorkOrderStatusDistributionSourceItems.value) {
     const status = toFiniteNumber(item.Status)
     const id = status === null ? "unknown" : `status-${status}`
     const current = counts.get(id) ?? {
       id,
-      label: getWorkOrderStatusLabel(status),
+      label: labelFormatter(status),
       value: 0,
       status,
     }
@@ -304,15 +318,15 @@ const inspectionStatusDistributionItems = computed<InspectionStatusDistributionI
   }
 
   return Array.from(counts.values())
-    .sort((left, right) => getInspectionStatusSortRank(left.status) - getInspectionStatusSortRank(right.status))
+    .sort((left, right) => getWorkOrderStatusSortRank(left.status) - getWorkOrderStatusSortRank(right.status))
     .map((item, index) => ({
       ...item,
-      color: inspectionStatusColorById[item.id] ?? inspectionStatusFallbackColors[index % inspectionStatusFallbackColors.length],
+      color: workOrderStatusColorById[item.id] ?? workOrderStatusFallbackColors[index % workOrderStatusFallbackColors.length],
     }))
 })
 
-const inspectionStatusDistributionChartConfig = computed<ChartConfig>(() => Object.fromEntries(
-  inspectionStatusDistributionItems.value.map(item => [
+const activeWorkOrderStatusDistributionChartConfig = computed<ChartConfig>(() => Object.fromEntries(
+  activeWorkOrderStatusDistributionItems.value.map(item => [
     item.id,
     {
       label: item.label,
@@ -320,8 +334,8 @@ const inspectionStatusDistributionChartConfig = computed<ChartConfig>(() => Obje
     },
   ]),
 ) as ChartConfig)
-const inspectionStatusDistributionTotal = computed(() => inspectionStatusDistributionSourceItems.value.length)
-const hasInspectionStatusDistribution = computed(() => inspectionStatusDistributionItems.value.some(item => item.value > 0))
+const activeWorkOrderStatusDistributionTotal = computed(() => activeWorkOrderStatusDistributionSourceItems.value.length)
+const hasActiveWorkOrderStatusDistribution = computed(() => activeWorkOrderStatusDistributionItems.value.some(item => item.value > 0))
 
 onMounted(() => {
   void loadDashboardStats()
@@ -387,6 +401,12 @@ function handleWorkOrderOverviewTimeRangeChange(value: unknown) {
 function handleWorkOrderTableTabChange(value: string | number) {
   if (value === "inspection" || value === "repair") {
     activeWorkOrderTableTab.value = value
+  }
+}
+
+function handleWorkOrderStatusDistributionTabChange(value: string | number) {
+  if (value === "inspection" || value === "repair") {
+    activeWorkOrderStatusDistributionTab.value = value
   }
 }
 
@@ -806,12 +826,12 @@ function toMonthKey(date: Date) {
   return `${year}-${month}`
 }
 
-function getInspectionStatusSortRank(status: number | null) {
+function getWorkOrderStatusSortRank(status: number | null) {
   return status ?? Number.MAX_SAFE_INTEGER
 }
 
-function formatInspectionStatusDistributionTooltip(value: unknown) {
-  const item = getInspectionStatusDistributionTooltipItem(value)
+function formatWorkOrderStatusDistributionTooltip(value: unknown) {
+  const item = getWorkOrderStatusDistributionTooltipItem(value)
 
   if (!item) {
     return ""
@@ -829,33 +849,33 @@ function formatInspectionStatusDistributionTooltip(value: unknown) {
       </div>
       <div class="flex items-center justify-between gap-4 text-muted-foreground">
         <span>占比</span>
-        <span class="font-mono font-medium tabular-nums text-foreground">${formatInspectionStatusDistributionPercent(item.value)}</span>
+        <span class="font-mono font-medium tabular-nums text-foreground">${formatWorkOrderStatusDistributionPercent(item.value)}</span>
       </div>
     </div>
   `
 }
 
-function getInspectionStatusDistributionTooltipItem(value: unknown) {
+function getWorkOrderStatusDistributionTooltipItem(value: unknown) {
   if (!value || typeof value !== "object") {
     return null
   }
 
   const record = value as { data?: unknown }
-  const item = (record.data && typeof record.data === "object" ? record.data : value) as Partial<InspectionStatusDistributionItem>
+  const item = (record.data && typeof record.data === "object" ? record.data : value) as Partial<WorkOrderStatusDistributionItem>
 
   if (typeof item.label !== "string" || typeof item.value !== "number" || typeof item.color !== "string") {
     return null
   }
 
-  return item as InspectionStatusDistributionItem
+  return item as WorkOrderStatusDistributionItem
 }
 
-function formatInspectionStatusDistributionPercent(value: number) {
-  if (!inspectionStatusDistributionTotal.value) {
+function formatWorkOrderStatusDistributionPercent(value: number) {
+  if (!activeWorkOrderStatusDistributionTotal.value) {
     return "0%"
   }
 
-  return `${Math.round((value / inspectionStatusDistributionTotal.value) * 100)}%`
+  return `${Math.round((value / activeWorkOrderStatusDistributionTotal.value) * 100)}%`
 }
 
 function toText(value: unknown, fallback = "") {
@@ -1239,21 +1259,37 @@ function toFiniteNumber(value: unknown) {
           <CardHeader class="flex flex-col gap-2 px-0 sm:min-h-8 sm:flex-row sm:items-center sm:justify-between sm:pl-2 sm:pr-0">
             <div class="flex flex-wrap items-center gap-3">
               <CardTitle :class="chartTitleClass">
-                检测工单状态分布
+                状态分布
               </CardTitle>
-              <span class="text-xs text-muted-foreground">
-                最近 {{ inspectionStatusDistributionLimit }} 条
-              </span>
+            </div>
+
+            <div class="w-fit shrink-0 self-start sm:self-auto">
+              <Tabs
+                :model-value="activeWorkOrderStatusDistributionTab"
+                aria-label="切换工单状态分布类型"
+                @update:model-value="handleWorkOrderStatusDistributionTabChange"
+              >
+                <TabsList :class="dashboardTabsListClass">
+                  <TabsTrigger
+                    v-for="tab in workOrderTableTabs"
+                    :key="tab.id"
+                    :value="tab.id"
+                    :class="`${dashboardTabsTriggerClass} min-w-20 px-3 text-xs`"
+                  >
+                    {{ tab.label }}
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
             </div>
           </CardHeader>
 
           <div>
             <Card :class="`${chartCardClass} w-full`">
               <CardContent class="flex flex-col p-0">
-                <div :class="`flex flex-col ${inspectionStatusPanelClass}`">
-                  <div v-if="inspectionStatusDistributionState.error" class="flex min-h-[260px] flex-col items-center justify-center gap-3 px-4 text-center">
+                <div :class="`flex flex-col ${workOrderStatusPanelClass}`">
+                  <div v-if="activeWorkOrderStatusDistributionState.error" class="flex min-h-[260px] flex-col items-center justify-center gap-3 px-4 text-center">
                     <div class="text-sm text-destructive">
-                      {{ inspectionStatusDistributionState.error }}
+                      {{ activeWorkOrderStatusDistributionState.error }}
                     </div>
                     <Button size="sm" variant="outline" class="gap-2" @click="loadWorkOrderOverviews">
                       <i class="ri-refresh-line text-sm" />
@@ -1261,20 +1297,20 @@ function toFiniteNumber(value: unknown) {
                     </Button>
                   </div>
 
-                  <div v-else-if="inspectionStatusDistributionState.loading" class="flex min-h-[360px] flex-col items-center justify-center gap-6 p-6">
+                  <div v-else-if="activeWorkOrderStatusDistributionState.loading" class="flex min-h-[360px] flex-col items-center justify-center gap-6 p-6">
                     <Skeleton class="size-52 rounded-full" />
                     <div class="grid w-full gap-2">
                       <Skeleton
                         v-for="status in 5"
-                        :key="`inspection-status-distribution-skeleton-${status}`"
+                        :key="`work-order-status-distribution-skeleton-${status}`"
                         class="h-8 w-full rounded-lg border border-border/60"
                       />
                     </div>
                   </div>
 
                   <ChartContainer
-                    v-else-if="hasInspectionStatusDistribution"
-                    :config="inspectionStatusDistributionChartConfig"
+                    v-else-if="hasActiveWorkOrderStatusDistribution"
+                    :config="activeWorkOrderStatusDistributionChartConfig"
                     :class="chartContainerClass"
                     :style="{
                       '--vis-donut-segment-stroke-width': '2px',
@@ -1284,13 +1320,13 @@ function toFiniteNumber(value: unknown) {
                     <div class="flex min-w-0 flex-col items-center justify-center p-5">
                       <div class="h-[320px] w-full max-w-[320px]">
                         <VisSingleContainer
-                          :data="inspectionStatusDistributionItems"
+                          :data="activeWorkOrderStatusDistributionItems"
                           :margin="{ top: 10, right: 10, bottom: 10, left: 10 }"
-                          aria-label="检测工单状态分布饼图"
+                          :aria-label="`${activeWorkOrderStatusDistributionLabel}状态分布饼图`"
                         >
                           <VisDonut
-                            :value="(d: InspectionStatusDistributionItem) => d.value"
-                            :color="(d: InspectionStatusDistributionItem) => d.color"
+                            :value="(d: WorkOrderStatusDistributionItem) => d.value"
+                            :color="(d: WorkOrderStatusDistributionItem) => d.color"
                             :arc-width="54"
                             :pad-angle="0.01"
                             :corner-radius="2"
@@ -1298,7 +1334,7 @@ function toFiniteNumber(value: unknown) {
                             :duration="0"
                           />
                           <ChartTooltip
-                            :triggers="{ [VisDonutSelectors.segment]: formatInspectionStatusDistributionTooltip }"
+                            :triggers="{ [VisDonutSelectors.segment]: formatWorkOrderStatusDistributionTooltip }"
                             :follow-cursor="true"
                             :vertical-shift="8"
                           />
@@ -1306,7 +1342,7 @@ function toFiniteNumber(value: unknown) {
                       </div>
                       <div class="mt-4 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
                         <div
-                          v-for="item in inspectionStatusDistributionItems"
+                          v-for="item in activeWorkOrderStatusDistributionItems"
                           :key="item.id"
                           class="flex min-w-0 items-center gap-1.5"
                         >
@@ -1323,7 +1359,7 @@ function toFiniteNumber(value: unknown) {
                   </ChartContainer>
 
                   <div v-else class="flex min-h-[260px] items-center justify-center px-4 text-center text-sm text-muted-foreground">
-                    当前暂无检测工单状态数据
+                    {{ activeWorkOrderStatusDistributionEmptyText }}
                   </div>
                 </div>
               </CardContent>
