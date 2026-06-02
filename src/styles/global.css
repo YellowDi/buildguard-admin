@@ -814,6 +814,18 @@
     background-color: var(--dashboard-card-hover-background);
   }
 
+  .dashboard-summary-card-surface {
+    background-color: var(--dashboard-card-hover-background);
+  }
+
+  .group:hover .dashboard-summary-card-surface {
+    background-color: var(--card-background);
+  }
+
+  .group:hover .dashboard-summary-card-surface:hover {
+    background-color: var(--dashboard-card-hover-background);
+  }
+
   .group:hover .dashboard-card-group-hover-surface {
     background-color: var(--dashboard-card-hover-background);
   }

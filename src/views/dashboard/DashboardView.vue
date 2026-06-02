@@ -17,6 +17,16 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { workOrderStatusMap, repairWorkOrderStatusMap } from "@/components/table-page/statusPresets"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import { StatusBadge, type StatusBadgeIcon, type StatusBadgeTone } from "@/components/ui/status-badge"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -25,7 +35,12 @@ import { fetchCustomers } from "@/lib/customers-api"
 import { fetchInspectionPlans } from "@/lib/inspection-plans-api"
 import { fetchInspectionServices } from "@/lib/inspection-services-api"
 import { fetchParks } from "@/lib/parks-api"
-import { isCompletedRepairWorkOrderStatus, isCompletedWorkOrderStatus } from "@/lib/work-order-status"
+import {
+  getRepairWorkOrderStatusLabel,
+  getWorkOrderStatusLabel,
+  isCompletedRepairWorkOrderStatus,
+  isCompletedWorkOrderStatus,
+} from "@/lib/work-order-status"
 import { fetchRepairWorkOrders, fetchWorkOrders, type RepairWorkOrderListItem, type WorkOrderListItem } from "@/lib/work-orders-api"
 import { handleApiError } from "@/lib/api-errors"
 
@@ -68,6 +83,22 @@ type WorkOrderComparisonDatum = {
   repairTotal: number
 }
 
+type WorkOrderTableRow = {
+  id: string
+  uuid: string
+  kind: WorkOrderOverviewKind
+  shortOrderNo: string
+  title: string
+  customerName: string
+  category: string
+  assignee: string
+  statusLabel: string
+  statusTone: StatusBadgeTone
+  statusIcon: StatusBadgeIcon
+  dateLabel: string
+  dateTime: number
+}
+
 type WorkOrderSummary = {
   total: number
   pendingAssign: number
@@ -106,6 +137,9 @@ const workOrderOverviewStates = ref<Record<WorkOrderOverviewKind, WorkOrderOverv
 })
 
 const workOrderOverviewTimeRange = ref<TimeRange>("12m")
+const activeWorkOrderTableTab = ref<WorkOrderOverviewKind>("inspection")
+const inspectionWorkOrderTableItems = ref<WorkOrderListItem[]>([])
+const repairWorkOrderTableItems = ref<RepairWorkOrderListItem[]>([])
 
 const workOrderHistoryChartConfig = {
   inspectionTotal: {
@@ -153,7 +187,27 @@ const workOrderOverview = computed(() => {
   }
 })
 
+const activeWorkOrderTableRows = computed(() => {
+  const rows = activeWorkOrderTableTab.value === "repair"
+    ? repairWorkOrderTableItems.value.map((item, index) => normalizeRepairWorkOrderTableRow(item, index))
+    : inspectionWorkOrderTableItems.value.map((item, index) => normalizeInspectionWorkOrderTableRow(item, index))
+
+  return rows
+    .sort((left, right) => right.dateTime - left.dateTime)
+    .slice(0, 10)
+})
+
+const activeWorkOrderTableState = computed(() => workOrderOverviewStates.value[activeWorkOrderTableTab.value])
+const activeWorkOrderTableEmptyText = computed(() => (
+  activeWorkOrderTableTab.value === "repair" ? "当前暂无报修工单" : "当前暂无检测工单"
+))
+
 const numberFormatter = new Intl.NumberFormat("zh-CN")
+const dateFormatter = new Intl.DateTimeFormat("zh-CN", {
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+})
 
 const statsCards = computed(() => [
   {
@@ -201,7 +255,7 @@ const dashboardTrendShellClass = `group flex min-w-0 w-full flex-col gap-2 round
 const dashboardTrendCardClass = `flex min-w-0 w-full flex-col gap-0 overflow-hidden border-border/60 ${dashboardCardBackgroundClass} py-0 shadow-none transition-[background-color,border-color,box-shadow] group-hover:border-transparent ${dashboardGroupHoverCardBackgroundClass} group-hover:shadow-(--shadow-card)`
 const dashboardTrendContentClass = "flex min-w-0 flex-col p-2 sm:p-4"
 const dashboardPlaceholderCardClass = `flex h-full min-h-[160px] min-w-0 w-full flex-col overflow-hidden border-border/60 ${dashboardCardBackgroundClass} py-0 shadow-none transition-[background-color,border-color,box-shadow] group-hover:border-transparent ${dashboardGroupHoverCardBackgroundClass} group-hover:shadow-(--shadow-card)`
-const dashboardSummaryCardClass = `rounded-lg border border-border/60 ${dashboardCardBackgroundClass} px-3 py-1.5 transition-colors ${dashboardCardHoverBackgroundClass}`
+const dashboardSummaryCardClass = "dashboard-summary-card-surface rounded-lg border border-border/60 px-3 py-1.5 transition-colors"
 const dashboardTabsListClass = "rounded-[8px] bg-card-background p-0.5"
 const dashboardTabsTriggerClass = "rounded-[6px]"
 const buildingRankingPanelClass = "h-[520px] overflow-hidden"
@@ -211,6 +265,10 @@ const workOrderTimeRangeTabs = [
   { id: "6m", label: "6个月" },
   { id: "3m", label: "3个月" },
 ] satisfies Array<{ id: TimeRange, label: string }>
+const workOrderTableTabs = [
+  { id: "inspection", label: "检测工单" },
+  { id: "repair", label: "报修工单" },
+] satisfies Array<{ id: WorkOrderOverviewKind, label: string }>
 const buildingRiskTabs = [
   { id: "high-risk", label: "高危" },
   { id: "rectification", label: "整改" },
@@ -296,6 +354,12 @@ function handleWorkOrderOverviewTimeRangeChange(value: unknown) {
   }
 }
 
+function handleWorkOrderTableTabChange(value: string | number) {
+  if (value === "inspection" || value === "repair") {
+    activeWorkOrderTableTab.value = value
+  }
+}
+
 async function loadBuildingRanking() {
   buildingRankingLoading.value = true
   buildingRankingError.value = ""
@@ -333,9 +397,11 @@ async function loadWorkOrderOverviews() {
   const referenceDate = resolveLatestWorkOrderDate([...inspectionWorkOrders, ...repairWorkOrders]) ?? new Date()
 
   if (inspectionResult.status === "fulfilled") {
+    inspectionWorkOrderTableItems.value = inspectionWorkOrders
     inspectionState.historyItems = buildWorkOrderHistory(inspectionWorkOrders, referenceDate)
     inspectionState.summary = buildWorkOrderSummary(inspectionWorkOrders, "inspection")
   } else {
+    inspectionWorkOrderTableItems.value = []
     inspectionState.historyItems = []
     inspectionState.summary = emptyWorkOrderSummary()
     inspectionState.error = handleApiError(inspectionResult.reason, {
@@ -345,9 +411,11 @@ async function loadWorkOrderOverviews() {
   }
 
   if (repairResult.status === "fulfilled") {
+    repairWorkOrderTableItems.value = repairWorkOrders
     repairState.historyItems = buildWorkOrderHistory(repairWorkOrders, referenceDate)
     repairState.summary = buildWorkOrderSummary(repairWorkOrders, "repair")
   } else {
+    repairWorkOrderTableItems.value = []
     repairState.historyItems = []
     repairState.summary = emptyWorkOrderSummary()
     repairState.error = handleApiError(repairResult.reason, {
@@ -470,6 +538,147 @@ async function fetchAllRepairWorkOrders() {
   }
 
   return allItems
+}
+
+function normalizeInspectionWorkOrderTableRow(item: WorkOrderListItem, index: number): WorkOrderTableRow {
+  const uuid = toText(item.Uuid, toText(item.Id, `inspection-${index + 1}`))
+  const status = toFiniteNumber(item.Status)
+  const date = resolveWorkOrderDate(item)
+  const orderNo = toText(item.OrderNo, `WO-${index + 1}`)
+
+  return {
+    id: `inspection-${uuid}`,
+    uuid,
+    kind: "inspection",
+    shortOrderNo: formatShortOrderNo(orderNo),
+    title: formatInspectionWorkOrderTitle(item),
+    customerName: toText(item.CorpName, toText(item.CustomerName, "-")),
+    category: toText(item.PlanName, "-"),
+    assignee: formatWorkOrderAssignee(item.Executors, item.Executor),
+    statusLabel: getWorkOrderStatusLabel(status),
+    ...resolveWorkOrderStatusBadge("inspection", status),
+    dateLabel: formatDashboardDate(date),
+    dateTime: date?.getTime() ?? 0,
+  }
+}
+
+function normalizeRepairWorkOrderTableRow(item: RepairWorkOrderListItem, index: number): WorkOrderTableRow {
+  const uuid = toText(item.Uuid, toText(item.Id, `repair-${index + 1}`))
+  const status = toFiniteNumber(item.Status)
+  const date = resolveWorkOrderDate(item)
+  const orderNo = toText(item.OrderNo, `RP-${index + 1}`)
+  const reportType = toText(item.ReportType)
+  const important = toText(item.Important)
+
+  return {
+    id: `repair-${uuid}`,
+    uuid,
+    kind: "repair",
+    shortOrderNo: formatShortOrderNo(orderNo),
+    title: formatRepairWorkOrderTitle(item),
+    customerName: toText(item.CorpName, toText(item.CustomerName, "-")),
+    category: [reportType, important].filter(Boolean).join(" / ") || "-",
+    assignee: formatWorkOrderAssignee(item.Executors, item.UserName),
+    statusLabel: getRepairWorkOrderStatusLabel(status),
+    ...resolveWorkOrderStatusBadge("repair", status),
+    dateLabel: formatDashboardDate(date),
+    dateTime: date?.getTime() ?? 0,
+  }
+}
+
+function formatShortOrderNo(value: unknown) {
+  const normalized = toText(value, "")
+
+  if (!normalized || normalized === "-") {
+    return "-"
+  }
+
+  const compact = normalized.replace(/[\s_-]+/g, "")
+  return compact.length > 8 ? compact.slice(-8) : compact
+}
+
+function formatInspectionWorkOrderTitle(item: WorkOrderListItem) {
+  const parkName = toText(item.ParkName, "")
+  return parkName && parkName !== "-" ? parkName : "未关联园区"
+}
+
+function formatRepairWorkOrderTitle(item: RepairWorkOrderListItem) {
+  const buildName = toText(item.BuildName, "")
+
+  if (buildName && buildName !== "-") {
+    return buildName
+  }
+
+  const customerName = toText(item.CustomerName, toText(item.CorpName, ""))
+
+  if (customerName && customerName !== "-") {
+    return customerName
+  }
+
+  const parkName = toText(item.ParkName, "")
+  return parkName && parkName !== "-" ? parkName : "未关联建筑"
+}
+
+function formatWorkOrderAssignee(executors: unknown, fallback: unknown) {
+  if (Array.isArray(executors)) {
+    const names = executors
+      .map(item => resolveExecutorName(item))
+      .filter(Boolean)
+
+    if (names.length) {
+      return names.join("、")
+    }
+  }
+
+  return toText(fallback, "未指派")
+}
+
+function resolveExecutorName(value: unknown) {
+  const directName = toText(value)
+  if (directName) {
+    return directName
+  }
+
+  if (!value || typeof value !== "object") {
+    return ""
+  }
+
+  const record = value as Record<string, unknown>
+  return toText(
+    record.Name,
+    toText(record.name, toText(record.UserName, toText(record.userName, toText(record.ExecutorName, toText(record.executorName))))),
+  )
+}
+
+function formatDashboardDate(value: Date | null) {
+  return value ? dateFormatter.format(value) : "-"
+}
+
+function resolveWorkOrderStatusBadge(kind: WorkOrderOverviewKind, status: number | null) {
+  const statusLabel = kind === "repair"
+    ? getRepairWorkOrderStatusLabel(status)
+    : getWorkOrderStatusLabel(status)
+  const statusMap = (kind === "repair" ? repairWorkOrderStatusMap : workOrderStatusMap) as Record<string, {
+    tone: StatusBadgeTone
+    icon?: StatusBadgeIcon
+  }>
+  const option = statusMap[statusLabel]
+
+  return {
+    statusTone: option?.tone ?? "gray",
+    statusIcon: option?.icon ?? "dot",
+  }
+}
+
+function goToWorkOrderDetail(row: WorkOrderTableRow) {
+  if (!row.uuid) {
+    return
+  }
+
+  void router.push({
+    name: row.kind === "repair" ? "repair-work-order-detail" : "inspection-work-order-detail",
+    params: { id: row.uuid },
+  })
 }
 
 function buildWorkOrderHistory(
@@ -970,17 +1179,147 @@ function hashText(value: string) {
           </Card>
         </div>
 
-        <div class="grid min-h-[160px] grid-cols-2 gap-4 xl:flex-1">
-          <div
-            v-for="placeholder in 2"
-            :key="`dashboard-placeholder-${placeholder}`"
-            :class="`${dashboardTrendShellClass} h-full min-h-0`"
-            aria-hidden="true"
-          >
-            <Card :class="dashboardPlaceholderCardClass">
-              <CardContent class="min-h-0 flex-1 p-0" />
-            </Card>
-          </div>
+        <div :class="dashboardTrendShellClass">
+          <CardHeader class="flex flex-col gap-2 px-0 sm:min-h-8 sm:flex-row sm:items-center sm:justify-between sm:pl-2 sm:pr-0">
+            <div class="flex flex-wrap items-center gap-3">
+              <CardTitle :class="chartTitleClass">
+                工单列表
+              </CardTitle>
+              <span class="text-xs text-muted-foreground">
+                最近 10 条
+              </span>
+            </div>
+
+            <div class="w-fit shrink-0 self-start sm:self-auto">
+              <Tabs
+                :model-value="activeWorkOrderTableTab"
+                aria-label="切换工单列表类型"
+                @update:model-value="handleWorkOrderTableTabChange"
+              >
+                <TabsList :class="dashboardTabsListClass">
+                  <TabsTrigger
+                    v-for="tab in workOrderTableTabs"
+                    :key="tab.id"
+                    :value="tab.id"
+                    :class="`${dashboardTabsTriggerClass} min-w-20 px-3 text-xs`"
+                  >
+                    {{ tab.label }}
+                  </TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+          </CardHeader>
+
+          <Card :class="dashboardTrendCardClass">
+            <CardContent class="p-0">
+              <div v-if="activeWorkOrderTableState.error" class="flex min-h-[260px] flex-col items-center justify-center gap-3 px-4 text-center">
+                <div class="text-sm text-destructive">
+                  {{ activeWorkOrderTableState.error }}
+                </div>
+                <Button size="sm" variant="outline" class="gap-2" @click="loadWorkOrderOverviews">
+                  <i class="ri-refresh-line text-sm" />
+                  重试
+                </Button>
+              </div>
+
+              <div v-else-if="activeWorkOrderTableState.loading" class="space-y-0 p-0">
+                <div
+                  v-for="row in 10"
+                  :key="`dashboard-work-order-row-skeleton-${row}`"
+                  class="grid h-[50px] grid-cols-[1.35fr_1fr_0.95fr_0.72fr_0.78fr_0.6fr] items-center gap-3 border-b border-border/70 px-4 last:border-b-0"
+                >
+                  <Skeleton class="h-4 w-full max-w-48" />
+                  <Skeleton class="h-4 w-full max-w-40" />
+                  <Skeleton class="h-4 w-full max-w-36" />
+                  <Skeleton class="h-4 w-full max-w-28" />
+                  <Skeleton class="h-5 w-14 rounded-md" />
+                  <Skeleton class="h-4 w-20" />
+                </div>
+              </div>
+
+              <div v-else-if="activeWorkOrderTableRows.length">
+                <Table class="min-w-[820px] table-fixed">
+                  <TableHeader>
+                    <TableRow class="border-border/70 text-left text-[11px] font-medium text-muted-foreground hover:bg-transparent">
+                      <TableHead class="h-auto w-[25%] px-4 py-2.5 text-[11px]">
+                        工单
+                      </TableHead>
+                      <TableHead class="h-auto w-[19%] px-3 py-2.5 text-[11px]">
+                        客户
+                      </TableHead>
+                      <TableHead class="h-auto w-[18%] px-3 py-2.5 text-[11px]">
+                        计划 / 类型
+                      </TableHead>
+                      <TableHead class="h-auto w-[14%] px-3 py-2.5 text-[11px]">
+                        负责人
+                      </TableHead>
+                      <TableHead class="h-auto w-[14%] px-3 py-2.5 text-[11px]">
+                        状态
+                      </TableHead>
+                      <TableHead class="h-auto w-[10%] px-4 py-2.5 text-[11px]">
+                        时间
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow
+                      v-for="row in activeWorkOrderTableRows"
+                      :key="row.id"
+                      class="group dashboard-card-hover-surface cursor-pointer border-border/70 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+                      role="button"
+                      tabindex="0"
+                      @click="goToWorkOrderDetail(row)"
+                      @keydown.enter.prevent="goToWorkOrderDetail(row)"
+                      @keydown.space.prevent="goToWorkOrderDetail(row)"
+                    >
+                      <TableCell class="px-4 py-2.5">
+                        <div class="inline-flex max-w-full min-w-0 items-baseline gap-1.5 text-left">
+                          <span class="min-w-0 max-w-full truncate text-[13px] font-semibold leading-5 text-foreground transition-colors group-hover:text-link">
+                            {{ row.title }}
+                          </span>
+                          <span class="shrink-0 text-[11px] leading-4 text-muted-foreground">
+                            #{{ row.shortOrderNo }}
+                          </span>
+                        </div>
+                      </TableCell>
+                      <TableCell class="px-3 py-2.5">
+                        <span class="block truncate text-[13px] font-medium leading-5 text-foreground">
+                          {{ row.customerName }}
+                        </span>
+                      </TableCell>
+                      <TableCell class="px-3 py-2.5">
+                        <span class="block truncate text-[13px] text-foreground">
+                          {{ row.category }}
+                        </span>
+                      </TableCell>
+                      <TableCell class="px-3 py-2.5">
+                        <span class="block truncate text-[13px] text-foreground">
+                          {{ row.assignee }}
+                        </span>
+                      </TableCell>
+                      <TableCell class="px-3 py-2.5">
+                        <StatusBadge
+                          :label="row.statusLabel"
+                          :tone="row.statusTone"
+                          :icon="row.statusIcon"
+                          class="h-6 max-w-none whitespace-nowrap"
+                        />
+                      </TableCell>
+                      <TableCell class="px-4 py-2.5 text-right">
+                        <span class="text-[12px] tabular-nums text-muted-foreground">
+                          {{ row.dateLabel }}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </div>
+
+              <div v-else class="flex min-h-[260px] items-center justify-center text-sm text-muted-foreground">
+                {{ activeWorkOrderTableEmptyText }}
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
 
