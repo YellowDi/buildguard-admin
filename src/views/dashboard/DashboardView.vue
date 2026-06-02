@@ -32,7 +32,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import AppSidebarCalendarEventGroups from "@/components/layout/app-sidebar/AppSidebarCalendarEventGroups.vue"
 import type { AppSidebarCalendarItem } from "@/components/layout/app-sidebar/types"
-import { groupCalendarEventsByDate, useCalendarEvents } from "@/composables/useCalendarEvents"
+import { getTodayDateKey, groupCalendarEventsByDate, useCalendarEvents } from "@/composables/useCalendarEvents"
 import { fetchCustomers } from "@/lib/customers-api"
 import { fetchInspectionPlans } from "@/lib/inspection-plans-api"
 import { fetchInspectionServices } from "@/lib/inspection-services-api"
@@ -345,9 +345,16 @@ const activeWorkOrderStatusDistributionChartConfig = computed<ChartConfig>(() =>
 ) as ChartConfig)
 const activeWorkOrderStatusDistributionTotal = computed(() => activeWorkOrderStatusDistributionSourceItems.value.length)
 const hasActiveWorkOrderStatusDistribution = computed(() => activeWorkOrderStatusDistributionItems.value.some(item => item.value > 0))
-const dashboardCalendarGroups = computed(() => groupCalendarEventsByDate(
-  dashboardCalendarEvents.value.filter(event => event.type === activeDashboardCalendarTab.value),
-))
+const dashboardCalendarGroups = computed(() => {
+  const todayKey = getTodayDateKey()
+  return groupCalendarEventsByDate(
+    dashboardCalendarEvents.value.filter(event => (
+      event.type === activeDashboardCalendarTab.value
+      && event.dateKey >= todayKey
+    )),
+    todayKey,
+  )
+})
 
 onMounted(() => {
   void loadDashboardStats()

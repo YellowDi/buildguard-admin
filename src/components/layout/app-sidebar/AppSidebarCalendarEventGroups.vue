@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia, EmptyTitle } from "@/components/ui/empty"
 import type { CalendarEventGroup } from "@/composables/useCalendarEvents"
 import type { AppSidebarCalendarItem } from "@/components/layout/app-sidebar/types"
 
@@ -28,7 +29,17 @@ function getEventTitleText(event: AppSidebarCalendarItem) {
     <p class="py-8 text-center text-sm text-muted-foreground">加载中...</p>
   </template>
   <template v-else-if="groups.length === 0">
-    <p class="py-8 text-center text-sm text-muted-foreground">暂无条目</p>
+    <div class="flex min-h-[220px] w-full min-w-0 flex-col items-center justify-center px-4 py-10">
+      <Empty class="w-full max-w-md flex-none border-0 bg-transparent p-6! shadow-none md:p-8!">
+        <EmptyHeader class="max-w-md">
+          <EmptyMedia variant="icon">
+            <i class="ri-calendar-event-line text-[18px]" />
+          </EmptyMedia>
+          <EmptyTitle>暂无日历条目</EmptyTitle>
+          <EmptyDescription>当前没有可展示的日历安排。</EmptyDescription>
+        </EmptyHeader>
+      </Empty>
+    </div>
   </template>
   <template v-else>
     <section
