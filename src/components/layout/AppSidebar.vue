@@ -10,24 +10,15 @@ import {
 } from "@/components/ui/sidebar"
 import AppSidebarHomeNav from "@/components/layout/app-sidebar/AppSidebarHomeNav.vue"
 import AppSidebarTopBar from "@/components/layout/app-sidebar/AppSidebarTopBar.vue"
-import type {
-  AppSidebarConversationItem,
-  AppSidebarInboxGroup,
-  AppSidebarNavItem,
-  AppSidebarTopTabId,
-} from "@/components/layout/app-sidebar/types"
+import type { AppSidebarNavItem, AppSidebarTopTabId } from "@/components/layout/app-sidebar/types"
 import UserCardPopover from "@/components/layout/UserCardPopover.vue"
 import SettingsSidebar from "@/components/settings/SettingsSidebar.vue"
 import { useSettings } from "@/composables/useSettings"
 import { useSettingsNavigation } from "@/composables/useSettingsNavigation"
 import { useCurrentUserPermissions } from "@/composables/useCurrentUserPermissions"
 import { DEFAULT_SETTINGS_CATEGORY_KEY, isSettingsCategoryKey, type SettingsCategoryKey } from "@/components/settings/types"
-import conversationsData from "@/mocks/ai-conversations.json"
-import inboxData from "@/mocks/inbox.json"
 
 const AppSidebarCalendarPanel = defineAsyncComponent(() => import("@/components/layout/app-sidebar/AppSidebarCalendarPanel.vue"))
-const AppSidebarConversationPanel = defineAsyncComponent(() => import("@/components/layout/app-sidebar/AppSidebarConversationPanel.vue"))
-const AppSidebarInboxPanel = defineAsyncComponent(() => import("@/components/layout/app-sidebar/AppSidebarInboxPanel.vue"))
 const GlobalCommand = defineAsyncComponent(() => import("@/components/layout/GlobalCommand.vue"))
 
 const props = defineProps<{
@@ -44,6 +35,8 @@ const { categories } = useSettings()
 const { settingsBackTarget } = useSettingsNavigation()
 const { canMenu } = useCurrentUserPermissions()
 
+// Conversation and inbox are post-v1 sidebar modes. Restore their tab entries
+// together with AppSidebarConversationPanel and AppSidebarInboxPanel branches.
 const topTabs: Array<{ id: AppSidebarTopTabId, label: string, icon: string }> = [
   {
     id: "home",
@@ -51,19 +44,9 @@ const topTabs: Array<{ id: AppSidebarTopTabId, label: string, icon: string }> = 
     icon: "ri-home-5-line",
   },
   {
-    id: "conversation",
-    label: "对话",
-    icon: "ri-chat-1-line",
-  },
-  {
     id: "calendar",
     label: "日历",
     icon: "ri-calendar-event-line",
-  },
-  {
-    id: "inbox",
-    label: "收件箱",
-    icon: "ri-inbox-2-line",
   },
 ]
 
@@ -135,8 +118,6 @@ const businessItems = reactive<AppSidebarNavItem[]>([
   },
 ])
 
-const inboxGroups = inboxData as AppSidebarInboxGroup[]
-const conversationItems = conversationsData as AppSidebarConversationItem[]
 const selectedTopTab = ref<AppSidebarTopTabId>("home")
 const isSearchDialogOpen = ref(false)
 const sidebarModeTransitionName = ref("sidebar-mode-forward")
@@ -338,14 +319,7 @@ watch(isSettingsRoute, (nextValue, previousValue) => {
             :active-path="activePath"
             @toggle-item="toggleItem"
           />
-          <AppSidebarConversationPanel
-            v-else-if="selectedTopTab === 'conversation'"
-            :items="conversationItems"
-          />
-          <AppSidebarInboxPanel
-            v-else-if="selectedTopTab === 'inbox'"
-            :groups="inboxGroups"
-          />
+          <!-- Restore post-v1 conversation/inbox panel branches before the calendar fallback. -->
           <AppSidebarCalendarPanel
             v-else
           />
@@ -397,14 +371,7 @@ watch(isSettingsRoute, (nextValue, previousValue) => {
             class="p-2"
             @toggle-item="toggleItem"
           />
-          <AppSidebarConversationPanel
-            v-else-if="selectedTopTab === 'conversation'"
-            :items="conversationItems"
-          />
-          <AppSidebarInboxPanel
-            v-else-if="selectedTopTab === 'inbox'"
-            :groups="inboxGroups"
-          />
+          <!-- Restore post-v1 conversation/inbox panel branches before the calendar fallback. -->
           <AppSidebarCalendarPanel
             v-else
             class="p-2"
