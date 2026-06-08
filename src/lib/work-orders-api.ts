@@ -33,6 +33,7 @@ export type WorkOrderListItem = {
   Score?: number
   Result?: number
   Remark?: string
+  Version?: number
   CreatedAt?: string
   UpdatedAt?: string
   [property: string]: unknown
@@ -160,6 +161,7 @@ export type WorkOrderInspectionHistoryDetailPayload = {
 export type GenerateWorkOrderGnReportPayload = {
   BuildUuid?: string
   Expert?: string
+  Version?: number
   WorkOrderUuid?: string
   [property: string]: unknown
 }
@@ -644,6 +646,11 @@ export async function generateWorkOrderGnReport(
     Expert: getOptionalString(payload.Expert) ?? "",
     WorkOrderUuid: getRequiredString(payload.WorkOrderUuid, "WorkOrderUuid"),
   }
+  const version = getOptionalPositiveInteger(payload.Version, "Version")
+
+  if (version !== undefined) {
+    normalizedPayload.Version = version
+  }
 
   const response = await fetch(WORK_ORDER_GN_REPORT_API_URL, {
     method: "POST",
@@ -968,6 +975,7 @@ function normalizeWorkOrderListItem(value: unknown): WorkOrderListItem {
     Score: getFirstNumber(record, ["Score", "score", "TotalScore", "totalScore"]),
     Result: getFirstNumber(record, ["Result", "result", "WorkOrderResult", "workOrderResult"]),
     Remark: getFirstText(record, ["Remark", "remark", "Note", "note", "Description", "description"]),
+    Version: getFirstNumber(record, ["Version", "version"]),
     CreatedStartAt: getFirstText(record, ["CreatedStartAt", "createdStartAt"]),
     CreatedEndAt: getFirstText(record, ["CreatedEndAt", "createdEndAt"]),
     CreatedAt: getFirstText(record, ["CreatedAt", "createdAt", "CreateTime", "createTime"]),

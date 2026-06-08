@@ -1831,6 +1831,7 @@ async function submitReportGeneration() {
 
   const buildUuid = toText(currentBuilding.BuildUuid, "")
   const targetWorkOrderUuid = toText(currentWorkOrder.Uuid, workOrderUuid.value)
+  const reportVersion = toPositiveInteger(currentBuilding.Version) ?? toPositiveInteger(currentWorkOrder.Version)
 
   if (!buildUuid) {
     toast.error("建筑信息不完整，无法生成报告")
@@ -1839,6 +1840,11 @@ async function submitReportGeneration() {
 
   if (!targetWorkOrderUuid) {
     toast.error("检测工单信息不完整，无法生成报告")
+    return
+  }
+
+  if (reportVersion === null) {
+    toast.error("当前建筑版本号缺失，无法生成报告")
     return
   }
 
@@ -1856,6 +1862,7 @@ async function submitReportGeneration() {
     const reportResult = await generateWorkOrderGnReport({
       BuildUuid: buildUuid,
       WorkOrderUuid: targetWorkOrderUuid,
+      Version: reportVersion,
       Expert: reportForm.value.expert,
     })
     const version = resolveGeneratedReportVersion(reportResult, generatedReport.value)
@@ -1906,6 +1913,7 @@ async function submitReportGeneration() {
     await uploadWorkOrderReport({
       BuildUuid: buildUuid,
       FileUrl: uploadResult.url,
+      Version: reportVersion,
       WorkOrderUuid: targetWorkOrderUuid,
     })
     markInspectionBuildReportGenerated(buildUuid, uploadResult.url)
