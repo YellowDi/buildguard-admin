@@ -663,7 +663,7 @@ async function submitInspectionComplete() {
 
   try {
     await updateWorkOrderStatus({
-      Uuid: uuid,
+      WorkOrderUuid: uuid,
       Status: INSPECTION_STATUS_CLOSED,
     })
 

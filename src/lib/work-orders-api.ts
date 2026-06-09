@@ -135,7 +135,7 @@ export type UpdateWorkOrderPayload = {
 }
 
 export type UpdateWorkOrderStatusPayload = {
-  Uuid: string
+  WorkOrderUuid: string
   Status: number
 }
 
@@ -752,7 +752,7 @@ export async function updateWorkOrder(payload: UpdateWorkOrderPayload): Promise<
 
 export async function updateWorkOrderStatus(payload: UpdateWorkOrderStatusPayload): Promise<CreateWorkOrderResult> {
   const normalizedPayload = {
-    Uuid: getRequiredString(payload.Uuid, "Uuid"),
+    WorkOrderUuid: getRequiredString(payload.WorkOrderUuid, "WorkOrderUuid"),
     Status: getRequiredNumber(payload.Status, "Status"),
   }
 
