@@ -2,6 +2,7 @@
 import { computed, reactive, ref } from "vue"
 import { toast } from "vue-sonner"
 
+import FileUploadField from "@/components/upload/FileUploadField.vue"
 import TablePage from "@/components/table-page/TablePage.vue"
 import { createTablePageDefinition, useTablePage } from "@/components/table-page/useTablePage"
 import type { TablePageSchema, TableQueryBarConfig } from "@/components/table-page/types"
@@ -18,7 +19,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { RichTextEditor } from "@/components/ui/rich-text-editor"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ResponsiveRightSheet } from "@/components/ui/sheet"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
@@ -32,11 +33,14 @@ import {
   type CustomerCaseModule,
   type CustomerCaseRecord,
 } from "@/lib/customer-cases-api"
-import { sanitizeRichTextHtml } from "@/lib/sanitize-html"
+import { fetchCustomers } from "@/lib/customers-api"
+import { getApiErrorMessage } from "@/lib/api-errors"
+import { uploadTencentCosFile } from "@/lib/tencent-cos-upload"
 import { cn } from "@/lib/utils"
 
 type CustomerCaseRow = CustomerCaseRecord & {
   bodyText: string
+  customerNameText: string
   moduleCount: number
   statusLabel: string
 }
@@ -46,14 +50,22 @@ type SheetMode = "create" | "edit" | "view"
 type CustomerCaseForm = {
   id: string
   title: string
+  customerUuid: string
+  customerName: string
   body: string
   modules: CustomerCaseModule[]
   isPublished: boolean
 }
 
+const CUSTOMER_NONE_VALUE = "__none__"
+const CUSTOMER_OPTIONS_PAGE_SIZE = 500
+
 const cases = ref<CustomerCaseRecord[]>([])
+const customerOptions = ref<Array<{ value: string; label: string }>>([])
 const loading = ref(false)
+const customerOptionsLoading = ref(false)
 const submitting = ref(false)
+const uploadingPhotoModuleId = ref("")
 const keywordQuery = ref("")
 const selectedStatus = ref("")
 const sheetOpen = ref(false)
@@ -72,6 +84,7 @@ const statusOptions = [
 const rows = computed<CustomerCaseRow[]>(() => cases.value.map(toCustomerCaseRow))
 const activeCase = computed(() => cases.value.find(item => item.id === form.id) ?? null)
 const deletingCase = computed(() => cases.value.find(item => item.id === deletingCaseId.value) ?? null)
+const customerSelectValue = computed(() => form.customerUuid || CUSTOMER_NONE_VALUE)
 const isReadonly = computed(() => sheetMode.value === "view")
 const sheetTitle = computed(() => {
   if (sheetMode.value === "create") return "新增客户案例"
@@ -129,6 +142,12 @@ const schema: TablePageSchema<CustomerCaseRow> = {
       sort: true,
     },
     {
+      key: "customerNameText",
+      label: "客户",
+      filterType: "text",
+      sort: true,
+    },
+    {
       key: "moduleCount",
       label: "模块",
       filterType: "number",
@@ -141,7 +160,7 @@ const schema: TablePageSchema<CustomerCaseRow> = {
     },
     {
       key: "bodyText",
-      label: "正文",
+      label: "项目描述",
       filterType: "text",
       width: "fill",
       slot: "cell-bodyText",
@@ -162,7 +181,7 @@ const schema: TablePageSchema<CustomerCaseRow> = {
       label: "页面内容",
       type: "text",
       fixed: true,
-      placeholder: "输入标题、正文或模块内容",
+      placeholder: "输入标题、客户、项目描述或模块内容",
       value: row => buildSearchText(row),
     },
   ],
@@ -191,7 +210,7 @@ const queryBar = computed<TableQueryBarConfig>(() => ({
       queryKey: "q",
       label: "关键词",
       icon: "ri-search-line",
-      placeholder: "标题、正文或模块内容",
+      placeholder: "标题、客户、项目描述或模块内容",
       value: keywordQuery.value,
       expandedWidth: 280,
       collapsedMaxWidth: 280,
@@ -217,6 +236,7 @@ const queryBar = computed<TableQueryBarConfig>(() => ({
 }))
 
 void loadCases()
+void loadCustomerOptions()
 
 async function loadCases() {
   loading.value = true
@@ -232,6 +252,28 @@ async function loadCases() {
     cases.value = []
   } finally {
     loading.value = false
+  }
+}
+
+async function loadCustomerOptions() {
+  customerOptionsLoading.value = true
+
+  try {
+    const result = await fetchCustomers({
+      PageNum: 1,
+      PageSize: CUSTOMER_OPTIONS_PAGE_SIZE,
+    })
+
+    customerOptions.value = result.list
+      .map(item => ({
+        value: toText(item.Uuid),
+        label: toText(item.CorpName, "未命名客户"),
+      }))
+      .filter(option => option.value)
+  } catch {
+    customerOptions.value = []
+  } finally {
+    customerOptionsLoading.value = false
   }
 }
 
@@ -277,6 +319,8 @@ async function saveCase() {
   try {
     const payload = {
       title,
+      customerUuid: form.customerUuid,
+      customerName: getCustomerName(form.customerUuid, form.customerName),
       body: form.body.trim(),
       modules: normalizeModuleOrders(form.modules),
       isPublished: form.isPublished,
@@ -356,12 +400,7 @@ async function confirmDelete() {
 function addModule() {
   form.modules = normalizeModuleOrders([
     ...form.modules,
-    {
-      id: createId("module"),
-      title: `模块 ${form.modules.length + 1}`,
-      content: "",
-      sortOrder: getNextSortOrder(form.modules),
-    },
+    createEmptyModule(getNextSortOrder(form.modules)),
   ])
 }
 
@@ -409,6 +448,50 @@ function clearDrag() {
   dragOverModuleId.value = ""
 }
 
+function handleCustomerChange(value: unknown) {
+  const nextValue = toText(value)
+
+  if (!nextValue || nextValue === CUSTOMER_NONE_VALUE) {
+    form.customerUuid = ""
+    form.customerName = ""
+    return
+  }
+
+  form.customerUuid = nextValue
+  form.customerName = getCustomerName(nextValue)
+}
+
+async function handleSitePhotoSelected(module: CustomerCaseModule, files: File[]) {
+  const file = files[0]
+  if (!file) {
+    return
+  }
+
+  if (!file.type.startsWith("image/")) {
+    toast.error("请选择图片文件")
+    return
+  }
+
+  uploadingPhotoModuleId.value = module.id
+
+  try {
+    const result = await uploadTencentCosFile({
+      file,
+      key: `customer-cases/site-photos/${Date.now()}-${sanitizeObjectKeyFileName(file.name)}`,
+      contentType: file.type || undefined,
+    })
+
+    module.sitePhotoUrl = result.url
+    toast.success("工地照片已上传")
+  } catch (error) {
+    toast.error("工地照片上传失败", {
+      description: getApiErrorMessage(error, "请稍后重试。"),
+    })
+  } finally {
+    uploadingPhotoModuleId.value = ""
+  }
+}
+
 function handleQueryChange(payload: { key: string; value: string | string[] }) {
   if (payload.key === "q") {
     keywordQuery.value = typeof payload.value === "string" ? payload.value.trim() : ""
@@ -435,6 +518,8 @@ function createEmptyForm(): CustomerCaseForm {
   return {
     id: "",
     title: "",
+    customerUuid: "",
+    customerName: "",
     body: "",
     modules: [],
     isPublished: true,
@@ -445,6 +530,8 @@ function createFormFromRecord(record: CustomerCaseRecord): CustomerCaseForm {
   return {
     id: record.id,
     title: record.title,
+    customerUuid: record.customerUuid,
+    customerName: record.customerName,
     body: stripHtml(record.body),
     modules: record.modules.map(module => ({ ...module })),
     isPublished: record.isPublished,
@@ -455,6 +542,7 @@ function toCustomerCaseRow(record: CustomerCaseRecord): CustomerCaseRow {
   return {
     ...record,
     bodyText: stripHtml(record.body) || "-",
+    customerNameText: record.customerName || "未关联客户",
     moduleCount: record.modules.length,
     statusLabel: record.isPublished ? "对外展示" : "不展示",
   }
@@ -464,6 +552,8 @@ function resolveCustomerCaseRecord(row: CustomerCaseRow | CustomerCaseRecord | R
   return {
     id: toText(row.id),
     title: toText(row.title),
+    customerUuid: toText(row.customerUuid),
+    customerName: toText(row.customerName),
     body: toText(row.body),
     modules: Array.isArray(row.modules)
       ? row.modules.map(normalizeModuleFromUnknown)
@@ -480,9 +570,24 @@ function normalizeModuleFromUnknown(value: unknown, index: number): CustomerCase
 
   return {
     id: toText(source.id) || createId("module"),
-    title: toText(source.title, `模块 ${index + 1}`),
-    content: toText(source.content),
+    projectProgress: toText(source.projectProgress),
+    projectStage: toText(source.projectStage),
+    sitePhotoUrl: toText(source.sitePhotoUrl),
+    progressDescription: toText(source.progressDescription),
+    craftInfo: toText(source.craftInfo),
     sortOrder: toNumber(source.sortOrder) ?? (index + 1) * 10,
+  }
+}
+
+function createEmptyModule(sortOrder: number): CustomerCaseModule {
+  return {
+    id: createId("module"),
+    projectProgress: "",
+    projectStage: "",
+    sitePhotoUrl: "",
+    progressDescription: "",
+    craftInfo: "",
+    sortOrder,
   }
 }
 
@@ -506,6 +611,10 @@ function getRowModuleCount(row: Record<string, unknown>) {
   return toNumber(row.moduleCount) ?? (Array.isArray(row.modules) ? row.modules.length : 0)
 }
 
+function getCustomerName(customerUuid: string, fallback = "") {
+  return customerOptions.value.find(option => option.value === customerUuid)?.label ?? fallback
+}
+
 function parseStatusFilter(value: string) {
   if (value === "published") return true
   if (value === "hidden") return false
@@ -515,21 +624,30 @@ function parseStatusFilter(value: string) {
 function buildSearchText(row: CustomerCaseRow) {
   return [
     row.title,
+    row.customerNameText,
     row.bodyText,
     row.statusLabel,
-    row.modules.map(module => `${module.title} ${stripHtml(module.content)}`).join(" "),
+    row.modules.map(buildModuleSearchText).join(" "),
   ].join(" ")
 }
 
-function getModulePreviewHtml(content: string) {
-  return sanitizeRichTextHtml(content) || "<p>暂无模块内容。</p>"
+function buildModuleSearchText(module: CustomerCaseModule) {
+  return [
+    module.projectProgress,
+    module.projectStage,
+    module.progressDescription,
+    module.craftInfo,
+  ].join(" ")
 }
 
 function normalizeModuleOrders(items: CustomerCaseModule[]) {
   return [...items].sort(compareModules).map((item, index) => ({
     ...item,
-    title: item.title.trim() || `模块 ${index + 1}`,
-    content: item.content.trim(),
+    projectProgress: item.projectProgress.trim(),
+    projectStage: item.projectStage.trim(),
+    sitePhotoUrl: item.sitePhotoUrl.trim(),
+    progressDescription: item.progressDescription.trim(),
+    craftInfo: item.craftInfo.trim(),
     sortOrder: (index + 1) * 10,
   }))
 }
@@ -554,7 +672,6 @@ function reorderById(items: CustomerCaseModule[], sourceId: string, targetId: st
 
 function compareModules(left: CustomerCaseModule, right: CustomerCaseModule) {
   return left.sortOrder - right.sortOrder
-    || left.title.localeCompare(right.title, "zh-CN")
 }
 
 function getNextSortOrder(items: Array<{ sortOrder: number }>) {
@@ -567,6 +684,12 @@ function createId(prefix: string) {
 
 function stripHtml(value: string) {
   return value.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim()
+}
+
+function sanitizeObjectKeyFileName(value: string) {
+  const normalized = value.trim().replace(/[\\/:*?"<>|\s]+/g, "-").replace(/^-+|-+$/g, "")
+
+  return normalized || "site-photo"
 }
 
 function toText(value: unknown, fallback = "") {
@@ -642,7 +765,7 @@ function toNumber(value: unknown) {
     <ResponsiveRightSheet
       v-model:open="sheetOpen"
       :title="sheetTitle"
-      description="维护标题、正文、客户案例模块和对外展示状态。"
+      description="维护标题、客户、项目描述、客户案例模块和对外展示状态。"
       :show-primary="false"
       sheet-content-class="flex min-h-0 flex-col overflow-hidden sm:max-w-3xl"
     >
@@ -712,6 +835,31 @@ function toNumber(value: unknown) {
           </label>
 
           <div class="case-editor-row">
+            <span class="case-editor-label">客户</span>
+            <div class="case-editor-control">
+              <Select
+                :model-value="customerSelectValue"
+                :disabled="isReadonly || customerOptionsLoading"
+                @update:model-value="handleCustomerChange"
+              >
+                <SelectTrigger class="w-full">
+                  <SelectValue :placeholder="customerOptionsLoading ? '正在加载客户...' : '请选择客户（非必填）'" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem :value="CUSTOMER_NONE_VALUE">不关联客户</SelectItem>
+                  <SelectItem
+                    v-for="customer in customerOptions"
+                    :key="customer.value"
+                    :value="customer.value"
+                  >
+                    {{ customer.label }}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div class="case-editor-row">
             <span class="case-editor-label">展示</span>
             <div class="case-editor-control">
               <div class="flex min-h-9 items-center justify-between gap-3">
@@ -724,13 +872,13 @@ function toNumber(value: unknown) {
           </div>
 
           <label class="case-editor-row case-editor-row--top">
-            <span class="case-editor-label">正文</span>
+            <span class="case-editor-label">项目描述</span>
             <span class="case-editor-control">
               <Textarea
                 v-model="form.body"
                 :disabled="isReadonly"
                 class="min-h-28 resize-y"
-                placeholder="输入客户案例正文摘要"
+                placeholder="输入项目描述"
               />
             </span>
           </label>
@@ -740,7 +888,7 @@ function toNumber(value: unknown) {
             <div class="case-editor-control">
               <div class="flex flex-col gap-2">
                 <article
-                  v-for="module in orderedFormModules"
+                  v-for="(module, index) in orderedFormModules"
                   :key="module.id"
                   :class="cn(
                     'rounded-lg border border-border/70 bg-background p-2.5',
@@ -763,12 +911,14 @@ function toNumber(value: unknown) {
                       <i class="ri-draggable text-[17px]" />
                     </button>
 
-                    <Input
-                      v-model="module.title"
-                      class="min-w-0 flex-1"
-                      :disabled="isReadonly"
-                      placeholder="模块标题"
-                    />
+                    <div class="min-w-0 flex-1">
+                      <p class="truncate text-sm font-medium text-foreground">
+                        模块 {{ index + 1 }}
+                      </p>
+                      <p class="mt-0.5 truncate text-xs text-muted-foreground">
+                        项目进度、项目阶段、工地照片、进度描述、工艺信息
+                      </p>
+                    </div>
 
                     <Button
                       v-if="!isReadonly"
@@ -783,19 +933,85 @@ function toNumber(value: unknown) {
                     </Button>
                   </div>
 
-                  <div class="mt-3">
-                    <RichTextEditor
-                      v-if="!isReadonly"
-                      v-model="module.content"
-                      placeholder="输入模块富文本内容"
-                      class="customer-case-rich-editor"
-                    />
-                    <div
-                      v-else
-                      class="customer-case-rich-content rounded-md border border-border/70 bg-muted/20 px-3 py-3 text-sm leading-7"
-                      v-html="getModulePreviewHtml(module.content)"
-                    />
+                  <div class="mt-3 grid gap-3 sm:grid-cols-2">
+                    <label class="grid gap-1.5 text-sm">
+                      <span class="font-medium text-foreground">项目进度</span>
+                      <Input
+                        v-model="module.projectProgress"
+                        :disabled="isReadonly"
+                        placeholder="例如：完成 70%"
+                      />
+                    </label>
+
+                    <label class="grid gap-1.5 text-sm">
+                      <span class="font-medium text-foreground">项目阶段</span>
+                      <Input
+                        v-model="module.projectStage"
+                        :disabled="isReadonly"
+                        placeholder="例如：主体施工"
+                      />
+                    </label>
                   </div>
+
+                  <div class="mt-3 grid gap-1.5 text-sm">
+                    <span class="font-medium text-foreground">工地照片</span>
+                    <FileUploadField
+                      accept="image/*"
+                      title="上传工地照片"
+                      description="支持浏览器可选择的图片文件。"
+                      :selected-label="module.sitePhotoUrl ? '已上传工地照片' : ''"
+                      :button-label="module.sitePhotoUrl ? '更换图片' : '上传图片'"
+                      loading-label="上传中..."
+                      :loading="uploadingPhotoModuleId === module.id"
+                      :disabled="isReadonly || uploadingPhotoModuleId === module.id"
+                      :show-supplement="Boolean(module.sitePhotoUrl)"
+                      compact
+                      @files-selected="handleSitePhotoSelected(module, $event)"
+                    >
+                      <template v-if="module.sitePhotoUrl" #preview>
+                        <div class="aspect-[4/3] w-full overflow-hidden rounded-md bg-muted">
+                          <img
+                            :src="module.sitePhotoUrl"
+                            alt=""
+                            class="h-full w-full object-cover"
+                          >
+                        </div>
+                      </template>
+
+                      <template v-if="module.sitePhotoUrl && !isReadonly" #actions>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          class="h-9 rounded-md text-muted-foreground"
+                          @click.stop="module.sitePhotoUrl = ''"
+                        >
+                          <i class="ri-close-line text-sm" />
+                          <span>移除</span>
+                        </Button>
+                      </template>
+                    </FileUploadField>
+                  </div>
+
+                  <label class="mt-3 grid gap-1.5 text-sm">
+                    <span class="font-medium text-foreground">进度描述</span>
+                    <Textarea
+                      v-model="module.progressDescription"
+                      :disabled="isReadonly"
+                      class="min-h-20 resize-y"
+                      placeholder="输入进度描述"
+                    />
+                  </label>
+
+                  <label class="mt-3 grid gap-1.5 text-sm">
+                    <span class="font-medium text-foreground">工艺信息</span>
+                    <Textarea
+                      v-model="module.craftInfo"
+                      :disabled="isReadonly"
+                      class="min-h-20 resize-y"
+                      placeholder="输入工艺信息"
+                    />
+                  </label>
                 </article>
 
                 <div v-if="!form.modules.length" class="rounded-md border border-dashed border-border py-8 text-center text-sm text-muted-foreground">
@@ -880,24 +1096,6 @@ function toNumber(value: unknown) {
 
 .case-editor-control {
   min-width: 0;
-}
-
-.customer-case-rich-editor :deep(.rich-text-editor-content) {
-  min-height: 220px;
-}
-
-.customer-case-rich-content :deep(p),
-.customer-case-rich-content :deep(ul),
-.customer-case-rich-content :deep(ol),
-.customer-case-rich-content :deep(blockquote) {
-  margin-bottom: 0.75rem;
-}
-
-.customer-case-rich-content :deep(p:last-child),
-.customer-case-rich-content :deep(ul:last-child),
-.customer-case-rich-content :deep(ol:last-child),
-.customer-case-rich-content :deep(blockquote:last-child) {
-  margin-bottom: 0;
 }
 
 @media (max-width: 640px) {

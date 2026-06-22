@@ -712,7 +712,16 @@ function getCustomerCaseSummary(record: CustomerCaseRecord) {
   }
 
   const firstModule = [...record.modules].sort(compareBySortOrder)[0]
-  return firstModule ? stripHtml(firstModule.content) : "暂无正文"
+  const moduleText = firstModule
+    ? [
+        firstModule.projectStage,
+        firstModule.projectProgress,
+        firstModule.progressDescription,
+        firstModule.craftInfo,
+      ].map(stripHtml).filter(Boolean).join(" · ")
+    : ""
+
+  return moduleText || "暂无项目描述"
 }
 
 function getCoverSrc(value: string) {

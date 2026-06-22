@@ -2,14 +2,19 @@ import mockCustomerCases from "@/mocks/customer-cases.json"
 
 export type CustomerCaseModule = {
   id: string
-  title: string
-  content: string
+  projectProgress: string
+  projectStage: string
+  sitePhotoUrl: string
+  progressDescription: string
+  craftInfo: string
   sortOrder: number
 }
 
 export type CustomerCaseRecord = {
   id: string
   title: string
+  customerUuid: string
+  customerName: string
   body: string
   modules: CustomerCaseModule[]
   isPublished: boolean
@@ -23,6 +28,8 @@ export type CustomerCaseListPayload = {
 
 export type SaveCustomerCasePayload = {
   title: string
+  customerUuid?: string
+  customerName?: string
   body: string
   modules: CustomerCaseModule[]
   isPublished: boolean
@@ -134,6 +141,8 @@ function normalizeCustomerCaseRecord(value: unknown): CustomerCaseRecord {
   return {
     id: id || createId("case"),
     title,
+    customerUuid: normalizeText(source.customerUuid),
+    customerName: normalizeText(source.customerName),
     body: normalizeText(source.body),
     modules: normalizeModules(source.modules),
     isPublished: Boolean(source.isPublished),
@@ -151,8 +160,11 @@ function normalizeModules(value: unknown): CustomerCaseModule[] {
       const source = isRecord(item) ? item : {}
       return {
         id: normalizeText(source.id) || createId("module"),
-        title: normalizeText(source.title, `模块 ${index + 1}`),
-        content: normalizeText(source.content),
+        projectProgress: normalizeText(source.projectProgress),
+        projectStage: normalizeText(source.projectStage),
+        sitePhotoUrl: normalizeText(source.sitePhotoUrl),
+        progressDescription: normalizeText(source.progressDescription),
+        craftInfo: normalizeText(source.craftInfo),
         sortOrder: normalizeNumber(source.sortOrder) ?? (index + 1) * 10,
       }
     })
@@ -170,15 +182,24 @@ function compareCustomerCases(left: CustomerCaseRecord, right: CustomerCaseRecor
 
 function compareModules(left: CustomerCaseModule, right: CustomerCaseModule) {
   return left.sortOrder - right.sortOrder
-    || left.title.localeCompare(right.title, "zh-CN")
 }
 
 function buildSearchText(record: CustomerCaseRecord) {
   return [
     record.title,
+    record.customerName,
     stripHtml(record.body),
-    record.modules.map(module => `${module.title} ${stripHtml(module.content)}`).join(" "),
+    record.modules.map(buildModuleSearchText).join(" "),
   ].join(" ").toLowerCase()
+}
+
+function buildModuleSearchText(module: CustomerCaseModule) {
+  return [
+    module.projectProgress,
+    module.projectStage,
+    module.progressDescription,
+    module.craftInfo,
+  ].join(" ")
 }
 
 function cloneCustomerCase(record: CustomerCaseRecord): CustomerCaseRecord {
