@@ -5,6 +5,7 @@ export type AppSidebarNavItem = {
   kind?: "item" | "separator"
   icon?: string
   path?: string
+  permissionPath?: string
   action?: "open-settings"
   badge?: string
   children?: AppSidebarNavItem[]

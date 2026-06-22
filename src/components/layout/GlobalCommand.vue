@@ -385,6 +385,7 @@ function flattenNavigationItems(items: AppSidebarNavItem[], parentLabels: string
           type: "页面",
           keywords: [item.label, item.path, ...parentLabels],
           to: item.path,
+          requiredMenuPath: item.permissionPath,
         } satisfies SearchItem]
       : []
 

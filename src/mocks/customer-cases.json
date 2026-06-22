@@ -1,0 +1,59 @@
+[
+  {
+    "id": "case-sunrise-park",
+    "title": "明湖广场消防设施年度检测",
+    "body": "<p>明湖广场通过标准化检测计划和移动端闭环整改，将消防设施巡检从纸质记录升级为可追踪的线上流程。</p>",
+    "isPublished": true,
+    "updatedAt": "2026-06-18 10:30",
+    "modules": [
+      {
+        "id": "case-sunrise-park-module-1",
+        "title": "项目背景",
+        "content": "<p>项目覆盖商业综合体、地下车库和屋面设备区，重点关注消防通道、报警设备和水系统运行状态。</p>",
+        "sortOrder": 10
+      },
+      {
+        "id": "case-sunrise-park-module-2",
+        "title": "执行结果",
+        "content": "<p>检测团队完成 126 个点位复核，输出整改清单并在移动端完成闭环确认。</p>",
+        "sortOrder": 20
+      }
+    ]
+  },
+  {
+    "id": "case-yunqi-campus",
+    "title": "云栖产业园建筑安全巡检",
+    "body": "<p>云栖产业园以园区为单位统一管理建筑台账、工单派发和检测报告，降低多楼栋巡检协同成本。</p>",
+    "isPublished": true,
+    "updatedAt": "2026-06-16 15:20",
+    "modules": [
+      {
+        "id": "case-yunqi-campus-module-1",
+        "title": "管理范围",
+        "content": "<p>覆盖研发楼、仓储中心和公共配套空间，统一沉淀建筑基础信息和巡检记录。</p>",
+        "sortOrder": 10
+      },
+      {
+        "id": "case-yunqi-campus-module-2",
+        "title": "客户收益",
+        "content": "<p>客户可以在 app 首页快速查看案例成果，管理端同步维护对外展示内容。</p>",
+        "sortOrder": 20
+      }
+    ]
+  },
+  {
+    "id": "case-internal-demo",
+    "title": "总部园区设备间专项排查",
+    "body": "<p>该案例用于内部培训，暂不对外展示。</p>",
+    "isPublished": false,
+    "updatedAt": "2026-06-12 09:00",
+    "modules": [
+      {
+        "id": "case-internal-demo-module-1",
+        "title": "排查说明",
+        "content": "<p>聚焦设备间通风、消防器材和用电安全，后续根据真实接口补充更多字段。</p>",
+        "sortOrder": 10
+      }
+    ]
+  }
+]

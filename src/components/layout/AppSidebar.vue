@@ -102,6 +102,12 @@ const businessItems = reactive<AppSidebarNavItem[]>([
     path: "/media-library",
   },
   {
+    label: "客户案例",
+    icon: "ri-profile-line",
+    path: "/customer-cases",
+    permissionPath: "/media-library",
+  },
+  {
     label: "App 首页",
     icon: "ri-smartphone-line",
     path: "/app-home",
@@ -196,7 +202,7 @@ function handleTopTabUpdate(tabId: string) {
 }
 
 function isBusinessRoute(path: string) {
-  return ["/", "/customers", "/parks", "/buildings", "/monitoring", "/inspection-services", "/inspection-plans", "/media-library", "/app-home", "/customer-feedback", "/work-orders"].some(
+  return ["/", "/customers", "/parks", "/buildings", "/monitoring", "/inspection-services", "/inspection-plans", "/media-library", "/customer-cases", "/app-home", "/customer-feedback", "/work-orders"].some(
     prefix => path === prefix || path.startsWith(`${prefix}/`),
   )
 }
@@ -206,7 +212,7 @@ function isNavItemAllowed(item: AppSidebarNavItem): boolean {
     return item.children.some(child => isNavItemAllowed(child))
   }
 
-  return !item.path || canMenu(item.path)
+  return !item.path || canMenu(item.permissionPath ?? item.path)
 }
 
 function findBusinessItem(items: AppSidebarNavItem[], target: AppSidebarNavItem): AppSidebarNavItem | null {
