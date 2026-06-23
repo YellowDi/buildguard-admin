@@ -31,17 +31,36 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import FormDatePicker from "@/components/form/FormDatePicker.vue"
 import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { ResponsiveRightSheet } from "@/components/ui/sheet"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { handleApiError } from "@/lib/api-errors"
+import { fetchCustomers } from "@/lib/customers-api"
 import {
+  createInspectionProject,
   createInspectionProjectProgress,
   fetchInspectionProjectDetail,
   fetchInspectionProjects,
   finishInspectionProject,
+  updateInspectionProject,
   updateInspectionProjectProgress,
   updateInspectionProjectPublicStatus,
   type InspectionProjectRecord,
@@ -73,6 +92,23 @@ type CustomerProjectRow = {
   raw: InspectionProjectRecord
 }
 
+type CustomerOption = {
+  uuid: string
+  name: string
+}
+
+type ProjectSheetMode = "create" | "view" | "edit"
+
+type ProjectForm = {
+  name: string
+  customerUuid: string
+  customerName: string
+  address: string
+  projectTime: string
+  duration: string
+  introduction: string
+}
+
 type ProgressEditorMode = "create" | "edit"
 
 type ProgressForm = {
@@ -82,6 +118,9 @@ type ProgressForm = {
   processInfo: string
   photos: WorkOrderFileItem[]
 }
+
+const CUSTOMER_NONE_VALUE = "__none__"
+const CUSTOMER_OPTIONS_PAGE_SIZE = 500
 
 const projects = ref<CustomerProjectRow[]>([])
 const loading = ref(false)
@@ -93,14 +132,19 @@ const nameQuery = ref("")
 const selectedStatus = ref("")
 const sortDirection = ref<"asc" | "desc">("desc")
 const sheetOpen = ref(false)
+const projectSheetMode = ref<ProjectSheetMode>("view")
 const detailLoading = ref(false)
 const selectedProject = ref<InspectionProjectRecord | null>(null)
+const customerOptions = ref<CustomerOption[]>([])
+const customerOptionsLoading = ref(false)
+const projectFormSubmitting = ref(false)
 const finishConfirmOpen = ref(false)
 const projectActionSubmitting = ref(false)
 const progressEditorOpen = ref(false)
 const progressEditorMode = ref<ProgressEditorMode>("create")
 const progressSubmitting = ref(false)
 const progressUploading = ref(false)
+const projectForm = reactive<ProjectForm>(createEmptyProjectForm())
 const progressForm = reactive<ProgressForm>(createEmptyProgressForm())
 let latestRequestId = 0
 let latestDetailRequestId = 0
@@ -122,6 +166,25 @@ const projectStatusMap = {
 
 const progressItems = computed(() => selectedProject.value?.ProgressList ?? [])
 const isProjectFinished = computed(() => toNumber(selectedProject.value?.Status) === 2)
+const isProjectFormMode = computed(() => projectSheetMode.value === "create" || projectSheetMode.value === "edit")
+const projectSheetTitle = computed(() => {
+  if (projectSheetMode.value === "create") return "添加客户项目"
+  if (projectSheetMode.value === "edit") return "编辑客户项目"
+  return "客户项目详情"
+})
+const projectSheetDescription = computed(() => {
+  if (projectSheetMode.value === "create") return "新增客户项目基础信息。"
+  if (projectSheetMode.value === "edit") return "编辑客户项目名称和关联客户。"
+  return "查看客户项目基础信息和项目进度记录。"
+})
+const projectFormCustomerSelectValue = computed(() => projectForm.customerUuid || CUSTOMER_NONE_VALUE)
+const projectFormSubmitLabel = computed(() => {
+  if (projectFormSubmitting.value) {
+    return projectSheetMode.value === "edit" ? "保存中..." : "提交中..."
+  }
+
+  return projectSheetMode.value === "edit" ? "保存" : "添加"
+})
 const progressEditorTitle = computed(() => progressEditorMode.value === "edit" ? "编辑项目进度" : "新增项目进度")
 const progressMediaLabel = computed(() => progressForm.photos.length ? `已添加 ${progressForm.photos.length} 个附件` : "")
 
@@ -339,11 +402,13 @@ watch(sheetOpen, (open) => {
     return
   }
 
+  projectSheetMode.value = "view"
   selectedProject.value = null
   detailLoading.value = false
   finishConfirmOpen.value = false
   progressEditorOpen.value = false
   latestDetailRequestId += 1
+  Object.assign(projectForm, createEmptyProjectForm())
   Object.assign(progressForm, createEmptyProgressForm())
 })
 
@@ -408,7 +473,12 @@ async function resolveExportRows(payload: TableExportRowsResolverPayload) {
 }
 
 function openCreate() {
-  void router.push({ name: "customer-project-create" })
+  selectedProject.value = null
+  projectSheetMode.value = "create"
+  detailLoading.value = false
+  Object.assign(projectForm, createEmptyProjectForm())
+  sheetOpen.value = true
+  void loadCustomerOptions()
 }
 
 function openDetail(row: CustomerProjectRow | Record<string, unknown>) {
@@ -416,28 +486,23 @@ function openDetail(row: CustomerProjectRow | Record<string, unknown>) {
 }
 
 function openEdit(row: CustomerProjectRow | Record<string, unknown>) {
-  const project = resolveProjectFromRow(row)
-
-  if (!project.Uuid) {
-    toast.error("客户项目信息不完整，无法编辑")
-    return
-  }
-
-  void router.push({
-    name: "customer-project-edit",
-    params: { id: project.Uuid },
-  })
+  openProjectSheet(row, "edit")
 }
 
-function openProjectSheet(row: CustomerProjectRow | Record<string, unknown>) {
+function openProjectSheet(row: CustomerProjectRow | Record<string, unknown>, mode: ProjectSheetMode = "view") {
   const project = resolveProjectFromRow(row)
 
   if (!project.Uuid) {
-    toast.error("客户项目信息不完整，无法打开详情")
+    toast.error(mode === "edit" ? "客户项目信息不完整，无法编辑" : "客户项目信息不完整，无法打开详情")
     return
   }
 
+  projectSheetMode.value = mode
   selectedProject.value = project
+  if (mode === "edit") {
+    applyProjectToForm(project)
+    void loadCustomerOptions()
+  }
   sheetOpen.value = true
   void loadProjectDetail(project.Uuid)
 }
@@ -455,6 +520,10 @@ async function loadProjectDetail(uuid: string) {
     }
 
     selectedProject.value = detail
+    if (projectSheetMode.value === "edit") {
+      applyProjectToForm(detail)
+      ensureCustomerOption(detail)
+    }
   } catch (error) {
     if (requestId !== latestDetailRequestId) {
       return
@@ -472,17 +541,15 @@ async function loadProjectDetail(uuid: string) {
 }
 
 function editSelectedProject() {
-  const uuid = toText(selectedProject.value?.Uuid)
-
-  if (!uuid) {
+  if (!selectedProject.value?.Uuid) {
     toast.error("客户项目信息不完整，无法编辑")
     return
   }
 
-  void router.push({
-    name: "customer-project-edit",
-    params: { id: uuid },
-  })
+  projectSheetMode.value = "edit"
+  applyProjectToForm(selectedProject.value)
+  ensureCustomerOption(selectedProject.value)
+  void loadCustomerOptions()
 }
 
 async function reloadSelectedProject() {
@@ -494,6 +561,124 @@ async function reloadSelectedProject() {
 
   await loadProjectDetail(uuid)
   await loadProjects()
+}
+
+async function loadCustomerOptions() {
+  if (customerOptionsLoading.value) {
+    return
+  }
+
+  customerOptionsLoading.value = true
+
+  try {
+    const result = await fetchCustomers({
+      PageNum: 1,
+      PageSize: CUSTOMER_OPTIONS_PAGE_SIZE,
+    })
+
+    customerOptions.value = result.list
+      .map(item => ({
+        uuid: toText(item.Uuid),
+        name: toText(item.CorpName, "未命名客户"),
+      }))
+      .filter(item => item.uuid)
+
+    if (selectedProject.value) {
+      ensureCustomerOption(selectedProject.value)
+    }
+  } catch (error) {
+    toast.error(handleApiError(error, {
+      mode: "silent",
+      fallback: "客户列表加载失败，请稍后重试。",
+    }))
+  } finally {
+    customerOptionsLoading.value = false
+  }
+}
+
+async function saveProjectForm() {
+  if (projectFormSubmitting.value || customerOptionsLoading.value) {
+    return
+  }
+
+  const name = projectForm.name.trim()
+  if (!name) {
+    toast.error("请填写项目名称")
+    return
+  }
+
+  const duration = parseOptionalPositiveInteger(projectForm.duration)
+  if (duration === false) {
+    toast.error("项目工期必须是正整数")
+    return
+  }
+
+  projectFormSubmitting.value = true
+
+  try {
+    const customerName = getCustomerOptionName(projectForm.customerUuid, projectForm.customerName)
+
+    if (projectSheetMode.value === "edit") {
+      const uuid = toText(selectedProject.value?.Uuid)
+      if (!uuid) {
+        toast.error("客户项目信息不完整，无法保存")
+        return
+      }
+
+      await updateInspectionProject({
+        Uuid: uuid,
+        Name: name,
+        CustomerUuid: projectForm.customerUuid,
+        CustomerName: customerName,
+      })
+      toast.success("客户项目已保存")
+      projectSheetMode.value = "view"
+      await reloadSelectedProject()
+    } else {
+      await createInspectionProject({
+        Name: name,
+        CustomerUuid: projectForm.customerUuid,
+        CustomerName: customerName,
+        Address: projectForm.address.trim(),
+        ProjectTime: projectForm.projectTime.trim(),
+        Duration: duration,
+        Introduction: projectForm.introduction.trim(),
+      })
+      toast.success("客户项目已添加")
+      sheetOpen.value = false
+      await loadProjects()
+    }
+  } catch (error) {
+    handleApiError(error, {
+      title: projectSheetMode.value === "edit" ? "客户项目保存失败" : "客户项目添加失败",
+      fallback: projectSheetMode.value === "edit" ? "客户项目保存失败，请稍后重试。" : "客户项目添加失败，请稍后重试。",
+    })
+  } finally {
+    projectFormSubmitting.value = false
+  }
+}
+
+function cancelProjectForm() {
+  if (projectSheetMode.value === "edit" && selectedProject.value) {
+    projectSheetMode.value = "view"
+    applyProjectToForm(selectedProject.value)
+    return
+  }
+
+  sheetOpen.value = false
+}
+
+function handleProjectCustomerChange(value: unknown) {
+  const nextValue = toText(value)
+
+  if (!nextValue || nextValue === CUSTOMER_NONE_VALUE) {
+    projectForm.customerUuid = ""
+    projectForm.customerName = ""
+    return
+  }
+
+  projectForm.customerUuid = nextValue
+  projectForm.customerName = getCustomerOptionName(nextValue)
 }
 
 async function handleProjectPublicChange(value: boolean | "indeterminate") {
@@ -578,6 +763,19 @@ function openProgressEdit(item: InspectionProjectProgressItem) {
 function cancelProgressEdit() {
   progressEditorOpen.value = false
   Object.assign(progressForm, createEmptyProgressForm())
+}
+
+function handleProgressDialogOpenChange(open: boolean) {
+  if (open) {
+    progressEditorOpen.value = true
+    return
+  }
+
+  if (progressSubmitting.value || progressUploading.value) {
+    return
+  }
+
+  cancelProgressEdit()
 }
 
 async function saveProgress() {
@@ -785,6 +983,18 @@ function resolveProjectFromRow(row: CustomerProjectRow | Record<string, unknown>
   }
 }
 
+function createEmptyProjectForm(): ProjectForm {
+  return {
+    name: "",
+    customerUuid: "",
+    customerName: "",
+    address: "",
+    projectTime: "",
+    duration: "",
+    introduction: "",
+  }
+}
+
 function createEmptyProgressForm(): ProgressForm {
   return {
     uuid: "",
@@ -793,6 +1003,47 @@ function createEmptyProgressForm(): ProgressForm {
     processInfo: "",
     photos: [],
   }
+}
+
+function applyProjectToForm(project: InspectionProjectRecord) {
+  projectForm.name = toText(project.Name)
+  projectForm.customerUuid = toText(project.CustomerUuid)
+  projectForm.customerName = toText(project.CustomerName)
+  projectForm.address = toText(project.Address)
+  projectForm.projectTime = toDatePickerInput(toText(project.ProjectTime))
+  projectForm.duration = toText(project.Duration)
+  projectForm.introduction = toText(project.Introduction)
+}
+
+function ensureCustomerOption(project: InspectionProjectRecord) {
+  const uuid = toText(project.CustomerUuid)
+
+  if (!uuid || customerOptions.value.some(item => item.uuid === uuid)) {
+    return
+  }
+
+  customerOptions.value = [
+    ...customerOptions.value,
+    {
+      uuid,
+      name: toText(project.CustomerName, toText(project.CorpName, "未命名客户")),
+    },
+  ]
+}
+
+function getCustomerOptionName(customerUuid: string, fallback = "") {
+  return customerOptions.value.find(item => item.uuid === customerUuid)?.name ?? fallback
+}
+
+function parseOptionalPositiveInteger(value: unknown) {
+  const normalized = toText(value)
+
+  if (!normalized) {
+    return undefined
+  }
+
+  const parsed = Number(normalized)
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : false
 }
 
 function buildPageFilterText(row: CustomerProjectRow) {
@@ -865,6 +1116,17 @@ function formatDateOnly(value: string) {
 
   const [datePart] = normalized.split(/[ T]/)
   return datePart || normalized
+}
+
+function toDatePickerInput(value: string) {
+  const normalized = toText(value)
+
+  if (!normalized) {
+    return ""
+  }
+
+  const match = normalized.match(/^(\d{4}-\d{2}-\d{2})(?:[ T].*)?$/)
+  return match?.[1] ?? ""
 }
 
 function toText(value: unknown, fallback = "") {
@@ -1025,8 +1287,8 @@ function asProjectRow(row: Record<string, unknown>) {
 
     <ResponsiveRightSheet
       v-model:open="sheetOpen"
-      title="客户项目详情"
-      description="查看客户项目基础信息和项目进度记录。"
+      :title="projectSheetTitle"
+      :description="projectSheetDescription"
       :show-primary="false"
       sheet-content-class="flex min-h-0 flex-col overflow-hidden sm:max-w-3xl"
     >
@@ -1047,7 +1309,29 @@ function asProjectRow(row: Record<string, unknown>) {
 
           <div class="right-sheet-actions__secondary">
             <Button
-              v-if="selectedProject?.Uuid"
+              v-if="isProjectFormMode"
+              type="button"
+              variant="ghost"
+              size="sm"
+              class="right-sheet-text-button"
+              :disabled="projectFormSubmitting"
+              @click="cancelProjectForm"
+            >
+              <span>取消</span>
+            </Button>
+            <Button
+              v-if="isProjectFormMode"
+              type="button"
+              size="sm"
+              class="h-8 rounded-md px-2.5"
+              :disabled="projectFormSubmitting || customerOptionsLoading"
+              @click="saveProjectForm"
+            >
+              <i :class="[projectFormSubmitting ? 'ri-loader-4-line animate-spin' : 'ri-save-line', 'text-sm']" />
+              <span>{{ projectFormSubmitLabel }}</span>
+            </Button>
+            <Button
+              v-if="!isProjectFormMode && selectedProject?.Uuid"
               type="button"
               variant="ghost"
               size="sm"
@@ -1059,7 +1343,7 @@ function asProjectRow(row: Record<string, unknown>) {
               <span>新增进度</span>
             </Button>
             <Button
-              v-if="selectedProject?.Uuid && !isProjectFinished"
+              v-if="!isProjectFormMode && selectedProject?.Uuid && !isProjectFinished"
               type="button"
               variant="ghost"
               size="sm"
@@ -1071,7 +1355,7 @@ function asProjectRow(row: Record<string, unknown>) {
               <span>完结</span>
             </Button>
             <Button
-              v-if="selectedProject?.Uuid"
+              v-if="!isProjectFormMode && selectedProject?.Uuid"
               type="button"
               variant="ghost"
               size="sm"
@@ -1085,7 +1369,127 @@ function asProjectRow(row: Record<string, unknown>) {
         </div>
       </template>
 
-      <div v-if="detailLoading && !selectedProject" class="space-y-3 px-4 py-5 sm:px-5">
+      <div v-if="isProjectFormMode" class="min-h-0 flex-1 overflow-y-auto">
+        <form class="project-editor-list px-4 pb-6 pt-1 sm:px-5" @submit.prevent="saveProjectForm">
+          <label class="project-editor-row">
+            <span class="project-editor-label">项目名称</span>
+            <span class="project-editor-control">
+              <Input
+                v-model="projectForm.name"
+                :disabled="projectFormSubmitting"
+                required
+                placeholder="请输入项目名称"
+              />
+            </span>
+          </label>
+
+          <div class="project-editor-row">
+            <span class="project-editor-label">关联客户</span>
+            <div class="project-editor-control">
+              <Select
+                :model-value="projectFormCustomerSelectValue"
+                :disabled="customerOptionsLoading || projectFormSubmitting"
+                @update:model-value="handleProjectCustomerChange"
+              >
+                <SelectTrigger class="w-full">
+                  <SelectValue :placeholder="customerOptionsLoading ? '正在加载客户...' : '请选择关联客户'" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem :value="CUSTOMER_NONE_VALUE">不关联客户</SelectItem>
+                  <SelectItem v-for="customer in customerOptions" :key="customer.uuid" :value="customer.uuid">
+                    {{ customer.name }}
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <template v-if="projectSheetMode === 'create'">
+            <label class="project-editor-row">
+              <span class="project-editor-label">项目地址</span>
+              <span class="project-editor-control">
+                <Input
+                  v-model="projectForm.address"
+                  :disabled="projectFormSubmitting"
+                  placeholder="请输入项目地址"
+                />
+              </span>
+            </label>
+
+            <div class="project-editor-row">
+              <span class="project-editor-label">项目时间</span>
+              <div class="project-editor-control">
+                <FormDatePicker
+                  v-model="projectForm.projectTime"
+                  :disabled="projectFormSubmitting"
+                  placeholder="请选择项目时间"
+                />
+              </div>
+            </div>
+
+            <label class="project-editor-row">
+              <span class="project-editor-label">项目工期</span>
+              <span class="project-editor-control">
+                <Input
+                  v-model="projectForm.duration"
+                  :disabled="projectFormSubmitting"
+                  type="number"
+                  min="1"
+                  step="1"
+                  placeholder="请输入工期天数"
+                />
+              </span>
+            </label>
+
+            <label class="project-editor-row project-editor-row--top">
+              <span class="project-editor-label">项目介绍</span>
+              <span class="project-editor-control">
+                <Textarea
+                  v-model="projectForm.introduction"
+                  :disabled="projectFormSubmitting"
+                  class="min-h-28 resize-y"
+                  placeholder="请输入项目介绍"
+                />
+              </span>
+            </label>
+          </template>
+
+          <div v-else class="project-editor-row project-editor-row--top">
+            <span class="project-editor-label">只读信息</span>
+            <div class="project-editor-control">
+              <p class="mb-3 text-xs text-muted-foreground">
+                项目更新接口目前只支持修改项目名称和关联客户。
+              </p>
+              <dl class="grid gap-3 rounded-lg border border-border/70 bg-muted/30 p-3 text-sm sm:grid-cols-2">
+                <div class="min-w-0">
+                  <dt class="text-muted-foreground">项目地址</dt>
+                  <dd class="mt-1 truncate font-medium text-foreground">{{ projectForm.address || '-' }}</dd>
+                </div>
+                <div class="min-w-0">
+                  <dt class="text-muted-foreground">项目时间</dt>
+                  <dd class="mt-1 font-medium text-foreground">{{ projectForm.projectTime || '-' }}</dd>
+                </div>
+                <div class="min-w-0">
+                  <dt class="text-muted-foreground">项目工期</dt>
+                  <dd class="mt-1 font-medium text-foreground">{{ projectForm.duration ? `${projectForm.duration} 天` : '-' }}</dd>
+                </div>
+                <div class="min-w-0">
+                  <dt class="text-muted-foreground">状态</dt>
+                  <dd class="mt-1 font-medium text-foreground">
+                    {{ formatProjectStatus(selectedProject?.Status) }} / {{ formatPublicStatus(selectedProject?.IsPublic) }}
+                  </dd>
+                </div>
+                <div class="min-w-0 sm:col-span-2">
+                  <dt class="text-muted-foreground">项目介绍</dt>
+                  <dd class="mt-1 whitespace-pre-wrap font-medium text-foreground">{{ projectForm.introduction || '-' }}</dd>
+                </div>
+              </dl>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <div v-else-if="detailLoading && !selectedProject" class="space-y-3 px-4 py-5 sm:px-5">
         <Skeleton class="h-9 w-2/3" />
         <Skeleton class="h-9 w-full" />
         <Skeleton class="h-24 w-full" />
@@ -1167,135 +1571,6 @@ function asProjectRow(row: Record<string, unknown>) {
                 </Button>
               </div>
 
-              <article
-                v-if="progressEditorOpen"
-                class="mb-3 rounded-lg border border-border/70 bg-background p-2.5"
-              >
-                <div class="flex items-center justify-between gap-3">
-                  <div class="min-w-0">
-                    <p class="truncate text-sm font-medium text-foreground">
-                      {{ progressEditorTitle }}
-                    </p>
-                    <p class="mt-0.5 truncate text-xs text-muted-foreground">
-                      项目阶段、工地照片、进度描述、工艺信息
-                    </p>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    class="size-8 rounded-md text-muted-foreground"
-                    :disabled="progressSubmitting || progressUploading"
-                    @click="cancelProgressEdit"
-                  >
-                    <i class="ri-close-line text-base" />
-                    <span class="sr-only">关闭项目进度表单</span>
-                  </Button>
-                </div>
-
-                <div class="mt-3 grid gap-3">
-                  <label class="grid gap-1.5 text-sm">
-                    <span class="font-medium text-foreground">项目阶段</span>
-                    <Input
-                      v-model="progressForm.stage"
-                      placeholder="请输入项目阶段"
-                      :disabled="progressSubmitting"
-                    />
-                  </label>
-
-                  <label class="grid gap-1.5 text-sm">
-                    <span class="font-medium text-foreground">进度描述</span>
-                    <Textarea
-                      v-model="progressForm.progressDesc"
-                      class="min-h-20 resize-y"
-                      placeholder="请输入进度描述"
-                      :disabled="progressSubmitting"
-                    />
-                  </label>
-
-                  <label class="grid gap-1.5 text-sm">
-                    <span class="font-medium text-foreground">工艺信息</span>
-                    <Textarea
-                      v-model="progressForm.processInfo"
-                      class="min-h-20 resize-y"
-                      placeholder="请输入工艺信息"
-                      :disabled="progressSubmitting"
-                    />
-                  </label>
-
-                  <FileUploadField
-                    accept="image/*,video/*"
-                    multiple
-                    compact
-                    title="工地照片"
-                    description="支持图片或视频文件。"
-                    :selected-label="progressMediaLabel"
-                    :button-label="progressForm.photos.length ? '继续上传' : '选择文件'"
-                    loading-label="上传中..."
-                    :loading="progressUploading"
-                    :disabled="progressSubmitting || progressUploading"
-                    :show-supplement="Boolean(progressForm.photos.length)"
-                    @files-selected="handleProgressFilesSelected"
-                  >
-                    <template v-if="progressForm.photos.length" #preview>
-                      <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                        <div
-                          v-for="(file, fileIndex) in progressForm.photos"
-                          :key="`${getFileUrl(file)}-${fileIndex}`"
-                          class="group relative overflow-hidden rounded-md bg-muted"
-                        >
-                          <video
-                            v-if="isVideoFile(file) && getFileUrl(file)"
-                            :src="getFileUrl(file)"
-                            controls
-                            preload="metadata"
-                            class="aspect-video w-full object-cover"
-                          />
-                          <img
-                            v-else-if="getFileUrl(file)"
-                            :src="getFileUrl(file)"
-                            alt=""
-                            class="aspect-video w-full object-cover"
-                          >
-                          <Button
-                            type="button"
-                            variant="secondary"
-                            size="icon-sm"
-                            class="absolute right-1.5 top-1.5 size-7 rounded-md opacity-95"
-                            :disabled="progressSubmitting || progressUploading"
-                            @click.stop="removeProgressPhoto(fileIndex)"
-                          >
-                            <i class="ri-close-line text-sm" />
-                            <span class="sr-only">移除附件</span>
-                          </Button>
-                        </div>
-                      </div>
-                    </template>
-                  </FileUploadField>
-
-                  <div class="flex justify-end gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      :disabled="progressSubmitting || progressUploading"
-                      @click="cancelProgressEdit"
-                    >
-                      取消
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      :disabled="progressSubmitting || progressUploading"
-                      @click="saveProgress"
-                    >
-                      <i :class="[progressSubmitting ? 'ri-loader-4-line animate-spin' : 'ri-save-line', 'text-sm']" />
-                      <span>{{ progressSubmitting ? '保存中...' : '保存进度' }}</span>
-                    </Button>
-                  </div>
-                </div>
-              </article>
-
               <div v-if="progressItems.length" class="space-y-3">
                 <article
                   v-for="(item, index) in progressItems"
@@ -1365,6 +1640,122 @@ function asProjectRow(row: Record<string, unknown>) {
         </div>
       </div>
     </ResponsiveRightSheet>
+
+    <Dialog :open="progressEditorOpen" @update:open="handleProgressDialogOpenChange">
+      <DialogContent
+        class="max-h-[calc(100vh-2rem)] overflow-y-auto sm:max-w-2xl"
+        :show-close-button="!progressSubmitting && !progressUploading"
+      >
+        <DialogHeader class="pr-8">
+          <DialogTitle>{{ progressEditorTitle }}</DialogTitle>
+          <DialogDescription>
+            项目阶段、工地照片、进度描述、工艺信息
+          </DialogDescription>
+        </DialogHeader>
+
+        <div class="grid gap-3">
+          <label class="grid gap-1.5 text-sm">
+            <span class="font-medium text-foreground">项目阶段</span>
+            <Input
+              v-model="progressForm.stage"
+              placeholder="请输入项目阶段"
+              :disabled="progressSubmitting"
+            />
+          </label>
+
+          <FileUploadField
+            accept="image/*,video/*"
+            multiple
+            compact
+            title="工地照片"
+            description="支持图片或视频文件。"
+            :selected-label="progressMediaLabel"
+            :button-label="progressForm.photos.length ? '继续上传' : '选择文件'"
+            loading-label="上传中..."
+            :loading="progressUploading"
+            :disabled="progressSubmitting || progressUploading"
+            :show-supplement="Boolean(progressForm.photos.length)"
+            @files-selected="handleProgressFilesSelected"
+          >
+            <template v-if="progressForm.photos.length" #preview>
+              <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                <div
+                  v-for="(file, fileIndex) in progressForm.photos"
+                  :key="`${getFileUrl(file)}-${fileIndex}`"
+                  class="group relative overflow-hidden rounded-md bg-muted"
+                >
+                  <video
+                    v-if="isVideoFile(file) && getFileUrl(file)"
+                    :src="getFileUrl(file)"
+                    controls
+                    preload="metadata"
+                    class="aspect-video w-full object-cover"
+                  />
+                  <img
+                    v-else-if="getFileUrl(file)"
+                    :src="getFileUrl(file)"
+                    alt=""
+                    class="aspect-video w-full object-cover"
+                  >
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="icon-sm"
+                    class="absolute right-1.5 top-1.5 size-7 rounded-md opacity-95"
+                    :disabled="progressSubmitting || progressUploading"
+                    @click.stop="removeProgressPhoto(fileIndex)"
+                  >
+                    <i class="ri-close-line text-sm" />
+                    <span class="sr-only">移除附件</span>
+                  </Button>
+                </div>
+              </div>
+            </template>
+          </FileUploadField>
+
+          <label class="grid gap-1.5 text-sm">
+            <span class="font-medium text-foreground">进度描述</span>
+            <Textarea
+              v-model="progressForm.progressDesc"
+              class="min-h-20 resize-y"
+              placeholder="请输入进度描述"
+              :disabled="progressSubmitting"
+            />
+          </label>
+
+          <label class="grid gap-1.5 text-sm">
+            <span class="font-medium text-foreground">工艺信息</span>
+            <Textarea
+              v-model="progressForm.processInfo"
+              class="min-h-20 resize-y"
+              placeholder="请输入工艺信息"
+              :disabled="progressSubmitting"
+            />
+          </label>
+        </div>
+
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            :disabled="progressSubmitting || progressUploading"
+            @click="cancelProgressEdit"
+          >
+            取消
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            :disabled="progressSubmitting || progressUploading"
+            @click="saveProgress"
+          >
+            <i :class="[progressSubmitting ? 'ri-loader-4-line animate-spin' : 'ri-save-line', 'text-sm']" />
+            <span>{{ progressSubmitting ? '保存中...' : '保存进度' }}</span>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
 
     <AlertDialog v-model:open="finishConfirmOpen">
       <AlertDialogContent>
