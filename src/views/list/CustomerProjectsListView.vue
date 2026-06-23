@@ -8,6 +8,9 @@ import type { TableExportRowsResolverPayload } from "@/components/table-page/exp
 import { createTablePageDefinition, useTablePage } from "@/components/table-page/useTablePage"
 import type { TablePageSchema, TableQueryBarConfig, TableStatusOption } from "@/components/table-page/types"
 import FileUploadField from "@/components/upload/FileUploadField.vue"
+import DetailFieldSections from "@/components/detail/DetailFieldSections.vue"
+import type { DetailFieldSection, DetailStatusValue } from "@/components/detail/types"
+import DetailFieldsSkeleton from "@/components/loading/DetailFieldsSkeleton.vue"
 import {
   Pagination,
   PaginationContent,
@@ -29,7 +32,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -49,8 +51,6 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { ResponsiveRightSheet } from "@/components/ui/sheet"
-import { Skeleton } from "@/components/ui/skeleton"
-import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { handleApiError } from "@/lib/api-errors"
 import { fetchCustomers } from "@/lib/customers-api"
@@ -164,6 +164,22 @@ const projectStatusMap = {
   未填写: { tone: "gray", icon: "dot" },
 } satisfies Record<string, TableStatusOption>
 
+const projectStatusRenderer = {
+  kind: "status",
+  map: projectStatusMap,
+  fallback: { tone: "gray", icon: "dot" },
+} satisfies DetailStatusValue["renderer"]
+
+const publicStatusRenderer = {
+  kind: "status",
+  map: {
+    公开: { tone: "green", icon: "check" },
+    不公开: { tone: "gray", icon: "minus" },
+    未填写: { tone: "gray", icon: "dot" },
+  },
+  fallback: { tone: "gray", icon: "dot" },
+} satisfies DetailStatusValue["renderer"]
+
 const progressItems = computed(() => selectedProject.value?.ProgressList ?? [])
 const isProjectFinished = computed(() => toNumber(selectedProject.value?.Status) === 2)
 const isProjectFormMode = computed(() => projectSheetMode.value === "create" || projectSheetMode.value === "edit")
@@ -187,6 +203,60 @@ const projectFormSubmitLabel = computed(() => {
 })
 const progressEditorTitle = computed(() => progressEditorMode.value === "edit" ? "编辑项目进度" : "新增项目进度")
 const progressMediaLabel = computed(() => progressForm.photos.length ? `已添加 ${progressForm.photos.length} 个附件` : "")
+const projectDetailSections = computed<DetailFieldSection[]>(() => {
+  const project = selectedProject.value
+
+  if (!project) {
+    return []
+  }
+
+  const publicStatus = formatPublicStatus(project.IsPublic)
+
+  return [
+    {
+      key: "basic",
+      title: "基础信息",
+      rows: [
+        { key: "name", label: "项目名称", value: toText(project.Name) },
+        { key: "customerName", label: "客户名称", value: toText(project.CustomerName) },
+        { key: "corpName", label: "企业名称", value: toText(project.CorpName) },
+        { key: "address", label: "项目地址", value: toText(project.Address), truncate: false },
+        { key: "projectTime", label: "项目时间", value: formatDateOnly(toText(project.ProjectTime, "-")) },
+        { key: "duration", label: "项目工期", value: formatDuration(project.Duration) },
+        { key: "introduction", label: "项目介绍", value: toText(project.Introduction), truncate: false },
+      ],
+    },
+    {
+      key: "status",
+      title: "状态信息",
+      rows: [
+        {
+          key: "status",
+          label: "项目状态",
+          value: {
+            kind: "status",
+            value: formatProjectStatus(project.Status),
+            renderer: projectStatusRenderer,
+          },
+        },
+        {
+          key: "publicStatus",
+          label: "公开状态",
+          value: {
+            kind: "status",
+            value: publicStatus,
+            renderer: publicStatusRenderer,
+          },
+          suffixAction: {
+            label: toNumber(project.IsPublic) === 1 ? "取消公开" : "公开",
+            icon: toNumber(project.IsPublic) === 1 ? "ri-eye-off-line" : "ri-eye-line",
+            onClick: () => handleProjectPublicChange(toNumber(selectedProject.value?.IsPublic) !== 1),
+          },
+        },
+      ],
+    },
+  ]
+})
 
 const schema: TablePageSchema<CustomerProjectRow> = {
   title: "客户项目",
@@ -206,11 +276,6 @@ const schema: TablePageSchema<CustomerProjectRow> = {
       key: "view-detail",
       label: "查看详情",
       onClick: row => openDetail(row),
-    },
-    {
-      key: "edit",
-      label: "编辑",
-      onClick: row => openEdit(row),
     },
   ],
   onRowClick: row => openDetail(row),
@@ -483,10 +548,6 @@ function openCreate() {
 
 function openDetail(row: CustomerProjectRow | Record<string, unknown>) {
   openProjectSheet(row)
-}
-
-function openEdit(row: CustomerProjectRow | Record<string, unknown>) {
-  openProjectSheet(row, "edit")
 }
 
 function openProjectSheet(row: CustomerProjectRow | Record<string, unknown>, mode: ProjectSheetMode = "view") {
@@ -1103,10 +1164,6 @@ function formatDuration(value: unknown) {
   return text ? `${text} 天` : "-"
 }
 
-function getStatusBadgeVariant(status: unknown) {
-  return toNumber(status) === 1 ? "default" : "secondary"
-}
-
 function formatDateOnly(value: string) {
   const normalized = value.trim()
 
@@ -1489,155 +1546,96 @@ function asProjectRow(row: Record<string, unknown>) {
         </form>
       </div>
 
-      <div v-else-if="detailLoading && !selectedProject" class="space-y-3 px-4 py-5 sm:px-5">
-        <Skeleton class="h-9 w-2/3" />
-        <Skeleton class="h-9 w-full" />
-        <Skeleton class="h-24 w-full" />
-        <Skeleton class="h-36 w-full" />
+      <div v-else-if="detailLoading && !selectedProject" class="min-h-0 flex-1 overflow-y-auto pb-6">
+        <DetailFieldsSkeleton :sections="2" :rows-per-section="4" />
       </div>
 
-      <div v-else-if="selectedProject" class="min-h-0 flex-1 overflow-y-auto">
-        <div class="project-editor-list px-4 pb-6 pt-1 sm:px-5">
-          <div class="project-editor-row">
-            <span class="project-editor-label">项目名称</span>
-            <p class="project-editor-value">{{ toText(selectedProject.Name, '-') }}</p>
+      <div v-else-if="selectedProject" class="min-h-0 flex-1 overflow-y-auto pb-6">
+        <DetailFieldSections :sections="projectDetailSections" use-title-block />
+
+        <section class="border-t border-border/80 pt-4">
+          <div class="detail-section-inset mb-3 flex items-center justify-between gap-3">
+            <h2 class="detail-field-section__heading">项目进度</h2>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              class="h-8 rounded-md"
+              :disabled="progressSubmitting || progressUploading"
+              @click="openProgressCreate"
+            >
+              <i class="ri-add-line text-sm" />
+              <span>新增进度</span>
+            </Button>
           </div>
 
-          <div class="project-editor-row">
-            <span class="project-editor-label">客户名称</span>
-            <p class="project-editor-value">{{ toText(selectedProject.CustomerName, '-') }}</p>
-          </div>
+          <div class="detail-section-inset">
+            <div v-if="progressItems.length" class="space-y-3">
+              <article
+                v-for="(item, index) in progressItems"
+                :key="getProgressKey(item, index)"
+                class="rounded-lg border border-border/70 bg-background p-3"
+              >
+                <div class="flex flex-wrap items-start justify-between gap-2">
+                  <div class="min-w-0">
+                    <p class="truncate text-sm font-medium text-foreground">
+                      {{ toText(item.Stage, '未填写阶段') }}
+                    </p>
+                    <p class="mt-0.5 text-xs text-muted-foreground">
+                      {{ getProgressVersion(item) }} · {{ formatDateOnly(toText(item.CreatedAt, '-')) }}
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    class="h-8 rounded-md px-2 text-muted-foreground"
+                    :disabled="progressSubmitting || progressUploading"
+                    @click="openProgressEdit(item)"
+                  >
+                    <i class="ri-edit-line text-sm" />
+                    <span>编辑</span>
+                  </Button>
+                </div>
 
-          <div class="project-editor-row">
-            <span class="project-editor-label">企业名称</span>
-            <p class="project-editor-value">{{ toText(selectedProject.CorpName, '-') }}</p>
-          </div>
+                <div class="mt-3 grid gap-3 text-sm">
+                  <div v-if="toText(item.ProgressDesc)" class="rounded-md bg-muted/45 p-2.5">
+                    <p class="text-xs font-medium text-foreground">进度描述</p>
+                    <p class="mt-1 text-muted-foreground">{{ toText(item.ProgressDesc) }}</p>
+                  </div>
+                  <div v-if="toText(item.ProcessInfo)" class="rounded-md bg-muted/45 p-2.5">
+                    <p class="text-xs font-medium text-foreground">工艺信息</p>
+                    <p class="mt-1 text-muted-foreground">{{ toText(item.ProcessInfo) }}</p>
+                  </div>
+                </div>
 
-          <div class="project-editor-row">
-            <span class="project-editor-label">项目地址</span>
-            <p class="project-editor-value">{{ toText(selectedProject.Address, '-') }}</p>
-          </div>
-
-          <div class="project-editor-row">
-            <span class="project-editor-label">项目时间</span>
-            <p class="project-editor-value">{{ formatDateOnly(toText(selectedProject.ProjectTime, '-')) }}</p>
-          </div>
-
-          <div class="project-editor-row">
-            <span class="project-editor-label">项目工期</span>
-            <p class="project-editor-value">{{ formatDuration(selectedProject.Duration) }}</p>
-          </div>
-
-          <div class="project-editor-row project-editor-row--top">
-            <span class="project-editor-label">项目介绍</span>
-            <p class="project-editor-value whitespace-pre-wrap">{{ toText(selectedProject.Introduction, '-') }}</p>
-          </div>
-
-          <div class="project-editor-row">
-            <span class="project-editor-label">展示状态</span>
-            <div class="project-editor-control">
-              <div class="flex flex-wrap items-center gap-2 py-1">
-                <Badge :variant="getStatusBadgeVariant(selectedProject.Status)">
-                  {{ formatProjectStatus(selectedProject.Status) }}
-                </Badge>
-                <Badge variant="secondary">
-                  {{ formatPublicStatus(selectedProject.IsPublic) }}
-                </Badge>
-                <Switch
-                  class="ml-1"
-                  :model-value="toNumber(selectedProject.IsPublic) === 1"
-                  :disabled="projectActionSubmitting"
-                  :aria-label="`${toText(selectedProject.Name, '客户项目')}公开状态`"
-                  @update:model-value="handleProjectPublicChange"
-                />
-              </div>
+                <div v-if="item.Photos?.length" class="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  <template
+                    v-for="(file, fileIndex) in item.Photos"
+                    :key="`${getProgressKey(item, index)}-${fileIndex}`"
+                  >
+                    <video
+                      v-if="isVideoFile(file) && getFileUrl(file)"
+                      :src="getFileUrl(file)"
+                      controls
+                      preload="metadata"
+                      class="aspect-video w-full rounded-md bg-muted object-cover"
+                    />
+                    <img
+                      v-else-if="getFileUrl(file)"
+                      :src="getFileUrl(file)"
+                      alt=""
+                      class="aspect-video w-full rounded-md bg-muted object-cover"
+                    >
+                  </template>
+                </div>
+              </article>
+            </div>
+            <div v-else class="rounded-md border border-dashed border-border py-8 text-center text-sm text-muted-foreground">
+              暂无项目进度
             </div>
           </div>
-
-          <div class="project-editor-row project-editor-row--top">
-            <span class="project-editor-label">项目进度</span>
-            <div class="project-editor-control">
-              <div class="mb-3 flex justify-end">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  class="h-8 rounded-md"
-                  :disabled="progressSubmitting || progressUploading"
-                  @click="openProgressCreate"
-                >
-                  <i class="ri-add-line text-sm" />
-                  <span>新增进度</span>
-                </Button>
-              </div>
-
-              <div v-if="progressItems.length" class="space-y-3">
-                <article
-                  v-for="(item, index) in progressItems"
-                  :key="getProgressKey(item, index)"
-                  class="rounded-lg border border-border/70 bg-background p-3"
-                >
-                  <div class="flex flex-wrap items-start justify-between gap-2">
-                    <div class="min-w-0">
-                      <p class="truncate text-sm font-medium text-foreground">
-                        {{ toText(item.Stage, '未填写阶段') }}
-                      </p>
-                      <p class="mt-0.5 text-xs text-muted-foreground">
-                        {{ getProgressVersion(item) }} · {{ formatDateOnly(toText(item.CreatedAt, '-')) }}
-                      </p>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      class="h-8 rounded-md px-2 text-muted-foreground"
-                      :disabled="progressSubmitting || progressUploading"
-                      @click="openProgressEdit(item)"
-                    >
-                      <i class="ri-edit-line text-sm" />
-                      <span>编辑</span>
-                    </Button>
-                  </div>
-
-                  <div class="mt-3 grid gap-3 text-sm">
-                    <div v-if="toText(item.ProgressDesc)" class="rounded-md bg-muted/45 p-2.5">
-                      <p class="text-xs font-medium text-foreground">进度描述</p>
-                      <p class="mt-1 text-muted-foreground">{{ toText(item.ProgressDesc) }}</p>
-                    </div>
-                    <div v-if="toText(item.ProcessInfo)" class="rounded-md bg-muted/45 p-2.5">
-                      <p class="text-xs font-medium text-foreground">工艺信息</p>
-                      <p class="mt-1 text-muted-foreground">{{ toText(item.ProcessInfo) }}</p>
-                    </div>
-                  </div>
-
-                  <div v-if="item.Photos?.length" class="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
-                    <template
-                      v-for="(file, fileIndex) in item.Photos"
-                      :key="`${getProgressKey(item, index)}-${fileIndex}`"
-                    >
-                      <video
-                        v-if="isVideoFile(file) && getFileUrl(file)"
-                        :src="getFileUrl(file)"
-                        controls
-                        preload="metadata"
-                        class="aspect-video w-full rounded-md bg-muted object-cover"
-                      />
-                      <img
-                        v-else-if="getFileUrl(file)"
-                        :src="getFileUrl(file)"
-                        alt=""
-                        class="aspect-video w-full rounded-md bg-muted object-cover"
-                      >
-                    </template>
-                  </div>
-                </article>
-              </div>
-              <div v-else class="rounded-md border border-dashed border-border py-8 text-center text-sm text-muted-foreground">
-                暂无项目进度
-              </div>
-            </div>
-          </div>
-        </div>
+        </section>
       </div>
     </ResponsiveRightSheet>
 
@@ -1813,14 +1811,6 @@ function asProjectRow(row: Record<string, unknown>) {
 
 .project-editor-control {
   min-width: 0;
-}
-
-.project-editor-value {
-  min-width: 0;
-  padding-top: 8px;
-  color: hsl(var(--foreground));
-  font-size: 14px;
-  line-height: 1.55;
 }
 
 @media (max-width: 640px) {
