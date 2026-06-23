@@ -394,6 +394,16 @@ const router = createRouter({
           } satisfies RouteMetaConfig,
         },
         {
+          path: "customer-projects",
+          name: "customer-projects",
+          component: () => import("@/views/list/CustomerProjectsListView.vue"),
+          meta: {
+            title: "客户项目",
+            loading: "table",
+            permissionPath: "/media-library",
+          } satisfies RouteMetaConfig,
+        },
+        {
           path: "customer-cases",
           name: "customer-cases",
           component: () => import("@/views/list/CustomerCasesListView.vue"),
