@@ -102,24 +102,24 @@ const businessItems = reactive<AppSidebarNavItem[]>([
     path: "/media-library",
   },
   {
-    label: "客户项目",
-    icon: "ri-briefcase-4-line",
-    path: "/customer-projects",
-    permissionPath: "/media-library",
-  },
-  {
-    label: "客户案例",
-    icon: "ri-profile-line",
-    path: "/customer-cases",
-    permissionPath: "/media-library",
-  },
-  {
     label: "App 首页",
     icon: "ri-smartphone-line",
     path: "/app-home",
   },
   {
-    label: "客户反馈",
+    label: "案例",
+    icon: "ri-profile-line",
+    path: "/customer-cases",
+    permissionPath: "/media-library",
+  },
+  {
+    label: "项目",
+    icon: "ri-briefcase-4-line",
+    path: "/customer-projects",
+    permissionPath: "/media-library",
+  },
+  {
+    label: "反馈",
     icon: "ri-feedback-line",
     path: "/customer-feedback",
   },

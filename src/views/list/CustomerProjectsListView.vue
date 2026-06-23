@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from "vue"
+import { computed, ref, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { toast } from "vue-sonner"
 
@@ -20,18 +20,12 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ResponsiveRightSheet } from "@/components/ui/sheet"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Textarea } from "@/components/ui/textarea"
 import { handleApiError } from "@/lib/api-errors"
-import { fetchCustomers } from "@/lib/customers-api"
 import {
-  createInspectionProject,
   fetchInspectionProjectDetail,
   fetchInspectionProjects,
-  updateInspectionProject,
   type InspectionProjectRecord,
   type InspectionProjectProgressItem,
   type WorkOrderFileItem,
@@ -60,22 +54,6 @@ type CustomerProjectRow = {
   raw: InspectionProjectRecord
 }
 
-type SheetMode = "create" | "detail" | "edit"
-
-type CustomerProjectForm = {
-  uuid: string
-  name: string
-  customerUuid: string
-  customerName: string
-  address: string
-  projectTime: string
-  duration: string
-  introduction: string
-}
-
-const CUSTOMER_NONE_VALUE = "__none__"
-const CUSTOMER_OPTIONS_PAGE_SIZE = 500
-
 const projects = ref<CustomerProjectRow[]>([])
 const loading = ref(false)
 const errorMessage = ref("")
@@ -85,14 +63,9 @@ const total = ref(0)
 const nameQuery = ref("")
 const selectedStatus = ref("")
 const sortDirection = ref<"asc" | "desc">("desc")
-const customerOptions = ref<Array<{ value: string; label: string }>>([])
-const customerOptionsLoading = ref(false)
 const sheetOpen = ref(false)
-const sheetMode = ref<SheetMode>("detail")
 const detailLoading = ref(false)
 const selectedProject = ref<InspectionProjectRecord | null>(null)
-const submitting = ref(false)
-const form = reactive<CustomerProjectForm>(createEmptyForm())
 let latestRequestId = 0
 let latestDetailRequestId = 0
 let syncingRoute = false
@@ -105,14 +78,6 @@ const statusOptions = [
   { value: "2", label: "已完结" },
 ]
 
-const customerSelectValue = computed(() => form.customerUuid || CUSTOMER_NONE_VALUE)
-const isReadonly = computed(() => sheetMode.value === "detail")
-const isCreateMode = computed(() => sheetMode.value === "create")
-const sheetTitle = computed(() => {
-  if (sheetMode.value === "create") return "新增客户项目"
-  if (sheetMode.value === "edit") return "编辑客户项目"
-  return "客户项目详情"
-})
 const progressItems = computed(() => selectedProject.value?.ProgressList ?? [])
 
 const schema: TablePageSchema<CustomerProjectRow> = {
@@ -122,10 +87,10 @@ const schema: TablePageSchema<CustomerProjectRow> = {
   data: [],
   showIndex: true,
   stickyHeader: true,
-  primaryActionLabel: "新增客户项目",
+  primaryActionLabel: "添加客户项目",
   emptyState: {
     title: "暂无客户项目",
-    description: "新增客户项目后，可在这里查看项目状态和进度。",
+    description: "添加客户项目后，可在这里查看项目状态和进度。",
     icon: "ri-briefcase-4-line",
   },
   rowActions: [
@@ -328,10 +293,7 @@ watch(sheetOpen, (open) => {
   selectedProject.value = null
   detailLoading.value = false
   latestDetailRequestId += 1
-  Object.assign(form, createEmptyForm())
 })
-
-void loadCustomerOptions()
 
 async function loadProjects() {
   const requestId = ++latestRequestId
@@ -378,28 +340,6 @@ async function loadProjects() {
   }
 }
 
-async function loadCustomerOptions() {
-  customerOptionsLoading.value = true
-
-  try {
-    const result = await fetchCustomers({
-      PageNum: 1,
-      PageSize: CUSTOMER_OPTIONS_PAGE_SIZE,
-    })
-
-    customerOptions.value = result.list
-      .map(item => ({
-        value: toText(item.Uuid),
-        label: toText(item.CorpName, "未命名客户"),
-      }))
-      .filter(option => option.value)
-  } catch {
-    customerOptions.value = []
-  } finally {
-    customerOptionsLoading.value = false
-  }
-}
-
 async function resolveExportRows(payload: TableExportRowsResolverPayload) {
   if (payload.scope !== "filtered") {
     return payload.defaultRows
@@ -416,22 +356,28 @@ async function resolveExportRows(payload: TableExportRowsResolverPayload) {
 }
 
 function openCreate() {
-  Object.assign(form, createEmptyForm())
-  selectedProject.value = null
-  detailLoading.value = false
-  sheetMode.value = "create"
-  sheetOpen.value = true
+  void router.push({ name: "customer-project-create" })
 }
 
 function openDetail(row: CustomerProjectRow | Record<string, unknown>) {
-  openProjectSheet(row, "detail")
+  openProjectSheet(row)
 }
 
 function openEdit(row: CustomerProjectRow | Record<string, unknown>) {
-  openProjectSheet(row, "edit")
+  const project = resolveProjectFromRow(row)
+
+  if (!project.Uuid) {
+    toast.error("客户项目信息不完整，无法编辑")
+    return
+  }
+
+  void router.push({
+    name: "customer-project-edit",
+    params: { id: project.Uuid },
+  })
 }
 
-function openProjectSheet(row: CustomerProjectRow | Record<string, unknown>, mode: SheetMode) {
+function openProjectSheet(row: CustomerProjectRow | Record<string, unknown>) {
   const project = resolveProjectFromRow(row)
 
   if (!project.Uuid) {
@@ -440,8 +386,6 @@ function openProjectSheet(row: CustomerProjectRow | Record<string, unknown>, mod
   }
 
   selectedProject.value = project
-  Object.assign(form, createFormFromRecord(project))
-  sheetMode.value = mode
   sheetOpen.value = true
   void loadProjectDetail(project.Uuid)
 }
@@ -459,7 +403,6 @@ async function loadProjectDetail(uuid: string) {
     }
 
     selectedProject.value = detail
-    Object.assign(form, createFormFromRecord(detail))
   } catch (error) {
     if (requestId !== latestDetailRequestId) {
       return
@@ -476,88 +419,18 @@ async function loadProjectDetail(uuid: string) {
   }
 }
 
-function enterEditMode() {
-  if (!form.uuid) {
+function editSelectedProject() {
+  const uuid = toText(selectedProject.value?.Uuid)
+
+  if (!uuid) {
+    toast.error("客户项目信息不完整，无法编辑")
     return
   }
 
-  sheetMode.value = "edit"
-}
-
-async function saveProject() {
-  if (isReadonly.value || submitting.value) {
-    return
-  }
-
-  const name = form.name.trim()
-
-  if (!name) {
-    toast.error("请填写项目名称")
-    return
-  }
-
-  const duration = parseOptionalNumber(form.duration)
-
-  if (duration === false) {
-    toast.error("项目工期必须是数字")
-    return
-  }
-
-  submitting.value = true
-
-  try {
-    const customerName = getCustomerName(form.customerUuid, form.customerName)
-
-    if (sheetMode.value === "create") {
-      await createInspectionProject({
-        Address: form.address.trim(),
-        CustomerName: customerName,
-        CustomerUuid: form.customerUuid,
-        Duration: duration,
-        Introduction: form.introduction.trim(),
-        Name: name,
-        ProjectTime: form.projectTime,
-      })
-      toast.success("客户项目已新增")
-      sheetOpen.value = false
-    } else {
-      await updateInspectionProject({
-        CustomerName: customerName,
-        CustomerUuid: form.customerUuid,
-        Name: name,
-        Uuid: form.uuid,
-      })
-      toast.success("客户项目已保存")
-
-      if (form.uuid) {
-        await loadProjectDetail(form.uuid)
-      }
-
-      sheetMode.value = "detail"
-    }
-
-    await loadProjects()
-  } catch (error) {
-    toast.error(handleApiError(error, {
-      mode: "silent",
-      fallback: "客户项目保存失败，请稍后重试。",
-    }))
-  } finally {
-    submitting.value = false
-  }
-}
-
-function handleCustomerChange(value: unknown) {
-  const nextValue = toText(value)
-
-  if (!nextValue || nextValue === CUSTOMER_NONE_VALUE) {
-    form.customerUuid = ""
-    form.customerName = ""
-    return
-  }
-
-  form.customerUuid = nextValue
-  form.customerName = getCustomerName(nextValue)
+  void router.push({
+    name: "customer-project-edit",
+    params: { id: uuid },
+  })
 }
 
 function handleToolbarSortToggle() {
@@ -662,32 +535,6 @@ function resolveProjectFromRow(row: CustomerProjectRow | Record<string, unknown>
   }
 }
 
-function createEmptyForm(): CustomerProjectForm {
-  return {
-    uuid: "",
-    name: "",
-    customerUuid: "",
-    customerName: "",
-    address: "",
-    projectTime: "",
-    duration: "",
-    introduction: "",
-  }
-}
-
-function createFormFromRecord(record: InspectionProjectRecord): CustomerProjectForm {
-  return {
-    uuid: toText(record.Uuid),
-    name: toText(record.Name),
-    customerUuid: toText(record.CustomerUuid),
-    customerName: toText(record.CustomerName),
-    address: toText(record.Address),
-    projectTime: formatDateInputValue(toText(record.ProjectTime)),
-    duration: toText(record.Duration),
-    introduction: toText(record.Introduction),
-  }
-}
-
 function buildPageFilterText(row: CustomerProjectRow) {
   return [
     row.name,
@@ -740,6 +587,11 @@ function formatPublicStatus(value: unknown) {
   return "未填写"
 }
 
+function formatDuration(value: unknown) {
+  const text = toText(value)
+  return text ? `${text} 天` : "-"
+}
+
 function getStatusBadgeVariant(status: unknown) {
   return toNumber(status) === 1 ? "default" : "secondary"
 }
@@ -753,22 +605,6 @@ function formatDateOnly(value: string) {
 
   const [datePart] = normalized.split(/[ T]/)
   return datePart || normalized
-}
-
-function formatDateInputValue(value: string) {
-  const datePart = formatDateOnly(value)
-  return datePart === "-" ? "" : datePart
-}
-
-function parseOptionalNumber(value: string) {
-  const normalized = value.trim()
-
-  if (!normalized) {
-    return undefined
-  }
-
-  const parsed = Number(normalized)
-  return Number.isFinite(parsed) ? parsed : false
 }
 
 function toText(value: unknown, fallback = "") {
@@ -813,10 +649,6 @@ function normalizeQueryValue(value: unknown) {
   }
 
   return typeof value === "string" ? value.trim() : ""
-}
-
-function getCustomerName(customerUuid: string, fallback = "") {
-  return customerOptions.value.find(option => option.value === customerUuid)?.label ?? fallback
 }
 
 function getProgressKey(item: InspectionProjectProgressItem, index: number) {
@@ -933,8 +765,8 @@ function asProjectRow(row: Record<string, unknown>) {
 
     <ResponsiveRightSheet
       v-model:open="sheetOpen"
-      :title="sheetTitle"
-      description="维护客户项目基础信息，查看项目进度记录。"
+      title="客户项目详情"
+      description="查看客户项目基础信息和项目进度记录。"
       :show-primary="false"
       sheet-content-class="flex min-h-0 flex-col overflow-hidden sm:max-w-3xl"
     >
@@ -955,106 +787,65 @@ function asProjectRow(row: Record<string, unknown>) {
 
           <div class="right-sheet-actions__secondary">
             <Button
-              v-if="sheetMode === 'detail' && form.uuid"
+              v-if="selectedProject?.Uuid"
               type="button"
               variant="ghost"
               size="sm"
               class="right-sheet-text-button"
-              @click="enterEditMode"
+              @click="editSelectedProject"
             >
               <i class="ri-edit-line text-sm" />
               <span>编辑</span>
-            </Button>
-            <Button
-              v-if="!isReadonly"
-              type="button"
-              size="sm"
-              class="h-8 rounded-md px-2.5"
-              :disabled="submitting || detailLoading"
-              @click="saveProject"
-            >
-              <i :class="[submitting ? 'ri-loader-4-line animate-spin' : 'ri-save-line', 'text-sm']" />
-              <span>{{ submitting ? '保存中...' : '保存' }}</span>
             </Button>
           </div>
         </div>
       </template>
 
-      <div v-if="detailLoading && !isCreateMode" class="space-y-3 px-4 py-5 sm:px-5">
+      <div v-if="detailLoading && !selectedProject" class="space-y-3 px-4 py-5 sm:px-5">
         <Skeleton class="h-9 w-2/3" />
         <Skeleton class="h-9 w-full" />
         <Skeleton class="h-24 w-full" />
         <Skeleton class="h-36 w-full" />
       </div>
 
-      <div v-else class="min-h-0 flex-1 overflow-y-auto">
+      <div v-else-if="selectedProject" class="min-h-0 flex-1 overflow-y-auto">
         <div class="project-editor-list px-4 pb-6 pt-1 sm:px-5">
-          <label class="project-editor-row">
-            <span class="project-editor-label">项目名称</span>
-            <span class="project-editor-control">
-              <Input v-model="form.name" :disabled="isReadonly" placeholder="输入项目名称" />
-            </span>
-          </label>
-
           <div class="project-editor-row">
-            <span class="project-editor-label">关联客户</span>
-            <div class="project-editor-control">
-              <Select
-                :model-value="customerSelectValue"
-                :disabled="isReadonly || customerOptionsLoading"
-                @update:model-value="handleCustomerChange"
-              >
-                <SelectTrigger class="w-full">
-                  <SelectValue :placeholder="customerOptionsLoading ? '正在加载客户...' : '请选择客户（非必填）'" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem :value="CUSTOMER_NONE_VALUE">不关联客户</SelectItem>
-                  <SelectItem
-                    v-for="customer in customerOptions"
-                    :key="customer.value"
-                    :value="customer.value"
-                  >
-                    {{ customer.label }}
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <span class="project-editor-label">项目名称</span>
+            <p class="project-editor-value">{{ toText(selectedProject.Name, '-') }}</p>
           </div>
 
-          <label class="project-editor-row">
+          <div class="project-editor-row">
+            <span class="project-editor-label">客户名称</span>
+            <p class="project-editor-value">{{ toText(selectedProject.CustomerName, '-') }}</p>
+          </div>
+
+          <div class="project-editor-row">
+            <span class="project-editor-label">企业名称</span>
+            <p class="project-editor-value">{{ toText(selectedProject.CorpName, '-') }}</p>
+          </div>
+
+          <div class="project-editor-row">
             <span class="project-editor-label">项目地址</span>
-            <span class="project-editor-control">
-              <Input v-model="form.address" :disabled="!isCreateMode" placeholder="输入项目地址" />
-            </span>
-          </label>
+            <p class="project-editor-value">{{ toText(selectedProject.Address, '-') }}</p>
+          </div>
 
-          <label class="project-editor-row">
+          <div class="project-editor-row">
             <span class="project-editor-label">项目时间</span>
-            <span class="project-editor-control">
-              <Input v-model="form.projectTime" type="date" :disabled="!isCreateMode" />
-            </span>
-          </label>
+            <p class="project-editor-value">{{ formatDateOnly(toText(selectedProject.ProjectTime, '-')) }}</p>
+          </div>
 
-          <label class="project-editor-row">
+          <div class="project-editor-row">
             <span class="project-editor-label">项目工期</span>
-            <span class="project-editor-control">
-              <Input v-model="form.duration" type="number" min="1" :disabled="!isCreateMode" placeholder="输入天数" />
-            </span>
-          </label>
+            <p class="project-editor-value">{{ formatDuration(selectedProject.Duration) }}</p>
+          </div>
 
-          <label class="project-editor-row project-editor-row--top">
+          <div class="project-editor-row project-editor-row--top">
             <span class="project-editor-label">项目介绍</span>
-            <span class="project-editor-control">
-              <Textarea
-                v-model="form.introduction"
-                :disabled="!isCreateMode"
-                class="min-h-28 resize-y"
-                placeholder="输入项目介绍"
-              />
-            </span>
-          </label>
+            <p class="project-editor-value whitespace-pre-wrap">{{ toText(selectedProject.Introduction, '-') }}</p>
+          </div>
 
-          <div v-if="!isCreateMode && selectedProject" class="project-editor-row">
+          <div class="project-editor-row">
             <span class="project-editor-label">展示状态</span>
             <div class="project-editor-control">
               <div class="flex flex-wrap items-center gap-2">
@@ -1068,7 +859,7 @@ function asProjectRow(row: Record<string, unknown>) {
             </div>
           </div>
 
-          <div v-if="!isCreateMode" class="project-editor-row project-editor-row--top">
+          <div class="project-editor-row project-editor-row--top">
             <span class="project-editor-label">项目进度</span>
             <div class="project-editor-control">
               <div v-if="progressItems.length" class="space-y-3">
@@ -1163,6 +954,14 @@ function asProjectRow(row: Record<string, unknown>) {
 
 .project-editor-control {
   min-width: 0;
+}
+
+.project-editor-value {
+  min-width: 0;
+  padding-top: 8px;
+  color: hsl(var(--foreground));
+  font-size: 14px;
+  line-height: 1.55;
 }
 
 @media (max-width: 640px) {

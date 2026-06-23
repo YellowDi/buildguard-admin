@@ -404,6 +404,34 @@ const router = createRouter({
           } satisfies RouteMetaConfig,
         },
         {
+          path: "customer-projects/create",
+          name: "customer-project-create",
+          component: () => import("@/views/form/CustomerProjectCreateView.vue"),
+          meta: {
+            title: "添加客户项目",
+            loading: "form",
+            permissionPath: "/media-library",
+            breadcrumb: [
+              { title: "客户项目", to: "customer-projects" },
+              { title: "添加客户项目" },
+            ] satisfies BreadcrumbMetaItem[],
+          } satisfies RouteMetaConfig,
+        },
+        {
+          path: "customer-projects/:id/edit",
+          name: "customer-project-edit",
+          component: () => import("@/views/form/CustomerProjectCreateView.vue"),
+          meta: {
+            title: "编辑客户项目",
+            loading: "form",
+            permissionPath: "/media-library",
+            breadcrumb: [
+              { title: "客户项目", to: "customer-projects" },
+              { title: "编辑客户项目" },
+            ] satisfies BreadcrumbMetaItem[],
+          } satisfies RouteMetaConfig,
+        },
+        {
           path: "customer-cases",
           name: "customer-cases",
           component: () => import("@/views/list/CustomerCasesListView.vue"),
