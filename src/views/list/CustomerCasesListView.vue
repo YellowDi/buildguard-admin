@@ -108,11 +108,6 @@ const schema: TablePageSchema<CustomerCaseRow> = {
   },
   rowActions: [
     {
-      key: "view",
-      label: "查看",
-      onClick: row => openView(row),
-    },
-    {
       key: "edit",
       label: "编辑",
       onClick: row => openEdit(row),
@@ -123,7 +118,7 @@ const schema: TablePageSchema<CustomerCaseRow> = {
       onClick: row => requestDelete(row.id),
     },
   ],
-  onRowClick: row => openView(row),
+  onRowClick: row => openEdit(row),
   columns: [
     {
       key: "title",
@@ -286,12 +281,6 @@ function openCreate() {
 function openEdit(row: CustomerCaseRow | CustomerCaseRecord | Record<string, unknown>) {
   Object.assign(form, createFormFromRecord(resolveCustomerCaseRecord(row)))
   sheetMode.value = "edit"
-  sheetOpen.value = true
-}
-
-function openView(row: CustomerCaseRow | CustomerCaseRecord | Record<string, unknown>) {
-  Object.assign(form, createFormFromRecord(resolveCustomerCaseRecord(row)))
-  sheetMode.value = "view"
   sheetOpen.value = true
 }
 
@@ -731,10 +720,10 @@ function toNumber(value: unknown) {
         <button
           type="button"
           class="inline-flex max-w-full min-w-0 items-center gap-1 text-left text-link transition-colors hover:text-link-hover"
-          @click.stop="openView(row)"
+          @click.stop="openEdit(row)"
         >
           <span class="truncate">{{ getRowTitle(row) }}</span>
-          <i class="ri-arrow-right-up-line shrink-0 text-sm" />
+          <i class="ri-edit-line shrink-0 text-sm" />
         </button>
       </template>
 
@@ -826,7 +815,7 @@ function toNumber(value: unknown) {
       </template>
 
       <div class="min-h-0 flex-1 overflow-y-auto">
-        <div class="case-editor-list pb-6 pt-1">
+        <div class="case-editor-list px-4 pb-6 pt-1 sm:px-5">
           <label class="case-editor-row">
             <span class="case-editor-label">标题</span>
             <span class="case-editor-control">
