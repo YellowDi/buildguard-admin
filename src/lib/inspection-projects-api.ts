@@ -76,6 +76,35 @@ export type UpdateInspectionProjectPayload = {
   [property: string]: unknown
 }
 
+export type FinishInspectionProjectPayload = {
+  Uuid?: string
+  [property: string]: unknown
+}
+
+export type UpdateInspectionProjectPublicPayload = {
+  IsPublic?: number
+  Uuid?: string
+  [property: string]: unknown
+}
+
+export type CreateInspectionProjectProgressPayload = {
+  Photos?: WorkOrderFileItem[]
+  ProcessInfo?: string
+  ProgressDesc?: string
+  ProjectUuid?: string
+  Stage?: string
+  [property: string]: unknown
+}
+
+export type UpdateInspectionProjectProgressPayload = {
+  Photos?: WorkOrderFileItem[]
+  ProcessInfo?: string
+  ProgressDesc?: string
+  Stage?: string
+  Uuid?: string
+  [property: string]: unknown
+}
+
 export type InspectionProjectDetailPayload = {
   Uuid?: string
   [property: string]: unknown
@@ -84,10 +113,18 @@ export type InspectionProjectDetailPayload = {
 const INSPECTION_PROJECT_LIST_API_URL = buildApiUrl(API_PATHS.inspectionProjectList)
 const INSPECTION_PROJECT_CREATE_API_URL = buildApiUrl(API_PATHS.inspectionProjectCreate)
 const INSPECTION_PROJECT_UPDATE_API_URL = buildApiUrl(API_PATHS.inspectionProjectUpdate)
+const INSPECTION_PROJECT_FINISH_API_URL = buildApiUrl(API_PATHS.inspectionProjectFinish)
+const INSPECTION_PROJECT_PUBLIC_UPDATE_API_URL = buildApiUrl(API_PATHS.inspectionProjectPublicUpdate)
+const INSPECTION_PROJECT_PROGRESS_CREATE_API_URL = buildApiUrl(API_PATHS.inspectionProjectProgressCreate)
+const INSPECTION_PROJECT_PROGRESS_UPDATE_API_URL = buildApiUrl(API_PATHS.inspectionProjectProgressUpdate)
 const INSPECTION_PROJECTS_LOAD_ERROR_MESSAGE = "客户项目列表加载失败，请稍后重试。"
 const INSPECTION_PROJECT_CREATE_ERROR_MESSAGE = "客户项目创建失败，请稍后重试。"
 const INSPECTION_PROJECT_DETAIL_ERROR_MESSAGE = "客户项目详情加载失败，请稍后重试。"
 const INSPECTION_PROJECT_UPDATE_ERROR_MESSAGE = "客户项目更新失败，请稍后重试。"
+const INSPECTION_PROJECT_FINISH_ERROR_MESSAGE = "客户项目完结失败，请稍后重试。"
+const INSPECTION_PROJECT_PUBLIC_UPDATE_ERROR_MESSAGE = "客户项目公开状态更新失败，请稍后重试。"
+const INSPECTION_PROJECT_PROGRESS_CREATE_ERROR_MESSAGE = "客户项目进度创建失败，请稍后重试。"
+const INSPECTION_PROJECT_PROGRESS_UPDATE_ERROR_MESSAGE = "客户项目进度更新失败，请稍后重试。"
 
 export async function fetchInspectionProjects(
   payload: ListInspectionProjectsPayload = {},
@@ -188,6 +225,99 @@ export async function updateInspectionProject(payload: UpdateInspectionProjectPa
   }
 
   assertApiSuccess(responseBody, INSPECTION_PROJECT_UPDATE_ERROR_MESSAGE)
+
+  return extractDetailRecord(responseBody)
+}
+
+export async function finishInspectionProject(payload: FinishInspectionProjectPayload) {
+  const response = await fetch(INSPECTION_PROJECT_FINISH_API_URL, {
+    method: "POST",
+    headers: buildApiHeaders({
+      "Content-Type": "application/json",
+    }),
+    body: JSON.stringify({
+      Uuid: getRequiredString(payload.Uuid, "Uuid"),
+    }),
+  })
+  const responseBody = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responseBody, INSPECTION_PROJECT_FINISH_ERROR_MESSAGE)
+  }
+
+  assertApiSuccess(responseBody, INSPECTION_PROJECT_FINISH_ERROR_MESSAGE)
+
+  return extractDetailRecord(responseBody)
+}
+
+export async function updateInspectionProjectPublicStatus(payload: UpdateInspectionProjectPublicPayload) {
+  const response = await fetch(INSPECTION_PROJECT_PUBLIC_UPDATE_API_URL, {
+    method: "POST",
+    headers: buildApiHeaders({
+      "Content-Type": "application/json",
+    }),
+    body: JSON.stringify({
+      IsPublic: getRequiredNumber(payload.IsPublic, "IsPublic"),
+      Uuid: getRequiredString(payload.Uuid, "Uuid"),
+    }),
+  })
+  const responseBody = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responseBody, INSPECTION_PROJECT_PUBLIC_UPDATE_ERROR_MESSAGE)
+  }
+
+  assertApiSuccess(responseBody, INSPECTION_PROJECT_PUBLIC_UPDATE_ERROR_MESSAGE)
+
+  return extractDetailRecord(responseBody)
+}
+
+export async function createInspectionProjectProgress(payload: CreateInspectionProjectProgressPayload) {
+  const response = await fetch(INSPECTION_PROJECT_PROGRESS_CREATE_API_URL, {
+    method: "POST",
+    headers: buildApiHeaders({
+      "Content-Type": "application/json",
+    }),
+    body: JSON.stringify({
+      Photos: getOptionalFiles(payload.Photos),
+      ProcessInfo: getOptionalString(payload.ProcessInfo),
+      ProgressDesc: getOptionalString(payload.ProgressDesc),
+      ProjectUuid: getRequiredString(payload.ProjectUuid, "ProjectUuid"),
+      Stage: getOptionalString(payload.Stage),
+    }),
+  })
+  const responseBody = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responseBody, INSPECTION_PROJECT_PROGRESS_CREATE_ERROR_MESSAGE)
+  }
+
+  assertApiSuccess(responseBody, INSPECTION_PROJECT_PROGRESS_CREATE_ERROR_MESSAGE)
+
+  return extractDetailRecord(responseBody)
+}
+
+export async function updateInspectionProjectProgress(payload: UpdateInspectionProjectProgressPayload) {
+  const response = await fetch(INSPECTION_PROJECT_PROGRESS_UPDATE_API_URL, {
+    method: "POST",
+    headers: buildApiHeaders({
+      "Content-Type": "application/json",
+    }),
+    body: JSON.stringify({
+      Photos: getOptionalFiles(payload.Photos),
+      ProcessInfo: getOptionalString(payload.ProcessInfo),
+      ProgressDesc: getOptionalString(payload.ProgressDesc),
+      Stage: getOptionalString(payload.Stage),
+      Uuid: getRequiredString(payload.Uuid, "Uuid"),
+    }),
+  })
+  const responseBody = await readResponseBody(response)
+
+  if (!response.ok) {
+    throw createHttpError(response, responseBody, INSPECTION_PROJECT_PROGRESS_UPDATE_ERROR_MESSAGE)
+  }
+
+  assertApiSuccess(responseBody, INSPECTION_PROJECT_PROGRESS_UPDATE_ERROR_MESSAGE)
 
   return extractDetailRecord(responseBody)
 }
@@ -337,6 +467,27 @@ function getOptionalNumber(value: unknown, fieldName: string) {
   }
 
   return parsed
+}
+
+function getRequiredNumber(value: unknown, fieldName: string) {
+  const parsed = getOptionalNumber(value, fieldName)
+
+  if (parsed === undefined) {
+    throw new TypeError(`${fieldName} is required`)
+  }
+
+  return parsed
+}
+
+function getOptionalFiles(value: unknown) {
+  if (!Array.isArray(value)) {
+    return []
+  }
+
+  return value.map(file => ({
+    Type: getOptionalNumber(asRecord(file)?.Type, "Type"),
+    Url: getOptionalString(asRecord(file)?.Url),
+  }))
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {

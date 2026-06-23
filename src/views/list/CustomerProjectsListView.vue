@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, watch } from "vue"
+import { computed, reactive, ref, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { toast } from "vue-sonner"
 
@@ -7,6 +7,7 @@ import TablePage from "@/components/table-page/TablePage.vue"
 import type { TableExportRowsResolverPayload } from "@/components/table-page/export-utils"
 import { createTablePageDefinition, useTablePage } from "@/components/table-page/useTablePage"
 import type { TablePageSchema, TableQueryBarConfig, TableStatusOption } from "@/components/table-page/types"
+import FileUploadField from "@/components/upload/FileUploadField.vue"
 import {
   Pagination,
   PaginationContent,
@@ -18,19 +19,37 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { ResponsiveRightSheet } from "@/components/ui/sheet"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Switch } from "@/components/ui/switch"
+import { Textarea } from "@/components/ui/textarea"
 import { handleApiError } from "@/lib/api-errors"
 import {
+  createInspectionProjectProgress,
   fetchInspectionProjectDetail,
   fetchInspectionProjects,
+  finishInspectionProject,
+  updateInspectionProjectProgress,
+  updateInspectionProjectPublicStatus,
   type InspectionProjectRecord,
   type InspectionProjectProgressItem,
   type WorkOrderFileItem,
 } from "@/lib/inspection-projects-api"
 import { fetchAllPaginatedListItems } from "@/lib/paginated-list-export"
+import { uploadTencentCosFile } from "@/lib/tencent-cos-upload"
 
 type CustomerProjectRow = {
   id: string
@@ -54,6 +73,16 @@ type CustomerProjectRow = {
   raw: InspectionProjectRecord
 }
 
+type ProgressEditorMode = "create" | "edit"
+
+type ProgressForm = {
+  uuid: string
+  stage: string
+  progressDesc: string
+  processInfo: string
+  photos: WorkOrderFileItem[]
+}
+
 const projects = ref<CustomerProjectRow[]>([])
 const loading = ref(false)
 const errorMessage = ref("")
@@ -66,6 +95,13 @@ const sortDirection = ref<"asc" | "desc">("desc")
 const sheetOpen = ref(false)
 const detailLoading = ref(false)
 const selectedProject = ref<InspectionProjectRecord | null>(null)
+const finishConfirmOpen = ref(false)
+const projectActionSubmitting = ref(false)
+const progressEditorOpen = ref(false)
+const progressEditorMode = ref<ProgressEditorMode>("create")
+const progressSubmitting = ref(false)
+const progressUploading = ref(false)
+const progressForm = reactive<ProgressForm>(createEmptyProgressForm())
 let latestRequestId = 0
 let latestDetailRequestId = 0
 let syncingRoute = false
@@ -85,6 +121,9 @@ const projectStatusMap = {
 } satisfies Record<string, TableStatusOption>
 
 const progressItems = computed(() => selectedProject.value?.ProgressList ?? [])
+const isProjectFinished = computed(() => toNumber(selectedProject.value?.Status) === 2)
+const progressEditorTitle = computed(() => progressEditorMode.value === "edit" ? "编辑项目进度" : "新增项目进度")
+const progressMediaLabel = computed(() => progressForm.photos.length ? `已添加 ${progressForm.photos.length} 个附件` : "")
 
 const schema: TablePageSchema<CustomerProjectRow> = {
   title: "客户项目",
@@ -302,7 +341,10 @@ watch(sheetOpen, (open) => {
 
   selectedProject.value = null
   detailLoading.value = false
+  finishConfirmOpen.value = false
+  progressEditorOpen.value = false
   latestDetailRequestId += 1
+  Object.assign(progressForm, createEmptyProgressForm())
 })
 
 async function loadProjects() {
@@ -443,6 +485,204 @@ function editSelectedProject() {
   })
 }
 
+async function reloadSelectedProject() {
+  const uuid = toText(selectedProject.value?.Uuid)
+
+  if (!uuid) {
+    return
+  }
+
+  await loadProjectDetail(uuid)
+  await loadProjects()
+}
+
+async function handleProjectPublicChange(value: boolean | "indeterminate") {
+  if (value === "indeterminate") {
+    return
+  }
+
+  const uuid = toText(selectedProject.value?.Uuid)
+
+  if (!uuid || projectActionSubmitting.value) {
+    return
+  }
+
+  projectActionSubmitting.value = true
+
+  try {
+    await updateInspectionProjectPublicStatus({
+      Uuid: uuid,
+      IsPublic: value ? 1 : 2,
+    })
+    toast.success(value ? "客户项目已公开" : "客户项目已取消公开")
+    await reloadSelectedProject()
+  } catch (error) {
+    toast.error(handleApiError(error, {
+      mode: "silent",
+      fallback: "客户项目公开状态更新失败，请稍后重试。",
+    }))
+  } finally {
+    projectActionSubmitting.value = false
+  }
+}
+
+async function confirmFinishProject() {
+  const uuid = toText(selectedProject.value?.Uuid)
+
+  if (!uuid || projectActionSubmitting.value) {
+    return
+  }
+
+  projectActionSubmitting.value = true
+
+  try {
+    await finishInspectionProject({ Uuid: uuid })
+    toast.success("客户项目已完结")
+    finishConfirmOpen.value = false
+    await reloadSelectedProject()
+  } catch (error) {
+    toast.error(handleApiError(error, {
+      mode: "silent",
+      fallback: "客户项目完结失败，请稍后重试。",
+    }))
+  } finally {
+    projectActionSubmitting.value = false
+  }
+}
+
+function openProgressCreate() {
+  if (!selectedProject.value?.Uuid) {
+    toast.error("客户项目信息不完整，无法新增进度")
+    return
+  }
+
+  progressEditorMode.value = "create"
+  Object.assign(progressForm, createEmptyProgressForm())
+  progressEditorOpen.value = true
+}
+
+function openProgressEdit(item: InspectionProjectProgressItem) {
+  progressEditorMode.value = "edit"
+  Object.assign(progressForm, {
+    uuid: toText(item.Uuid),
+    stage: toText(item.Stage),
+    progressDesc: toText(item.ProgressDesc),
+    processInfo: toText(item.ProcessInfo),
+    photos: Array.isArray(item.Photos)
+      ? item.Photos.map(file => ({ ...file }))
+      : [],
+  } satisfies ProgressForm)
+  progressEditorOpen.value = true
+}
+
+function cancelProgressEdit() {
+  progressEditorOpen.value = false
+  Object.assign(progressForm, createEmptyProgressForm())
+}
+
+async function saveProgress() {
+  const projectUuid = toText(selectedProject.value?.Uuid)
+
+  if (!projectUuid || progressSubmitting.value || progressUploading.value) {
+    return
+  }
+
+  if (!hasProgressFormContent()) {
+    toast.error("请填写项目进度内容")
+    return
+  }
+
+  progressSubmitting.value = true
+
+  try {
+    const payload = {
+      Photos: progressForm.photos,
+      ProcessInfo: progressForm.processInfo.trim(),
+      ProgressDesc: progressForm.progressDesc.trim(),
+      Stage: progressForm.stage.trim(),
+    }
+
+    if (progressEditorMode.value === "edit") {
+      await updateInspectionProjectProgress({
+        ...payload,
+        Uuid: progressForm.uuid,
+      })
+      toast.success("项目进度已保存")
+    } else {
+      await createInspectionProjectProgress({
+        ...payload,
+        ProjectUuid: projectUuid,
+      })
+      toast.success("项目进度已新增")
+    }
+
+    cancelProgressEdit()
+    await reloadSelectedProject()
+  } catch (error) {
+    toast.error(handleApiError(error, {
+      mode: "silent",
+      fallback: "项目进度保存失败，请稍后重试。",
+    }))
+  } finally {
+    progressSubmitting.value = false
+  }
+}
+
+function hasProgressFormContent() {
+  return Boolean(
+    progressForm.stage.trim()
+    || progressForm.progressDesc.trim()
+    || progressForm.processInfo.trim()
+    || progressForm.photos.length,
+  )
+}
+
+async function handleProgressFilesSelected(files: File[]) {
+  if (!files.length || progressUploading.value) {
+    return
+  }
+
+  const invalidFile = files.find(file => !file.type.startsWith("image/") && !file.type.startsWith("video/"))
+
+  if (invalidFile) {
+    toast.error("请选择图片或视频文件")
+    return
+  }
+
+  progressUploading.value = true
+
+  try {
+    const uploadedFiles: WorkOrderFileItem[] = []
+
+    for (const file of files) {
+      const result = await uploadTencentCosFile({
+        file,
+        key: `inspection-projects/progress/${Date.now()}-${sanitizeObjectKeyFileName(file.name)}`,
+        contentType: file.type || undefined,
+      })
+
+      uploadedFiles.push({
+        Type: file.type.startsWith("video/") ? 2 : 1,
+        Url: result.url,
+      })
+    }
+
+    progressForm.photos = [...progressForm.photos, ...uploadedFiles]
+    toast.success("项目进度附件已上传")
+  } catch (error) {
+    toast.error(handleApiError(error, {
+      mode: "silent",
+      fallback: "项目进度附件上传失败，请稍后重试。",
+    }))
+  } finally {
+    progressUploading.value = false
+  }
+}
+
+function removeProgressPhoto(index: number) {
+  progressForm.photos = progressForm.photos.filter((_, itemIndex) => itemIndex !== index)
+}
+
 function handleToolbarSortToggle() {
   sortDirection.value = sortDirection.value === "asc" ? "desc" : "asc"
 }
@@ -542,6 +782,16 @@ function resolveProjectFromRow(row: CustomerProjectRow | Record<string, unknown>
     Status: toNumber(row.status) ?? undefined,
     Uuid: toText(row.uuid),
     ProgressList: [],
+  }
+}
+
+function createEmptyProgressForm(): ProgressForm {
+  return {
+    uuid: "",
+    stage: "",
+    progressDesc: "",
+    processInfo: "",
+    photos: [],
   }
 }
 
@@ -678,6 +928,12 @@ function isVideoFile(file: WorkOrderFileItem) {
   return toNumber(file.Type) === 2
 }
 
+function sanitizeObjectKeyFileName(value: string) {
+  const normalized = value.trim().replace(/[\\/:*?"<>|\s]+/g, "-").replace(/^-+|-+$/g, "")
+
+  return normalized || "project-progress-file"
+}
+
 function asProjectRow(row: Record<string, unknown>) {
   return row as CustomerProjectRow
 }
@@ -796,6 +1052,30 @@ function asProjectRow(row: Record<string, unknown>) {
               variant="ghost"
               size="sm"
               class="right-sheet-text-button"
+              :disabled="progressSubmitting || progressUploading"
+              @click="openProgressCreate"
+            >
+              <i class="ri-add-line text-sm" />
+              <span>新增进度</span>
+            </Button>
+            <Button
+              v-if="selectedProject?.Uuid && !isProjectFinished"
+              type="button"
+              variant="ghost"
+              size="sm"
+              class="right-sheet-text-button"
+              :disabled="projectActionSubmitting"
+              @click="finishConfirmOpen = true"
+            >
+              <i class="ri-checkbox-circle-line text-sm" />
+              <span>完结</span>
+            </Button>
+            <Button
+              v-if="selectedProject?.Uuid"
+              type="button"
+              variant="ghost"
+              size="sm"
+              class="right-sheet-text-button"
               @click="editSelectedProject"
             >
               <i class="ri-edit-line text-sm" />
@@ -852,13 +1132,20 @@ function asProjectRow(row: Record<string, unknown>) {
           <div class="project-editor-row">
             <span class="project-editor-label">展示状态</span>
             <div class="project-editor-control">
-              <div class="flex flex-wrap items-center gap-2">
+              <div class="flex flex-wrap items-center gap-2 py-1">
                 <Badge :variant="getStatusBadgeVariant(selectedProject.Status)">
                   {{ formatProjectStatus(selectedProject.Status) }}
                 </Badge>
                 <Badge variant="secondary">
                   {{ formatPublicStatus(selectedProject.IsPublic) }}
                 </Badge>
+                <Switch
+                  class="ml-1"
+                  :model-value="toNumber(selectedProject.IsPublic) === 1"
+                  :disabled="projectActionSubmitting"
+                  :aria-label="`${toText(selectedProject.Name, '客户项目')}公开状态`"
+                  @update:model-value="handleProjectPublicChange"
+                />
               </div>
             </div>
           </div>
@@ -866,6 +1153,146 @@ function asProjectRow(row: Record<string, unknown>) {
           <div class="project-editor-row project-editor-row--top">
             <span class="project-editor-label">项目进度</span>
             <div class="project-editor-control">
+              <div class="mb-3 flex justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  class="h-8 rounded-md"
+                  :disabled="progressSubmitting || progressUploading"
+                  @click="openProgressCreate"
+                >
+                  <i class="ri-add-line text-sm" />
+                  <span>新增进度</span>
+                </Button>
+              </div>
+
+              <article
+                v-if="progressEditorOpen"
+                class="mb-3 rounded-lg border border-border/70 bg-muted/25 p-3"
+              >
+                <div class="flex items-center justify-between gap-3">
+                  <div class="min-w-0">
+                    <p class="truncate text-sm font-medium text-foreground">
+                      {{ progressEditorTitle }}
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    class="size-8 rounded-md text-muted-foreground"
+                    :disabled="progressSubmitting || progressUploading"
+                    @click="cancelProgressEdit"
+                  >
+                    <i class="ri-close-line text-base" />
+                    <span class="sr-only">关闭项目进度表单</span>
+                  </Button>
+                </div>
+
+                <div class="mt-3 grid gap-3">
+                  <label class="grid gap-1.5 text-sm">
+                    <span class="font-medium text-foreground">项目阶段</span>
+                    <Input
+                      v-model="progressForm.stage"
+                      placeholder="请输入项目阶段"
+                      :disabled="progressSubmitting"
+                    />
+                  </label>
+
+                  <label class="grid gap-1.5 text-sm">
+                    <span class="font-medium text-foreground">进度描述</span>
+                    <Textarea
+                      v-model="progressForm.progressDesc"
+                      class="min-h-20 resize-y"
+                      placeholder="请输入进度描述"
+                      :disabled="progressSubmitting"
+                    />
+                  </label>
+
+                  <label class="grid gap-1.5 text-sm">
+                    <span class="font-medium text-foreground">工艺信息</span>
+                    <Textarea
+                      v-model="progressForm.processInfo"
+                      class="min-h-20 resize-y"
+                      placeholder="请输入工艺信息"
+                      :disabled="progressSubmitting"
+                    />
+                  </label>
+
+                  <FileUploadField
+                    accept="image/*,video/*"
+                    multiple
+                    compact
+                    title="上传工地照片/视频"
+                    description="支持图片或视频文件。"
+                    :selected-label="progressMediaLabel"
+                    :button-label="progressForm.photos.length ? '继续上传' : '选择文件'"
+                    loading-label="上传中..."
+                    :loading="progressUploading"
+                    :disabled="progressSubmitting || progressUploading"
+                    :show-supplement="Boolean(progressForm.photos.length)"
+                    @files-selected="handleProgressFilesSelected"
+                  >
+                    <template v-if="progressForm.photos.length" #preview>
+                      <div class="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                        <div
+                          v-for="(file, fileIndex) in progressForm.photos"
+                          :key="`${getFileUrl(file)}-${fileIndex}`"
+                          class="group relative overflow-hidden rounded-md bg-muted"
+                        >
+                          <video
+                            v-if="isVideoFile(file) && getFileUrl(file)"
+                            :src="getFileUrl(file)"
+                            controls
+                            preload="metadata"
+                            class="aspect-video w-full object-cover"
+                          />
+                          <img
+                            v-else-if="getFileUrl(file)"
+                            :src="getFileUrl(file)"
+                            alt=""
+                            class="aspect-video w-full object-cover"
+                          >
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            size="icon-sm"
+                            class="absolute right-1.5 top-1.5 size-7 rounded-md opacity-95"
+                            :disabled="progressSubmitting || progressUploading"
+                            @click.stop="removeProgressPhoto(fileIndex)"
+                          >
+                            <i class="ri-close-line text-sm" />
+                            <span class="sr-only">移除附件</span>
+                          </Button>
+                        </div>
+                      </div>
+                    </template>
+                  </FileUploadField>
+
+                  <div class="flex justify-end gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      :disabled="progressSubmitting || progressUploading"
+                      @click="cancelProgressEdit"
+                    >
+                      取消
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      :disabled="progressSubmitting || progressUploading"
+                      @click="saveProgress"
+                    >
+                      <i :class="[progressSubmitting ? 'ri-loader-4-line animate-spin' : 'ri-save-line', 'text-sm']" />
+                      <span>{{ progressSubmitting ? '保存中...' : '保存进度' }}</span>
+                    </Button>
+                  </div>
+                </div>
+              </article>
+
               <div v-if="progressItems.length" class="space-y-3">
                 <article
                   v-for="(item, index) in progressItems"
@@ -881,6 +1308,17 @@ function asProjectRow(row: Record<string, unknown>) {
                         {{ getProgressVersion(item) }} · {{ formatDateOnly(toText(item.CreatedAt, '-')) }}
                       </p>
                     </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      class="h-8 rounded-md px-2 text-muted-foreground"
+                      :disabled="progressSubmitting || progressUploading"
+                      @click="openProgressEdit(item)"
+                    >
+                      <i class="ri-edit-line text-sm" />
+                      <span>编辑</span>
+                    </Button>
                   </div>
 
                   <div class="mt-3 grid gap-3 text-sm">
@@ -922,6 +1360,27 @@ function asProjectRow(row: Record<string, unknown>) {
         </div>
       </div>
     </ResponsiveRightSheet>
+
+    <AlertDialog v-model:open="finishConfirmOpen">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>完结这个客户项目？</AlertDialogTitle>
+          <AlertDialogDescription>
+            完结后，该项目状态会变为已完结。
+            <span v-if="selectedProject" class="mt-2 block font-medium text-foreground">
+              {{ toText(selectedProject.Name, '未命名项目') }}
+            </span>
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel :disabled="projectActionSubmitting">取消</AlertDialogCancel>
+          <AlertDialogAction :disabled="projectActionSubmitting" @click.prevent="confirmFinishProject">
+            <i :class="[projectActionSubmitting ? 'ri-loader-4-line animate-spin' : 'ri-checkbox-circle-line', 'text-sm']" />
+            <span>{{ projectActionSubmitting ? '处理中...' : '确认完结' }}</span>
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   </section>
 </template>
 
