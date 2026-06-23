@@ -53,11 +53,12 @@ import {
   fetchMediaVideos,
   type MediaVideoRecord,
 } from "@/lib/media-videos-api"
-import {
-  fetchCustomerCases,
-  type CustomerCaseRecord,
-} from "@/lib/customer-cases-api"
 import { handleApiError } from "@/lib/api-errors"
+import {
+  fetchPublicInspectionProjects,
+  type InspectionProjectRecord,
+} from "@/lib/inspection-projects-api"
+import { fetchAllPaginatedListItems } from "@/lib/paginated-list-export"
 import { useCurrentUserPermissions } from "@/composables/useCurrentUserPermissions"
 import { PERMISSION_CODES } from "@/lib/permission-codes"
 import { cn } from "@/lib/utils"
@@ -117,7 +118,7 @@ const mediaState = reactive<{
   videoItems: [],
   articleItems: [],
 })
-const customerCases = ref<CustomerCaseRecord[]>([])
+const customerProjects = ref<InspectionProjectRecord[]>([])
 const mediaOptionsLoaded = reactive<Record<AppHomeMediaOptionKind, boolean>>({
   video: false,
   article: false,
@@ -152,7 +153,7 @@ const mediaOptionLoadPromises: Partial<Record<AppHomeMediaOptionKind, Promise<vo
 
 const orderedModules = computed(() => [...modules.value].sort(compareBySortOrder))
 const enabledModules = computed(() => orderedModules.value.filter(module => module.enabled))
-const publishedCustomerCases = computed(() => customerCases.value.filter(item => item.isPublished))
+const publishedCustomerProjects = computed(() => customerProjects.value)
 const selectedModule = computed(() => modules.value.find(module => module.id === selectedModuleId.value) ?? null)
 const deletingModule = computed(() => modules.value.find(module => module.id === deletingModuleId.value) ?? null)
 const canSaveAppHomeConfig = computed(() => canButton(PERMISSION_CODES.appHomeConfigSave))
@@ -251,16 +252,16 @@ watch(selectedVideoCategories, (categories) => {
 async function loadInitialData(options: { silent?: boolean } = {}) {
   loading.value = true
   try {
-    const [contentResult, customerCaseResult] = await Promise.all([
+    const [contentResult, projectItems] = await Promise.all([
       fetchMediaContents({ PageNum: 1, PageSize: MEDIA_CONTENT_PAGE_SIZE }),
-      fetchCustomerCases({ isPublished: true }),
+      fetchAllPaginatedListItems(({ PageNum, PageSize }) => fetchPublicInspectionProjects({ PageNum, PageSize })),
     ])
 
     persistedModuleIds.value = new Set()
     persistedCategoryIds.value = new Set()
     articleCategoryIds.value = new Map()
     clearVideoSourceForms()
-    customerCases.value = customerCaseResult.list
+    customerProjects.value = projectItems
     modules.value = normalizeModuleOrders(contentResult.list.map(normalizeMediaContent).filter((item): item is AppHomeModule => item !== null))
     selectedModuleId.value = selectedModule.value?.id ?? modules.value[0]?.id ?? ""
     await ensureMediaOptionsForModules(modules.value)
@@ -705,23 +706,26 @@ function getArticleOptionLabel(article: ArticleItem) {
   return `${article.title} · ${getCategoryPathLabel(mediaState.articleCategories, article.categoryId)}`
 }
 
-function getCustomerCaseSummary(record: CustomerCaseRecord) {
-  const bodyText = stripHtml(record.body)
+function getCustomerProjectSummary(record: InspectionProjectRecord) {
+  const bodyText = stripHtml(toOptionalText(record.Introduction))
   if (bodyText) {
     return bodyText
   }
 
-  const firstModule = [...record.modules].sort(compareBySortOrder)[0]
-  const moduleText = firstModule
+  const firstProgress = record.ProgressList?.[0]
+  const progressText = firstProgress
     ? [
-        firstModule.projectStage,
-        firstModule.projectProgress,
-        firstModule.progressDescription,
-        firstModule.craftInfo,
-      ].map(stripHtml).filter(Boolean).join(" · ")
+        firstProgress.Stage,
+        firstProgress.ProgressDesc,
+        firstProgress.ProcessInfo,
+      ].map(value => stripHtml(toOptionalText(value))).filter(Boolean).join(" · ")
     : ""
 
-  return moduleText || "暂无项目描述"
+  return progressText || "暂无项目描述"
+}
+
+function getCustomerProjectKey(record: InspectionProjectRecord, index: number) {
+  return toOptionalText(record.Uuid) || `${toOptionalText(record.Name) || "project"}-${index}`
 }
 
 function getCoverSrc(value: string) {
@@ -1593,29 +1597,29 @@ function hashText(value: string) {
               </div>
 
               <div
-                v-if="publishedCustomerCases.length"
+                v-if="publishedCustomerProjects.length"
                 class="border-b border-dashed border-zinc-300/90 py-4 first:pt-0 last:border-b-0"
               >
                 <section class="min-w-0">
                   <h2 class="px-0 text-[18px] font-semibold leading-none text-zinc-950">
-                    客户案例
+                    客户项目
                   </h2>
 
                   <div class="app-home-video-rail -mx-4 mt-5 flex gap-4 overflow-x-auto px-4 pb-1">
                     <article
-                      v-for="item in publishedCustomerCases.slice(0, 8)"
-                      :key="item.id"
+                      v-for="(item, index) in publishedCustomerProjects.slice(0, 8)"
+                      :key="getCustomerProjectKey(item, index)"
                       class="relative flex h-48 w-36 shrink-0 flex-col overflow-hidden rounded-[8px] bg-zinc-950 p-3 text-white"
                     >
                       <div class="flex items-center gap-1.5 text-[11px] font-medium text-white/65">
-                        <i class="ri-profile-line text-[13px]" />
-                        <span>CASE</span>
+                        <i class="ri-briefcase-4-line text-[13px]" />
+                        <span>PROJECT</span>
                       </div>
                       <h3 class="mt-auto line-clamp-3 text-[15px] font-semibold leading-[1.32] text-white">
-                        {{ item.title }}
+                        {{ toOptionalText(item.Name) || '未命名项目' }}
                       </h3>
                       <p class="mt-2 line-clamp-3 text-[12px] leading-[1.5] text-white/68">
-                        {{ getCustomerCaseSummary(item) }}
+                        {{ getCustomerProjectSummary(item) }}
                       </p>
                     </article>
                   </div>
@@ -1623,7 +1627,7 @@ function hashText(value: string) {
               </div>
             </template>
 
-          <div v-if="!showInitialSkeleton && !enabledModules.length && !publishedCustomerCases.length" class="py-20 text-center text-sm text-zinc-500">
+          <div v-if="!showInitialSkeleton && !enabledModules.length && !publishedCustomerProjects.length" class="py-20 text-center text-sm text-zinc-500">
             暂无启用模块
           </div>
         </div>

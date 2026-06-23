@@ -432,16 +432,6 @@ const router = createRouter({
           } satisfies RouteMetaConfig,
         },
         {
-          path: "customer-cases",
-          name: "customer-cases",
-          component: () => import("@/views/list/CustomerCasesListView.vue"),
-          meta: {
-            title: "客户案例",
-            loading: "table",
-            permissionPath: "/media-library",
-          } satisfies RouteMetaConfig,
-        },
-        {
           path: "app-home",
           name: "app-home",
           component: () => import("@/views/app-home/AppHomeConfigView.vue"),
@@ -903,7 +893,6 @@ function inferPermissionPath(path: string) {
     "/inspection-services",
     "/inspection-plans",
     "/media-library",
-    "/customer-cases",
     "/app-home",
     "/customer-feedback",
     "/customers",

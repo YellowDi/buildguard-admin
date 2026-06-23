@@ -1169,12 +1169,15 @@ function asProjectRow(row: Record<string, unknown>) {
 
               <article
                 v-if="progressEditorOpen"
-                class="mb-3 rounded-lg border border-border/70 bg-muted/25 p-3"
+                class="mb-3 rounded-lg border border-border/70 bg-background p-2.5"
               >
                 <div class="flex items-center justify-between gap-3">
                   <div class="min-w-0">
                     <p class="truncate text-sm font-medium text-foreground">
                       {{ progressEditorTitle }}
+                    </p>
+                    <p class="mt-0.5 truncate text-xs text-muted-foreground">
+                      项目阶段、工地照片、进度描述、工艺信息
                     </p>
                   </div>
                   <Button
@@ -1224,7 +1227,7 @@ function asProjectRow(row: Record<string, unknown>) {
                     accept="image/*,video/*"
                     multiple
                     compact
-                    title="上传工地照片/视频"
+                    title="工地照片"
                     description="支持图片或视频文件。"
                     :selected-label="progressMediaLabel"
                     :button-label="progressForm.photos.length ? '继续上传' : '选择文件'"
@@ -1322,11 +1325,13 @@ function asProjectRow(row: Record<string, unknown>) {
                   </div>
 
                   <div class="mt-3 grid gap-3 text-sm">
-                    <div v-if="toText(item.ProgressDesc)" class="rounded-md bg-muted/45 p-2.5 text-muted-foreground">
-                      {{ toText(item.ProgressDesc) }}
+                    <div v-if="toText(item.ProgressDesc)" class="rounded-md bg-muted/45 p-2.5">
+                      <p class="text-xs font-medium text-foreground">进度描述</p>
+                      <p class="mt-1 text-muted-foreground">{{ toText(item.ProgressDesc) }}</p>
                     </div>
-                    <div v-if="toText(item.ProcessInfo)" class="rounded-md bg-muted/45 p-2.5 text-muted-foreground">
-                      {{ toText(item.ProcessInfo) }}
+                    <div v-if="toText(item.ProcessInfo)" class="rounded-md bg-muted/45 p-2.5">
+                      <p class="text-xs font-medium text-foreground">工艺信息</p>
+                      <p class="mt-1 text-muted-foreground">{{ toText(item.ProcessInfo) }}</p>
                     </div>
                   </div>
 

@@ -1,5 +1,5 @@
 import { assertApiSuccess, createHttpError, readResponseBody } from "@/lib/api-errors"
-import { API_PATHS, buildApiHeaders, buildApiRequestUrl, buildApiUrl } from "@/lib/api"
+import { API_PATHS, buildApiHeaders, buildApiHeadersWithoutAuth, buildApiRequestUrl, buildApiUrl } from "@/lib/api"
 
 type InspectionProjectsEnvelope = {
   Total?: number
@@ -111,6 +111,7 @@ export type InspectionProjectDetailPayload = {
 }
 
 const INSPECTION_PROJECT_LIST_API_URL = buildApiUrl(API_PATHS.inspectionProjectList)
+const INSPECTION_PROJECT_PUBLIC_LIST_API_URL = buildApiUrl(API_PATHS.inspectionProjectPublicList)
 const INSPECTION_PROJECT_CREATE_API_URL = buildApiUrl(API_PATHS.inspectionProjectCreate)
 const INSPECTION_PROJECT_UPDATE_API_URL = buildApiUrl(API_PATHS.inspectionProjectUpdate)
 const INSPECTION_PROJECT_FINISH_API_URL = buildApiUrl(API_PATHS.inspectionProjectFinish)
@@ -125,6 +126,7 @@ const INSPECTION_PROJECT_FINISH_ERROR_MESSAGE = "客户项目完结失败，请�
 const INSPECTION_PROJECT_PUBLIC_UPDATE_ERROR_MESSAGE = "客户项目公开状态更新失败，请稍后重试。"
 const INSPECTION_PROJECT_PROGRESS_CREATE_ERROR_MESSAGE = "客户项目进度创建失败，请稍后重试。"
 const INSPECTION_PROJECT_PROGRESS_UPDATE_ERROR_MESSAGE = "客户项目进度更新失败，请稍后重试。"
+const INSPECTION_PROJECT_PUBLIC_LIST_ERROR_MESSAGE = "公开客户项目列表加载失败，请稍后重试。"
 
 export async function fetchInspectionProjects(
   payload: ListInspectionProjectsPayload = {},
@@ -148,6 +150,35 @@ export async function fetchInspectionProjects(
   }
 
   assertApiSuccess(responsePayload, INSPECTION_PROJECTS_LOAD_ERROR_MESSAGE)
+
+  const list = extractList(responsePayload)
+
+  return {
+    list: list.map(item => normalizeProjectRecord(item)),
+    total: extractTotal(responsePayload, list.length),
+  }
+}
+
+export async function fetchPublicInspectionProjects(
+  payload: Pick<ListInspectionProjectsPayload, "PageNum" | "PageSize"> = {},
+): Promise<InspectionProjectsResult> {
+  const response = await fetch(INSPECTION_PROJECT_PUBLIC_LIST_API_URL, {
+    method: "POST",
+    headers: buildApiHeadersWithoutAuth({
+      "Content-Type": "application/json",
+    }),
+    body: JSON.stringify({
+      PageNum: getOptionalNumber(payload.PageNum, "PageNum"),
+      PageSize: getOptionalNumber(payload.PageSize, "PageSize"),
+    }),
+  })
+  const responsePayload = await readResponseBody(response) as InspectionProjectsEnvelope | unknown[]
+
+  if (!response.ok) {
+    throw createHttpError(response, responsePayload, INSPECTION_PROJECT_PUBLIC_LIST_ERROR_MESSAGE)
+  }
+
+  assertApiSuccess(responsePayload, INSPECTION_PROJECT_PUBLIC_LIST_ERROR_MESSAGE)
 
   const list = extractList(responsePayload)
 
