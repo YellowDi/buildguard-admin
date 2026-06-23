@@ -6,7 +6,7 @@ import { toast } from "vue-sonner"
 import TablePage from "@/components/table-page/TablePage.vue"
 import type { TableExportRowsResolverPayload } from "@/components/table-page/export-utils"
 import { createTablePageDefinition, useTablePage } from "@/components/table-page/useTablePage"
-import type { TablePageSchema, TableQueryBarConfig } from "@/components/table-page/types"
+import type { TablePageSchema, TableQueryBarConfig, TableStatusOption } from "@/components/table-page/types"
 import {
   Pagination,
   PaginationContent,
@@ -78,6 +78,12 @@ const statusOptions = [
   { value: "2", label: "已完结" },
 ]
 
+const projectStatusMap = {
+  进行中: { tone: "green", icon: "clock" },
+  已完结: { tone: "green", icon: "check" },
+  未填写: { tone: "gray", icon: "dot" },
+} satisfies Record<string, TableStatusOption>
+
 const progressItems = computed(() => selectedProject.value?.ProgressList ?? [])
 
 const schema: TablePageSchema<CustomerProjectRow> = {
@@ -120,7 +126,11 @@ const schema: TablePageSchema<CustomerProjectRow> = {
       key: "statusLabel",
       label: "状态",
       filterType: "tag",
-      slot: "cell-statusLabel",
+      cellRenderer: {
+        kind: "status",
+        map: projectStatusMap,
+        fallback: { tone: "gray", icon: "dot" },
+      },
       sort: {
         kind: "metric",
         value: row => row.status ?? 0,
@@ -714,12 +724,6 @@ function asProjectRow(row: Record<string, unknown>) {
           <span class="truncate">{{ row.name }}</span>
           <i class="ri-arrow-right-up-line shrink-0 text-sm" />
         </button>
-      </template>
-
-      <template #cell-statusLabel="{ row }">
-        <Badge :variant="getStatusBadgeVariant(row.status)">
-          {{ row.statusLabel }}
-        </Badge>
       </template>
 
       <template #cell-address="{ row }">
