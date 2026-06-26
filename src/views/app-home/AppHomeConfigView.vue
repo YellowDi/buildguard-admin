@@ -56,8 +56,7 @@ import {
 } from "@/lib/media-videos-api"
 import { handleApiError } from "@/lib/api-errors"
 import {
-  fetchCustomerInspectionProjects,
-  type InspectionProjectCustomerItem,
+  fetchInspectionProjects,
   type InspectionProjectRecord,
 } from "@/lib/inspection-projects-api"
 import { fetchAllPaginatedListItems } from "@/lib/paginated-list-export"
@@ -112,6 +111,11 @@ type AppHomeMediaOptionKind = "video" | "article" | "project"
 
 const MEDIA_OPTION_PAGE_SIZE = 500
 const MEDIA_CONTENT_PAGE_SIZE = 500
+const APP_HOME_MEDIA_CONTENT_TYPE = {
+  article: 2,
+  project: 3,
+  video: 1,
+} as const satisfies Record<AppHomeModuleType, 1 | 2 | 3>
 const APP_HOME_VIDEO_COVER_SNAPSHOT_OPTIONS = {
   width: 144,
   height: 0,
@@ -352,8 +356,8 @@ async function loadMediaOptions(kind: AppHomeMediaOptionKind) {
       mediaState.articleCategories = normalizeMediaCategoryTree(categoryResult.list)
       mediaState.articleItems = articleResult.list.map((item, index) => normalizeMediaArticle(item, index))
     } else {
-      const projectItems = await fetchAllPaginatedListItems(({ PageNum, PageSize }) => fetchCustomerInspectionProjects({ PageNum, PageSize }))
-      mergeProjectItems(projectItems.map((item, index) => normalizeProjectItem(item, index)))
+      const projectItems = await fetchAllPaginatedListItems(({ PageNum, PageSize }) => fetchInspectionProjects({ PageNum, PageSize }))
+      mergeProjectItems(projectItems.filter(isInspectionProjectPublic).map((item, index) => normalizeProjectItem(item, index)))
     }
 
     mediaOptionsLoaded[kind] = true
@@ -941,7 +945,7 @@ function normalizeSelectedProjectIds(value: unknown) {
       ? []
       : [String(value)]
 
-  return uniqueIds(ids).filter(projectId => projectItemMap.value.has(projectId))
+  return uniqueIds(ids).filter(projectId => projectOptions.value.some(item => item.id === projectId))
 }
 
 function syncHomeMediaReferences() {
@@ -1194,15 +1198,15 @@ function normalizeMediaArticle(item: MediaArticleRecord, index: number): Article
   }
 }
 
-function normalizeProjectItem(item: InspectionProjectRecord | InspectionProjectCustomerItem, index: number): ProjectItem {
+function normalizeProjectItem(item: InspectionProjectRecord, index: number): ProjectItem {
   const id = toOptionalText(item.Uuid) || `inspection-project-${index + 1}`
-  const firstProgress = Array.isArray((item as InspectionProjectRecord).ProgressList)
-    ? (item as InspectionProjectRecord).ProgressList?.[0]
+  const firstProgress = Array.isArray(item.ProgressList)
+    ? item.ProgressList?.[0]
     : undefined
-  const stage = toOptionalText((item as InspectionProjectCustomerItem).Stage) || toOptionalText(firstProgress?.Stage)
-  const progressDesc = toOptionalText((item as InspectionProjectCustomerItem).ProgressDesc) || toOptionalText(firstProgress?.ProgressDesc)
+  const stage = toOptionalText(firstProgress?.Stage)
+  const progressDesc = toOptionalText(firstProgress?.ProgressDesc)
   const processInfo = toOptionalText(firstProgress?.ProcessInfo)
-  const introduction = stripHtml(toOptionalText((item as InspectionProjectRecord).Introduction))
+  const introduction = stripHtml(toOptionalText(item.Introduction))
   const summary = introduction || [stage, progressDesc, processInfo]
     .map(value => stripHtml(value))
     .filter(Boolean)
@@ -1215,7 +1219,7 @@ function normalizeProjectItem(item: InspectionProjectRecord | InspectionProjectC
     stage,
     summary: summary || "暂无项目描述",
     status: toOptionalNumber(item.Status) ?? null,
-    isPublic: toOptionalNumber((item as InspectionProjectRecord).IsPublic) ?? null,
+    isPublic: toOptionalNumber(item.IsPublic) ?? null,
     sortOrder: index + 1,
   }
 }
@@ -1260,10 +1264,14 @@ function mergeProjectItems(items: ProjectItem[]) {
 }
 
 function isProjectVisibleOnApp(item: ProjectItem) {
-  return item.isPublic === null || item.isPublic === 1
+  return item.isPublic === 1
 }
 
-function getProjectCoverUrl(item: InspectionProjectRecord | InspectionProjectCustomerItem) {
+function isInspectionProjectPublic(item: InspectionProjectRecord) {
+  return toOptionalNumber(item.IsPublic) === 1
+}
+
+function getProjectCoverUrl(item: InspectionProjectRecord) {
   const record = item as Record<string, unknown>
   return toOptionalText(record.Url)
     || toOptionalText(record.CoverUrl)
@@ -1410,7 +1418,7 @@ function buildMediaContentPayload(module: AppHomeModule) {
     SortNum: module.sortOrder,
     Status: module.enabled ? 1 as const : 2 as const,
     Title: module.title.trim() || getDefaultModuleTitle(module.type),
-    Type: module.type === "video" ? 1 as const : module.type === "article" ? 2 as const : 3 as const,
+    Type: APP_HOME_MEDIA_CONTENT_TYPE[module.type],
   }
 }
 
