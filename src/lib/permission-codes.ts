@@ -45,6 +45,7 @@ export const PERMISSION_CODES = {
   appHomeCategoryAdd: "app-home:category:add",
   appHomeModuleDelete: "app-home:module:delete",
   appHomeModuleSave: "app-home:module:save",
+  appHomeProjectModuleAdd: "app-home:project-module:add",
   appHomeArticleModuleAdd: "app-home:article-module:add",
   appHomeVideoModuleAdd: "app-home:video-module:add",
   appHomeConfigSave: "app-home:config:save",
@@ -93,6 +94,13 @@ export const PERMISSION_CODES = {
   customerDelete: "customer:delete",
   customerEdit: "customer:edit",
   customerAdd: "customer:add",
+  customerProjectProgressEdit: "customer-project:progress:edit",
+  customerProjectProgressAdd: "customer-project:progress:add",
+  customerProjectFinish: "customer-project:finish",
+  customerProjectCoverUpload: "customer-project:cover-upload",
+  customerProjectPublicUpdate: "customer-project:public:update",
+  customerProjectEdit: "customer-project:edit",
+  customerProjectAdd: "customer-project:add",
 } as const
 
 export type PermissionCode = (typeof PERMISSION_CODES)[keyof typeof PERMISSION_CODES]

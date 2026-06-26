@@ -179,7 +179,7 @@ const canSaveAppHomeConfig = computed(() => canButton(PERMISSION_CODES.appHomeCo
 const canSaveAppHomeModule = computed(() => canButton(PERMISSION_CODES.appHomeModuleSave))
 const canAddAppHomeVideoModule = computed(() => canButton(PERMISSION_CODES.appHomeVideoModuleAdd))
 const canAddAppHomeArticleModule = computed(() => canButton(PERMISSION_CODES.appHomeArticleModuleAdd))
-const canAddAppHomeProjectModule = computed(() => canSaveAppHomeModule.value)
+const canAddAppHomeProjectModule = computed(() => canButton(PERMISSION_CODES.appHomeProjectModuleAdd))
 const canDeleteAppHomeModule = computed(() => canButton(PERMISSION_CODES.appHomeModuleDelete))
 const canAddAppHomeCategory = computed(() => canButton(PERMISSION_CODES.appHomeCategoryAdd))
 const canDeleteAppHomeCategory = computed(() => canButton(PERMISSION_CODES.appHomeCategoryDelete))

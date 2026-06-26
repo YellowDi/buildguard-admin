@@ -110,7 +110,6 @@ const businessItems = reactive<AppSidebarNavItem[]>([
     label: "项目",
     icon: "ri-briefcase-4-line",
     path: "/customer-projects",
-    permissionPath: "/media-library",
   },
   {
     label: "反馈",

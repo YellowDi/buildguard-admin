@@ -52,6 +52,7 @@ import {
 } from "@/components/ui/select"
 import { ResponsiveRightSheet } from "@/components/ui/sheet"
 import { Textarea } from "@/components/ui/textarea"
+import { useCurrentUserPermissions } from "@/composables/useCurrentUserPermissions"
 import { handleApiError } from "@/lib/api-errors"
 import { fetchCustomers } from "@/lib/customers-api"
 import {
@@ -68,6 +69,7 @@ import {
   type WorkOrderFileItem,
 } from "@/lib/inspection-projects-api"
 import { fetchAllPaginatedListItems } from "@/lib/paginated-list-export"
+import { PERMISSION_CODES } from "@/lib/permission-codes"
 import { uploadTencentCosFile } from "@/lib/tencent-cos-upload"
 
 type CustomerProjectRow = {
@@ -153,6 +155,7 @@ let syncingRoute = false
 
 const route = useRoute()
 const router = useRouter()
+const { canButton } = useCurrentUserPermissions()
 
 const statusOptions = [
   { value: "1", label: "进行中" },
@@ -207,6 +210,15 @@ const progressMediaLabel = computed(() => progressForm.photos.length ? `已添�
 const projectCoverUrl = computed(() => getProjectCoverUrl(selectedProject.value))
 const projectCoverSelectedLabel = computed(() => projectCoverUrl.value || "暂未设置封面")
 const projectCoverButtonLabel = computed(() => projectCoverUrl.value ? "更换并保存封面" : "上传并保存封面")
+const canAddCustomerProject = computed(() => canButton(PERMISSION_CODES.customerProjectAdd))
+const canEditCustomerProject = computed(() => canButton(PERMISSION_CODES.customerProjectEdit))
+const canUpdateCustomerProjectPublicStatus = computed(() => canButton(PERMISSION_CODES.customerProjectPublicUpdate))
+const canUploadCustomerProjectCover = computed(() => canButton(PERMISSION_CODES.customerProjectCoverUpload))
+const canFinishCustomerProject = computed(() => canButton(PERMISSION_CODES.customerProjectFinish))
+const canAddCustomerProjectProgress = computed(() => canButton(PERMISSION_CODES.customerProjectProgressAdd))
+const canEditCustomerProjectProgress = computed(() => canButton(PERMISSION_CODES.customerProjectProgressEdit))
+const canSubmitProjectForm = computed(() => projectSheetMode.value === "edit" ? canEditCustomerProject.value : canAddCustomerProject.value)
+const canSaveCustomerProjectProgress = computed(() => progressEditorMode.value === "edit" ? canEditCustomerProjectProgress.value : canAddCustomerProjectProgress.value)
 const projectDetailSections = computed<DetailFieldSection[]>(() => {
   const project = selectedProject.value
 
@@ -251,11 +263,11 @@ const projectDetailSections = computed<DetailFieldSection[]>(() => {
             value: publicStatus,
             renderer: publicStatusRenderer,
           },
-          suffixAction: {
+          suffixAction: canUpdateCustomerProjectPublicStatus.value ? {
             label: toNumber(project.IsPublic) === 1 ? "取消公开" : "公开",
             icon: toNumber(project.IsPublic) === 1 ? "ri-eye-off-line" : "ri-eye-line",
             onClick: () => handleProjectPublicChange(toNumber(selectedProject.value?.IsPublic) !== 1),
-          },
+          } : undefined,
         },
       ],
     },
@@ -270,6 +282,7 @@ const schema: TablePageSchema<CustomerProjectRow> = {
   showIndex: true,
   stickyHeader: true,
   primaryActionLabel: "添加客户项目",
+  primaryActionPermissionCode: PERMISSION_CODES.customerProjectAdd,
   emptyState: {
     title: "暂无客户项目",
     description: "添加客户项目后，可在这里查看项目状态和进度。",
@@ -542,6 +555,11 @@ async function resolveExportRows(payload: TableExportRowsResolverPayload) {
 }
 
 function openCreate() {
+  if (!canAddCustomerProject.value) {
+    toast.error("无权添加客户项目")
+    return
+  }
+
   selectedProject.value = null
   projectSheetMode.value = "create"
   detailLoading.value = false
@@ -555,6 +573,11 @@ function openDetail(row: CustomerProjectRow | Record<string, unknown>) {
 }
 
 function openProjectSheet(row: CustomerProjectRow | Record<string, unknown>, mode: ProjectSheetMode = "view") {
+  if (mode === "edit" && !canEditCustomerProject.value) {
+    toast.error("无权编辑客户项目")
+    return
+  }
+
   const project = resolveProjectFromRow(row)
 
   if (!project.Uuid) {
@@ -609,6 +632,11 @@ async function loadProjectDetail(uuid: string) {
 }
 
 function editSelectedProject() {
+  if (!canEditCustomerProject.value) {
+    toast.error("无权编辑客户项目")
+    return
+  }
+
   if (!selectedProject.value?.Uuid) {
     toast.error("客户项目信息不完整，无法编辑")
     return
@@ -666,6 +694,11 @@ async function loadCustomerOptions() {
 
 async function saveProjectForm() {
   if (projectFormSubmitting.value || customerOptionsLoading.value) {
+    return
+  }
+
+  if (!canSubmitProjectForm.value) {
+    toast.error(projectSheetMode.value === "edit" ? "无权编辑客户项目" : "无权添加客户项目")
     return
   }
 
@@ -754,6 +787,11 @@ async function handleProjectPublicChange(value: boolean | "indeterminate") {
     return
   }
 
+  if (!canUpdateCustomerProjectPublicStatus.value) {
+    toast.error("无权更新客户项目公开状态")
+    return
+  }
+
   const uuid = toText(selectedProject.value?.Uuid)
 
   if (!uuid || projectActionSubmitting.value) {
@@ -782,6 +820,11 @@ async function handleProjectPublicChange(value: boolean | "indeterminate") {
 
 async function handleProjectCoverFilesSelected(files: File[]) {
   if (!files.length || projectCoverUploading.value) {
+    return
+  }
+
+  if (!canUploadCustomerProjectCover.value) {
+    toast.error("无权上传项目封面")
     return
   }
 
@@ -831,6 +874,11 @@ async function handleProjectCoverFilesSelected(files: File[]) {
 }
 
 async function confirmFinishProject() {
+  if (!canFinishCustomerProject.value) {
+    toast.error("无权完结客户项目")
+    return
+  }
+
   const uuid = toText(selectedProject.value?.Uuid)
 
   if (!uuid || projectActionSubmitting.value) {
@@ -855,6 +903,11 @@ async function confirmFinishProject() {
 }
 
 function openProgressCreate() {
+  if (!canAddCustomerProjectProgress.value) {
+    toast.error("无权新增项目进度")
+    return
+  }
+
   if (!selectedProject.value?.Uuid) {
     toast.error("客户项目信息不完整，无法新增进度")
     return
@@ -866,6 +919,11 @@ function openProgressCreate() {
 }
 
 function openProgressEdit(item: InspectionProjectProgressItem) {
+  if (!canEditCustomerProjectProgress.value) {
+    toast.error("无权编辑项目进度")
+    return
+  }
+
   progressEditorMode.value = "edit"
   Object.assign(progressForm, {
     uuid: toText(item.Uuid),
@@ -901,6 +959,11 @@ async function saveProgress() {
   const projectUuid = toText(selectedProject.value?.Uuid)
 
   if (!projectUuid || progressSubmitting.value || progressUploading.value) {
+    return
+  }
+
+  if (!canSaveCustomerProjectProgress.value) {
+    toast.error(progressEditorMode.value === "edit" ? "无权编辑项目进度" : "无权新增项目进度")
     return
   }
 
@@ -956,6 +1019,11 @@ function hasProgressFormContent() {
 
 async function handleProgressFilesSelected(files: File[]) {
   if (!files.length || progressUploading.value) {
+    return
+  }
+
+  if (!canSaveCustomerProjectProgress.value) {
+    toast.error(progressEditorMode.value === "edit" ? "无权编辑项目进度" : "无权新增项目进度")
     return
   }
 
@@ -1467,7 +1535,7 @@ function asProjectRow(row: Record<string, unknown>) {
               <span>取消</span>
             </Button>
             <Button
-              v-if="isProjectFormMode"
+              v-if="isProjectFormMode && canSubmitProjectForm"
               type="button"
               size="sm"
               class="h-8 rounded-md px-2.5"
@@ -1478,7 +1546,7 @@ function asProjectRow(row: Record<string, unknown>) {
               <span>{{ projectFormSubmitLabel }}</span>
             </Button>
             <Button
-              v-if="!isProjectFormMode && selectedProject?.Uuid"
+              v-if="!isProjectFormMode && selectedProject?.Uuid && canAddCustomerProjectProgress"
               type="button"
               variant="ghost"
               size="sm"
@@ -1490,7 +1558,7 @@ function asProjectRow(row: Record<string, unknown>) {
               <span>新增进度</span>
             </Button>
             <Button
-              v-if="!isProjectFormMode && selectedProject?.Uuid && !isProjectFinished"
+              v-if="!isProjectFormMode && selectedProject?.Uuid && !isProjectFinished && canFinishCustomerProject"
               type="button"
               variant="ghost"
               size="sm"
@@ -1502,7 +1570,7 @@ function asProjectRow(row: Record<string, unknown>) {
               <span>完结</span>
             </Button>
             <Button
-              v-if="!isProjectFormMode && selectedProject?.Uuid"
+              v-if="!isProjectFormMode && selectedProject?.Uuid && canEditCustomerProject"
               type="button"
               variant="ghost"
               size="sm"
@@ -1643,12 +1711,13 @@ function asProjectRow(row: Record<string, unknown>) {
       <div v-else-if="selectedProject" class="min-h-0 flex-1 overflow-y-auto pb-6">
         <DetailFieldSections :sections="projectDetailSections" use-title-block />
 
-        <section class="border-t border-border/80 pt-4">
+        <section v-if="canUploadCustomerProjectCover || projectCoverUrl" class="border-t border-border/80 pt-4">
           <div class="detail-section-inset mb-3">
             <h2 class="detail-field-section__heading">项目封面</h2>
           </div>
           <div class="detail-section-inset pb-4">
             <FileUploadField
+              v-if="canUploadCustomerProjectCover"
               accept="image/*"
               title="上传项目封面"
               description="用于 App 首页客户项目卡片展示，选择图片后会立即上传并保存。"
@@ -1676,6 +1745,12 @@ function asProjectRow(row: Record<string, unknown>) {
                 </button>
               </template>
             </FileUploadField>
+            <img
+              v-else-if="projectCoverUrl"
+              :src="projectCoverUrl"
+              :alt="`${toText(selectedProject.Name, '客户项目')}封面`"
+              class="aspect-[16/9] w-full max-w-sm rounded-md bg-muted object-cover"
+            >
           </div>
         </section>
 
@@ -1683,6 +1758,7 @@ function asProjectRow(row: Record<string, unknown>) {
           <div class="detail-section-inset mb-3 flex items-center justify-between gap-3">
             <h2 class="detail-field-section__heading">项目进度</h2>
             <Button
+              v-if="canAddCustomerProjectProgress"
               type="button"
               variant="outline"
               size="sm"
@@ -1709,6 +1785,7 @@ function asProjectRow(row: Record<string, unknown>) {
                     </p>
                   </div>
                   <Button
+                    v-if="canEditCustomerProjectProgress"
                     type="button"
                     variant="ghost"
                     size="sm"
@@ -1785,6 +1862,7 @@ function asProjectRow(row: Record<string, unknown>) {
           </label>
 
           <FileUploadField
+            v-if="canSaveCustomerProjectProgress"
             accept="image/*,video/*"
             multiple
             compact
@@ -1866,6 +1944,7 @@ function asProjectRow(row: Record<string, unknown>) {
             取消
           </Button>
           <Button
+            v-if="canSaveCustomerProjectProgress"
             type="button"
             size="sm"
             :disabled="progressSubmitting || progressUploading"

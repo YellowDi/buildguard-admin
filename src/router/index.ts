@@ -400,7 +400,6 @@ const router = createRouter({
           meta: {
             title: "客户项目",
             loading: "table",
-            permissionPath: "/media-library",
           } satisfies RouteMetaConfig,
         },
         {
@@ -865,6 +864,7 @@ function inferPermissionPath(path: string) {
     "/inspection-services",
     "/inspection-plans",
     "/media-library",
+    "/customer-projects",
     "/app-home",
     "/customer-feedback",
     "/customers",
