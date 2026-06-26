@@ -30,6 +30,7 @@ export type InspectionProjectProgressItem = {
 
 export type InspectionProjectRecord = {
   Address?: string
+  CoverUrl?: string
   CorpName?: string
   CustomerName?: string
   CustomerUuid?: string
@@ -40,15 +41,18 @@ export type InspectionProjectRecord = {
   ProgressList?: InspectionProjectProgressItem[]
   ProjectTime?: string
   Status?: number
+  Url?: string
   Uuid?: string
   [property: string]: unknown
 }
 
 export type InspectionProjectCustomerItem = {
+  CoverUrl?: string
   Name?: string
   ProgressDesc?: string
   Stage?: string
   Status?: number
+  Url?: string
   Uuid?: string
   [property: string]: unknown
 }

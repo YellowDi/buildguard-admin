@@ -93,6 +93,7 @@ type ArticleItem = {
   sortOrder: number
 }
 type ProjectItem = {
+  cover: string
   id: string
   title: string
   stage: string
@@ -1208,6 +1209,7 @@ function normalizeProjectItem(item: InspectionProjectRecord | InspectionProjectC
     .join(" · ")
 
   return {
+    cover: getProjectCoverUrl(item),
     id,
     title: toOptionalText(item.Name) || `项目 ${index + 1}`,
     stage,
@@ -1249,6 +1251,7 @@ function mergeProjectItems(items: ProjectItem[]) {
     nextItems.set(item.id, {
       ...previous,
       ...item,
+      cover: item.cover || previous?.cover || "",
       isPublic: item.isPublic ?? previous?.isPublic ?? null,
     })
   }
@@ -1258,6 +1261,14 @@ function mergeProjectItems(items: ProjectItem[]) {
 
 function isProjectVisibleOnApp(item: ProjectItem) {
   return item.isPublic === null || item.isPublic === 1
+}
+
+function getProjectCoverUrl(item: InspectionProjectRecord | InspectionProjectCustomerItem) {
+  const record = item as Record<string, unknown>
+  return toOptionalText(record.Url)
+    || toOptionalText(record.CoverUrl)
+    || toOptionalText(record.coverUrl)
+    || toOptionalText(record.cover)
 }
 
 function normalizeMediaContent(item: MediaContentRecord, index: number): AppHomeModule | null {
@@ -1873,14 +1884,22 @@ function hashText(value: string) {
                     :key="item.id"
                     class="relative flex h-48 w-36 shrink-0 flex-col overflow-hidden rounded-[8px] bg-zinc-950 p-3 text-white"
                   >
-                    <div class="flex items-center gap-1.5 text-[11px] font-medium text-white/65">
+                    <img
+                      v-if="item.cover"
+                      :src="getCoverSrc(item.cover)"
+                      alt=""
+                      class="absolute inset-0 h-full w-full object-cover object-center"
+                    />
+                    <div v-if="item.cover" class="absolute inset-0 bg-black/10" />
+                    <div v-if="item.cover" class="absolute inset-x-0 bottom-0 h-2/3 bg-linear-to-t from-black/90 via-black/45 to-transparent" />
+                    <div class="relative z-10 flex items-center gap-1.5 text-[11px] font-medium text-white/70">
                       <i class="ri-briefcase-4-line text-[13px]" />
                       <span>{{ getProjectStatusLabel(item) }}</span>
                     </div>
-                    <h3 class="mt-auto line-clamp-3 text-[15px] font-semibold leading-[1.32] text-white">
+                    <h3 class="relative z-10 mt-auto line-clamp-3 text-[15px] font-semibold leading-[1.32] text-white">
                       {{ item.title }}
                     </h3>
-                    <p class="mt-2 line-clamp-3 text-[12px] leading-[1.5] text-white/68">
+                    <p class="relative z-10 mt-2 line-clamp-3 text-[12px] leading-[1.5] text-white/72">
                       {{ item.summary }}
                     </p>
                   </article>
@@ -2212,18 +2231,27 @@ function hashText(value: string) {
                   <article
                     v-for="project in resolveModuleProjects(selectedProjectModule)"
                     :key="project.id"
-                    class="rounded-lg border border-border/70 bg-background p-3"
+                    class="overflow-hidden rounded-lg border border-border/70 bg-background"
                   >
-                    <div class="flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <i class="ri-briefcase-4-line text-sm" />
-                      <span>{{ getProjectStatusLabel(project) }}</span>
+                    <div v-if="project.cover" class="aspect-[16/9] overflow-hidden bg-muted">
+                      <img
+                        :src="getCoverSrc(project.cover)"
+                        alt=""
+                        class="h-full w-full object-cover"
+                      />
                     </div>
-                    <h4 class="mt-2 line-clamp-1 text-sm font-semibold text-foreground">
-                      {{ project.title }}
-                    </h4>
-                    <p class="mt-1 line-clamp-2 text-xs leading-5 text-muted-foreground">
-                      {{ project.summary }}
-                    </p>
+                    <div class="p-3">
+                      <div class="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <i class="ri-briefcase-4-line text-sm" />
+                        <span>{{ getProjectStatusLabel(project) }}</span>
+                      </div>
+                      <h4 class="mt-2 line-clamp-1 text-sm font-semibold text-foreground">
+                        {{ project.title }}
+                      </h4>
+                      <p class="mt-1 line-clamp-2 text-xs leading-5 text-muted-foreground">
+                        {{ project.summary }}
+                      </p>
+                    </div>
                   </article>
                 </div>
                 <div v-else class="rounded-md border border-dashed border-border py-6 text-center text-sm text-muted-foreground">

@@ -140,6 +140,7 @@ const customerOptionsLoading = ref(false)
 const projectFormSubmitting = ref(false)
 const finishConfirmOpen = ref(false)
 const projectActionSubmitting = ref(false)
+const projectCoverUploading = ref(false)
 const progressEditorOpen = ref(false)
 const progressEditorMode = ref<ProgressEditorMode>("create")
 const progressSubmitting = ref(false)
@@ -203,6 +204,8 @@ const projectFormSubmitLabel = computed(() => {
 })
 const progressEditorTitle = computed(() => progressEditorMode.value === "edit" ? "编辑项目进度" : "新增项目进度")
 const progressMediaLabel = computed(() => progressForm.photos.length ? `已添加 ${progressForm.photos.length} 个附件` : "")
+const projectCoverUrl = computed(() => getProjectCoverUrl(selectedProject.value))
+const projectCoverSelectedLabel = computed(() => projectCoverUrl.value || "暂未设置封面")
 const projectDetailSections = computed<DetailFieldSection[]>(() => {
   const project = selectedProject.value
 
@@ -472,6 +475,7 @@ watch(sheetOpen, (open) => {
   detailLoading.value = false
   finishConfirmOpen.value = false
   progressEditorOpen.value = false
+  projectCoverUploading.value = false
   latestDetailRequestId += 1
   Object.assign(projectForm, createEmptyProjectForm())
   Object.assign(progressForm, createEmptyProgressForm())
@@ -580,7 +584,10 @@ async function loadProjectDetail(uuid: string) {
       return
     }
 
-    selectedProject.value = detail
+    const previousCoverUrl = getProjectCoverUrl(selectedProject.value)
+    selectedProject.value = previousCoverUrl && !getProjectCoverUrl(detail)
+      ? withProjectCoverUrl(detail, previousCoverUrl)
+      : detail
     if (projectSheetMode.value === "edit") {
       applyProjectToForm(detail)
       ensureCustomerOption(detail)
@@ -759,6 +766,7 @@ async function handleProjectPublicChange(value: boolean | "indeterminate") {
     await updateInspectionProjectPublicStatus({
       Uuid: uuid,
       IsPublic: value ? 1 : 2,
+      Url: projectCoverUrl.value,
     })
     toast.success(value ? "客户项目已公开" : "客户项目已取消公开")
     await reloadSelectedProject()
@@ -769,6 +777,54 @@ async function handleProjectPublicChange(value: boolean | "indeterminate") {
     }))
   } finally {
     projectActionSubmitting.value = false
+  }
+}
+
+async function handleProjectCoverFilesSelected(files: File[]) {
+  if (!files.length || projectCoverUploading.value) {
+    return
+  }
+
+  const uuid = toText(selectedProject.value?.Uuid)
+
+  if (!uuid) {
+    toast.error("客户项目信息不完整，无法上传封面")
+    return
+  }
+
+  const file = files[0]
+
+  if (!file?.type.startsWith("image/")) {
+    toast.error("请选择图片文件")
+    return
+  }
+
+  projectCoverUploading.value = true
+
+  try {
+    const result = await uploadTencentCosFile({
+      file,
+      key: `inspection-projects/covers/${uuid}-${Date.now()}-${sanitizeObjectKeyFileName(file.name)}`,
+      contentType: file.type || undefined,
+    })
+    const coverUrl = result.url
+
+    await updateInspectionProjectPublicStatus({
+      Uuid: uuid,
+      IsPublic: toNumber(selectedProject.value?.IsPublic) === 1 ? 1 : 2,
+      Url: coverUrl,
+    })
+
+    mergeSelectedProjectCoverUrl(coverUrl)
+    toast.success("项目封面已上传")
+    await loadProjects()
+  } catch (error) {
+    toast.error(handleApiError(error, {
+      mode: "silent",
+      fallback: "项目封面上传失败，请稍后重试。",
+    }))
+  } finally {
+    projectCoverUploading.value = false
   }
 }
 
@@ -1239,6 +1295,42 @@ function getProgressVersion(item: InspectionProjectProgressItem) {
   return version === null ? "-" : `v${version}`
 }
 
+function getProjectCoverUrl(project: InspectionProjectRecord | null | undefined) {
+  if (!project) {
+    return ""
+  }
+
+  const record = project as Record<string, unknown>
+  return toText(record.Url)
+    || toText(record.CoverUrl)
+    || toText(record.coverUrl)
+    || toText(record.cover)
+}
+
+function withProjectCoverUrl(project: InspectionProjectRecord, coverUrl: string): InspectionProjectRecord {
+  return {
+    ...project,
+    CoverUrl: coverUrl,
+    Url: coverUrl,
+  }
+}
+
+function mergeSelectedProjectCoverUrl(coverUrl: string) {
+  const uuid = toText(selectedProject.value?.Uuid)
+
+  if (!uuid || !selectedProject.value) {
+    return
+  }
+
+  selectedProject.value = withProjectCoverUrl(selectedProject.value, coverUrl)
+  projects.value = projects.value.map(row => row.uuid === uuid
+    ? {
+        ...row,
+        raw: withProjectCoverUrl(row.raw, coverUrl),
+      }
+    : row)
+}
+
 function getFileUrl(file: WorkOrderFileItem) {
   return toText(file.Url)
 }
@@ -1552,6 +1644,42 @@ function asProjectRow(row: Record<string, unknown>) {
 
       <div v-else-if="selectedProject" class="min-h-0 flex-1 overflow-y-auto pb-6">
         <DetailFieldSections :sections="projectDetailSections" use-title-block />
+
+        <section class="border-t border-border/80 pt-4">
+          <div class="detail-section-inset mb-3">
+            <h2 class="detail-field-section__heading">项目封面</h2>
+          </div>
+          <div class="detail-section-inset">
+            <FileUploadField
+              accept="image/*"
+              title="上传项目封面"
+              description="用于 App 首页客户项目卡片展示，公开项目时会同步提交封面地址。"
+              button-label="选择封面"
+              loading-label="上传中..."
+              icon="ri-image-add-line"
+              :loading="projectCoverUploading"
+              :disabled="projectActionSubmitting"
+              :selected-label="projectCoverSelectedLabel"
+              :show-supplement="Boolean(projectCoverUrl)"
+              @files-selected="files => { void handleProjectCoverFilesSelected(files) }"
+            >
+              <template v-if="projectCoverUrl" #preview="{ open }">
+                <button
+                  type="button"
+                  class="block aspect-[16/9] w-full max-w-sm overflow-hidden rounded-md bg-muted text-left outline outline-1 -outline-offset-1 outline-black/5 transition-transform duration-180 hover:scale-[1.01] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/45"
+                  aria-label="更换项目封面"
+                  @click="open"
+                >
+                  <img
+                    :src="projectCoverUrl"
+                    :alt="`${toText(selectedProject.Name, '客户项目')}封面`"
+                    class="h-full w-full object-cover"
+                  >
+                </button>
+              </template>
+            </FileUploadField>
+          </div>
+        </section>
 
         <section class="border-t border-border/80 pt-4">
           <div class="detail-section-inset mb-3 flex items-center justify-between gap-3">
