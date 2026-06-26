@@ -1,5 +1,5 @@
 import { assertApiSuccess, createHttpError, readResponseBody } from "@/lib/api-errors"
-import { API_PATHS, buildApiHeaders, buildApiHeadersWithoutAuth, buildApiRequestUrl, buildApiUrl } from "@/lib/api"
+import { API_PATHS, buildApiHeaders, buildApiRequestUrl, buildApiUrl } from "@/lib/api"
 
 type InspectionProjectsEnvelope = {
   Total?: number
@@ -44,8 +44,22 @@ export type InspectionProjectRecord = {
   [property: string]: unknown
 }
 
+export type InspectionProjectCustomerItem = {
+  Name?: string
+  ProgressDesc?: string
+  Stage?: string
+  Status?: number
+  Uuid?: string
+  [property: string]: unknown
+}
+
 export type InspectionProjectsResult = {
   list: InspectionProjectRecord[]
+  total: number
+}
+
+export type InspectionProjectCustomerListResult = {
+  list: InspectionProjectCustomerItem[]
   total: number
 }
 
@@ -83,6 +97,7 @@ export type FinishInspectionProjectPayload = {
 
 export type UpdateInspectionProjectPublicPayload = {
   IsPublic?: number
+  Url?: string
   Uuid?: string
   [property: string]: unknown
 }
@@ -111,7 +126,7 @@ export type InspectionProjectDetailPayload = {
 }
 
 const INSPECTION_PROJECT_LIST_API_URL = buildApiUrl(API_PATHS.inspectionProjectList)
-const INSPECTION_PROJECT_PUBLIC_LIST_API_URL = buildApiUrl(API_PATHS.inspectionProjectPublicList)
+const INSPECTION_PROJECT_CUSTOMER_LIST_API_URL = buildApiUrl(API_PATHS.inspectionProjectCustomerList)
 const INSPECTION_PROJECT_CREATE_API_URL = buildApiUrl(API_PATHS.inspectionProjectCreate)
 const INSPECTION_PROJECT_UPDATE_API_URL = buildApiUrl(API_PATHS.inspectionProjectUpdate)
 const INSPECTION_PROJECT_FINISH_API_URL = buildApiUrl(API_PATHS.inspectionProjectFinish)
@@ -126,7 +141,7 @@ const INSPECTION_PROJECT_FINISH_ERROR_MESSAGE = "客户项目完结失败，请�
 const INSPECTION_PROJECT_PUBLIC_UPDATE_ERROR_MESSAGE = "客户项目公开状态更新失败，请稍后重试。"
 const INSPECTION_PROJECT_PROGRESS_CREATE_ERROR_MESSAGE = "客户项目进度创建失败，请稍后重试。"
 const INSPECTION_PROJECT_PROGRESS_UPDATE_ERROR_MESSAGE = "客户项目进度更新失败，请稍后重试。"
-const INSPECTION_PROJECT_PUBLIC_LIST_ERROR_MESSAGE = "公开客户项目列表加载失败，请稍后重试。"
+const INSPECTION_PROJECT_CUSTOMER_LIST_ERROR_MESSAGE = "客户项目展示列表加载失败，请稍后重试。"
 
 export async function fetchInspectionProjects(
   payload: ListInspectionProjectsPayload = {},
@@ -159,12 +174,12 @@ export async function fetchInspectionProjects(
   }
 }
 
-export async function fetchPublicInspectionProjects(
+export async function fetchCustomerInspectionProjects(
   payload: Pick<ListInspectionProjectsPayload, "PageNum" | "PageSize"> = {},
-): Promise<InspectionProjectsResult> {
-  const response = await fetch(INSPECTION_PROJECT_PUBLIC_LIST_API_URL, {
+): Promise<InspectionProjectCustomerListResult> {
+  const response = await fetch(INSPECTION_PROJECT_CUSTOMER_LIST_API_URL, {
     method: "POST",
-    headers: buildApiHeadersWithoutAuth({
+    headers: buildApiHeaders({
       "Content-Type": "application/json",
     }),
     body: JSON.stringify({
@@ -175,15 +190,15 @@ export async function fetchPublicInspectionProjects(
   const responsePayload = await readResponseBody(response) as InspectionProjectsEnvelope | unknown[]
 
   if (!response.ok) {
-    throw createHttpError(response, responsePayload, INSPECTION_PROJECT_PUBLIC_LIST_ERROR_MESSAGE)
+    throw createHttpError(response, responsePayload, INSPECTION_PROJECT_CUSTOMER_LIST_ERROR_MESSAGE)
   }
 
-  assertApiSuccess(responsePayload, INSPECTION_PROJECT_PUBLIC_LIST_ERROR_MESSAGE)
+  assertApiSuccess(responsePayload, INSPECTION_PROJECT_CUSTOMER_LIST_ERROR_MESSAGE)
 
   const list = extractList(responsePayload)
 
   return {
-    list: list.map(item => normalizeProjectRecord(item)),
+    list: list.map(item => normalizeCustomerProjectItem(item)),
     total: extractTotal(responsePayload, list.length),
   }
 }
@@ -289,6 +304,7 @@ export async function updateInspectionProjectPublicStatus(payload: UpdateInspect
     }),
     body: JSON.stringify({
       IsPublic: getRequiredNumber(payload.IsPublic, "IsPublic"),
+      Url: getOptionalString(payload.Url),
       Uuid: getRequiredString(payload.Uuid, "Uuid"),
     }),
   })
@@ -436,6 +452,10 @@ function normalizeProjectRecord(value: unknown): InspectionProjectRecord {
       ? record.ProgressList.map(item => normalizeProgressItem(item))
       : [],
   } as InspectionProjectRecord
+}
+
+function normalizeCustomerProjectItem(value: unknown): InspectionProjectCustomerItem {
+  return asRecord(value) as InspectionProjectCustomerItem ?? {}
 }
 
 function normalizeProgressItem(value: unknown): InspectionProjectProgressItem {

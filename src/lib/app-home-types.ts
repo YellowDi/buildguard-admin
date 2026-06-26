@@ -1,4 +1,4 @@
-export type AppHomeModuleType = "video" | "article"
+export type AppHomeModuleType = "video" | "article" | "project"
 
 export type AppHomeVideoSource =
   | {
@@ -37,4 +37,9 @@ export type AppHomeArticleModule = AppHomeBaseModule & {
   articleId: string
 }
 
-export type AppHomeModule = AppHomeVideoModule | AppHomeArticleModule
+export type AppHomeProjectModule = AppHomeBaseModule & {
+  type: "project"
+  projectIds: string[]
+}
+
+export type AppHomeModule = AppHomeVideoModule | AppHomeArticleModule | AppHomeProjectModule

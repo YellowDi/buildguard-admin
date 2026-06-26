@@ -1,5 +1,6 @@
 import { assertApiSuccess, createHttpError, readResponseBody } from "@/lib/api-errors"
 import { API_PATHS, buildApiHeaders, buildApiRequestUrl, buildApiUrl } from "@/lib/api"
+import type { InspectionProjectRecord } from "@/lib/inspection-projects-api"
 import type { MediaArticleRecord } from "@/lib/media-articles-api"
 import type { MediaVideoRecord } from "@/lib/media-videos-api"
 
@@ -12,7 +13,7 @@ type MediaContentsListEnvelope = {
 }
 
 export type MediaContentStatus = 1 | 2
-export type MediaContentKind = 1 | 2
+export type MediaContentKind = 1 | 2 | 3
 
 export type MediaContentCategoryMediaItem = {
   SortNum?: number
@@ -32,6 +33,7 @@ export type MediaContentCategoryRecord = {
   Id?: number
   MediaArticle?: MediaArticleRecord[]
   MediaVideo?: MediaVideoRecord[]
+  Project?: InspectionProjectRecord[]
   SortNum?: number
   Title?: string
   Uuid?: string

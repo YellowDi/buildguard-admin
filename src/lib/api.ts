@@ -127,7 +127,7 @@ export const API_PATHS = {
   mediaContentSortUpdate: "/bqi/media/content/sort/update",
   mediaContentStatusUpdate: "/bqi/media/content/status/update",
   inspectionProjectList: "/bqi/inspection/project/list",
-  inspectionProjectPublicList: "/bqi/inspection/project/public/list",
+  inspectionProjectCustomerList: "/bqi/inspection/project/customer/list",
   inspectionProjectCreate: "/bqi/inspection/project/new",
   inspectionProjectDetail: "/bqi/inspection/project/detail",
   inspectionProjectUpdate: "/bqi/inspection/project/update",

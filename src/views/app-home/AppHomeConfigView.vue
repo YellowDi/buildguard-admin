@@ -27,6 +27,7 @@ import {
   type AppHomeArticleModule,
   type AppHomeModule,
   type AppHomeModuleType,
+  type AppHomeProjectModule,
   type AppHomeVideoCategory,
   type AppHomeVideoModule,
   type AppHomeVideoSource,
@@ -55,7 +56,8 @@ import {
 } from "@/lib/media-videos-api"
 import { handleApiError } from "@/lib/api-errors"
 import {
-  fetchPublicInspectionProjects,
+  fetchCustomerInspectionProjects,
+  type InspectionProjectCustomerItem,
   type InspectionProjectRecord,
 } from "@/lib/inspection-projects-api"
 import { fetchAllPaginatedListItems } from "@/lib/paginated-list-export"
@@ -90,13 +92,22 @@ type ArticleItem = {
   summary: string
   sortOrder: number
 }
+type ProjectItem = {
+  id: string
+  title: string
+  stage: string
+  summary: string
+  status: number | null
+  isPublic: number | null
+  sortOrder: number
+}
 
 type NewVideoSourceForm = {
   kind: "category" | "video"
   categoryId: string
   videoIds: string[]
 }
-type AppHomeMediaOptionKind = "video" | "article"
+type AppHomeMediaOptionKind = "video" | "article" | "project"
 
 const MEDIA_OPTION_PAGE_SIZE = 500
 const MEDIA_CONTENT_PAGE_SIZE = 500
@@ -112,20 +123,23 @@ const mediaState = reactive<{
   articleCategories: MediaCategoryNode[]
   videoItems: VideoItem[]
   articleItems: ArticleItem[]
+  projectItems: ProjectItem[]
 }>({
   videoCategories: [],
   articleCategories: [],
   videoItems: [],
   articleItems: [],
+  projectItems: [],
 })
-const customerProjects = ref<InspectionProjectRecord[]>([])
 const mediaOptionsLoaded = reactive<Record<AppHomeMediaOptionKind, boolean>>({
   video: false,
   article: false,
+  project: false,
 })
 const mediaOptionsLoading = reactive<Record<AppHomeMediaOptionKind, boolean>>({
   video: false,
   article: false,
+  project: false,
 })
 const modules = ref<AppHomeModule[]>([])
 const selectedModuleId = ref(modules.value[0]?.id ?? "")
@@ -144,6 +158,7 @@ const deletingSourceCategoryId = ref("")
 const persistedModuleIds = ref(new Set<string>())
 const persistedCategoryIds = ref(new Set<string>())
 const articleCategoryIds = ref(new Map<string, string>())
+const projectCategoryIds = ref(new Map<string, string>())
 const activePreviewCategoryIds = reactive<Record<string, string>>({})
 const draggingId = ref("")
 const draggingTarget = ref<DragTarget | "">("")
@@ -153,13 +168,13 @@ const mediaOptionLoadPromises: Partial<Record<AppHomeMediaOptionKind, Promise<vo
 
 const orderedModules = computed(() => [...modules.value].sort(compareBySortOrder))
 const enabledModules = computed(() => orderedModules.value.filter(module => module.enabled))
-const publishedCustomerProjects = computed(() => customerProjects.value)
 const selectedModule = computed(() => modules.value.find(module => module.id === selectedModuleId.value) ?? null)
 const deletingModule = computed(() => modules.value.find(module => module.id === deletingModuleId.value) ?? null)
 const canSaveAppHomeConfig = computed(() => canButton(PERMISSION_CODES.appHomeConfigSave))
 const canSaveAppHomeModule = computed(() => canButton(PERMISSION_CODES.appHomeModuleSave))
 const canAddAppHomeVideoModule = computed(() => canButton(PERMISSION_CODES.appHomeVideoModuleAdd))
 const canAddAppHomeArticleModule = computed(() => canButton(PERMISSION_CODES.appHomeArticleModuleAdd))
+const canAddAppHomeProjectModule = computed(() => canSaveAppHomeModule.value)
 const canDeleteAppHomeModule = computed(() => canButton(PERMISSION_CODES.appHomeModuleDelete))
 const canAddAppHomeCategory = computed(() => canButton(PERMISSION_CODES.appHomeCategoryAdd))
 const canDeleteAppHomeCategory = computed(() => canButton(PERMISSION_CODES.appHomeCategoryDelete))
@@ -171,12 +186,16 @@ const selectedVideoModule = computed((): AppHomeVideoModule | null => (
 const selectedArticleModule = computed((): AppHomeArticleModule | null => (
   selectedModule.value?.type === "article" ? selectedModule.value : null
 ))
+const selectedProjectModule = computed((): AppHomeProjectModule | null => (
+  selectedModule.value?.type === "project" ? selectedModule.value : null
+))
 const selectedVideoCategories = computed(() => selectedVideoModule.value
   ? [...selectedVideoModule.value.categories].sort(compareBySortOrder)
   : [])
 
 const videoCategoryOptions = computed(() => flattenCategoryTree(mediaState.videoCategories))
 const articleOptions = computed(() => [...mediaState.articleItems].sort(compareBySortOrder))
+const projectOptions = computed(() => [...mediaState.projectItems].filter(isProjectVisibleOnApp).sort(compareBySortOrder))
 const videoOptions = computed(() => [...mediaState.videoItems].sort(compareBySortOrder))
 const videoOptionGroups = computed<VideoOptionGroup[]>(() => {
   const groups = new Map<string, VideoOptionGroup>()
@@ -208,6 +227,7 @@ const videoOptionGroups = computed<VideoOptionGroup[]>(() => {
 })
 const videoItemMap = computed(() => new Map(mediaState.videoItems.map(item => [item.id, item])))
 const articleItemMap = computed(() => new Map(mediaState.articleItems.map(item => [item.id, item])))
+const projectItemMap = computed(() => new Map(mediaState.projectItems.map(item => [item.id, item])))
 const videoSourceSelectValues = computed<Record<string, string[]>>(() => {
   const values: Record<string, string[]> = {}
 
@@ -252,16 +272,14 @@ watch(selectedVideoCategories, (categories) => {
 async function loadInitialData(options: { silent?: boolean } = {}) {
   loading.value = true
   try {
-    const [contentResult, projectItems] = await Promise.all([
-      fetchMediaContents({ PageNum: 1, PageSize: MEDIA_CONTENT_PAGE_SIZE }),
-      fetchAllPaginatedListItems(({ PageNum, PageSize }) => fetchPublicInspectionProjects({ PageNum, PageSize })),
-    ])
+    const contentResult = await fetchMediaContents({ PageNum: 1, PageSize: MEDIA_CONTENT_PAGE_SIZE })
 
     persistedModuleIds.value = new Set()
     persistedCategoryIds.value = new Set()
     articleCategoryIds.value = new Map()
+    projectCategoryIds.value = new Map()
+    mediaState.projectItems = []
     clearVideoSourceForms()
-    customerProjects.value = projectItems
     modules.value = normalizeModuleOrders(contentResult.list.map(normalizeMediaContent).filter((item): item is AppHomeModule => item !== null))
     selectedModuleId.value = selectedModule.value?.id ?? modules.value[0]?.id ?? ""
     await ensureMediaOptionsForModules(modules.value)
@@ -324,7 +342,7 @@ async function loadMediaOptions(kind: AppHomeMediaOptionKind) {
 
       mediaState.videoCategories = normalizeMediaCategoryTree(categoryResult.list)
       mediaState.videoItems = videoResult.list.map((item, index) => normalizeMediaVideo(item, index))
-    } else {
+    } else if (kind === "article") {
       const [categoryResult, articleResult] = await Promise.all([
         fetchMediaTypes({ Type: 2, PageNum: 1, PageSize: MEDIA_OPTION_PAGE_SIZE }),
         fetchMediaArticles({ PageNum: 1, PageSize: MEDIA_OPTION_PAGE_SIZE }),
@@ -332,6 +350,9 @@ async function loadMediaOptions(kind: AppHomeMediaOptionKind) {
 
       mediaState.articleCategories = normalizeMediaCategoryTree(categoryResult.list)
       mediaState.articleItems = articleResult.list.map((item, index) => normalizeMediaArticle(item, index))
+    } else {
+      const projectItems = await fetchAllPaginatedListItems(({ PageNum, PageSize }) => fetchCustomerInspectionProjects({ PageNum, PageSize }))
+      mergeProjectItems(projectItems.map((item, index) => normalizeProjectItem(item, index)))
     }
 
     mediaOptionsLoaded[kind] = true
@@ -339,8 +360,8 @@ async function loadMediaOptions(kind: AppHomeMediaOptionKind) {
     syncHomeMediaReferences()
   } catch (error) {
     handleApiError(error, {
-      title: kind === "video" ? "视频选项加载失败" : "文章选项加载失败",
-      fallback: kind === "video" ? "视频选项加载失败，请稍后重试。" : "文章选项加载失败，请稍后重试。",
+      title: getMediaOptionLoadErrorTitle(kind),
+      fallback: getMediaOptionLoadErrorMessage(kind),
     })
   } finally {
     mediaOptionsLoading[kind] = false
@@ -362,16 +383,22 @@ async function addModule(type: AppHomeModuleType) {
     return
   }
 
+  if (type === "project" && !canAddAppHomeProjectModule.value) {
+    return
+  }
+
   await ensureMediaOptions(type)
   const nextSortOrder = getNextSortOrder(modules.value)
   const nextModule = type === "video"
     ? createVideoModule(nextSortOrder)
-    : createArticleModule(nextSortOrder)
+    : type === "article"
+      ? createArticleModule(nextSortOrder)
+      : createProjectModule(nextSortOrder)
 
   modules.value = normalizeModuleOrders([...modules.value, nextModule])
   selectedModuleId.value = nextModule.id
   sheetOpen.value = true
-  toast.success(type === "video" ? "已添加视频模块" : "已添加文章模块")
+  toast.success(getModuleAddSuccessMessage(type))
 }
 
 function requestDeleteModule(moduleId: string) {
@@ -407,6 +434,7 @@ async function confirmDeleteModule() {
 
     modules.value = normalizeModuleOrders(modules.value.filter(item => item.id !== moduleId))
     articleCategoryIds.value.delete(moduleId)
+    projectCategoryIds.value.delete(moduleId)
     if (selectedModuleId.value === moduleId) {
       selectedModuleId.value = modules.value[0]?.id ?? ""
       sheetOpen.value = false
@@ -636,6 +664,11 @@ function getModuleSummary(module: AppHomeModule) {
     return article?.title ?? "未选择文章"
   }
 
+  if (module.type === "project") {
+    const projects = resolveModuleProjects(module)
+    return projects.length ? projects.map(item => item.title).slice(0, 2).join("、") : "未选择项目"
+  }
+
   const categoryCount = module.categories.length
   const sourceCount = module.categories.reduce((total, category) => total + category.sources.length, 0)
   return `${categoryCount} 个自定义分类 · ${sourceCount} 个内容来源`
@@ -646,7 +679,83 @@ function getModuleItemCount(module: AppHomeModule) {
     return module.articleId ? 1 : 0
   }
 
+  if (module.type === "project") {
+    return resolveModuleProjects(module).length
+  }
+
   return module.categories.reduce((total, category) => total + resolveCategoryVideos(category).length, 0)
+}
+
+function getModuleTypeLabel(module: AppHomeModule) {
+  if (module.type === "video") {
+    return "视频"
+  }
+
+  if (module.type === "article") {
+    return "文章"
+  }
+
+  return "项目"
+}
+
+function getModuleIconClass(module: AppHomeModule) {
+  if (module.type === "video") {
+    return "ri-movie-2-line"
+  }
+
+  if (module.type === "article") {
+    return "ri-article-line"
+  }
+
+  return "ri-briefcase-4-line"
+}
+
+function getDefaultModuleTitle(type: AppHomeModuleType) {
+  if (type === "video") {
+    return "视频模块"
+  }
+
+  if (type === "article") {
+    return "文章卡片"
+  }
+
+  return "客户项目"
+}
+
+function getModuleAddSuccessMessage(type: AppHomeModuleType) {
+  if (type === "video") {
+    return "已添加视频模块"
+  }
+
+  if (type === "article") {
+    return "已添加文章模块"
+  }
+
+  return "已添加项目模块"
+}
+
+function getMediaOptionLoadErrorTitle(kind: AppHomeMediaOptionKind) {
+  if (kind === "video") {
+    return "视频选项加载失败"
+  }
+
+  if (kind === "article") {
+    return "文章选项加载失败"
+  }
+
+  return "项目选项加载失败"
+}
+
+function getMediaOptionLoadErrorMessage(kind: AppHomeMediaOptionKind) {
+  if (kind === "video") {
+    return "视频选项加载失败，请稍后重试。"
+  }
+
+  if (kind === "article") {
+    return "文章选项加载失败，请稍后重试。"
+  }
+
+  return "项目选项加载失败，请稍后重试。"
 }
 
 function getVideoModuleActiveCategory(module: AppHomeVideoModule) {
@@ -694,6 +803,28 @@ function getArticle(module: AppHomeArticleModule) {
   return articleItemMap.value.get(module.articleId) ?? null
 }
 
+function resolveModuleProjects(module: AppHomeProjectModule) {
+  return module.projectIds
+    .map(projectId => projectItemMap.value.get(projectId))
+    .filter((item): item is ProjectItem => item !== undefined && isProjectVisibleOnApp(item))
+}
+
+function getProjectOptionLabel(project: ProjectItem) {
+  return project.stage ? `${project.title} · ${project.stage}` : project.title
+}
+
+function getProjectStatusLabel(project: ProjectItem) {
+  if (project.status === 1) {
+    return "进行中"
+  }
+
+  if (project.status === 2) {
+    return "已完结"
+  }
+
+  return "未填写"
+}
+
 function getSourceLabel(source: AppHomeVideoSource) {
   if (source.kind === "category") {
     return `媒体库分类：${getCategoryPathLabel(mediaState.videoCategories, source.categoryId)}`
@@ -704,28 +835,6 @@ function getSourceLabel(source: AppHomeVideoSource) {
 
 function getArticleOptionLabel(article: ArticleItem) {
   return `${article.title} · ${getCategoryPathLabel(mediaState.articleCategories, article.categoryId)}`
-}
-
-function getCustomerProjectSummary(record: InspectionProjectRecord) {
-  const bodyText = stripHtml(toOptionalText(record.Introduction))
-  if (bodyText) {
-    return bodyText
-  }
-
-  const firstProgress = record.ProgressList?.[0]
-  const progressText = firstProgress
-    ? [
-        firstProgress.Stage,
-        firstProgress.ProgressDesc,
-        firstProgress.ProcessInfo,
-      ].map(value => stripHtml(toOptionalText(value))).filter(Boolean).join(" · ")
-    : ""
-
-  return progressText || "暂无项目描述"
-}
-
-function getCustomerProjectKey(record: InspectionProjectRecord, index: number) {
-  return toOptionalText(record.Uuid) || `${toOptionalText(record.Name) || "project"}-${index}`
 }
 
 function getCoverSrc(value: string) {
@@ -814,14 +923,36 @@ function handleVideoSourceVideoIdsChange(category: AppHomeVideoCategory, value: 
   form.videoIds = nextFormVideoIds
 }
 
+function handleProjectIdsChange(value: unknown) {
+  const module = selectedProjectModule.value
+
+  if (!module) {
+    return
+  }
+
+  module.projectIds = normalizeSelectedProjectIds(value)
+}
+
+function normalizeSelectedProjectIds(value: unknown) {
+  const ids = Array.isArray(value)
+    ? value.map(String)
+    : value == null
+      ? []
+      : [String(value)]
+
+  return uniqueIds(ids).filter(projectId => projectItemMap.value.has(projectId))
+}
+
 function syncHomeMediaReferences() {
   const categoryIds = new Set(videoCategoryOptions.value.map(item => item.id))
   const videoIds = new Set(videoOptions.value.map(item => item.id))
   const articleIds = new Set(articleOptions.value.map(item => item.id))
+  const projectIds = new Set(projectOptions.value.map(item => item.id))
   const fallbackCategoryId = videoCategoryOptions.value[0]?.id ?? ""
   const fallbackArticleId = articleOptions.value[0]?.id ?? ""
   const shouldSyncVideoReferences = mediaOptionsLoaded.video
   const shouldSyncArticleReferences = mediaOptionsLoaded.article
+  const shouldSyncProjectReferences = mediaOptionsLoaded.project
 
   modules.value = modules.value.map((module) => {
     if (module.type === "article") {
@@ -835,6 +966,17 @@ function syncHomeMediaReferences() {
             ...module,
             articleId: fallbackArticleId,
           }
+    }
+
+    if (module.type === "project") {
+      if (!shouldSyncProjectReferences) {
+        return module
+      }
+
+      return {
+        ...module,
+        projectIds: module.projectIds.filter(projectId => projectIds.has(projectId)),
+      }
     }
 
     if (!shouldSyncVideoReferences) {
@@ -959,6 +1101,17 @@ function createArticleModule(sortOrder: number): AppHomeArticleModule {
   }
 }
 
+function createProjectModule(sortOrder: number): AppHomeProjectModule {
+  return {
+    id: createId("module"),
+    type: "project",
+    title: "客户项目",
+    enabled: true,
+    sortOrder,
+    projectIds: projectOptions.value[0]?.id ? [projectOptions.value[0].id] : [],
+  }
+}
+
 function createVideoCategory(title: string, sortOrder: number): AppHomeVideoCategory {
   return {
     id: createId("category"),
@@ -1040,9 +1193,76 @@ function normalizeMediaArticle(item: MediaArticleRecord, index: number): Article
   }
 }
 
+function normalizeProjectItem(item: InspectionProjectRecord | InspectionProjectCustomerItem, index: number): ProjectItem {
+  const id = toOptionalText(item.Uuid) || `inspection-project-${index + 1}`
+  const firstProgress = Array.isArray((item as InspectionProjectRecord).ProgressList)
+    ? (item as InspectionProjectRecord).ProgressList?.[0]
+    : undefined
+  const stage = toOptionalText((item as InspectionProjectCustomerItem).Stage) || toOptionalText(firstProgress?.Stage)
+  const progressDesc = toOptionalText((item as InspectionProjectCustomerItem).ProgressDesc) || toOptionalText(firstProgress?.ProgressDesc)
+  const processInfo = toOptionalText(firstProgress?.ProcessInfo)
+  const introduction = stripHtml(toOptionalText((item as InspectionProjectRecord).Introduction))
+  const summary = introduction || [stage, progressDesc, processInfo]
+    .map(value => stripHtml(value))
+    .filter(Boolean)
+    .join(" · ")
+
+  return {
+    id,
+    title: toOptionalText(item.Name) || `项目 ${index + 1}`,
+    stage,
+    summary: summary || "暂无项目描述",
+    status: toOptionalNumber(item.Status) ?? null,
+    isPublic: toOptionalNumber((item as InspectionProjectRecord).IsPublic) ?? null,
+    sortOrder: index + 1,
+  }
+}
+
+function normalizeMediaContentProjectItems(categoryList: unknown[]) {
+  const projects: ProjectItem[] = []
+
+  for (const category of categoryList) {
+    if (!category || typeof category !== "object" || Array.isArray(category)) {
+      continue
+    }
+
+    const projectRecords = (category as Record<string, unknown>).Project
+    if (!Array.isArray(projectRecords)) {
+      continue
+    }
+
+    projects.push(...projectRecords.map((project, index) => normalizeProjectItem(project as InspectionProjectRecord, projects.length + index)))
+  }
+
+  return projects
+}
+
+function mergeProjectItems(items: ProjectItem[]) {
+  if (!items.length) {
+    return
+  }
+
+  const nextItems = new Map(mediaState.projectItems.map(item => [item.id, item]))
+
+  for (const item of items) {
+    const previous = nextItems.get(item.id)
+    nextItems.set(item.id, {
+      ...previous,
+      ...item,
+      isPublic: item.isPublic ?? previous?.isPublic ?? null,
+    })
+  }
+
+  mediaState.projectItems = [...nextItems.values()].sort(compareBySortOrder)
+}
+
+function isProjectVisibleOnApp(item: ProjectItem) {
+  return item.isPublic === null || item.isPublic === 1
+}
+
 function normalizeMediaContent(item: MediaContentRecord, index: number): AppHomeModule | null {
   const id = toOptionalText(item.Uuid) || `media-content-${item.Id ?? index + 1}`
-  const contentType = item.Type === 2 ? "article" : item.Type === 1 ? "video" : null
+  const contentType = item.Type === 3 ? "project" : item.Type === 2 ? "article" : item.Type === 1 ? "video" : null
 
   if (!contentType) {
     return null
@@ -1055,7 +1275,7 @@ function normalizeMediaContent(item: MediaContentRecord, index: number): AppHome
   const categoryList = Array.isArray(item.CategoryList) ? item.CategoryList : []
   const base = {
     id,
-    title: toOptionalText(item.Title) || (contentType === "video" ? "视频模块" : "文章卡片"),
+    title: toOptionalText(item.Title) || getDefaultModuleTitle(contentType),
     enabled: item.Status !== 2,
     sortOrder: toOptionalNumber(item.SortNum) ?? (index + 1) * 10,
   }
@@ -1072,6 +1292,24 @@ function normalizeMediaContent(item: MediaContentRecord, index: number): AppHome
       ...base,
       type: "article",
       articleId: findFirstArticleUuid(categoryList),
+    }
+  }
+
+  if (contentType === "project") {
+    const firstCategory = categoryList[0]
+    const categoryUuid = toOptionalText(firstCategory?.Uuid)
+    const projects = normalizeMediaContentProjectItems(categoryList)
+
+    if (categoryUuid) {
+      projectCategoryIds.value.set(id, categoryUuid)
+    }
+
+    mergeProjectItems(projects)
+
+    return {
+      ...base,
+      type: "project",
+      projectIds: projects.filter(isProjectVisibleOnApp).map(project => project.id),
     }
   }
 
@@ -1160,8 +1398,8 @@ function buildMediaContentPayload(module: AppHomeModule) {
     CategoryList: buildMediaContentCategoryList(module),
     SortNum: module.sortOrder,
     Status: module.enabled ? 1 as const : 2 as const,
-    Title: module.title.trim() || (module.type === "video" ? "视频模块" : "文章卡片"),
-    Type: module.type === "video" ? 1 as const : 2 as const,
+    Title: module.title.trim() || getDefaultModuleTitle(module.type),
+    Type: module.type === "video" ? 1 as const : module.type === "article" ? 2 as const : 3 as const,
   }
 }
 
@@ -1177,6 +1415,18 @@ function buildMediaContentCategoryList(module: AppHomeModule): MediaContentCateg
       SortNum: 10,
       Title: module.title.trim() || "文章内容",
       Uuid: articleCategoryIds.value.get(module.id),
+    }]
+  }
+
+  if (module.type === "project") {
+    return [{
+      MediaList: module.projectIds.map((projectId, index) => ({
+        SortNum: (index + 1) * 10,
+        Uuid: projectId,
+      })),
+      SortNum: 10,
+      Title: module.title.trim() || "客户项目",
+      Uuid: projectCategoryIds.value.get(module.id),
     }]
   }
 
@@ -1241,6 +1491,12 @@ function replaceModuleId(previousId: string, nextId: string) {
   if (articleCategoryId) {
     articleCategoryIds.value.delete(previousId)
     articleCategoryIds.value.set(nextId, articleCategoryId)
+  }
+
+  const projectCategoryId = projectCategoryIds.value.get(previousId)
+  if (projectCategoryId) {
+    projectCategoryIds.value.delete(previousId)
+    projectCategoryIds.value.set(nextId, projectCategoryId)
   }
 }
 
@@ -1422,7 +1678,7 @@ function hashText(value: string) {
                 <div class="flex min-w-0 items-center gap-1.5">
                   <i
                     :class="[
-                      module.type === 'video' ? 'ri-movie-2-line' : 'ri-article-line',
+                      getModuleIconClass(module),
                       'shrink-0 text-[15px] text-muted-foreground',
                     ]"
                   />
@@ -1437,7 +1693,7 @@ function hashText(value: string) {
                   </span>
                 </div>
                 <p class="mt-1 truncate text-xs text-muted-foreground">
-                  {{ module.type === 'video' ? '视频' : '文章' }} · {{ getModuleItemCount(module) }} 条 · {{ getModuleSummary(module) }}
+                  {{ getModuleTypeLabel(module) }} · {{ getModuleItemCount(module) }} 条 · {{ getModuleSummary(module) }}
                 </p>
               </button>
             </div>
@@ -1468,6 +1724,16 @@ function hashText(value: string) {
           >
             <i class="ri-add-line text-[15px]" />
             <span>添加文章模块</span>
+          </Button>
+          <Button
+            v-if="canAddAppHomeProjectModule"
+            variant="ghost"
+            size="sm"
+            class="h-8 w-full justify-start rounded-md px-2 text-muted-foreground"
+            @click="addModule('project')"
+          >
+            <i class="ri-add-line text-[15px]" />
+            <span>添加项目模块</span>
           </Button>
         </div>
       </div>
@@ -1568,7 +1834,7 @@ function hashText(value: string) {
               </section>
             </template>
 
-            <template v-else>
+            <template v-else-if="module.type === 'article'">
               <section>
                 <article
                   v-if="getArticle(module)"
@@ -1594,40 +1860,41 @@ function hashText(value: string) {
                 </div>
               </section>
             </template>
-              </div>
 
-              <div
-                v-if="publishedCustomerProjects.length"
-                class="border-b border-dashed border-zinc-300/90 py-4 first:pt-0 last:border-b-0"
-              >
-                <section class="min-w-0">
-                  <h2 class="px-0 text-[18px] font-semibold leading-none text-zinc-950">
-                    客户项目
-                  </h2>
+            <template v-else>
+              <section class="min-w-0">
+                <h2 class="px-0 text-[18px] font-semibold leading-none text-zinc-950">
+                  {{ module.title || '客户项目' }}
+                </h2>
 
-                  <div class="app-home-video-rail -mx-4 mt-5 flex gap-4 overflow-x-auto px-4 pb-1">
-                    <article
-                      v-for="(item, index) in publishedCustomerProjects.slice(0, 8)"
-                      :key="getCustomerProjectKey(item, index)"
-                      class="relative flex h-48 w-36 shrink-0 flex-col overflow-hidden rounded-[8px] bg-zinc-950 p-3 text-white"
-                    >
-                      <div class="flex items-center gap-1.5 text-[11px] font-medium text-white/65">
-                        <i class="ri-briefcase-4-line text-[13px]" />
-                        <span>PROJECT</span>
-                      </div>
-                      <h3 class="mt-auto line-clamp-3 text-[15px] font-semibold leading-[1.32] text-white">
-                        {{ toOptionalText(item.Name) || '未命名项目' }}
-                      </h3>
-                      <p class="mt-2 line-clamp-3 text-[12px] leading-[1.5] text-white/68">
-                        {{ getCustomerProjectSummary(item) }}
-                      </p>
-                    </article>
-                  </div>
-                </section>
+                <div v-if="resolveModuleProjects(module).length" class="app-home-video-rail -mx-4 mt-5 flex gap-4 overflow-x-auto px-4 pb-1">
+                  <article
+                    v-for="item in resolveModuleProjects(module).slice(0, 8)"
+                    :key="item.id"
+                    class="relative flex h-48 w-36 shrink-0 flex-col overflow-hidden rounded-[8px] bg-zinc-950 p-3 text-white"
+                  >
+                    <div class="flex items-center gap-1.5 text-[11px] font-medium text-white/65">
+                      <i class="ri-briefcase-4-line text-[13px]" />
+                      <span>{{ getProjectStatusLabel(item) }}</span>
+                    </div>
+                    <h3 class="mt-auto line-clamp-3 text-[15px] font-semibold leading-[1.32] text-white">
+                      {{ item.title }}
+                    </h3>
+                    <p class="mt-2 line-clamp-3 text-[12px] leading-[1.5] text-white/68">
+                      {{ item.summary }}
+                    </p>
+                  </article>
+                </div>
+
+                <div v-else class="mt-5 rounded-lg border border-dashed border-zinc-300 py-8 text-center text-sm text-zinc-500">
+                  暂未选择公开客户项目
+                </div>
+              </section>
+            </template>
               </div>
             </template>
 
-          <div v-if="!showInitialSkeleton && !enabledModules.length && !publishedCustomerProjects.length" class="py-20 text-center text-sm text-zinc-500">
+          <div v-if="!showInitialSkeleton && !enabledModules.length" class="py-20 text-center text-sm text-zinc-500">
             暂无启用模块
           </div>
         </div>
@@ -1891,6 +2158,77 @@ function hashText(value: string) {
                     </p>
                   </div>
                 </article>
+              </div>
+            </div>
+          </template>
+
+          <template v-if="selectedProjectModule">
+            <div class="article-editor-row">
+              <span class="article-editor-label">项目</span>
+              <div class="article-editor-control">
+                <Select
+                  :model-value="selectedProjectModule.projectIds"
+                  multiple
+                  @update:model-value="handleProjectIdsChange"
+                >
+                  <SelectTrigger class="w-full">
+                    <SelectValue placeholder="选择公开客户项目" />
+                  </SelectTrigger>
+                  <SelectContent class="max-h-[360px]">
+                    <SelectItem
+                      v-for="project in projectOptions"
+                      :key="project.id"
+                      :value="project.id"
+                      :class="selectedProjectModule.projectIds.includes(project.id) ? 'bg-accent text-accent-foreground font-medium' : ''"
+                    >
+                      <template #indicator-icon>
+                        <span class="sr-only">已选择</span>
+                      </template>
+                      <span class="flex min-w-0 flex-1 items-center gap-2">
+                        <i
+                          v-if="selectedProjectModule.projectIds.includes(project.id)"
+                          class="ri-check-line shrink-0 text-base leading-none"
+                          aria-hidden="true"
+                        />
+                        <span v-else class="size-4 shrink-0" aria-hidden="true" />
+                        <span class="truncate">{{ getProjectOptionLabel(project) }}</span>
+                      </span>
+                    </SelectItem>
+                    <div v-if="mediaOptionsLoading.project" class="px-2 py-6 text-center text-sm text-muted-foreground">
+                      项目加载中...
+                    </div>
+                    <div v-else-if="!projectOptions.length" class="px-2 py-6 text-center text-sm text-muted-foreground">
+                      暂无可选公开客户项目
+                    </div>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div class="article-editor-row article-editor-row--top">
+              <span class="article-editor-label">预览</span>
+              <div class="article-editor-control">
+                <div v-if="resolveModuleProjects(selectedProjectModule).length" class="grid gap-2 sm:grid-cols-2">
+                  <article
+                    v-for="project in resolveModuleProjects(selectedProjectModule)"
+                    :key="project.id"
+                    class="rounded-lg border border-border/70 bg-background p-3"
+                  >
+                    <div class="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <i class="ri-briefcase-4-line text-sm" />
+                      <span>{{ getProjectStatusLabel(project) }}</span>
+                    </div>
+                    <h4 class="mt-2 line-clamp-1 text-sm font-semibold text-foreground">
+                      {{ project.title }}
+                    </h4>
+                    <p class="mt-1 line-clamp-2 text-xs leading-5 text-muted-foreground">
+                      {{ project.summary }}
+                    </p>
+                  </article>
+                </div>
+                <div v-else class="rounded-md border border-dashed border-border py-6 text-center text-sm text-muted-foreground">
+                  暂未选择公开客户项目
+                </div>
               </div>
             </div>
           </template>
