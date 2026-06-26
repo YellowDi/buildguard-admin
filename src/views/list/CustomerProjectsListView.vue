@@ -206,6 +206,7 @@ const progressEditorTitle = computed(() => progressEditorMode.value === "edit" ?
 const progressMediaLabel = computed(() => progressForm.photos.length ? `已添加 ${progressForm.photos.length} 个附件` : "")
 const projectCoverUrl = computed(() => getProjectCoverUrl(selectedProject.value))
 const projectCoverSelectedLabel = computed(() => projectCoverUrl.value || "暂未设置封面")
+const projectCoverButtonLabel = computed(() => projectCoverUrl.value ? "更换并保存封面" : "上传并保存封面")
 const projectDetailSections = computed<DetailFieldSection[]>(() => {
   const project = selectedProject.value
 
@@ -475,7 +476,6 @@ watch(sheetOpen, (open) => {
   detailLoading.value = false
   finishConfirmOpen.value = false
   progressEditorOpen.value = false
-  projectCoverUploading.value = false
   latestDetailRequestId += 1
   Object.assign(projectForm, createEmptyProjectForm())
   Object.assign(progressForm, createEmptyProgressForm())
@@ -786,6 +786,7 @@ async function handleProjectCoverFilesSelected(files: File[]) {
   }
 
   const uuid = toText(selectedProject.value?.Uuid)
+  const publicStatus = toNumber(selectedProject.value?.IsPublic) === 1 ? 1 : 2
 
   if (!uuid) {
     toast.error("客户项目信息不完整，无法上传封面")
@@ -811,13 +812,14 @@ async function handleProjectCoverFilesSelected(files: File[]) {
 
     await updateInspectionProjectPublicStatus({
       Uuid: uuid,
-      IsPublic: toNumber(selectedProject.value?.IsPublic) === 1 ? 1 : 2,
+      IsPublic: publicStatus,
       Url: coverUrl,
     })
 
-    mergeSelectedProjectCoverUrl(coverUrl)
-    toast.success("项目封面已上传")
+    mergeProjectCoverUrl(uuid, coverUrl)
+    toast.success("项目封面已保存")
     await loadProjects()
+    mergeProjectCoverUrl(uuid, coverUrl)
   } catch (error) {
     toast.error(handleApiError(error, {
       mode: "silent",
@@ -1310,14 +1312,15 @@ function withProjectCoverUrl(project: InspectionProjectRecord, coverUrl: string)
   }
 }
 
-function mergeSelectedProjectCoverUrl(coverUrl: string) {
-  const uuid = toText(selectedProject.value?.Uuid)
-
-  if (!uuid || !selectedProject.value) {
+function mergeProjectCoverUrl(uuid: string, coverUrl: string) {
+  if (!uuid) {
     return
   }
 
-  selectedProject.value = withProjectCoverUrl(selectedProject.value, coverUrl)
+  if (selectedProject.value && toText(selectedProject.value.Uuid) === uuid) {
+    selectedProject.value = withProjectCoverUrl(selectedProject.value, coverUrl)
+  }
+
   projects.value = projects.value.map(row => row.uuid === uuid
     ? {
         ...row,
@@ -1648,9 +1651,9 @@ function asProjectRow(row: Record<string, unknown>) {
             <FileUploadField
               accept="image/*"
               title="上传项目封面"
-              description="用于 App 首页客户项目卡片展示，公开项目时会同步提交封面地址。"
-              button-label="选择封面"
-              loading-label="上传中..."
+              description="用于 App 首页客户项目卡片展示，选择图片后会立即上传并保存。"
+              :button-label="projectCoverButtonLabel"
+              loading-label="保存中..."
               icon="ri-image-add-line"
               :loading="projectCoverUploading"
               :disabled="projectActionSubmitting"
