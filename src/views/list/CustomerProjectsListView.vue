@@ -1290,11 +1290,6 @@ function getProgressKey(item: InspectionProjectProgressItem, index: number) {
   return toText(item.Uuid) || `${toText(item.Version, "progress")}-${index}`
 }
 
-function getProgressVersion(item: InspectionProjectProgressItem) {
-  const version = toNumber(item.Version)
-  return version === null ? "-" : `v${version}`
-}
-
 function getProjectCoverUrl(project: InspectionProjectRecord | null | undefined) {
   if (!project) {
     return ""
@@ -1649,7 +1644,7 @@ function asProjectRow(row: Record<string, unknown>) {
           <div class="detail-section-inset mb-3">
             <h2 class="detail-field-section__heading">项目封面</h2>
           </div>
-          <div class="detail-section-inset">
+          <div class="detail-section-inset pb-4">
             <FileUploadField
               accept="image/*"
               title="上传项目封面"
@@ -1706,11 +1701,8 @@ function asProjectRow(row: Record<string, unknown>) {
               >
                 <div class="flex flex-wrap items-start justify-between gap-2">
                   <div class="min-w-0">
-                    <p class="truncate text-sm font-medium text-foreground">
+                    <p class="truncate text-base font-semibold leading-6 text-foreground">
                       {{ toText(item.Stage, '未填写阶段') }}
-                    </p>
-                    <p class="mt-0.5 text-xs text-muted-foreground">
-                      {{ getProgressVersion(item) }} · {{ formatDateOnly(toText(item.CreatedAt, '-')) }}
                     </p>
                   </div>
                   <Button
