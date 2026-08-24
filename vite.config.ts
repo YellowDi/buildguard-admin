@@ -4,7 +4,7 @@ import tailwindcss from "@tailwindcss/vite"
 import vue from "@vitejs/plugin-vue"
 import { defineConfig } from "vite"
 
-const apiTarget = "http://192.168.2.4:8000"
+const apiTarget = "https://www.nbbjyw.com"
 
 export default defineConfig({
   base: "/admin/",
