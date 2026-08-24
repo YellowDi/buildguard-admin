@@ -96,8 +96,6 @@ export function createHttpError(
 
   if (isAuthExpired({
     status,
-    record: asRecord(payload),
-    code,
     message,
   })) {
     notifyAuthExpired()
@@ -120,7 +118,7 @@ export function assertApiSuccess(payload: unknown, fallback = "请求失败，�
   const code = extractScalar(payload, CODE_KEYS)
   const message = extractMessage(payload) ?? fallback
 
-  if (isAuthExpired({ record, code, message })) {
+  if (isAuthExpired({ message })) {
     notifyAuthExpired()
     throw new ApiError(message, {
       code: code ?? undefined,
@@ -307,26 +305,14 @@ function decodePossiblyMisencodedHeader(value: string) {
 
 function isAuthExpired({
   status,
-  record,
-  code,
   message,
 }: {
   status?: number
-  record?: Record<string, unknown> | null
-  code?: string | null
   message: string
 }) {
-  if (status === 401 || status === 403) {
+  if (status === 401) {
     return true
   }
 
-  if (code === "1001" || code === "401" || code === "403") {
-    return true
-  }
-
-  if (AUTH_EXPIRED_MESSAGE_PATTERN.test(message) && (!record || record.success === false)) {
-    return true
-  }
-
-  return false
+  return AUTH_EXPIRED_MESSAGE_PATTERN.test(message)
 }
