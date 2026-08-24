@@ -140,8 +140,8 @@ const primaryActionLabel = computed(() => {
 })
 const resetDialogDescription = computed(() => (
   isEditMode.value
-    ? "当前已修改的客户信息和责任人内容都会恢复为最近一次加载的资料。"
-    : "当前已填写的客户信息和责任人内容都会被清空，此操作不可撤销。"
+    ? "当前已修改的客户信息和企业负责人内容都会恢复为最近一次加载的资料。"
+    : "当前已填写的客户信息和企业负责人内容都会被清空，此操作不可撤销。"
 ))
 const industryOptions = computed<SelectOption[]>(() => {
   const options = industryEntries.value.map(entry => ({
@@ -342,7 +342,7 @@ async function handleSubmit() {
     .filter(principal => principal.Name || principal.Phone)
 
   if (!people.length) {
-    toast.error("请至少填写一位责任人")
+    toast.error("请至少填写一位企业负责人")
     return
   }
 
@@ -919,7 +919,7 @@ function dedupeSelectOptions(options: SelectOption[]) {
 
           <div
             id="section-principals"
-            data-quick-nav-label="责任人"
+            data-quick-nav-label="企业负责人"
             :class="cn(
               'scroll-mt-28 py-5',
               isRequiredFieldInvalid('section-principals') && 'rounded-md ring-2 ring-destructive/25 ring-offset-2 ring-offset-background',
@@ -928,11 +928,11 @@ function dedupeSelectOptions(options: SelectOption[]) {
             <FieldSet>
               <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-6">
                 <FieldGroup class="min-w-0 flex-1 gap-1">
-                  <FieldLegend>责任人</FieldLegend>
-                  <FieldDescription>至少填写一位责任人，并指定一位主要责任人。</FieldDescription>
+                  <FieldLegend>企业负责人</FieldLegend>
+                  <FieldDescription>至少填写一位企业负责人，并指定一位主要企业负责人。</FieldDescription>
                 </FieldGroup>
                 <Button variant="outline" size="sm" type="button" class="shrink-0" @click="addPrincipal" @focus="handleFocus('section-principals')">
-                  添加责任人
+                  添加企业负责人
                 </Button>
               </div>
 
@@ -942,7 +942,7 @@ function dedupeSelectOptions(options: SelectOption[]) {
                     <thead>
                       <tr>
                         <th class="rounded-tl-md rounded-bl-md bg-muted px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground sm:pl-7">
-                          主要责任人
+                          主要企业负责人
                         </th>
                         <th class="bg-muted px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground sm:pl-7">
                           姓名

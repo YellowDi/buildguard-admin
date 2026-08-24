@@ -151,7 +151,7 @@ const schema: TablePageSchema<CustomerRecord> = {
     },
     {
       key: "principalDisplay",
-      label: "责任人",
+      label: "企业负责人",
       cellRenderer: {
         kind: "dual-inline",
         primaryKey: "principalName",
@@ -159,13 +159,13 @@ const schema: TablePageSchema<CustomerRecord> = {
       },
       filter: {
         type: "text",
-        label: "责任人",
-        placeholder: "输入责任人或手机号",
+        label: "企业负责人",
+        placeholder: "输入企业负责人或手机号",
         defaultVisible: true,
         value: row => row.principalDisplay,
       },
       sort: {
-        label: "责任人",
+        label: "企业负责人",
         value: row => row.principalName === "-" ? row.principalPhone : row.principalName,
       },
     },
